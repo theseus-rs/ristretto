@@ -123,7 +123,7 @@ impl ClassFile {
     ///
     /// # Errors
     /// - If there are more than 65,535 interfaces, fields, methods, or attributes.
-    pub fn to_bytes(self, bytes: &mut Vec<u8>) -> Result<()> {
+    pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u32::<BigEndian>(MAGIC)?;
         self.version.to_bytes(bytes)?;
         self.constant_pool.to_bytes(bytes)?;
@@ -133,25 +133,25 @@ impl ClassFile {
 
         let interfaces_length = u16::try_from(self.interfaces.len())?;
         bytes.write_u16::<BigEndian>(interfaces_length)?;
-        for interface in self.interfaces {
-            bytes.write_u16::<BigEndian>(interface)?;
+        for interface in &self.interfaces {
+            bytes.write_u16::<BigEndian>(*interface)?;
         }
 
         let fields_length = u16::try_from(self.fields.len())?;
         bytes.write_u16::<BigEndian>(fields_length)?;
-        for field in self.fields {
+        for field in &self.fields {
             field.to_bytes(bytes)?;
         }
 
         let methods_length = u16::try_from(self.methods.len())?;
         bytes.write_u16::<BigEndian>(methods_length)?;
-        for method in self.methods {
+        for method in &self.methods {
             method.to_bytes(bytes)?;
         }
 
         let attributes_length = u16::try_from(self.attributes.len())?;
         bytes.write_u16::<BigEndian>(attributes_length)?;
-        for attribute in self.attributes {
+        for attribute in &self.attributes {
             attribute.to_bytes(bytes)?;
         }
 

@@ -9,9 +9,20 @@ fn benchmarks(criterion: &mut Criterion) {
 }
 
 fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
+    let class_file = ClassFile::from_bytes(&mut Cursor::new(CLASS_BYTES.to_vec()))?;
     criterion.bench_function("from_bytes", |bencher| {
         bencher.iter(|| {
             from_bytes().ok();
+        });
+    });
+    criterion.bench_function("to_bytes", |bencher| {
+        bencher.iter(|| {
+            to_bytes(&class_file).ok();
+        });
+    });
+    criterion.bench_function("verify", |bencher| {
+        bencher.iter(|| {
+            verify(&class_file).ok();
         });
     });
 
@@ -21,6 +32,16 @@ fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
 fn from_bytes() -> Result<()> {
     let mut original_bytes = Cursor::new(CLASS_BYTES.to_vec());
     let _class_file = ClassFile::from_bytes(&mut original_bytes)?;
+    Ok(())
+}
+
+fn to_bytes(class_file: &ClassFile) -> Result<()> {
+    class_file.to_bytes(&mut Vec::new())?;
+    Ok(())
+}
+
+fn verify(class_file: &ClassFile) -> Result<()> {
+    class_file.verify()?;
     Ok(())
 }
 
