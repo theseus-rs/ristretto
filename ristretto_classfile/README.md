@@ -2,7 +2,7 @@
 
 [![ci](https://github.com/theseus-rs/ristretto/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/theseus-rs/ristretto/actions/workflows/ci.yml)
 [![Documentation](https://docs.rs/ristretto_classfile/badge.svg)](https://docs.rs/ristretto_classfile)
-[![Code Coverage](https://codecov.io/gh/theseus-rs/ristretto_class/branch/main/graph/badge.svg)](https://codecov.io/gh/theseus-rs/ristretto_classfile)
+[![Code Coverage](https://codecov.io/gh/theseus-rs/ristretto/branch/main/graph/badge.svg)](https://codecov.io/gh/theseus-rs/ristretto)
 [![Benchmarks](https://img.shields.io/badge/%F0%9F%90%B0_bencher-enabled-6ec241)](https://bencher.dev/perf/theseus-rs-ristretto_classfile)
 [![Latest version](https://img.shields.io/crates/v/ristretto_classfile.svg)](https://crates.io/crates/ristretto_classfile)
 [![License](https://img.shields.io/crates/l/ristretto_classfile)](https://github.com/theseus-rs/ristretto_classfile#license)
