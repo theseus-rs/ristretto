@@ -1,0 +1,26 @@
+[package]
+name = "ristretto_classfile"
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+bitflags = { workspace = true }
+byteorder = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+flate2 = { workspace = true }
+reqwest = { workspace = true }
+tar = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+zip = { workspace = true }
+
+[[bench]]
+harness = false
+name = "classfile"
