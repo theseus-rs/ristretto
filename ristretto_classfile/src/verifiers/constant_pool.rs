@@ -345,10 +345,9 @@ mod test {
             Constant::String { .. } => Constant::String {
                 string_index: integer_index,
             },
-            Constant::MethodType { .. } => Constant::MethodType {
+            _ => Constant::MethodType {
                 descriptor_index: integer_index,
             },
-            _ => panic!("Invalid constant type"),
         };
 
         test_indexes_index_type_error(class_file.clone(), constant.clone())?;
@@ -404,11 +403,10 @@ mod test {
                 class_index,
                 name_and_type_index,
             },
-            Constant::InterfaceMethodRef { .. } => Constant::InterfaceMethodRef {
+            _ => Constant::InterfaceMethodRef {
                 class_index,
                 name_and_type_index,
             },
-            _ => panic!("Invalid constant type"),
         }
     }
 
@@ -532,22 +530,15 @@ mod test {
         Ok(())
     }
 
-    fn test_indexes_bootstrap_method_index_error(mut class_file: ClassFile, constant: Constant) {
-        let (Constant::Dynamic {
-            bootstrap_method_attr_index: index,
-            ..
-        }
-        | Constant::InvokeDynamic {
-            bootstrap_method_attr_index: index,
-            ..
-        }) = constant
-        else {
-            panic!("Invalid constant type");
-        };
+    fn test_indexes_bootstrap_method_index_error(
+        mut class_file: ClassFile,
+        constant: Constant,
+        index: usize,
+    ) {
         class_file.constant_pool.add(constant);
         assert_eq!(
             verify_constant_indexes(&class_file),
-            Err(InvalidBootstrapMethodIndex(index as usize))
+            Err(InvalidBootstrapMethodIndex(index))
         );
     }
 
@@ -568,6 +559,7 @@ mod test {
                 bootstrap_method_attr_index: u16::MAX,
                 name_and_type_index,
             },
+            u16::MAX as usize,
         );
         test_indexes_index_error(
             class_file.clone(),
@@ -603,6 +595,7 @@ mod test {
                 bootstrap_method_attr_index: u16::MAX,
                 name_and_type_index,
             },
+            u16::MAX as usize,
         );
         test_indexes_index_error(
             class_file.clone(),
