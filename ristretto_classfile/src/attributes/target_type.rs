@@ -265,6 +265,7 @@ mod test {
     }
 
     fn test_array_type(target_type: &TargetType, expected_bytes: &[u8]) -> Result<()> {
+        assert_eq!(target_type.target_type(), expected_bytes[0]);
         let mut bytes = Vec::new();
         target_type.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);

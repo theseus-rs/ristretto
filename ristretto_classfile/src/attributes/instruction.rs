@@ -735,7 +735,7 @@ impl Instruction {
                         bytes.read_i16::<BigEndian>()?,
                     ),
                     169 => Instruction::Ret_w(bytes.read_u16::<BigEndian>()?),
-                    _ => return Err(InvalidWideInstruction(code)),
+                    _ => return Err(InvalidWideInstruction(wide_code)),
                 }
             }
             197 => Instruction::Multianewarray(bytes.read_u16::<BigEndian>()?, bytes.read_u8()?),
@@ -2480,6 +2480,16 @@ mod test {
     }
 
     #[test]
+    fn test_invokeinterface_error() {
+        let bytes: [u8; 5] = [185, 0, 42, 3, 1];
+        let mut cursor = Cursor::new(bytes.to_vec());
+        assert_eq!(
+            Instruction::from_bytes(&mut cursor),
+            Err(InvalidInstruction(185))
+        );
+    }
+
+    #[test]
     fn test_invokedynamic() -> Result<()> {
         let instruction = Instruction::Invokedynamic(42);
         let code = 186;
@@ -2557,6 +2567,11 @@ mod test {
         let code = 195;
         let expected_bytes = [code];
         test_instruction(&instruction, &expected_bytes, code)
+    }
+
+    #[test]
+    fn test_wide() {
+        assert_eq!(196, Instruction::Wide.code());
     }
 
     #[test]
@@ -2715,5 +2730,15 @@ mod test {
         let code = 169;
         let expected_bytes = [wide_code, code, 0, 42];
         test_instruction(&instruction, &expected_bytes, wide_code)
+    }
+
+    #[test]
+    fn test_wide_error() {
+        let bytes: [u8; 4] = [196, 0, 1, 2];
+        let mut cursor = Cursor::new(bytes.to_vec());
+        assert_eq!(
+            Instruction::from_bytes(&mut cursor),
+            Err(InvalidWideInstruction(0))
+        );
     }
 }
