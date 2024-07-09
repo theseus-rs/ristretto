@@ -87,7 +87,7 @@ pub enum Error {
     FromUtf8Error(String),
     /// Error when attempting to convert a numeric value to a different type
     #[error(transparent)]
-    TryFromIntError(TryFromIntError),
+    TryFromIntError(#[from] TryFromIntError),
     /// Error when verifying a class file
     #[error("{context}: {message}")]
     VerificationError { context: String, message: String },
@@ -104,13 +104,6 @@ impl From<FromUtf8Error> for Error {
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
         Error::IoError(error.to_string())
-    }
-}
-
-/// Convert [`TryFromIntError` errors](TryFromIntError) to [`TryFromIntError`](Error::TryFromIntError)
-impl From<TryFromIntError> for Error {
-    fn from(error: TryFromIntError) -> Self {
-        Error::TryFromIntError(error)
     }
 }
 
@@ -134,16 +127,5 @@ mod test {
         let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
         let error = Error::from(io_error);
         assert_eq!(error.to_string(), "IO error: file not found");
-    }
-
-    #[test]
-    #[allow(clippy::unwrap_used)]
-    fn test_try_from_int_error() {
-        let error = u16::try_from(65_536).unwrap_err();
-        let error = Error::from(error);
-        assert_eq!(
-            error.to_string(),
-            "out of range integral type conversion attempted"
-        );
     }
 }

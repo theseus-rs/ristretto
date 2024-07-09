@@ -3,6 +3,7 @@ use crate::error::Error::InvalidInstruction;
 use crate::error::Result;
 use crate::Error::InvalidWideInstruction;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `Instruction`.
@@ -948,9 +949,269 @@ impl Instruction {
     }
 }
 
+impl fmt::Display for Instruction {
+    #[allow(clippy::too_many_lines)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Instruction::Nop => write!(f, "nop"),
+            Instruction::Aconst_null => write!(f, "aconst_null"),
+            Instruction::Iconst_m1 => write!(f, "iconst_m1"),
+            Instruction::Iconst_0 => write!(f, "iconst_0"),
+            Instruction::Iconst_1 => write!(f, "iconst_1"),
+            Instruction::Iconst_2 => write!(f, "iconst_2"),
+            Instruction::Iconst_3 => write!(f, "iconst_3"),
+            Instruction::Iconst_4 => write!(f, "iconst_4"),
+            Instruction::Iconst_5 => write!(f, "iconst_5"),
+            Instruction::Lconst_0 => write!(f, "lconst_0"),
+            Instruction::Lconst_1 => write!(f, "lconst_1"),
+            Instruction::Fconst_0 => write!(f, "fconst_0"),
+            Instruction::Fconst_1 => write!(f, "fconst_1"),
+            Instruction::Fconst_2 => write!(f, "fconst_2"),
+            Instruction::Dconst_0 => write!(f, "dconst_0"),
+            Instruction::Dconst_1 => write!(f, "dconst_1"),
+            Instruction::Bipush(value) => write!(f, "bipush {value}"),
+            Instruction::Sipush(value) => write!(f, "sipush {value}"),
+            Instruction::Ldc(value) => write!(f, "ldc #{value}"),
+            Instruction::Ldc_w(value) => write!(f, "ldc_w #{value}"),
+            Instruction::Ldc2_w(value) => write!(f, "ldc2_w #{value}"),
+            Instruction::Iload(value) => write!(f, "iload {value}"),
+            Instruction::Lload(value) => write!(f, "lload {value}"),
+            Instruction::Fload(value) => write!(f, "fload {value}"),
+            Instruction::Dload(value) => write!(f, "dload {value}"),
+            Instruction::Aload(value) => write!(f, "aload {value}"),
+            Instruction::Iload_0 => write!(f, "iload_0"),
+            Instruction::Iload_1 => write!(f, "iload_1"),
+            Instruction::Iload_2 => write!(f, "iload_2"),
+            Instruction::Iload_3 => write!(f, "iload_3"),
+            Instruction::Lload_0 => write!(f, "lload_0"),
+            Instruction::Lload_1 => write!(f, "lload_1"),
+            Instruction::Lload_2 => write!(f, "lload_2"),
+            Instruction::Lload_3 => write!(f, "lload_3"),
+            Instruction::Fload_0 => write!(f, "fload_0"),
+            Instruction::Fload_1 => write!(f, "fload_1"),
+            Instruction::Fload_2 => write!(f, "fload_2"),
+            Instruction::Fload_3 => write!(f, "fload_3"),
+            Instruction::Dload_0 => write!(f, "dload_0"),
+            Instruction::Dload_1 => write!(f, "dload_1"),
+            Instruction::Dload_2 => write!(f, "dload_2"),
+            Instruction::Dload_3 => write!(f, "dload_3"),
+            Instruction::Aload_0 => write!(f, "aload_0"),
+            Instruction::Aload_1 => write!(f, "aload_1"),
+            Instruction::Aload_2 => write!(f, "aload_2"),
+            Instruction::Aload_3 => write!(f, "aload_3"),
+            Instruction::Iaload => write!(f, "iaload"),
+            Instruction::Laload => write!(f, "laload"),
+            Instruction::Faload => write!(f, "faload"),
+            Instruction::Daload => write!(f, "daload"),
+            Instruction::Aaload => write!(f, "aaload"),
+            Instruction::Baload => write!(f, "baload"),
+            Instruction::Caload => write!(f, "caload"),
+            Instruction::Saload => write!(f, "saload"),
+            Instruction::Istore(value) => write!(f, "istore {value}"),
+            Instruction::Lstore(value) => write!(f, "lstore {value}"),
+            Instruction::Fstore(value) => write!(f, "fstore {value}"),
+            Instruction::Dstore(value) => write!(f, "dstore {value}"),
+            Instruction::Astore(value) => write!(f, "astore {value}"),
+            Instruction::Istore_0 => write!(f, "istore_0"),
+            Instruction::Istore_1 => write!(f, "istore_1"),
+            Instruction::Istore_2 => write!(f, "istore_2"),
+            Instruction::Istore_3 => write!(f, "istore_3"),
+            Instruction::Lstore_0 => write!(f, "lstore_0"),
+            Instruction::Lstore_1 => write!(f, "lstore_1"),
+            Instruction::Lstore_2 => write!(f, "lstore_2"),
+            Instruction::Lstore_3 => write!(f, "lstore_3"),
+            Instruction::Fstore_0 => write!(f, "fstore_0"),
+            Instruction::Fstore_1 => write!(f, "fstore_1"),
+            Instruction::Fstore_2 => write!(f, "fstore_2"),
+            Instruction::Fstore_3 => write!(f, "fstore_3"),
+            Instruction::Dstore_0 => write!(f, "dstore_0"),
+            Instruction::Dstore_1 => write!(f, "dstore_1"),
+            Instruction::Dstore_2 => write!(f, "dstore_2"),
+            Instruction::Dstore_3 => write!(f, "dstore_3"),
+            Instruction::Astore_0 => write!(f, "astore_0"),
+            Instruction::Astore_1 => write!(f, "astore_1"),
+            Instruction::Astore_2 => write!(f, "astore_2"),
+            Instruction::Astore_3 => write!(f, "astore_3"),
+            Instruction::Iastore => write!(f, "iastore"),
+            Instruction::Lastore => write!(f, "lastore"),
+            Instruction::Fastore => write!(f, "fastore"),
+            Instruction::Dastore => write!(f, "dastore"),
+            Instruction::Aastore => write!(f, "aastore"),
+            Instruction::Bastore => write!(f, "bastore"),
+            Instruction::Castore => write!(f, "castore"),
+            Instruction::Sastore => write!(f, "sastore"),
+            Instruction::Pop => write!(f, "pop"),
+            Instruction::Pop2 => write!(f, "pop2"),
+            Instruction::Dup => write!(f, "dup"),
+            Instruction::Dup_x1 => write!(f, "dup_x1"),
+            Instruction::Dup_x2 => write!(f, "dup_x2"),
+            Instruction::Dup2 => write!(f, "dup2"),
+            Instruction::Dup2_x1 => write!(f, "dup2_x1"),
+            Instruction::Dup2_x2 => write!(f, "dup2_x2"),
+            Instruction::Swap => write!(f, "swap"),
+            Instruction::Iadd => write!(f, "iadd"),
+            Instruction::Ladd => write!(f, "ladd"),
+            Instruction::Fadd => write!(f, "fadd"),
+            Instruction::Dadd => write!(f, "dadd"),
+            Instruction::Isub => write!(f, "isub"),
+            Instruction::Lsub => write!(f, "lsub"),
+            Instruction::Fsub => write!(f, "fsub"),
+            Instruction::Dsub => write!(f, "dsub"),
+            Instruction::Imul => write!(f, "imul"),
+            Instruction::Lmul => write!(f, "lmul"),
+            Instruction::Fmul => write!(f, "fmul"),
+            Instruction::Dmul => write!(f, "dmul"),
+            Instruction::Idiv => write!(f, "idiv"),
+            Instruction::Ldiv => write!(f, "ldiv"),
+            Instruction::Fdiv => write!(f, "fdiv"),
+            Instruction::Ddiv => write!(f, "ddiv"),
+            Instruction::Irem => write!(f, "irem"),
+            Instruction::Lrem => write!(f, "lrem"),
+            Instruction::Frem => write!(f, "frem"),
+            Instruction::Drem => write!(f, "drem"),
+            Instruction::Ineg => write!(f, "ineg"),
+            Instruction::Lneg => write!(f, "lneg"),
+            Instruction::Fneg => write!(f, "fneg"),
+            Instruction::Dneg => write!(f, "dneg"),
+            Instruction::Ishl => write!(f, "ishl"),
+            Instruction::Lshl => write!(f, "lshl"),
+            Instruction::Ishr => write!(f, "ishr"),
+            Instruction::Lshr => write!(f, "lshr"),
+            Instruction::Iushr => write!(f, "iushr"),
+            Instruction::Lushr => write!(f, "lushr"),
+            Instruction::Iand => write!(f, "iand"),
+            Instruction::Land => write!(f, "land"),
+            Instruction::Ior => write!(f, "ior"),
+            Instruction::Lor => write!(f, "lor"),
+            Instruction::Ixor => write!(f, "ixor"),
+            Instruction::Lxor => write!(f, "lxor"),
+            Instruction::Iinc(value1, value2) => write!(f, "iinc {value1}, {value2}"),
+            Instruction::I2l => write!(f, "i2l"),
+            Instruction::I2f => write!(f, "i2f"),
+            Instruction::I2d => write!(f, "i2d"),
+            Instruction::L2i => write!(f, "l2i"),
+            Instruction::L2f => write!(f, "l2f"),
+            Instruction::L2d => write!(f, "l2d"),
+            Instruction::F2i => write!(f, "f2i"),
+            Instruction::F2l => write!(f, "f2l"),
+            Instruction::F2d => write!(f, "f2d"),
+            Instruction::D2i => write!(f, "d2i"),
+            Instruction::D2l => write!(f, "d2l"),
+            Instruction::D2f => write!(f, "d2f"),
+            Instruction::I2b => write!(f, "i2b"),
+            Instruction::I2c => write!(f, "i2c"),
+            Instruction::I2s => write!(f, "i2s"),
+            Instruction::Lcmp => write!(f, "lcmp"),
+            Instruction::Fcmpl => write!(f, "fcmpl"),
+            Instruction::Fcmpg => write!(f, "fcmpg"),
+            Instruction::Dcmpl => write!(f, "dcmpl"),
+            Instruction::Dcmpg => write!(f, "dcmpg"),
+            Instruction::Ifeq(value) => write!(f, "ifeq {value}"),
+            Instruction::Ifne(value) => write!(f, "ifne {value}"),
+            Instruction::Iflt(value) => write!(f, "iflt {value}"),
+            Instruction::Ifge(value) => write!(f, "ifge {value}"),
+            Instruction::Ifgt(value) => write!(f, "ifgt {value}"),
+            Instruction::Ifle(value) => write!(f, "ifle {value}"),
+            Instruction::If_icmpeq(value) => write!(f, "if_icmpeq {value}"),
+            Instruction::If_icmpne(value) => write!(f, "if_icmpne {value}"),
+            Instruction::If_icmplt(value) => write!(f, "if_icmplt {value}"),
+            Instruction::If_icmpge(value) => write!(f, "if_icmpge {value}"),
+            Instruction::If_icmpgt(value) => write!(f, "if_icmpgt {value}"),
+            Instruction::If_icmple(value) => write!(f, "if_icmple {value}"),
+            Instruction::If_acmpeq(value) => write!(f, "if_acmpeq {value}"),
+            Instruction::If_acmpne(value) => write!(f, "if_acmpne {value}"),
+            Instruction::Goto(value) => write!(f, "goto {value}"),
+            Instruction::Jsr(value) => write!(f, "jsr {value}"),
+            Instruction::Ret(value) => write!(f, "ret {value}"),
+            Instruction::Tableswitch {
+                default,
+                low,
+                high,
+                offsets,
+            } => {
+                // tableswitch   { // 3 to 5
+                //            3: 52
+                //            4: 62
+                //            5: 72
+                //      default: 82
+                // }
+                let width = 12;
+                writeln!(f, "tableswitch   {{ // {low} to {high}")?;
+                for (i, offset) in offsets.iter().enumerate() {
+                    let value = low + i32::try_from(i).map_err(|_| fmt::Error)?;
+                    writeln!(f, "{value:>width$}: {offset}")?;
+                }
+                writeln!(f, "{:>width$}: {default}", "default")?;
+                write!(f, "}}")
+            }
+            Instruction::Lookupswitch { pairs, default } => {
+                let first_pair = pairs.first().unwrap_or(&(0, 0));
+                let (low, _) = first_pair;
+                let width = 12;
+                writeln!(f, "lookupswitch   {{ // {low}")?;
+                for pair in pairs {
+                    let (value, offset) = pair;
+                    writeln!(f, "{value:>width$}: {offset}")?;
+                }
+                writeln!(f, "{:>width$}: {default}", "default")?;
+                write!(f, "}}")
+            }
+            Instruction::Ireturn => write!(f, "ireturn"),
+            Instruction::Lreturn => write!(f, "lreturn"),
+            Instruction::Freturn => write!(f, "freturn"),
+            Instruction::Dreturn => write!(f, "dreturn"),
+            Instruction::Areturn => write!(f, "areturn"),
+            Instruction::Return => write!(f, "return"),
+            Instruction::Getstatic(value) => write!(f, "getstatic #{value}"),
+            Instruction::Putstatic(value) => write!(f, "putstatic #{value}"),
+            Instruction::Getfield(value) => write!(f, "getfield #{value}"),
+            Instruction::Putfield(value) => write!(f, "putfield #{value}"),
+            Instruction::Invokevirtual(value) => write!(f, "invokevirtual #{value}"),
+            Instruction::Invokespecial(value) => write!(f, "invokespecial #{value}"),
+            Instruction::Invokestatic(value) => write!(f, "invokestatic #{value}"),
+            Instruction::Invokeinterface(value, count) => {
+                write!(f, "invokeinterface #{value}, {count}")
+            }
+            Instruction::Invokedynamic(value) => write!(f, "invokedynamic #{value}"),
+            Instruction::New(value) => write!(f, "new #{value}"),
+            Instruction::Newarray(value) => write!(f, "newarray {value}"),
+            Instruction::Anewarray(value) => write!(f, "anewarray #{value}"),
+            Instruction::Arraylength => write!(f, "arraylength"),
+            Instruction::Athrow => write!(f, "athrow"),
+            Instruction::Checkcast(value) => write!(f, "checkcast #{value}"),
+            Instruction::Instanceof(value) => write!(f, "instanceof #{value}"),
+            Instruction::Monitorenter => write!(f, "monitorenter"),
+            Instruction::Monitorexit => write!(f, "monitorexit"),
+            Instruction::Wide => write!(f, "wide"),
+            Instruction::Multianewarray(value, dim) => write!(f, "multianewarray #{value}, {dim}"),
+            Instruction::Ifnull(value) => write!(f, "ifnull {value}"),
+            Instruction::Ifnonnull(value) => write!(f, "ifnonnull {value}"),
+            Instruction::Goto_w(value) => write!(f, "goto_w {value}"),
+            Instruction::Jsr_w(value) => write!(f, "jsr_w {value}"),
+            Instruction::Breakpoint => write!(f, "breakpoint"),
+            // Wide instructions
+            Instruction::Iload_w(value) => write!(f, "iload_w {value}"),
+            Instruction::Lload_w(value) => write!(f, "lload_w {value}"),
+            Instruction::Fload_w(value) => write!(f, "fload_w {value}"),
+            Instruction::Dload_w(value) => write!(f, "dload_w {value}"),
+            Instruction::Aload_w(value) => write!(f, "aload_w {value}"),
+            Instruction::Istore_w(value) => write!(f, "istore_w {value}"),
+            Instruction::Lstore_w(value) => write!(f, "lstore_w {value}"),
+            Instruction::Fstore_w(value) => write!(f, "fstore_w {value}"),
+            Instruction::Dstore_w(value) => write!(f, "dstore_w {value}"),
+            Instruction::Astore_w(value) => write!(f, "astore_w {value}"),
+            Instruction::Iinc_w(value1, value2) => {
+                write!(f, "iinc_w {value1}, {value2}")
+            }
+            Instruction::Ret_w(value) => write!(f, "ret_w {value}"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use indoc::indoc;
     use std::io::Read;
 
     #[test]
@@ -984,6 +1245,8 @@ mod test {
         let instruction = Instruction::Nop;
         let code = 0;
         let expected_bytes = [code];
+
+        assert_eq!("nop", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -992,6 +1255,8 @@ mod test {
         let instruction = Instruction::Aconst_null;
         let code = 1;
         let expected_bytes = [code];
+
+        assert_eq!("aconst_null", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1000,6 +1265,8 @@ mod test {
         let instruction = Instruction::Iconst_m1;
         let code = 2;
         let expected_bytes = [code];
+
+        assert_eq!("iconst_m1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1008,6 +1275,8 @@ mod test {
         let instruction = Instruction::Iconst_0;
         let code = 3;
         let expected_bytes = [code];
+
+        assert_eq!("iconst_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1016,6 +1285,8 @@ mod test {
         let instruction = Instruction::Iconst_1;
         let code = 4;
         let expected_bytes = [code];
+
+        assert_eq!("iconst_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1024,6 +1295,8 @@ mod test {
         let instruction = Instruction::Iconst_2;
         let code = 5;
         let expected_bytes = [code];
+
+        assert_eq!("iconst_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1032,6 +1305,8 @@ mod test {
         let instruction = Instruction::Iconst_3;
         let code = 6;
         let expected_bytes = [code];
+
+        assert_eq!("iconst_3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1040,6 +1315,8 @@ mod test {
         let instruction = Instruction::Iconst_4;
         let code = 7;
         let expected_bytes = [code];
+
+        assert_eq!("iconst_4", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1048,6 +1325,8 @@ mod test {
         let instruction = Instruction::Iconst_5;
         let code = 8;
         let expected_bytes = [code];
+
+        assert_eq!("iconst_5", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1056,6 +1335,8 @@ mod test {
         let instruction = Instruction::Lconst_0;
         let code = 9;
         let expected_bytes = [code];
+
+        assert_eq!("lconst_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1064,6 +1345,8 @@ mod test {
         let instruction = Instruction::Lconst_1;
         let code = 10;
         let expected_bytes = [code];
+
+        assert_eq!("lconst_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1072,6 +1355,8 @@ mod test {
         let instruction = Instruction::Fconst_0;
         let code = 11;
         let expected_bytes = [code];
+
+        assert_eq!("fconst_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1080,6 +1365,8 @@ mod test {
         let instruction = Instruction::Fconst_1;
         let code = 12;
         let expected_bytes = [code];
+
+        assert_eq!("fconst_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1088,6 +1375,8 @@ mod test {
         let instruction = Instruction::Fconst_2;
         let code = 13;
         let expected_bytes = [code];
+
+        assert_eq!("fconst_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1096,6 +1385,8 @@ mod test {
         let instruction = Instruction::Dconst_0;
         let code = 14;
         let expected_bytes = [code];
+
+        assert_eq!("dconst_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1104,6 +1395,8 @@ mod test {
         let instruction = Instruction::Dconst_1;
         let code = 15;
         let expected_bytes = [code];
+
+        assert_eq!("dconst_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1112,6 +1405,8 @@ mod test {
         let instruction = Instruction::Bipush(42);
         let code = 16;
         let expected_bytes = [code, 42];
+
+        assert_eq!("bipush 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1120,6 +1415,8 @@ mod test {
         let instruction = Instruction::Sipush(42);
         let code = 17;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("sipush 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1128,6 +1425,8 @@ mod test {
         let instruction = Instruction::Ldc(42);
         let code = 18;
         let expected_bytes = [code, 42];
+
+        assert_eq!("ldc #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1136,6 +1435,8 @@ mod test {
         let instruction = Instruction::Ldc_w(42);
         let code = 19;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("ldc_w #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1144,6 +1445,8 @@ mod test {
         let instruction = Instruction::Ldc2_w(42);
         let code = 20;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("ldc2_w #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1152,6 +1455,8 @@ mod test {
         let instruction = Instruction::Iload(42);
         let code = 21;
         let expected_bytes = [code, 42];
+
+        assert_eq!("iload 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1160,6 +1465,8 @@ mod test {
         let instruction = Instruction::Lload(42);
         let code = 22;
         let expected_bytes = [code, 42];
+
+        assert_eq!("lload 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1168,6 +1475,8 @@ mod test {
         let instruction = Instruction::Fload(42);
         let code = 23;
         let expected_bytes = [code, 42];
+
+        assert_eq!("fload 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1176,6 +1485,8 @@ mod test {
         let instruction = Instruction::Dload(42);
         let code = 24;
         let expected_bytes = [code, 42];
+
+        assert_eq!("dload 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1184,6 +1495,8 @@ mod test {
         let instruction = Instruction::Aload(42);
         let code = 25;
         let expected_bytes = [code, 42];
+
+        assert_eq!("aload 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1192,6 +1505,8 @@ mod test {
         let instruction = Instruction::Iload_0;
         let code = 26;
         let expected_bytes = [code];
+
+        assert_eq!("iload_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1200,6 +1515,8 @@ mod test {
         let instruction = Instruction::Iload_1;
         let code = 27;
         let expected_bytes = [code];
+
+        assert_eq!("iload_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1208,6 +1525,8 @@ mod test {
         let instruction = Instruction::Iload_2;
         let code = 28;
         let expected_bytes = [code];
+
+        assert_eq!("iload_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1216,6 +1535,8 @@ mod test {
         let instruction = Instruction::Iload_3;
         let code = 29;
         let expected_bytes = [code];
+
+        assert_eq!("iload_3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1224,6 +1545,8 @@ mod test {
         let instruction = Instruction::Lload_0;
         let code = 30;
         let expected_bytes = [code];
+
+        assert_eq!("lload_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1232,6 +1555,8 @@ mod test {
         let instruction = Instruction::Lload_1;
         let code = 31;
         let expected_bytes = [code];
+
+        assert_eq!("lload_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1240,6 +1565,8 @@ mod test {
         let instruction = Instruction::Lload_2;
         let code = 32;
         let expected_bytes = [code];
+
+        assert_eq!("lload_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1248,6 +1575,8 @@ mod test {
         let instruction = Instruction::Lload_3;
         let code = 33;
         let expected_bytes = [code];
+
+        assert_eq!("lload_3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1256,6 +1585,8 @@ mod test {
         let instruction = Instruction::Fload_0;
         let code = 34;
         let expected_bytes = [code];
+
+        assert_eq!("fload_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1264,6 +1595,8 @@ mod test {
         let instruction = Instruction::Fload_1;
         let code = 35;
         let expected_bytes = [code];
+
+        assert_eq!("fload_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1272,6 +1605,8 @@ mod test {
         let instruction = Instruction::Fload_2;
         let code = 36;
         let expected_bytes = [code];
+
+        assert_eq!("fload_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1280,6 +1615,8 @@ mod test {
         let instruction = Instruction::Fload_3;
         let code = 37;
         let expected_bytes = [code];
+
+        assert_eq!("fload_3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1288,6 +1625,8 @@ mod test {
         let instruction = Instruction::Dload_0;
         let code = 38;
         let expected_bytes = [code];
+
+        assert_eq!("dload_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1296,6 +1635,8 @@ mod test {
         let instruction = Instruction::Dload_1;
         let code = 39;
         let expected_bytes = [code];
+
+        assert_eq!("dload_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1304,6 +1645,8 @@ mod test {
         let instruction = Instruction::Dload_2;
         let code = 40;
         let expected_bytes = [code];
+
+        assert_eq!("dload_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1312,6 +1655,8 @@ mod test {
         let instruction = Instruction::Dload_3;
         let code = 41;
         let expected_bytes = [code];
+
+        assert_eq!("dload_3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1320,6 +1665,8 @@ mod test {
         let instruction = Instruction::Aload_0;
         let code = 42;
         let expected_bytes = [code];
+
+        assert_eq!("aload_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1328,6 +1675,8 @@ mod test {
         let instruction = Instruction::Aload_1;
         let code = 43;
         let expected_bytes = [code];
+
+        assert_eq!("aload_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1336,6 +1685,8 @@ mod test {
         let instruction = Instruction::Aload_2;
         let code = 44;
         let expected_bytes = [code];
+
+        assert_eq!("aload_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1344,6 +1695,8 @@ mod test {
         let instruction = Instruction::Aload_3;
         let code = 45;
         let expected_bytes = [code];
+
+        assert_eq!("aload_3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1352,6 +1705,8 @@ mod test {
         let instruction = Instruction::Iaload;
         let code = 46;
         let expected_bytes = [code];
+
+        assert_eq!("iaload", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1360,6 +1715,8 @@ mod test {
         let instruction = Instruction::Laload;
         let code = 47;
         let expected_bytes = [code];
+
+        assert_eq!("laload", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1368,6 +1725,8 @@ mod test {
         let instruction = Instruction::Faload;
         let code = 48;
         let expected_bytes = [code];
+
+        assert_eq!("faload", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1376,6 +1735,8 @@ mod test {
         let instruction = Instruction::Daload;
         let code = 49;
         let expected_bytes = [code];
+
+        assert_eq!("daload", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1384,6 +1745,8 @@ mod test {
         let instruction = Instruction::Aaload;
         let code = 50;
         let expected_bytes = [code];
+
+        assert_eq!("aaload", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1392,6 +1755,8 @@ mod test {
         let instruction = Instruction::Baload;
         let code = 51;
         let expected_bytes = [code];
+
+        assert_eq!("baload", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1400,6 +1765,8 @@ mod test {
         let instruction = Instruction::Caload;
         let code = 52;
         let expected_bytes = [code];
+
+        assert_eq!("caload", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1408,6 +1775,8 @@ mod test {
         let instruction = Instruction::Saload;
         let code = 53;
         let expected_bytes = [code];
+
+        assert_eq!("saload", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1416,6 +1785,8 @@ mod test {
         let instruction = Instruction::Istore(42);
         let code = 54;
         let expected_bytes = [code, 42];
+
+        assert_eq!("istore 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1424,6 +1795,8 @@ mod test {
         let instruction = Instruction::Lstore(42);
         let code = 55;
         let expected_bytes = [code, 42];
+
+        assert_eq!("lstore 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1432,6 +1805,8 @@ mod test {
         let instruction = Instruction::Fstore(42);
         let code = 56;
         let expected_bytes = [code, 42];
+
+        assert_eq!("fstore 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1440,6 +1815,8 @@ mod test {
         let instruction = Instruction::Dstore(42);
         let code = 57;
         let expected_bytes = [code, 42];
+
+        assert_eq!("dstore 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1448,6 +1825,8 @@ mod test {
         let instruction = Instruction::Astore(42);
         let code = 58;
         let expected_bytes = [code, 42];
+
+        assert_eq!("astore 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1456,6 +1835,8 @@ mod test {
         let instruction = Instruction::Istore_0;
         let code = 59;
         let expected_bytes = [code];
+
+        assert_eq!("istore_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1464,6 +1845,8 @@ mod test {
         let instruction = Instruction::Istore_1;
         let code = 60;
         let expected_bytes = [code];
+
+        assert_eq!("istore_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1472,6 +1855,8 @@ mod test {
         let instruction = Instruction::Istore_2;
         let code = 61;
         let expected_bytes = [code];
+
+        assert_eq!("istore_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1480,6 +1865,8 @@ mod test {
         let instruction = Instruction::Istore_3;
         let code = 62;
         let expected_bytes = [code];
+
+        assert_eq!("istore_3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1488,6 +1875,8 @@ mod test {
         let instruction = Instruction::Lstore_0;
         let code = 63;
         let expected_bytes = [code];
+
+        assert_eq!("lstore_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1496,6 +1885,8 @@ mod test {
         let instruction = Instruction::Lstore_1;
         let code = 64;
         let expected_bytes = [code];
+
+        assert_eq!("lstore_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1504,6 +1895,8 @@ mod test {
         let instruction = Instruction::Lstore_2;
         let code = 65;
         let expected_bytes = [code];
+
+        assert_eq!("lstore_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1512,6 +1905,8 @@ mod test {
         let instruction = Instruction::Lstore_3;
         let code = 66;
         let expected_bytes = [code];
+
+        assert_eq!("lstore_3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1520,6 +1915,8 @@ mod test {
         let instruction = Instruction::Fstore_0;
         let code = 67;
         let expected_bytes = [code];
+
+        assert_eq!("fstore_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1528,6 +1925,8 @@ mod test {
         let instruction = Instruction::Fstore_1;
         let code = 68;
         let expected_bytes = [code];
+
+        assert_eq!("fstore_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1536,6 +1935,8 @@ mod test {
         let instruction = Instruction::Fstore_2;
         let code = 69;
         let expected_bytes = [code];
+
+        assert_eq!("fstore_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1544,6 +1945,8 @@ mod test {
         let instruction = Instruction::Fstore_3;
         let code = 70;
         let expected_bytes = [code];
+
+        assert_eq!("fstore_3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1552,6 +1955,8 @@ mod test {
         let instruction = Instruction::Dstore_0;
         let code = 71;
         let expected_bytes = [code];
+
+        assert_eq!("dstore_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1560,6 +1965,8 @@ mod test {
         let instruction = Instruction::Dstore_1;
         let code = 72;
         let expected_bytes = [code];
+
+        assert_eq!("dstore_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1568,6 +1975,8 @@ mod test {
         let instruction = Instruction::Dstore_2;
         let code = 73;
         let expected_bytes = [code];
+
+        assert_eq!("dstore_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1576,6 +1985,8 @@ mod test {
         let instruction = Instruction::Dstore_3;
         let code = 74;
         let expected_bytes = [code];
+
+        assert_eq!("dstore_3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1584,6 +1995,8 @@ mod test {
         let instruction = Instruction::Astore_0;
         let code = 75;
         let expected_bytes = [code];
+
+        assert_eq!("astore_0", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1592,6 +2005,8 @@ mod test {
         let instruction = Instruction::Astore_1;
         let code = 76;
         let expected_bytes = [code];
+
+        assert_eq!("astore_1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1600,6 +2015,8 @@ mod test {
         let instruction = Instruction::Astore_2;
         let code = 77;
         let expected_bytes = [code];
+
+        assert_eq!("astore_2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1608,6 +2025,8 @@ mod test {
         let instruction = Instruction::Astore_3;
         let code = 78;
         let expected_bytes = [code];
+
+        assert_eq!("astore_3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1616,6 +2035,8 @@ mod test {
         let instruction = Instruction::Iastore;
         let code = 79;
         let expected_bytes = [code];
+
+        assert_eq!("iastore", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1624,6 +2045,8 @@ mod test {
         let instruction = Instruction::Lastore;
         let code = 80;
         let expected_bytes = [code];
+
+        assert_eq!("lastore", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1632,6 +2055,8 @@ mod test {
         let instruction = Instruction::Fastore;
         let code = 81;
         let expected_bytes = [code];
+
+        assert_eq!("fastore", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1640,6 +2065,8 @@ mod test {
         let instruction = Instruction::Dastore;
         let code = 82;
         let expected_bytes = [code];
+
+        assert_eq!("dastore", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1648,6 +2075,8 @@ mod test {
         let instruction = Instruction::Aastore;
         let code = 83;
         let expected_bytes = [code];
+
+        assert_eq!("aastore", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1656,6 +2085,8 @@ mod test {
         let instruction = Instruction::Bastore;
         let code = 84;
         let expected_bytes = [code];
+
+        assert_eq!("bastore", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1664,6 +2095,8 @@ mod test {
         let instruction = Instruction::Castore;
         let code = 85;
         let expected_bytes = [code];
+
+        assert_eq!("castore", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1672,6 +2105,8 @@ mod test {
         let instruction = Instruction::Sastore;
         let code = 86;
         let expected_bytes = [code];
+
+        assert_eq!("sastore", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1680,6 +2115,8 @@ mod test {
         let instruction = Instruction::Pop;
         let code = 87;
         let expected_bytes = [code];
+
+        assert_eq!("pop", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1688,6 +2125,8 @@ mod test {
         let instruction = Instruction::Pop2;
         let code = 88;
         let expected_bytes = [code];
+
+        assert_eq!("pop2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1696,6 +2135,8 @@ mod test {
         let instruction = Instruction::Dup;
         let code = 89;
         let expected_bytes = [code];
+
+        assert_eq!("dup", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1704,6 +2145,8 @@ mod test {
         let instruction = Instruction::Dup_x1;
         let code = 90;
         let expected_bytes = [code];
+
+        assert_eq!("dup_x1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1712,6 +2155,8 @@ mod test {
         let instruction = Instruction::Dup_x2;
         let code = 91;
         let expected_bytes = [code];
+
+        assert_eq!("dup_x2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1720,6 +2165,8 @@ mod test {
         let instruction = Instruction::Dup2;
         let code = 92;
         let expected_bytes = [code];
+
+        assert_eq!("dup2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1728,6 +2175,8 @@ mod test {
         let instruction = Instruction::Dup2_x1;
         let code = 93;
         let expected_bytes = [code];
+
+        assert_eq!("dup2_x1", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1736,6 +2185,8 @@ mod test {
         let instruction = Instruction::Dup2_x2;
         let code = 94;
         let expected_bytes = [code];
+
+        assert_eq!("dup2_x2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1744,6 +2195,8 @@ mod test {
         let instruction = Instruction::Swap;
         let code = 95;
         let expected_bytes = [code];
+
+        assert_eq!("swap", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1752,6 +2205,8 @@ mod test {
         let instruction = Instruction::Iadd;
         let code = 96;
         let expected_bytes = [code];
+
+        assert_eq!("iadd", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1760,6 +2215,8 @@ mod test {
         let instruction = Instruction::Ladd;
         let code = 97;
         let expected_bytes = [code];
+
+        assert_eq!("ladd", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1768,6 +2225,8 @@ mod test {
         let instruction = Instruction::Fadd;
         let code = 98;
         let expected_bytes = [code];
+
+        assert_eq!("fadd", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1776,6 +2235,8 @@ mod test {
         let instruction = Instruction::Dadd;
         let code = 99;
         let expected_bytes = [code];
+
+        assert_eq!("dadd", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1784,6 +2245,8 @@ mod test {
         let instruction = Instruction::Isub;
         let code = 100;
         let expected_bytes = [code];
+
+        assert_eq!("isub", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1792,6 +2255,8 @@ mod test {
         let instruction = Instruction::Lsub;
         let code = 101;
         let expected_bytes = [code];
+
+        assert_eq!("lsub", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1800,6 +2265,8 @@ mod test {
         let instruction = Instruction::Fsub;
         let code = 102;
         let expected_bytes = [code];
+
+        assert_eq!("fsub", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1808,6 +2275,8 @@ mod test {
         let instruction = Instruction::Dsub;
         let code = 103;
         let expected_bytes = [code];
+
+        assert_eq!("dsub", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1816,6 +2285,8 @@ mod test {
         let instruction = Instruction::Imul;
         let code = 104;
         let expected_bytes = [code];
+
+        assert_eq!("imul", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1824,6 +2295,8 @@ mod test {
         let instruction = Instruction::Lmul;
         let code = 105;
         let expected_bytes = [code];
+
+        assert_eq!("lmul", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1832,6 +2305,8 @@ mod test {
         let instruction = Instruction::Fmul;
         let code = 106;
         let expected_bytes = [code];
+
+        assert_eq!("fmul", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1840,6 +2315,8 @@ mod test {
         let instruction = Instruction::Dmul;
         let code = 107;
         let expected_bytes = [code];
+
+        assert_eq!("dmul", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1848,6 +2325,8 @@ mod test {
         let instruction = Instruction::Idiv;
         let code = 108;
         let expected_bytes = [code];
+
+        assert_eq!("idiv", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1856,6 +2335,8 @@ mod test {
         let instruction = Instruction::Ldiv;
         let code = 109;
         let expected_bytes = [code];
+
+        assert_eq!("ldiv", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1864,6 +2345,8 @@ mod test {
         let instruction = Instruction::Fdiv;
         let code = 110;
         let expected_bytes = [code];
+
+        assert_eq!("fdiv", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1872,6 +2355,8 @@ mod test {
         let instruction = Instruction::Ddiv;
         let code = 111;
         let expected_bytes = [code];
+
+        assert_eq!("ddiv", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1880,6 +2365,8 @@ mod test {
         let instruction = Instruction::Irem;
         let code = 112;
         let expected_bytes = [code];
+
+        assert_eq!("irem", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1888,6 +2375,8 @@ mod test {
         let instruction = Instruction::Lrem;
         let code = 113;
         let expected_bytes = [code];
+
+        assert_eq!("lrem", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1896,6 +2385,8 @@ mod test {
         let instruction = Instruction::Frem;
         let code = 114;
         let expected_bytes = [code];
+
+        assert_eq!("frem", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1904,6 +2395,8 @@ mod test {
         let instruction = Instruction::Drem;
         let code = 115;
         let expected_bytes = [code];
+
+        assert_eq!("drem", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1912,6 +2405,8 @@ mod test {
         let instruction = Instruction::Ineg;
         let code = 116;
         let expected_bytes = [code];
+
+        assert_eq!("ineg", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1920,6 +2415,8 @@ mod test {
         let instruction = Instruction::Lneg;
         let code = 117;
         let expected_bytes = [code];
+
+        assert_eq!("lneg", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1928,6 +2425,8 @@ mod test {
         let instruction = Instruction::Fneg;
         let code = 118;
         let expected_bytes = [code];
+
+        assert_eq!("fneg", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1936,6 +2435,8 @@ mod test {
         let instruction = Instruction::Dneg;
         let code = 119;
         let expected_bytes = [code];
+
+        assert_eq!("dneg", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1944,6 +2445,8 @@ mod test {
         let instruction = Instruction::Ishl;
         let code = 120;
         let expected_bytes = [code];
+
+        assert_eq!("ishl", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1952,6 +2455,8 @@ mod test {
         let instruction = Instruction::Lshl;
         let code = 121;
         let expected_bytes = [code];
+
+        assert_eq!("lshl", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1960,6 +2465,8 @@ mod test {
         let instruction = Instruction::Ishr;
         let code = 122;
         let expected_bytes = [code];
+
+        assert_eq!("ishr", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1968,6 +2475,8 @@ mod test {
         let instruction = Instruction::Lshr;
         let code = 123;
         let expected_bytes = [code];
+
+        assert_eq!("lshr", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1976,6 +2485,8 @@ mod test {
         let instruction = Instruction::Iushr;
         let code = 124;
         let expected_bytes = [code];
+
+        assert_eq!("iushr", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1984,6 +2495,8 @@ mod test {
         let instruction = Instruction::Lushr;
         let code = 125;
         let expected_bytes = [code];
+
+        assert_eq!("lushr", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1992,6 +2505,8 @@ mod test {
         let instruction = Instruction::Iand;
         let code = 126;
         let expected_bytes = [code];
+
+        assert_eq!("iand", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2000,6 +2515,8 @@ mod test {
         let instruction = Instruction::Land;
         let code = 127;
         let expected_bytes = [code];
+
+        assert_eq!("land", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2008,6 +2525,8 @@ mod test {
         let instruction = Instruction::Ior;
         let code = 128;
         let expected_bytes = [code];
+
+        assert_eq!("ior", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2016,6 +2535,8 @@ mod test {
         let instruction = Instruction::Lor;
         let code = 129;
         let expected_bytes = [code];
+
+        assert_eq!("lor", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2024,6 +2545,8 @@ mod test {
         let instruction = Instruction::Ixor;
         let code = 130;
         let expected_bytes = [code];
+
+        assert_eq!("ixor", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2032,6 +2555,8 @@ mod test {
         let instruction = Instruction::Lxor;
         let code = 131;
         let expected_bytes = [code];
+
+        assert_eq!("lxor", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2040,6 +2565,8 @@ mod test {
         let instruction = Instruction::Iinc(42, 3);
         let code = 132;
         let expected_bytes = [code, 42, 3];
+
+        assert_eq!("iinc 42, 3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2048,6 +2575,8 @@ mod test {
         let instruction = Instruction::I2l;
         let code = 133;
         let expected_bytes = [code];
+
+        assert_eq!("i2l", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2056,6 +2585,8 @@ mod test {
         let instruction = Instruction::I2f;
         let code = 134;
         let expected_bytes = [code];
+
+        assert_eq!("i2f", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2064,6 +2595,8 @@ mod test {
         let instruction = Instruction::I2d;
         let code = 135;
         let expected_bytes = [code];
+
+        assert_eq!("i2d", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2072,6 +2605,8 @@ mod test {
         let instruction = Instruction::L2i;
         let code = 136;
         let expected_bytes = [code];
+
+        assert_eq!("l2i", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2080,6 +2615,8 @@ mod test {
         let instruction = Instruction::L2f;
         let code = 137;
         let expected_bytes = [code];
+
+        assert_eq!("l2f", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2088,6 +2625,8 @@ mod test {
         let instruction = Instruction::L2d;
         let code = 138;
         let expected_bytes = [code];
+
+        assert_eq!("l2d", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2096,6 +2635,8 @@ mod test {
         let instruction = Instruction::F2i;
         let code = 139;
         let expected_bytes = [code];
+
+        assert_eq!("f2i", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2104,6 +2645,8 @@ mod test {
         let instruction = Instruction::F2l;
         let code = 140;
         let expected_bytes = [code];
+
+        assert_eq!("f2l", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2112,6 +2655,8 @@ mod test {
         let instruction = Instruction::F2d;
         let code = 141;
         let expected_bytes = [code];
+
+        assert_eq!("f2d", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2120,6 +2665,8 @@ mod test {
         let instruction = Instruction::D2i;
         let code = 142;
         let expected_bytes = [code];
+
+        assert_eq!("d2i", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2128,6 +2675,8 @@ mod test {
         let instruction = Instruction::D2l;
         let code = 143;
         let expected_bytes = [code];
+
+        assert_eq!("d2l", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2136,6 +2685,8 @@ mod test {
         let instruction = Instruction::D2f;
         let code = 144;
         let expected_bytes = [code];
+
+        assert_eq!("d2f", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2144,6 +2695,8 @@ mod test {
         let instruction = Instruction::I2b;
         let code = 145;
         let expected_bytes = [code];
+
+        assert_eq!("i2b", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2152,6 +2705,8 @@ mod test {
         let instruction = Instruction::I2c;
         let code = 146;
         let expected_bytes = [code];
+
+        assert_eq!("i2c", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2160,6 +2715,8 @@ mod test {
         let instruction = Instruction::I2s;
         let code = 147;
         let expected_bytes = [code];
+
+        assert_eq!("i2s", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2168,6 +2725,8 @@ mod test {
         let instruction = Instruction::Lcmp;
         let code = 148;
         let expected_bytes = [code];
+
+        assert_eq!("lcmp", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2176,6 +2735,8 @@ mod test {
         let instruction = Instruction::Fcmpl;
         let code = 149;
         let expected_bytes = [code];
+
+        assert_eq!("fcmpl", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2184,6 +2745,8 @@ mod test {
         let instruction = Instruction::Fcmpg;
         let code = 150;
         let expected_bytes = [code];
+
+        assert_eq!("fcmpg", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2192,6 +2755,8 @@ mod test {
         let instruction = Instruction::Dcmpl;
         let code = 151;
         let expected_bytes = [code];
+
+        assert_eq!("dcmpl", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2200,6 +2765,8 @@ mod test {
         let instruction = Instruction::Dcmpg;
         let code = 152;
         let expected_bytes = [code];
+
+        assert_eq!("dcmpg", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2208,6 +2775,8 @@ mod test {
         let instruction = Instruction::Ifeq(42);
         let code = 153;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("ifeq 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2216,6 +2785,8 @@ mod test {
         let instruction = Instruction::Ifne(42);
         let code = 154;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("ifne 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2224,6 +2795,8 @@ mod test {
         let instruction = Instruction::Iflt(42);
         let code = 155;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("iflt 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2232,6 +2805,8 @@ mod test {
         let instruction = Instruction::Ifge(42);
         let code = 156;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("ifge 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2240,6 +2815,8 @@ mod test {
         let instruction = Instruction::Ifgt(42);
         let code = 157;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("ifgt 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2248,6 +2825,8 @@ mod test {
         let instruction = Instruction::Ifle(42);
         let code = 158;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("ifle 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2256,6 +2835,8 @@ mod test {
         let instruction = Instruction::If_icmpeq(42);
         let code = 159;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("if_icmpeq 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2264,6 +2845,8 @@ mod test {
         let instruction = Instruction::If_icmpne(42);
         let code = 160;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("if_icmpne 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2272,6 +2855,8 @@ mod test {
         let instruction = Instruction::If_icmplt(42);
         let code = 161;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("if_icmplt 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2280,6 +2865,8 @@ mod test {
         let instruction = Instruction::If_icmpge(42);
         let code = 162;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("if_icmpge 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2288,6 +2875,8 @@ mod test {
         let instruction = Instruction::If_icmpgt(42);
         let code = 163;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("if_icmpgt 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2296,6 +2885,8 @@ mod test {
         let instruction = Instruction::If_icmple(42);
         let code = 164;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("if_icmple 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2304,6 +2895,8 @@ mod test {
         let instruction = Instruction::If_acmpeq(42);
         let code = 165;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("if_acmpeq 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2312,6 +2905,8 @@ mod test {
         let instruction = Instruction::If_acmpne(42);
         let code = 166;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("if_acmpne 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2320,6 +2915,8 @@ mod test {
         let instruction = Instruction::Goto(42);
         let code = 167;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("goto 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2328,6 +2925,8 @@ mod test {
         let instruction = Instruction::Jsr(42);
         let code = 168;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("jsr 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2336,6 +2935,8 @@ mod test {
         let instruction = Instruction::Ret(42);
         let code = 169;
         let expected_bytes = [code, 42];
+
+        assert_eq!("ret 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2351,6 +2952,14 @@ mod test {
         let expected_bytes = [
             170, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4,
         ];
+
+        let expected = indoc! {"
+            tableswitch   { // 1 to 2
+                       1: 3
+                       2: 4
+                 default: 42
+            }"};
+        assert_eq!(expected, instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2364,6 +2973,13 @@ mod test {
         let expected_bytes = [
             171, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2,
         ];
+
+        let expected = indoc! {"
+            lookupswitch   { // 1
+                       1: 2
+                 default: 42
+            }"};
+        assert_eq!(expected, instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2372,6 +2988,8 @@ mod test {
         let instruction = Instruction::Ireturn;
         let code = 172;
         let expected_bytes = [code];
+
+        assert_eq!("ireturn", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2380,6 +2998,8 @@ mod test {
         let instruction = Instruction::Lreturn;
         let code = 173;
         let expected_bytes = [code];
+
+        assert_eq!("lreturn", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2388,6 +3008,8 @@ mod test {
         let instruction = Instruction::Freturn;
         let code = 174;
         let expected_bytes = [code];
+
+        assert_eq!("freturn", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2396,6 +3018,8 @@ mod test {
         let instruction = Instruction::Dreturn;
         let code = 175;
         let expected_bytes = [code];
+
+        assert_eq!("dreturn", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2404,6 +3028,8 @@ mod test {
         let instruction = Instruction::Areturn;
         let code = 176;
         let expected_bytes = [code];
+
+        assert_eq!("areturn", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2412,6 +3038,8 @@ mod test {
         let instruction = Instruction::Return;
         let code = 177;
         let expected_bytes = [code];
+
+        assert_eq!("return", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2420,6 +3048,8 @@ mod test {
         let instruction = Instruction::Getstatic(42);
         let code = 178;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("getstatic #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2428,6 +3058,8 @@ mod test {
         let instruction = Instruction::Putstatic(42);
         let code = 179;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("putstatic #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2436,6 +3068,8 @@ mod test {
         let instruction = Instruction::Getfield(42);
         let code = 180;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("getfield #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2444,6 +3078,8 @@ mod test {
         let instruction = Instruction::Putfield(42);
         let code = 181;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("putfield #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2452,6 +3088,8 @@ mod test {
         let instruction = Instruction::Invokevirtual(42);
         let code = 182;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("invokevirtual #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2460,6 +3098,8 @@ mod test {
         let instruction = Instruction::Invokespecial(42);
         let code = 183;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("invokespecial #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2468,6 +3108,8 @@ mod test {
         let instruction = Instruction::Invokestatic(42);
         let code = 184;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("invokestatic #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2476,6 +3118,8 @@ mod test {
         let instruction = Instruction::Invokeinterface(42, 3);
         let code = 185;
         let expected_bytes = [code, 0, 42, 3, 0];
+
+        assert_eq!("invokeinterface #42, 3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2494,6 +3138,8 @@ mod test {
         let instruction = Instruction::Invokedynamic(42);
         let code = 186;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("invokedynamic #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2502,6 +3148,8 @@ mod test {
         let instruction = Instruction::New(42);
         let code = 187;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("new #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2510,6 +3158,8 @@ mod test {
         let instruction = Instruction::Newarray(ArrayType::Boolean);
         let code = 188;
         let expected_bytes = [code, 4];
+
+        assert_eq!("newarray boolean", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2518,6 +3168,8 @@ mod test {
         let instruction = Instruction::Anewarray(42);
         let code = 189;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("anewarray #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2526,6 +3178,8 @@ mod test {
         let instruction = Instruction::Arraylength;
         let code = 190;
         let expected_bytes = [code];
+
+        assert_eq!("arraylength", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2534,6 +3188,8 @@ mod test {
         let instruction = Instruction::Athrow;
         let code = 191;
         let expected_bytes = [code];
+
+        assert_eq!("athrow", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2542,6 +3198,8 @@ mod test {
         let instruction = Instruction::Checkcast(42);
         let code = 192;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("checkcast #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2550,6 +3208,8 @@ mod test {
         let instruction = Instruction::Instanceof(42);
         let code = 193;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("instanceof #42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2558,6 +3218,8 @@ mod test {
         let instruction = Instruction::Monitorenter;
         let code = 194;
         let expected_bytes = [code];
+
+        assert_eq!("monitorenter", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2566,12 +3228,15 @@ mod test {
         let instruction = Instruction::Monitorexit;
         let code = 195;
         let expected_bytes = [code];
+
+        assert_eq!("monitorexit", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
     #[test]
     fn test_wide() {
         assert_eq!(196, Instruction::Wide.code());
+        assert_eq!("wide", Instruction::Wide.to_string());
     }
 
     #[test]
@@ -2579,6 +3244,8 @@ mod test {
         let instruction = Instruction::Multianewarray(42, 3);
         let code = 197;
         let expected_bytes = [code, 0, 42, 3];
+
+        assert_eq!("multianewarray #42, 3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2587,6 +3254,8 @@ mod test {
         let instruction = Instruction::Ifnull(42);
         let code = 198;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("ifnull 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2595,6 +3264,8 @@ mod test {
         let instruction = Instruction::Ifnonnull(42);
         let code = 199;
         let expected_bytes = [code, 0, 42];
+
+        assert_eq!("ifnonnull 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2603,6 +3274,8 @@ mod test {
         let instruction = Instruction::Goto_w(42);
         let code = 200;
         let expected_bytes = [code, 0, 0, 0, 42];
+
+        assert_eq!("goto_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2611,6 +3284,8 @@ mod test {
         let instruction = Instruction::Jsr_w(42);
         let code = 201;
         let expected_bytes = [code, 0, 0, 0, 42];
+
+        assert_eq!("jsr_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2619,6 +3294,8 @@ mod test {
         let instruction = Instruction::Breakpoint;
         let code = 202;
         let expected_bytes = [code];
+
+        assert_eq!("breakpoint", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2630,6 +3307,8 @@ mod test {
         let wide_code = 196;
         let code = 21;
         let expected_bytes = [wide_code, code, 0, 42];
+
+        assert_eq!("iload_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -2639,6 +3318,8 @@ mod test {
         let wide_code = 196;
         let code = 22;
         let expected_bytes = [wide_code, code, 0, 42];
+
+        assert_eq!("lload_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -2648,6 +3329,8 @@ mod test {
         let wide_code = 196;
         let code = 23;
         let expected_bytes = [wide_code, code, 0, 42];
+
+        assert_eq!("fload_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -2657,6 +3340,8 @@ mod test {
         let wide_code = 196;
         let code = 24;
         let expected_bytes = [wide_code, code, 0, 42];
+
+        assert_eq!("dload_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -2666,6 +3351,8 @@ mod test {
         let wide_code = 196;
         let code = 25;
         let expected_bytes = [wide_code, code, 0, 42];
+
+        assert_eq!("aload_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -2675,6 +3362,8 @@ mod test {
         let wide_code = 196;
         let code = 54;
         let expected_bytes = [wide_code, code, 0, 42];
+
+        assert_eq!("istore_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -2684,6 +3373,8 @@ mod test {
         let wide_code = 196;
         let code = 55;
         let expected_bytes = [wide_code, code, 0, 42];
+
+        assert_eq!("lstore_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -2693,6 +3384,8 @@ mod test {
         let wide_code = 196;
         let code = 56;
         let expected_bytes = [wide_code, code, 0, 42];
+
+        assert_eq!("fstore_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -2702,6 +3395,8 @@ mod test {
         let wide_code = 196;
         let code = 57;
         let expected_bytes = [wide_code, code, 0, 42];
+
+        assert_eq!("dstore_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -2711,6 +3406,8 @@ mod test {
         let wide_code = 196;
         let code = 58;
         let expected_bytes = [wide_code, code, 0, 42];
+
+        assert_eq!("astore_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -2720,6 +3417,8 @@ mod test {
         let wide_code = 196;
         let code = 132;
         let expected_bytes = [wide_code, code, 0, 42, 0, 3];
+
+        assert_eq!("iinc_w 42, 3", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -2729,6 +3428,8 @@ mod test {
         let wide_code = 196;
         let code = 169;
         let expected_bytes = [wide_code, code, 0, 42];
+
+        assert_eq!("ret_w 42", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
