@@ -1,6 +1,7 @@
 use crate::error::Result;
 use bitflags::bitflags;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 bitflags! {
@@ -51,6 +52,25 @@ impl RequiresFlags {
     }
 }
 
+impl fmt::Display for RequiresFlags {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut access_flags = Vec::new();
+        if self.contains(RequiresFlags::TRANSITIVE) {
+            access_flags.push("ACC_TRANSITIVE");
+        }
+        if self.contains(RequiresFlags::STATIC_PHASE) {
+            access_flags.push("ACC_STATIC_PHASE");
+        }
+        if self.contains(RequiresFlags::SYNTHETIC) {
+            access_flags.push("ACC_SYNTHETIC");
+        }
+        if self.contains(RequiresFlags::MANDATED) {
+            access_flags.push("ACC_MANDATED");
+        }
+        write!(f, "({:#06X}) {}", self.bits(), access_flags.join(", "))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -81,5 +101,22 @@ mod test {
         let mut bytes = Cursor::new(bytes);
         assert_eq!(Ok(access_flags), RequiresFlags::from_bytes(&mut bytes));
         Ok(())
+    }
+
+    #[test]
+    fn test_to_string() {
+        assert_eq!(
+            "(0x0020) ACC_TRANSITIVE",
+            RequiresFlags::TRANSITIVE.to_string()
+        );
+        assert_eq!(
+            "(0x0040) ACC_STATIC_PHASE",
+            RequiresFlags::STATIC_PHASE.to_string()
+        );
+        assert_eq!(
+            "(0x1000) ACC_SYNTHETIC",
+            RequiresFlags::SYNTHETIC.to_string()
+        );
+        assert_eq!("(0x8000) ACC_MANDATED", RequiresFlags::MANDATED.to_string());
     }
 }

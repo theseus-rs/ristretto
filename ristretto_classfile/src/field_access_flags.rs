@@ -1,6 +1,7 @@
 use crate::error::Result;
 use bitflags::bitflags;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 bitflags! {
@@ -57,6 +58,40 @@ impl FieldAccessFlags {
     }
 }
 
+impl fmt::Display for FieldAccessFlags {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut access_flags = Vec::new();
+        if self.contains(FieldAccessFlags::PUBLIC) {
+            access_flags.push("ACC_PUBLIC");
+        }
+        if self.contains(FieldAccessFlags::PRIVATE) {
+            access_flags.push("ACC_PRIVATE");
+        }
+        if self.contains(FieldAccessFlags::PROTECTED) {
+            access_flags.push("ACC_PROTECTED");
+        }
+        if self.contains(FieldAccessFlags::STATIC) {
+            access_flags.push("ACC_STATIC");
+        }
+        if self.contains(FieldAccessFlags::FINAL) {
+            access_flags.push("ACC_FINAL");
+        }
+        if self.contains(FieldAccessFlags::VOLATILE) {
+            access_flags.push("ACC_VOLATILE");
+        }
+        if self.contains(FieldAccessFlags::TRANSIENT) {
+            access_flags.push("ACC_TRANSIENT");
+        }
+        if self.contains(FieldAccessFlags::SYNTHETIC) {
+            access_flags.push("ACC_SYNTHETIC");
+        }
+        if self.contains(FieldAccessFlags::ENUM) {
+            access_flags.push("ACC_ENUM");
+        }
+        write!(f, "({:#06X}) {}", self.bits(), access_flags.join(", "))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -92,5 +127,33 @@ mod test {
         let mut bytes = Cursor::new(bytes);
         assert_eq!(Ok(access_flags), FieldAccessFlags::from_bytes(&mut bytes));
         Ok(())
+    }
+
+    #[test]
+    fn test_to_string() {
+        assert_eq!("(0x0001) ACC_PUBLIC", FieldAccessFlags::PUBLIC.to_string());
+        assert_eq!(
+            "(0x0002) ACC_PRIVATE",
+            FieldAccessFlags::PRIVATE.to_string()
+        );
+        assert_eq!(
+            "(0x0004) ACC_PROTECTED",
+            FieldAccessFlags::PROTECTED.to_string()
+        );
+        assert_eq!("(0x0008) ACC_STATIC", FieldAccessFlags::STATIC.to_string());
+        assert_eq!("(0x0010) ACC_FINAL", FieldAccessFlags::FINAL.to_string());
+        assert_eq!(
+            "(0x0040) ACC_VOLATILE",
+            FieldAccessFlags::VOLATILE.to_string()
+        );
+        assert_eq!(
+            "(0x0080) ACC_TRANSIENT",
+            FieldAccessFlags::TRANSIENT.to_string()
+        );
+        assert_eq!(
+            "(0x1000) ACC_SYNTHETIC",
+            FieldAccessFlags::SYNTHETIC.to_string()
+        );
+        assert_eq!("(0x4000) ACC_ENUM", FieldAccessFlags::ENUM.to_string());
     }
 }

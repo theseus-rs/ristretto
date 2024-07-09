@@ -1,6 +1,7 @@
 use crate::error::Result;
 use bitflags::bitflags;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 bitflags! {
@@ -45,6 +46,22 @@ impl ModuleAccessFlags {
     }
 }
 
+impl fmt::Display for ModuleAccessFlags {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut access_flags = Vec::new();
+        if self.contains(ModuleAccessFlags::OPEN) {
+            access_flags.push("ACC_OPEN");
+        }
+        if self.contains(ModuleAccessFlags::SYNTHETIC) {
+            access_flags.push("ACC_SYNTHETIC");
+        }
+        if self.contains(ModuleAccessFlags::MANDATED) {
+            access_flags.push("ACC_MANDATED");
+        }
+        write!(f, "({:#06X}) {}", self.bits(), access_flags.join(", "))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -74,5 +91,18 @@ mod test {
         let mut bytes = Cursor::new(bytes);
         assert_eq!(Ok(access_flags), ModuleAccessFlags::from_bytes(&mut bytes));
         Ok(())
+    }
+
+    #[test]
+    fn test_to_string() {
+        assert_eq!("(0x0020) ACC_OPEN", ModuleAccessFlags::OPEN.to_string());
+        assert_eq!(
+            "(0x1000) ACC_SYNTHETIC",
+            ModuleAccessFlags::SYNTHETIC.to_string()
+        );
+        assert_eq!(
+            "(0x8000) ACC_MANDATED",
+            ModuleAccessFlags::MANDATED.to_string()
+        );
     }
 }

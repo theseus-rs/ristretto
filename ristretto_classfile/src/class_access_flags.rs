@@ -1,6 +1,7 @@
 use crate::error::Result;
 use bitflags::bitflags;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 bitflags! {
@@ -57,6 +58,40 @@ impl ClassAccessFlags {
     }
 }
 
+impl fmt::Display for ClassAccessFlags {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut access_flags = Vec::new();
+        if self.contains(ClassAccessFlags::PUBLIC) {
+            access_flags.push("ACC_PUBLIC");
+        }
+        if self.contains(ClassAccessFlags::FINAL) {
+            access_flags.push("ACC_FINAL");
+        }
+        if self.contains(ClassAccessFlags::SUPER) {
+            access_flags.push("ACC_SUPER");
+        }
+        if self.contains(ClassAccessFlags::INTERFACE) {
+            access_flags.push("ACC_INTERFACE");
+        }
+        if self.contains(ClassAccessFlags::ABSTRACT) {
+            access_flags.push("ACC_ABSTRACT");
+        }
+        if self.contains(ClassAccessFlags::SYNTHETIC) {
+            access_flags.push("ACC_SYNTHETIC");
+        }
+        if self.contains(ClassAccessFlags::ANNOTATION) {
+            access_flags.push("ACC_ANNOTATION");
+        }
+        if self.contains(ClassAccessFlags::ENUM) {
+            access_flags.push("ACC_ENUM");
+        }
+        if self.contains(ClassAccessFlags::MODULE) {
+            access_flags.push("ACC_MODULE");
+        }
+        write!(f, "({:#06X}) {}", self.bits(), access_flags.join(", "))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -92,5 +127,33 @@ mod test {
         let mut bytes = Cursor::new(bytes);
         assert_eq!(Ok(access_flags), ClassAccessFlags::from_bytes(&mut bytes));
         Ok(())
+    }
+
+    #[test]
+    fn test_to_string() {
+        assert_eq!("(0x0001) ACC_PUBLIC", ClassAccessFlags::PUBLIC.to_string());
+        assert_eq!("(0x0010) ACC_FINAL", ClassAccessFlags::FINAL.to_string());
+        assert_eq!("(0x0020) ACC_SUPER", ClassAccessFlags::SUPER.to_string());
+        assert_eq!(
+            "(0x0200) ACC_INTERFACE",
+            ClassAccessFlags::INTERFACE.to_string()
+        );
+        assert_eq!(
+            "(0x0400) ACC_ABSTRACT",
+            ClassAccessFlags::ABSTRACT.to_string()
+        );
+        assert_eq!(
+            "(0x1000) ACC_SYNTHETIC",
+            ClassAccessFlags::SYNTHETIC.to_string()
+        );
+        assert_eq!(
+            "(0x2000) ACC_ANNOTATION",
+            ClassAccessFlags::ANNOTATION.to_string()
+        );
+        assert_eq!("(0x4000) ACC_ENUM", ClassAccessFlags::ENUM.to_string());
+        assert_eq!("(0x8000) ACC_MODULE", ClassAccessFlags::MODULE.to_string());
+
+        let access_flags = ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER;
+        assert_eq!("(0x0021) ACC_PUBLIC, ACC_SUPER", access_flags.to_string());
     }
 }

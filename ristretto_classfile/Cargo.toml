@@ -17,6 +17,7 @@ thiserror = { workspace = true }
 [dev-dependencies]
 criterion = { workspace = true }
 flate2 = { workspace = true }
+indoc = { workspace = true }
 reqwest = { workspace = true }
 tar = { workspace = true }
 tokio = { workspace = true, features = ["full"] }

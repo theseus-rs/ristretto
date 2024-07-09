@@ -1,4 +1,4 @@
-use crate::class_access_flags::ClassAccessFlags;
+use crate::attributes::nested_class_access_flags::NestedClassAccessFlags;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
@@ -11,7 +11,7 @@ pub struct InnerClass {
     pub class_info_index: u16,
     pub outer_class_info_index: u16,
     pub name_index: u16,
-    pub class_access_flags: ClassAccessFlags,
+    pub access_flags: NestedClassAccessFlags,
 }
 
 impl InnerClass {
@@ -23,13 +23,13 @@ impl InnerClass {
         let class_info_index = bytes.read_u16::<BigEndian>()?;
         let outer_class_info_index = bytes.read_u16::<BigEndian>()?;
         let name_index = bytes.read_u16::<BigEndian>()?;
-        let class_access_flags = ClassAccessFlags::from_bytes(bytes)?;
+        let access_flags = NestedClassAccessFlags::from_bytes(bytes)?;
 
         let inner_class = InnerClass {
             class_info_index,
             outer_class_info_index,
             name_index,
-            class_access_flags,
+            access_flags,
         };
         Ok(inner_class)
     }
@@ -42,7 +42,7 @@ impl InnerClass {
         bytes.write_u16::<BigEndian>(self.class_info_index)?;
         bytes.write_u16::<BigEndian>(self.outer_class_info_index)?;
         bytes.write_u16::<BigEndian>(self.name_index)?;
-        self.class_access_flags.to_bytes(bytes)
+        self.access_flags.to_bytes(bytes)
     }
 }
 
@@ -56,7 +56,7 @@ mod test {
             class_info_index: 1,
             outer_class_info_index: 2,
             name_index: 3,
-            class_access_flags: ClassAccessFlags::PUBLIC,
+            access_flags: NestedClassAccessFlags::PUBLIC,
         };
         let expected_value = [0, 1, 0, 2, 0, 3, 0, 1];
         let mut bytes = Vec::new();

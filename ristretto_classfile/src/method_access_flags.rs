@@ -1,6 +1,7 @@
 use crate::error::Result;
 use bitflags::bitflags;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 bitflags! {
@@ -63,6 +64,49 @@ impl MethodAccessFlags {
     }
 }
 
+impl fmt::Display for MethodAccessFlags {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut access_flags = Vec::new();
+        if self.contains(MethodAccessFlags::PUBLIC) {
+            access_flags.push("ACC_PUBLIC");
+        }
+        if self.contains(MethodAccessFlags::PRIVATE) {
+            access_flags.push("ACC_PRIVATE");
+        }
+        if self.contains(MethodAccessFlags::PROTECTED) {
+            access_flags.push("ACC_PROTECTED");
+        }
+        if self.contains(MethodAccessFlags::STATIC) {
+            access_flags.push("ACC_STATIC");
+        }
+        if self.contains(MethodAccessFlags::FINAL) {
+            access_flags.push("ACC_FINAL");
+        }
+        if self.contains(MethodAccessFlags::SYNCHRONIZED) {
+            access_flags.push("ACC_SYNCHRONIZED");
+        }
+        if self.contains(MethodAccessFlags::BRIDGE) {
+            access_flags.push("ACC_BRIDGE");
+        }
+        if self.contains(MethodAccessFlags::VARARGS) {
+            access_flags.push("ACC_VARARGS");
+        }
+        if self.contains(MethodAccessFlags::NATIVE) {
+            access_flags.push("ACC_NATIVE");
+        }
+        if self.contains(MethodAccessFlags::ABSTRACT) {
+            access_flags.push("ACC_ABSTRACT");
+        }
+        if self.contains(MethodAccessFlags::STRICT) {
+            access_flags.push("ACC_STRICT");
+        }
+        if self.contains(MethodAccessFlags::SYNTHETIC) {
+            access_flags.push("ACC_SYNTHETIC");
+        }
+        write!(f, "({:#06X}) {}", self.bits(), access_flags.join(", "))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -101,5 +145,46 @@ mod test {
         let mut bytes = Cursor::new(bytes);
         assert_eq!(Ok(access_flags), MethodAccessFlags::from_bytes(&mut bytes));
         Ok(())
+    }
+
+    #[test]
+    fn test_to_string() {
+        assert_eq!("(0x0001) ACC_PUBLIC", MethodAccessFlags::PUBLIC.to_string());
+        assert_eq!(
+            "(0x0002) ACC_PRIVATE",
+            MethodAccessFlags::PRIVATE.to_string()
+        );
+        assert_eq!(
+            "(0x0004) ACC_PROTECTED",
+            MethodAccessFlags::PROTECTED.to_string()
+        );
+        assert_eq!("(0x0008) ACC_STATIC", MethodAccessFlags::STATIC.to_string());
+        assert_eq!("(0x0010) ACC_FINAL", MethodAccessFlags::FINAL.to_string());
+        assert_eq!(
+            "(0x0020) ACC_SYNCHRONIZED",
+            MethodAccessFlags::SYNCHRONIZED.to_string()
+        );
+        assert_eq!("(0x0040) ACC_BRIDGE", MethodAccessFlags::BRIDGE.to_string());
+        assert_eq!(
+            "(0x0080) ACC_VARARGS",
+            MethodAccessFlags::VARARGS.to_string()
+        );
+        assert_eq!("(0x0100) ACC_NATIVE", MethodAccessFlags::NATIVE.to_string());
+        assert_eq!(
+            "(0x0400) ACC_ABSTRACT",
+            MethodAccessFlags::ABSTRACT.to_string()
+        );
+        assert_eq!("(0x0800) ACC_STRICT", MethodAccessFlags::STRICT.to_string());
+        assert_eq!(
+            "(0x1000) ACC_SYNTHETIC",
+            MethodAccessFlags::SYNTHETIC.to_string()
+        );
+
+        let access_flags =
+            MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL;
+        assert_eq!(
+            "(0x0019) ACC_PUBLIC, ACC_STATIC, ACC_FINAL",
+            access_flags.to_string()
+        );
     }
 }

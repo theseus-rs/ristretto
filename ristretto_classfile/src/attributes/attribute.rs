@@ -1010,10 +1010,10 @@ impl Attribute {
 mod test {
     use super::*;
     use crate::attributes::annotation_value_pair::AnnotationValuePair;
+    use crate::attributes::nested_class_access_flags::NestedClassAccessFlags;
     use crate::attributes::{
         AnnotationElement, ExportsFlags, OpensFlags, RequiresFlags, TargetPath, TargetType,
     };
-    use crate::class_access_flags::ClassAccessFlags;
     use crate::method_access_flags::MethodAccessFlags;
 
     #[test]
@@ -1150,7 +1150,7 @@ mod test {
             class_info_index: 1,
             outer_class_info_index: 2,
             name_index: 3,
-            class_access_flags: ClassAccessFlags::PUBLIC,
+            access_flags: NestedClassAccessFlags::PUBLIC,
         };
         let attribute = Attribute::InnerClasses {
             name_index: 1,

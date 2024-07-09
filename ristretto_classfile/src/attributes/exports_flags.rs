@@ -1,6 +1,7 @@
 use crate::error::Result;
 use bitflags::bitflags;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 bitflags! {
@@ -45,6 +46,19 @@ impl ExportsFlags {
     }
 }
 
+impl fmt::Display for ExportsFlags {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut access_flags = Vec::new();
+        if self.contains(ExportsFlags::SYNTHETIC) {
+            access_flags.push("ACC_SYNTHETIC");
+        }
+        if self.contains(ExportsFlags::MANDATED) {
+            access_flags.push("ACC_MANDATED");
+        }
+        write!(f, "({:#06X}) {}", self.bits(), access_flags.join(", "))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -72,5 +86,14 @@ mod test {
         let mut bytes = Cursor::new(bytes);
         assert_eq!(Ok(access_flags), ExportsFlags::from_bytes(&mut bytes));
         Ok(())
+    }
+
+    #[test]
+    fn test_to_string() {
+        assert_eq!(
+            "(0x1000) ACC_SYNTHETIC",
+            ExportsFlags::SYNTHETIC.to_string()
+        );
+        assert_eq!("(0x8000) ACC_MANDATED", ExportsFlags::MANDATED.to_string());
     }
 }

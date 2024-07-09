@@ -15,6 +15,7 @@ mod local_variable_target;
 mod local_variable_type_table;
 mod method_parameter;
 mod module_access_flags;
+mod nested_class_access_flags;
 mod opens;
 mod opens_flags;
 mod parameter_annotation;
