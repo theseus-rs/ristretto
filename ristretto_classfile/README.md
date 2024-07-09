@@ -19,22 +19,23 @@ is still a work in progress. The API is currently unstable and will change as th
 # Examples
 
 ```rust
-use ristretto_classfile::{ClassFile, Result};
+use ristretto_classfile::{ClassFile, Constant, ConstantPool, Result, Version};
 
 fn main() -> Result<()> {
     let mut constant_pool = ConstantPool::default();
     constant_pool.add(Constant::Utf8("Foo".to_string()));
+    let utf8_index = u16::try_from(constant_pool.len())?;
     constant_pool.add(Constant::Class {
-        name_index: constant_pool.len(),
+        name_index: utf8_index,
     });
-    let class_index = constant_pool.len();
+    let class_index = u16::try_from(constant_pool.len())?;
     let class_file = ClassFile {
         version: Version::Java21 { minor: 0 },
-        constant_pool: constant_pool.clone(),
+        constant_pool,
         this_class: class_index,
         ..Default::default()
     };
-    class_file.verify()?;
+    class_file.verify()
 }
 ```
 

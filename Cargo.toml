@@ -1,6 +1,11 @@
 [workspace]
-default-members = ["ristretto_classfile"]
-members = ["ristretto_classfile"]
+default-members = [
+    "ristretto_classfile"
+]
+members = [
+    "examples/*",
+    "ristretto_classfile",
+]
 resolver = "2"
 
 [workspace.package]
