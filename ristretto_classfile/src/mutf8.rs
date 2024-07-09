@@ -104,18 +104,12 @@ mod tests {
                 let mutf8_encoded_bytes = to_bytes(&s)?;
                 match i {
                     0 => assert_eq!(mutf8_encoded_bytes, vec![0xC0, 0x80]),
-                    _ => assert_eq!(
-                        rust_encoded_bytes, mutf8_encoded_bytes,
-                        "Failed encoding at character"
-                    ),
+                    _ => assert_eq!(rust_encoded_bytes, mutf8_encoded_bytes),
                 }
 
                 let rust_encoded_result = String::from_utf8(rust_encoded_bytes)?;
                 let mutf8_encoded_result = from_bytes(mutf8_encoded_bytes.as_slice())?;
-                assert_eq!(
-                    rust_encoded_result, mutf8_encoded_result,
-                    "Failed decoding at character"
-                );
+                assert_eq!(rust_encoded_result, mutf8_encoded_result);
             }
         }
         Ok(())

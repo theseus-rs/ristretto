@@ -63,42 +63,58 @@ mod test {
     }
 
     #[test]
-    fn test_byte() {
+    fn test_byte() -> Result<()> {
         assert_eq!(BaseType::Byte.code(), 'B');
+        assert_eq!(BaseType::Byte, BaseType::parse('B')?);
+        Ok(())
     }
 
     #[test]
-    fn test_char() {
+    fn test_char() -> Result<()> {
         assert_eq!(BaseType::Char.code(), 'C');
+        assert_eq!(BaseType::Char, BaseType::parse('C')?);
+        Ok(())
     }
 
     #[test]
-    fn test_double() {
+    fn test_double() -> Result<()> {
         assert_eq!(BaseType::Double.code(), 'D');
+        assert_eq!(BaseType::Double, BaseType::parse('D')?);
+        Ok(())
     }
 
     #[test]
-    fn test_float() {
+    fn test_float() -> Result<()> {
         assert_eq!(BaseType::Float.code(), 'F');
+        assert_eq!(BaseType::Float, BaseType::parse('F')?);
+        Ok(())
     }
 
     #[test]
-    fn test_int() {
+    fn test_int() -> Result<()> {
         assert_eq!(BaseType::Int.code(), 'I');
+        assert_eq!(BaseType::Int, BaseType::parse('I')?);
+        Ok(())
     }
 
     #[test]
-    fn test_long() {
+    fn test_long() -> Result<()> {
         assert_eq!(BaseType::Long.code(), 'J');
+        assert_eq!(BaseType::Long, BaseType::parse('J')?);
+        Ok(())
     }
 
     #[test]
-    fn test_short() {
+    fn test_short() -> Result<()> {
         assert_eq!(BaseType::Short.code(), 'S');
+        assert_eq!(BaseType::Short, BaseType::parse('S')?);
+        Ok(())
     }
 
     #[test]
-    fn test_boolean() {
+    fn test_boolean() -> Result<()> {
         assert_eq!(BaseType::Boolean.code(), 'Z');
+        assert_eq!(BaseType::Boolean, BaseType::parse('Z')?);
+        Ok(())
     }
 }

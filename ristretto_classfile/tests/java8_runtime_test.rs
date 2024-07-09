@@ -12,6 +12,7 @@ async fn verify() -> Result<(), Box<dyn Error>> {
     let client = Client::new();
     let archive = client.get(url).send().await?.bytes().await?.to_vec();
     let jar_bytes = get_runtime_jar(archive)?;
+
     utilities::jar::verify(jar_bytes)?;
 
     Ok(())

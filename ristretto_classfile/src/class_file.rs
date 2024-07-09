@@ -175,6 +175,22 @@ mod test {
     }
 
     #[test]
+    fn test_class_name_invalid_constant_pool() {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.add(Constant::Utf8("Test".to_string()));
+        let class_file = ClassFile {
+            constant_pool,
+            this_class: 1,
+            ..Default::default()
+        };
+
+        assert_eq!(
+            Err(InvalidConstantPoolIndexType(1)),
+            class_file.class_name()
+        );
+    }
+
+    #[test]
     fn test_verify() -> Result<()> {
         let class_bytes = include_bytes!("../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();

@@ -1,5 +1,8 @@
+interface SimpleInterface {
+}
+
 @Deprecated
-public class Simple {
+public class Simple implements SimpleInterface {
     public static final boolean BOOLEAN = true;
     public static final byte BYTE = Byte.MAX_VALUE;
     public static final char CHAR = 'A';
