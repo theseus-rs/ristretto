@@ -1,10 +1,11 @@
 [package]
-name = "ristretto_classfile"
 authors.workspace = true
 categories.workspace = true
+description = "A library for reading, writing and verifying Java classfiles."
 edition.workspace = true
-keywords.workspace = true
+keywords = ["java", "jvm", "classfile", "bytecode"]
 license.workspace = true
+name = "ristretto_classfile"
 repository.workspace = true
 version.workspace = true
 
