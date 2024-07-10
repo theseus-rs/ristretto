@@ -1,6 +1,7 @@
 use crate::base_type::BaseType;
 use crate::error::Result;
 use crate::Error::{InvalidFieldTypeCode, InvalidFieldTypeDescriptor};
+use std::fmt;
 
 /// Implementation of `FieldType`.
 ///
@@ -71,6 +72,16 @@ impl FieldType {
     }
 }
 
+impl fmt::Display for FieldType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FieldType::Base(base_type) => write!(f, "{base_type}"),
+            FieldType::Object(class_name) => write!(f, "L{class_name};"),
+            FieldType::Array(component_type) => write!(f, "[{component_type}"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -94,47 +105,74 @@ mod test {
 
     #[test]
     fn test_base_byte() -> Result<()> {
-        test_field_type(&FieldType::Base(BaseType::Byte), "B", 'B')
+        let field_type = FieldType::Base(BaseType::Byte);
+
+        assert_eq!("byte", field_type.to_string());
+        test_field_type(&field_type, "B", 'B')
     }
 
     #[test]
     fn test_base_char() -> Result<()> {
-        test_field_type(&FieldType::Base(BaseType::Char), "C", 'C')
+        let field_type = FieldType::Base(BaseType::Char);
+
+        assert_eq!("char", field_type.to_string());
+        test_field_type(&field_type, "C", 'C')
     }
 
     #[test]
     fn test_base_double() -> Result<()> {
-        test_field_type(&FieldType::Base(BaseType::Double), "D", 'D')
+        let field_type = FieldType::Base(BaseType::Double);
+
+        assert_eq!("double", field_type.to_string());
+        test_field_type(&field_type, "D", 'D')
     }
 
     #[test]
     fn test_base_float() -> Result<()> {
-        test_field_type(&FieldType::Base(BaseType::Float), "F", 'F')
+        let field_type = FieldType::Base(BaseType::Float);
+
+        assert_eq!("float", field_type.to_string());
+        test_field_type(&field_type, "F", 'F')
     }
 
     #[test]
     fn test_base_int() -> Result<()> {
-        test_field_type(&FieldType::Base(BaseType::Int), "I", 'I')
+        let field_type = FieldType::Base(BaseType::Int);
+
+        assert_eq!("int", field_type.to_string());
+        test_field_type(&field_type, "I", 'I')
     }
 
     #[test]
     fn test_base_long() -> Result<()> {
-        test_field_type(&FieldType::Base(BaseType::Long), "J", 'J')
+        let field_type = FieldType::Base(BaseType::Long);
+
+        assert_eq!("long", field_type.to_string());
+        test_field_type(&field_type, "J", 'J')
     }
 
     #[test]
     fn test_base_short() -> Result<()> {
-        test_field_type(&FieldType::Base(BaseType::Short), "S", 'S')
+        let field_type = FieldType::Base(BaseType::Short);
+
+        assert_eq!("short", field_type.to_string());
+        test_field_type(&field_type, "S", 'S')
     }
 
     #[test]
     fn test_base_boolean() -> Result<()> {
-        test_field_type(&FieldType::Base(BaseType::Boolean), "Z", 'Z')
+        let field_type = FieldType::Base(BaseType::Boolean);
+
+        assert_eq!("boolean", field_type.to_string());
+        test_field_type(&field_type, "Z", 'Z')
     }
 
     #[test]
     fn test_object() -> Result<()> {
-        test_field_type(&FieldType::Object("Foo".to_string()), "LFoo;", 'L')
+        let field_type = FieldType::Object("Foo".to_string());
+
+        assert_eq!("LFoo;", field_type.to_string());
+        test_field_type(&field_type, "LFoo;", 'L')
     }
 
     #[test]
@@ -158,6 +196,9 @@ mod test {
     #[test]
     fn test_array() -> Result<()> {
         let component_type = FieldType::Base(BaseType::Int);
-        test_field_type(&FieldType::Array(Box::new(component_type)), "[I", '[')
+        let field_type = FieldType::Array(Box::new(component_type));
+
+        assert_eq!("[int", field_type.to_string());
+        test_field_type(&field_type, "[I", '[')
     }
 }

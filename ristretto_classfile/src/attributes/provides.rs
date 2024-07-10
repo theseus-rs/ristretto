@@ -1,5 +1,6 @@
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `Provides`.
@@ -44,9 +45,28 @@ impl Provides {
     }
 }
 
+impl fmt::Display for Provides {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Provides[index={}, with_index={:?}]",
+            self.index, self.with_index
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_to_string() {
+        let provides = Provides {
+            index: 1,
+            with_index: vec![2],
+        };
+        assert_eq!("Provides[index=1, with_index=[2]]", provides.to_string());
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {

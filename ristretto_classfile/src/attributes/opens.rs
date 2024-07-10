@@ -1,6 +1,7 @@
 use crate::attributes::OpensFlags;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `Opens`.
@@ -51,9 +52,32 @@ impl Opens {
     }
 }
 
+impl fmt::Display for Opens {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "index: {}, flags: {}, to_index: {:?}",
+            self.index, self.flags, self.to_index
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_display() {
+        let opens = Opens {
+            index: 1,
+            flags: OpensFlags::MANDATED,
+            to_index: vec![3],
+        };
+        assert_eq!(
+            "index: 1, flags: (0x8000) ACC_MANDATED, to_index: [3]",
+            opens.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {

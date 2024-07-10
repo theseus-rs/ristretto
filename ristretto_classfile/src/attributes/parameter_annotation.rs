@@ -1,6 +1,7 @@
 use crate::attributes::Annotation;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of a parameter annotation.
@@ -45,10 +46,37 @@ impl ParameterAnnotation {
     }
 }
 
+impl fmt::Display for ParameterAnnotation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ParameterAnnotation[annotations={:?}]", self.annotations)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::attributes::{AnnotationElement, AnnotationValuePair};
+
+    #[test]
+    fn test_to_string() {
+        let annotation_value_pair = AnnotationValuePair {
+            name_index: 1,
+            value: AnnotationElement::Byte {
+                const_value_index: 42,
+            },
+        };
+        let annotation = Annotation {
+            type_index: 3,
+            elements: vec![annotation_value_pair],
+        };
+        let parameter_annotation = ParameterAnnotation {
+            annotations: vec![annotation],
+        };
+        assert_eq!(
+            "ParameterAnnotation[annotations=[Annotation { type_index: 3, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }]]",
+            parameter_annotation.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {

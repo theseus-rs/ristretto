@@ -1,5 +1,6 @@
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `BootstrapMethod`.
@@ -46,9 +47,31 @@ impl BootstrapMethod {
     }
 }
 
+impl fmt::Display for BootstrapMethod {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "bootstrap_method_ref: {}, arguments: {:?}",
+            self.bootstrap_method_ref, self.arguments
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_to_string() {
+        let bootstrap_method = BootstrapMethod {
+            bootstrap_method_ref: 3,
+            arguments: vec![42],
+        };
+        assert_eq!(
+            "bootstrap_method_ref: 3, arguments: [42]",
+            bootstrap_method.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {
@@ -57,6 +80,7 @@ mod test {
             arguments: vec![42],
         };
         let expected_value = [0, 3, 0, 1, 0, 42];
+
         let mut bytes = Vec::new();
         bootstrap_method.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);

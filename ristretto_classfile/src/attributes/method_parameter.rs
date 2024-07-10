@@ -1,6 +1,7 @@
 use crate::error::Result;
 use crate::method_access_flags::MethodAccessFlags;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `MethodParameter`.
@@ -37,9 +38,30 @@ impl MethodParameter {
     }
 }
 
+impl fmt::Display for MethodParameter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "name_index: {}, access_flags: {}",
+            self.name_index, self.access_flags
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_deserialization() -> Result<()> {
+        let expected_value = MethodParameter {
+            name_index: 3,
+            access_flags: MethodAccessFlags::PUBLIC,
+        };
+        let mut bytes = Cursor::new(vec![0, 3, 0, 1]);
+        assert_eq!(expected_value, MethodParameter::from_bytes(&mut bytes)?);
+        Ok(())
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {

@@ -1,8 +1,10 @@
 use crate::attributes::Attribute;
 use crate::constant_pool::ConstantPool;
+use crate::display::indent_lines;
 use crate::error::Result;
 use crate::method_access_flags::MethodAccessFlags;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Method.
@@ -60,14 +62,54 @@ impl Method {
     }
 }
 
+impl fmt::Display for Method {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "access_flags: {}", self.access_flags)?;
+        writeln!(f, "name_index: #{}", self.name_index)?;
+        writeln!(f, "descriptor_index: #{}", self.descriptor_index)?;
+        writeln!(f, "attributes:")?;
+        for (index, attribute) in self.attributes.iter().enumerate() {
+            if index > 0 {
+                writeln!(f)?;
+            }
+            writeln!(f, "{}", indent_lines(&attribute.to_string(), "  "))?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::attributes::Attribute;
     use crate::constant::Constant;
+    use indoc::indoc;
 
     #[test]
-    fn test_method() -> Result<()> {
+    fn test_to_string() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.add(Constant::Utf8("ConstantValue".to_string()));
+        let mut attribute_bytes = Cursor::new([0, 1, 0, 0, 0, 2, 4, 2].to_vec());
+        let attribute = Attribute::from_bytes(&constant_pool, &mut attribute_bytes)?;
+        let method = Method {
+            access_flags: MethodAccessFlags::PUBLIC,
+            name_index: 1,
+            descriptor_index: 2,
+            attributes: vec![attribute],
+        };
+        let expected = indoc! {"
+            access_flags: (0x0001) ACC_PUBLIC
+            name_index: #1
+            descriptor_index: #2
+            attributes:
+              ConstantValue { name_index: 1, constantvalue_index: 1026 }
+        "};
+        assert_eq!(expected, method.to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn test_serialization() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         constant_pool.add(Constant::Utf8("ConstantValue".to_string()));
         let mut attribute_bytes = Cursor::new([0, 1, 0, 0, 0, 2, 4, 2].to_vec());

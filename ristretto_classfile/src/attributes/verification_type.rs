@@ -1,6 +1,7 @@
 use crate::error::Error::InvalidVerificationTypeTag;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `VerificationType`.
@@ -80,6 +81,22 @@ impl VerificationType {
     }
 }
 
+impl fmt::Display for VerificationType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            VerificationType::Top => write!(f, "top"),
+            VerificationType::Integer => write!(f, "integer"),
+            VerificationType::Float => write!(f, "float"),
+            VerificationType::Double => write!(f, "double"),
+            VerificationType::Long => write!(f, "long"),
+            VerificationType::Null => write!(f, "null"),
+            VerificationType::UninitializedThis => write!(f, "uninitialized this"),
+            VerificationType::Object { cpool_index } => write!(f, "object #{cpool_index}"),
+            VerificationType::Uninitialized { offset } => write!(f, "uninitialized {offset}"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -120,6 +137,8 @@ mod test {
         let verification_type = VerificationType::Top;
         let tag = 0;
         let expected_bytes = [tag];
+
+        assert_eq!("top", verification_type.to_string());
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
@@ -128,6 +147,8 @@ mod test {
         let verification_type = VerificationType::Integer;
         let tag = 1;
         let expected_bytes = [tag];
+
+        assert_eq!("integer", verification_type.to_string());
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
@@ -136,6 +157,8 @@ mod test {
         let verification_type = VerificationType::Float;
         let tag = 2;
         let expected_bytes = [tag];
+
+        assert_eq!("float", verification_type.to_string());
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
@@ -144,6 +167,8 @@ mod test {
         let verification_type = VerificationType::Double;
         let tag = 3;
         let expected_bytes = [tag];
+
+        assert_eq!("double", verification_type.to_string());
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
@@ -152,6 +177,8 @@ mod test {
         let verification_type = VerificationType::Long;
         let tag = 4;
         let expected_bytes = [tag];
+
+        assert_eq!("long", verification_type.to_string());
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
@@ -160,6 +187,8 @@ mod test {
         let verification_type = VerificationType::Null;
         let tag = 5;
         let expected_bytes = [tag];
+
+        assert_eq!("null", verification_type.to_string());
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
@@ -168,6 +197,8 @@ mod test {
         let verification_type = VerificationType::UninitializedThis;
         let tag = 6;
         let expected_bytes = [tag];
+
+        assert_eq!("uninitialized this", verification_type.to_string());
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
@@ -176,6 +207,8 @@ mod test {
         let verification_type = VerificationType::Object { cpool_index: 42 };
         let tag = 7;
         let expected_bytes = [tag, 0, 42];
+
+        assert_eq!("object #42", verification_type.to_string());
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
@@ -184,6 +217,8 @@ mod test {
         let verification_type = VerificationType::Uninitialized { offset: 42 };
         let tag = 8;
         let expected_bytes = [tag, 0, 42];
+
+        assert_eq!("uninitialized 42", verification_type.to_string());
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 }

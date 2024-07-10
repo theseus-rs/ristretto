@@ -1,6 +1,7 @@
 use crate::attributes::{AnnotationValuePair, TargetPath, TargetType};
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of a type annotation.
@@ -73,10 +74,43 @@ impl TypeAnnotation {
     }
 }
 
+impl fmt::Display for TypeAnnotation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "TypeAnnotation[target_type={}, type_path={:?}, type_index={}, elements={:?}]",
+            self.target_type, self.type_path, self.type_index, self.elements
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::attributes::{AnnotationElement, AnnotationValuePair};
+
+    #[test]
+    fn test_to_string() {
+        let element = AnnotationValuePair {
+            name_index: 1,
+            value: AnnotationElement::Byte {
+                const_value_index: 42,
+            },
+        };
+        let type_annotation = TypeAnnotation {
+            target_type: TargetType::Empty { target_type: 19 },
+            type_path: vec![TargetPath {
+                type_path_kind: 1,
+                type_argument_index: 2,
+            }],
+            type_index: 42,
+            elements: vec![element],
+        };
+        assert_eq!(
+            "TypeAnnotation[target_type=Empty[target_type=19], type_path=[TargetPath { type_path_kind: 1, type_argument_index: 2 }], type_index=42, elements=[AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }]]",
+            type_annotation.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {

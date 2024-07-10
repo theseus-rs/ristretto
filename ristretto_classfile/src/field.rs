@@ -1,9 +1,11 @@
 use crate::attributes::Attribute;
 use crate::constant_pool::ConstantPool;
+use crate::display::indent_lines;
 use crate::error::Result;
 use crate::field_access_flags::FieldAccessFlags;
 use crate::FieldType;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Field.
@@ -66,6 +68,23 @@ impl Field {
     }
 }
 
+impl fmt::Display for Field {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "access_flags: {}", self.access_flags)?;
+        writeln!(f, "name_index: #{}", self.name_index)?;
+        writeln!(f, "descriptor_index: #{}", self.descriptor_index)?;
+        writeln!(f, "field_type: {:?}", self.field_type)?;
+        writeln!(f, "attributes:")?;
+        for (index, attribute) in self.attributes.iter().enumerate() {
+            if index > 0 {
+                writeln!(f)?;
+            }
+            writeln!(f, "{}", indent_lines(&attribute.to_string(), "  "))?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -73,6 +92,34 @@ mod test {
     use crate::constant::Constant;
     use crate::field_access_flags::FieldAccessFlags;
     use crate::BaseType;
+    use indoc::indoc;
+
+    #[test]
+    fn test_to_string() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.add(Constant::Utf8("ConstantValue".to_string()));
+        constant_pool.add(Constant::Utf8("I".to_string()));
+        let mut attribute_bytes = Cursor::new([0, 1, 0, 0, 0, 2, 4, 2].to_vec());
+        let attribute = Attribute::from_bytes(&constant_pool, &mut attribute_bytes)?;
+        let field = Field {
+            access_flags: FieldAccessFlags::PUBLIC,
+            name_index: 1,
+            descriptor_index: 2,
+            field_type: FieldType::Base(BaseType::Int),
+            attributes: vec![attribute],
+        };
+
+        let expected = indoc! {r"
+            access_flags: (0x0001) ACC_PUBLIC
+            name_index: #1
+            descriptor_index: #2
+            field_type: Base(Int)
+            attributes:
+              ConstantValue { name_index: 1, constantvalue_index: 1026 }
+        "};
+        assert_eq!(expected, field.to_string());
+        Ok(())
+    }
 
     #[test]
     fn test_field() -> Result<()> {

@@ -1,6 +1,7 @@
 use crate::attributes::nested_class_access_flags::NestedClassAccessFlags;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `InnerClass`.
@@ -46,9 +47,33 @@ impl InnerClass {
     }
 }
 
+impl fmt::Display for InnerClass {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "class_info_index: {}, outer_class_info_index: {}, name_index: {}, access_flags: {}",
+            self.class_info_index, self.outer_class_info_index, self.name_index, self.access_flags
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_to_string() {
+        let inner_class = InnerClass {
+            class_info_index: 1,
+            outer_class_info_index: 2,
+            name_index: 3,
+            access_flags: NestedClassAccessFlags::PUBLIC,
+        };
+        assert_eq!(
+            "class_info_index: 1, outer_class_info_index: 2, name_index: 3, access_flags: (0x0001) ACC_PUBLIC",
+            inner_class.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {
@@ -59,6 +84,7 @@ mod test {
             access_flags: NestedClassAccessFlags::PUBLIC,
         };
         let expected_value = [0, 1, 0, 2, 0, 3, 0, 1];
+
         let mut bytes = Vec::new();
         inner_class.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);

@@ -2,6 +2,7 @@ use crate::attributes::Annotation;
 use crate::error::Error::InvalidAnnotationElementTag;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `AnnotationElement`.
@@ -180,6 +181,53 @@ impl AnnotationElement {
     }
 }
 
+impl fmt::Display for AnnotationElement {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            AnnotationElement::Byte { const_value_index } => {
+                write!(f, "Byte {{ const_value_index: {const_value_index} }}")
+            }
+            AnnotationElement::Char { const_value_index } => {
+                write!(f, "Char {{ const_value_index: {const_value_index} }}")
+            }
+            AnnotationElement::Double { const_value_index } => {
+                write!(f, "Double {{ const_value_index: {const_value_index} }}")
+            }
+            AnnotationElement::Float { const_value_index } => {
+                write!(f, "Float {{ const_value_index: {const_value_index} }}")
+            }
+            AnnotationElement::Int { const_value_index } => {
+                write!(f, "Int {{ const_value_index: {const_value_index} }}")
+            }
+            AnnotationElement::Long { const_value_index } => {
+                write!(f, "Long {{ const_value_index: {const_value_index} }}")
+            }
+            AnnotationElement::Short { const_value_index } => {
+                write!(f, "Short {{ const_value_index: {const_value_index} }}")
+            }
+            AnnotationElement::Boolean { const_value_index } => {
+                write!(f, "Boolean {{ const_value_index: {const_value_index} }}")
+            }
+            AnnotationElement::String { const_value_index } => {
+                write!(f, "String {{ const_value_index: {const_value_index} }}")
+            }
+            AnnotationElement::Enum {
+                type_name_index,
+                const_name_index,
+            } => write!(f, "Enum {{ type_name_index: {type_name_index}, const_name_index: {const_name_index} }}"),
+            AnnotationElement::Class { class_info_index } => {
+                write!(f, "Class {{ class_info_index: {class_info_index} }}")
+            }
+            AnnotationElement::Annotation { annotation } => {
+                write!(f, "Annotation {{ annotation: {annotation:?} }}")
+            }
+            AnnotationElement::Array { values } => {
+                write!(f, "Array {{ values: {values:?} }}")
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -212,6 +260,7 @@ mod test {
         };
         let expected_bytes = [66, 0, 42];
 
+        assert_eq!("Byte { const_value_index: 42 }", element.to_string());
         test_element(&element, &expected_bytes, b'B')
     }
 
@@ -222,6 +271,7 @@ mod test {
         };
         let expected_bytes = [67, 0, 42];
 
+        assert_eq!("Char { const_value_index: 42 }", element.to_string());
         test_element(&element, &expected_bytes, b'C')
     }
 
@@ -232,6 +282,7 @@ mod test {
         };
         let expected_bytes = [68, 0, 42];
 
+        assert_eq!("Double { const_value_index: 42 }", element.to_string());
         test_element(&element, &expected_bytes, b'D')
     }
 
@@ -242,6 +293,7 @@ mod test {
         };
         let expected_bytes = [70, 0, 42];
 
+        assert_eq!("Float { const_value_index: 42 }", element.to_string());
         test_element(&element, &expected_bytes, b'F')
     }
 
@@ -252,6 +304,7 @@ mod test {
         };
         let expected_bytes = [73, 0, 42];
 
+        assert_eq!("Int { const_value_index: 42 }", element.to_string());
         test_element(&element, &expected_bytes, b'I')
     }
 
@@ -262,6 +315,7 @@ mod test {
         };
         let expected_bytes = [74, 0, 42];
 
+        assert_eq!("Long { const_value_index: 42 }", element.to_string());
         test_element(&element, &expected_bytes, b'J')
     }
 
@@ -272,6 +326,7 @@ mod test {
         };
         let expected_bytes = [83, 0, 42];
 
+        assert_eq!("Short { const_value_index: 42 }", element.to_string());
         test_element(&element, &expected_bytes, b'S')
     }
 
@@ -282,6 +337,7 @@ mod test {
         };
         let expected_bytes = [90, 0, 42];
 
+        assert_eq!("Boolean { const_value_index: 42 }", element.to_string());
         test_element(&element, &expected_bytes, b'Z')
     }
 
@@ -292,6 +348,7 @@ mod test {
         };
         let expected_bytes = [115, 0, 42];
 
+        assert_eq!("String { const_value_index: 42 }", element.to_string());
         test_element(&element, &expected_bytes, b's')
     }
 
@@ -303,6 +360,10 @@ mod test {
         };
         let expected_bytes = [101, 0, 3, 0, 42];
 
+        assert_eq!(
+            "Enum { type_name_index: 3, const_name_index: 42 }",
+            element.to_string()
+        );
         test_element(&element, &expected_bytes, b'e')
     }
 
@@ -313,6 +374,7 @@ mod test {
         };
         let expected_bytes = [99, 0, 42];
 
+        assert_eq!("Class { class_info_index: 42 }", element.to_string());
         test_element(&element, &expected_bytes, b'c')
     }
 
@@ -331,6 +393,7 @@ mod test {
         let element = AnnotationElement::Annotation { annotation };
         let expected_bytes = [64, 0, 3, 0, 1, 0, 1, 66, 0, 42];
 
+        assert_eq!("Annotation { annotation: Annotation { type_index: 3, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] } }", element.to_string());
         test_element(&element, &expected_bytes, b'@')
     }
 
@@ -350,6 +413,7 @@ mod test {
         let element = AnnotationElement::Array { values };
         let expected_bytes = [91, 0, 1, 64, 0, 3, 0, 1, 0, 1, 66, 0, 42];
 
+        assert_eq!("Array { values: [Annotation { annotation: Annotation { type_index: 3, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] } }] }", element.to_string());
         test_element(&element, &expected_bytes, b'[')
     }
 }

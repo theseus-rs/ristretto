@@ -1,5 +1,6 @@
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `LocalVariableTypeTable`.
@@ -50,9 +51,34 @@ impl LocalVariableTypeTable {
     }
 }
 
+impl fmt::Display for LocalVariableTypeTable {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "start_pc: {}, length: {}, name_index: {}, signature_index: {}, index: {}",
+            self.start_pc, self.length, self.name_index, self.signature_index, self.index
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_display() {
+        let local_variable_type_table = LocalVariableTypeTable {
+            start_pc: 1,
+            length: 2,
+            name_index: 3,
+            signature_index: 4,
+            index: 5,
+        };
+        assert_eq!(
+            "start_pc: 1, length: 2, name_index: 3, signature_index: 4, index: 5",
+            local_variable_type_table.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {

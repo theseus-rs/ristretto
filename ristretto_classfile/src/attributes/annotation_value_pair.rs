@@ -1,6 +1,7 @@
 use crate::attributes::AnnotationElement;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of an annotation value pair.
@@ -35,9 +36,30 @@ impl AnnotationValuePair {
     }
 }
 
+impl fmt::Display for AnnotationValuePair {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "name_index: {}, value: {}", self.name_index, self.value)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_to_string() {
+        let annotation_value_pair = AnnotationValuePair {
+            name_index: 1,
+            value: AnnotationElement::Byte {
+                const_value_index: 42,
+            },
+        };
+
+        assert_eq!(
+            "name_index: 1, value: Byte { const_value_index: 42 }",
+            annotation_value_pair.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {

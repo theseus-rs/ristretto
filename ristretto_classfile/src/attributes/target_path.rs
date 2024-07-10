@@ -1,5 +1,6 @@
 use crate::error::Result;
 use byteorder::{ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `TargetPath`.
@@ -38,6 +39,16 @@ impl TargetPath {
     }
 }
 
+impl fmt::Display for TargetPath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "TargetPath[type_path_kind={}, type_argument_index={}]",
+            self.type_path_kind, self.type_argument_index
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -49,6 +60,12 @@ mod test {
             type_argument_index: 2,
         };
         let expected_value = [1, 2];
+
+        assert_eq!(
+            "TargetPath[type_path_kind=1, type_argument_index=2]",
+            target_path.to_string()
+        );
+
         let mut bytes = Vec::new();
         target_path.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);

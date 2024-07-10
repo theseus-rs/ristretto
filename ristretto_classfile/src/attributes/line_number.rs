@@ -1,5 +1,6 @@
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `LineNumber`.
@@ -9,6 +10,12 @@ use std::io::Cursor;
 pub struct LineNumber {
     pub start_pc: u16,
     pub line_number: u16,
+}
+
+impl fmt::Display for LineNumber {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}: {}", self.start_pc, self.line_number)
+    }
 }
 
 impl LineNumber {
@@ -47,6 +54,9 @@ mod test {
         };
         let expected_value = [0, 1, 0, 42];
         let mut bytes = Vec::new();
+
+        assert_eq!("1: 42", line_number.to_string());
+
         line_number.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 

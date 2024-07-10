@@ -2,6 +2,7 @@ use crate::attributes::LocalVariableTarget;
 use crate::error::Result;
 use crate::Error::InvalidTargetTypeCode;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `TargetType`.
@@ -251,6 +252,81 @@ impl TargetType {
     }
 }
 
+impl fmt::Display for TargetType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TargetType::TypeParameter {
+                target_type,
+                type_parameter_index,
+            } => write!(
+                f,
+                "TypeParameter[target_type={target_type}, type_parameter_index={type_parameter_index}]",
+            ),
+            TargetType::SuperType {
+                target_type,
+                supertype_index,
+            } => write!(
+                f,
+                "SuperType[target_type={target_type}, supertype_index={supertype_index}]",
+            ),
+            TargetType::TypeParameterBound {
+                target_type,
+                type_parameter_index,
+                bound_index,
+            } => write!(
+                f,
+                "TypeParameterBound[target_type={target_type}, type_parameter_index={type_parameter_index}, bound_index={bound_index}]",
+            ),
+            TargetType::Empty { target_type } => {
+                write!(f, "Empty[target_type={target_type}]")
+            }
+            TargetType::FormalParameter {
+                target_type,
+                formal_parameter_index,
+            } => write!(
+                f,
+                "FormalParameter[target_type={target_type}, formal_parameter_index={formal_parameter_index}]",
+            ),
+            TargetType::Throws {
+                target_type,
+                throws_type_index,
+            } => write!(
+                f,
+                "Throws[target_type={target_type}, throws_type_index={throws_type_index}]",
+            ),
+            TargetType::LocalVar {
+                target_type,
+                local_variable_targets,
+            } => write!(
+                f,
+                "LocalVar[target_type={target_type}, local_variable_targets={local_variable_targets:?}]",
+            ),
+            TargetType::Catch {
+                target_type,
+                exception_table_index,
+            } => write!(
+                f,
+                "Catch[target_type={target_type}, exception_table_index={exception_table_index}]",
+            ),
+            TargetType::Offset {
+                target_type,
+                offset,
+            } => write!(
+                f,
+                "Offset[target_type={target_type}, offset={offset}]",
+            ),
+            TargetType::TypeArgument {
+                target_type,
+                offset,
+                type_argument_index,
+            } => write!(
+                f,
+                "TypeArgument[target_type={target_type}, offset={offset}, type_argument_index={type_argument_index}]",
+            ),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -280,6 +356,11 @@ mod test {
             target_type: 0,
             type_parameter_index: 42,
         };
+
+        assert_eq!(
+            "TypeParameter[target_type=0, type_parameter_index=42]",
+            target_type.to_string()
+        );
         test_array_type(&target_type, &[0, 42])
     }
 
@@ -289,6 +370,11 @@ mod test {
             target_type: 16,
             supertype_index: 42,
         };
+
+        assert_eq!(
+            "SuperType[target_type=16, supertype_index=42]",
+            target_type.to_string()
+        );
         test_array_type(&target_type, &[16, 0, 42])
     }
 
@@ -299,12 +385,19 @@ mod test {
             type_parameter_index: 1,
             bound_index: 42,
         };
+
+        assert_eq!(
+            "TypeParameterBound[target_type=17, type_parameter_index=1, bound_index=42]",
+            target_type.to_string()
+        );
         test_array_type(&target_type, &[17, 1, 42])
     }
 
     #[test]
     fn test_empty() -> Result<()> {
         let target_type = TargetType::Empty { target_type: 19 };
+
+        assert_eq!("Empty[target_type=19]", target_type.to_string());
         test_array_type(&target_type, &[19])
     }
 
@@ -314,6 +407,11 @@ mod test {
             target_type: 22,
             formal_parameter_index: 42,
         };
+
+        assert_eq!(
+            "FormalParameter[target_type=22, formal_parameter_index=42]",
+            target_type.to_string()
+        );
         test_array_type(&target_type, &[22, 42])
     }
 
@@ -323,6 +421,11 @@ mod test {
             target_type: 23,
             throws_type_index: 42,
         };
+
+        assert_eq!(
+            "Throws[target_type=23, throws_type_index=42]",
+            target_type.to_string()
+        );
         test_array_type(&target_type, &[23, 0, 42])
     }
 
@@ -337,6 +440,8 @@ mod test {
             target_type: 64,
             local_variable_targets,
         };
+
+        assert_eq!("LocalVar[target_type=64, local_variable_targets=[LocalVariableTarget { start_pc: 1, length: 2, index: 3 }]]", target_type.to_string());
         test_array_type(&target_type, &[64, 0, 1, 0, 1, 0, 2, 0, 3])
     }
 
@@ -346,6 +451,11 @@ mod test {
             target_type: 66,
             exception_table_index: 42,
         };
+
+        assert_eq!(
+            "Catch[target_type=66, exception_table_index=42]",
+            target_type.to_string()
+        );
         test_array_type(&target_type, &[66, 0, 42])
     }
 
@@ -355,6 +465,8 @@ mod test {
             target_type: 67,
             offset: 42,
         };
+
+        assert_eq!("Offset[target_type=67, offset=42]", target_type.to_string());
         test_array_type(&target_type, &[67, 0, 42])
     }
 
@@ -365,6 +477,11 @@ mod test {
             offset: 1,
             type_argument_index: 42,
         };
+
+        assert_eq!(
+            "TypeArgument[target_type=71, offset=1, type_argument_index=42]",
+            target_type.to_string()
+        );
         test_array_type(&target_type, &[71, 0, 1, 42])
     }
 }

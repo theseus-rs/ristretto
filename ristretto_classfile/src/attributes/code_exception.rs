@@ -1,5 +1,6 @@
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `CodeException`.
@@ -45,9 +46,33 @@ impl CodeException {
     }
 }
 
+impl fmt::Display for CodeException {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "start_pc: {}, end_pc: {}, handler_pc: {}, catch_type: {}",
+            self.start_pc, self.end_pc, self.handler_pc, self.catch_type
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_to_string() {
+        let code_exception = CodeException {
+            start_pc: 1,
+            end_pc: 2,
+            handler_pc: 3,
+            catch_type: 4,
+        };
+        assert_eq!(
+            "start_pc: 1, end_pc: 2, handler_pc: 3, catch_type: 4",
+            code_exception.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {
@@ -58,6 +83,7 @@ mod test {
             catch_type: 4,
         };
         let expected_value = [0, 1, 0, 2, 0, 3, 0, 4];
+
         let mut bytes = Vec::new();
         bootstrap_method.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);

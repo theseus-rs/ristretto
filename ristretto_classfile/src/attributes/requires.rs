@@ -1,6 +1,7 @@
 use crate::attributes::RequiresFlags;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `Requires`.
@@ -42,9 +43,32 @@ impl Requires {
     }
 }
 
+impl fmt::Display for Requires {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Requires[index={}, flags={}, version_index={}]",
+            self.index, self.flags, self.version_index
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_to_string() {
+        let requires = Requires {
+            index: 1,
+            flags: RequiresFlags::MANDATED,
+            version_index: 3,
+        };
+        assert_eq!(
+            "Requires[index=1, flags=(0x8000) ACC_MANDATED, version_index=3]",
+            requires.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {

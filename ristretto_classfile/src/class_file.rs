@@ -2,6 +2,7 @@ use crate::attributes::Attribute;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::constant::Constant;
 use crate::constant_pool::ConstantPool;
+use crate::display::indent_lines;
 use crate::error::Error::{InvalidMagicNumber, VerificationError};
 use crate::error::Result;
 use crate::field::Field;
@@ -10,6 +11,7 @@ use crate::verifiers::verifier;
 use crate::version::Version;
 use crate::Error::InvalidConstantPoolIndexType;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 const MAGIC: u32 = 0xCAFE_BABE;
@@ -42,6 +44,24 @@ impl ClassFile {
         };
 
         self.constant_pool.try_get_utf8(*name_index)
+    }
+
+    /// Get the source file name.
+    ///
+    /// # Errors
+    /// Returns an error if the source file name is not found.
+    pub fn source_file(&self) -> Result<&String> {
+        let mut index = 0;
+        for attribute in &self.attributes {
+            if let Attribute::SourceFile {
+                source_file_index, ..
+            } = attribute
+            {
+                index = *source_file_index;
+                break;
+            }
+        }
+        self.constant_pool.try_get_utf8(index)
     }
 
     /// Verify the `ClassFile`.
@@ -159,10 +179,44 @@ impl ClassFile {
     }
 }
 
+impl fmt::Display for ClassFile {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "version: {}", self.version)?;
+        writeln!(f, "access_flags: {}", self.access_flags)?;
+        writeln!(f, "this_class: #{}", self.this_class)?;
+        writeln!(f, "super_class: #{}", self.super_class)?;
+        writeln!(f, "interfaces: {:?}", self.interfaces)?;
+        writeln!(f, "fields:")?;
+        for (index, field) in self.fields.iter().enumerate() {
+            if index > 0 {
+                writeln!(f)?;
+            }
+            writeln!(f, "{}", indent_lines(&field.to_string(), "  "))?;
+        }
+        writeln!(f, "methods:")?;
+        for (index, method) in self.methods.iter().enumerate() {
+            if index > 0 {
+                writeln!(f)?;
+            }
+            writeln!(f, "{}", indent_lines(&method.to_string(), "  "))?;
+        }
+        writeln!(f, "attributes:")?;
+        for (index, attribute) in self.attributes.iter().enumerate() {
+            if index > 0 {
+                writeln!(f)?;
+            }
+            writeln!(f, "{}", indent_lines(&attribute.to_string(), "  "))?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::error::Result;
+    use crate::Error::InvalidConstantPoolIndex;
+    use indoc::indoc;
 
     #[test]
     fn test_invalid_magic() {
@@ -172,6 +226,16 @@ mod test {
             Err(InvalidMagicNumber(invalid_magic)),
             ClassFile::from_bytes(&mut bytes)
         );
+    }
+
+    #[test]
+    fn test_class_name() -> Result<()> {
+        let class_bytes = include_bytes!("../classes/Simple.class");
+        let expected_bytes = class_bytes.to_vec();
+        let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
+
+        assert_eq!("Simple", class_file.class_name()?);
+        Ok(())
     }
 
     #[test]
@@ -188,6 +252,23 @@ mod test {
             Err(InvalidConstantPoolIndexType(1)),
             class_file.class_name()
         );
+    }
+
+    #[test]
+    fn test_source_file() -> Result<()> {
+        let class_bytes = include_bytes!("../classes/Simple.class");
+        let expected_bytes = class_bytes.to_vec();
+        let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
+
+        assert_eq!("Simple.java", class_file.source_file()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_source_file_invalid_constant_pool() {
+        let class_file = ClassFile::default();
+
+        assert_eq!(Err(InvalidConstantPoolIndex(0)), class_file.source_file());
     }
 
     #[test]
@@ -225,6 +306,32 @@ mod test {
             }),
             class_file.verify()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_minimum_to_string() -> Result<()> {
+        let class_bytes = include_bytes!("../classes/Minimum.class");
+        let expected_bytes = class_bytes.to_vec();
+        let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
+        let expected = indoc! {"
+            version: Java 21
+            access_flags: (0x0021) ACC_PUBLIC, ACC_SUPER
+            this_class: #7
+            super_class: #2
+            interfaces: []
+            fields:
+            methods:
+              access_flags: (0x0001) ACC_PUBLIC
+              name_index: #5
+              descriptor_index: #6
+              attributes:
+                Code { name_index: 9, max_stack: 1, max_locals: 1, code: [42, 183, 0, 1, 177], exceptions: [], attributes: [LineNumberTable { name_index: 10, line_numbers: [LineNumber { start_pc: 0, line_number: 1 }] }] }
+            attributes:
+              SourceFile { name_index: 11, source_file_index: 12 }
+        "};
+
+        assert_eq!(expected, class_file.to_string());
         Ok(())
     }
 

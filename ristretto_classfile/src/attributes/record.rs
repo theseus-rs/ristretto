@@ -2,6 +2,7 @@ use crate::attributes::Attribute;
 use crate::constant_pool::ConstantPool;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `Record`.
@@ -55,10 +56,37 @@ impl Record {
     }
 }
 
+impl fmt::Display for Record {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Record[name_index={}, descriptor_index={}, attributes={:?}]",
+            self.name_index, self.descriptor_index, self.attributes
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::constant::Constant;
+
+    #[test]
+    fn test_to_string() {
+        let attribute = Attribute::ConstantValue {
+            name_index: 1,
+            constantvalue_index: 42,
+        };
+        let record = Record {
+            name_index: 1,
+            descriptor_index: 2,
+            attributes: vec![attribute],
+        };
+        assert_eq!(
+            "Record[name_index=1, descriptor_index=2, attributes=[ConstantValue { name_index: 1, constantvalue_index: 42 }]]",
+            record.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {

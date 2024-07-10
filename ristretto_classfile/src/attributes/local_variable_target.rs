@@ -1,5 +1,6 @@
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `LocalVariableTarget`.
@@ -42,9 +43,32 @@ impl LocalVariableTarget {
     }
 }
 
+impl fmt::Display for LocalVariableTarget {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "start_pc: {}, length: {}, index: {}",
+            self.start_pc, self.length, self.index
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_display() {
+        let local_variable_target = LocalVariableTarget {
+            start_pc: 1,
+            length: 2,
+            index: 3,
+        };
+        assert_eq!(
+            "start_pc: 1, length: 2, index: 3",
+            local_variable_target.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {

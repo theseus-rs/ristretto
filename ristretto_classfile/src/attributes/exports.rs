@@ -1,6 +1,7 @@
 use crate::attributes::ExportsFlags;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `Exports`.
@@ -51,9 +52,32 @@ impl Exports {
     }
 }
 
+impl fmt::Display for Exports {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "index: {}, flags: {}, to_index: {:?}",
+            self.index, self.flags, self.to_index
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_to_string() {
+        let exports = Exports {
+            index: 1,
+            flags: ExportsFlags::MANDATED,
+            to_index: vec![3],
+        };
+        assert_eq!(
+            "index: 1, flags: (0x8000) ACC_MANDATED, to_index: [3]",
+            exports.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {
@@ -63,6 +87,7 @@ mod test {
             to_index: vec![3],
         };
         let expected_value = [0, 1, 128, 0, 0, 1, 0, 3];
+
         let mut bytes = Vec::new();
         exports.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);

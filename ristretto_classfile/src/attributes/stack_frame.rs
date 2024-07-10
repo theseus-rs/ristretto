@@ -2,6 +2,7 @@ use crate::attributes::VerificationType;
 use crate::error::Error::InvalidStackFrameType;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of `StackFrame`.
@@ -195,6 +196,71 @@ impl StackFrame {
     }
 }
 
+impl fmt::Display for StackFrame {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            StackFrame::SameFrame { frame_type } => {
+                write!(f, "SameFrame[frame_type={frame_type}]")
+            }
+            StackFrame::SameLocals1StackItemFrame { frame_type, stack } => {
+                write!(
+                    f,
+                    "SameLocals1StackItemFrame[frame_type={frame_type}, stack={stack:?}]",
+                )
+            }
+            StackFrame::SameLocals1StackItemFrameExtended {
+                frame_type,
+                offset_delta,
+                stack,
+            } => {
+                write!(
+                    f,
+                    "SameLocals1StackItemFrameExtended[frame_type={frame_type}, offset_delta={offset_delta}, stack={stack:?}]",
+                )
+            }
+            StackFrame::ChopFrame {
+                frame_type,
+                offset_delta,
+            } => {
+                write!(
+                    f,
+                    "ChopFrame[frame_type={frame_type}, offset_delta={offset_delta}]",
+                )
+            }
+            StackFrame::SameFrameExtended {
+                frame_type,
+                offset_delta,
+            } => {
+                write!(
+                    f,
+                    "SameFrameExtended[frame_type={frame_type}, offset_delta={offset_delta}]",
+                )
+            }
+            StackFrame::AppendFrame {
+                frame_type,
+                offset_delta,
+                locals,
+            } => {
+                write!(
+                    f,
+                    "AppendFrame[frame_type={frame_type}, offset_delta={offset_delta}, locals={locals:?}]",
+                )
+            }
+            StackFrame::FullFrame {
+                frame_type,
+                offset_delta,
+                locals,
+                stack,
+            } => {
+                write!(
+                    f,
+                    "FullFrame[frame_type={frame_type}, offset_delta={offset_delta}, locals={locals:?}, stack={stack:?}]",
+                )
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -226,6 +292,8 @@ mod test {
     fn test_same_frame() -> Result<()> {
         let stack_frame = StackFrame::SameFrame { frame_type: 0 };
         let expected_bytes = [0];
+
+        assert_eq!("SameFrame[frame_type=0]", stack_frame.to_string());
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
@@ -236,6 +304,11 @@ mod test {
             stack: vec![VerificationType::Null],
         };
         let expected_bytes = [64, 5];
+
+        assert_eq!(
+            "SameLocals1StackItemFrame[frame_type=64, stack=[Null]]",
+            stack_frame.to_string()
+        );
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
@@ -247,6 +320,11 @@ mod test {
             stack: vec![VerificationType::Null],
         };
         let expected_bytes = [247, 0, 42, 5];
+
+        assert_eq!(
+            "SameLocals1StackItemFrameExtended[frame_type=247, offset_delta=42, stack=[Null]]",
+            stack_frame.to_string()
+        );
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
@@ -257,6 +335,11 @@ mod test {
             offset_delta: 42,
         };
         let expected_bytes = [248, 0, 42];
+
+        assert_eq!(
+            "ChopFrame[frame_type=248, offset_delta=42]",
+            stack_frame.to_string()
+        );
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
@@ -267,6 +350,11 @@ mod test {
             offset_delta: 42,
         };
         let expected_bytes = [251, 0, 42];
+
+        assert_eq!(
+            "SameFrameExtended[frame_type=251, offset_delta=42]",
+            stack_frame.to_string()
+        );
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
@@ -278,6 +366,11 @@ mod test {
             locals: vec![VerificationType::Null],
         };
         let expected_bytes = [252, 0, 42, 5];
+
+        assert_eq!(
+            "AppendFrame[frame_type=252, offset_delta=42, locals=[Null]]",
+            stack_frame.to_string()
+        );
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
@@ -290,6 +383,11 @@ mod test {
             stack: vec![VerificationType::Integer],
         };
         let expected_bytes = [255, 0, 42, 0, 1, 5, 0, 1, 1];
+
+        assert_eq!(
+            "FullFrame[frame_type=255, offset_delta=42, locals=[Null], stack=[Integer]]",
+            stack_frame.to_string()
+        );
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 }

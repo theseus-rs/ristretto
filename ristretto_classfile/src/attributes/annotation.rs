@@ -1,6 +1,7 @@
 use crate::attributes::annotation_value_pair::AnnotationValuePair;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 /// Implementation of Annotation.
@@ -49,10 +50,39 @@ impl Annotation {
     }
 }
 
+impl fmt::Display for Annotation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "type_index: {}, elements: {:?}",
+            self.type_index, self.elements
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::attributes::AnnotationElement;
+
+    #[test]
+    fn test_to_string() {
+        let annotation_value_pair = AnnotationValuePair {
+            name_index: 1,
+            value: AnnotationElement::Byte {
+                const_value_index: 42,
+            },
+        };
+        let annotation = Annotation {
+            type_index: 3,
+            elements: vec![annotation_value_pair],
+        };
+
+        assert_eq!(
+            "type_index: 3, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }]",
+            annotation.to_string()
+        );
+    }
 
     #[test]
     fn test_serialization() -> Result<()> {
@@ -67,6 +97,7 @@ mod test {
             elements: vec![annotation_value_pair],
         };
         let expected_value = [0, 3, 0, 1, 0, 1, 66, 0, 42];
+
         let mut bytes = Vec::new();
         annotation.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);

@@ -1,6 +1,7 @@
 use crate::error::Error::InvalidVersion;
 use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::fmt;
 use std::io::Cursor;
 
 const JAVA_PREVIEW_MINOR_VERSION: u16 = 65535;
@@ -192,6 +193,37 @@ impl Default for Version {
     }
 }
 
+impl fmt::Display for Version {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Version::Java1_0_2 { .. } => write!(f, "Java 1.0.2"),
+            Version::Java1_1 { .. } => write!(f, "Java 1.1"),
+            Version::Java1_2 { .. } => write!(f, "Java 1.2"),
+            Version::Java1_3 { .. } => write!(f, "Java 1.3"),
+            Version::Java1_4 { .. } => write!(f, "Java 1.4"),
+            Version::Java5_0 { .. } => write!(f, "Java 5.0"),
+            Version::Java6 { .. } => write!(f, "Java 6"),
+            Version::Java7 { .. } => write!(f, "Java 7"),
+            Version::Java8 { .. } => write!(f, "Java 8"),
+            Version::Java9 { .. } => write!(f, "Java 9"),
+            Version::Java10 { .. } => write!(f, "Java 10"),
+            Version::Java11 { .. } => write!(f, "Java 11"),
+            Version::Java12 { .. } => write!(f, "Java 12"),
+            Version::Java13 { .. } => write!(f, "Java 13"),
+            Version::Java14 { .. } => write!(f, "Java 14"),
+            Version::Java15 { .. } => write!(f, "Java 15"),
+            Version::Java16 { .. } => write!(f, "Java 16"),
+            Version::Java17 { .. } => write!(f, "Java 17"),
+            Version::Java18 { .. } => write!(f, "Java 18"),
+            Version::Java19 { .. } => write!(f, "Java 19"),
+            Version::Java20 { .. } => write!(f, "Java 20"),
+            Version::Java21 { .. } => write!(f, "Java 21"),
+            Version::Java22 { .. } => write!(f, "Java 22"),
+            Version::Java23 { .. } => write!(f, "Java 23"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -237,6 +269,7 @@ mod test {
             } else {
                 index -= 1;
             }
+            assert!(version.to_string().starts_with("Java "));
             assert_eq!(major, MIN_MAJOR + index);
             assert_eq!(version.minor(), 0);
         }

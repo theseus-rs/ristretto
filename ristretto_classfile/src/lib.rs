@@ -7,11 +7,11 @@
 //!
 //! ## Getting Started
 //!
-//! Implementation of the [JVM class File Format](https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html) that
+//! Implementation of the [JVM Class File Format](https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html) that
 //! is used to read, write and verify Java classes.
 //!
-//! Reading and writing class files for any version of Java version up to 23. Verification of class files is supported, but
-//! is still a work in progress. The API is currently unstable and will change as the implementation progresses.
+//! Supports reading and writing class files for any version of Java version up to 23. Verification
+//! of class files is supported, but is still a work in progress.
 //!
 //! # Examples
 //!
@@ -59,6 +59,7 @@ mod class_access_flags;
 mod class_file;
 mod constant;
 mod constant_pool;
+mod display;
 mod error;
 mod field;
 mod field_access_flags;

@@ -1,5 +1,6 @@
 use crate::error::Result;
 use crate::Error::InvalidBaseTypeCode;
+use std::fmt;
 
 /// Implementation of `BaseType`.
 ///
@@ -53,6 +54,21 @@ impl BaseType {
     }
 }
 
+impl fmt::Display for BaseType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BaseType::Byte => write!(f, "byte"),
+            BaseType::Char => write!(f, "char"),
+            BaseType::Double => write!(f, "double"),
+            BaseType::Float => write!(f, "float"),
+            BaseType::Int => write!(f, "int"),
+            BaseType::Long => write!(f, "long"),
+            BaseType::Short => write!(f, "short"),
+            BaseType::Boolean => write!(f, "boolean"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -66,6 +82,7 @@ mod test {
     fn test_byte() -> Result<()> {
         assert_eq!(BaseType::Byte.code(), 'B');
         assert_eq!(BaseType::Byte, BaseType::parse('B')?);
+        assert_eq!("byte", BaseType::Byte.to_string());
         Ok(())
     }
 
@@ -73,6 +90,7 @@ mod test {
     fn test_char() -> Result<()> {
         assert_eq!(BaseType::Char.code(), 'C');
         assert_eq!(BaseType::Char, BaseType::parse('C')?);
+        assert_eq!("char", BaseType::Char.to_string());
         Ok(())
     }
 
@@ -80,6 +98,7 @@ mod test {
     fn test_double() -> Result<()> {
         assert_eq!(BaseType::Double.code(), 'D');
         assert_eq!(BaseType::Double, BaseType::parse('D')?);
+        assert_eq!("double", BaseType::Double.to_string());
         Ok(())
     }
 
@@ -87,6 +106,7 @@ mod test {
     fn test_float() -> Result<()> {
         assert_eq!(BaseType::Float.code(), 'F');
         assert_eq!(BaseType::Float, BaseType::parse('F')?);
+        assert_eq!("float", BaseType::Float.to_string());
         Ok(())
     }
 
@@ -94,6 +114,7 @@ mod test {
     fn test_int() -> Result<()> {
         assert_eq!(BaseType::Int.code(), 'I');
         assert_eq!(BaseType::Int, BaseType::parse('I')?);
+        assert_eq!("int", BaseType::Int.to_string());
         Ok(())
     }
 
@@ -101,6 +122,7 @@ mod test {
     fn test_long() -> Result<()> {
         assert_eq!(BaseType::Long.code(), 'J');
         assert_eq!(BaseType::Long, BaseType::parse('J')?);
+        assert_eq!("long", BaseType::Long.to_string());
         Ok(())
     }
 
@@ -108,6 +130,7 @@ mod test {
     fn test_short() -> Result<()> {
         assert_eq!(BaseType::Short.code(), 'S');
         assert_eq!(BaseType::Short, BaseType::parse('S')?);
+        assert_eq!("short", BaseType::Short.to_string());
         Ok(())
     }
 
@@ -115,6 +138,7 @@ mod test {
     fn test_boolean() -> Result<()> {
         assert_eq!(BaseType::Boolean.code(), 'Z');
         assert_eq!(BaseType::Boolean, BaseType::parse('Z')?);
+        assert_eq!("boolean", BaseType::Boolean.to_string());
         Ok(())
     }
 }
