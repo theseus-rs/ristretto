@@ -68,10 +68,7 @@ impl fmt::Display for Method {
         writeln!(f, "name_index: #{}", self.name_index)?;
         writeln!(f, "descriptor_index: #{}", self.descriptor_index)?;
         writeln!(f, "attributes:")?;
-        for (index, attribute) in self.attributes.iter().enumerate() {
-            if index > 0 {
-                writeln!(f)?;
-            }
+        for attribute in &self.attributes {
             writeln!(f, "{}", indent_lines(&attribute.to_string(), "  "))?;
         }
         Ok(())
@@ -86,26 +83,30 @@ mod test {
     use indoc::indoc;
 
     #[test]
-    fn test_to_string() -> Result<()> {
-        let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8("ConstantValue".to_string()));
-        let mut attribute_bytes = Cursor::new([0, 1, 0, 0, 0, 2, 4, 2].to_vec());
-        let attribute = Attribute::from_bytes(&constant_pool, &mut attribute_bytes)?;
+    fn test_to_string() {
+        let attribute1 = Attribute::ConstantValue {
+            name_index: 1,
+            constant_value_index: 2,
+        };
+        let attribute2 = Attribute::ConstantValue {
+            name_index: 3,
+            constant_value_index: 4,
+        };
         let method = Method {
             access_flags: MethodAccessFlags::PUBLIC,
             name_index: 1,
             descriptor_index: 2,
-            attributes: vec![attribute],
+            attributes: vec![attribute1, attribute2],
         };
         let expected = indoc! {"
             access_flags: (0x0001) ACC_PUBLIC
             name_index: #1
             descriptor_index: #2
             attributes:
-              ConstantValue { name_index: 1, constantvalue_index: 1026 }
+              ConstantValue { name_index: 1, constant_value_index: 2 }
+              ConstantValue { name_index: 3, constant_value_index: 4 }
         "};
         assert_eq!(expected, method.to_string());
-        Ok(())
     }
 
     #[test]

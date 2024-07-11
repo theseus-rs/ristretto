@@ -75,10 +75,7 @@ impl fmt::Display for Field {
         writeln!(f, "descriptor_index: #{}", self.descriptor_index)?;
         writeln!(f, "field_type: {:?}", self.field_type)?;
         writeln!(f, "attributes:")?;
-        for (index, attribute) in self.attributes.iter().enumerate() {
-            if index > 0 {
-                writeln!(f)?;
-            }
+        for attribute in &self.attributes {
             writeln!(f, "{}", indent_lines(&attribute.to_string(), "  "))?;
         }
         Ok(())
@@ -115,7 +112,7 @@ mod test {
             descriptor_index: #2
             field_type: Base(Int)
             attributes:
-              ConstantValue { name_index: 1, constantvalue_index: 1026 }
+              ConstantValue { name_index: 1, constant_value_index: 1026 }
         "};
         assert_eq!(expected, field.to_string());
         Ok(())
