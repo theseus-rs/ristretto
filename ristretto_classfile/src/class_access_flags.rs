@@ -48,6 +48,38 @@ impl ClassAccessFlags {
         Ok(access_flags)
     }
 
+    /// Get the Class Access Flags as a string of code.
+    #[must_use]
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_code(&self) -> String {
+        let mut modifiers = Vec::new();
+        if self.contains(ClassAccessFlags::PUBLIC) {
+            modifiers.push("public");
+        }
+        if self.contains(ClassAccessFlags::ABSTRACT) {
+            modifiers.push("abstract");
+        }
+        if self.contains(ClassAccessFlags::FINAL) {
+            modifiers.push("final");
+        }
+        if self.contains(ClassAccessFlags::SYNTHETIC) {
+            modifiers.push("synthetic");
+        }
+        if self.contains(ClassAccessFlags::ANNOTATION) {
+            modifiers.push("annotation");
+        } else if self.contains(ClassAccessFlags::ENUM) {
+            modifiers.push("enum");
+        } else if self.contains(ClassAccessFlags::INTERFACE) {
+            modifiers.push("interface");
+        } else if self.contains(ClassAccessFlags::MODULE) {
+            modifiers.push("module");
+        } else {
+            modifiers.push("class");
+        }
+
+        modifiers.join(" ")
+    }
+
     /// Serialize the `ClassAccessFlags` to bytes.
     ///
     /// # Errors
@@ -127,6 +159,19 @@ mod test {
         let mut bytes = Cursor::new(bytes);
         assert_eq!(Ok(access_flags), ClassAccessFlags::from_bytes(&mut bytes));
         Ok(())
+    }
+
+    #[test]
+    fn test_as_code() {
+        assert_eq!("public class", ClassAccessFlags::PUBLIC.as_code());
+        assert_eq!("final class", ClassAccessFlags::FINAL.as_code());
+        assert_eq!("class", ClassAccessFlags::SUPER.as_code());
+        assert_eq!("interface", ClassAccessFlags::INTERFACE.as_code());
+        assert_eq!("abstract class", ClassAccessFlags::ABSTRACT.as_code());
+        assert_eq!("synthetic class", ClassAccessFlags::SYNTHETIC.as_code());
+        assert_eq!("annotation", ClassAccessFlags::ANNOTATION.as_code());
+        assert_eq!("enum", ClassAccessFlags::ENUM.as_code());
+        assert_eq!("module", ClassAccessFlags::MODULE.as_code());
     }
 
     #[test]
