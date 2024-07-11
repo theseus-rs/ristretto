@@ -180,18 +180,21 @@ impl ClassFile {
 
 impl fmt::Display for ClassFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(source_file) = self.source_file().map_err(|_| fmt::Error)? {
-            writeln!(f, r#"Compiled from "{source_file}""#)?;
-        }
-        writeln!(f, "version: {}", self.version)?;
-        writeln!(f, "major version: {}", self.version.major())?;
-        writeln!(f, "minor version: {}", self.version.minor())?;
-        writeln!(f, "access_flags: {}", self.access_flags)?;
-        writeln!(f, "this_class: #{}", self.this_class)?;
-        writeln!(f, "super_class: #{}", self.super_class)?;
+        let class_name = self.class_name().map_err(|_| fmt::Error)?;
+        writeln!(f, "{} {class_name}", self.access_flags.as_code())?;
         writeln!(
             f,
-            "interfaces: {}, fields: {}, methods: {}, attributes: {}",
+            "  major version: {} ({})",
+            self.version.major(),
+            self.version
+        )?;
+        writeln!(f, "  minor version: {}", self.version.minor())?;
+        writeln!(f, "  access_flags: {}", self.access_flags)?;
+        writeln!(f, "  this_class: #{}", self.this_class)?;
+        writeln!(f, "  super_class: #{}", self.super_class)?;
+        writeln!(
+            f,
+            "  interfaces: {}, fields: {}, methods: {}, attributes: {}",
             self.interfaces.len(),
             self.fields.len(),
             self.methods.len(),
@@ -335,15 +338,14 @@ mod test {
         let class_bytes = include_bytes!("../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
-        let expected = indoc! {r#"
-            Compiled from "Minimum.java"
-            version: Java 21
-            major version: 65
-            minor version: 0
-            access_flags: (0x0021) ACC_PUBLIC, ACC_SUPER
-            this_class: #7
-            super_class: #2
-            interfaces: 0, fields: 0, methods: 1, attributes: 1
+        let expected = indoc! {r"
+            public class Minimum
+              major version: 65 (Java 21)
+              minor version: 0
+              access_flags: (0x0021) ACC_PUBLIC, ACC_SUPER
+              this_class: #7
+              super_class: #2
+              interfaces: 0, fields: 0, methods: 1, attributes: 1
             Constant Pool:
                #1 = MethodRef          #2.#3
                #2 = Class              #4
@@ -373,7 +375,7 @@ mod test {
                      line 0: 1
             attributes:
               SourceFile { name_index: 11, source_file_index: 12 }
-        "#};
+        "};
 
         assert_eq!(expected, class_file.to_string());
         Ok(())

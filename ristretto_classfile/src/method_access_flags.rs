@@ -62,6 +62,39 @@ impl MethodAccessFlags {
         bytes.write_u16::<BigEndian>(self.bits())?;
         Ok(())
     }
+
+    /// Get the Method Access Flags as a string of code.
+    #[must_use]
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_code(&self) -> String {
+        let mut modifiers = Vec::new();
+        if self.contains(MethodAccessFlags::PUBLIC) {
+            modifiers.push("public");
+        }
+        if self.contains(MethodAccessFlags::PRIVATE) {
+            modifiers.push("private");
+        }
+        if self.contains(MethodAccessFlags::PROTECTED) {
+            modifiers.push("protected");
+        }
+        if self.contains(MethodAccessFlags::STATIC) {
+            modifiers.push("static");
+        }
+        if self.contains(MethodAccessFlags::ABSTRACT) {
+            modifiers.push("abstract");
+        }
+        if self.contains(MethodAccessFlags::FINAL) {
+            modifiers.push("final");
+        }
+        if self.contains(MethodAccessFlags::SYNCHRONIZED) {
+            modifiers.push("synchronized");
+        }
+        if self.contains(MethodAccessFlags::NATIVE) {
+            modifiers.push("native");
+        }
+
+        modifiers.join(" ")
+    }
 }
 
 impl fmt::Display for MethodAccessFlags {
@@ -145,6 +178,26 @@ mod test {
         let mut bytes = Cursor::new(bytes);
         assert_eq!(Ok(access_flags), MethodAccessFlags::from_bytes(&mut bytes));
         Ok(())
+    }
+
+    #[test]
+    fn test_as_code() {
+        assert_eq!("public", MethodAccessFlags::PUBLIC.as_code());
+        assert_eq!("private", MethodAccessFlags::PRIVATE.as_code());
+        assert_eq!("protected", MethodAccessFlags::PROTECTED.as_code());
+        assert_eq!("static", MethodAccessFlags::STATIC.as_code());
+        assert_eq!("final", MethodAccessFlags::FINAL.as_code());
+        assert_eq!("synchronized", MethodAccessFlags::SYNCHRONIZED.as_code());
+        assert_eq!("", MethodAccessFlags::BRIDGE.as_code());
+        assert_eq!("", MethodAccessFlags::VARARGS.as_code());
+        assert_eq!("native", MethodAccessFlags::NATIVE.as_code());
+        assert_eq!("abstract", MethodAccessFlags::ABSTRACT.as_code());
+        assert_eq!("", MethodAccessFlags::STRICT.as_code());
+        assert_eq!("", MethodAccessFlags::SYNTHETIC.as_code());
+
+        let access_flags =
+            MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL;
+        assert_eq!("public static final", access_flags.as_code());
     }
 
     #[test]

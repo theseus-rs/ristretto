@@ -56,6 +56,42 @@ impl FieldAccessFlags {
         bytes.write_u16::<BigEndian>(self.bits())?;
         Ok(())
     }
+
+    /// Get the Field Access Flags as a string of code.
+    #[must_use]
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_code(&self) -> String {
+        let mut modifiers = Vec::new();
+        if self.contains(FieldAccessFlags::PUBLIC) {
+            modifiers.push("public");
+        }
+        if self.contains(FieldAccessFlags::PRIVATE) {
+            modifiers.push("private");
+        }
+        if self.contains(FieldAccessFlags::PROTECTED) {
+            modifiers.push("protected");
+        }
+        if self.contains(FieldAccessFlags::STATIC) {
+            modifiers.push("static");
+        }
+        if self.contains(FieldAccessFlags::VOLATILE) {
+            modifiers.push("volatile");
+        }
+        if self.contains(FieldAccessFlags::TRANSIENT) {
+            modifiers.push("transient");
+        }
+        if self.contains(FieldAccessFlags::FINAL) {
+            modifiers.push("final");
+        }
+        if self.contains(FieldAccessFlags::SYNTHETIC) {
+            modifiers.push("synthetic");
+        }
+        if self.contains(FieldAccessFlags::ENUM) {
+            modifiers.push("enum");
+        }
+
+        modifiers.join(" ")
+    }
 }
 
 impl fmt::Display for FieldAccessFlags {
@@ -127,6 +163,22 @@ mod test {
         let mut bytes = Cursor::new(bytes);
         assert_eq!(Ok(access_flags), FieldAccessFlags::from_bytes(&mut bytes));
         Ok(())
+    }
+
+    #[test]
+    fn test_as_code() {
+        assert_eq!("public", FieldAccessFlags::PUBLIC.as_code());
+        assert_eq!("private", FieldAccessFlags::PRIVATE.as_code());
+        assert_eq!("protected", FieldAccessFlags::PROTECTED.as_code());
+        assert_eq!("static", FieldAccessFlags::STATIC.as_code());
+        assert_eq!("final", FieldAccessFlags::FINAL.as_code());
+        assert_eq!("volatile", FieldAccessFlags::VOLATILE.as_code());
+        assert_eq!("transient", FieldAccessFlags::TRANSIENT.as_code());
+        assert_eq!("synthetic", FieldAccessFlags::SYNTHETIC.as_code());
+        assert_eq!("enum", FieldAccessFlags::ENUM.as_code());
+        let access_flags =
+            FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL;
+        assert_eq!("public static final", access_flags.as_code());
     }
 
     #[test]
