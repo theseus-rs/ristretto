@@ -42,7 +42,7 @@ impl fmt::Display for MethodParameter {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "name_index: {}, access_flags: {}",
+            "name_index: #{}, access_flags: {}",
             self.name_index, self.access_flags
         )
     }
@@ -53,14 +53,15 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_deserialization() -> Result<()> {
-        let expected_value = MethodParameter {
+    fn test_to_string() {
+        let method_parameter = MethodParameter {
             name_index: 3,
             access_flags: MethodAccessFlags::PUBLIC,
         };
-        let mut bytes = Cursor::new(vec![0, 3, 0, 1]);
-        assert_eq!(expected_value, MethodParameter::from_bytes(&mut bytes)?);
-        Ok(())
+        assert_eq!(
+            "name_index: #3, access_flags: (0x0001) ACC_PUBLIC",
+            method_parameter.to_string()
+        );
     }
 
     #[test]

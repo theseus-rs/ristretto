@@ -75,7 +75,7 @@ mod test {
     fn test_to_string() {
         let attribute = Attribute::ConstantValue {
             name_index: 1,
-            constantvalue_index: 42,
+            constant_value_index: 42,
         };
         let record = Record {
             name_index: 1,
@@ -83,7 +83,7 @@ mod test {
             attributes: vec![attribute],
         };
         assert_eq!(
-            "Record[name_index=1, descriptor_index=2, attributes=[ConstantValue { name_index: 1, constantvalue_index: 42 }]]",
+            "Record[name_index=1, descriptor_index=2, attributes=[ConstantValue { name_index: 1, constant_value_index: 42 }]]",
             record.to_string()
         );
     }
@@ -92,7 +92,7 @@ mod test {
     fn test_serialization() -> Result<()> {
         let attribute = Attribute::ConstantValue {
             name_index: 1,
-            constantvalue_index: 42,
+            constant_value_index: 42,
         };
         let mut constant_pool = ConstantPool::default();
         constant_pool.add(Constant::Utf8("ConstantValue".to_string()));

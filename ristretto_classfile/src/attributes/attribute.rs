@@ -9,6 +9,7 @@ use crate::attributes::{
 };
 use crate::constant::Constant;
 use crate::constant_pool::ConstantPool;
+use crate::display::indent_lines;
 use crate::error::Error::{InvalidAttributeLength, InvalidAttributeNameIndex};
 use crate::error::Result;
 use crate::mutf8;
@@ -35,7 +36,7 @@ const VERSION_61_0: Version = Version::Java17 { minor: 0 };
 pub enum Attribute {
     ConstantValue {
         name_index: u16,
-        constantvalue_index: u16,
+        constant_value_index: u16,
     },
     Code {
         name_index: u16,
@@ -275,7 +276,7 @@ impl Attribute {
                 }
                 Attribute::ConstantValue {
                     name_index,
-                    constantvalue_index: bytes.read_u16::<BigEndian>()?,
+                    constant_value_index: bytes.read_u16::<BigEndian>()?,
                 }
             }
             "Code" => {
@@ -663,8 +664,8 @@ impl Attribute {
         let (name_index, info) = match self {
             Attribute::ConstantValue {
                 name_index,
-                constantvalue_index,
-            } => (name_index, constantvalue_index.to_be_bytes().to_vec()),
+                constant_value_index,
+            } => (name_index, constant_value_index.to_be_bytes().to_vec()),
             Attribute::Code {
                 name_index,
                 max_stack,
@@ -1009,7 +1010,49 @@ impl Attribute {
 
 impl fmt::Display for Attribute {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self:?}")
+        match self {
+            Attribute::Code {
+                max_stack,
+                max_locals,
+                code,
+                exceptions,
+                attributes,
+                ..
+            } => {
+                writeln!(f, "Code:")?;
+                writeln!(f, "  max_stack = {max_stack}, max_locals = {max_locals}")?;
+
+                let code_length = u64::try_from(code.len()).map_err(|_| fmt::Error)?;
+                let mut cursor = Cursor::new(code.clone());
+                while cursor.position() < code_length {
+                    let index = cursor.position();
+                    let instruction =
+                        Instruction::from_bytes(&mut cursor).map_err(|_| fmt::Error)?;
+                    let value = instruction.to_string();
+                    let (name, value) = value.split_once(' ').unwrap_or((value.as_str(), ""));
+                    writeln!(f, "{index:>6}: {name:<12} {value}")?;
+                }
+
+                if !exceptions.is_empty() {
+                    writeln!(f, "  {exceptions:?}")?;
+                }
+
+                for attribute in attributes {
+                    writeln!(f, "{}", indent_lines(&attribute.to_string(), "  "))?;
+                }
+            }
+            Attribute::LineNumberTable { line_numbers, .. } => {
+                writeln!(f, "LineNumberTable:")?;
+                for line_number in line_numbers {
+                    let start_pc = line_number.start_pc;
+                    let line_number = line_number.line_number;
+                    writeln!(f, "{:>9}: {line_number}", format!("line {start_pc}"))?;
+                }
+            }
+            _ => write!(f, "{self:?}")?,
+        }
+
+        Ok(())
     }
 }
 
@@ -1022,6 +1065,7 @@ mod test {
         AnnotationElement, ExportsFlags, OpensFlags, RequiresFlags, TargetPath, TargetType,
     };
     use crate::method_access_flags::MethodAccessFlags;
+    use indoc::indoc;
 
     #[test]
     fn test_invalid_attribute_name_index_error() {
@@ -1079,7 +1123,7 @@ mod test {
     fn test_constant_value() -> Result<()> {
         let attribute = Attribute::ConstantValue {
             name_index: 1,
-            constantvalue_index: 42,
+            constant_value_index: 42,
         };
         let expected_bytes = [0, 1, 0, 0, 0, 2, 0, 42];
 
@@ -1090,7 +1134,7 @@ mod test {
     fn test_code() -> Result<()> {
         let constant = Attribute::ConstantValue {
             name_index: 2,
-            constantvalue_index: 42,
+            constant_value_index: 42,
         };
         let exception = CodeException {
             start_pc: 1,
@@ -1110,8 +1154,15 @@ mod test {
             0, 1, 0, 0, 0, 29, 0, 2, 0, 3, 0, 0, 0, 1, 4, 0, 1, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 2,
             0, 0, 0, 2, 0, 42,
         ];
+        let expected = indoc! {"
+            Code:
+              max_stack = 2, max_locals = 3
+                 0: iconst_1     
+              [CodeException { start_pc: 1, end_pc: 2, handler_pc: 3, catch_type: 4 }]
+              ConstantValue { name_index: 2, constant_value_index: 42 }
+        "};
 
-        assert_eq!("Code { name_index: 1, max_stack: 2, max_locals: 3, code: [4], exceptions: [CodeException { start_pc: 1, end_pc: 2, handler_pc: 3, catch_type: 4 }], attributes: [ConstantValue { name_index: 2, constantvalue_index: 42 }] }", attribute.to_string());
+        assert_eq!(expected, attribute.to_string());
 
         let mut constant_pool = ConstantPool::default();
         constant_pool.add(Constant::Utf8(attribute.name().to_string()));
@@ -1282,11 +1333,12 @@ mod test {
             }],
         };
         let expected_bytes = [0, 1, 0, 0, 0, 6, 0, 1, 0, 2, 0, 42];
+        let expected = indoc! {"
+            LineNumberTable:
+               line 2: 42
+        "};
 
-        assert_eq!(
-            "LineNumberTable { name_index: 1, line_numbers: [LineNumber { start_pc: 2, line_number: 42 }] }",
-            attribute.to_string()
-        );
+        assert_eq!(expected, attribute.to_string());
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
     }
 
@@ -1683,7 +1735,7 @@ mod test {
     fn test_record() -> Result<()> {
         let constant = Attribute::ConstantValue {
             name_index: 1,
-            constantvalue_index: 42,
+            constant_value_index: 42,
         };
         let record = Record {
             name_index: 2,
@@ -1708,7 +1760,7 @@ mod test {
         assert!(!attribute.valid_for_version(&VERSION_45_0));
 
         assert_eq!(
-            "Record { name_index: 4, records: [Record { name_index: 2, descriptor_index: 3, attributes: [ConstantValue { name_index: 1, constantvalue_index: 42 }] }] }",
+            "Record { name_index: 4, records: [Record { name_index: 2, descriptor_index: 3, attributes: [ConstantValue { name_index: 1, constant_value_index: 42 }] }] }",
             attribute.to_string()
         );
 

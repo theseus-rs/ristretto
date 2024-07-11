@@ -124,7 +124,7 @@ impl fmt::Display for ConstantEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ConstantEntry::Constant(constant) => write!(f, "{constant}"),
-            ConstantEntry::Placeholder => write!(f, "Placeholder"),
+            ConstantEntry::Placeholder => Ok(()),
         }
     }
 }
@@ -173,14 +173,21 @@ impl<'a> IntoIterator for &'a ConstantPool {
 }
 
 impl fmt::Display for ConstantPool {
+    //    #1 = Class              #2             // java/lang/Byte
+    //    #2 = Utf8               java/lang/Byte
+    //    #3 = Class              #4             // java/lang/Integer
+    //    #4 = Utf8               java/lang/Integer
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (index, constant) in self.constants.iter().enumerate() {
-            if matches!(constant, ConstantEntry::Placeholder) {
-                continue;
+        for (index, constant_entry) in self.constants.iter().enumerate() {
+            match constant_entry {
+                ConstantEntry::Constant(constant) => {
+                    let index = index + 1;
+                    let value = constant.to_string();
+                    let (name, value) = value.split_once(' ').unwrap_or_default();
+                    writeln!(f, "{:>5} = {name:<18} {value}", format!("#{index}"))?;
+                }
+                ConstantEntry::Placeholder => continue,
             }
-
-            let index = index + 1;
-            writeln!(f, "{index}: {constant}")?;
         }
         Ok(())
     }
@@ -190,7 +197,15 @@ impl fmt::Display for ConstantPool {
 mod test {
     use super::*;
     use crate::constant::Constant;
-    use indoc::indoc;
+
+    #[test]
+    fn test_constant_pool_entry_to_string() {
+        assert_eq!(
+            "Integer 42",
+            ConstantEntry::Constant(Constant::Integer(42)).to_string()
+        );
+        assert_eq!("", ConstantEntry::Placeholder.to_string());
+    }
 
     #[test]
     fn test_get_zero_none() {
@@ -325,11 +340,7 @@ mod test {
         constant_pool.add(Constant::Utf8("foo".to_string()));
         constant_pool.add(Constant::Integer(42));
         constant_pool.add(Constant::Long(1_234_567_890));
-        let expected = indoc! {"
-            1: Utf8 foo
-            2: Integer 42
-            3: Long 1234567890
-        "};
+        let expected = "   #1 = Utf8               foo\n   #2 = Integer            42\n   #3 = Long               1234567890\n";
         assert_eq!(expected, constant_pool.to_string());
     }
 
