@@ -239,7 +239,7 @@ pub enum Instruction {
 }
 
 impl Instruction {
-    /// Return the tag for the instruction element.
+    /// Return the code for the instruction element.
     #[allow(clippy::match_same_arms)]
     #[allow(clippy::too_many_lines)]
     #[must_use]
@@ -1129,12 +1129,6 @@ impl fmt::Display for Instruction {
                 high,
                 offsets,
             } => {
-                // tableswitch   { // 3 to 5
-                //            3: 52
-                //            4: 62
-                //            5: 72
-                //      default: 82
-                // }
                 let width = 12;
                 writeln!(f, "tableswitch   {{ // {low} to {high}")?;
                 for (i, offset) in offsets.iter().enumerate() {
