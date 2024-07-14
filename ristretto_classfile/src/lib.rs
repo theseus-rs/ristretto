@@ -16,7 +16,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use ristretto_classfile::{ClassFile, Constant, ConstantPool, Result, Version};
+//! use ristretto_classfile::{ClassFile, ConstantPool, Result, Version};
 //!
 //! fn main() -> Result<()> {
 //!     let mut constant_pool = ConstantPool::default();
