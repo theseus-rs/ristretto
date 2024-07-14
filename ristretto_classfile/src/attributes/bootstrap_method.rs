@@ -34,7 +34,7 @@ impl BootstrapMethod {
     /// Serialize the bootstrap method to bytes.
     ///
     /// # Errors
-    /// If there are more than 65,535 arguments.
+    /// If there are more than 65,534 arguments.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.bootstrap_method_ref)?;
 

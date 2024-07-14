@@ -40,7 +40,7 @@ impl Record {
     /// Serialize the record to bytes.
     ///
     /// # Errors
-    /// - If the number of attributes exceeds 65,535.
+    /// - If the number of attributes exceeds 65,534.
     /// - If an attribute fails to serialize.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.name_index)?;
@@ -69,7 +69,6 @@ impl fmt::Display for Record {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::constant::Constant;
 
     #[test]
     fn test_to_string() {
@@ -95,7 +94,7 @@ mod test {
             constant_value_index: 42,
         };
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8("ConstantValue".to_string()));
+        constant_pool.add_utf8("ConstantValue")?;
         let record = Record {
             name_index: 1,
             descriptor_index: 2,

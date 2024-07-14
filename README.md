@@ -16,6 +16,27 @@ Crates for the [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se2
 
 Crates for the [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se22/html/)
 
+Supports reading and writing class files for any version of Java version up to 23. Verification of class files is
+supported, but is still a work in progress.
+
+# Examples
+
+```rust
+use ristretto_classfile::{ClassFile, Constant, ConstantPool, Result, Version};
+
+fn main() -> Result<()> {
+    let mut constant_pool = ConstantPool::default();
+    let this_class = constant_pool.add_class("Foo")?;
+    let class_file = ClassFile {
+        version: Version::Java21 { minor: 0 },
+        constant_pool,
+        this_class,
+        ..Default::default()
+    };
+    class_file.verify()
+}
+```
+
 ## Safety
 
 These crates use `#![forbid(unsafe_code)]` to ensure everything is implemented in 100% safe Rust.

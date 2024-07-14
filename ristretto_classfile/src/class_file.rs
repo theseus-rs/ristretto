@@ -39,7 +39,7 @@ impl ClassFile {
     /// Returns an error if the class name is not found.
     pub fn class_name(&self) -> Result<&String> {
         let class_constant = self.constant_pool.try_get(self.this_class)?;
-        let Constant::Class { name_index } = class_constant else {
+        let Constant::Class(name_index) = class_constant else {
             return Err(InvalidConstantPoolIndexType(self.this_class));
         };
 
@@ -141,7 +141,7 @@ impl ClassFile {
     /// Serialize the `ClassFile` to bytes.
     ///
     /// # Errors
-    /// - If there are more than 65,535 interfaces, fields, methods, or attributes.
+    /// - If there are more than 65,534 interfaces, fields, methods, or attributes.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u32::<BigEndian>(MAGIC)?;
         self.version.to_bytes(bytes)?;
@@ -260,12 +260,12 @@ mod test {
     }
 
     #[test]
-    fn test_class_name_invalid_constant_pool() {
+    fn test_class_name_invalid_constant_pool() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8("Test".to_string()));
+        let utf8_index = constant_pool.add_utf8("Test")?;
         let class_file = ClassFile {
             constant_pool,
-            this_class: 1,
+            this_class: utf8_index,
             ..Default::default()
         };
 
@@ -273,6 +273,7 @@ mod test {
             Err(InvalidConstantPoolIndexType(1)),
             class_file.class_name()
         );
+        Ok(())
     }
 
     #[test]
@@ -308,18 +309,12 @@ mod test {
     #[test]
     fn test_verify_error() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8("Test".to_string()));
-        constant_pool.add(Constant::Class {
-            name_index: u16::try_from(constant_pool.len())?,
-        });
-        let class_index = u16::try_from(constant_pool.len())?;
+        let this_class = constant_pool.add_class("Test")?;
         // Add an invalid constant to trigger a verification error.
-        constant_pool.add(Constant::Class {
-            name_index: u16::MAX,
-        });
+        constant_pool.push(Constant::Class(u16::MAX));
         let class_file = ClassFile {
             constant_pool: constant_pool.clone(),
-            this_class: class_index,
+            this_class,
             ..Default::default()
         };
 

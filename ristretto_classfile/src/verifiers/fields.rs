@@ -45,8 +45,8 @@ mod test {
     fn get_test_class_file_and_field() -> (ClassFile, Field) {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.add(Constant::Utf8("foo".to_string()));
-        constant_pool.add(Constant::Utf8("I".to_string()));
+        constant_pool.push(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("I".to_string()));
         let field = Field {
             access_flags: FieldAccessFlags::PUBLIC,
             name_index: 1,
@@ -84,9 +84,7 @@ mod test {
     fn test_invalid_name_index_type() -> Result<()> {
         let (mut class_file, mut field) = get_test_class_file_and_field();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.add(Constant::Class {
-            name_index: field.name_index,
-        });
+        constant_pool.push(Constant::Class(field.name_index));
         field.name_index = u16::try_from(constant_pool.len())?;
         assert_eq!(
             Err(InvalidConstantPoolIndexType(field.name_index)),
@@ -109,9 +107,7 @@ mod test {
     fn test_invalid_descriptor_index_type() -> Result<()> {
         let (mut class_file, mut field) = get_test_class_file_and_field();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.add(Constant::Class {
-            name_index: field.descriptor_index,
-        });
+        constant_pool.push(Constant::Class(field.descriptor_index));
         field.descriptor_index = u16::try_from(constant_pool.len())?;
         assert_eq!(
             Err(InvalidConstantPoolIndexType(field.descriptor_index)),

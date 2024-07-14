@@ -47,7 +47,7 @@ impl Method {
     /// Serialize the `Method` to bytes.
     ///
     /// # Errors
-    /// If there are more than 65,535 attributes, an error is returned.
+    /// If there are more than 65,534 attributes, an error is returned.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         self.access_flags.to_bytes(bytes)?;
         bytes.write_u16::<BigEndian>(self.name_index)?;
@@ -79,7 +79,6 @@ impl fmt::Display for Method {
 mod test {
     use super::*;
     use crate::attributes::Attribute;
-    use crate::constant::Constant;
     use indoc::indoc;
 
     #[test]
@@ -112,7 +111,7 @@ mod test {
     #[test]
     fn test_serialization() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8("ConstantValue".to_string()));
+        constant_pool.add_utf8("ConstantValue")?;
         let mut attribute_bytes = Cursor::new([0, 1, 0, 0, 0, 2, 4, 2].to_vec());
         let attribute = Attribute::from_bytes(&constant_pool, &mut attribute_bytes)?;
         let method = Method {

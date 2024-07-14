@@ -1080,15 +1080,16 @@ mod test {
         );
     }
 
-    fn test_invalid_attribute_from_bytes_error(attribute: &str) {
+    fn test_invalid_attribute_from_bytes_error(attribute: &str) -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8(attribute.to_string()));
+        constant_pool.add_utf8(attribute)?;
         let expected_bytes = [0, 1, 0, 0, 0, 64];
 
         assert_eq!(
             Err(InvalidAttributeLength(64)),
             Attribute::from_bytes(&constant_pool, &mut Cursor::new(expected_bytes.to_vec()))
         );
+        Ok(())
     }
 
     fn test_attribute(
@@ -1098,7 +1099,7 @@ mod test {
     ) -> Result<()> {
         let name = attribute.name();
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8(name.to_string()));
+        constant_pool.add_utf8(name)?;
 
         assert!(attribute.valid_for_version(supported_versions));
         assert!(!attribute.valid_for_version(&VERSION_45_0));
@@ -1115,8 +1116,8 @@ mod test {
     }
 
     #[test]
-    fn test_constant_value_from_bytes_error() {
-        test_invalid_attribute_from_bytes_error("ConstantValue");
+    fn test_constant_value_from_bytes_error() -> Result<()> {
+        test_invalid_attribute_from_bytes_error("ConstantValue")
     }
 
     #[test]
@@ -1165,8 +1166,8 @@ mod test {
         assert_eq!(expected, attribute.to_string());
 
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8(attribute.name().to_string()));
-        constant_pool.add(Constant::Utf8(constant.name().to_string()));
+        constant_pool.add_utf8(attribute.name())?;
+        constant_pool.add_utf8(constant.name())?;
 
         assert!(attribute.valid_for_version(&VERSION_45_3));
         assert!(!attribute.valid_for_version(&VERSION_45_0));
@@ -1234,8 +1235,8 @@ mod test {
     }
 
     #[test]
-    fn test_enclosing_method_from_bytes_error() {
-        test_invalid_attribute_from_bytes_error("EnclosingMethod");
+    fn test_enclosing_method_from_bytes_error() -> Result<()> {
+        test_invalid_attribute_from_bytes_error("EnclosingMethod")
     }
 
     #[test]
@@ -1255,8 +1256,8 @@ mod test {
     }
 
     #[test]
-    fn test_synthetic_from_bytes_error() {
-        test_invalid_attribute_from_bytes_error("Synthetic");
+    fn test_synthetic_from_bytes_error() -> Result<()> {
+        test_invalid_attribute_from_bytes_error("Synthetic")
     }
 
     #[test]
@@ -1269,8 +1270,8 @@ mod test {
     }
 
     #[test]
-    fn test_signature_from_bytes_error() {
-        test_invalid_attribute_from_bytes_error("Signature");
+    fn test_signature_from_bytes_error() -> Result<()> {
+        test_invalid_attribute_from_bytes_error("Signature")
     }
 
     #[test]
@@ -1289,8 +1290,8 @@ mod test {
     }
 
     #[test]
-    fn test_source_file_from_bytes_error() {
-        test_invalid_attribute_from_bytes_error("SourceFile");
+    fn test_source_file_from_bytes_error() -> Result<()> {
+        test_invalid_attribute_from_bytes_error("SourceFile")
     }
 
     #[test]
@@ -1387,8 +1388,8 @@ mod test {
     }
 
     #[test]
-    fn test_deprecated_from_bytes_error() {
-        test_invalid_attribute_from_bytes_error("Deprecated");
+    fn test_deprecated_from_bytes_error() -> Result<()> {
+        test_invalid_attribute_from_bytes_error("Deprecated")
     }
 
     #[test]
@@ -1677,8 +1678,8 @@ mod test {
     }
 
     #[test]
-    fn test_module_main_class_from_bytes_error() {
-        test_invalid_attribute_from_bytes_error("ModuleMainClass");
+    fn test_module_main_class_from_bytes_error() -> Result<()> {
+        test_invalid_attribute_from_bytes_error("ModuleMainClass")
     }
 
     #[test]
@@ -1697,8 +1698,8 @@ mod test {
     }
 
     #[test]
-    fn test_nest_host_from_bytes_error() {
-        test_invalid_attribute_from_bytes_error("NestHost");
+    fn test_nest_host_from_bytes_error() -> Result<()> {
+        test_invalid_attribute_from_bytes_error("NestHost")
     }
 
     #[test]
@@ -1751,10 +1752,10 @@ mod test {
         ];
 
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8(constant.name().to_string()));
-        constant_pool.add(Constant::Utf8("bar".to_string()));
-        constant_pool.add(Constant::Utf8("test".to_string()));
-        constant_pool.add(Constant::Utf8(attribute.name().to_string()));
+        constant_pool.add_utf8(constant.name())?;
+        constant_pool.add_utf8("bar")?;
+        constant_pool.add_utf8("test")?;
+        constant_pool.add_utf8(attribute.name())?;
 
         assert!(attribute.valid_for_version(&VERSION_60_0));
         assert!(!attribute.valid_for_version(&VERSION_45_0));

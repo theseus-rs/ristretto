@@ -41,7 +41,6 @@ pub fn verify(class_file: &ClassFile) -> Result<()> {
 mod test {
     use super::*;
     use crate::class_file::ClassFile;
-    use crate::constant::Constant;
     use crate::constant_pool::ConstantPool;
     use std::io::Cursor;
 
@@ -57,11 +56,7 @@ mod test {
 
     fn test_verify_error(access_flags: ClassAccessFlags) -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8("foo".to_string()));
-        constant_pool.add(Constant::Class {
-            name_index: u16::try_from(constant_pool.len())?,
-        });
-        let this_class = u16::try_from(constant_pool.len())?;
+        let this_class = constant_pool.add_class("Foo")?;
         let class_file = ClassFile {
             constant_pool,
             access_flags,

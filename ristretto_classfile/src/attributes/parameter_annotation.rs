@@ -33,7 +33,7 @@ impl ParameterAnnotation {
     /// Serialize the parameter annotation to bytes.
     ///
     /// # Errors
-    /// - If the number of annotations exceeds 65,535.
+    /// - If the number of annotations exceeds 65,534.
     /// - If an annotation fails to serialize.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         let annotations_length = u16::try_from(self.annotations.len())?;

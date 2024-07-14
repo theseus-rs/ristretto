@@ -40,7 +40,7 @@ fn verify_super_class(class_file: &ClassFile) -> Result<()> {
     }
 
     let constant_pool = &class_file.constant_pool;
-    match constant_pool.get(class_file.this_class) {
+    match constant_pool.get(class_file.super_class) {
         Some(Constant::Class { .. }) => {} // valid constant
         None => return Err(InvalidConstantPoolIndex(super_class)),
         _ => return Err(InvalidConstantPoolIndexType(super_class)),
@@ -57,9 +57,7 @@ mod test {
     fn test_verify_this_class_success() -> Result<()> {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.add(Constant::Class { name_index: 1 });
-        let index = constant_pool.len();
-        class_file.this_class = u16::try_from(index)?;
+        class_file.this_class = constant_pool.add_class("Foo")?;
 
         assert_eq!(Ok(()), verify_this_class(&class_file));
         Ok(())
@@ -81,8 +79,7 @@ mod test {
     fn test_verify_this_class_invalid_index_type() -> Result<()> {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.add(Constant::Integer(42));
-        let index = u16::try_from(constant_pool.len())?;
+        let index = constant_pool.add_integer(42)?;
         class_file.this_class = index;
 
         assert_eq!(
@@ -96,9 +93,7 @@ mod test {
     fn test_verify_super_class_success() -> Result<()> {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.add(Constant::Class { name_index: 1 });
-        let index = u16::try_from(constant_pool.len())?;
-        class_file.super_class = index;
+        class_file.super_class = constant_pool.add_class("Foo")?;
 
         assert_eq!(Ok(()), verify_super_class(&class_file));
         Ok(())
@@ -129,8 +124,7 @@ mod test {
     fn test_verify_super_class_invalid_index_type() -> Result<()> {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.add(Constant::Integer(42));
-        let index = u16::try_from(constant_pool.len())?;
+        let index = constant_pool.add_integer(42)?;
         class_file.super_class = index;
 
         assert_eq!(

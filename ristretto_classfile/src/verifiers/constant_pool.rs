@@ -38,16 +38,16 @@ fn verify_constant_indexes(class_file: &ClassFile) -> Result<()> {
     for (index, constant) in constant_pool.iter().enumerate() {
         let index = u16::try_from(index)?;
         match constant {
-            Constant::Class { name_index }
-            | Constant::Module { name_index }
-            | Constant::Package { name_index } => {
+            Constant::Class(name_index)
+            | Constant::Module(name_index)
+            | Constant::Package(name_index) => {
                 match constant_pool.get(*name_index) {
                     Some(Constant::Utf8 { .. }) => {} // valid index
                     None => return Err(InvalidConstantPoolIndex(index)),
                     _ => return Err(InvalidConstantPoolIndexType(index)),
                 }
             }
-            Constant::String { string_index } => {
+            Constant::String(string_index) => {
                 match constant_pool.get(*string_index) {
                     Some(Constant::Utf8 { .. }) => {} // valid index
                     None => return Err(InvalidConstantPoolIndex(index)),
@@ -130,7 +130,7 @@ fn verify_constant_indexes(class_file: &ClassFile) -> Result<()> {
                     }
                 }
             },
-            Constant::MethodType { descriptor_index } => {
+            Constant::MethodType(descriptor_index) => {
                 match constant_pool.get(*descriptor_index) {
                     Some(Constant::Utf8 { .. }) => {} // valid index
                     None => return Err(InvalidConstantPoolIndex(index)),
@@ -191,26 +191,24 @@ mod test {
     fn get_utf8_index(class_file: &mut ClassFile) -> Result<u16> {
         class_file
             .constant_pool
-            .add(Constant::Utf8("foo".to_string()));
+            .push(Constant::Utf8("foo".to_string()));
         Ok(u16::try_from(class_file.constant_pool.len())?)
     }
 
     fn get_integer_index(class_file: &mut ClassFile) -> Result<u16> {
-        class_file.constant_pool.add(Constant::Integer(42));
+        class_file.constant_pool.push(Constant::Integer(42));
         Ok(u16::try_from(class_file.constant_pool.len())?)
     }
 
     fn get_class_index(class_file: &mut ClassFile) -> Result<u16> {
         let utf8_index = get_utf8_index(class_file)?;
-        class_file.constant_pool.add(Constant::Class {
-            name_index: utf8_index,
-        });
+        class_file.constant_pool.push(Constant::Class(utf8_index));
         Ok(u16::try_from(class_file.constant_pool.len())?)
     }
 
     fn get_name_and_type_index(class_file: &mut ClassFile) -> Result<u16> {
         let utf8_index = get_utf8_index(class_file)?;
-        class_file.constant_pool.add(Constant::NameAndType {
+        class_file.constant_pool.push(Constant::NameAndType {
             name_index: utf8_index,
             descriptor_index: utf8_index,
         });
@@ -245,7 +243,7 @@ mod test {
         let tag = constant.tag();
 
         class_file.version = version;
-        class_file.constant_pool.add(constant);
+        class_file.constant_pool.push(constant);
 
         assert_eq!(
             verify_version_constants(&class_file),
@@ -256,12 +254,7 @@ mod test {
 
     #[test]
     fn test_version_constants_method_type() -> Result<()> {
-        test_version_constants_error(
-            Version::Java6 { minor: 0 },
-            Constant::MethodType {
-                descriptor_index: 1,
-            },
-        )
+        test_version_constants_error(Version::Java6 { minor: 0 }, Constant::MethodType(1))
     }
 
     #[test]
@@ -288,22 +281,16 @@ mod test {
 
     #[test]
     fn test_version_constants_module() -> Result<()> {
-        test_version_constants_error(
-            Version::Java8 { minor: 0 },
-            Constant::Module { name_index: 1 },
-        )
+        test_version_constants_error(Version::Java8 { minor: 0 }, Constant::Module(1))
     }
 
     #[test]
     fn test_version_constants_package() -> Result<()> {
-        test_version_constants_error(
-            Version::Java8 { minor: 0 },
-            Constant::Package { name_index: 1 },
-        )
+        test_version_constants_error(Version::Java8 { minor: 0 }, Constant::Package(1))
     }
 
     fn test_indexes_index_error(mut class_file: ClassFile, constant: Constant) -> Result<()> {
-        class_file.constant_pool.add(constant);
+        class_file.constant_pool.push(constant);
         let index = u16::try_from(class_file.constant_pool.len() - 1)?;
         assert_eq!(
             verify_constant_indexes(&class_file),
@@ -313,7 +300,7 @@ mod test {
     }
 
     fn test_indexes_index_type_error(mut class_file: ClassFile, constant: Constant) -> Result<()> {
-        class_file.constant_pool.add(constant);
+        class_file.constant_pool.push(constant);
         let index = u16::try_from(class_file.constant_pool.len() - 1)?;
         assert_eq!(
             verify_constant_indexes(&class_file),
@@ -333,21 +320,11 @@ mod test {
         let integer_index = get_integer_index(class_file)?;
 
         let constant = match constant {
-            Constant::Class { .. } => Constant::Class {
-                name_index: integer_index,
-            },
-            Constant::Module { .. } => Constant::Module {
-                name_index: integer_index,
-            },
-            Constant::Package { .. } => Constant::Package {
-                name_index: integer_index,
-            },
-            Constant::String { .. } => Constant::String {
-                string_index: integer_index,
-            },
-            _ => Constant::MethodType {
-                descriptor_index: integer_index,
-            },
+            Constant::Class { .. } => Constant::Class(integer_index),
+            Constant::Module { .. } => Constant::Module(integer_index),
+            Constant::Package { .. } => Constant::Package(integer_index),
+            Constant::String { .. } => Constant::String(integer_index),
+            _ => Constant::MethodType(integer_index),
         };
 
         test_indexes_index_type_error(class_file.clone(), constant.clone())?;
@@ -356,37 +333,27 @@ mod test {
 
     #[test]
     fn test_indexes_class_errors() -> Result<()> {
-        test_indexes_utf8_index_errors(&Constant::Class {
-            name_index: u16::MAX,
-        })
+        test_indexes_utf8_index_errors(&Constant::Class(u16::MAX))
     }
 
     #[test]
     fn test_indexes_module_errors() -> Result<()> {
-        test_indexes_utf8_index_errors(&Constant::Module {
-            name_index: u16::MAX,
-        })
+        test_indexes_utf8_index_errors(&Constant::Module(u16::MAX))
     }
 
     #[test]
     fn test_indexes_package_errors() -> Result<()> {
-        test_indexes_utf8_index_errors(&Constant::Package {
-            name_index: u16::MAX,
-        })
+        test_indexes_utf8_index_errors(&Constant::Package(u16::MAX))
     }
 
     #[test]
     fn test_indexes_string_errors() -> Result<()> {
-        test_indexes_utf8_index_errors(&Constant::String {
-            string_index: u16::MAX,
-        })
+        test_indexes_utf8_index_errors(&Constant::String(u16::MAX))
     }
 
     #[test]
     fn test_indexes_method_type_errors() -> Result<()> {
-        test_indexes_utf8_index_errors(&Constant::MethodType {
-            descriptor_index: u16::MAX,
-        })
+        test_indexes_utf8_index_errors(&Constant::MethodType(u16::MAX))
     }
 
     fn get_ref_constant(
@@ -522,7 +489,7 @@ mod test {
 
     fn test_indexes_no_bootstrap_methods_error(constant: Constant) -> Result<()> {
         let class_file = &mut get_class_file()?;
-        class_file.constant_pool.add(constant);
+        class_file.constant_pool.push(constant);
         assert_eq!(
             verify_constant_indexes(class_file),
             Err(BootstrapMethodsNotDefined)
@@ -535,7 +502,7 @@ mod test {
         constant: Constant,
         index: usize,
     ) {
-        class_file.constant_pool.add(constant);
+        class_file.constant_pool.push(constant);
         assert_eq!(
             verify_constant_indexes(&class_file),
             Err(InvalidBootstrapMethodIndex(index))

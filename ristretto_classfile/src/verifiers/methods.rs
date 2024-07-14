@@ -44,8 +44,8 @@ mod test {
     fn get_test_class_file_and_method() -> (ClassFile, Method) {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.add(Constant::Utf8("foo".to_string()));
-        constant_pool.add(Constant::Utf8("V".to_string()));
+        constant_pool.push(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("V".to_string()));
         let method = Method {
             access_flags: MethodAccessFlags::PUBLIC,
             name_index: 1,
@@ -82,9 +82,7 @@ mod test {
     fn test_invalid_name_index_type() -> Result<()> {
         let (mut class_file, mut method) = get_test_class_file_and_method();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.add(Constant::Class {
-            name_index: method.name_index,
-        });
+        constant_pool.push(Constant::Class(method.name_index));
         method.name_index = u16::try_from(constant_pool.len())?;
         assert_eq!(
             Err(InvalidConstantPoolIndexType(method.name_index)),
@@ -107,9 +105,7 @@ mod test {
     fn test_invalid_descriptor_index_type() -> Result<()> {
         let (mut class_file, mut method) = get_test_class_file_and_method();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.add(Constant::Class {
-            name_index: method.descriptor_index,
-        });
+        constant_pool.push(Constant::Class(method.descriptor_index));
         method.descriptor_index = u16::try_from(constant_pool.len())?;
         assert_eq!(
             Err(InvalidConstantPoolIndexType(method.descriptor_index)),
