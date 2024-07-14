@@ -36,6 +36,7 @@ pub enum Version {
     Java21 { minor: u16 },
     Java22 { minor: u16 },
     Java23 { minor: u16 },
+    Unknown { major: u16, minor: u16 },
 }
 
 impl Version {
@@ -72,7 +73,7 @@ impl Version {
             65 => Version::Java21 { minor },
             66 => Version::Java22 { minor },
             67 => Version::Java23 { minor },
-            _ => return Err(InvalidVersion { major, minor }),
+            _ => Version::Unknown { major, minor },
         };
 
         Ok(version)
@@ -105,6 +106,7 @@ impl Version {
             Version::Java21 { .. } => 65,
             Version::Java22 { .. } => 66,
             Version::Java23 { .. } => 67,
+            Version::Unknown { major, .. } => *major,
         }
     }
 
@@ -135,7 +137,8 @@ impl Version {
             | Version::Java20 { minor, .. }
             | Version::Java21 { minor, .. }
             | Version::Java22 { minor, .. }
-            | Version::Java23 { minor, .. } => *minor,
+            | Version::Java23 { minor, .. }
+            | Version::Unknown { minor, .. } => *minor,
         }
     }
 
@@ -220,6 +223,7 @@ impl fmt::Display for Version {
             Version::Java21 { .. } => write!(f, "Java 21"),
             Version::Java22 { .. } => write!(f, "Java 22"),
             Version::Java23 { .. } => write!(f, "Java 23"),
+            Version::Unknown { major, .. } => write!(f, "Unknown ({major})"),
         }
     }
 }
@@ -233,7 +237,7 @@ mod test {
     const MAX_MAJOR: u16 = 67;
 
     #[test]
-    fn all_versions() -> Result<()> {
+    fn all_known_versions() -> Result<()> {
         let versions = [
             Version::Java1_0_2 { minor: 0 },
             Version::Java1_1 { minor: 0 },
@@ -278,6 +282,15 @@ mod test {
     }
 
     #[test]
+    fn test_unknown_version() -> Result<()> {
+        let version = Version::from(1, 2)?;
+        assert_eq!(version.major(), 1);
+        assert_eq!(version.minor(), 2);
+        assert_eq!("Unknown (1)", version.to_string());
+        Ok(())
+    }
+
+    #[test]
     fn test_from() -> Result<()> {
         for major in MIN_MAJOR..=MAX_MAJOR {
             // Test with minor version 0
@@ -292,13 +305,6 @@ mod test {
 
     #[test]
     fn test_from_invalid_version() {
-        assert_eq!(
-            Err(InvalidVersion {
-                major: MIN_MAJOR - 1,
-                minor: 0
-            }),
-            Version::from(MIN_MAJOR - 1, 0)
-        );
         assert_eq!(
             Err(InvalidVersion {
                 major: 56,
