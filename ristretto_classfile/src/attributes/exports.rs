@@ -38,7 +38,7 @@ impl Exports {
     /// Serialize the exports to bytes.
     ///
     /// # Errors
-    /// If there are more than 65,535 `to_index` values.
+    /// If there are more than 65,534 `to_index` values.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.index)?;
         self.flags.to_bytes(bytes)?;

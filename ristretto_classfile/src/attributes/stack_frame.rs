@@ -124,7 +124,7 @@ impl StackFrame {
     /// Serialize the stack frame to bytes.
     ///
     /// # Errors
-    /// - If the number of locals or stack items exceeds 65,535.
+    /// - If the number of locals or stack items exceeds 65,534.
     /// - If a stack frame fails to serialize.
     #[allow(clippy::match_same_arms)]
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {

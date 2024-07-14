@@ -3,7 +3,7 @@
 
 use ristretto_classfile::attributes::{Attribute, Instruction, LineNumber};
 use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, Constant, ConstantPool, MethodAccessFlags, Result, Version,
+    ClassAccessFlags, ClassFile, Constant, ConstantPool, Error, MethodAccessFlags, Result, Version,
 };
 use std::fs;
 use std::io::Cursor;
@@ -12,75 +12,57 @@ use std::io::Cursor;
 ///
 /// ```java
 /// public class HelloWorld {
-//     public static void main(String[] args) {
-//         System.out.println("Hello, World!");
-//     }
-// }
+///     public static void main(String[] args) {
+///         System.out.println("Hello, World!");
+///     }
+/// }
 /// ```
 #[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
     let mut constant_pool = ConstantPool::default();
-    constant_pool.add(Constant::MethodRef {
-        class_index: 2,
-        name_and_type_index: 3,
-    });
-    constant_pool.add(Constant::Class { name_index: 4 });
-    let super_class = u16::try_from(constant_pool.len())?;
-    constant_pool.add(Constant::NameAndType {
-        name_index: 5,
-        descriptor_index: 6,
-    });
-    constant_pool.add(Constant::Utf8("java/lang/Object".to_string()));
-    constant_pool.add(Constant::Utf8("<init>".to_string()));
-    constant_pool.add(Constant::Utf8("()V".to_string()));
-    constant_pool.add(Constant::FieldRef {
-        class_index: 8,
-        name_and_type_index: 9,
-    });
-    constant_pool.add(Constant::Class { name_index: 10 });
-    constant_pool.add(Constant::NameAndType {
-        name_index: 11,
-        descriptor_index: 12,
-    });
-    constant_pool.add(Constant::Utf8("java/lang/System".to_string()));
-    constant_pool.add(Constant::Utf8("out".to_string()));
-    constant_pool.add(Constant::Utf8("Ljava/io/PrintStream;".to_string()));
-    constant_pool.add(Constant::String { string_index: 14 });
-    constant_pool.add(Constant::Utf8("Hello, World!".to_string()));
-    constant_pool.add(Constant::MethodRef {
-        class_index: 16,
-        name_and_type_index: 17,
-    });
-    constant_pool.add(Constant::Class { name_index: 18 });
-    constant_pool.add(Constant::NameAndType {
-        name_index: 19,
-        descriptor_index: 20,
-    });
-    constant_pool.add(Constant::Utf8("java/io/PrintStream".to_string()));
-    constant_pool.add(Constant::Utf8("println".to_string()));
-    constant_pool.add(Constant::Utf8("(Ljava/lang/String;)V".to_string()));
-    constant_pool.add(Constant::Class { name_index: 22 });
-    let this_class = u16::try_from(constant_pool.len())?;
-    constant_pool.add(Constant::Utf8("HelloWorld".to_string()));
-    constant_pool.add(Constant::Utf8("Code".to_string()));
-    constant_pool.add(Constant::Utf8("LineNumberTable".to_string()));
-    constant_pool.add(Constant::Utf8("main".to_string()));
-    constant_pool.add(Constant::Utf8("([Ljava/lang/String;)V".to_string()));
+    let super_class = constant_pool.add_class("java/lang/Object")?;
+    let object_init = constant_pool.add_method_ref(super_class, "<init>", "()V")?;
+    let system_class = constant_pool.add_class("java/lang/System")?;
+    let println_field =
+        constant_pool.add_field_ref(system_class, "out", "Ljava/io/PrintStream;")?;
+    let hello_world_string = constant_pool.add_string("Hello, World!")?;
+    let print_stream_class = constant_pool.add_class("java/io/PrintStream")?;
+    let println_method =
+        constant_pool.add_method_ref(print_stream_class, "println", "(Ljava/lang/String;)V")?;
+    let this_class = constant_pool.add_class("HelloWorld")?;
+    let code_index = constant_pool.add_utf8("Code".to_string())?;
+    let line_number_table_index = constant_pool.add_utf8("LineNumberTable".to_string())?;
+    let main_name_index = constant_pool.add_utf8("main".to_string())?;
+    let main_descriptor_index = constant_pool.add_utf8("([Ljava/lang/String;)V".to_string())?;
 
     let mut methods = Vec::new();
+    let Some(Constant::MethodRef {
+        name_and_type_index,
+        ..
+    }) = constant_pool.get(object_init)
+    else {
+        return Err(Error::InvalidConstantPoolIndexType(object_init));
+    };
+    let Some(Constant::NameAndType {
+        name_index,
+        descriptor_index,
+    }) = constant_pool.get(*name_and_type_index)
+    else {
+        return Err(Error::InvalidConstantPoolIndexType(object_init));
+    };
     let mut init_method = ristretto_classfile::Method {
         access_flags: MethodAccessFlags::PUBLIC,
-        name_index: 5,
-        descriptor_index: 6,
+        name_index: *name_index,
+        descriptor_index: *descriptor_index,
         attributes: Vec::new(),
     };
     init_method.attributes.push(Attribute::Code {
-        name_index: 23,
+        name_index: code_index,
         max_stack: 1,
         max_locals: 1,
         code: instructions_as_bytes(&vec![
             Instruction::Aload_0,
-            Instruction::Invokespecial(1),
+            Instruction::Invokespecial(object_init),
             Instruction::Return,
         ])?,
         exceptions: Vec::new(),
@@ -90,25 +72,25 @@ fn main() -> Result<()> {
 
     let mut main_method = ristretto_classfile::Method {
         access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-        name_index: 25,
-        descriptor_index: 26,
+        name_index: main_name_index,
+        descriptor_index: main_descriptor_index,
         attributes: Vec::new(),
     };
     main_method.attributes.push(Attribute::Code {
-        name_index: 23,
+        name_index: code_index,
         max_stack: 2,
         max_locals: 1,
         code: instructions_as_bytes(&vec![
-            Instruction::Getstatic(7),
-            Instruction::Ldc(13),
-            Instruction::Invokevirtual(15),
+            Instruction::Getstatic(println_field),
+            Instruction::Ldc(u8::try_from(hello_world_string)?),
+            Instruction::Invokevirtual(println_method),
             Instruction::Return,
         ])?,
         exceptions: Vec::new(),
         attributes: Vec::new(),
     });
     main_method.attributes.push(Attribute::LineNumberTable {
-        name_index: 24,
+        name_index: line_number_table_index,
         line_numbers: vec![
             LineNumber {
                 start_pc: 0,

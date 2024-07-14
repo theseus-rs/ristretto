@@ -23,12 +23,8 @@ pub enum Constant {
     Float(f32),
     Long(i64),
     Double(f64),
-    Class {
-        name_index: u16,
-    },
-    String {
-        string_index: u16,
-    },
+    Class(u16),  // Name index (Utf8)
+    String(u16), // String index (Utf8)
     FieldRef {
         class_index: u16,
         name_and_type_index: u16,
@@ -49,9 +45,7 @@ pub enum Constant {
         reference_kind: ReferenceKind,
         reference_index: u16,
     },
-    MethodType {
-        descriptor_index: u16,
-    },
+    MethodType(u16), // Descriptor index (NameAndType)
     Dynamic {
         bootstrap_method_attr_index: u16,
         name_and_type_index: u16,
@@ -60,12 +54,8 @@ pub enum Constant {
         bootstrap_method_attr_index: u16,
         name_and_type_index: u16,
     },
-    Module {
-        name_index: u16,
-    },
-    Package {
-        name_index: u16,
-    },
+    Module(u16),  // Name index (Utf8)
+    Package(u16), // Name index (Utf8)
 }
 
 impl Constant {
@@ -124,12 +114,8 @@ impl Constant {
             4 => Constant::Float(bytes.read_f32::<BigEndian>()?),
             5 => Constant::Long(bytes.read_i64::<BigEndian>()?),
             6 => Constant::Double(bytes.read_f64::<BigEndian>()?),
-            7 => Constant::Class {
-                name_index: bytes.read_u16::<BigEndian>()?,
-            },
-            8 => Constant::String {
-                string_index: bytes.read_u16::<BigEndian>()?,
-            },
+            7 => Constant::Class(bytes.read_u16::<BigEndian>()?),
+            8 => Constant::String(bytes.read_u16::<BigEndian>()?),
             9 => Constant::FieldRef {
                 class_index: bytes.read_u16::<BigEndian>()?,
                 name_and_type_index: bytes.read_u16::<BigEndian>()?,
@@ -150,9 +136,7 @@ impl Constant {
                 reference_kind: ReferenceKind::from_bytes(bytes)?,
                 reference_index: bytes.read_u16::<BigEndian>()?,
             },
-            16 => Constant::MethodType {
-                descriptor_index: bytes.read_u16::<BigEndian>()?,
-            },
+            16 => Constant::MethodType(bytes.read_u16::<BigEndian>()?),
             17 => Constant::Dynamic {
                 bootstrap_method_attr_index: bytes.read_u16::<BigEndian>()?,
                 name_and_type_index: bytes.read_u16::<BigEndian>()?,
@@ -161,12 +145,8 @@ impl Constant {
                 bootstrap_method_attr_index: bytes.read_u16::<BigEndian>()?,
                 name_and_type_index: bytes.read_u16::<BigEndian>()?,
             },
-            19 => Constant::Module {
-                name_index: bytes.read_u16::<BigEndian>()?,
-            },
-            20 => Constant::Package {
-                name_index: bytes.read_u16::<BigEndian>()?,
-            },
+            19 => Constant::Module(bytes.read_u16::<BigEndian>()?),
+            20 => Constant::Package(bytes.read_u16::<BigEndian>()?),
             _ => return Err(InvalidConstantTag(tag)),
         };
         Ok(constant)
@@ -191,10 +171,8 @@ impl Constant {
             Constant::Float(value) => bytes.write_f32::<BigEndian>(*value)?,
             Constant::Long(value) => bytes.write_i64::<BigEndian>(*value)?,
             Constant::Double(value) => bytes.write_f64::<BigEndian>(*value)?,
-            Constant::Class { name_index } => bytes.write_u16::<BigEndian>(*name_index)?,
-            Constant::String {
-                string_index: utf8_index,
-            } => bytes.write_u16::<BigEndian>(*utf8_index)?,
+            Constant::Class(name_index) => bytes.write_u16::<BigEndian>(*name_index)?,
+            Constant::String(string_index) => bytes.write_u16::<BigEndian>(*string_index)?,
             Constant::FieldRef {
                 class_index,
                 name_and_type_index,
@@ -230,7 +208,7 @@ impl Constant {
                 reference_kind.to_bytes(bytes)?;
                 bytes.write_u16::<BigEndian>(*reference_index)?;
             }
-            Constant::MethodType { descriptor_index } => {
+            Constant::MethodType(descriptor_index) => {
                 bytes.write_u16::<BigEndian>(*descriptor_index)?;
             }
             Constant::Dynamic {
@@ -247,8 +225,8 @@ impl Constant {
                 bytes.write_u16::<BigEndian>(*bootstrap_method_attr_index)?;
                 bytes.write_u16::<BigEndian>(*name_and_type_index)?;
             }
-            Constant::Module { name_index } => bytes.write_u16::<BigEndian>(*name_index)?,
-            Constant::Package { name_index } => bytes.write_u16::<BigEndian>(*name_index)?,
+            Constant::Module(name_index) => bytes.write_u16::<BigEndian>(*name_index)?,
+            Constant::Package(name_index) => bytes.write_u16::<BigEndian>(*name_index)?,
         }
 
         Ok(())
@@ -263,8 +241,8 @@ impl fmt::Display for Constant {
             Constant::Float(value) => write!(f, "Float {value}"),
             Constant::Long(value) => write!(f, "Long {value}"),
             Constant::Double(value) => write!(f, "Double {value}"),
-            Constant::Class { name_index } => write!(f, "Class #{name_index}"),
-            Constant::String { string_index } => write!(f, "String #{string_index}"),
+            Constant::Class(name_index) => write!(f, "Class #{name_index}"),
+            Constant::String(string_index) => write!(f, "String #{string_index}"),
             Constant::FieldRef {
                 class_index,
                 name_and_type_index,
@@ -288,7 +266,7 @@ impl fmt::Display for Constant {
                 reference_kind,
                 reference_index,
             } => write!(f, "MethodHandle {reference_kind}.#{reference_index}"),
-            Constant::MethodType { descriptor_index } => {
+            Constant::MethodType(descriptor_index) => {
                 write!(f, "MethodType #{descriptor_index}")
             }
             Constant::Dynamic {
@@ -305,8 +283,8 @@ impl fmt::Display for Constant {
                 f,
                 "InvokeDynamic #{bootstrap_method_attr_index}.#{name_and_type_index}"
             ),
-            Constant::Module { name_index } => write!(f, "Module #{name_index}"),
-            Constant::Package { name_index } => write!(f, "Package #{name_index}"),
+            Constant::Module(name_index) => write!(f, "Module #{name_index}"),
+            Constant::Package(name_index) => write!(f, "Package #{name_index}"),
         }
     }
 }
@@ -386,7 +364,7 @@ mod test {
 
     #[test]
     fn test_class() -> Result<()> {
-        let constant = Constant::Class { name_index: 1 };
+        let constant = Constant::Class(1);
         let expected_bytes = [7, 0, 1];
 
         assert_eq!("Class #1", constant.to_string());
@@ -395,7 +373,7 @@ mod test {
 
     #[test]
     fn test_string() -> Result<()> {
-        let constant = Constant::String { string_index: 1 };
+        let constant = Constant::String(1);
         let expected_bytes = [8, 0, 1];
 
         assert_eq!("String #1", constant.to_string());
@@ -464,9 +442,7 @@ mod test {
 
     #[test]
     fn test_method_type() -> Result<()> {
-        let constant = Constant::MethodType {
-            descriptor_index: 1,
-        };
+        let constant = Constant::MethodType(1);
         let expected_bytes = [16, 0, 1];
 
         assert_eq!("MethodType #1", constant.to_string());
@@ -499,7 +475,7 @@ mod test {
 
     #[test]
     fn test_module() -> Result<()> {
-        let constant = Constant::Module { name_index: 1 };
+        let constant = Constant::Module(1);
         let expected_bytes = [19, 0, 1];
 
         assert_eq!("Module #1", constant.to_string());
@@ -508,7 +484,7 @@ mod test {
 
     #[test]
     fn test_package() -> Result<()> {
-        let constant = Constant::Package { name_index: 1 };
+        let constant = Constant::Package(1);
         let expected_bytes = [20, 0, 1];
 
         assert_eq!("Package #1", constant.to_string());

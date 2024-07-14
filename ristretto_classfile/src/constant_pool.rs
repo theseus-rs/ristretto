@@ -1,6 +1,7 @@
 use crate::constant::Constant;
 use crate::error::Result;
 use crate::Error::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
+use crate::ReferenceKind;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
@@ -14,13 +15,23 @@ pub struct ConstantPool {
 }
 
 impl ConstantPool {
-    /// Add a constant to the pool.
-    pub fn add(&mut self, constant: Constant) {
+    /// Push a constant to the pool.
+    pub fn push(&mut self, constant: Constant) {
         let add_placeholder = matches!(constant, Constant::Long(_) | Constant::Double(_));
         self.constants.push(ConstantEntry::Constant(constant));
         if add_placeholder {
             self.constants.push(ConstantEntry::Placeholder);
         }
+    }
+
+    /// Add a constant to the pool and return the index.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add(&mut self, constant: Constant) -> Result<u16> {
+        let index = u16::try_from(self.constants.len() + 1)?;
+        self.push(constant);
+        Ok(index)
     }
 
     /// Get a constant from the pool by index; indexes are 1-based.
@@ -48,20 +59,6 @@ impl ConstantPool {
         }
     }
 
-    /// Get a UTF-8 constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a UTF-8 constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.7>
-    ///
-    /// # Errors
-    /// Returns an error if the index is out of bounds or the constant is not a UTF-8 constant.
-    pub fn try_get_utf8(&self, index: u16) -> Result<&String> {
-        match self.try_get(index) {
-            Ok(Constant::Utf8(value)) => Ok(value),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
-            _ => Err(InvalidConstantPoolIndexType(index)),
-        }
-    }
-
     /// Get the number of constants in the pool.
     #[must_use]
     pub fn len(&self) -> usize {
@@ -71,7 +68,7 @@ impl ConstantPool {
     /// Check if the pool is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.constants.is_empty()
+        self.len() == 0
     }
 
     /// Get an iterator over the constants in the pool.
@@ -89,7 +86,7 @@ impl ConstantPool {
         let constant_pool_count = bytes.read_u16::<BigEndian>()? - 1;
         while constant_pool.len() < constant_pool_count as usize {
             let constant = Constant::from_bytes(bytes)?;
-            constant_pool.add(constant);
+            constant_pool.push(constant);
         }
 
         Ok(constant_pool)
@@ -98,7 +95,7 @@ impl ConstantPool {
     /// Serialize the `ConstantPool` to bytes.
     ///
     /// # Errors
-    /// If there are more than 65,535 constants in the pool.
+    /// If there are more than 65,534 constants in the pool.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         let constant_pool_count = u16::try_from(self.constants.len())? + 1;
         bytes.write_u16::<BigEndian>(constant_pool_count)?;
@@ -108,6 +105,219 @@ impl ConstantPool {
             }
         }
         Ok(())
+    }
+
+    /// Add a UTF-8 constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_utf8<S: AsRef<str>>(&mut self, value: S) -> Result<u16> {
+        let value = value.as_ref().to_string();
+        self.add(Constant::Utf8(value))
+    }
+
+    /// Get a UTF-8 constant from the pool by index; indexes are 1-based.
+    /// Returns an error if the constant is not a UTF-8 constant.
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.7>
+    ///
+    /// # Errors
+    /// Returns an error if the index is out of bounds or the constant is not a UTF-8 constant.
+    pub fn try_get_utf8(&self, index: u16) -> Result<&String> {
+        match self.try_get(index) {
+            Ok(Constant::Utf8(value)) => Ok(value),
+            Err(_) => Err(InvalidConstantPoolIndex(index)),
+            _ => Err(InvalidConstantPoolIndexType(index)),
+        }
+    }
+
+    /// Add an integer constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_integer(&mut self, value: i32) -> Result<u16> {
+        self.add(Constant::Integer(value))
+    }
+
+    /// Add a float constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_float(&mut self, value: f32) -> Result<u16> {
+        self.add(Constant::Float(value))
+    }
+
+    /// Add a long constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_long(&mut self, value: i64) -> Result<u16> {
+        self.add(Constant::Long(value))
+    }
+
+    /// Add a double constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_double(&mut self, value: f64) -> Result<u16> {
+        self.add(Constant::Double(value))
+    }
+
+    /// Add a class constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_class<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
+        let utf8_index = self.add_utf8(name)?;
+        self.add(Constant::Class(utf8_index))
+    }
+
+    /// Add a string constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_string<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
+        let utf8_index = self.add_utf8(name)?;
+        self.add(Constant::String(utf8_index))
+    }
+
+    /// Add a field reference constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_field_ref<S: AsRef<str>>(
+        &mut self,
+        class_index: u16,
+        name: S,
+        descriptor: S,
+    ) -> Result<u16> {
+        let name_and_type_index = self.add_name_and_type(name, descriptor)?;
+        self.add(Constant::FieldRef {
+            class_index,
+            name_and_type_index,
+        })
+    }
+
+    /// Add a method reference constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_method_ref<S: AsRef<str>>(
+        &mut self,
+        class_index: u16,
+        name: S,
+        descriptor: S,
+    ) -> Result<u16> {
+        let name_and_type_index = self.add_name_and_type(name, descriptor)?;
+        self.add(Constant::MethodRef {
+            class_index,
+            name_and_type_index,
+        })
+    }
+
+    /// Add an interface method reference constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_interface_method_ref<S: AsRef<str>>(
+        &mut self,
+        class_index: u16,
+        name: S,
+        descriptor: S,
+    ) -> Result<u16> {
+        let name_and_type_index = self.add_name_and_type(name, descriptor)?;
+        self.add(Constant::InterfaceMethodRef {
+            class_index,
+            name_and_type_index,
+        })
+    }
+
+    /// Add a name and type constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_name_and_type<S: AsRef<str>>(&mut self, name: S, descriptor: S) -> Result<u16> {
+        let name_index = self.add_utf8(name)?;
+        let descriptor_index = self.add_utf8(descriptor)?;
+        self.add(Constant::NameAndType {
+            name_index,
+            descriptor_index,
+        })
+    }
+
+    /// Add a method handle constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_method_handle(
+        &mut self,
+        reference_kind: ReferenceKind,
+        reference_index: u16,
+    ) -> Result<u16> {
+        self.add(Constant::MethodHandle {
+            reference_kind,
+            reference_index,
+        })
+    }
+
+    /// Add a method type constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_method_type<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
+        let utf8_index = self.add_utf8(name)?;
+        self.add(Constant::MethodType(utf8_index))
+    }
+
+    /// Add a dynamic constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_dynamic<S: AsRef<str>>(
+        &mut self,
+        bootstrap_method_attr_index: u16,
+        name: S,
+        descriptor: S,
+    ) -> Result<u16> {
+        let name_and_type_index = self.add_name_and_type(name, descriptor)?;
+        self.add(Constant::Dynamic {
+            bootstrap_method_attr_index,
+            name_and_type_index,
+        })
+    }
+
+    /// Add a invoke dynamic constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_invoke_dynamic<S: AsRef<str>>(
+        &mut self,
+        bootstrap_method_attr_index: u16,
+        name: S,
+        descriptor: S,
+    ) -> Result<u16> {
+        let name_and_type_index = self.add_name_and_type(name, descriptor)?;
+        self.add(Constant::InvokeDynamic {
+            bootstrap_method_attr_index,
+            name_and_type_index,
+        })
+    }
+
+    /// Add a module constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_module<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
+        let utf8_index = self.add_utf8(name)?;
+        self.add(Constant::Module(utf8_index))
+    }
+
+    /// Add a package constant to the pool.
+    ///
+    /// # Errors
+    /// If there are more than 65,534 constants in the pool.
+    pub fn add_package<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
+        let utf8_index = self.add_utf8(name)?;
+        self.add(Constant::Package(utf8_index))
     }
 }
 
@@ -217,7 +427,7 @@ mod test {
     fn test_get() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.get(1).is_none());
-        constant_pool.add(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("foo".to_string()));
         assert!(constant_pool.get(1).is_some());
     }
 
@@ -231,8 +441,120 @@ mod test {
     fn test_try_get() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.try_get(1).is_err());
-        constant_pool.add(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("foo".to_string()));
         assert!(constant_pool.try_get(1).is_ok());
+    }
+
+    #[test]
+    fn test_utf8() {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.push(Constant::Utf8("foo".to_string()));
+        assert!(constant_pool.get(1).is_some());
+        assert_eq!(1, constant_pool.constants.len());
+    }
+
+    #[test]
+    fn test_integer() {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.push(Constant::Integer(42));
+        assert!(constant_pool.get(1).is_some());
+        assert_eq!(1, constant_pool.constants.len());
+    }
+
+    #[test]
+    fn test_long() {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.push(Constant::Long(1_234_567_890));
+        assert!(constant_pool.get(1).is_some());
+        assert!(constant_pool.get(2).is_none());
+        assert_eq!(2, constant_pool.constants.len());
+    }
+
+    #[test]
+    fn test_len() {
+        let mut constant_pool = ConstantPool::default();
+        assert_eq!(0, constant_pool.len());
+        constant_pool.push(Constant::Integer(42));
+        assert_eq!(1, constant_pool.len());
+    }
+
+    #[test]
+    fn test_is_empty() {
+        let mut constant_pool = ConstantPool::default();
+        assert!(constant_pool.is_empty());
+        constant_pool.push(Constant::Integer(42));
+        assert!(!constant_pool.is_empty());
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.push(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Integer(42));
+        constant_pool.push(Constant::Long(1_234_567_890));
+        let mut iter = constant_pool.iter();
+        assert_eq!(Some(&Constant::Utf8("foo".to_string())), iter.next());
+        assert_eq!(Some(&Constant::Integer(42)), iter.next());
+        assert_eq!(Some(&Constant::Long(1_234_567_890)), iter.next());
+        assert_eq!(None, iter.next());
+    }
+
+    #[test]
+    fn test_into_iter() {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.push(Constant::Utf8("foo".to_string()));
+        for constant in &constant_pool {
+            assert_eq!(Constant::Utf8("foo".to_string()), *constant);
+        }
+    }
+
+    #[test]
+    fn test_double() {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.push(Constant::Double(std::f64::consts::PI));
+        assert!(constant_pool.get(1).is_some());
+        assert!(constant_pool.get(2).is_none());
+        assert_eq!(2, constant_pool.constants.len());
+    }
+
+    #[test]
+    fn test_to_string() {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.push(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Integer(42));
+        constant_pool.push(Constant::Long(1_234_567_890));
+        let expected = "   #1 = Utf8               foo\n   #2 = Integer            42\n   #3 = Long               1234567890\n";
+        assert_eq!(expected, constant_pool.to_string());
+    }
+
+    #[test]
+    fn test_serialization() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let integer_constant = Constant::Integer(42);
+        let long_constant = Constant::Long(1_234_567_890);
+
+        constant_pool.push(integer_constant.clone());
+        constant_pool.push(long_constant.clone());
+
+        let expected_bytes = [0, 4, 3, 0, 0, 0, 42, 5, 0, 0, 0, 0, 73, 150, 2, 210];
+        let mut bytes = Vec::new();
+        constant_pool.to_bytes(&mut bytes)?;
+        assert_eq!(expected_bytes, &bytes[..]);
+        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        assert_eq!(constant_pool, ConstantPool::from_bytes(&mut bytes)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_utf8() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_utf8("foo")?;
+        assert_eq!(1, index);
+        assert_eq!(
+            Some(&Constant::Utf8("foo".to_string())),
+            constant_pool.get(index)
+        );
+        Ok(())
     }
 
     #[test]
@@ -247,7 +569,7 @@ mod test {
     #[test]
     fn test_try_get_utf8_type_error() {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Integer(42));
+        constant_pool.push(Constant::Integer(42));
         assert_eq!(
             Err(InvalidConstantPoolIndexType(1)),
             constant_pool.try_get_utf8(1)
@@ -258,107 +580,200 @@ mod test {
     fn test_try_get_utf8() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.try_get(1).is_err());
-        constant_pool.add(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("foo".to_string()));
         assert!(constant_pool.try_get(1).is_ok());
     }
 
     #[test]
-    fn test_utf8() {
+    fn test_add_integer() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8("foo".to_string()));
-        assert!(constant_pool.get(1).is_some());
-        assert_eq!(1, constant_pool.constants.len());
+        let index = constant_pool.add_integer(42)?;
+        assert_eq!(1, index);
+        assert_eq!(Some(&Constant::Integer(42)), constant_pool.get(index));
+        Ok(())
     }
 
     #[test]
-    fn test_integer() {
+    fn test_add_float() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Integer(42));
-        assert!(constant_pool.get(1).is_some());
-        assert_eq!(1, constant_pool.constants.len());
+        let index = constant_pool.add_float(std::f32::consts::PI)?;
+        assert_eq!(1, index);
+        assert_eq!(
+            Some(&Constant::Float(std::f32::consts::PI)),
+            constant_pool.get(index)
+        );
+        Ok(())
     }
 
     #[test]
-    fn test_long() {
+    fn test_add_long() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Long(1_234_567_890));
-        assert!(constant_pool.get(1).is_some());
-        assert!(constant_pool.get(2).is_none());
-        assert_eq!(2, constant_pool.constants.len());
+        let index = constant_pool.add_long(i64::MAX)?;
+        assert_eq!(1, index);
+        assert_eq!(Some(&Constant::Long(i64::MAX)), constant_pool.get(index));
+        Ok(())
     }
 
     #[test]
-    fn test_len() {
+    fn test_add_double() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        assert_eq!(0, constant_pool.len());
-        constant_pool.add(Constant::Integer(42));
-        assert_eq!(1, constant_pool.len());
+        let index = constant_pool.add_double(std::f64::consts::PI)?;
+        assert_eq!(1, index);
+        assert_eq!(
+            Some(&Constant::Double(std::f64::consts::PI)),
+            constant_pool.get(index)
+        );
+        Ok(())
     }
 
     #[test]
-    fn test_is_empty() {
+    fn test_add_class() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        assert!(constant_pool.is_empty());
-        constant_pool.add(Constant::Integer(42));
-        assert!(!constant_pool.is_empty());
+        let index = constant_pool.add_class("java/lang/Object")?;
+        assert_eq!(2, index);
+        assert_eq!(Some(&Constant::Class(1)), constant_pool.get(index));
+        Ok(())
     }
 
     #[test]
-    fn test_iter() {
+    fn test_add_string() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8("foo".to_string()));
-        constant_pool.add(Constant::Integer(42));
-        constant_pool.add(Constant::Long(1_234_567_890));
-        let mut iter = constant_pool.iter();
-        assert_eq!(Some(&Constant::Utf8("foo".to_string())), iter.next());
-        assert_eq!(Some(&Constant::Integer(42)), iter.next());
-        assert_eq!(Some(&Constant::Long(1_234_567_890)), iter.next());
-        assert_eq!(None, iter.next());
+        let index = constant_pool.add_string("foo")?;
+        assert_eq!(2, index);
+        assert_eq!(Some(&Constant::String(1)), constant_pool.get(index));
+        Ok(())
     }
 
     #[test]
-    fn test_into_iter() {
+    fn test_add_field_ref() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8("foo".to_string()));
-        for constant in &constant_pool {
-            assert_eq!(Constant::Utf8("foo".to_string()), *constant);
-        }
+        let index = constant_pool.add_field_ref(1, "out", "Ljava/io/PrintStream;")?;
+        assert_eq!(4, index);
+        assert_eq!(
+            Some(&Constant::FieldRef {
+                class_index: 1,
+                name_and_type_index: 3
+            }),
+            constant_pool.get(index)
+        );
+        Ok(())
     }
 
     #[test]
-    fn test_double() {
+    fn test_add_method_ref() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Double(std::f64::consts::PI));
-        assert!(constant_pool.get(1).is_some());
-        assert!(constant_pool.get(2).is_none());
-        assert_eq!(2, constant_pool.constants.len());
+        let index = constant_pool.add_method_ref(1, "println", "(Ljava/lang/String;)V")?;
+        assert_eq!(4, index);
+        assert_eq!(
+            Some(&Constant::MethodRef {
+                class_index: 1,
+                name_and_type_index: 3
+            }),
+            constant_pool.get(index)
+        );
+        Ok(())
     }
 
     #[test]
-    fn test_to_string() {
+    fn test_add_interface_method_ref() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.add(Constant::Utf8("foo".to_string()));
-        constant_pool.add(Constant::Integer(42));
-        constant_pool.add(Constant::Long(1_234_567_890));
-        let expected = "   #1 = Utf8               foo\n   #2 = Integer            42\n   #3 = Long               1234567890\n";
-        assert_eq!(expected, constant_pool.to_string());
+        let index =
+            constant_pool.add_interface_method_ref(1, "println", "(Ljava/lang/String;)V")?;
+        assert_eq!(4, index);
+        assert_eq!(
+            Some(&Constant::InterfaceMethodRef {
+                class_index: 1,
+                name_and_type_index: 3
+            }),
+            constant_pool.get(index)
+        );
+        Ok(())
     }
 
     #[test]
-    fn test_serialization() -> Result<()> {
+    fn test_add_name_and_type() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        let integer_constant = Constant::Integer(42);
-        let long_constant = Constant::Long(1_234_567_890);
+        let index = constant_pool.add_name_and_type("name", "type")?;
+        assert_eq!(3, index);
+        assert_eq!(
+            Some(&Constant::NameAndType {
+                name_index: 1,
+                descriptor_index: 2
+            }),
+            constant_pool.get(index)
+        );
+        Ok(())
+    }
 
-        constant_pool.add(integer_constant.clone());
-        constant_pool.add(long_constant.clone());
+    #[test]
+    fn test_add_method_handle() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_method_handle(ReferenceKind::GetField, 1)?;
+        assert_eq!(1, index);
+        assert_eq!(
+            Some(&Constant::MethodHandle {
+                reference_kind: ReferenceKind::GetField,
+                reference_index: 1
+            }),
+            constant_pool.get(index)
+        );
+        Ok(())
+    }
 
-        let expected_bytes = [0, 4, 3, 0, 0, 0, 42, 5, 0, 0, 0, 0, 73, 150, 2, 210];
-        let mut bytes = Vec::new();
-        constant_pool.to_bytes(&mut bytes)?;
-        assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
-        assert_eq!(constant_pool, ConstantPool::from_bytes(&mut bytes)?);
+    #[test]
+    fn test_add_method_type() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_method_type("()V")?;
+        assert_eq!(2, index);
+        assert_eq!(Some(&Constant::MethodType(1)), constant_pool.get(index));
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_dynamic() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_dynamic(1, "name", "type")?;
+        assert_eq!(4, index);
+        assert_eq!(
+            Some(&Constant::Dynamic {
+                bootstrap_method_attr_index: 1,
+                name_and_type_index: 3
+            }),
+            constant_pool.get(index)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_invoke_dynamic() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_invoke_dynamic(1, "name", "type")?;
+        assert_eq!(4, index);
+        assert_eq!(
+            Some(&Constant::InvokeDynamic {
+                bootstrap_method_attr_index: 1,
+                name_and_type_index: 3
+            }),
+            constant_pool.get(index)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_module() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_module("module")?;
+        assert_eq!(2, index);
+        assert_eq!(Some(&Constant::Module(1)), constant_pool.get(index));
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_package() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_package("package")?;
+        assert_eq!(2, index);
+        assert_eq!(Some(&Constant::Package(1)), constant_pool.get(index));
         Ok(())
     }
 }

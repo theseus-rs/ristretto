@@ -136,7 +136,7 @@ impl AnnotationElement {
     /// Serialize the annotation element to bytes.
     ///
     /// # Errors
-    /// If there are more than 65,535 values in the array.
+    /// If there are more than 65,534 values in the array.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         match self {
             AnnotationElement::Byte { const_value_index }
