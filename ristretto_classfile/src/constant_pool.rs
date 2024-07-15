@@ -9,12 +9,21 @@ use std::io::Cursor;
 /// Constant pool.
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4>
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ConstantPool {
     constants: Vec<ConstantEntry>,
 }
 
 impl ConstantPool {
+    /// Create a new constant pool.
+    #[must_use]
+    pub fn new() -> Self {
+        // The constant pool is 1-based, so the first entry is a placeholder.
+        Self {
+            constants: vec![ConstantEntry::Placeholder],
+        }
+    }
+
     /// Push a constant to the pool.
     pub fn push(&mut self, constant: Constant) {
         let add_placeholder = matches!(constant, Constant::Long(_) | Constant::Double(_));
@@ -29,7 +38,10 @@ impl ConstantPool {
     /// # Errors
     /// If there are more than 65,534 constants in the pool.
     pub fn add(&mut self, constant: Constant) -> Result<u16> {
-        let index = u16::try_from(self.constants.len() + 1)?;
+        // Logically the index is self.len() + 1.  However, since the constant pool is one based and
+        // a placeholder is added as the first entry, we can just use the length of the constants
+        // vector to obtain the new index value.
+        let index = u16::try_from(self.constants.len())?;
         self.push(constant);
         Ok(index)
     }
@@ -52,7 +64,7 @@ impl ConstantPool {
     /// # Errors
     /// Returns an error if the index is out of bounds.
     pub fn try_get(&self, index: u16) -> Result<&Constant> {
-        let constant_entry = self.constants.get(index.saturating_sub(1) as usize);
+        let constant_entry = self.constants.get(index as usize);
         match constant_entry {
             Some(ConstantEntry::Constant(constant)) => Ok(constant),
             _ => Err(InvalidConstantPoolIndex(index)),
@@ -62,7 +74,7 @@ impl ConstantPool {
     /// Get the number of constants in the pool.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.constants.len()
+        self.constants.len() - 1
     }
 
     /// Check if the pool is empty.
@@ -97,7 +109,7 @@ impl ConstantPool {
     /// # Errors
     /// If there are more than 65,534 constants in the pool.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
-        let constant_pool_count = u16::try_from(self.constants.len())? + 1;
+        let constant_pool_count = u16::try_from(self.len())? + 1;
         bytes.write_u16::<BigEndian>(constant_pool_count)?;
         for constant_entry in &self.constants {
             if let ConstantEntry::Constant(constant) = constant_entry {
@@ -321,6 +333,12 @@ impl ConstantPool {
     }
 }
 
+impl Default for ConstantPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// All 8 byte constants (long and double) take up two entries in the constant pool; a placeholder
 /// is used to facilitate efficient indexed access of constants in the pool. See the JVM spec for:
 /// <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.5>
@@ -347,9 +365,10 @@ pub struct ConstantPoolIterator<'a> {
 
 impl<'a> ConstantPoolIterator<'a> {
     pub fn new(constant_pool: &'a ConstantPool) -> Self {
+        // index is 1-based; skip the first entry, which is a placeholder
         Self {
             constant_pool,
-            index: 0,
+            index: 1,
         }
     }
 }
@@ -383,12 +402,9 @@ impl<'a> IntoIterator for &'a ConstantPool {
 }
 
 impl fmt::Display for ConstantPool {
-    //    #1 = Class              #2             // java/lang/Byte
-    //    #2 = Utf8               java/lang/Byte
-    //    #3 = Class              #4             // java/lang/Integer
-    //    #4 = Utf8               java/lang/Integer
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (index, constant_entry) in self.constants.iter().enumerate() {
+        // skip the first entry, which is a placeholder
+        for (index, constant_entry) in self.constants.iter().skip(1).enumerate() {
             match constant_entry {
                 ConstantEntry::Constant(constant) => {
                     let index = index + 1;
@@ -450,7 +466,7 @@ mod test {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Utf8("foo".to_string()));
         assert!(constant_pool.get(1).is_some());
-        assert_eq!(1, constant_pool.constants.len());
+        assert_eq!(1, constant_pool.len());
     }
 
     #[test]
@@ -458,7 +474,7 @@ mod test {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Integer(42));
         assert!(constant_pool.get(1).is_some());
-        assert_eq!(1, constant_pool.constants.len());
+        assert_eq!(1, constant_pool.len());
     }
 
     #[test]
@@ -467,7 +483,7 @@ mod test {
         constant_pool.push(Constant::Long(1_234_567_890));
         assert!(constant_pool.get(1).is_some());
         assert!(constant_pool.get(2).is_none());
-        assert_eq!(2, constant_pool.constants.len());
+        assert_eq!(2, constant_pool.len());
     }
 
     #[test]
@@ -514,7 +530,7 @@ mod test {
         constant_pool.push(Constant::Double(std::f64::consts::PI));
         assert!(constant_pool.get(1).is_some());
         assert!(constant_pool.get(2).is_none());
-        assert_eq!(2, constant_pool.constants.len());
+        assert_eq!(2, constant_pool.len());
     }
 
     #[test]
