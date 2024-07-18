@@ -608,7 +608,7 @@ checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 
 [[package]]
 name = "helloworld"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "ristretto_classfile",
 ]
@@ -1301,7 +1301,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classfile"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "bitflags 2.6.0",
  "byteorder",
