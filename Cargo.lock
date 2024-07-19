@@ -607,7 +607,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 
 [[package]]
-name = "helloworld"
+name = "hello_world"
 version = "0.2.2"
 dependencies = [
  "ristretto_classfile",
@@ -1192,6 +1192,13 @@ checksum = "1465873a3dfdaa8ae7cb14b4383657caab0b3e8a0aa9ae8e04b044854c8dfce2"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
+]
+
+[[package]]
+name = "read_class"
+version = "0.2.2"
+dependencies = [
+ "ristretto_classfile",
 ]
 
 [[package]]

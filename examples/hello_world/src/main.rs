@@ -48,7 +48,7 @@ fn main() -> Result<()> {
         descriptor_index,
     }) = constant_pool.get(*name_and_type_index)
     else {
-        return Err(Error::InvalidConstantPoolIndexType(object_init));
+        return Err(Error::InvalidConstantPoolIndexType(*name_and_type_index));
     };
     let mut init_method = ristretto_classfile::Method {
         access_flags: MethodAccessFlags::PUBLIC,
