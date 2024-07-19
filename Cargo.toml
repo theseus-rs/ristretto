@@ -33,3 +33,10 @@ zip = "2.1.3"
 shared-version = true
 dependent-version = "upgrade"
 tag-name = "v{{version}}"
+
+[profile.release]
+#codegen-units = 1
+lto = true
+opt-level = "z"
+panic = "abort"
+strip = true

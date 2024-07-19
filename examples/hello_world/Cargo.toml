@@ -1,0 +1,9 @@
+[package]
+edition.workspace = true
+name = "hello_world"
+publish = false
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+ristretto_classfile = { path = "../../ristretto_classfile" }
