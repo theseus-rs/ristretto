@@ -30,10 +30,10 @@ fn main() -> Result<()> {
     let println_method =
         constant_pool.add_method_ref(print_stream_class, "println", "(Ljava/lang/String;)V")?;
     let this_class = constant_pool.add_class("HelloWorld")?;
-    let code_index = constant_pool.add_utf8("Code".to_string())?;
-    let line_number_table_index = constant_pool.add_utf8("LineNumberTable".to_string())?;
-    let main_name_index = constant_pool.add_utf8("main".to_string())?;
-    let main_descriptor_index = constant_pool.add_utf8("([Ljava/lang/String;)V".to_string())?;
+    let code_index = constant_pool.add_utf8("Code")?;
+    let line_number_table_index = constant_pool.add_utf8("LineNumberTable")?;
+    let main_name_index = constant_pool.add_utf8("main")?;
+    let main_descriptor_index = constant_pool.add_utf8("([Ljava/lang/String;)V")?;
 
     let mut methods = Vec::new();
     let Some(Constant::MethodRef {
