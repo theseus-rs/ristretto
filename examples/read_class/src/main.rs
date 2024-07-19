@@ -10,6 +10,10 @@ use std::process;
 /// Example that reads a class file and verifies it.
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
+    run(&args)
+}
+
+fn run(args: &[String]) -> Result<()> {
     if args.len() != 2 {
         eprintln!("Usage: {} <file_name>", args[0]);
         process::exit(1);
@@ -26,6 +30,10 @@ mod test {
 
     #[test]
     fn test_main() -> Result<()> {
-        main()
+        let args = vec![
+            "read_class".to_string(),
+            "classes/HelloWorld.class".to_string(),
+        ];
+        run(&args)
     }
 }
