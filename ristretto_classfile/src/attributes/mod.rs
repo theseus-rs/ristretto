@@ -9,6 +9,7 @@ mod exports;
 mod exports_flags;
 mod inner_class;
 mod instruction;
+mod instruction_utils;
 mod line_number;
 mod local_variable_table;
 mod local_variable_target;
