@@ -820,8 +820,7 @@ impl Instruction {
                 high,
                 offsets,
             } => {
-                let current_position = i32::try_from(bytes.position())?;
-                let position = u32::try_from(current_position + 1)?;
+                let position = i32::try_from(bytes.position())?;
                 let padding = (4 - (position % 4)) % 4;
                 for _ in 0..padding {
                     bytes.write_u8(0)?;
@@ -834,8 +833,7 @@ impl Instruction {
                 }
             }
             Instruction::Lookupswitch { pairs, default } => {
-                let current_position = i32::try_from(bytes.position())?;
-                let position = u32::try_from(current_position + 1)?;
+                let position = i32::try_from(bytes.position())?;
                 let padding = (4 - (position % 4)) % 4;
                 for _ in 0..padding {
                     bytes.write_u8(0)?;
@@ -1229,6 +1227,8 @@ mod test {
         let mut bytes = Vec::new();
         buffer.set_position(0);
         buffer.read_to_end(&mut bytes)?;
+        assert_eq!(expected_bytes, bytes);
+
         let mut bytes = Cursor::new(expected_bytes.to_vec());
         assert_eq!(*instruction, Instruction::from_bytes(&mut bytes)?);
         Ok(())
