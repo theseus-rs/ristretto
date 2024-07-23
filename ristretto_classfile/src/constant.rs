@@ -246,11 +246,11 @@ impl fmt::Display for Constant {
             Constant::FieldRef {
                 class_index,
                 name_and_type_index,
-            } => write!(f, "FieldRef #{class_index}.#{name_and_type_index}"),
+            } => write!(f, "Fieldref #{class_index}.#{name_and_type_index}"),
             Constant::MethodRef {
                 class_index,
                 name_and_type_index,
-            } => write!(f, "MethodRef #{class_index}.#{name_and_type_index}"),
+            } => write!(f, "Methodref #{class_index}.#{name_and_type_index}"),
             Constant::InterfaceMethodRef {
                 class_index,
                 name_and_type_index,
@@ -388,7 +388,7 @@ mod test {
         };
         let expected_bytes = [9, 0, 1, 0, 2];
 
-        assert_eq!("FieldRef #1.#2", constant.to_string());
+        assert_eq!("Fieldref #1.#2", constant.to_string());
         test_constant(&constant, &expected_bytes, 9, &VERSION_45_3)
     }
 
@@ -400,7 +400,7 @@ mod test {
         };
         let expected_bytes = [10, 0, 1, 0, 2];
 
-        assert_eq!("MethodRef #1.#2", constant.to_string());
+        assert_eq!("Methodref #1.#2", constant.to_string());
         test_constant(&constant, &expected_bytes, 10, &VERSION_45_3)
     }
 
