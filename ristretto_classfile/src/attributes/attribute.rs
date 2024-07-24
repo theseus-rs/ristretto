@@ -1022,8 +1022,32 @@ impl fmt::Display for Attribute {
                 let mut cursor = Cursor::new(code_bytes.clone());
                 while cursor.position() < code_length {
                     let index = cursor.position();
-                    let instruction =
+                    let mut instruction =
                         Instruction::from_bytes(&mut cursor).map_err(|_| fmt::Error)?;
+                    match instruction {
+                        Instruction::Tableswitch {
+                            ref mut default,
+                            ref mut offsets,
+                            ..
+                        } => {
+                            let position = i32::try_from(index).map_err(|_| fmt::Error)?;
+                            *default += position;
+                            for offset in offsets {
+                                *offset += position;
+                            }
+                        }
+                        Instruction::Lookupswitch {
+                            ref mut default,
+                            ref mut pairs,
+                        } => {
+                            let position = i32::try_from(index).map_err(|_| fmt::Error)?;
+                            *default += position;
+                            for (_match, offset) in pairs {
+                                *offset += position;
+                            }
+                        }
+                        _ => {}
+                    }
                     let value = instruction.to_string();
                     let (name, value) = value.split_once(' ').unwrap_or((value.as_str(), ""));
                     let value = format!("{name:<13} {value}");
