@@ -52,20 +52,23 @@ pub(crate) fn to_bytes(instructions: &[Instruction]) -> Result<Vec<u8>> {
                 ..
             } => {
                 let position = u32::try_from(index)?;
+                let position_byte = i32::from(
+                    *instruction_to_byte_map
+                        .get(&u16::try_from(position)?)
+                        .expect("instruction byte"),
+                );
                 let default_offset = position + u32::try_from(*default)?;
-                let byte_default = *instruction_to_byte_map
+                let default_byte = *instruction_to_byte_map
                     .get(&u16::try_from(default_offset)?)
-                    .expect("instruction byte")
-                    - u16::try_from(index)?;
-                *default = i32::from(byte_default);
+                    .expect("instruction byte");
+                *default = i32::from(default_byte) - position_byte;
 
                 for offset in offsets.iter_mut() {
                     let instruction_offset = position + u32::try_from(*offset)?;
-                    let byte_offset = instruction_to_byte_map
+                    let offset_byte = instruction_to_byte_map
                         .get(&u16::try_from(instruction_offset)?)
-                        .expect("instruction byte")
-                        - u16::try_from(index)?;
-                    *offset = i32::from(byte_offset);
+                        .expect("instruction byte");
+                    *offset = i32::from(*offset_byte) - position_byte;
                 }
             }
             Instruction::Lookupswitch {
@@ -73,20 +76,23 @@ pub(crate) fn to_bytes(instructions: &[Instruction]) -> Result<Vec<u8>> {
                 ref mut pairs,
             } => {
                 let position = u32::try_from(index)?;
+                let position_byte = i32::from(
+                    *instruction_to_byte_map
+                        .get(&u16::try_from(position)?)
+                        .expect("instruction byte"),
+                );
                 let default_offset = position + u32::try_from(*default)?;
-                let byte_default = instruction_to_byte_map
+                let default_byte = *instruction_to_byte_map
                     .get(&u16::try_from(default_offset)?)
-                    .expect("instruction byte")
-                    - u16::try_from(index)?;
-                *default = i32::from(byte_default);
+                    .expect("instruction byte");
+                *default = i32::from(default_byte) - position_byte;
 
                 for (_match, offset) in pairs.iter_mut() {
                     let instruction_offset = position + u32::try_from(*offset)?;
-                    let byte_offset = instruction_to_byte_map
+                    let offset_byte = instruction_to_byte_map
                         .get(&u16::try_from(instruction_offset)?)
-                        .expect("instruction byte")
-                        - u16::try_from(index)?;
-                    *offset = i32::from(byte_offset);
+                        .expect("instruction byte");
+                    *offset = i32::from(*offset_byte) - position_byte;
                 }
             }
             _ => {}
@@ -220,16 +226,6 @@ mod tests {
 
     #[test]
     fn test_from_bytes() -> Result<()> {
-        let bytes = vec![
-            3,   // Iconst_0
-            59,  // Istore_0
-            26,  // Iload_0
-            4,   // Iconst_1
-            96,  // Iadd
-            172, // Ireturn
-        ];
-        let mut cursor = Cursor::new(bytes);
-        let result = from_bytes(&mut cursor)?;
         let instructions = vec![
             Instruction::Iconst_0,
             Instruction::Istore_0,
@@ -238,6 +234,12 @@ mod tests {
             Instruction::Iadd,
             Instruction::Ireturn,
         ];
+        let bytes = instructions
+            .iter()
+            .map(Instruction::code)
+            .collect::<Vec<u8>>();
+        let mut cursor = Cursor::new(bytes);
+        let result = from_bytes(&mut cursor)?;
 
         assert_eq!(instructions, result);
 

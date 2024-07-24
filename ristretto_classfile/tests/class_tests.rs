@@ -6,6 +6,7 @@ pub fn test_class(class_bytes: &[u8]) -> Result<()> {
     let class_file = ClassFile::from_bytes(&mut original_bytes)?;
     let mut serde_bytes = Vec::new();
     class_file.to_bytes(&mut serde_bytes)?;
+    let _ = class_file.to_string();
     assert_eq!(class_bytes, serde_bytes);
     Ok(())
 }
@@ -18,6 +19,11 @@ pub fn test_annotations() -> Result<()> {
 #[test]
 pub fn test_constants() -> Result<()> {
     test_class(include_bytes!("../classes/Constants.class"))
+}
+
+#[test]
+pub fn test_expressions() -> Result<()> {
+    test_class(include_bytes!("../classes/Expressions.class"))
 }
 
 #[test]

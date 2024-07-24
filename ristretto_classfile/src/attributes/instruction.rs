@@ -1137,10 +1137,8 @@ impl fmt::Display for Instruction {
                 write!(f, "        }}")
             }
             Instruction::Lookupswitch { pairs, default } => {
-                let first_pair = pairs.first().unwrap_or(&(0, 0));
-                let (low, _) = first_pair;
                 let width = 12;
-                writeln!(f, "lookupswitch {{ // {low}")?;
+                writeln!(f, "lookupswitch {{ // {}", pairs.len())?;
                 for pair in pairs {
                     let (value, offset) = pair;
                     writeln!(f, "        {value:>width$}: {offset}")?;
