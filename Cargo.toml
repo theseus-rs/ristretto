@@ -15,7 +15,7 @@ edition = "2021"
 keywords = ["java", "jvm"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/theseus-rs/ristretto"
-version = "0.2.2"
+version = "0.3.0"
 
 [workspace.dependencies]
 bitflags = "2.6.0"
