@@ -1,5 +1,6 @@
 use crate::attributes::bootstrap_method::BootstrapMethod;
 use crate::attributes::inner_class::InnerClass;
+use crate::attributes::instruction_utils;
 use crate::attributes::line_number::LineNumber;
 use crate::attributes::parameter_annotation::ParameterAnnotation;
 use crate::attributes::{
@@ -42,7 +43,7 @@ pub enum Attribute {
         name_index: u16,
         max_stack: u16,
         max_locals: u16,
-        code: Vec<u8>,
+        code: Vec<Instruction>,
         exceptions: Vec<CodeException>,
         attributes: Vec<Attribute>,
     },
@@ -286,14 +287,7 @@ impl Attribute {
                 let code_length = bytes.read_u32::<BigEndian>()?;
                 let mut code = vec![0; code_length as usize];
                 bytes.read_exact(&mut code)?;
-
-                let code_length = u64::try_from(code.len())?;
-                let mut code_cursor = Cursor::new(code.clone());
-                let mut instructions = Vec::new();
-                while code_cursor.position() < code_length {
-                    let instruction = Instruction::from_bytes(&mut code_cursor)?;
-                    instructions.push(instruction);
-                }
+                let instructions = instruction_utils::from_bytes(&mut Cursor::new(code))?;
 
                 let exception_length = bytes.read_u16::<BigEndian>()?;
                 let mut exceptions = Vec::with_capacity(exception_length as usize);
@@ -311,7 +305,7 @@ impl Attribute {
                     name_index,
                     max_stack,
                     max_locals,
-                    code,
+                    code: instructions,
                     exceptions,
                     attributes,
                 }
@@ -678,9 +672,10 @@ impl Attribute {
                 bytes.write_u16::<BigEndian>(*max_stack)?;
                 bytes.write_u16::<BigEndian>(*max_locals)?;
 
-                let code_length = u32::try_from(code.len())?;
+                let code_bytes = instruction_utils::to_bytes(code)?;
+                let code_length = u32::try_from(code_bytes.len())?;
                 bytes.write_u32::<BigEndian>(code_length)?;
-                bytes.extend_from_slice(code.as_slice());
+                bytes.extend_from_slice(code_bytes.as_slice());
 
                 let exceptions_length = u16::try_from(exceptions.len())?;
                 bytes.write_u16::<BigEndian>(exceptions_length)?;
@@ -1022,12 +1017,37 @@ impl fmt::Display for Attribute {
                 writeln!(f, "Code:")?;
                 writeln!(f, "  stack={max_stack}, locals={max_locals}")?;
 
-                let code_length = u64::try_from(code.len()).map_err(|_| fmt::Error)?;
-                let mut cursor = Cursor::new(code.clone());
+                let code_bytes = instruction_utils::to_bytes(code).map_err(|_| fmt::Error)?;
+                let code_length = u64::try_from(code_bytes.len()).map_err(|_| fmt::Error)?;
+                let mut cursor = Cursor::new(code_bytes.clone());
                 while cursor.position() < code_length {
                     let index = cursor.position();
-                    let instruction =
+                    let mut instruction =
                         Instruction::from_bytes(&mut cursor).map_err(|_| fmt::Error)?;
+                    match instruction {
+                        Instruction::Tableswitch {
+                            ref mut default,
+                            ref mut offsets,
+                            ..
+                        } => {
+                            let position = i32::try_from(index).map_err(|_| fmt::Error)?;
+                            *default += position;
+                            for offset in offsets {
+                                *offset += position;
+                            }
+                        }
+                        Instruction::Lookupswitch {
+                            ref mut default,
+                            ref mut pairs,
+                        } => {
+                            let position = i32::try_from(index).map_err(|_| fmt::Error)?;
+                            *default += position;
+                            for (_match, offset) in pairs {
+                                *offset += position;
+                            }
+                        }
+                        _ => {}
+                    }
                     let value = instruction.to_string();
                     let (name, value) = value.split_once(' ').unwrap_or((value.as_str(), ""));
                     let value = format!("{name:<13} {value}");
@@ -1154,7 +1174,7 @@ mod test {
             name_index: 1,
             max_stack: 2,
             max_locals: 3,
-            code: vec![4],
+            code: vec![Instruction::Iconst_1],
             exceptions: vec![exception],
             attributes: vec![constant.clone()],
         };

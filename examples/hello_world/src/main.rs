@@ -6,7 +6,6 @@ use ristretto_classfile::{
     ClassAccessFlags, ClassFile, Constant, ConstantPool, Error, MethodAccessFlags, Result, Version,
 };
 use std::fs;
-use std::io::Cursor;
 
 /// Creates a simple "Hello, World!" class file equivalent to the following Java code:
 ///
@@ -60,11 +59,11 @@ fn main() -> Result<()> {
         name_index: code_index,
         max_stack: 1,
         max_locals: 1,
-        code: instructions_as_bytes(&vec![
+        code: vec![
             Instruction::Aload_0,
             Instruction::Invokespecial(object_init),
             Instruction::Return,
-        ])?,
+        ],
         exceptions: Vec::new(),
         attributes: Vec::new(),
     });
@@ -80,12 +79,12 @@ fn main() -> Result<()> {
         name_index: code_index,
         max_stack: 2,
         max_locals: 1,
-        code: instructions_as_bytes(&vec![
+        code: vec![
             Instruction::Getstatic(println_field),
             Instruction::Ldc(u8::try_from(hello_world_string)?),
             Instruction::Invokevirtual(println_method),
             Instruction::Return,
-        ])?,
+        ],
         exceptions: Vec::new(),
         attributes: Vec::new(),
     });
@@ -119,14 +118,6 @@ fn main() -> Result<()> {
     class_file.to_bytes(&mut bytes)?;
     fs::write("HelloWorld.class", bytes)?;
     Ok(())
-}
-
-fn instructions_as_bytes(instructions: &Vec<Instruction>) -> Result<Vec<u8>> {
-    let mut bytes = Cursor::new(Vec::new());
-    for instruction in instructions {
-        instruction.to_bytes(&mut bytes)?;
-    }
-    Ok(bytes.into_inner())
 }
 
 #[cfg(test)]
