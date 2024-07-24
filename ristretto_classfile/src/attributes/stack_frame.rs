@@ -45,6 +45,20 @@ pub enum StackFrame {
 }
 
 impl StackFrame {
+    /// Get the frame type.
+    #[must_use]
+    pub fn frame_type(&self) -> u8 {
+        match self {
+            StackFrame::SameFrame { frame_type }
+            | StackFrame::SameLocals1StackItemFrame { frame_type, .. }
+            | StackFrame::SameLocals1StackItemFrameExtended { frame_type, .. }
+            | StackFrame::ChopFrame { frame_type, .. }
+            | StackFrame::SameFrameExtended { frame_type, .. }
+            | StackFrame::AppendFrame { frame_type, .. }
+            | StackFrame::FullFrame { frame_type, .. } => *frame_type,
+        }
+    }
+
     /// Deserialize the stack frame from bytes.
     ///
     /// # Errors
@@ -200,51 +214,64 @@ impl fmt::Display for StackFrame {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             StackFrame::SameFrame { frame_type } => {
-                write!(f, "SameFrame[frame_type={frame_type}]")
+                write!(f, "frame_type = {frame_type} /* same */")
             }
             StackFrame::SameLocals1StackItemFrame { frame_type, stack } => {
-                write!(
+                writeln!(
                     f,
-                    "SameLocals1StackItemFrame[frame_type={frame_type}, stack={stack:?}]",
-                )
+                    "frame_type = {frame_type} /* same_locals_1_stack_item */"
+                )?;
+                let stack = stack
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                write!(f, "  stack = [ {stack} ]")
             }
             StackFrame::SameLocals1StackItemFrameExtended {
                 frame_type,
                 offset_delta,
                 stack,
             } => {
-                write!(
+                writeln!(
                     f,
-                    "SameLocals1StackItemFrameExtended[frame_type={frame_type}, offset_delta={offset_delta}, stack={stack:?}]",
-                )
+                    "frame_type = {frame_type} /* same_locals_1_stack_item_frame_extended */"
+                )?;
+                writeln!(f, "  offset_delta = {offset_delta}")?;
+                let stack = stack
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                write!(f, "  stack = [ {stack} ]")
             }
             StackFrame::ChopFrame {
                 frame_type,
                 offset_delta,
             } => {
-                write!(
-                    f,
-                    "ChopFrame[frame_type={frame_type}, offset_delta={offset_delta}]",
-                )
+                writeln!(f, "frame_type = {frame_type} /* chop */")?;
+                write!(f, "  offset_delta = {offset_delta}")
             }
             StackFrame::SameFrameExtended {
                 frame_type,
                 offset_delta,
             } => {
-                write!(
-                    f,
-                    "SameFrameExtended[frame_type={frame_type}, offset_delta={offset_delta}]",
-                )
+                writeln!(f, "frame_type = {frame_type} /* same_frame_extended */")?;
+                write!(f, "  offset_delta = {offset_delta}")
             }
             StackFrame::AppendFrame {
                 frame_type,
                 offset_delta,
                 locals,
             } => {
-                write!(
-                    f,
-                    "AppendFrame[frame_type={frame_type}, offset_delta={offset_delta}, locals={locals:?}]",
-                )
+                writeln!(f, "frame_type = {frame_type} /* append */")?;
+                writeln!(f, "  offset_delta = {offset_delta}")?;
+                let locals = locals
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                write!(f, "  locals = [ {locals} ]")
             }
             StackFrame::FullFrame {
                 frame_type,
@@ -252,10 +279,20 @@ impl fmt::Display for StackFrame {
                 locals,
                 stack,
             } => {
-                write!(
-                    f,
-                    "FullFrame[frame_type={frame_type}, offset_delta={offset_delta}, locals={locals:?}, stack={stack:?}]",
-                )
+                writeln!(f, "frame_type = {frame_type} /* full_frame */")?;
+                writeln!(f, "  offset_delta = {offset_delta}")?;
+                let locals = locals
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                writeln!(f, "  locals = [ {locals} ]")?;
+                let stack = stack
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                write!(f, "  stack = [ {stack} ]")
             }
         }
     }
@@ -264,6 +301,7 @@ impl fmt::Display for StackFrame {
 #[cfg(test)]
 mod test {
     use super::*;
+    use indoc::indoc;
 
     #[test]
     fn test_invalid_stack_frame() -> Result<()> {
@@ -290,23 +328,32 @@ mod test {
 
     #[test]
     fn test_same_frame() -> Result<()> {
+        let frame_type = 0;
         let stack_frame = StackFrame::SameFrame { frame_type: 0 };
         let expected_bytes = [0];
 
-        assert_eq!("SameFrame[frame_type=0]", stack_frame.to_string());
+        assert_eq!(frame_type, stack_frame.frame_type());
+        assert_eq!(
+            indoc! {"frame_type = 0 /* same */"},
+            stack_frame.to_string()
+        );
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
     #[test]
     fn test_same_locales_1_stack_item_frame() -> Result<()> {
+        let frame_type = 64;
         let stack_frame = StackFrame::SameLocals1StackItemFrame {
-            frame_type: 64,
+            frame_type,
             stack: vec![VerificationType::Null],
         };
         let expected_bytes = [64, 5];
 
+        assert_eq!(frame_type, stack_frame.frame_type());
         assert_eq!(
-            "SameLocals1StackItemFrame[frame_type=64, stack=[Null]]",
+            indoc! {"
+            frame_type = 64 /* same_locals_1_stack_item */
+              stack = [ null ]"},
             stack_frame.to_string()
         );
         test_stack_frame(&stack_frame, &expected_bytes)
@@ -314,15 +361,20 @@ mod test {
 
     #[test]
     fn test_same_locales_1_stack_item_frame_extended() -> Result<()> {
+        let frame_type = 247;
         let stack_frame = StackFrame::SameLocals1StackItemFrameExtended {
-            frame_type: 247,
+            frame_type,
             offset_delta: 42,
             stack: vec![VerificationType::Null],
         };
         let expected_bytes = [247, 0, 42, 5];
 
+        assert_eq!(frame_type, stack_frame.frame_type());
         assert_eq!(
-            "SameLocals1StackItemFrameExtended[frame_type=247, offset_delta=42, stack=[Null]]",
+            indoc! {"
+            frame_type = 247 /* same_locals_1_stack_item_frame_extended */
+              offset_delta = 42
+              stack = [ null ]"},
             stack_frame.to_string()
         );
         test_stack_frame(&stack_frame, &expected_bytes)
@@ -330,14 +382,18 @@ mod test {
 
     #[test]
     fn test_chop_frame() -> Result<()> {
+        let frame_type = 248;
         let stack_frame = StackFrame::ChopFrame {
-            frame_type: 248,
+            frame_type,
             offset_delta: 42,
         };
         let expected_bytes = [248, 0, 42];
 
+        assert_eq!(frame_type, stack_frame.frame_type());
         assert_eq!(
-            "ChopFrame[frame_type=248, offset_delta=42]",
+            indoc! {"
+            frame_type = 248 /* chop */
+              offset_delta = 42"},
             stack_frame.to_string()
         );
         test_stack_frame(&stack_frame, &expected_bytes)
@@ -345,14 +401,18 @@ mod test {
 
     #[test]
     fn test_same_frame_extended() -> Result<()> {
+        let frame_type = 251;
         let stack_frame = StackFrame::SameFrameExtended {
-            frame_type: 251,
+            frame_type,
             offset_delta: 42,
         };
         let expected_bytes = [251, 0, 42];
 
+        assert_eq!(frame_type, stack_frame.frame_type());
         assert_eq!(
-            "SameFrameExtended[frame_type=251, offset_delta=42]",
+            indoc! {"
+            frame_type = 251 /* same_frame_extended */
+              offset_delta = 42"},
             stack_frame.to_string()
         );
         test_stack_frame(&stack_frame, &expected_bytes)
@@ -360,15 +420,20 @@ mod test {
 
     #[test]
     fn test_append_frame() -> Result<()> {
+        let frame_type = 252;
         let stack_frame = StackFrame::AppendFrame {
-            frame_type: 252,
+            frame_type,
             offset_delta: 42,
             locals: vec![VerificationType::Null],
         };
         let expected_bytes = [252, 0, 42, 5];
 
+        assert_eq!(frame_type, stack_frame.frame_type());
         assert_eq!(
-            "AppendFrame[frame_type=252, offset_delta=42, locals=[Null]]",
+            indoc! {"
+            frame_type = 252 /* append */
+              offset_delta = 42
+              locals = [ null ]"},
             stack_frame.to_string()
         );
         test_stack_frame(&stack_frame, &expected_bytes)
@@ -376,16 +441,22 @@ mod test {
 
     #[test]
     fn test_full_frame() -> Result<()> {
+        let frame_type = 255;
         let stack_frame = StackFrame::FullFrame {
-            frame_type: 255,
+            frame_type,
             offset_delta: 42,
             locals: vec![VerificationType::Null],
             stack: vec![VerificationType::Integer],
         };
         let expected_bytes = [255, 0, 42, 0, 1, 5, 0, 1, 1];
 
+        assert_eq!(frame_type, stack_frame.frame_type());
         assert_eq!(
-            "FullFrame[frame_type=255, offset_delta=42, locals=[Null], stack=[Integer]]",
+            indoc! {"\
+            frame_type = 255 /* full_frame */
+              offset_delta = 42
+              locals = [ null ]
+              stack = [ int ]"},
             stack_frame.to_string()
         );
         test_stack_frame(&stack_frame, &expected_bytes)

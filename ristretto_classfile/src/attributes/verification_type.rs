@@ -85,7 +85,7 @@ impl fmt::Display for VerificationType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             VerificationType::Top => write!(f, "top"),
-            VerificationType::Integer => write!(f, "integer"),
+            VerificationType::Integer => write!(f, "int"),
             VerificationType::Float => write!(f, "float"),
             VerificationType::Double => write!(f, "double"),
             VerificationType::Long => write!(f, "long"),
@@ -148,7 +148,7 @@ mod test {
         let tag = 1;
         let expected_bytes = [tag];
 
-        assert_eq!("integer", verification_type.to_string());
+        assert_eq!("int", verification_type.to_string());
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 

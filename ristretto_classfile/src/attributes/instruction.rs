@@ -1128,25 +1128,25 @@ impl fmt::Display for Instruction {
                 offsets,
             } => {
                 let width = 12;
-                writeln!(f, "tableswitch   {{ // {low} to {high}")?;
+                writeln!(f, "tableswitch {{ // {low} to {high}")?;
                 for (i, offset) in offsets.iter().enumerate() {
                     let value = low + i32::try_from(i).map_err(|_| fmt::Error)?;
-                    writeln!(f, "{value:>width$}: {offset}")?;
+                    writeln!(f, "        {value:>width$}: {offset}")?;
                 }
-                writeln!(f, "{:>width$}: {default}", "default")?;
-                write!(f, "}}")
+                writeln!(f, "        {:>width$}: {default}", "default")?;
+                write!(f, "        }}")
             }
             Instruction::Lookupswitch { pairs, default } => {
                 let first_pair = pairs.first().unwrap_or(&(0, 0));
                 let (low, _) = first_pair;
                 let width = 12;
-                writeln!(f, "lookupswitch   {{ // {low}")?;
+                writeln!(f, "lookupswitch {{ // {low}")?;
                 for pair in pairs {
                     let (value, offset) = pair;
-                    writeln!(f, "{value:>width$}: {offset}")?;
+                    writeln!(f, "        {value:>width$}: {offset}")?;
                 }
-                writeln!(f, "{:>width$}: {default}", "default")?;
-                write!(f, "}}")
+                writeln!(f, "        {:>width$}: {default}", "default")?;
+                write!(f, "        }}")
             }
             Instruction::Ireturn => write!(f, "ireturn"),
             Instruction::Lreturn => write!(f, "lreturn"),
@@ -2948,11 +2948,11 @@ mod test {
         ];
 
         let expected = indoc! {"
-            tableswitch   { // 1 to 2
-                       1: 3
-                       2: 4
-                 default: 42
-            }"};
+            tableswitch { // 1 to 2
+                               1: 3
+                               2: 4
+                         default: 42
+                    }"};
         assert_eq!(expected, instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
@@ -2969,10 +2969,10 @@ mod test {
         ];
 
         let expected = indoc! {"
-            lookupswitch   { // 1
-                       1: 2
-                 default: 42
-            }"};
+            lookupswitch { // 1
+                               1: 2
+                         default: 42
+                    }"};
         assert_eq!(expected, instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
