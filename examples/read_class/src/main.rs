@@ -21,7 +21,9 @@ fn run(args: &[String]) -> Result<()> {
     let file_name = &args[1];
     let bytes = fs::read(file_name)?;
     let class_file = ClassFile::from_bytes(&mut Cursor::new(bytes))?;
-    class_file.verify()
+    class_file.verify()?;
+    println!("{class_file}");
+    Ok(())
 }
 
 #[cfg(test)]

@@ -1015,7 +1015,7 @@ impl fmt::Display for Attribute {
                 ..
             } => {
                 writeln!(f, "Code:")?;
-                writeln!(f, "  max_stack = {max_stack}, max_locals = {max_locals}")?;
+                writeln!(f, "  stack={max_stack}, locals={max_locals}")?;
 
                 let code_bytes = instruction_utils::to_bytes(code).map_err(|_| fmt::Error)?;
                 let code_length = u64::try_from(code_bytes.len()).map_err(|_| fmt::Error)?;
@@ -1026,7 +1026,8 @@ impl fmt::Display for Attribute {
                         Instruction::from_bytes(&mut cursor).map_err(|_| fmt::Error)?;
                     let value = instruction.to_string();
                     let (name, value) = value.split_once(' ').unwrap_or((value.as_str(), ""));
-                    writeln!(f, "{index:>6}: {name:<12} {value}")?;
+                    let value = format!("{name:<13} {value}");
+                    writeln!(f, "{index:>6}: {}", value.trim())?;
                 }
 
                 if !exceptions.is_empty() {
@@ -1042,7 +1043,13 @@ impl fmt::Display for Attribute {
                 for line_number in line_numbers {
                     let start_pc = line_number.start_pc;
                     let line_number = line_number.line_number;
-                    writeln!(f, "{:>9}: {line_number}", format!("line {start_pc}"))?;
+                    writeln!(f, "  line {line_number}: {start_pc}")?;
+                }
+            }
+            Attribute::StackMapTable { frames, .. } => {
+                writeln!(f, "StackMapTable: number_of_entries = {}", frames.len())?;
+                for frame in frames {
+                    writeln!(f, "{}", indent_lines(&frame.to_string(), "  "))?;
                 }
             }
             _ => write!(f, "{self:?}")?,
@@ -1153,8 +1160,8 @@ mod test {
         ];
         let expected = indoc! {"
             Code:
-              max_stack = 2, max_locals = 3
-                 0: iconst_1     
+              stack=2, locals=3
+                 0: iconst_1
               [CodeException { start_pc: 1, end_pc: 2, handler_pc: 3, catch_type: 4 }]
               ConstantValue { name_index: 2, constant_value_index: 42 }
         "};
@@ -1188,7 +1195,10 @@ mod test {
         let expected_bytes = [0, 1, 0, 0, 0, 3, 0, 1, 0];
 
         assert_eq!(
-            "StackMapTable { name_index: 1, frames: [SameFrame { frame_type: 0 }] }",
+            indoc! {"
+                StackMapTable: number_of_entries = 1
+                  frame_type = 0 /* same */
+            "},
             attribute.to_string()
         );
         test_attribute(&attribute, &expected_bytes, &VERSION_50_0)
@@ -1332,7 +1342,7 @@ mod test {
         let expected_bytes = [0, 1, 0, 0, 0, 6, 0, 1, 0, 2, 0, 42];
         let expected = indoc! {"
             LineNumberTable:
-               line 2: 42
+              line 42: 2
         "};
 
         assert_eq!(expected, attribute.to_string());

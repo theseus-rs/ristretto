@@ -70,7 +70,7 @@ impl Field {
 
 impl fmt::Display for Field {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "access_flags: {}", self.access_flags)?;
+        writeln!(f, "flags: {}", self.access_flags)?;
         writeln!(f, "name_index: #{}", self.name_index)?;
         writeln!(f, "descriptor_index: #{}", self.descriptor_index)?;
         writeln!(f, "field_type: {:?}", self.field_type)?;
@@ -106,7 +106,7 @@ mod test {
         };
 
         let expected = indoc! {r"
-            access_flags: (0x0001) ACC_PUBLIC
+            flags: (0x0001) ACC_PUBLIC
             name_index: #1
             descriptor_index: #2
             field_type: Base(Int)

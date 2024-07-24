@@ -182,14 +182,14 @@ impl fmt::Display for ClassFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let class_name = self.class_name().map_err(|_| fmt::Error)?;
         writeln!(f, "{} {class_name}", self.access_flags.as_code())?;
+        writeln!(f, "  minor version: {}", self.version.minor())?;
         writeln!(
             f,
             "  major version: {} ({})",
             self.version.major(),
             self.version
         )?;
-        writeln!(f, "  minor version: {}", self.version.minor())?;
-        writeln!(f, "  access_flags: {}", self.access_flags)?;
+        writeln!(f, "  flags: {}", self.access_flags)?;
         writeln!(f, "  this_class: #{}", self.this_class)?;
         writeln!(f, "  super_class: #{}", self.super_class)?;
         writeln!(
@@ -201,33 +201,41 @@ impl fmt::Display for ClassFile {
             self.attributes.len()
         )?;
 
-        writeln!(f, "Constant Pool:")?;
+        writeln!(f, "Constant pool:")?;
         write!(f, "{}", self.constant_pool)?;
+        writeln!(f, "{{")?;
 
-        writeln!(f, "interfaces:")?;
-        for interface in &self.interfaces {
-            writeln!(f, "  #{interface}")?;
-        }
-
-        writeln!(f, "fields:")?;
-        for (index, field) in self.fields.iter().enumerate() {
-            if index > 0 {
-                writeln!(f)?;
+        if !self.interfaces.is_empty() {
+            writeln!(f, "interfaces:")?;
+            for interface in &self.interfaces {
+                writeln!(f, "  #{interface}")?;
             }
-            writeln!(f, "{}", indent_lines(&field.to_string(), "  "))?;
         }
 
-        writeln!(f, "methods:")?;
-        for (index, method) in self.methods.iter().enumerate() {
-            if index > 0 {
-                writeln!(f)?;
+        if !self.fields.is_empty() {
+            writeln!(f, "fields:")?;
+            for (index, field) in self.fields.iter().enumerate() {
+                if index > 0 {
+                    writeln!(f)?;
+                }
+                writeln!(f, "{}", indent_lines(&field.to_string(), "  "))?;
             }
-            writeln!(f, "{}", indent_lines(&method.to_string(), "  "))?;
         }
 
-        writeln!(f, "attributes:")?;
+        if !self.methods.is_empty() {
+            writeln!(f, "methods:")?;
+            for (index, method) in self.methods.iter().enumerate() {
+                if index > 0 {
+                    writeln!(f)?;
+                }
+                writeln!(f, "{}", indent_lines(&method.to_string(), "  "))?;
+            }
+        }
+
+        writeln!(f, "}}")?;
+
         for attribute in &self.attributes {
-            writeln!(f, "{}", indent_lines(&attribute.to_string(), "  "))?;
+            writeln!(f, "{}", &attribute.to_string())?;
         }
         Ok(())
     }
@@ -335,14 +343,14 @@ mod test {
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
         let expected = indoc! {r"
             public class Minimum
-              major version: 65 (Java 21)
               minor version: 0
-              access_flags: (0x0021) ACC_PUBLIC, ACC_SUPER
+              major version: 65 (Java 21)
+              flags: (0x0021) ACC_PUBLIC, ACC_SUPER
               this_class: #7
               super_class: #2
               interfaces: 0, fields: 0, methods: 1, attributes: 1
-            Constant Pool:
-               #1 = MethodRef          #2.#3
+            Constant pool:
+               #1 = Methodref          #2.#3
                #2 = Class              #4
                #3 = NameAndType        #5:#6
                #4 = Utf8               java/lang/Object
@@ -354,22 +362,21 @@ mod test {
               #10 = Utf8               LineNumberTable
               #11 = Utf8               SourceFile
               #12 = Utf8               Minimum.java
-            interfaces:
-            fields:
+            {
             methods:
-              access_flags: (0x0001) ACC_PUBLIC
+              flags: (0x0001) ACC_PUBLIC
               name_index: #5
               descriptor_index: #6
               attributes:
                 Code:
-                  max_stack = 1, max_locals = 1
-                     0: aload_0      
+                  stack=1, locals=1
+                     0: aload_0
                      1: invokespecial #1
-                     4: return       
+                     4: return
                   LineNumberTable:
-                     line 0: 1
-            attributes:
-              SourceFile { name_index: 11, source_file_index: 12 }
+                    line 1: 0
+            }
+            SourceFile { name_index: 11, source_file_index: 12 }
         "};
 
         assert_eq!(expected, class_file.to_string());
