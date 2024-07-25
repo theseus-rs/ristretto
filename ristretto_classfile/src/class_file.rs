@@ -222,14 +222,12 @@ impl fmt::Display for ClassFile {
             }
         }
 
-        if !self.methods.is_empty() {
-            writeln!(f, "methods:")?;
-            for (index, method) in self.methods.iter().enumerate() {
-                if index > 0 {
-                    writeln!(f)?;
-                }
-                writeln!(f, "{}", indent_lines(&method.to_string(), "  "))?;
+        writeln!(f, "methods:")?;
+        for (index, method) in self.methods.iter().enumerate() {
+            if index > 0 {
+                writeln!(f)?;
             }
+            writeln!(f, "{}", indent_lines(&method.to_string(), "  "))?;
         }
 
         writeln!(f, "}}")?;
