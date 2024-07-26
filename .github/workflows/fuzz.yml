@@ -16,7 +16,7 @@ permissions:
 jobs:
   fuzz:
     name: ${{ matrix.target }}
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
