@@ -22,14 +22,14 @@ jobs:
       matrix:
         target:
           - base_type_parse
-          - class_access_from_bytes
+          - class_access_flags_from_bytes
           - class_file_from_bytes
           - constant_from_bytes
           - constant_pool_from_bytes
-          - field_access_from_bytes
+          - field_access_flags_from_bytes
           - field_from_bytes
           - field_type_parse
-          - method_access_from_bytes
+          - method_access_flags_from_bytes
           - method_from_bytes
           - mutf8_from_bytes
           - mutf8_to_bytes
