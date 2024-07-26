@@ -1,6 +1,5 @@
 use crate::attributes::Attribute;
 use crate::class_access_flags::ClassAccessFlags;
-use crate::constant::Constant;
 use crate::constant_pool::ConstantPool;
 use crate::display::indent_lines;
 use crate::error::Error::{InvalidMagicNumber, VerificationError};
@@ -9,7 +8,6 @@ use crate::field::Field;
 use crate::method::Method;
 use crate::verifiers::verifier;
 use crate::version::Version;
-use crate::Error::InvalidConstantPoolIndexType;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
@@ -38,12 +36,7 @@ impl ClassFile {
     /// # Errors
     /// Returns an error if the class name is not found.
     pub fn class_name(&self) -> Result<&String> {
-        let class_constant = self.constant_pool.try_get(self.this_class)?;
-        let Constant::Class(name_index) = class_constant else {
-            return Err(InvalidConstantPoolIndexType(self.this_class));
-        };
-
-        self.constant_pool.try_get_utf8(*name_index)
+        self.constant_pool.try_get_class(self.this_class)
     }
 
     /// Get the source file name.
@@ -243,6 +236,8 @@ impl fmt::Display for ClassFile {
 mod test {
     use super::*;
     use crate::error::Result;
+    use crate::Constant;
+    use crate::Error::InvalidConstantPoolIndexType;
     use indoc::indoc;
 
     #[test]
