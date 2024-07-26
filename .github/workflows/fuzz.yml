@@ -34,6 +34,6 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo fuzz
-        uses: dtolnay/install@cargo-fuzz
+        run: cargo install cargo-fuzz
       - name: Fuzz Tests
         run: cargo fuzz run ${{ matrix.target }} -- ${{ matrix.option }}
