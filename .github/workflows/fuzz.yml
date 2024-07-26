@@ -23,9 +23,6 @@ jobs:
         test:
           - mutf8_from_bytes
           - mutf8_to_bytes
-          - macos-arm64
-          - macos-x64
-          - windows-x64
 
         include:
           - test: mutf8_from_bytes
@@ -41,7 +38,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           components: 'llvm-tools-preview'
-          toolchain: stable
+          toolchain: nightly
 
       - name: Install fuzz
         uses: dtolnay/install@cargo-fuzz
