@@ -18,9 +18,57 @@ path = "../ristretto_classfile"
 members = ["."]
 
 [[bin]]
+name = "base_type_parse"
+path = "fuzz_targets/base_type_parse.rs"
+
+[[bin]]
+name = "class_access_flags_from_bytes"
+path = "fuzz_targets/class_access_flags_from_bytes.rs"
+
+[[bin]]
+name = "class_file_from_bytes"
+path = "fuzz_targets/class_file_from_bytes.rs"
+
+[[bin]]
+name = "constant_from_bytes"
+path = "fuzz_targets/constant_from_bytes.rs"
+
+[[bin]]
+name = "constant_pool_from_bytes"
+path = "fuzz_targets/constant_pool_from_bytes.rs"
+
+[[bin]]
+name = "field_access_flags_from_bytes"
+path = "fuzz_targets/field_access_flags_from_bytes.rs"
+
+[[bin]]
+name = "field_from_bytes"
+path = "fuzz_targets/field_from_bytes.rs"
+
+[[bin]]
+name = "field_type_parse"
+path = "fuzz_targets/field_type_parse.rs"
+
+[[bin]]
+name = "method_access_flags_from_bytes"
+path = "fuzz_targets/method_access_flags_from_bytes.rs"
+
+[[bin]]
+name = "method_from_bytes"
+path = "fuzz_targets/method_from_bytes.rs"
+
+[[bin]]
 name = "mutf8_from_bytes"
 path = "fuzz_targets/mutf8_from_bytes.rs"
 
 [[bin]]
 name = "mutf8_to_bytes"
 path = "fuzz_targets/mutf8_to_bytes.rs"
+
+[[bin]]
+name = "reference_kind_from_bytes"
+path = "fuzz_targets/reference_kind_from_bytes.rs"
+
+[[bin]]
+name = "version_from_bytes"
+path = "fuzz_targets/version_from_bytes.rs"

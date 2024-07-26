@@ -237,7 +237,7 @@ mod test {
     use super::*;
     use crate::error::Result;
     use crate::Constant;
-    use crate::Error::InvalidConstantPoolIndexType;
+    use crate::Error::{InvalidConstantPoolIndexType, IoError};
     use indoc::indoc;
 
     #[test]
@@ -412,5 +412,17 @@ mod test {
         class_file.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, bytes);
         Ok(())
+    }
+
+    #[test]
+    fn test_from_bytes_invalid() {
+        let bytes = vec![
+            202, 254, 186, 190, 254, 0, 0, 48, 0, 0, 160, 93, 37, 0, 212, 186,
+        ];
+        let mut cursor = Cursor::new(bytes);
+        assert_eq!(
+            Err(IoError("Invalid constant pool count".to_string())),
+            ClassFile::from_bytes(&mut cursor)
+        );
     }
 }

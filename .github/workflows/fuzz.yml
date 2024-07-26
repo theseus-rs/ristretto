@@ -21,13 +21,23 @@ jobs:
       fail-fast: false
       matrix:
         target:
+          - base_type_parse
+          - class_access_from_bytes
+          - class_file_from_bytes
+          - constant_from_bytes
+          - constant_pool_from_bytes
+          - field_access_from_bytes
+          - field_from_bytes
+          - field_type_parse
+          - method_access_from_bytes
+          - method_from_bytes
           - mutf8_from_bytes
           - mutf8_to_bytes
+          - reference_kind_from_bytes
+          - version_from_bytes
         include:
-          - target: mutf8_from_bytes
-            option: -max_total_time=60
-          - target: mutf8_to_bytes
-            option: -max_total_time=60
+          - target: base_type_parse
+            option: -max_len=1
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -36,4 +46,4 @@ jobs:
       - name: Install cargo fuzz
         run: cargo install cargo-fuzz
       - name: Fuzz Tests
-        run: cargo fuzz run ${{ matrix.target }} -- ${{ matrix.option }}
+        run: cargo fuzz run ${{ matrix.target }} -- -max_total_time=60 ${{ matrix.option }}

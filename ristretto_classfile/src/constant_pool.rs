@@ -3,8 +3,8 @@ use crate::error::Result;
 use crate::Error::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
 use crate::ReferenceKind;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::fmt;
 use std::io::Cursor;
+use std::{fmt, io};
 
 /// Constant pool.
 ///
@@ -95,7 +95,13 @@ impl ConstantPool {
     /// Returns an error if the bytes are not a valid constant pool.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ConstantPool> {
         let mut constant_pool = ConstantPool::default();
-        let constant_pool_count = bytes.read_u16::<BigEndian>()? - 1;
+        let constant_pool_count =
+            bytes
+                .read_u16::<BigEndian>()?
+                .checked_sub(1)
+                .ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidData, "Invalid constant pool count")
+                })?;
         while constant_pool.len() < constant_pool_count as usize {
             let constant = Constant::from_bytes(bytes)?;
             constant_pool.push(constant);
@@ -673,6 +679,7 @@ impl fmt::Display for ConstantPool {
 mod test {
     use super::*;
     use crate::constant::Constant;
+    use crate::Error::IoError;
     use std::fmt::Debug;
 
     #[test]
@@ -1182,5 +1189,14 @@ mod test {
     #[test]
     fn test_try_get_package() {
         test_try_get_constant(ConstantPool::try_get_package, Constant::Package(1));
+    }
+
+    #[test]
+    fn test_from_bytes_invalid_tag() {
+        let mut bytes = Cursor::new(vec![0, 0, 10]);
+        assert_eq!(
+            Err(IoError("Invalid constant pool count".to_string())),
+            ConstantPool::from_bytes(&mut bytes)
+        );
     }
 }

@@ -1,7 +1,7 @@
 use crate::base_type::BaseType;
 use crate::error::Result;
 use crate::Error::{InvalidFieldTypeCode, InvalidFieldTypeDescriptor};
-use std::fmt;
+use std::{fmt, io};
 
 /// Implementation of `FieldType`.
 ///
@@ -54,7 +54,10 @@ impl FieldType {
             'S' => FieldType::Base(BaseType::Short),
             'Z' => FieldType::Base(BaseType::Boolean),
             'L' => {
-                let class_name: String = chars.take(descriptor.len() - 2).collect();
+                let take_chars = descriptor.len().checked_sub(2).ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidData, "Invalid descriptor length")
+                })?;
+                let class_name: String = chars.take(take_chars).collect();
                 if !class_name.is_empty() && descriptor.ends_with(';') {
                     FieldType::Object(class_name)
                 } else {
@@ -85,6 +88,7 @@ impl fmt::Display for FieldType {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::Error::IoError;
 
     #[test]
     fn test_invalid_code() {
@@ -200,5 +204,14 @@ mod test {
 
         assert_eq!("[int", field_type.to_string());
         test_field_type(&field_type, "[I", '[')
+    }
+
+    #[test]
+    fn test_parse_invalid() {
+        let descriptor = "L".to_string();
+        assert_eq!(
+            Err(IoError("Invalid descriptor length".to_string())),
+            FieldType::parse(&descriptor)
+        );
     }
 }
