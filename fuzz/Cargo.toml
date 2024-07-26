@@ -1,17 +1,21 @@
 [package]
-edition.workspace = true
-license.workspace = true
+edition = "2021"
 name = "ristretto_fuzz"
 publish = false
-repository.workspace = true
-version.workspace = true
+version = "0.0.0"
 
 [package.metadata]
 cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-ristretto_classfile = { path = "../ristretto_classfile" }
+
+[dependencies.ristretto_classfile]
+path = "../ristretto_classfile"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
 
 [[bin]]
 name = "mutf8_from_bytes"
