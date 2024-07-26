@@ -1,1 +1,3 @@
+/fuzz/artifacts/
+/fuzz/corpus/
 /target/

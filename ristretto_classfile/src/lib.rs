@@ -61,7 +61,7 @@ mod field_access_flags;
 mod field_type;
 mod method;
 mod method_access_flags;
-pub(crate) mod mutf8;
+pub mod mutf8;
 mod reference_kind;
 mod verifiers;
 mod version;

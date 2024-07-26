@@ -5,6 +5,7 @@ default-members = [
 members = [
     "examples/*",
     "ristretto_classfile",
+    "fuzz",
 ]
 resolver = "2"
 
