@@ -3,13 +3,14 @@
 //!
 //! See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.7>
 
+use crate::Error::FromUtf8Error;
 use crate::Result;
 
 /// Converts a Rust string to a Java Modified UTF-8 byte array.
 ///
 /// # Errors
 /// Should not occur; reserved for future use.
-pub(crate) fn to_bytes(data: &str) -> Result<Vec<u8>> {
+pub fn to_bytes(data: &str) -> Result<Vec<u8>> {
     let mut encoded = Vec::with_capacity(data.len());
 
     for ch in data.chars() {
@@ -44,7 +45,7 @@ pub(crate) fn to_bytes(data: &str) -> Result<Vec<u8>> {
 /// Should not occur; reserved for future use.
 #[allow(clippy::similar_names)]
 #[allow(clippy::unnecessary_wraps)]
-pub(crate) fn from_bytes(bytes: &[u8]) -> Result<String> {
+pub fn from_bytes(bytes: &[u8]) -> Result<String> {
     let mut decoded = String::with_capacity(bytes.len());
     let mut i = 0;
 
@@ -55,6 +56,9 @@ pub(crate) fn from_bytes(bytes: &[u8]) -> Result<String> {
             decoded.push(byte1 as char);
             i += 1;
         } else if byte1 & 0xE0 == 0xC0 {
+            if i + 1 >= bytes.len() {
+                return Err(FromUtf8Error("Invalid UTF-8 byte sequence".to_string()));
+            }
             let byte2 = bytes[i + 1];
             if byte1 == 0xC0 && byte2 == 0x80 {
                 decoded.push('\u{0000}');
@@ -64,6 +68,9 @@ pub(crate) fn from_bytes(bytes: &[u8]) -> Result<String> {
             }
             i += 2;
         } else if byte1 & 0xF0 == 0xE0 {
+            if i + 2 >= bytes.len() {
+                return Err(FromUtf8Error("Invalid UTF-8 byte sequence".to_string()));
+            }
             let byte2 = bytes[i + 1];
             let byte3 = bytes[i + 2];
             let ch = (u32::from(byte1 & 0x0F) << 12)
@@ -72,6 +79,9 @@ pub(crate) fn from_bytes(bytes: &[u8]) -> Result<String> {
             decoded.push(char::from_u32(ch).unwrap_or_default());
             i += 3;
         } else {
+            if i + 3 >= bytes.len() {
+                return Err(FromUtf8Error("Invalid UTF-8 byte sequence".to_string()));
+            }
             // Handle surrogate pairs and supplementary characters
             let byte2 = bytes[i + 1];
             let byte3 = bytes[i + 2];
@@ -154,5 +164,13 @@ mod tests {
         let result = from_bytes(bytes)?;
         assert_eq!(result, expected);
         Ok(())
+    }
+
+    #[test]
+    fn test_from_bytes_invalid() {
+        assert!(from_bytes(&[0x59, 0xd9]).is_err());
+        assert!(from_bytes(&[0x56, 0xe7]).is_err());
+        assert!(from_bytes(&[0x56, 0xa8]).is_err());
+        assert!(from_bytes(&[0x7e, 0xff, 0xff, 0x2a]).is_err());
     }
 }

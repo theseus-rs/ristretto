@@ -1,0 +1,39 @@
+name: fuzz
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '30 12 * * 0'
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: ${{ matrix.target }}
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - mutf8_from_bytes
+          - mutf8_to_bytes
+        include:
+          - target: mutf8_from_bytes
+            option: -max_total_time=60
+          - target: mutf8_to_bytes
+            option: -max_total_time=60
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+      - name: Install cargo fuzz
+        run: cargo install cargo-fuzz
+      - name: Fuzz Tests
+        run: cargo fuzz run ${{ matrix.target }} -- ${{ matrix.option }}

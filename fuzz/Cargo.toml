@@ -1,0 +1,26 @@
+[package]
+edition = "2021"
+name = "ristretto_fuzz"
+publish = false
+version = "0.0.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.ristretto_classfile]
+path = "../ristretto_classfile"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "mutf8_from_bytes"
+path = "fuzz_targets/mutf8_from_bytes.rs"
+
+[[bin]]
+name = "mutf8_to_bytes"
+path = "fuzz_targets/mutf8_to_bytes.rs"
