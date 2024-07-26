@@ -6,4 +6,5 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
 ristretto_classfile = { path = "../../ristretto_classfile" }

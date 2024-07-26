@@ -19,6 +19,7 @@ repository = "https://github.com/theseus-rs/ristretto"
 version = "0.3.0"
 
 [workspace.dependencies]
+anyhow = "1.0.44"
 bitflags = "2.6.0"
 byteorder = "1.5.0"
 criterion = "0.5.1"
