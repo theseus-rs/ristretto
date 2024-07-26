@@ -1,8 +1,10 @@
 [package]
+edition.workspace = true
+license.workspace = true
 name = "ristretto_fuzz"
-version = "0.0.0"
 publish = false
-edition = "2021"
+repository.workspace = true
+version.workspace = true
 
 [package.metadata]
 cargo-fuzz = true
@@ -14,13 +16,7 @@ ristretto_classfile = { path = "../ristretto_classfile" }
 [[bin]]
 name = "mutf8_from_bytes"
 path = "fuzz_targets/mutf8_from_bytes.rs"
-test = false
-doc = false
-bench = false
 
 [[bin]]
 name = "mutf8_to_bytes"
 path = "fuzz_targets/mutf8_to_bytes.rs"
-test = false
-doc = false
-bench = false
