@@ -3,7 +3,7 @@
 
 use ristretto_classfile::attributes::{Attribute, Instruction, LineNumber};
 use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, Constant, ConstantPool, Error, MethodAccessFlags, Result, Version,
+    ClassAccessFlags, ClassFile, ConstantPool, MethodAccessFlags, Result, Version,
 };
 use std::fs;
 
@@ -35,20 +35,9 @@ fn main() -> Result<()> {
     let main_descriptor_index = constant_pool.add_utf8("([Ljava/lang/String;)V")?;
 
     let mut methods = Vec::new();
-    let Some(Constant::MethodRef {
-        name_and_type_index,
-        ..
-    }) = constant_pool.get(object_init)
-    else {
-        return Err(Error::InvalidConstantPoolIndexType(object_init));
-    };
-    let Some(Constant::NameAndType {
-        name_index,
-        descriptor_index,
-    }) = constant_pool.get(*name_and_type_index)
-    else {
-        return Err(Error::InvalidConstantPoolIndexType(*name_and_type_index));
-    };
+    let (_class_index, name_and_type_index) = constant_pool.try_get_method_ref(object_init)?;
+    let (name_index, descriptor_index) =
+        constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let mut init_method = ristretto_classfile::Method {
         access_flags: MethodAccessFlags::PUBLIC,
         name_index: *name_index,
