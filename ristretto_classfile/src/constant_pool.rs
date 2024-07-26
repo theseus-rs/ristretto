@@ -527,7 +527,7 @@ impl ConstantPool {
     /// dynamic constant.
     pub fn try_get_invoke_dynamic(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index) {
-            Ok(Constant::Dynamic {
+            Ok(Constant::InvokeDynamic {
                 bootstrap_method_attr_index,
                 name_and_type_index,
             }) => Ok((bootstrap_method_attr_index, name_and_type_index)),
@@ -822,13 +822,10 @@ mod test {
         } else {
             constant_pool.push(Constant::Utf8("foo".to_string()));
         }
-        constant_pool.push(Constant::Integer(42));
+        constant_pool.push(constant);
         assert_eq!(Err(InvalidConstantPoolIndex(0)), f(&constant_pool, 0));
         assert_eq!(Err(InvalidConstantPoolIndexType(1)), f(&constant_pool, 1));
-
-        let mut constant_pool = ConstantPool::default();
-        constant_pool.push(constant);
-        assert!(constant_pool.try_get(1).is_ok());
+        assert!(f(&constant_pool, 2).is_ok());
     }
 
     fn test_try_get_constant_tuple<A, B>(
@@ -840,13 +837,10 @@ mod test {
     {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Utf8("foo".to_string()));
-        constant_pool.push(Constant::Integer(42));
+        constant_pool.push(constant);
         assert_eq!(Err(InvalidConstantPoolIndex(0)), f(&constant_pool, 0));
         assert_eq!(Err(InvalidConstantPoolIndexType(1)), f(&constant_pool, 1));
-
-        let mut constant_pool = ConstantPool::default();
-        constant_pool.push(constant);
-        assert!(constant_pool.try_get(1).is_ok());
+        assert!(f(&constant_pool, 2).is_ok());
     }
 
     #[test]
@@ -962,7 +956,7 @@ mod test {
 
     #[test]
     fn test_try_get_string() {
-        test_try_get_constant(ConstantPool::try_get_string, Constant::String(42));
+        test_try_get_constant(ConstantPool::try_get_string, Constant::String(1));
     }
 
     #[test]
