@@ -46,4 +46,4 @@ jobs:
       - name: Install cargo fuzz
         run: cargo install cargo-fuzz
       - name: Fuzz Tests
-        run: cargo fuzz run ${{ matrix.target }} -- -max_total_time=60 ${{ matrix.option }}
+        run: cargo fuzz run ${{ matrix.target }} -- -max_total_time=60 -rss_limit_mb=8192 ${{ matrix.option }}
