@@ -30,7 +30,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_main() -> Result<()> {
+    fn test_run() -> Result<()> {
         let args = vec![
             "read_class".to_string(),
             "classes/HelloWorld.class".to_string(),
@@ -40,7 +40,6 @@ mod test {
 
     #[test]
     fn test_main_error() {
-        let args = vec!["read_class".to_string()];
-        assert!(run(&args).is_err());
+        assert!(main().is_err());
     }
 }
