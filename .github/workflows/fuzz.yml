@@ -21,6 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         target:
+          # classfile fuzzing
           - base_type_parse
           - class_access_flags_from_bytes
           - class_file_from_bytes
@@ -35,6 +36,35 @@ jobs:
           - mutf8_to_bytes
           - reference_kind_from_bytes
           - version_from_bytes
+          # classfile attributes fuzzing
+          - annotation_from_bytes
+          - annotation_element_from_bytes
+          - annotation_value_pair_from_bytes
+          - array_type_from_bytes
+          - bootstrap_method_from_bytes
+          - code_exception_from_bytes
+          - exports_flags_from_bytes
+          - exports_from_bytes
+          - inner_class_from_bytes
+          - instruction_from_bytes
+          - line_number_from_bytes
+          - local_variable_table_from_bytes
+          - local_variable_target_from_bytes
+          - method_parameter_from_bytes
+          - module_access_flags_from_bytes
+          - nested_class_access_flags_from_bytes
+          - opens_from_bytes
+          - opens_flags_from_bytes
+          - parameter_annotation_from_bytes
+          - provides_from_bytes
+          - record_from_bytes
+          - requires_flags_from_bytes
+          - requires_from_bytes
+          - stack_frame_from_bytes
+          - target_path_from_bytes
+          - target_type_from_bytes
+          - type_annotation_from_bytes
+          - verification_type_from_bytes
         include:
           - target: base_type_parse
             option: -max_len=1
@@ -46,4 +76,4 @@ jobs:
       - name: Install cargo fuzz
         run: cargo install cargo-fuzz
       - name: Fuzz Tests
-        run: cargo fuzz run ${{ matrix.target }} -- -max_total_time=30 -rss_limit_mb=8192 ${{ matrix.option }}
+        run: cargo fuzz run ${{ matrix.target }} -- -max_total_time=15 -rss_limit_mb=8192 ${{ matrix.option }}

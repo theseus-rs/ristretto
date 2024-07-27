@@ -66,7 +66,7 @@ impl FieldType {
             }
             '[' => {
                 let component_type = Self::parse(&chars.collect())?;
-                FieldType::Array(Box::new(component_type))
+                FieldType::Array(component_type.into())
             }
             _ => return Err(InvalidFieldTypeCode(code)),
         };
@@ -200,7 +200,7 @@ mod test {
     #[test]
     fn test_array() -> Result<()> {
         let component_type = FieldType::Base(BaseType::Int);
-        let field_type = FieldType::Array(Box::new(component_type));
+        let field_type = FieldType::Array(component_type.into());
 
         assert_eq!("[int", field_type.to_string());
         test_field_type(&field_type, "[I", '[')

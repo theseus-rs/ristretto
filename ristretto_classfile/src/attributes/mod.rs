@@ -47,6 +47,7 @@ pub use local_variable_target::LocalVariableTarget;
 pub use local_variable_type_table::LocalVariableTypeTable;
 pub use method_parameter::MethodParameter;
 pub use module_access_flags::ModuleAccessFlags;
+pub use nested_class_access_flags::NestedClassAccessFlags;
 pub use opens::Opens;
 pub use opens_flags::OpensFlags;
 pub use parameter_annotation::ParameterAnnotation;
