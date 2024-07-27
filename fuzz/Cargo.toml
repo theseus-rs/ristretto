@@ -17,58 +17,172 @@ path = "../ristretto_classfile"
 [workspace]
 members = ["."]
 
+# classfile fuzz targets
 [[bin]]
 name = "base_type_parse"
-path = "fuzz_targets/base_type_parse.rs"
+path = "fuzz_targets/classfile/base_type_parse.rs"
 
 [[bin]]
 name = "class_access_flags_from_bytes"
-path = "fuzz_targets/class_access_flags_from_bytes.rs"
+path = "fuzz_targets/classfile/class_access_flags_from_bytes.rs"
 
 [[bin]]
 name = "class_file_from_bytes"
-path = "fuzz_targets/class_file_from_bytes.rs"
+path = "fuzz_targets/classfile/class_file_from_bytes.rs"
 
 [[bin]]
 name = "constant_from_bytes"
-path = "fuzz_targets/constant_from_bytes.rs"
+path = "fuzz_targets/classfile/constant_from_bytes.rs"
 
 [[bin]]
 name = "constant_pool_from_bytes"
-path = "fuzz_targets/constant_pool_from_bytes.rs"
+path = "fuzz_targets/classfile/constant_pool_from_bytes.rs"
 
 [[bin]]
 name = "field_access_flags_from_bytes"
-path = "fuzz_targets/field_access_flags_from_bytes.rs"
+path = "fuzz_targets/classfile/field_access_flags_from_bytes.rs"
 
 [[bin]]
 name = "field_from_bytes"
-path = "fuzz_targets/field_from_bytes.rs"
+path = "fuzz_targets/classfile/field_from_bytes.rs"
 
 [[bin]]
 name = "field_type_parse"
-path = "fuzz_targets/field_type_parse.rs"
+path = "fuzz_targets/classfile/field_type_parse.rs"
 
 [[bin]]
 name = "method_access_flags_from_bytes"
-path = "fuzz_targets/method_access_flags_from_bytes.rs"
+path = "fuzz_targets/classfile/method_access_flags_from_bytes.rs"
 
 [[bin]]
 name = "method_from_bytes"
-path = "fuzz_targets/method_from_bytes.rs"
+path = "fuzz_targets/classfile/method_from_bytes.rs"
 
 [[bin]]
 name = "mutf8_from_bytes"
-path = "fuzz_targets/mutf8_from_bytes.rs"
+path = "fuzz_targets/classfile/mutf8_from_bytes.rs"
 
 [[bin]]
 name = "mutf8_to_bytes"
-path = "fuzz_targets/mutf8_to_bytes.rs"
+path = "fuzz_targets/classfile/mutf8_to_bytes.rs"
 
 [[bin]]
 name = "reference_kind_from_bytes"
-path = "fuzz_targets/reference_kind_from_bytes.rs"
+path = "fuzz_targets/classfile/reference_kind_from_bytes.rs"
 
 [[bin]]
 name = "version_from_bytes"
-path = "fuzz_targets/version_from_bytes.rs"
+path = "fuzz_targets/classfile/version_from_bytes.rs"
+
+# classfile/attributes fuzz targets
+[[bin]]
+name = "annotation_from_bytes"
+path = "fuzz_targets/classfile/attributes/annotation_from_bytes.rs"
+
+[[bin]]
+name = "annotation_element_from_bytes"
+path = "fuzz_targets/classfile/attributes/annotation_element_from_bytes.rs"
+
+[[bin]]
+name = "annotation_value_pair_from_bytes"
+path = "fuzz_targets/classfile/attributes/annotation_value_pair_from_bytes.rs"
+
+[[bin]]
+name = "array_type_from_bytes"
+path = "fuzz_targets/classfile/attributes/array_type_from_bytes.rs"
+
+[[bin]]
+name = "bootstrap_method_from_bytes"
+path = "fuzz_targets/classfile/attributes/bootstrap_method_from_bytes.rs"
+
+[[bin]]
+name = "code_exception_from_bytes"
+path = "fuzz_targets/classfile/attributes/code_exception_from_bytes.rs"
+
+[[bin]]
+name = "exports_flags_from_bytes"
+path = "fuzz_targets/classfile/attributes/exports_flags_from_bytes.rs"
+
+[[bin]]
+name = "exports_from_bytes"
+path = "fuzz_targets/classfile/attributes/exports_from_bytes.rs"
+
+[[bin]]
+name = "inner_class_from_bytes"
+path = "fuzz_targets/classfile/attributes/inner_class_from_bytes.rs"
+
+[[bin]]
+name = "instruction_from_bytes"
+path = "fuzz_targets/classfile/attributes/instruction_from_bytes.rs"
+
+[[bin]]
+name = "line_number_from_bytes"
+path = "fuzz_targets/classfile/attributes/line_number_from_bytes.rs"
+
+[[bin]]
+name = "local_variable_table_from_bytes"
+path = "fuzz_targets/classfile/attributes/local_variable_table_from_bytes.rs"
+
+[[bin]]
+name = "local_variable_target_from_bytes"
+path = "fuzz_targets/classfile/attributes/local_variable_target_from_bytes.rs"
+
+[[bin]]
+name = "method_parameter_from_bytes"
+path = "fuzz_targets/classfile/attributes/method_parameter_from_bytes.rs"
+
+[[bin]]
+name = "module_access_flags_from_bytes"
+path = "fuzz_targets/classfile/attributes/module_access_flags_from_bytes.rs"
+
+[[bin]]
+name = "nested_class_access_flags_from_bytes"
+path = "fuzz_targets/classfile/attributes/nested_class_access_flags_from_bytes.rs"
+
+[[bin]]
+name = "opens_from_bytes"
+path = "fuzz_targets/classfile/attributes/opens_from_bytes.rs"
+
+[[bin]]
+name = "opens_flags_from_bytes"
+path = "fuzz_targets/classfile/attributes/opens_flags_from_bytes.rs"
+
+[[bin]]
+name = "parameter_annotation_from_bytes"
+path = "fuzz_targets/classfile/attributes/parameter_annotation_from_bytes.rs"
+
+[[bin]]
+name = "provides_from_bytes"
+path = "fuzz_targets/classfile/attributes/provides_from_bytes.rs"
+
+[[bin]]
+name = "record_from_bytes"
+path = "fuzz_targets/classfile/attributes/record_from_bytes.rs"
+
+[[bin]]
+name = "requires_flags_from_bytes"
+path = "fuzz_targets/classfile/attributes/requires_flags_from_bytes.rs"
+
+[[bin]]
+name = "requires_from_bytes"
+path = "fuzz_targets/classfile/attributes/requires_from_bytes.rs"
+
+[[bin]]
+name = "stack_frame_from_bytes"
+path = "fuzz_targets/classfile/attributes/stack_frame_from_bytes.rs"
+
+[[bin]]
+name = "target_path_from_bytes"
+path = "fuzz_targets/classfile/attributes/target_path_from_bytes.rs"
+
+[[bin]]
+name = "target_type_from_bytes"
+path = "fuzz_targets/classfile/attributes/target_type_from_bytes.rs"
+
+[[bin]]
+name = "type_annotation_from_bytes"
+path = "fuzz_targets/classfile/attributes/type_annotation_from_bytes.rs"
+
+[[bin]]
+name = "verification_type_from_bytes"
+path = "fuzz_targets/classfile/attributes/verification_type_from_bytes.rs"
