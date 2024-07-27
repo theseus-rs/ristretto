@@ -41,7 +41,6 @@ jobs:
           - annotation_element_from_bytes
           - annotation_value_pair_from_bytes
           - array_type_from_bytes
-          - attribute_from_bytes
           - bootstrap_method_from_bytes
           - code_exception_from_bytes
           - exports_flags_from_bytes
