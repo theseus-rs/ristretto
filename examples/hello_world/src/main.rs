@@ -7,7 +7,7 @@ use ristretto_classfile::{
 };
 use std::fs;
 
-/// Creates a simple "Hello, World!" class file equivalent to the following Java code:
+/// Creates a class file equivalent to the following Java code:
 ///
 /// ```java
 /// public class HelloWorld {
