@@ -24,8 +24,8 @@ jobs:
         uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo fuzz
         run: cargo install cargo-fuzz
-      - name: Build fuzz targetsFuzz Tests
-        run: cargo fuzz build --release --debug-assertions
+      - name: Build fuzz target
+        run: cargo fuzz run -- class_file_from_bytes -max_total_time=1 -rss_limit_mb=8192
       - name: Upload fuzz target
         uses: actions/upload-artifact@v4
         with:
