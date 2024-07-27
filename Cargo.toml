@@ -27,7 +27,7 @@ indoc = "2.0.5"
 reqwest = "0.12.5"
 tar = "0.4.41"
 thiserror = "1.0.63"
-tokio = "1.39.1"
+tokio = "1.39.2"
 zip = "2.1.5"
 
 [workspace.metadata.release]
