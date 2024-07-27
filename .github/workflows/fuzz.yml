@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 jobs:
-  build_fuzz_targets:
+  build_fuzz_target:
     name: Build fuzz target
     runs-on: macos-14
     steps:
@@ -35,6 +35,7 @@ jobs:
   fuzz:
     name: ${{ matrix.target }}
     runs-on: macos-14
+    needs: build_fuzz_target
     strategy:
       fail-fast: false
       matrix:
