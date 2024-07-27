@@ -14,6 +14,24 @@ permissions:
   contents: read
 
 jobs:
+  build_fuzz_targets:
+    name: Build fuzz target
+    runs-on: macos-14
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+      - name: Install cargo fuzz
+        run: cargo install cargo-fuzz
+      - name: Build fuzz targetsFuzz Tests
+        run: cargo fuzz build --release --debug-assertions
+      - name: Upload fuzz target
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-target
+          path: fuzz/target/
+
   fuzz:
     name: ${{ matrix.target }}
     runs-on: macos-14
@@ -75,5 +93,9 @@ jobs:
         uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo fuzz
         run: cargo install cargo-fuzz
+      - name: Download fuzz target
+        uses: actions/download-artifact@v4
+        with:
+          name: fuzz-target
       - name: Fuzz Tests
         run: cargo fuzz run ${{ matrix.target }} -- -max_total_time=30 -rss_limit_mb=8192 ${{ matrix.option }}
