@@ -13,7 +13,7 @@
 Implementation of the [JVM Class File Format](https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html) that
 is used to read, write and verify Java classes.
 
-Supports reading and writing class files for any version of Java version up to 23. Verification of class files is
+Supports reading and writing class files for any version of Java version up to 24. Verification of class files is
 supported, but is still a work in progress.
 
 # Examples

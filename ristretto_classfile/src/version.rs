@@ -36,6 +36,7 @@ pub enum Version {
     Java21 { minor: u16 },
     Java22 { minor: u16 },
     Java23 { minor: u16 },
+    Java24 { minor: u16 },
 }
 
 impl Version {
@@ -72,6 +73,7 @@ impl Version {
             65 => Version::Java21 { minor },
             66 => Version::Java22 { minor },
             67 => Version::Java23 { minor },
+            68 => Version::Java24 { minor },
             _ => return Err(InvalidVersion { major, minor }),
         };
 
@@ -105,6 +107,7 @@ impl Version {
             Version::Java21 { .. } => 65,
             Version::Java22 { .. } => 66,
             Version::Java23 { .. } => 67,
+            Version::Java24 { .. } => 68,
         }
     }
 
@@ -135,7 +138,8 @@ impl Version {
             | Version::Java20 { minor, .. }
             | Version::Java21 { minor, .. }
             | Version::Java22 { minor, .. }
-            | Version::Java23 { minor, .. } => *minor,
+            | Version::Java23 { minor, .. }
+            | Version::Java24 { minor, .. } => *minor,
         }
     }
 
@@ -220,6 +224,7 @@ impl fmt::Display for Version {
             Version::Java21 { .. } => write!(f, "Java 21"),
             Version::Java22 { .. } => write!(f, "Java 22"),
             Version::Java23 { .. } => write!(f, "Java 23"),
+            Version::Java24 { .. } => write!(f, "Java 24"),
         }
     }
 }
@@ -259,6 +264,7 @@ mod test {
             Version::Java21 { minor: 0 },
             Version::Java22 { minor: 0 },
             Version::Java23 { minor: 0 },
+            Version::Java24 { minor: 0 },
         ];
 
         for (index, version) in versions.iter().enumerate() {
