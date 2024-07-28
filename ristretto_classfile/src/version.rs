@@ -235,7 +235,7 @@ mod test {
     use std::io;
 
     const MIN_MAJOR: u16 = 45;
-    const MAX_MAJOR: u16 = 67;
+    const MAX_MAJOR: u16 = 68;
 
     #[test]
     fn all_known_versions() -> Result<()> {
