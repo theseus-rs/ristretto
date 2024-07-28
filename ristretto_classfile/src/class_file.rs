@@ -39,23 +39,6 @@ impl ClassFile {
         self.constant_pool.try_get_class(self.this_class)
     }
 
-    /// Get the source file name.
-    ///
-    /// # Errors
-    /// Returns an error if the source file name is not found.
-    pub fn source_file(&self) -> Result<Option<&String>> {
-        for attribute in &self.attributes {
-            if let Attribute::SourceFile {
-                source_file_index, ..
-            } = attribute
-            {
-                let source_file = self.constant_pool.try_get_utf8(*source_file_index)?;
-                return Ok(Some(source_file));
-            }
-        }
-        Ok(None)
-    }
-
     /// Verify the `ClassFile`.
     ///
     /// # Errors
@@ -274,26 +257,6 @@ mod test {
             Err(InvalidConstantPoolIndexType(1)),
             class_file.class_name()
         );
-        Ok(())
-    }
-
-    #[test]
-    fn test_source_file() -> Result<()> {
-        let class_bytes = include_bytes!("../classes/Simple.class");
-        let expected_bytes = class_bytes.to_vec();
-        let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
-        let source_file = class_file
-            .source_file()?
-            .map_or(String::new(), std::clone::Clone::clone);
-
-        assert_eq!("Simple.java", source_file);
-        Ok(())
-    }
-
-    #[test]
-    fn test_source_file_none() -> Result<()> {
-        let class_file = ClassFile::default();
-        assert_eq!(None, class_file.source_file()?);
         Ok(())
     }
 
