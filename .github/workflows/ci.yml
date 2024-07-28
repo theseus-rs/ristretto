@@ -85,7 +85,7 @@ jobs:
           RUST_LOG: "info"
           RUST_LOG_SPAN_EVENTS: full
         run: |
-          cargo test
+          cargo test --target ${{ matrix.target }}
 
       - name: Tests
         if: ${{ startsWith(matrix.platform, 'ubuntu-') }}
@@ -98,7 +98,7 @@ jobs:
           RUSTFLAGS: -Cinstrument-coverage
           RUSTDOCFLAGS: -Cinstrument-coverage
         run: |
-          cargo test --workspace --all-features
+          cargo test --target ${{ matrix.target }} --workspace --all-features
 
       - name: Produce coverage info
         if: ${{ startsWith(matrix.platform, 'ubuntu-') }}
