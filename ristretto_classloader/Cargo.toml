@@ -1,0 +1,29 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "A library for loading Java classfiles."
+edition.workspace = true
+keywords = ["java", "jvm", "classfile", "classloader", "bytecode"]
+license.workspace = true
+name = "ristretto_classloader"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+dashmap = { workspace = true, features = ["rayon"] }
+rayon = { workspace = true }
+reqwest = { workspace = true, optional = true }
+ristretto_classfile = { path = "../ristretto_classfile" }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+indoc = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+[features]
+all = ["url"]
+default = []
+url = ["dep:reqwest"]

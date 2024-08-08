@@ -8,7 +8,6 @@ use std::io::Cursor;
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-5.html#jvms-5.4.3.5>
 #[derive(Clone, Debug, PartialEq)]
-#[allow(dead_code)]
 pub enum ReferenceKind {
     GetField,
     GetStatic,

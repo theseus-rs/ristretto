@@ -26,4 +26,4 @@ zip = { workspace = true }
 
 [[bench]]
 harness = false
-name = "classfile"
+name = "class_file"

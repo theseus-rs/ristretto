@@ -13,25 +13,25 @@ pub fn test_class(class_bytes: &[u8]) -> Result<()> {
 
 #[test]
 pub fn test_annotations() -> Result<()> {
-    test_class(include_bytes!("../classes/Annotations.class"))
+    test_class(include_bytes!("../../classes/Annotations.class"))
 }
 
 #[test]
 pub fn test_constants() -> Result<()> {
-    test_class(include_bytes!("../classes/Constants.class"))
+    test_class(include_bytes!("../../classes/Constants.class"))
 }
 
 #[test]
 pub fn test_expressions() -> Result<()> {
-    test_class(include_bytes!("../classes/Expressions.class"))
+    test_class(include_bytes!("../../classes/Expressions.class"))
 }
 
 #[test]
 pub fn test_minimum() -> Result<()> {
-    test_class(include_bytes!("../classes/Minimum.class"))
+    test_class(include_bytes!("../../classes/Minimum.class"))
 }
 
 #[test]
 pub fn test_simple() -> Result<()> {
-    test_class(include_bytes!("../classes/Simple.class"))
+    test_class(include_bytes!("../../classes/Simple.class"))
 }

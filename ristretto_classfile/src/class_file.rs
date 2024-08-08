@@ -235,7 +235,7 @@ mod test {
 
     #[test]
     fn test_class_name() -> Result<()> {
-        let class_bytes = include_bytes!("../classes/Simple.class");
+        let class_bytes = include_bytes!("../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
 
@@ -262,7 +262,7 @@ mod test {
 
     #[test]
     fn test_verify() -> Result<()> {
-        let class_bytes = include_bytes!("../classes/Simple.class");
+        let class_bytes = include_bytes!("../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
 
@@ -294,7 +294,7 @@ mod test {
 
     #[test]
     fn test_minimum_to_string() -> Result<()> {
-        let class_bytes = include_bytes!("../classes/Minimum.class");
+        let class_bytes = include_bytes!("../../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
         let expected = indoc! {r"
@@ -341,7 +341,7 @@ mod test {
 
     #[test]
     fn test_minimum_serialization() -> Result<()> {
-        let class_bytes = include_bytes!("../classes/Minimum.class");
+        let class_bytes = include_bytes!("../../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
 
@@ -360,7 +360,7 @@ mod test {
 
     #[test]
     fn test_simple_serialization() -> Result<()> {
-        let class_bytes = include_bytes!("../classes/Simple.class");
+        let class_bytes = include_bytes!("../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
 

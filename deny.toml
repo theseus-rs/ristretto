@@ -16,6 +16,7 @@ targets = [
 [licenses]
 allow = [
     "Apache-2.0",
+    "BSL-1.0",
     "MIT",
     "Unicode-DFS-2016",
     "Unlicense",

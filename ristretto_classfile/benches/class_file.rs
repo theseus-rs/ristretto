@@ -2,7 +2,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use ristretto_classfile::{ClassFile, Result};
 use std::io::Cursor;
 
-const CLASS_BYTES: &[u8] = include_bytes!("../classes/Simple.class");
+const CLASS_BYTES: &[u8] = include_bytes!("../../classes/Simple.class");
 
 fn benchmarks(criterion: &mut Criterion) {
     bench_lifecycle(criterion).ok();

@@ -183,7 +183,7 @@ mod test {
     use std::io::Cursor;
 
     fn get_class_file() -> Result<ClassFile> {
-        let class_bytes = include_bytes!("../../classes/Minimum.class");
+        let class_bytes = include_bytes!("../../../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
         ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))
     }
@@ -230,7 +230,7 @@ mod test {
 
     #[test]
     fn test_verify() -> Result<()> {
-        let class_bytes = include_bytes!("../../classes/Simple.class");
+        let class_bytes = include_bytes!("../../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
 

@@ -10,7 +10,8 @@ pub fn verify(jar_bytes: Vec<u8>) -> Result<()> {
         let mut file = archive
             .by_index(i)
             .expect("Failed to extract file from archive");
-        if !file.name().ends_with(".class") {
+        let file_name = file.name().to_string();
+        if !file_name.ends_with(".class") {
             continue;
         }
 
@@ -18,7 +19,6 @@ pub fn verify(jar_bytes: Vec<u8>) -> Result<()> {
         std::io::copy(&mut file, &mut out).expect("Failed to copy file");
         let mut bytes = Cursor::new(out);
 
-        let _file_name = file.name().to_string();
         let class_file = ClassFile::from_bytes(&mut bytes)?;
         class_file.verify()?;
     }
