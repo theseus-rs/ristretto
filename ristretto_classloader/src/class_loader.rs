@@ -1,8 +1,11 @@
+use crate::Error::ClassNotFound;
 use crate::{Class, ClassPath, Result};
 use dashmap::DashMap;
 use std::sync::Arc;
 
 /// Implementation of a Java class loader.
+///
+/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-5.html>
 #[derive(Debug)]
 pub struct ClassLoader {
     name: String,
@@ -54,10 +57,26 @@ impl ClassLoader {
             return Ok(Arc::clone(&class));
         }
 
-        let class_file = loader.class_path.read_class(name).await?;
-        let class = Arc::new(Class::new(Arc::clone(loader), class_file));
-        loader.classes.insert(name.to_string(), Arc::clone(&class));
-        Ok(class)
+        // Convert hierarchy of class loaders to a flat list.
+        let mut class_loader = Arc::clone(loader);
+        let mut class_loaders = vec![Arc::clone(&class_loader)];
+        while let Some(parent) = class_loader.get_parent() {
+            class_loader = parent;
+            class_loaders.push(Arc::clone(&class_loader));
+        }
+
+        // Iterate over class loaders in reverse order.
+        for class_loader in class_loaders.into_iter().rev() {
+            if let Ok(class_file) = class_loader.class_path.read_class(name).await {
+                let class = Arc::new(Class::new(class_loader.clone(), class_file));
+                class_loader
+                    .classes
+                    .insert(name.to_string(), Arc::clone(&class));
+                return Ok(class);
+            }
+        }
+
+        Err(ClassNotFound(name.to_string()))
     }
 }
 
@@ -134,6 +153,30 @@ mod tests {
         let class = ClassLoader::load_class(&class_loader, "HelloWorld").await?;
         let class_file = class.get_class_file();
         assert_eq!("HelloWorld", class_file.class_name()?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_class_parent() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_directory = cargo_manifest.join("../classes");
+        let class_path_entries = [classes_directory.to_string_lossy().to_string()];
+        let class_path = class_path_entries.join(":");
+        let boot_class_loader = ClassLoader::new("test", ClassPath::from(&class_path));
+        let mut class_loader = ClassLoader::new("test", ClassPath::from("foo"));
+        class_loader.set_parent(Some(Arc::new(boot_class_loader)));
+
+        let class = ClassLoader::load_class(&Arc::new(class_loader), "HelloWorld").await?;
+        let class_file = class.get_class_file();
+        assert_eq!("HelloWorld", class_file.class_name()?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_class_not_found() -> Result<()> {
+        let class_loader = ClassLoader::default();
+        let result = ClassLoader::load_class(&Arc::new(class_loader), "Foo").await;
+        assert!(matches!(result, Err(ClassNotFound(_))));
         Ok(())
     }
 }
