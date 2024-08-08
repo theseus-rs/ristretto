@@ -45,8 +45,8 @@ mod test {
     use std::io::Cursor;
 
     #[test]
-    fn test_verify_success() -> crate::error::Result<()> {
-        let class_bytes = include_bytes!("../../classes/Simple.class");
+    fn test_verify_success() -> Result<()> {
+        let class_bytes = include_bytes!("../../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
 

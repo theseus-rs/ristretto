@@ -10,7 +10,6 @@ const JAVA_PREVIEW_MINOR_VERSION: u16 = 65535;
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.1>
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
-#[allow(dead_code)]
 pub enum Version {
     Java1_0_2 { minor: u16 },
     Java1_1 { minor: u16 },
