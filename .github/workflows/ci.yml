@@ -78,7 +78,7 @@ jobs:
           cargo build --target ${{ matrix.target }}
 
       - name: Tests
-        if: ${{ !startsWith(matrix.platform, 'ubuntu-') && !startsWith(matrix.platform, 'wasm32-') }}
+        if: ${{ !startsWith(matrix.platform, 'wasm32-') }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -88,7 +88,7 @@ jobs:
           cargo test --target ${{ matrix.target }}
 
       - name: Tests
-        if: ${{ startsWith(matrix.platform, 'ubuntu-') }}
+        if: ${{ startsWith(matrix.platform, 'linux-') }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -101,7 +101,7 @@ jobs:
           cargo test --target ${{ matrix.target }} --workspace --all-features
 
       - name: Produce coverage info
-        if: ${{ startsWith(matrix.platform, 'ubuntu-') }}
+        if: ${{ startsWith(matrix.platform, 'linux-') }}
         run: |
           grcov $(find . -name "ristretto-*.profraw" -print) \
             -s . \
@@ -116,7 +116,7 @@ jobs:
             -o lcov.info
 
       - name: Upload to codecov.io
-        if: ${{ startsWith(matrix.platform, 'ubuntu-') }}
+        if: ${{ startsWith(matrix.platform, 'linux-') }}
         uses: codecov/codecov-action@v4
         with:
           files: lcov.info
