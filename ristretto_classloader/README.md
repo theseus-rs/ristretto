@@ -16,8 +16,7 @@ load Java classes.
 # Examples
 
 ```rust
-use anyhow::Result;
-use ristretto_classloader::{ClassLoader, ClassPath};
+use ristretto_classloader::{ClassLoader, ClassPath, Result};
 use std::sync::Arc;
 
 #[tokio::main]

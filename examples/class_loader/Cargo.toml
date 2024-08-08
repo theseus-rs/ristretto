@@ -6,6 +6,5 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow = { workspace = true }
 ristretto_classloader = { path = "../../ristretto_classloader" }
 tokio = { workspace = true, features = ["rt-multi-thread"] }

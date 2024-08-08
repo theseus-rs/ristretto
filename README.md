@@ -16,10 +16,12 @@ Crates for the [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se2
 
 Crates for the [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se22/html/)
 
-Supports reading and writing class files for any version of Java version up to 24. Verification of class files is
-supported, but is still a work in progress.
+Supports reading, writing, verifying and loading classed for any version of Java version up to 24. Verification of
+class files is supported, but is still a work in progress.
 
 # Examples
+
+## Create a class file
 
 ```rust
 use ristretto_classfile::{ClassFile, ConstantPool, Result, Version};
@@ -34,6 +36,21 @@ fn main() -> Result<()> {
         ..Default::default()
     };
     class_file.verify()
+}
+```
+
+## Load a class
+
+```rust
+use ristretto_classloader::{ClassLoader, ClassPath, Result};
+use std::sync::Arc;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let class_loader = Arc::new(ClassLoader::new("example", ClassPath::from("classes")));
+    let class = ClassLoader::load_class(&class_loader, "HelloWorld").await?;
+    println!("{class:?}");
+    Ok(())
 }
 ```
 

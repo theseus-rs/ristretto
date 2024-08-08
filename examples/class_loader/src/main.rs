@@ -1,8 +1,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
 
-use anyhow::Result;
-use ristretto_classloader::{ClassLoader, ClassPath};
+use ristretto_classloader::{ClassLoader, ClassPath, Result};
 use std::sync::Arc;
 
 /// Example that uses a class loader to load a class.
