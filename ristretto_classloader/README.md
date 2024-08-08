@@ -28,6 +28,14 @@ async fn main() -> Result<()> {
 }
 ```
 
+## Feature flags
+
+The following features are available:
+
+| Name  | Description                    | Default? |
+|-------|--------------------------------|----------|
+| `url` | Enables url class path entries | No       |
+
 ## Safety
 
 These crates use `#![forbid(unsafe_code)]` to ensure everything is implemented in 100% safe Rust.
