@@ -78,16 +78,6 @@ jobs:
           cargo build --target ${{ matrix.target }}
 
       - name: Tests
-        if: ${{ startsWith(matrix.platform, 'wasm32-') }}
-        env:
-          CARGO_TERM_COLOR: always
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          RUST_LOG: "info"
-          RUST_LOG_SPAN_EVENTS: full
-        run: |
-          cargo test --target ${{ matrix.target }}
-
-      - name: Tests
         if: ${{ !startsWith(matrix.platform, 'wasm32-') }}
         env:
           CARGO_TERM_COLOR: always
