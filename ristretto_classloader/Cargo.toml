@@ -13,7 +13,7 @@ version.workspace = true
 dashmap = { workspace = true, features = ["rayon"] }
 rayon = { workspace = true }
 reqwest = { workspace = true, optional = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.4.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.5.0" }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
