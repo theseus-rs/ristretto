@@ -27,18 +27,18 @@ impl ClassLoader {
 
     /// Get the name of the class loader.
     #[must_use]
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
     /// Get the class path.
     #[must_use]
-    pub fn get_class_path(&self) -> &ClassPath {
+    pub fn class_path(&self) -> &ClassPath {
         &self.class_path
     }
 
     /// Get the parent class loader.
-    pub fn get_parent(&self) -> Option<Arc<ClassLoader>> {
+    pub fn parent(&self) -> Option<Arc<ClassLoader>> {
         self.parent.as_ref().map(Arc::clone)
     }
 
@@ -60,7 +60,7 @@ impl ClassLoader {
         // Convert hierarchy of class loaders to a flat list.
         let mut class_loader = Arc::clone(loader);
         let mut class_loaders = vec![Arc::clone(&class_loader)];
-        while let Some(parent) = class_loader.get_parent() {
+        while let Some(parent) = class_loader.parent() {
             class_loader = parent;
             class_loaders.push(Arc::clone(&class_loader));
         }
@@ -92,7 +92,7 @@ impl Default for ClassLoader {
 impl PartialEq for ClassLoader {
     /// Compare class loaders by name.
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.get_parent() == other.get_parent()
+        self.name == other.name && self.parent() == other.parent()
     }
 }
 
@@ -105,16 +105,16 @@ mod tests {
     fn test_new() {
         let name = "test";
         let class_loader = ClassLoader::new(name, ClassPath::default());
-        assert_eq!(name, class_loader.get_name());
-        assert_eq!(&ClassPath::default(), class_loader.get_class_path());
-        assert!(class_loader.get_parent().is_none());
+        assert_eq!(name, class_loader.name());
+        assert_eq!(&ClassPath::default(), class_loader.class_path());
+        assert!(class_loader.parent().is_none());
     }
 
     #[test]
     fn test_default() {
         let class_loader = ClassLoader::default();
-        assert_eq!("bootstrap", class_loader.get_name());
-        assert!(class_loader.get_parent().is_none());
+        assert_eq!("bootstrap", class_loader.name());
+        assert!(class_loader.parent().is_none());
     }
 
     #[test]
@@ -136,10 +136,7 @@ mod tests {
         let mut class_loader1 = ClassLoader::new("test1", ClassPath::default());
         let class_loader2 = ClassLoader::new("test2", ClassPath::default());
         class_loader1.set_parent(Some(Arc::new(class_loader2)));
-        assert_eq!(
-            "test2",
-            class_loader1.get_parent().expect("parent").get_name()
-        );
+        assert_eq!("test2", class_loader1.parent().expect("parent").name());
     }
 
     #[tokio::test]
@@ -150,9 +147,15 @@ mod tests {
 
         let class_path = class_path_entries.join(":");
         let class_loader = Arc::new(ClassLoader::new("test", ClassPath::from(&class_path)));
-        let class = ClassLoader::load_class(&class_loader, "HelloWorld").await?;
+        let class_name = "HelloWorld";
+        let class = ClassLoader::load_class(&class_loader, class_name).await?;
         let class_file = class.get_class_file();
-        assert_eq!("HelloWorld", class_file.class_name()?);
+        assert_eq!(class_name, class_file.class_name()?);
+
+        // Load the same class again to test caching
+        let class = ClassLoader::load_class(&class_loader, class_name).await?;
+        let class_file = class.get_class_file();
+        assert_eq!(class_name, class_file.class_name()?);
         Ok(())
     }
 

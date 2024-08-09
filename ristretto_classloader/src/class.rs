@@ -37,7 +37,7 @@ impl Debug for Class {
     /// Formats the class for debugging.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Class")
-            .field("class_loader", &self.class_loader.get_name())
+            .field("class_loader", &self.class_loader.name())
             .field("class_file", &self.class_file)
             .finish()
     }
@@ -57,7 +57,7 @@ mod tests {
         let mut cursor = Cursor::new(bytes);
         let class_file = ClassFile::from_bytes(&mut cursor)?;
         let class = Class::new(Arc::new(class_loader), Arc::new(class_file));
-        assert_eq!("bootstrap", class.get_class_loader().get_name());
+        assert_eq!("bootstrap", class.get_class_loader().name());
         assert_eq!("Simple", class.get_class_file().class_name()?);
         Ok(())
     }

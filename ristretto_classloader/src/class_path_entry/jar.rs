@@ -42,22 +42,19 @@ impl Jar {
         class_files: &DashMap<String, Arc<ClassFile>>,
     ) -> Result<()> {
         let reader = io::Cursor::new(bytes);
-        let mut archive =
-            ZipArchive::new(reader).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let mut archive = ZipArchive::new(reader)?;
 
         // Decompress all the bytes from the jar and store in a map to be converted into class files
         let mut class_bytes = HashMap::new();
         for i in 0..archive.len() {
-            let mut file = archive
-                .by_index(i)
-                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            let mut file = archive.by_index(i)?;
             let file_name = file.name().to_string();
             if !file_name.ends_with(".class") {
                 continue;
             }
 
             let mut bytes = Vec::new();
-            io::copy(&mut file, &mut bytes).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            io::copy(&mut file, &mut bytes)?;
             let class_name = file_name.replace('/', ".").replace(".class", "");
             class_bytes.insert(class_name, bytes);
         }
@@ -141,6 +138,8 @@ impl PartialEq for Jar {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+    use zip::write::SimpleFileOptions;
 
     #[test]
     fn test_new() {
@@ -193,6 +192,50 @@ mod tests {
         let classes_jar = cargo_manifest.join("../classes/classes.jar");
         let jar = Jar::new(classes_jar.to_string_lossy());
         let result = jar.read_class("Foo").await;
+        assert!(matches!(result, Err(ClassNotFound(_))));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_bad_class_file() -> Result<()> {
+        let temp_dir = tempfile::tempdir()?;
+
+        // Create a jar with a bad class file
+        let jar_path = temp_dir.path().join("invalid.jar");
+        let mut archive = zip::ZipWriter::new(fs::File::create(&jar_path)?);
+        archive.start_file("HelloWorld.class", SimpleFileOptions::default())?;
+        archive.write_all(&[0x00, 0x01, 0x02])?;
+        archive.finish()?;
+
+        // Test reading the class file
+        let jar = Jar::new(jar_path.to_string_lossy());
+        let result = jar.read_class("HelloWorld").await;
+        assert!(matches!(result, Err(ClassNotFound(_))));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_invalid_class_file() -> Result<()> {
+        let temp_dir = tempfile::tempdir()?;
+
+        // Create an invalid class file
+        let class_file = ClassFile {
+            this_class: 42,
+            ..Default::default()
+        };
+        let mut bytes = Vec::new();
+        class_file.to_bytes(&mut bytes)?;
+
+        // Create a jar with an invalid class file
+        let jar_path = temp_dir.path().join("invalid.jar");
+        let mut archive = zip::ZipWriter::new(fs::File::create(&jar_path)?);
+        archive.start_file("HelloWorld.class", SimpleFileOptions::default())?;
+        archive.write_all(bytes.as_slice())?;
+        archive.finish()?;
+
+        // Test reading the class file
+        let jar = Jar::new(jar_path.to_string_lossy());
+        let result = jar.read_class("HelloWorld").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
         Ok(())
     }

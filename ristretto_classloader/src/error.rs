@@ -17,4 +17,7 @@ pub enum Error {
     #[cfg(feature = "url")]
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),
+    /// An error while reading a jar or module
+    #[error(transparent)]
+    ZipError(#[from] zip::result::ZipError),
 }

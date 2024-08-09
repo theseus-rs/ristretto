@@ -16,7 +16,7 @@ Crates for the [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se2
 
 Crates for the [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se22/html/)
 
-Supports reading, writing, verifying and loading classed for any version of Java version up to 24. Verification of
+Supports reading, writing, verifying and loading classes for any version of Java version up to 24. Verification of
 class files is supported, but is still a work in progress.
 
 # Examples
