@@ -136,10 +136,7 @@ mod tests {
         let mut class_loader1 = ClassLoader::new("test1", ClassPath::default());
         let class_loader2 = ClassLoader::new("test2", ClassPath::default());
         class_loader1.set_parent(Some(Arc::new(class_loader2)));
-        assert_eq!(
-            "test2",
-            class_loader1.parent().expect("parent").name()
-        );
+        assert_eq!("test2", class_loader1.parent().expect("parent").name());
     }
 
     #[tokio::test]
