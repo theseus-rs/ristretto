@@ -188,7 +188,7 @@ checksum = "1462739cb27611015575c0c11df5df7601141071f07518d56fcc1be504cbec97"
 
 [[package]]
 name = "class_loader"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "ristretto_classloader",
  "tokio",
@@ -503,7 +503,7 @@ checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 
 [[package]]
 name = "hello_world"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "ristretto_classfile",
 ]
@@ -949,7 +949,7 @@ dependencies = [
 
 [[package]]
 name = "read_class"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "ristretto_classfile",
@@ -1062,7 +1062,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classfile"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "bitflags 2.6.0",
@@ -1079,7 +1079,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classloader"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "dashmap",
  "indoc",
