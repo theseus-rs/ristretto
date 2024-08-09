@@ -71,14 +71,6 @@ impl IntoIterator for ClassPath {
     }
 }
 
-/// Default implementation for `ClassPath`.
-impl Default for ClassPath {
-    /// Returns a `ClassPath` with the current directory.
-    fn default() -> Self {
-        ClassPath::new(vec![ClassPathEntry::default()])
-    }
-}
-
 impl Display for ClassPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let class_path = self
@@ -101,12 +93,6 @@ mod tests {
     fn test_new() {
         let class_path = ClassPath::new(vec![ClassPathEntry::new("."), ClassPathEntry::new("..")]);
         assert_eq!(".:..", class_path.to_string());
-    }
-
-    #[test]
-    fn test_default() {
-        let class_path = ClassPath::default();
-        assert_eq!(".", class_path.to_string());
     }
 
     #[test]
