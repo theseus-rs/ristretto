@@ -80,14 +80,6 @@ impl ClassLoader {
     }
 }
 
-/// Default implementation of a class loader.
-impl Default for ClassLoader {
-    /// Create a new bootstrap class loader with no parent.
-    fn default() -> Self {
-        Self::new("bootstrap", ClassPath::default())
-    }
-}
-
 /// Implement equality for class loaders.
 impl PartialEq for ClassLoader {
     /// Compare class loaders by name.
@@ -104,37 +96,30 @@ mod tests {
     #[test]
     fn test_new() {
         let name = "test";
-        let class_loader = ClassLoader::new(name, ClassPath::default());
+        let class_loader = ClassLoader::new(name, ClassPath::from("."));
         assert_eq!(name, class_loader.name());
-        assert_eq!(&ClassPath::default(), class_loader.class_path());
-        assert!(class_loader.parent().is_none());
-    }
-
-    #[test]
-    fn test_default() {
-        let class_loader = ClassLoader::default();
-        assert_eq!("bootstrap", class_loader.name());
+        assert_eq!(&ClassPath::from("."), class_loader.class_path());
         assert!(class_loader.parent().is_none());
     }
 
     #[test]
     fn test_equality() {
-        let class_loader1 = ClassLoader::new("test", ClassPath::default());
-        let class_loader2 = ClassLoader::new("test", ClassPath::default());
+        let class_loader1 = ClassLoader::new("test", ClassPath::from("."));
+        let class_loader2 = ClassLoader::new("test", ClassPath::from("."));
         assert_eq!(class_loader1, class_loader2);
     }
 
     #[test]
     fn test_inequality() {
-        let class_loader1 = ClassLoader::new("test1", ClassPath::default());
-        let class_loader2 = ClassLoader::new("test2", ClassPath::default());
+        let class_loader1 = ClassLoader::new("test1", ClassPath::from("."));
+        let class_loader2 = ClassLoader::new("test2", ClassPath::from("."));
         assert_ne!(class_loader1, class_loader2);
     }
 
     #[test]
     fn test_set_parent() {
-        let mut class_loader1 = ClassLoader::new("test1", ClassPath::default());
-        let class_loader2 = ClassLoader::new("test2", ClassPath::default());
+        let mut class_loader1 = ClassLoader::new("test1", ClassPath::from("."));
+        let class_loader2 = ClassLoader::new("test2", ClassPath::from("."));
         class_loader1.set_parent(Some(Arc::new(class_loader2)));
         assert_eq!("test2", class_loader1.parent().expect("parent").name());
     }
@@ -177,7 +162,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_class_not_found() -> Result<()> {
-        let class_loader = ClassLoader::default();
+        let class_path = ClassPath::from(".");
+        let class_loader = ClassLoader::new("test", class_path);
         let result = ClassLoader::load_class(&Arc::new(class_loader), "Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
         Ok(())

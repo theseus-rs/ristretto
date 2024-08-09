@@ -16,14 +16,6 @@ pub enum ClassPathEntry {
     Url(crate::class_path_entry::url::Url),
 }
 
-/// Default implementation for `ClassPathEntry`.
-impl Default for ClassPathEntry {
-    /// Returns a class path entry with a default directory.
-    fn default() -> Self {
-        ClassPathEntry::Directory(Directory::default())
-    }
-}
-
 /// Implementation for `ClassPathEntry`.
 impl ClassPathEntry {
     /// Create a new class path entry.
@@ -69,12 +61,6 @@ impl ClassPathEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_default() {
-        let class_path_entry = ClassPathEntry::default();
-        assert_eq!(class_path_entry.name(), ".");
-    }
 
     //
     // Directory Tests

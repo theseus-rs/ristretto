@@ -58,14 +58,6 @@ impl Directory {
     }
 }
 
-/// The default directory is the current directory.
-impl Default for Directory {
-    /// Create a new directory with the current directory.
-    fn default() -> Self {
-        Self::new(".")
-    }
-}
-
 /// Implement the `PartialEq` trait for `Directory`.
 impl PartialEq for Directory {
     /// Compare two directories.
@@ -82,12 +74,6 @@ mod tests {
     fn test_new() {
         let directory = Directory::new("test");
         assert_eq!("test", directory.name());
-    }
-
-    #[test]
-    fn test_default() {
-        let directory = Directory::default();
-        assert_eq!(".", directory.name());
     }
 
     #[test]
