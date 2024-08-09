@@ -42,22 +42,19 @@ impl Jar {
         class_files: &DashMap<String, Arc<ClassFile>>,
     ) -> Result<()> {
         let reader = io::Cursor::new(bytes);
-        let mut archive =
-            ZipArchive::new(reader).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let mut archive = ZipArchive::new(reader)?;
 
         // Decompress all the bytes from the jar and store in a map to be converted into class files
         let mut class_bytes = HashMap::new();
         for i in 0..archive.len() {
-            let mut file = archive
-                .by_index(i)
-                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            let mut file = archive.by_index(i)?;
             let file_name = file.name().to_string();
             if !file_name.ends_with(".class") {
                 continue;
             }
 
             let mut bytes = Vec::new();
-            io::copy(&mut file, &mut bytes).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            io::copy(&mut file, &mut bytes)?;
             let class_name = file_name.replace('/', ".").replace(".class", "");
             class_bytes.insert(class_name, bytes);
         }
