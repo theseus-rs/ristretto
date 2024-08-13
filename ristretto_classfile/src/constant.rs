@@ -293,7 +293,7 @@ impl fmt::Display for Constant {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_tag() {
         let mut bytes = Cursor::new(vec![0]);
         assert_eq!(Err(InvalidConstantTag(0)), Constant::from_bytes(&mut bytes));
@@ -317,7 +317,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_utf8() -> Result<()> {
         let constant = Constant::Utf8("foo".to_string());
         let expected_bytes = [1, 0, 3, 102, 111, 111];
@@ -326,7 +326,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 1, &VERSION_45_3)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_integer() -> Result<()> {
         let constant = Constant::Integer(42);
         let expected_bytes = [3, 0, 0, 0, 42];
@@ -335,7 +335,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 3, &VERSION_45_3)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_float() -> Result<()> {
         let constant = Constant::Float(std::f32::consts::PI);
         let expected_bytes = [4, 64, 73, 15, 219];
@@ -344,7 +344,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 4, &VERSION_45_3)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_long() -> Result<()> {
         let constant = Constant::Long(1_234_567_890);
         let expected_bytes = [5, 0, 0, 0, 0, 73, 150, 2, 210];
@@ -353,7 +353,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 5, &VERSION_45_3)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_double() -> Result<()> {
         let constant = Constant::Double(std::f64::consts::PI);
         let expected_bytes = [6, 64, 9, 33, 251, 84, 68, 45, 24];
@@ -362,7 +362,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 6, &VERSION_45_3)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_class() -> Result<()> {
         let constant = Constant::Class(1);
         let expected_bytes = [7, 0, 1];
@@ -371,7 +371,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 7, &VERSION_45_3)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_string() -> Result<()> {
         let constant = Constant::String(1);
         let expected_bytes = [8, 0, 1];
@@ -380,7 +380,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 8, &VERSION_45_3)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_field_ref() -> Result<()> {
         let constant = Constant::FieldRef {
             class_index: 1,
@@ -392,7 +392,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 9, &VERSION_45_3)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_method_ref() -> Result<()> {
         let constant = Constant::MethodRef {
             class_index: 1,
@@ -404,7 +404,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 10, &VERSION_45_3)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_interface_method_ref() -> Result<()> {
         let constant = Constant::InterfaceMethodRef {
             class_index: 1,
@@ -416,7 +416,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 11, &VERSION_45_3)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_name_and_type() -> Result<()> {
         let constant = Constant::NameAndType {
             name_index: 1,
@@ -428,7 +428,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 12, &VERSION_45_3)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_method_handle() -> Result<()> {
         let constant = Constant::MethodHandle {
             reference_kind: ReferenceKind::GetField,
@@ -440,7 +440,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 15, &VERSION_51_0)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_method_type() -> Result<()> {
         let constant = Constant::MethodType(1);
         let expected_bytes = [16, 0, 1];
@@ -449,7 +449,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 16, &VERSION_51_0)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dynamic() -> Result<()> {
         let constant = Constant::Dynamic {
             bootstrap_method_attr_index: 1,
@@ -461,7 +461,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 17, &VERSION_55_0)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invoke_dynamic() -> Result<()> {
         let constant = Constant::InvokeDynamic {
             bootstrap_method_attr_index: 1,
@@ -473,7 +473,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 18, &VERSION_51_0)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_module() -> Result<()> {
         let constant = Constant::Module(1);
         let expected_bytes = [19, 0, 1];
@@ -482,7 +482,7 @@ mod test {
         test_constant(&constant, &expected_bytes, 19, &VERSION_55_0)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_package() -> Result<()> {
         let constant = Constant::Package(1);
         let expected_bytes = [20, 0, 1];

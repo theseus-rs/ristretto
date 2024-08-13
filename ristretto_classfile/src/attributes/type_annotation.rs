@@ -89,7 +89,7 @@ mod test {
     use super::*;
     use crate::attributes::{AnnotationElement, AnnotationValuePair};
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         let element = AnnotationValuePair {
             name_index: 1,
@@ -112,7 +112,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let element = AnnotationValuePair {
             name_index: 1,

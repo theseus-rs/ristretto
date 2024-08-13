@@ -223,7 +223,7 @@ mod test {
     use crate::Error::{InvalidConstantPoolIndexType, IoError};
     use indoc::indoc;
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_magic() {
         let invalid_magic: u32 = 0x0102_0304;
         let mut bytes = Cursor::new(invalid_magic.to_be_bytes().to_vec());
@@ -233,7 +233,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_class_name() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
@@ -243,7 +243,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_class_name_invalid_constant_pool() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let utf8_index = constant_pool.add_utf8("Test")?;
@@ -260,7 +260,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_verify() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
@@ -270,7 +270,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_verify_error() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let this_class = constant_pool.add_class("Test")?;
@@ -292,7 +292,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_minimum_to_string() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
@@ -339,7 +339,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_minimum_serialization() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
@@ -358,7 +358,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_simple_serialization() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
@@ -377,7 +377,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_from_bytes_invalid() {
         let bytes = vec![
             202, 254, 186, 190, 254, 0, 0, 48, 0, 0, 160, 93, 37, 0, 212, 186,

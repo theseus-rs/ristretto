@@ -63,12 +63,12 @@ impl fmt::Display for OpensFlags {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_default() {
         assert_eq!(OpensFlags::empty(), OpensFlags::default());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
         let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
@@ -78,7 +78,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_access_flags() -> Result<()> {
         let access_flags = OpensFlags::MANDATED;
         let mut bytes = Vec::new();
@@ -88,7 +88,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         assert_eq!("(0x1000) ACC_SYNTHETIC", OpensFlags::SYNTHETIC.to_string());
         assert_eq!("(0x8000) ACC_MANDATED", OpensFlags::MANDATED.to_string());

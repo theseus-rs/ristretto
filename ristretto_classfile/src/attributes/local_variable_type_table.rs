@@ -65,7 +65,7 @@ impl fmt::Display for LocalVariableTypeTable {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_display() {
         let local_variable_type_table = LocalVariableTypeTable {
             start_pc: 1,
@@ -80,7 +80,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let local_variable_type_table = LocalVariableTypeTable {
             start_pc: 1,

@@ -70,27 +70,27 @@ impl PartialEq for Directory {
 mod tests {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_new() {
         let directory = Directory::new("test");
         assert_eq!("test", directory.name());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_equality() {
         let directory1 = Directory::new("test");
         let directory2 = Directory::new("test");
         assert_eq!(directory1, directory2);
     }
 
-    #[test]
+    #[test_log::test]
     fn test_inequality() {
         let directory1 = Directory::new("test1");
         let directory2 = Directory::new("test2");
         assert_ne!(directory1, directory2);
     }
 
-    #[tokio::test]
+    #[test_log::test(tokio::test)]
     async fn test_read_class_invalid_directory() -> Result<()> {
         let directory = Directory::new("foo");
         let result = directory.read_class("HelloWorld").await;
@@ -98,7 +98,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[test_log::test(tokio::test)]
     async fn test_read_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
@@ -111,7 +111,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[test_log::test(tokio::test)]
     async fn test_read_class_invalid_class_name() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");

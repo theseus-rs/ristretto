@@ -101,7 +101,7 @@ impl fmt::Display for VerificationType {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_verification_type() -> Result<()> {
         let mut bytes = Vec::new();
         let tag = u8::MAX;
@@ -132,7 +132,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_top() -> Result<()> {
         let verification_type = VerificationType::Top;
         let tag = 0;
@@ -142,7 +142,7 @@ mod test {
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_integer() -> Result<()> {
         let verification_type = VerificationType::Integer;
         let tag = 1;
@@ -152,7 +152,7 @@ mod test {
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_float() -> Result<()> {
         let verification_type = VerificationType::Float;
         let tag = 2;
@@ -162,7 +162,7 @@ mod test {
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_double() -> Result<()> {
         let verification_type = VerificationType::Double;
         let tag = 3;
@@ -172,7 +172,7 @@ mod test {
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_long() -> Result<()> {
         let verification_type = VerificationType::Long;
         let tag = 4;
@@ -182,7 +182,7 @@ mod test {
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_null() -> Result<()> {
         let verification_type = VerificationType::Null;
         let tag = 5;
@@ -192,7 +192,7 @@ mod test {
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_uninitialized_this() -> Result<()> {
         let verification_type = VerificationType::UninitializedThis;
         let tag = 6;
@@ -202,7 +202,7 @@ mod test {
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_object() -> Result<()> {
         let verification_type = VerificationType::Object { cpool_index: 42 };
         let tag = 7;
@@ -212,7 +212,7 @@ mod test {
         test_verification_type(&verification_type, &expected_bytes, tag)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_uninitialized() -> Result<()> {
         let verification_type = VerificationType::Uninitialized { offset: 42 };
         let tag = 8;

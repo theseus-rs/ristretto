@@ -1,5 +1,7 @@
+.idea/
 /fuzz/artifacts/
 /fuzz/corpus/
 /fuzz/target/
 /fuzz/Cargo.lock
 /target/
+/examples/hello_world/HelloWorld.class

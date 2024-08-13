@@ -75,12 +75,12 @@ impl fmt::Display for RequiresFlags {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_default() {
         assert_eq!(RequiresFlags::empty(), RequiresFlags::default());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
         let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
@@ -93,7 +93,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_access_flags() -> Result<()> {
         let access_flags = RequiresFlags::TRANSITIVE;
         let mut bytes = Vec::new();
@@ -103,7 +103,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         assert_eq!(
             "(0x0020) ACC_TRANSITIVE",

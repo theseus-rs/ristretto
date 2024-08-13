@@ -57,7 +57,7 @@ impl fmt::Display for LocalVariableTarget {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_display() {
         let local_variable_target = LocalVariableTarget {
             start_pc: 1,
@@ -70,7 +70,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let local_variable_target = LocalVariableTarget {
             start_pc: 1,

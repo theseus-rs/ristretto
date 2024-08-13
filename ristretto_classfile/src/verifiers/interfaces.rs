@@ -20,7 +20,7 @@ pub fn verify(class_file: &ClassFile) -> Result<()> {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_verify_success() -> Result<()> {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
@@ -31,7 +31,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_verify_invalid_index() {
         let mut class_file = ClassFile::default();
         let index = 1;
@@ -40,7 +40,7 @@ mod test {
         assert_eq!(Err(InvalidConstantPoolIndex(index)), verify(&class_file));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_verify_invalid_index_type() -> Result<()> {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;

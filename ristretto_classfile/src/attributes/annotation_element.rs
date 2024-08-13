@@ -233,7 +233,7 @@ mod test {
     use super::*;
     use crate::attributes::annotation_value_pair::AnnotationValuePair;
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_tag() {
         let mut bytes = Cursor::new(vec![0]);
         assert_eq!(
@@ -253,7 +253,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_byte() -> Result<()> {
         let element = AnnotationElement::Byte {
             const_value_index: 42,
@@ -264,7 +264,7 @@ mod test {
         test_element(&element, &expected_bytes, b'B')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_char() -> Result<()> {
         let element = AnnotationElement::Char {
             const_value_index: 42,
@@ -275,7 +275,7 @@ mod test {
         test_element(&element, &expected_bytes, b'C')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_double() -> Result<()> {
         let element = AnnotationElement::Double {
             const_value_index: 42,
@@ -286,7 +286,7 @@ mod test {
         test_element(&element, &expected_bytes, b'D')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_float() -> Result<()> {
         let element = AnnotationElement::Float {
             const_value_index: 42,
@@ -297,7 +297,7 @@ mod test {
         test_element(&element, &expected_bytes, b'F')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_int() -> Result<()> {
         let element = AnnotationElement::Int {
             const_value_index: 42,
@@ -308,7 +308,7 @@ mod test {
         test_element(&element, &expected_bytes, b'I')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_long() -> Result<()> {
         let element = AnnotationElement::Long {
             const_value_index: 42,
@@ -319,7 +319,7 @@ mod test {
         test_element(&element, &expected_bytes, b'J')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_short() -> Result<()> {
         let element = AnnotationElement::Short {
             const_value_index: 42,
@@ -330,7 +330,7 @@ mod test {
         test_element(&element, &expected_bytes, b'S')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_boolean() -> Result<()> {
         let element = AnnotationElement::Boolean {
             const_value_index: 42,
@@ -341,7 +341,7 @@ mod test {
         test_element(&element, &expected_bytes, b'Z')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_string() -> Result<()> {
         let element = AnnotationElement::String {
             const_value_index: 42,
@@ -352,7 +352,7 @@ mod test {
         test_element(&element, &expected_bytes, b's')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_enum() -> Result<()> {
         let element = AnnotationElement::Enum {
             type_name_index: 3,
@@ -367,7 +367,7 @@ mod test {
         test_element(&element, &expected_bytes, b'e')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_class() -> Result<()> {
         let element = AnnotationElement::Class {
             class_info_index: 42,
@@ -378,7 +378,7 @@ mod test {
         test_element(&element, &expected_bytes, b'c')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_annotation() -> Result<()> {
         let element = AnnotationValuePair {
             name_index: 1,
@@ -397,7 +397,7 @@ mod test {
         test_element(&element, &expected_bytes, b'@')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_array() -> Result<()> {
         let element = AnnotationValuePair {
             name_index: 1,

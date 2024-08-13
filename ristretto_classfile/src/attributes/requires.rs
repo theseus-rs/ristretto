@@ -57,7 +57,7 @@ impl fmt::Display for Requires {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         let requires = Requires {
             index: 1,
@@ -70,7 +70,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let requires = Requires {
             index: 1,

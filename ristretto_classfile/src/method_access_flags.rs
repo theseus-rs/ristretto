@@ -144,12 +144,12 @@ impl fmt::Display for MethodAccessFlags {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_default() {
         assert_eq!(MethodAccessFlags::empty(), MethodAccessFlags::default());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
         let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
@@ -170,7 +170,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_access_flags() -> Result<()> {
         let access_flags = MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL;
         let mut bytes = Vec::new();
@@ -180,7 +180,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_as_code() {
         assert_eq!("public", MethodAccessFlags::PUBLIC.as_code());
         assert_eq!("private", MethodAccessFlags::PRIVATE.as_code());
@@ -200,7 +200,7 @@ mod test {
         assert_eq!("public static final", access_flags.as_code());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         assert_eq!("(0x0001) ACC_PUBLIC", MethodAccessFlags::PUBLIC.to_string());
         assert_eq!(

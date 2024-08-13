@@ -53,7 +53,7 @@ impl fmt::Display for TargetPath {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let target_path = TargetPath {
             type_path_kind: 1,

@@ -128,12 +128,12 @@ impl fmt::Display for ClassAccessFlags {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_default() {
         assert_eq!(ClassAccessFlags::empty(), ClassAccessFlags::default());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
         let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
@@ -151,7 +151,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_access_flags() -> Result<()> {
         let access_flags = ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL;
         let mut bytes = Vec::new();
@@ -161,7 +161,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_as_code() {
         assert_eq!("public class", ClassAccessFlags::PUBLIC.as_code());
         assert_eq!("final class", ClassAccessFlags::FINAL.as_code());
@@ -174,7 +174,7 @@ mod test {
         assert_eq!("module", ClassAccessFlags::MODULE.as_code());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         assert_eq!("(0x0001) ACC_PUBLIC", ClassAccessFlags::PUBLIC.to_string());
         assert_eq!("(0x0010) ACC_FINAL", ClassAccessFlags::FINAL.to_string());

@@ -52,7 +52,7 @@ impl fmt::Display for MethodParameter {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         let method_parameter = MethodParameter {
             name_index: 3,
@@ -64,7 +64,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let method_parameter = MethodParameter {
             name_index: 3,

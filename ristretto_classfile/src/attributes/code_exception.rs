@@ -60,7 +60,7 @@ impl fmt::Display for CodeException {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         let code_exception = CodeException {
             start_pc: 1,
@@ -74,7 +74,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let bootstrap_method = CodeException {
             start_pc: 1,
