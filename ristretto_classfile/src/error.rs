@@ -52,6 +52,9 @@ pub enum Error {
     /// Invalid instruction
     #[error("Invalid instruction: {0}")]
     InvalidInstruction(u8),
+    /// Invalid instruction offset
+    #[error("Invalid instruction offset: {0}")]
+    InvalidInstructionOffset(u32),
     /// Invalid magic number when reading a class file
     #[error("Invalid magic number: {0}")]
     InvalidMagicNumber(u32),

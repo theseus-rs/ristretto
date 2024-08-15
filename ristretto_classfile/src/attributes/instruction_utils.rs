@@ -1,4 +1,5 @@
 use crate::attributes::Instruction;
+use crate::Error::InvalidInstructionOffset;
 use crate::Result;
 use std::collections::HashMap;
 use std::io::Cursor;
@@ -44,7 +45,7 @@ pub(crate) fn to_bytes(instructions: &[Instruction]) -> Result<Vec<u8>> {
             | Instruction::Jsr_w(ref mut offset) => {
                 *offset = *instruction_to_byte_map
                     .get(offset)
-                    .expect("instruction byte");
+                    .ok_or(InvalidInstructionOffset(u32::from(*offset)))?;
             }
             Instruction::Tableswitch {
                 ref mut default,
@@ -60,14 +61,14 @@ pub(crate) fn to_bytes(instructions: &[Instruction]) -> Result<Vec<u8>> {
                 let default_offset = position + u32::try_from(*default)?;
                 let default_byte = *instruction_to_byte_map
                     .get(&u16::try_from(default_offset)?)
-                    .expect("instruction byte");
+                    .ok_or(InvalidInstructionOffset(default_offset))?;
                 *default = i32::from(default_byte) - position_byte;
 
                 for offset in offsets.iter_mut() {
                     let instruction_offset = position + u32::try_from(*offset)?;
                     let offset_byte = instruction_to_byte_map
                         .get(&u16::try_from(instruction_offset)?)
-                        .expect("instruction byte");
+                        .ok_or(InvalidInstructionOffset(instruction_offset))?;
                     *offset = i32::from(*offset_byte) - position_byte;
                 }
             }
@@ -84,14 +85,14 @@ pub(crate) fn to_bytes(instructions: &[Instruction]) -> Result<Vec<u8>> {
                 let default_offset = position + u32::try_from(*default)?;
                 let default_byte = *instruction_to_byte_map
                     .get(&u16::try_from(default_offset)?)
-                    .expect("instruction byte");
+                    .ok_or(InvalidInstructionOffset(default_offset))?;
                 *default = i32::from(default_byte) - position_byte;
 
                 for (_match, offset) in pairs.iter_mut() {
                     let instruction_offset = position + u32::try_from(*offset)?;
                     let offset_byte = instruction_to_byte_map
                         .get(&u16::try_from(instruction_offset)?)
-                        .expect("instruction byte");
+                        .ok_or(InvalidInstructionOffset(instruction_offset))?;
                     *offset = i32::from(*offset_byte) - position_byte;
                 }
             }
@@ -144,7 +145,7 @@ pub(crate) fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Vec<Instruction>
             | Instruction::Jsr_w(ref mut offset) => {
                 *offset = *byte_to_instruction_map
                     .get(offset)
-                    .expect("byte instruction");
+                    .ok_or(InvalidInstructionOffset(u32::from(*offset)))?;
             }
             Instruction::Tableswitch {
                 ref mut default,
@@ -158,7 +159,7 @@ pub(crate) fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Vec<Instruction>
                 let default_offset = position + u32::try_from(*default)?;
                 let instruction_default = byte_to_instruction_map
                     .get(&u16::try_from(default_offset)?)
-                    .expect("byte instruction")
+                    .ok_or(InvalidInstructionOffset(default_offset))?
                     - u16::try_from(index)?;
                 *default = i32::from(instruction_default);
 
@@ -166,7 +167,7 @@ pub(crate) fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Vec<Instruction>
                     let byte_offset = position + u32::try_from(*offset)?;
                     let instruction_offset = byte_to_instruction_map
                         .get(&u16::try_from(byte_offset)?)
-                        .expect("byte instruction")
+                        .ok_or(InvalidInstructionOffset(byte_offset))?
                         - u16::try_from(index)?;
                     *offset = i32::from(instruction_offset);
                 }
@@ -182,7 +183,7 @@ pub(crate) fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Vec<Instruction>
                 let default_offset = position + u32::try_from(*default)?;
                 let instruction_default = byte_to_instruction_map
                     .get(&u16::try_from(default_offset)?)
-                    .expect("byte instruction")
+                    .ok_or(InvalidInstructionOffset(default_offset))?
                     - u16::try_from(index)?;
                 *default = i32::from(instruction_default);
 
@@ -190,7 +191,7 @@ pub(crate) fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Vec<Instruction>
                     let byte_offset = position + u32::try_from(*offset)?;
                     let instruction_offset = byte_to_instruction_map
                         .get(&u16::try_from(byte_offset)?)
-                        .expect("byte instruction")
+                        .ok_or(InvalidInstructionOffset(byte_offset))?
                         - u16::try_from(index)?;
                     *offset = i32::from(instruction_offset);
                 }
@@ -225,6 +226,63 @@ mod tests {
     }
 
     #[test_log::test]
+    fn test_to_bytes_invalid() {
+        let instructions = vec![Instruction::Iflt(42)];
+        let result = to_bytes(&instructions);
+        assert!(matches!(result, Err(InvalidInstructionOffset(_))));
+    }
+
+    #[test_log::test]
+    fn test_to_bytes_invalid_table_switch_default_offset() {
+        let instructions = vec![Instruction::Tableswitch {
+            default: 42,
+            low: 0,
+            high: 0,
+            offsets: vec![],
+        }];
+        let result = to_bytes(&instructions);
+        assert!(matches!(result, Err(InvalidInstructionOffset(_))));
+    }
+
+    #[test_log::test]
+    fn test_to_bytes_invalid_table_switch_offset() {
+        let instructions = vec![
+            Instruction::Nop,
+            Instruction::Tableswitch {
+                default: 0,
+                low: 0,
+                high: 0,
+                offsets: vec![42],
+            },
+        ];
+        let result = to_bytes(&instructions);
+        assert!(matches!(result, Err(InvalidInstructionOffset(_))));
+    }
+
+    #[test_log::test]
+    fn test_to_bytes_invalid_lookup_switch_default_offset() {
+        let instructions = vec![Instruction::Lookupswitch {
+            default: 42,
+            pairs: vec![],
+        }];
+        let result = to_bytes(&instructions);
+        assert!(matches!(result, Err(InvalidInstructionOffset(_))));
+    }
+
+    #[test_log::test]
+    fn test_to_bytes_invalid_lookup_switch_pairs_offset() {
+        let instructions = vec![
+            Instruction::Nop,
+            Instruction::Lookupswitch {
+                default: 0,
+                pairs: vec![(0, 42)],
+            },
+        ];
+        let result = to_bytes(&instructions);
+        assert!(matches!(result, Err(InvalidInstructionOffset(_))));
+    }
+
+    #[test_log::test]
     fn test_from_bytes() -> Result<()> {
         let instructions = vec![
             Instruction::Iconst_0,
@@ -244,6 +302,52 @@ mod tests {
         assert_eq!(instructions, result);
 
         Ok(())
+    }
+
+    #[test_log::test]
+    fn test_from_bytes_invalid() {
+        let bytes = vec![155, 0, 42];
+        let mut cursor = Cursor::new(bytes);
+        let result = from_bytes(&mut cursor);
+        assert!(matches!(result, Err(InvalidInstructionOffset(_))));
+    }
+
+    #[test_log::test]
+    fn test_from_bytes_invalid_table_switch_default_offset() {
+        let bytes = vec![
+            170, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4,
+        ];
+        let mut cursor = Cursor::new(bytes);
+        let result = from_bytes(&mut cursor);
+        assert!(matches!(result, Err(InvalidInstructionOffset(_))));
+    }
+
+    #[test_log::test]
+    fn test_from_bytes_invalid_table_switch_offset() {
+        let bytes = vec![
+            0, 170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4,
+        ];
+        let mut cursor = Cursor::new(bytes);
+        let result = from_bytes(&mut cursor);
+        assert!(matches!(result, Err(InvalidInstructionOffset(_))));
+    }
+
+    #[test_log::test]
+    fn test_from_bytes_invalid_lookup_switch_default_offset() {
+        let bytes = vec![
+            171, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2,
+        ];
+        let mut cursor = Cursor::new(bytes);
+        let result = from_bytes(&mut cursor);
+        assert!(matches!(result, Err(InvalidInstructionOffset(_))));
+    }
+
+    #[test_log::test]
+    fn test_from_bytes_invalid_lookup_switch_offset() {
+        let bytes = vec![0, 171, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2];
+        let mut cursor = Cursor::new(bytes);
+        let result = from_bytes(&mut cursor);
+        assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
     fn test_instruction(instruction: Instruction) -> Result<()> {
