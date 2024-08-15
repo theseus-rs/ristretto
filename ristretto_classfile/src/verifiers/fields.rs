@@ -57,20 +57,20 @@ mod test {
         (class_file, field)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_success() {
         let (class_file, _field) = get_test_class_file_and_field();
         assert_eq!(Ok(()), verify(&class_file));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_access_flag_error() {
         let (class_file, mut field) = get_test_class_file_and_field();
         field.access_flags = FieldAccessFlags::FINAL | FieldAccessFlags::VOLATILE;
         assert_eq!(Ok(()), verify(&class_file));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_name_index() {
         let (class_file, mut field) = get_test_class_file_and_field();
         field.name_index = u16::MAX;
@@ -80,7 +80,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_name_index_type() -> Result<()> {
         let (mut class_file, mut field) = get_test_class_file_and_field();
         let constant_pool = &mut class_file.constant_pool;
@@ -93,7 +93,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_descriptor_index() {
         let (class_file, mut field) = get_test_class_file_and_field();
         field.descriptor_index = u16::MAX;
@@ -103,7 +103,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_descriptor_index_type() -> Result<()> {
         let (mut class_file, mut field) = get_test_class_file_and_field();
         let constant_pool = &mut class_file.constant_pool;

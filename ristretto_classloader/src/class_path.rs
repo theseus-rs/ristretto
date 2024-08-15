@@ -23,19 +23,21 @@ impl ClassPath {
     }
 
     /// Creates a new `ClassPath` from a string.
-    pub fn from<S: AsRef<str>>(class_path: S) -> Self {
+    ///
+    /// # Errors
+    /// if the class path is not valid.
+    pub async fn from<S: AsRef<str>>(class_path: S) -> Result<Self> {
         let class_path = class_path.as_ref();
-        let class_path = class_path
-            .split(':')
-            .map(|entry| {
-                #[cfg(feature = "url")]
-                let entry = entry
-                    .replace("http//", "http://")
-                    .replace("https//", "https://");
-                ClassPathEntry::new(entry)
-            })
-            .collect();
-        ClassPath::new(class_path)
+        let class_paths = class_path.split(':').collect::<Vec<_>>();
+        let mut class_path_entries = Vec::new();
+        for path in class_paths {
+            #[cfg(feature = "url")]
+            let path = path
+                .replace("http//", "http://")
+                .replace("https//", "https://");
+            class_path_entries.push(ClassPathEntry::new(path).await?);
+        }
+        Ok(ClassPath::new(class_path_entries))
     }
 
     /// Returns an iterator over the class path.
@@ -89,35 +91,42 @@ mod tests {
     use crate::Result;
     use std::path::PathBuf;
 
-    #[test]
-    fn test_new() {
-        let class_path = ClassPath::new(vec![ClassPathEntry::new("."), ClassPathEntry::new("..")]);
+    #[test_log::test(tokio::test)]
+    async fn test_new() -> Result<()> {
+        let class_path = ClassPath::new(vec![
+            ClassPathEntry::new(".").await?,
+            ClassPathEntry::new("..").await?,
+        ]);
         assert_eq!(".:..", class_path.to_string());
+        Ok(())
     }
 
-    #[test]
-    fn test_from() {
-        let class_path = ClassPath::from(".:..");
+    #[test_log::test(tokio::test)]
+    async fn test_from() -> Result<()> {
+        let class_path = ClassPath::from(".:..").await?;
         assert_eq!(".:..", class_path.to_string());
+        Ok(())
     }
 
-    #[test]
-    fn test_iter() {
-        let class_path = ClassPath::from(".:..");
+    #[test_log::test(tokio::test)]
+    async fn test_iter() -> Result<()> {
+        let class_path = ClassPath::from(".:..").await?;
         let mut iter = class_path.iter();
         assert_eq!(".", iter.next().expect("next").name());
         assert_eq!("..", iter.next().expect("next").name());
+        Ok(())
     }
 
-    #[test]
-    fn test_into_iter() {
-        let class_path = ClassPath::from(".:..");
+    #[test_log::test(tokio::test)]
+    async fn test_into_iter() -> Result<()> {
+        let class_path = ClassPath::from(".:..").await?;
         let mut iter = class_path.into_iter();
         assert_eq!(".", iter.next().expect("next").name());
         assert_eq!("..", iter.next().expect("next").name());
+        Ok(())
     }
 
-    #[tokio::test]
+    #[test_log::test(tokio::test)]
     async fn test_read_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
@@ -131,7 +140,7 @@ mod tests {
         ];
 
         let class_path = class_path_entries.join(":");
-        let class_path_entry = ClassPath::from(&class_path);
+        let class_path_entry = ClassPath::from(&class_path).await?;
 
         let class_file = class_path_entry.read_class("HelloWorld").await?;
         assert_eq!("HelloWorld", class_file.class_name()?);

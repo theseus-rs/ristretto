@@ -1204,7 +1204,7 @@ mod test {
     use indoc::indoc;
     use std::io::Read;
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_instruction() -> Result<()> {
         let mut bytes = Vec::new();
         let code = u8::MAX;
@@ -1232,7 +1232,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_nop() -> Result<()> {
         let instruction = Instruction::Nop;
         let code = 0;
@@ -1242,7 +1242,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_aconst_null() -> Result<()> {
         let instruction = Instruction::Aconst_null;
         let code = 1;
@@ -1252,7 +1252,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iconst_m1() -> Result<()> {
         let instruction = Instruction::Iconst_m1;
         let code = 2;
@@ -1262,7 +1262,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iconst_0() -> Result<()> {
         let instruction = Instruction::Iconst_0;
         let code = 3;
@@ -1272,7 +1272,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iconst_1() -> Result<()> {
         let instruction = Instruction::Iconst_1;
         let code = 4;
@@ -1282,7 +1282,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iconst_2() -> Result<()> {
         let instruction = Instruction::Iconst_2;
         let code = 5;
@@ -1292,7 +1292,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iconst_3() -> Result<()> {
         let instruction = Instruction::Iconst_3;
         let code = 6;
@@ -1302,7 +1302,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iconst_4() -> Result<()> {
         let instruction = Instruction::Iconst_4;
         let code = 7;
@@ -1312,7 +1312,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iconst_5() -> Result<()> {
         let instruction = Instruction::Iconst_5;
         let code = 8;
@@ -1322,7 +1322,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lconst_0() -> Result<()> {
         let instruction = Instruction::Lconst_0;
         let code = 9;
@@ -1332,7 +1332,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lconst_1() -> Result<()> {
         let instruction = Instruction::Lconst_1;
         let code = 10;
@@ -1342,7 +1342,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fconst_0() -> Result<()> {
         let instruction = Instruction::Fconst_0;
         let code = 11;
@@ -1352,7 +1352,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fconst_1() -> Result<()> {
         let instruction = Instruction::Fconst_1;
         let code = 12;
@@ -1362,7 +1362,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fconst_2() -> Result<()> {
         let instruction = Instruction::Fconst_2;
         let code = 13;
@@ -1372,7 +1372,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dconst_0() -> Result<()> {
         let instruction = Instruction::Dconst_0;
         let code = 14;
@@ -1382,7 +1382,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dconst_1() -> Result<()> {
         let instruction = Instruction::Dconst_1;
         let code = 15;
@@ -1392,7 +1392,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_bipush() -> Result<()> {
         let instruction = Instruction::Bipush(42);
         let code = 16;
@@ -1402,7 +1402,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_sipush() -> Result<()> {
         let instruction = Instruction::Sipush(42);
         let code = 17;
@@ -1412,7 +1412,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ldc() -> Result<()> {
         let instruction = Instruction::Ldc(42);
         let code = 18;
@@ -1422,7 +1422,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ldc_w() -> Result<()> {
         let instruction = Instruction::Ldc_w(42);
         let code = 19;
@@ -1432,7 +1432,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ldc2_w() -> Result<()> {
         let instruction = Instruction::Ldc2_w(42);
         let code = 20;
@@ -1442,7 +1442,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iload() -> Result<()> {
         let instruction = Instruction::Iload(42);
         let code = 21;
@@ -1452,7 +1452,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lload() -> Result<()> {
         let instruction = Instruction::Lload(42);
         let code = 22;
@@ -1462,7 +1462,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fload() -> Result<()> {
         let instruction = Instruction::Fload(42);
         let code = 23;
@@ -1472,7 +1472,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dload() -> Result<()> {
         let instruction = Instruction::Dload(42);
         let code = 24;
@@ -1482,7 +1482,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_aload() -> Result<()> {
         let instruction = Instruction::Aload(42);
         let code = 25;
@@ -1492,7 +1492,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iload_0() -> Result<()> {
         let instruction = Instruction::Iload_0;
         let code = 26;
@@ -1502,7 +1502,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iload_1() -> Result<()> {
         let instruction = Instruction::Iload_1;
         let code = 27;
@@ -1512,7 +1512,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iload_2() -> Result<()> {
         let instruction = Instruction::Iload_2;
         let code = 28;
@@ -1522,7 +1522,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iload_3() -> Result<()> {
         let instruction = Instruction::Iload_3;
         let code = 29;
@@ -1532,7 +1532,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lload_0() -> Result<()> {
         let instruction = Instruction::Lload_0;
         let code = 30;
@@ -1542,7 +1542,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lload_1() -> Result<()> {
         let instruction = Instruction::Lload_1;
         let code = 31;
@@ -1552,7 +1552,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lload_2() -> Result<()> {
         let instruction = Instruction::Lload_2;
         let code = 32;
@@ -1562,7 +1562,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lload_3() -> Result<()> {
         let instruction = Instruction::Lload_3;
         let code = 33;
@@ -1572,7 +1572,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fload_0() -> Result<()> {
         let instruction = Instruction::Fload_0;
         let code = 34;
@@ -1582,7 +1582,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fload_1() -> Result<()> {
         let instruction = Instruction::Fload_1;
         let code = 35;
@@ -1592,7 +1592,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fload_2() -> Result<()> {
         let instruction = Instruction::Fload_2;
         let code = 36;
@@ -1602,7 +1602,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fload_3() -> Result<()> {
         let instruction = Instruction::Fload_3;
         let code = 37;
@@ -1612,7 +1612,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dload_0() -> Result<()> {
         let instruction = Instruction::Dload_0;
         let code = 38;
@@ -1622,7 +1622,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dload_1() -> Result<()> {
         let instruction = Instruction::Dload_1;
         let code = 39;
@@ -1632,7 +1632,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dload_2() -> Result<()> {
         let instruction = Instruction::Dload_2;
         let code = 40;
@@ -1642,7 +1642,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dload_3() -> Result<()> {
         let instruction = Instruction::Dload_3;
         let code = 41;
@@ -1652,7 +1652,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_aload_0() -> Result<()> {
         let instruction = Instruction::Aload_0;
         let code = 42;
@@ -1662,7 +1662,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_aload_1() -> Result<()> {
         let instruction = Instruction::Aload_1;
         let code = 43;
@@ -1672,7 +1672,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_aload_2() -> Result<()> {
         let instruction = Instruction::Aload_2;
         let code = 44;
@@ -1682,7 +1682,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_aload_3() -> Result<()> {
         let instruction = Instruction::Aload_3;
         let code = 45;
@@ -1692,7 +1692,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iaload() -> Result<()> {
         let instruction = Instruction::Iaload;
         let code = 46;
@@ -1702,7 +1702,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_laload() -> Result<()> {
         let instruction = Instruction::Laload;
         let code = 47;
@@ -1712,7 +1712,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_faload() -> Result<()> {
         let instruction = Instruction::Faload;
         let code = 48;
@@ -1722,7 +1722,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_daload() -> Result<()> {
         let instruction = Instruction::Daload;
         let code = 49;
@@ -1732,7 +1732,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_aaload() -> Result<()> {
         let instruction = Instruction::Aaload;
         let code = 50;
@@ -1742,7 +1742,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_baload() -> Result<()> {
         let instruction = Instruction::Baload;
         let code = 51;
@@ -1752,7 +1752,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_caload() -> Result<()> {
         let instruction = Instruction::Caload;
         let code = 52;
@@ -1762,7 +1762,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_saload() -> Result<()> {
         let instruction = Instruction::Saload;
         let code = 53;
@@ -1772,7 +1772,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_istore() -> Result<()> {
         let instruction = Instruction::Istore(42);
         let code = 54;
@@ -1782,7 +1782,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lstore() -> Result<()> {
         let instruction = Instruction::Lstore(42);
         let code = 55;
@@ -1792,7 +1792,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fstore() -> Result<()> {
         let instruction = Instruction::Fstore(42);
         let code = 56;
@@ -1802,7 +1802,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dstore() -> Result<()> {
         let instruction = Instruction::Dstore(42);
         let code = 57;
@@ -1812,7 +1812,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_astore() -> Result<()> {
         let instruction = Instruction::Astore(42);
         let code = 58;
@@ -1822,7 +1822,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_istore_0() -> Result<()> {
         let instruction = Instruction::Istore_0;
         let code = 59;
@@ -1832,7 +1832,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_istore_1() -> Result<()> {
         let instruction = Instruction::Istore_1;
         let code = 60;
@@ -1842,7 +1842,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_istore_2() -> Result<()> {
         let instruction = Instruction::Istore_2;
         let code = 61;
@@ -1852,7 +1852,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_istore_3() -> Result<()> {
         let instruction = Instruction::Istore_3;
         let code = 62;
@@ -1862,7 +1862,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lstore_0() -> Result<()> {
         let instruction = Instruction::Lstore_0;
         let code = 63;
@@ -1872,7 +1872,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lstore_1() -> Result<()> {
         let instruction = Instruction::Lstore_1;
         let code = 64;
@@ -1882,7 +1882,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lstore_2() -> Result<()> {
         let instruction = Instruction::Lstore_2;
         let code = 65;
@@ -1892,7 +1892,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lstore_3() -> Result<()> {
         let instruction = Instruction::Lstore_3;
         let code = 66;
@@ -1902,7 +1902,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fstore_0() -> Result<()> {
         let instruction = Instruction::Fstore_0;
         let code = 67;
@@ -1912,7 +1912,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fstore_1() -> Result<()> {
         let instruction = Instruction::Fstore_1;
         let code = 68;
@@ -1922,7 +1922,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fstore_2() -> Result<()> {
         let instruction = Instruction::Fstore_2;
         let code = 69;
@@ -1932,7 +1932,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fstore_3() -> Result<()> {
         let instruction = Instruction::Fstore_3;
         let code = 70;
@@ -1942,7 +1942,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dstore_0() -> Result<()> {
         let instruction = Instruction::Dstore_0;
         let code = 71;
@@ -1952,7 +1952,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dstore_1() -> Result<()> {
         let instruction = Instruction::Dstore_1;
         let code = 72;
@@ -1962,7 +1962,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dstore_2() -> Result<()> {
         let instruction = Instruction::Dstore_2;
         let code = 73;
@@ -1972,7 +1972,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dstore_3() -> Result<()> {
         let instruction = Instruction::Dstore_3;
         let code = 74;
@@ -1982,7 +1982,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_astore_0() -> Result<()> {
         let instruction = Instruction::Astore_0;
         let code = 75;
@@ -1992,7 +1992,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_astore_1() -> Result<()> {
         let instruction = Instruction::Astore_1;
         let code = 76;
@@ -2002,7 +2002,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_astore_2() -> Result<()> {
         let instruction = Instruction::Astore_2;
         let code = 77;
@@ -2012,7 +2012,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_astore_3() -> Result<()> {
         let instruction = Instruction::Astore_3;
         let code = 78;
@@ -2022,7 +2022,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iastore() -> Result<()> {
         let instruction = Instruction::Iastore;
         let code = 79;
@@ -2032,7 +2032,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lastore() -> Result<()> {
         let instruction = Instruction::Lastore;
         let code = 80;
@@ -2042,7 +2042,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fastore() -> Result<()> {
         let instruction = Instruction::Fastore;
         let code = 81;
@@ -2052,7 +2052,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dastore() -> Result<()> {
         let instruction = Instruction::Dastore;
         let code = 82;
@@ -2062,7 +2062,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_aastore() -> Result<()> {
         let instruction = Instruction::Aastore;
         let code = 83;
@@ -2072,7 +2072,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_bastore() -> Result<()> {
         let instruction = Instruction::Bastore;
         let code = 84;
@@ -2082,7 +2082,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_castore() -> Result<()> {
         let instruction = Instruction::Castore;
         let code = 85;
@@ -2092,7 +2092,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_sastore() -> Result<()> {
         let instruction = Instruction::Sastore;
         let code = 86;
@@ -2102,7 +2102,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_pop() -> Result<()> {
         let instruction = Instruction::Pop;
         let code = 87;
@@ -2112,7 +2112,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_pop2() -> Result<()> {
         let instruction = Instruction::Pop2;
         let code = 88;
@@ -2122,7 +2122,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dup() -> Result<()> {
         let instruction = Instruction::Dup;
         let code = 89;
@@ -2132,7 +2132,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dup_x1() -> Result<()> {
         let instruction = Instruction::Dup_x1;
         let code = 90;
@@ -2142,7 +2142,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dup_x2() -> Result<()> {
         let instruction = Instruction::Dup_x2;
         let code = 91;
@@ -2152,7 +2152,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dup2() -> Result<()> {
         let instruction = Instruction::Dup2;
         let code = 92;
@@ -2162,7 +2162,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dup2_x1() -> Result<()> {
         let instruction = Instruction::Dup2_x1;
         let code = 93;
@@ -2172,7 +2172,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dup2_x2() -> Result<()> {
         let instruction = Instruction::Dup2_x2;
         let code = 94;
@@ -2182,7 +2182,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_swap() -> Result<()> {
         let instruction = Instruction::Swap;
         let code = 95;
@@ -2192,7 +2192,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iadd() -> Result<()> {
         let instruction = Instruction::Iadd;
         let code = 96;
@@ -2202,7 +2202,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ladd() -> Result<()> {
         let instruction = Instruction::Ladd;
         let code = 97;
@@ -2212,7 +2212,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fadd() -> Result<()> {
         let instruction = Instruction::Fadd;
         let code = 98;
@@ -2222,7 +2222,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dadd() -> Result<()> {
         let instruction = Instruction::Dadd;
         let code = 99;
@@ -2232,7 +2232,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_isub() -> Result<()> {
         let instruction = Instruction::Isub;
         let code = 100;
@@ -2242,7 +2242,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lsub() -> Result<()> {
         let instruction = Instruction::Lsub;
         let code = 101;
@@ -2252,7 +2252,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fsub() -> Result<()> {
         let instruction = Instruction::Fsub;
         let code = 102;
@@ -2262,7 +2262,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dsub() -> Result<()> {
         let instruction = Instruction::Dsub;
         let code = 103;
@@ -2272,7 +2272,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_imul() -> Result<()> {
         let instruction = Instruction::Imul;
         let code = 104;
@@ -2282,7 +2282,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lmul() -> Result<()> {
         let instruction = Instruction::Lmul;
         let code = 105;
@@ -2292,7 +2292,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fmul() -> Result<()> {
         let instruction = Instruction::Fmul;
         let code = 106;
@@ -2302,7 +2302,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dmul() -> Result<()> {
         let instruction = Instruction::Dmul;
         let code = 107;
@@ -2312,7 +2312,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_idiv() -> Result<()> {
         let instruction = Instruction::Idiv;
         let code = 108;
@@ -2322,7 +2322,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ldiv() -> Result<()> {
         let instruction = Instruction::Ldiv;
         let code = 109;
@@ -2332,7 +2332,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fdiv() -> Result<()> {
         let instruction = Instruction::Fdiv;
         let code = 110;
@@ -2342,7 +2342,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ddiv() -> Result<()> {
         let instruction = Instruction::Ddiv;
         let code = 111;
@@ -2352,7 +2352,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_irem() -> Result<()> {
         let instruction = Instruction::Irem;
         let code = 112;
@@ -2362,7 +2362,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lrem() -> Result<()> {
         let instruction = Instruction::Lrem;
         let code = 113;
@@ -2372,7 +2372,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_frem() -> Result<()> {
         let instruction = Instruction::Frem;
         let code = 114;
@@ -2382,7 +2382,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_drem() -> Result<()> {
         let instruction = Instruction::Drem;
         let code = 115;
@@ -2392,7 +2392,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ineg() -> Result<()> {
         let instruction = Instruction::Ineg;
         let code = 116;
@@ -2402,7 +2402,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lneg() -> Result<()> {
         let instruction = Instruction::Lneg;
         let code = 117;
@@ -2412,7 +2412,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fneg() -> Result<()> {
         let instruction = Instruction::Fneg;
         let code = 118;
@@ -2422,7 +2422,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dneg() -> Result<()> {
         let instruction = Instruction::Dneg;
         let code = 119;
@@ -2432,7 +2432,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ishl() -> Result<()> {
         let instruction = Instruction::Ishl;
         let code = 120;
@@ -2442,7 +2442,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lshl() -> Result<()> {
         let instruction = Instruction::Lshl;
         let code = 121;
@@ -2452,7 +2452,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ishr() -> Result<()> {
         let instruction = Instruction::Ishr;
         let code = 122;
@@ -2462,7 +2462,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lshr() -> Result<()> {
         let instruction = Instruction::Lshr;
         let code = 123;
@@ -2472,7 +2472,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iushr() -> Result<()> {
         let instruction = Instruction::Iushr;
         let code = 124;
@@ -2482,7 +2482,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lushr() -> Result<()> {
         let instruction = Instruction::Lushr;
         let code = 125;
@@ -2492,7 +2492,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iand() -> Result<()> {
         let instruction = Instruction::Iand;
         let code = 126;
@@ -2502,7 +2502,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_land() -> Result<()> {
         let instruction = Instruction::Land;
         let code = 127;
@@ -2512,7 +2512,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ior() -> Result<()> {
         let instruction = Instruction::Ior;
         let code = 128;
@@ -2522,7 +2522,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lor() -> Result<()> {
         let instruction = Instruction::Lor;
         let code = 129;
@@ -2532,7 +2532,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ixor() -> Result<()> {
         let instruction = Instruction::Ixor;
         let code = 130;
@@ -2542,7 +2542,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lxor() -> Result<()> {
         let instruction = Instruction::Lxor;
         let code = 131;
@@ -2552,7 +2552,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iinc() -> Result<()> {
         let instruction = Instruction::Iinc(42, 3);
         let code = 132;
@@ -2562,7 +2562,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_i2l() -> Result<()> {
         let instruction = Instruction::I2l;
         let code = 133;
@@ -2572,7 +2572,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_i2f() -> Result<()> {
         let instruction = Instruction::I2f;
         let code = 134;
@@ -2582,7 +2582,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_i2d() -> Result<()> {
         let instruction = Instruction::I2d;
         let code = 135;
@@ -2592,7 +2592,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_l2i() -> Result<()> {
         let instruction = Instruction::L2i;
         let code = 136;
@@ -2602,7 +2602,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_l2f() -> Result<()> {
         let instruction = Instruction::L2f;
         let code = 137;
@@ -2612,7 +2612,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_l2d() -> Result<()> {
         let instruction = Instruction::L2d;
         let code = 138;
@@ -2622,7 +2622,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_f2i() -> Result<()> {
         let instruction = Instruction::F2i;
         let code = 139;
@@ -2632,7 +2632,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_f2l() -> Result<()> {
         let instruction = Instruction::F2l;
         let code = 140;
@@ -2642,7 +2642,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_f2d() -> Result<()> {
         let instruction = Instruction::F2d;
         let code = 141;
@@ -2652,7 +2652,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_d2i() -> Result<()> {
         let instruction = Instruction::D2i;
         let code = 142;
@@ -2662,7 +2662,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_d2l() -> Result<()> {
         let instruction = Instruction::D2l;
         let code = 143;
@@ -2672,7 +2672,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_d2f() -> Result<()> {
         let instruction = Instruction::D2f;
         let code = 144;
@@ -2682,7 +2682,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_i2b() -> Result<()> {
         let instruction = Instruction::I2b;
         let code = 145;
@@ -2692,7 +2692,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_i2c() -> Result<()> {
         let instruction = Instruction::I2c;
         let code = 146;
@@ -2702,7 +2702,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_i2s() -> Result<()> {
         let instruction = Instruction::I2s;
         let code = 147;
@@ -2712,7 +2712,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lcmp() -> Result<()> {
         let instruction = Instruction::Lcmp;
         let code = 148;
@@ -2722,7 +2722,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fcmpl() -> Result<()> {
         let instruction = Instruction::Fcmpl;
         let code = 149;
@@ -2732,7 +2732,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fcmpg() -> Result<()> {
         let instruction = Instruction::Fcmpg;
         let code = 150;
@@ -2742,7 +2742,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dcmpl() -> Result<()> {
         let instruction = Instruction::Dcmpl;
         let code = 151;
@@ -2752,7 +2752,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dcmpg() -> Result<()> {
         let instruction = Instruction::Dcmpg;
         let code = 152;
@@ -2762,7 +2762,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifeq() -> Result<()> {
         let instruction = Instruction::Ifeq(42);
         let code = 153;
@@ -2772,7 +2772,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifne() -> Result<()> {
         let instruction = Instruction::Ifne(42);
         let code = 154;
@@ -2782,7 +2782,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iflt() -> Result<()> {
         let instruction = Instruction::Iflt(42);
         let code = 155;
@@ -2792,7 +2792,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifge() -> Result<()> {
         let instruction = Instruction::Ifge(42);
         let code = 156;
@@ -2802,7 +2802,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifgt() -> Result<()> {
         let instruction = Instruction::Ifgt(42);
         let code = 157;
@@ -2812,7 +2812,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifle() -> Result<()> {
         let instruction = Instruction::Ifle(42);
         let code = 158;
@@ -2822,7 +2822,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmpeq() -> Result<()> {
         let instruction = Instruction::If_icmpeq(42);
         let code = 159;
@@ -2832,7 +2832,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmpne() -> Result<()> {
         let instruction = Instruction::If_icmpne(42);
         let code = 160;
@@ -2842,7 +2842,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmplt() -> Result<()> {
         let instruction = Instruction::If_icmplt(42);
         let code = 161;
@@ -2852,7 +2852,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmpge() -> Result<()> {
         let instruction = Instruction::If_icmpge(42);
         let code = 162;
@@ -2862,7 +2862,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmpgt() -> Result<()> {
         let instruction = Instruction::If_icmpgt(42);
         let code = 163;
@@ -2872,7 +2872,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmple() -> Result<()> {
         let instruction = Instruction::If_icmple(42);
         let code = 164;
@@ -2882,7 +2882,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_acmpeq() -> Result<()> {
         let instruction = Instruction::If_acmpeq(42);
         let code = 165;
@@ -2892,7 +2892,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_acmpne() -> Result<()> {
         let instruction = Instruction::If_acmpne(42);
         let code = 166;
@@ -2902,7 +2902,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_goto() -> Result<()> {
         let instruction = Instruction::Goto(42);
         let code = 167;
@@ -2912,7 +2912,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_jsr() -> Result<()> {
         let instruction = Instruction::Jsr(42);
         let code = 168;
@@ -2922,7 +2922,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ret() -> Result<()> {
         let instruction = Instruction::Ret(42);
         let code = 169;
@@ -2932,7 +2932,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_tableswitch() -> Result<()> {
         let instruction = Instruction::Tableswitch {
             default: 42,
@@ -2955,7 +2955,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lookupswitch() -> Result<()> {
         let instruction = Instruction::Lookupswitch {
             default: 42,
@@ -2975,7 +2975,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ireturn() -> Result<()> {
         let instruction = Instruction::Ireturn;
         let code = 172;
@@ -2985,7 +2985,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lreturn() -> Result<()> {
         let instruction = Instruction::Lreturn;
         let code = 173;
@@ -2995,7 +2995,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_freturn() -> Result<()> {
         let instruction = Instruction::Freturn;
         let code = 174;
@@ -3005,7 +3005,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dreturn() -> Result<()> {
         let instruction = Instruction::Dreturn;
         let code = 175;
@@ -3015,7 +3015,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_areturn() -> Result<()> {
         let instruction = Instruction::Areturn;
         let code = 176;
@@ -3025,7 +3025,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_return() -> Result<()> {
         let instruction = Instruction::Return;
         let code = 177;
@@ -3035,7 +3035,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_getstatic() -> Result<()> {
         let instruction = Instruction::Getstatic(42);
         let code = 178;
@@ -3045,7 +3045,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_putstatic() -> Result<()> {
         let instruction = Instruction::Putstatic(42);
         let code = 179;
@@ -3055,7 +3055,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_getfield() -> Result<()> {
         let instruction = Instruction::Getfield(42);
         let code = 180;
@@ -3065,7 +3065,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_putfield() -> Result<()> {
         let instruction = Instruction::Putfield(42);
         let code = 181;
@@ -3075,7 +3075,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invokevirtual() -> Result<()> {
         let instruction = Instruction::Invokevirtual(42);
         let code = 182;
@@ -3085,7 +3085,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invokespecial() -> Result<()> {
         let instruction = Instruction::Invokespecial(42);
         let code = 183;
@@ -3095,7 +3095,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invokestatic() -> Result<()> {
         let instruction = Instruction::Invokestatic(42);
         let code = 184;
@@ -3105,7 +3105,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invokeinterface() -> Result<()> {
         let instruction = Instruction::Invokeinterface(42, 3);
         let code = 185;
@@ -3115,7 +3115,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invokeinterface_error() {
         let bytes: [u8; 5] = [185, 0, 42, 3, 1];
         let mut cursor = Cursor::new(bytes.to_vec());
@@ -3125,7 +3125,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_invokedynamic() -> Result<()> {
         let instruction = Instruction::Invokedynamic(42);
         let code = 186;
@@ -3135,7 +3135,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_new() -> Result<()> {
         let instruction = Instruction::New(42);
         let code = 187;
@@ -3145,7 +3145,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_newarray() -> Result<()> {
         let instruction = Instruction::Newarray(ArrayType::Boolean);
         let code = 188;
@@ -3155,7 +3155,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_anewarray() -> Result<()> {
         let instruction = Instruction::Anewarray(42);
         let code = 189;
@@ -3165,7 +3165,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_arraylength() -> Result<()> {
         let instruction = Instruction::Arraylength;
         let code = 190;
@@ -3175,7 +3175,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_athrow() -> Result<()> {
         let instruction = Instruction::Athrow;
         let code = 191;
@@ -3185,7 +3185,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_checkcast() -> Result<()> {
         let instruction = Instruction::Checkcast(42);
         let code = 192;
@@ -3195,7 +3195,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_instanceof() -> Result<()> {
         let instruction = Instruction::Instanceof(42);
         let code = 193;
@@ -3205,7 +3205,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_monitorenter() -> Result<()> {
         let instruction = Instruction::Monitorenter;
         let code = 194;
@@ -3215,7 +3215,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_monitorexit() -> Result<()> {
         let instruction = Instruction::Monitorexit;
         let code = 195;
@@ -3225,13 +3225,13 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_wide() {
         assert_eq!(196, Instruction::Wide.code());
         assert_eq!("wide", Instruction::Wide.to_string());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_multianewarray() -> Result<()> {
         let instruction = Instruction::Multianewarray(42, 3);
         let code = 197;
@@ -3241,7 +3241,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifnull() -> Result<()> {
         let instruction = Instruction::Ifnull(42);
         let code = 198;
@@ -3251,7 +3251,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifnonnull() -> Result<()> {
         let instruction = Instruction::Ifnonnull(42);
         let code = 199;
@@ -3261,7 +3261,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_goto_w() -> Result<()> {
         let instruction = Instruction::Goto_w(42);
         let code = 200;
@@ -3271,7 +3271,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_jsr_w() -> Result<()> {
         let instruction = Instruction::Jsr_w(42);
         let code = 201;
@@ -3281,7 +3281,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_breakpoint() -> Result<()> {
         let instruction = Instruction::Breakpoint;
         let code = 202;
@@ -3293,7 +3293,7 @@ mod test {
 
     // Wide instructions
 
-    #[test]
+    #[test_log::test]
     fn test_iload_w() -> Result<()> {
         let instruction = Instruction::Iload_w(42);
         let wide_code = 196;
@@ -3304,7 +3304,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lload_w() -> Result<()> {
         let instruction = Instruction::Lload_w(42);
         let wide_code = 196;
@@ -3315,7 +3315,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fload_w() -> Result<()> {
         let instruction = Instruction::Fload_w(42);
         let wide_code = 196;
@@ -3326,7 +3326,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dload_w() -> Result<()> {
         let instruction = Instruction::Dload_w(42);
         let wide_code = 196;
@@ -3337,7 +3337,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_aload_w() -> Result<()> {
         let instruction = Instruction::Aload_w(42);
         let wide_code = 196;
@@ -3348,7 +3348,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_istore_w() -> Result<()> {
         let instruction = Instruction::Istore_w(42);
         let wide_code = 196;
@@ -3359,7 +3359,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lstore_w() -> Result<()> {
         let instruction = Instruction::Lstore_w(42);
         let wide_code = 196;
@@ -3370,7 +3370,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_fstore_w() -> Result<()> {
         let instruction = Instruction::Fstore_w(42);
         let wide_code = 196;
@@ -3381,7 +3381,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_dstore_w() -> Result<()> {
         let instruction = Instruction::Dstore_w(42);
         let wide_code = 196;
@@ -3392,7 +3392,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_astore_w() -> Result<()> {
         let instruction = Instruction::Astore_w(42);
         let wide_code = 196;
@@ -3403,7 +3403,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iinc_w() -> Result<()> {
         let instruction = Instruction::Iinc_w(42, 3);
         let wide_code = 196;
@@ -3414,7 +3414,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ret_w() -> Result<()> {
         let instruction = Instruction::Ret_w(42);
         let wide_code = 196;
@@ -3425,7 +3425,7 @@ mod test {
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_wide_error() {
         let bytes: [u8; 4] = [196, 0, 1, 2];
         let mut cursor = Cursor::new(bytes.to_vec());

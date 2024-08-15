@@ -66,7 +66,7 @@ impl fmt::Display for Opens {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_display() {
         let opens = Opens {
             index: 1,
@@ -79,7 +79,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let opens = Opens {
             index: 1,

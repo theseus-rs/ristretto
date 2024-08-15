@@ -236,7 +236,7 @@ mod test {
     const MIN_MAJOR: u16 = 45;
     const MAX_MAJOR: u16 = 68;
 
-    #[test]
+    #[test_log::test]
     fn all_known_versions() -> Result<()> {
         let versions = [
             Version::Java1_0_2 { minor: 0 },
@@ -282,7 +282,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_from() -> Result<()> {
         for major in MIN_MAJOR..=MAX_MAJOR {
             // Test with minor version 0
@@ -295,7 +295,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_from_invalid_version() {
         assert_eq!(
             Err(InvalidVersion {
@@ -313,26 +313,26 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_major() {
         let version = Version::Java21 { minor: 0 };
         assert_eq!(version.major(), 65);
     }
 
-    #[test]
+    #[test_log::test]
     fn test_minor() {
         let minor = 3;
         let version = Version::Java11 { minor };
         assert_eq!(version.minor(), minor);
     }
 
-    #[test]
+    #[test_log::test]
     fn test_supports() {
         assert!(Version::Java11 { minor: 0 }.supports(&Version::Java5_0 { minor: 0 }));
         assert!(!Version::Java5_0 { minor: 0 }.supports(&Version::Java11 { minor: 0 }));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_is_preview() {
         assert!(!Version::Java11 { minor: 0 }.is_preview());
         assert!(Version::Java21 {
@@ -341,13 +341,13 @@ mod test {
         .is_preview());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_default() {
         let version = Version::default();
         assert_eq!(version, Version::Java21 { minor: 0 });
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let version = Version::Java21 {
             minor: JAVA_PREVIEW_MINOR_VERSION,

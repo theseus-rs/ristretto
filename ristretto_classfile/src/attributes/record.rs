@@ -70,7 +70,7 @@ impl fmt::Display for Record {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         let attribute = Attribute::ConstantValue {
             name_index: 1,
@@ -87,7 +87,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let attribute = Attribute::ConstantValue {
             name_index: 1,

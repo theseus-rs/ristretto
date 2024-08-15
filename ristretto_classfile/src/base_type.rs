@@ -73,12 +73,12 @@ impl fmt::Display for BaseType {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_code() {
         assert_eq!(Err(InvalidBaseTypeCode('0')), BaseType::parse('0'));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_byte() -> Result<()> {
         assert_eq!(BaseType::Byte.code(), 'B');
         assert_eq!(BaseType::Byte, BaseType::parse('B')?);
@@ -86,7 +86,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_char() -> Result<()> {
         assert_eq!(BaseType::Char.code(), 'C');
         assert_eq!(BaseType::Char, BaseType::parse('C')?);
@@ -94,7 +94,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_double() -> Result<()> {
         assert_eq!(BaseType::Double.code(), 'D');
         assert_eq!(BaseType::Double, BaseType::parse('D')?);
@@ -102,7 +102,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_float() -> Result<()> {
         assert_eq!(BaseType::Float.code(), 'F');
         assert_eq!(BaseType::Float, BaseType::parse('F')?);
@@ -110,7 +110,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_int() -> Result<()> {
         assert_eq!(BaseType::Int.code(), 'I');
         assert_eq!(BaseType::Int, BaseType::parse('I')?);
@@ -118,7 +118,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_long() -> Result<()> {
         assert_eq!(BaseType::Long.code(), 'J');
         assert_eq!(BaseType::Long, BaseType::parse('J')?);
@@ -126,7 +126,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_short() -> Result<()> {
         assert_eq!(BaseType::Short.code(), 'S');
         assert_eq!(BaseType::Short, BaseType::parse('S')?);
@@ -134,7 +134,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_boolean() -> Result<()> {
         assert_eq!(BaseType::Boolean.code(), 'Z');
         assert_eq!(BaseType::Boolean, BaseType::parse('Z')?);

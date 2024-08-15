@@ -331,7 +331,7 @@ impl fmt::Display for TargetType {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_code() {
         let mut bytes = Cursor::new(vec![255]);
         assert_eq!(
@@ -350,7 +350,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_type_parameter() -> Result<()> {
         let target_type = TargetType::TypeParameter {
             target_type: 0,
@@ -364,7 +364,7 @@ mod test {
         test_array_type(&target_type, &[0, 42])
     }
 
-    #[test]
+    #[test_log::test]
     fn test_super_type() -> Result<()> {
         let target_type = TargetType::SuperType {
             target_type: 16,
@@ -378,7 +378,7 @@ mod test {
         test_array_type(&target_type, &[16, 0, 42])
     }
 
-    #[test]
+    #[test_log::test]
     fn test_type_parameter_bound() -> Result<()> {
         let target_type = TargetType::TypeParameterBound {
             target_type: 17,
@@ -393,7 +393,7 @@ mod test {
         test_array_type(&target_type, &[17, 1, 42])
     }
 
-    #[test]
+    #[test_log::test]
     fn test_empty() -> Result<()> {
         let target_type = TargetType::Empty { target_type: 19 };
 
@@ -401,7 +401,7 @@ mod test {
         test_array_type(&target_type, &[19])
     }
 
-    #[test]
+    #[test_log::test]
     fn test_formal_parameter() -> Result<()> {
         let target_type = TargetType::FormalParameter {
             target_type: 22,
@@ -415,7 +415,7 @@ mod test {
         test_array_type(&target_type, &[22, 42])
     }
 
-    #[test]
+    #[test_log::test]
     fn test_throws() -> Result<()> {
         let target_type = TargetType::Throws {
             target_type: 23,
@@ -429,7 +429,7 @@ mod test {
         test_array_type(&target_type, &[23, 0, 42])
     }
 
-    #[test]
+    #[test_log::test]
     fn test_local_var() -> Result<()> {
         let local_variable_targets = vec![LocalVariableTarget {
             start_pc: 1,
@@ -445,7 +445,7 @@ mod test {
         test_array_type(&target_type, &[64, 0, 1, 0, 1, 0, 2, 0, 3])
     }
 
-    #[test]
+    #[test_log::test]
     fn test_catch() -> Result<()> {
         let target_type = TargetType::Catch {
             target_type: 66,
@@ -459,7 +459,7 @@ mod test {
         test_array_type(&target_type, &[66, 0, 42])
     }
 
-    #[test]
+    #[test_log::test]
     fn test_offset() -> Result<()> {
         let target_type = TargetType::Offset {
             target_type: 67,
@@ -470,7 +470,7 @@ mod test {
         test_array_type(&target_type, &[67, 0, 42])
     }
 
-    #[test]
+    #[test_log::test]
     fn test_type_argument() -> Result<()> {
         let target_type = TargetType::TypeArgument {
             target_type: 71,

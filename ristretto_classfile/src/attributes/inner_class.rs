@@ -61,7 +61,7 @@ impl fmt::Display for InnerClass {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         let inner_class = InnerClass {
             class_info_index: 1,
@@ -75,7 +75,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let inner_class = InnerClass {
             class_info_index: 1,

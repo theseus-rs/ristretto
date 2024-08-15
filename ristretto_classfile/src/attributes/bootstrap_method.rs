@@ -61,7 +61,7 @@ impl fmt::Display for BootstrapMethod {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         let bootstrap_method = BootstrapMethod {
             bootstrap_method_ref: 3,
@@ -73,7 +73,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let bootstrap_method = BootstrapMethod {
             bootstrap_method_ref: 3,

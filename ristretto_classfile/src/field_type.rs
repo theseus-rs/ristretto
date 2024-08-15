@@ -90,7 +90,7 @@ mod test {
     use super::*;
     use crate::Error::IoError;
 
-    #[test]
+    #[test_log::test]
     fn test_invalid_code() {
         assert_eq!(
             Err(InvalidFieldTypeCode('0')),
@@ -107,7 +107,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_base_byte() -> Result<()> {
         let field_type = FieldType::Base(BaseType::Byte);
 
@@ -115,7 +115,7 @@ mod test {
         test_field_type(&field_type, "B", 'B')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_base_char() -> Result<()> {
         let field_type = FieldType::Base(BaseType::Char);
 
@@ -123,7 +123,7 @@ mod test {
         test_field_type(&field_type, "C", 'C')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_base_double() -> Result<()> {
         let field_type = FieldType::Base(BaseType::Double);
 
@@ -131,7 +131,7 @@ mod test {
         test_field_type(&field_type, "D", 'D')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_base_float() -> Result<()> {
         let field_type = FieldType::Base(BaseType::Float);
 
@@ -139,7 +139,7 @@ mod test {
         test_field_type(&field_type, "F", 'F')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_base_int() -> Result<()> {
         let field_type = FieldType::Base(BaseType::Int);
 
@@ -147,7 +147,7 @@ mod test {
         test_field_type(&field_type, "I", 'I')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_base_long() -> Result<()> {
         let field_type = FieldType::Base(BaseType::Long);
 
@@ -155,7 +155,7 @@ mod test {
         test_field_type(&field_type, "J", 'J')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_base_short() -> Result<()> {
         let field_type = FieldType::Base(BaseType::Short);
 
@@ -163,7 +163,7 @@ mod test {
         test_field_type(&field_type, "S", 'S')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_base_boolean() -> Result<()> {
         let field_type = FieldType::Base(BaseType::Boolean);
 
@@ -171,7 +171,7 @@ mod test {
         test_field_type(&field_type, "Z", 'Z')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_object() -> Result<()> {
         let field_type = FieldType::Object("Foo".to_string());
 
@@ -179,7 +179,7 @@ mod test {
         test_field_type(&field_type, "LFoo;", 'L')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_object_no_semicolon_invalid() {
         let descriptor = "Lfoo".to_string();
         assert_eq!(
@@ -188,7 +188,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_object_no_class_name_invalid() {
         let descriptor = "L;".to_string();
         assert_eq!(
@@ -197,7 +197,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_array() -> Result<()> {
         let component_type = FieldType::Base(BaseType::Int);
         let field_type = FieldType::Array(component_type.into());
@@ -206,7 +206,7 @@ mod test {
         test_field_type(&field_type, "[I", '[')
     }
 
-    #[test]
+    #[test_log::test]
     fn test_parse_invalid() {
         let descriptor = "L".to_string();
         assert_eq!(

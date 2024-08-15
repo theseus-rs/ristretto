@@ -682,7 +682,7 @@ mod test {
     use crate::Error::IoError;
     use std::fmt::Debug;
 
-    #[test]
+    #[test_log::test]
     fn test_constant_pool_entry_to_string() {
         assert_eq!(
             "Integer 42",
@@ -691,13 +691,13 @@ mod test {
         assert_eq!("", ConstantEntry::Placeholder.to_string());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_get_zero_none() {
         let constant_pool = ConstantPool::default();
         assert!(constant_pool.get(0).is_none());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_get() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.get(1).is_none());
@@ -705,13 +705,13 @@ mod test {
         assert!(constant_pool.get(1).is_some());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_zero_error() {
         let constant_pool = ConstantPool::default();
         assert_eq!(Err(InvalidConstantPoolIndex(0)), constant_pool.try_get(0));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.try_get(1).is_err());
@@ -719,7 +719,7 @@ mod test {
         assert!(constant_pool.try_get(1).is_ok());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_utf8() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Utf8("foo".to_string()));
@@ -727,7 +727,7 @@ mod test {
         assert_eq!(1, constant_pool.len());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_integer() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Integer(42));
@@ -735,7 +735,7 @@ mod test {
         assert_eq!(1, constant_pool.len());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_long() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Long(1_234_567_890));
@@ -744,7 +744,7 @@ mod test {
         assert_eq!(2, constant_pool.len());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_len() {
         let mut constant_pool = ConstantPool::default();
         assert_eq!(0, constant_pool.len());
@@ -752,7 +752,7 @@ mod test {
         assert_eq!(1, constant_pool.len());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_is_empty() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.is_empty());
@@ -760,7 +760,7 @@ mod test {
         assert!(!constant_pool.is_empty());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iter() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Utf8("foo".to_string()));
@@ -773,7 +773,7 @@ mod test {
         assert_eq!(None, iter.next());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_into_iter() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Utf8("foo".to_string()));
@@ -782,7 +782,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[test_log::test]
     fn test_double() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Double(std::f64::consts::PI));
@@ -791,7 +791,7 @@ mod test {
         assert_eq!(2, constant_pool.len());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Utf8("foo".to_string()));
@@ -801,7 +801,7 @@ mod test {
         assert_eq!(expected, constant_pool.to_string());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let integer_constant = Constant::Integer(42);
@@ -850,7 +850,7 @@ mod test {
         assert!(f(&constant_pool, 2).is_ok());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_utf8() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_utf8("foo")?;
@@ -862,7 +862,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_utf8() {
         test_try_get_constant(
             ConstantPool::try_get_utf8,
@@ -870,7 +870,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_integer() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_integer(42)?;
@@ -879,12 +879,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_integer() {
         test_try_get_constant(ConstantPool::try_get_integer, Constant::Integer(42));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_float() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_float(std::f32::consts::PI)?;
@@ -896,7 +896,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_float() {
         test_try_get_constant(
             ConstantPool::try_get_float,
@@ -904,7 +904,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_long() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_long(i64::MAX)?;
@@ -913,12 +913,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_long() {
         test_try_get_constant(ConstantPool::try_get_long, Constant::Long(i64::MAX));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_double() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_double(std::f64::consts::PI)?;
@@ -930,7 +930,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_double() {
         test_try_get_constant(
             ConstantPool::try_get_double,
@@ -938,7 +938,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_class() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_class("java/lang/Object")?;
@@ -947,12 +947,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_class() {
         test_try_get_constant(ConstantPool::try_get_class, Constant::Class(1));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_string() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_string("foo")?;
@@ -961,12 +961,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_string() {
         test_try_get_constant(ConstantPool::try_get_string, Constant::String(1));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_field_ref() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_field_ref(1, "out", "Ljava/io/PrintStream;")?;
@@ -981,7 +981,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_field_ref() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_field_ref,
@@ -992,7 +992,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_method_ref() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_method_ref(1, "println", "(Ljava/lang/String;)V")?;
@@ -1007,7 +1007,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_method_ref() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_method_ref,
@@ -1018,7 +1018,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_interface_method_ref() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index =
@@ -1034,7 +1034,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_interface_method_ref() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_interface_method_ref,
@@ -1045,7 +1045,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_name_and_type() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_name_and_type("name", "type")?;
@@ -1060,7 +1060,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_name_and_type() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_name_and_type,
@@ -1071,7 +1071,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_method_handle() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_method_handle(ReferenceKind::GetField, 1)?;
@@ -1086,7 +1086,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_method_handle() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_method_handle,
@@ -1097,7 +1097,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_method_type() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_method_type("()V")?;
@@ -1106,12 +1106,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_method_type() {
         test_try_get_constant(ConstantPool::try_get_method_type, Constant::MethodType(1));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_dynamic() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_dynamic(1, "name", "type")?;
@@ -1126,7 +1126,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_dynamic() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_dynamic,
@@ -1137,7 +1137,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_invoke_dynamic() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_invoke_dynamic(1, "name", "type")?;
@@ -1152,7 +1152,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_invoke_dynamic() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_invoke_dynamic,
@@ -1163,7 +1163,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_module() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_module("module")?;
@@ -1172,12 +1172,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_module() {
         test_try_get_constant(ConstantPool::try_get_module, Constant::Module(1));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_add_package() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_package("package")?;
@@ -1186,12 +1186,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_try_get_package() {
         test_try_get_constant(ConstantPool::try_get_package, Constant::Package(1));
     }
 
-    #[test]
+    #[test_log::test]
     fn test_from_bytes_invalid_tag() {
         let mut bytes = Cursor::new(vec![0, 0, 10]);
         assert_eq!(

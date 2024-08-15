@@ -66,7 +66,7 @@ impl fmt::Display for Exports {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         let exports = Exports {
             index: 1,
@@ -79,7 +79,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let exports = Exports {
             index: 1,

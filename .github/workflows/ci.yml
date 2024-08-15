@@ -72,8 +72,7 @@ jobs:
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          RUST_LOG: "info"
-          RUST_LOG_SPAN_EVENTS: full
+          RUST_LOG: info
         run: |
           cargo build --target ${{ matrix.target }}
 
@@ -83,12 +82,12 @@ jobs:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           LLVM_PROFILE_FILE: ristretto-%p-%m.profraw
-          RUST_LOG: "info"
-          RUST_LOG_SPAN_EVENTS: full
+          RUST_LOG: info
           RUSTFLAGS: -Cinstrument-coverage
           RUSTDOCFLAGS: -Cinstrument-coverage
         run: |
           cargo test --workspace --all-features
+          du -h ~/.ristretto
 
       - name: Produce coverage info
         if: ${{ startsWith(matrix.platform, 'linux-') }}

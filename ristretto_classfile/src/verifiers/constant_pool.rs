@@ -228,7 +228,7 @@ mod test {
         Ok(0)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_verify() -> Result<()> {
         let class_bytes = include_bytes!("../../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
@@ -252,12 +252,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_version_constants_method_type() -> Result<()> {
         test_version_constants_error(Version::Java6 { minor: 0 }, Constant::MethodType(1))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_version_constants_dynamic() -> Result<()> {
         test_version_constants_error(
             Version::Java10 { minor: 0 },
@@ -268,7 +268,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[test_log::test]
     fn test_version_constants_invoke_dynamic() -> Result<()> {
         test_version_constants_error(
             Version::Java6 { minor: 0 },
@@ -279,12 +279,12 @@ mod test {
         )
     }
 
-    #[test]
+    #[test_log::test]
     fn test_version_constants_module() -> Result<()> {
         test_version_constants_error(Version::Java8 { minor: 0 }, Constant::Module(1))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_version_constants_package() -> Result<()> {
         test_version_constants_error(Version::Java8 { minor: 0 }, Constant::Package(1))
     }
@@ -331,27 +331,27 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_class_errors() -> Result<()> {
         test_indexes_utf8_index_errors(&Constant::Class(u16::MAX))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_module_errors() -> Result<()> {
         test_indexes_utf8_index_errors(&Constant::Module(u16::MAX))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_package_errors() -> Result<()> {
         test_indexes_utf8_index_errors(&Constant::Package(u16::MAX))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_string_errors() -> Result<()> {
         test_indexes_utf8_index_errors(&Constant::String(u16::MAX))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_method_type_errors() -> Result<()> {
         test_indexes_utf8_index_errors(&Constant::MethodType(u16::MAX))
     }
@@ -402,7 +402,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_field_ref_errors() -> Result<()> {
         test_indexes_ref_errors(&Constant::FieldRef {
             class_index: 0,
@@ -410,7 +410,7 @@ mod test {
         })
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_method_ref_errors() -> Result<()> {
         test_indexes_ref_errors(&Constant::MethodRef {
             class_index: 0,
@@ -418,7 +418,7 @@ mod test {
         })
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_interface_method_ref_errors() -> Result<()> {
         test_indexes_ref_errors(&Constant::InterfaceMethodRef {
             class_index: 0,
@@ -426,7 +426,7 @@ mod test {
         })
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_name_and_type_errors() -> Result<()> {
         let class_file = &mut get_class_file()?;
         let integer_index = get_integer_index(class_file)?;
@@ -463,7 +463,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_method_handle_errors() -> Result<()> {
         let class_file = &mut get_class_file()?;
         let integer_index = get_integer_index(class_file)?;
@@ -509,7 +509,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_dynamic_errors() -> Result<()> {
         let class_file = &mut get_class_file()?;
         let bootstrap_method_index = get_bootstrap_methods_index(class_file)?;
@@ -545,7 +545,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_indexes_invoke_dynamic_errors() -> Result<()> {
         let class_file = &mut get_class_file()?;
         let bootstrap_method_index = get_bootstrap_methods_index(class_file)?;

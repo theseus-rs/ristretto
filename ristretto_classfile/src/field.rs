@@ -90,7 +90,7 @@ mod test {
     use crate::BaseType;
     use indoc::indoc;
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8("ConstantValue")?;
@@ -117,7 +117,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_field() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8("ConstantValue")?;

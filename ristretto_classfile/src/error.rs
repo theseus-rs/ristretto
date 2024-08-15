@@ -111,7 +111,7 @@ impl From<std::io::Error> for Error {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_from_utf8_error() {
         let invalid_utf8: Vec<u8> = vec![0, 159, 146, 150];
         let utf8_error = String::from_utf8(invalid_utf8).expect_err("expected FromUtf8Error");
@@ -122,7 +122,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_io_error() {
         let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
         let error = Error::from(io_error);

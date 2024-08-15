@@ -46,7 +46,7 @@ impl LineNumber {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let line_number = LineNumber {
             start_pc: 1,

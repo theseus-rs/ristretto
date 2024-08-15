@@ -103,7 +103,7 @@ impl fmt::Display for NestedClassAccessFlags {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_default() {
         assert_eq!(
             NestedClassAccessFlags::empty(),
@@ -111,7 +111,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
         let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
@@ -130,7 +130,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[test_log::test]
     fn test_access_flags() -> Result<()> {
         let access_flags = NestedClassAccessFlags::PUBLIC | NestedClassAccessFlags::FINAL;
         let mut bytes = Vec::new();
@@ -143,7 +143,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         assert_eq!(
             "(0x0001) ACC_PUBLIC",

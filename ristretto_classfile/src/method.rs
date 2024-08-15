@@ -81,7 +81,7 @@ mod test {
     use crate::attributes::Attribute;
     use indoc::indoc;
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         let attribute1 = Attribute::ConstantValue {
             name_index: 1,
@@ -108,7 +108,7 @@ mod test {
         assert_eq!(expected, method.to_string());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8("ConstantValue")?;

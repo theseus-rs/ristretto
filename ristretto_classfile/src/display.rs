@@ -11,7 +11,7 @@ pub fn indent_lines(input: &str, indent: &str) -> String {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_indent_lines() {
         let input = "hello\nworld".to_string();
         let indent = "  ";

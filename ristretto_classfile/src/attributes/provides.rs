@@ -59,7 +59,7 @@ impl fmt::Display for Provides {
 mod test {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_to_string() {
         let provides = Provides {
             index: 1,
@@ -68,7 +68,7 @@ mod test {
         assert_eq!("Provides[index=1, with_index=[2]]", provides.to_string());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_serialization() -> Result<()> {
         let provides = Provides {
             index: 1,

@@ -105,7 +105,7 @@ mod tests {
     /// Test all valid UTF-8 characters, the only two invalid characters are U+D800 and U+DFFF
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4.7:~:text=the%20resulting%20string).-,bytes%5B%5D,-The%20bytes%20array>
-    #[test]
+    #[test_log::test]
     fn test_all_utf8_chars() -> Result<()> {
         for i in 0..=0x0010_FFFF {
             if let Some(ch) = char::from_u32(i) {
@@ -127,13 +127,13 @@ mod tests {
 
     /// Test the encoding of CESU-8 character from `X11GB18030_0$Encoder.class` Java 8 rt.jar
     /// that fails with CESU-8 implementations.
-    #[test]
+    #[test_log::test]
     fn test_utf8_encoding() {
         let bytes = &[237, 162, 162];
         assert!(from_bytes(bytes).is_ok());
     }
 
-    #[test]
+    #[test_log::test]
     fn test_to_bytes() -> Result<()> {
         let data = "\u{0000}\u{007F}\u{0080}\u{07FF}\u{0800}\u{FFFF}\u{10000}";
         let expected = vec![
@@ -149,7 +149,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_from_bytes() -> Result<()> {
         let bytes = &[
             0xC0, 0x80, // '\u{0000}'
@@ -166,7 +166,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_from_bytes_invalid() {
         assert!(from_bytes(&[0x59, 0xd9]).is_err());
         assert!(from_bytes(&[0x56, 0xe7]).is_err());

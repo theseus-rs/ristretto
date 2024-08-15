@@ -205,7 +205,7 @@ pub(crate) fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Vec<Instruction>
 mod tests {
     use super::*;
 
-    #[test]
+    #[test_log::test]
     fn test_to_bytes() -> Result<()> {
         let instructions = vec![
             Instruction::Iconst_0,
@@ -224,7 +224,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_from_bytes() -> Result<()> {
         let instructions = vec![
             Instruction::Iconst_0,
@@ -258,97 +258,97 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifeq() -> Result<()> {
         test_instruction(Instruction::Ifeq(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifne() -> Result<()> {
         test_instruction(Instruction::Ifne(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_iflt() -> Result<()> {
         test_instruction(Instruction::Iflt(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifge() -> Result<()> {
         test_instruction(Instruction::Ifge(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifgt() -> Result<()> {
         test_instruction(Instruction::Ifgt(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifle() -> Result<()> {
         test_instruction(Instruction::Ifle(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmpeq() -> Result<()> {
         test_instruction(Instruction::If_icmpeq(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmpne() -> Result<()> {
         test_instruction(Instruction::If_icmpne(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmplt() -> Result<()> {
         test_instruction(Instruction::If_icmplt(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmpge() -> Result<()> {
         test_instruction(Instruction::If_icmpge(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmpgt() -> Result<()> {
         test_instruction(Instruction::If_icmpgt(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_icmple() -> Result<()> {
         test_instruction(Instruction::If_icmple(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_acmpeq() -> Result<()> {
         test_instruction(Instruction::If_acmpeq(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_if_acmpne() -> Result<()> {
         test_instruction(Instruction::If_acmpne(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_goto() -> Result<()> {
         test_instruction(Instruction::Goto(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_jsr() -> Result<()> {
         test_instruction(Instruction::Jsr(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifnull() -> Result<()> {
         test_instruction(Instruction::Ifnull(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_ifnonnull() -> Result<()> {
         test_instruction(Instruction::Ifnonnull(0))
     }
 
-    #[test]
+    #[test_log::test]
     fn test_goto_w() -> Result<()> {
         let instruction = Instruction::Goto_w(1);
         let expected_bytes = [instruction.code(), 0, 0, 0, 5, Instruction::Nop.code()];
@@ -362,7 +362,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_jsr_w() -> Result<()> {
         let instruction = Instruction::Jsr_w(1);
         let expected_bytes = [instruction.code(), 0, 0, 0, 5, Instruction::Nop.code()];
@@ -376,7 +376,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_tableswitch() -> Result<()> {
         let instruction = Instruction::Tableswitch {
             default: 3,
@@ -428,7 +428,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[test_log::test]
     fn test_lookupswitch() -> Result<()> {
         let instruction = Instruction::Lookupswitch {
             default: 3,

@@ -47,7 +47,8 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let class_loader = Arc::new(ClassLoader::new("example", ClassPath::from("classes")));
+    let class_path = ClassPath::from("classes").await?;
+    let class_loader = Arc::new(ClassLoader::new("example", class_path));
     let class = ClassLoader::load_class(&class_loader, "HelloWorld").await?;
     println!("{class:?}");
     Ok(())

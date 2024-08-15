@@ -21,6 +21,7 @@ flate2 = { workspace = true }
 indoc = { workspace = true }
 reqwest = { workspace = true }
 tar = { workspace = true }
+test-log = { workspace = true }
 tokio = { workspace = true }
 zip = { workspace = true }
 
