@@ -1,6 +1,9 @@
 name: Benchmarks
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     types: [ opened, reopened, synchronize ]
 
@@ -27,6 +30,7 @@ jobs:
         uses: bencherdev/bencher@main
 
       - name: Run benchmarks
+        if: ${{ github.event_name == 'pull_request' }}
         env:
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
           BENCHER_PROJECT: theseus-rs-ristretto
@@ -38,3 +42,12 @@ jobs:
             --github-actions "${{ secrets.GITHUB_TOKEN }}" \
             --err \
             "cargo bench"
+
+      - name: Run benchmarks
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+          BENCHER_PROJECT: theseus-rs-ristretto
+          BENCHER_ADAPTER: rust_criterion
+        run: |
+          bencher run "cargo bench"

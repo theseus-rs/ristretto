@@ -111,16 +111,3 @@ jobs:
           files: lcov.info
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Install benchmarking tools
-        if: ${{ github.ref == 'refs/heads/main' && startsWith(matrix.platform, 'linux-') }}
-        uses: bencherdev/bencher@main
-
-      - name: Run benchmarks
-        if: ${{ github.ref == 'refs/heads/main' && startsWith(matrix.platform, 'linux-') }}
-        env:
-          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-          BENCHER_PROJECT: theseus-rs-ristretto
-          BENCHER_ADAPTER: rust_criterion
-        run: |
-          bencher run "cargo bench"
