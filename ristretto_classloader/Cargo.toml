@@ -14,7 +14,7 @@ dashmap = { workspace = true, features = ["rayon"] }
 flate2 = { workspace = true }
 rayon = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.5.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.6.0" }
 serde = { workspace = true, features = ["derive"] }
 tar = { workspace = true }
 tempfile = { workspace = true }
