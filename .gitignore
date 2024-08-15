@@ -4,4 +4,4 @@
 /fuzz/target/
 /fuzz/Cargo.lock
 /target/
-/examples/hello_world/HelloWorld.class
+/examples/write_class/HelloWorld.class

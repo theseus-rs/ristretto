@@ -1,6 +1,6 @@
 [package]
 edition.workspace = true
-name = "hello_world"
+name = "write_class"
 publish = false
 license.workspace = true
 version.workspace = true
