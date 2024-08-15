@@ -30,7 +30,7 @@ home = "0.5.9"
 indoc = "2.0.5"
 rayon = "1.10.0"
 reqwest = "0.12.5"
-serde = "1.0.206"
+serde = "1.0.207"
 tar = "0.4.41"
 tempfile = "3.11.0"
 test-log = { version = "0.2.16", features = ["trace"] }
