@@ -16,10 +16,32 @@ Crates for the [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se2
 
 Crates for the [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se22/html/)
 
-Supports reading, writing, verifying and loading classes for any version of Java version up to 24. Verification of
-class files is supported, but is still a work in progress.
+### Features
+
+* loading classes from any version of [AWS Corretto](https://github.com/corretto)
+* load classes from directories, jars, modules
+* url classes loading from jars and modules
+* reading, writing, verifying classes for any version of Java version up to 24
+* verification of class files is supported, but is still a work in progress.
 
 # Examples
+
+## Load a class from the Java runtime
+
+```rust
+use ristretto_classloader::{runtime, ClassLoader, Result};
+use std::sync::Arc;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let (version, class_loader) = runtime::class_loader("21").await?;
+    let class_name = "java.util.HashMap";
+    println!("Loading {class_name} from Java runtime {version}");
+    let class = ClassLoader::load_class(&Arc::new(class_loader), class_name).await?;
+    println!("{class:?}");
+    Ok(())
+}
+```
 
 ## Create a class file
 
@@ -36,22 +58,6 @@ fn main() -> Result<()> {
         ..Default::default()
     };
     class_file.verify()
-}
-```
-
-## Load a class
-
-```rust
-use ristretto_classloader::{ClassLoader, ClassPath, Result};
-use std::sync::Arc;
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    let class_path = ClassPath::from("classes").await?;
-    let class_loader = Arc::new(ClassLoader::new("example", class_path));
-    let class = ClassLoader::load_class(&class_loader, "HelloWorld").await?;
-    println!("{class:?}");
-    Ok(())
 }
 ```
 

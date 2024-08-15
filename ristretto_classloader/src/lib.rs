@@ -7,19 +7,30 @@
 //!
 //! ## Getting Started
 //!
-//! Implementation of a [JVM Class Loader](https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html) that is used to load Java classes.
+//! Implementation of a [JVM Class Loader](https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html)
+//! that is used to load Java classes. Classes can be loaded from the file system or from a URL;
+//! jar and modules are supported.  A runtime Java class loader can be created from any version of
+//! [AWS Corretto](https://github.com/corretto).  The runtime class loader will download and install
+//! the requested version of Corretto into and create a class loader that can be used to load Java
+//! classes.
+//!
+//! The AWS Corretto runtime is installed in the following directory:
+//!
+//! - Unix: `$HOME/.ristretto/<version>`
+//! - Windows: `%USERPROFILE%\.ristretto\<version>`
 //!
 //! # Examples
 //!
 //! ```rust
-//! use ristretto_classloader::{ClassLoader, ClassPath, Result};
+//! use ristretto_classloader::{runtime, ClassLoader, Result};
 //! use std::sync::Arc;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
-//!     let class_path = ClassPath::from("../classes").await?;
-//!     let class_loader = Arc::new(ClassLoader::new("example", class_path));
-//!     let class = ClassLoader::load_class(&class_loader, "HelloWorld").await?;
+//!     let (version, class_loader) = runtime::class_loader("21").await?;
+//!     let class_name = "java.util.HashMap";
+//!     println!("Loading {class_name} from Java runtime {version}");
+//!     let class = ClassLoader::load_class(&Arc::new(class_loader), class_name).await?;
 //!     println!("{class:?}");
 //!     Ok(())
 //! }
