@@ -1,7 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use ristretto_classloader::{runtime, ClassLoader, Result};
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::runtime::Runtime;
 
 fn benchmarks(criterion: &mut Criterion) {
@@ -70,9 +69,7 @@ async fn runtime_class_loader(version: &str) -> Result<()> {
 
 criterion_group!(
     name = benches;
-    config = Criterion::default()
-        .measurement_time(Duration::from_secs(10))
-        .sample_size(10);
+    config = Criterion::default();
     targets = benchmarks
 );
 criterion_main!(benches);

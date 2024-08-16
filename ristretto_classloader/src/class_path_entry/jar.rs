@@ -1,123 +1,64 @@
-use crate::Error::ClassNotFound;
+use crate::Error::{ArchiveError, ClassNotFound};
 use crate::Result;
 use dashmap::DashMap;
-use rayon::prelude::*;
 use ristretto_classfile::ClassFile;
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io;
+use std::path::PathBuf;
 use std::sync::Arc;
-use tracing::{debug, instrument};
+use tokio::sync::RwLock;
+use tracing::instrument;
 use zip::ZipArchive;
 
 /// A jar or zip in the class path.
 #[derive(Debug)]
 pub struct Jar {
     name: String,
+    archive: Arc<RwLock<Archive>>,
     class_files: DashMap<String, Arc<ClassFile>>,
-    is_module: bool,
 }
 
 /// Implement the `Jar` struct.
 impl Jar {
     /// Create new jar from a path.
-    pub async fn new<S: AsRef<str>>(path: S) -> Result<Self> {
+    pub fn new<S: AsRef<str>>(path: S) -> Self {
         let path = path.as_ref();
-        #[cfg(target_arch = "wasm32")]
-        let bytes = std::fs::read(path)?;
-        #[cfg(not(target_arch = "wasm32"))]
-        let bytes = tokio::fs::read(path).await?;
-        Jar::from_bytes(path, bytes).await
+        let archive = Archive::from_path(PathBuf::from(path));
+
+        Self {
+            name: path.to_string(),
+            archive: Arc::new(RwLock::new(archive)),
+            class_files: DashMap::new(),
+        }
     }
 
     /// Create new jar from url.
     #[cfg(feature = "url")]
-    pub async fn from_url<S: AsRef<str>>(url: S) -> Result<Self> {
+    pub fn from_url<S: AsRef<str>>(url: S) -> Self {
         let url = url.as_ref();
-        let client = reqwest::Client::new();
-        let bytes = client.get(url).send().await?.bytes().await?.to_vec();
-        Jar::from_bytes(url, bytes).await
+        let archive = Archive::from_url(url);
+
+        Self {
+            name: url.to_string(),
+            archive: Arc::new(RwLock::new(archive)),
+            class_files: DashMap::new(),
+        }
     }
 
     /// Create new jar from bytes.
-    #[allow(clippy::explicit_iter_loop)]
-    pub async fn from_bytes<S: AsRef<str>>(name: S, bytes: Vec<u8>) -> Result<Self> {
-        let mut class_files = DashMap::new();
-        Self::load_class_files(&bytes, &class_files).await?;
-        let is_module = class_files.contains_key("classes.module-info");
+    pub fn from_bytes<S: AsRef<str>>(name: S, bytes: Vec<u8>) -> Self {
+        let archive = Archive::from_bytes(bytes);
 
-        if is_module {
-            let new_class_files = DashMap::new();
-            for (key, value) in class_files {
-                let key = key.strip_prefix("classes.").unwrap_or(key.as_str());
-                new_class_files.insert(key.to_string(), value);
-            }
-            class_files = new_class_files;
-        }
-
-        Ok(Self {
+        Self {
             name: name.as_ref().to_string(),
-            class_files,
-            is_module,
-        })
-    }
-
-    /// Load all class files from a jar.
-    ///
-    /// # Errors
-    /// if the jar cannot be read or the class files cannot be loaded.
-    #[allow(clippy::case_sensitive_file_extension_comparisons)]
-    #[instrument(level = "trace", skip(bytes, class_files))]
-    pub async fn load_class_files(
-        bytes: &Vec<u8>,
-        class_files: &DashMap<String, Arc<ClassFile>>,
-    ) -> Result<()> {
-        let reader = io::Cursor::new(bytes);
-        let mut archive = ZipArchive::new(reader)?;
-
-        // Decompress all the bytes from the jar and store in a map to be converted into class files
-        let mut class_bytes = HashMap::new();
-        for i in 0..archive.len() {
-            let mut file = archive.by_index(i)?;
-            let file_name = file.name().to_string();
-            if !file_name.ends_with(".class") {
-                continue;
-            }
-
-            let mut bytes = Vec::new();
-            io::copy(&mut file, &mut bytes)?;
-            let class_name = file_name.replace('/', ".").replace(".class", "");
-            class_bytes.insert(class_name, bytes);
+            archive: Arc::new(RwLock::new(archive)),
+            class_files: DashMap::new(),
         }
-
-        // Convert the bytes into class files in parallel
-        class_bytes.par_iter().for_each(|(class_name, bytes)| {
-            let mut bytes = io::Cursor::new(bytes.clone());
-            let class_file = match ClassFile::from_bytes(&mut bytes) {
-                Ok(class_file) => class_file,
-                Err(error) => {
-                    debug!("Failed to load class file {class_name:?}: {error:?}");
-                    return;
-                }
-            };
-
-            match class_file.verify() {
-                Ok(()) => (),
-                Err(error) => {
-                    debug!("Failed to verify class file {class_name:?}: {error:?}");
-                    return;
-                }
-            }
-
-            class_files.insert(class_name.to_string(), Arc::new(class_file));
-        });
-
-        Ok(())
     }
 
     /// Get the name of the jar.
-    pub fn name(&self) -> String {
-        self.name.clone()
+    pub fn name(&self) -> &String {
+        &self.name
     }
 
     /// Read a class from the jar.
@@ -129,6 +70,20 @@ impl Jar {
         let name = name.as_ref();
         if let Some(class_file) = self.class_files.get(name) {
             return Ok(Arc::clone(class_file.value()));
+        }
+
+        let mut archive = self.archive.write().await;
+        let class_file = if archive.is_module().await? {
+            let name = format!("classes.{name}");
+            archive.load_class_file(name.as_str()).await?
+        } else {
+            archive.load_class_file(name).await?
+        };
+        if let Some(class_file) = class_file {
+            let class_file = Arc::new(class_file);
+            self.class_files
+                .insert(name.to_string(), class_file.clone());
+            return Ok(class_file);
         }
 
         Err(ClassNotFound(name.to_string()))
@@ -143,45 +98,158 @@ impl PartialEq for Jar {
     }
 }
 
+/// The source of the archive.
+#[allow(clippy::struct_field_names)]
+#[derive(Debug)]
+struct Archive {
+    path: Option<PathBuf>,
+    url: Option<String>,
+    bytes: Option<Arc<Vec<u8>>>,
+    zip_archive: Option<ZipArchive<io::Cursor<Vec<u8>>>>,
+    is_module: Option<bool>,
+}
+
+/// Implement the `Archive` enum.
+impl Archive {
+    /// Create a new archive source from a path.
+    fn from_path(path: PathBuf) -> Self {
+        let path = Some(path);
+        Self {
+            path,
+            url: None,
+            bytes: None,
+            zip_archive: None,
+            is_module: None,
+        }
+    }
+
+    /// Create a new archive source from a url.
+    fn from_url<S: AsRef<str>>(url: S) -> Self {
+        let url = url.as_ref().to_string();
+        Self {
+            path: None,
+            url: Some(url),
+            bytes: None,
+            zip_archive: None,
+            is_module: None,
+        }
+    }
+
+    /// Create a new archive source from bytes.
+    ///
+    /// # Errors
+    /// if the bytes cannot be read.
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        Self {
+            path: None,
+            url: None,
+            bytes: Some(Arc::new(bytes)),
+            zip_archive: None,
+            is_module: None,
+        }
+    }
+
+    /// Create a new archive source from a path.
+    ///
+    /// # Errors
+    /// if the archive cannot be read.
+    async fn zip_archive(&mut self) -> Result<&mut ZipArchive<io::Cursor<Vec<u8>>>> {
+        if let Some(ref mut zip_archive) = self.zip_archive {
+            return Ok(zip_archive);
+        }
+
+        if let Some(path) = &self.path {
+            #[cfg(target_arch = "wasm32")]
+            let bytes = std::fs::read(path)?;
+            #[cfg(not(target_arch = "wasm32"))]
+            let bytes = tokio::fs::read(path).await?;
+            let cursor = io::Cursor::new(bytes);
+            let archive = ZipArchive::new(cursor)?;
+            self.zip_archive = Some(archive);
+        } else if let Some(url) = &self.url {
+            let client = reqwest::Client::new();
+            let bytes = client.get(url).send().await?.bytes().await?.to_vec();
+            let cursor = io::Cursor::new(bytes);
+            let archive = ZipArchive::new(cursor)?;
+            self.zip_archive = Some(archive);
+        } else if let Some(bytes) = &self.bytes {
+            let bytes = bytes.to_vec();
+            let cursor = io::Cursor::new(bytes);
+            let archive = ZipArchive::new(cursor)?;
+            self.bytes = None;
+            self.zip_archive = Some(archive);
+        }
+
+        if let Some(ref mut zip_archive) = self.zip_archive {
+            Ok(zip_archive)
+        } else {
+            Err(ArchiveError("No archive source provided".to_string()))
+        }
+    }
+
+    /// Load all class files from a jar.
+    ///
+    /// # Errors
+    /// if the jar cannot be read or the class files cannot be loaded.
+    #[allow(clippy::case_sensitive_file_extension_comparisons)]
+    #[instrument(level = "trace")]
+    async fn load_class_file(&mut self, class_name: &str) -> Result<Option<ClassFile>> {
+        let class_file_name = format!("{}.class", class_name.replace('.', "/"));
+        let zip_archive = self.zip_archive().await?;
+        if let Some(index) = zip_archive.index_for_name(&class_file_name) {
+            let mut file = zip_archive.by_index(index)?;
+            let mut bytes = Vec::new();
+            io::copy(&mut file, &mut bytes)?;
+            let mut cursor = io::Cursor::new(bytes);
+            let class_file = ClassFile::from_bytes(&mut cursor)?;
+            class_file.verify()?;
+            return Ok(Some(class_file));
+        }
+        Ok(None)
+    }
+
+    async fn is_module(&mut self) -> Result<bool> {
+        if let Some(is_module) = self.is_module {
+            Ok(is_module)
+        } else {
+            let module_info = self.load_class_file("classes.module-info").await?;
+            let is_module = module_info.is_some();
+            self.is_module = Some(is_module);
+            Ok(is_module)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Error;
+    use crate::Error::ClassFileError;
     use std::io::Write;
     use std::path::PathBuf;
     use zip::write::SimpleFileOptions;
 
-    #[test_log::test(tokio::test)]
-    async fn test_new() -> Result<()> {
+    #[test_log::test]
+    fn test_new() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_jar = cargo_manifest.join("../classes/classes.jar");
-        let jar = Jar::new(classes_jar.to_string_lossy()).await?;
+        let jar = Jar::new(classes_jar.to_string_lossy());
         assert!(jar.name().ends_with("classes.jar"));
-        Ok(())
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_equality() -> Result<()> {
+    #[test_log::test]
+    fn test_equality() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_jar = cargo_manifest.join("../classes/classes.jar");
-        let jar1 = Jar::new(classes_jar.to_string_lossy()).await?;
-        let jar2 = Jar::new(classes_jar.to_string_lossy()).await?;
+        let jar1 = Jar::new(classes_jar.to_string_lossy());
+        let jar2 = Jar::new(classes_jar.to_string_lossy());
         assert_eq!(jar1, jar2);
-        Ok(())
-    }
-
-    #[test_log::test(tokio::test)]
-    async fn test_read_class_invalid_jar() -> Result<()> {
-        let result = Jar::new("foo.jar").await;
-        assert!(matches!(result, Err(Error::IoError(_))));
-        Ok(())
     }
 
     #[test_log::test(tokio::test)]
     async fn test_read_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_jar = cargo_manifest.join("../classes/classes.jar");
-        let jar = Jar::new(classes_jar.to_string_lossy()).await?;
+        let jar = Jar::new(classes_jar.to_string_lossy());
         // Read the class file twice to test caching
         for _ in 0..2 {
             let class_file = jar.read_class("HelloWorld").await?;
@@ -198,7 +266,7 @@ mod tests {
     async fn test_read_class_invalid_class_name() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_jar = cargo_manifest.join("../classes/classes.jar");
-        let jar = Jar::new(classes_jar.to_string_lossy()).await?;
+        let jar = Jar::new(classes_jar.to_string_lossy());
         let result = jar.read_class("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
         Ok(())
@@ -216,9 +284,9 @@ mod tests {
         archive.finish()?;
 
         // Test reading the class file
-        let jar = Jar::new(jar_path.to_string_lossy()).await?;
+        let jar = Jar::new(jar_path.to_string_lossy());
         let result = jar.read_class("HelloWorld").await;
-        assert!(matches!(result, Err(ClassNotFound(_))));
+        assert!(matches!(result, Err(ClassFileError(_))));
         Ok(())
     }
 
@@ -242,17 +310,9 @@ mod tests {
         archive.finish()?;
 
         // Test reading the class file
-        let jar = Jar::new(jar_path.to_string_lossy()).await?;
+        let jar = Jar::new(jar_path.to_string_lossy());
         let result = jar.read_class("HelloWorld").await;
-        assert!(matches!(result, Err(ClassNotFound(_))));
-        Ok(())
-    }
-
-    #[cfg(feature = "url")]
-    #[test_log::test(tokio::test)]
-    async fn test_from_url_invalid() -> Result<()> {
-        let result = Jar::from_url("https://foo.url").await;
-        assert!(matches!(result, Err(Error::RequestError(_))));
+        assert!(matches!(result, Err(ClassFileError(_))));
         Ok(())
     }
 
@@ -260,7 +320,7 @@ mod tests {
     #[test_log::test(tokio::test)]
     async fn test_from_url_read_class() -> Result<()> {
         let url = "https://repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar";
-        let url = Jar::from_url(url).await?;
+        let url = Jar::from_url(url);
         // Read the class file twice to test caching
         for _ in 0..2 {
             let class_file = url

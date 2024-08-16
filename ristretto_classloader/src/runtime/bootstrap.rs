@@ -30,7 +30,7 @@ pub async fn class_loader(version: &str) -> Result<(String, ClassLoader)> {
         archive_version = version;
     }
 
-    let class_path = get_class_path(&archive_version, &installation_dir).await?;
+    let class_path = get_class_path(&archive_version, &installation_dir)?;
     let class_loader = ClassLoader::new("bootstrap", class_path);
     Ok((archive_version, class_loader))
 }
@@ -39,8 +39,7 @@ pub async fn class_loader(version: &str) -> Result<(String, ClassLoader)> {
 ///
 /// # Errors
 /// An error will be returned if the class path cannot be determined.
-#[allow(clippy::unused_async)]
-async fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
+fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
     #[cfg(target_os = "macos")]
     let installation_dir = installation_dir.join("Contents").join("Home");
 
@@ -69,7 +68,7 @@ async fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassP
         class_paths.join(":")
     };
     debug!("Class loader for {version}: {class_path}");
-    ClassPath::from(class_path).await
+    Ok(ClassPath::from(class_path))
 }
 
 /// Extract the archive to the installation directory.

@@ -11,6 +11,7 @@ use tracing::instrument;
 /// A directory in the class path.
 #[derive(Debug)]
 pub struct Directory {
+    name: String,
     path: PathBuf,
     class_files: DashMap<String, Arc<ClassFile>>,
 }
@@ -19,14 +20,17 @@ pub struct Directory {
 impl Directory {
     /// Create a new directory from a path.
     pub fn new<S: AsRef<str>>(path: S) -> Self {
-        let path = PathBuf::from(path.as_ref());
-        let class_files = DashMap::new();
-        Self { path, class_files }
+        let path = path.as_ref();
+        Self {
+            name: path.to_string(),
+            path: PathBuf::from(path),
+            class_files: DashMap::new(),
+        }
     }
 
     /// Get the name of the directory.
-    pub fn name(&self) -> String {
-        self.path.to_string_lossy().to_string()
+    pub fn name(&self) -> &String {
+        &self.name
     }
 
     /// Read a class from the directory.
