@@ -236,6 +236,18 @@ mod tests {
         assert!(jar.name().ends_with("classes.jar"));
     }
 
+    #[test_log::test(tokio::test)]
+    async fn test_from_bytes() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let bytes = tokio::fs::read(classes_jar).await?;
+        let jar = Jar::from_bytes("test", bytes);
+        assert_eq!("test", jar.name().as_str());
+        let class_file = jar.read_class("HelloWorld").await?;
+        assert_eq!("HelloWorld", class_file.class_name()?);
+        Ok(())
+    }
+
     #[test_log::test]
     fn test_equality() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -314,6 +326,19 @@ mod tests {
         let result = jar.read_class("HelloWorld").await;
         assert!(matches!(result, Err(ClassFileError(_))));
         Ok(())
+    }
+
+    #[test_log::test(tokio::test)]
+    async fn test_archive_zip_archive_error() {
+        let mut archive = Archive {
+            path: None,
+            url: None,
+            bytes: None,
+            zip_archive: None,
+            is_module: None,
+        };
+        let result = archive.zip_archive().await;
+        assert!(matches!(result, Err(ArchiveError(_))));
     }
 
     #[cfg(feature = "url")]
