@@ -187,10 +187,10 @@ impl Archive {
         }
     }
 
-    /// Load all class files from a jar.
+    /// Load class file from a jar.
     ///
     /// # Errors
-    /// if the jar cannot be read or the class files cannot be loaded.
+    /// if the jar cannot be read or the class file cannot be loaded.
     #[allow(clippy::case_sensitive_file_extension_comparisons)]
     #[instrument(level = "trace")]
     async fn load_class_file(&mut self, class_name: &str) -> Result<Option<ClassFile>> {
@@ -208,6 +208,10 @@ impl Archive {
         Ok(None)
     }
 
+    /// Check if the archive is a module.
+    ///
+    /// # Errors
+    /// if the module information cannot be read.
     async fn is_module(&mut self) -> Result<bool> {
         if let Some(is_module) = self.is_module {
             Ok(is_module)
