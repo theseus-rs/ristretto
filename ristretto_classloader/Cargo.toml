@@ -10,14 +10,13 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-dashmap = { workspace = true, features = ["rayon"] }
+dashmap = { workspace = true, features = ["inline", "rayon"] }
 flate2 = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.6.0" }
 serde = { workspace = true, features = ["derive"] }
 tar = { workspace = true }
 tempfile = { workspace = true }
-test-log = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 zip = { workspace = true }
@@ -32,7 +31,7 @@ tokio = { workspace = true, features = ["fs"] }
 [dev-dependencies]
 criterion = { workspace = true }
 indoc = { workspace = true }
-tempfile = { workspace = true }
+test-log = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 tokio = { workspace = true }
