@@ -93,39 +93,35 @@ mod tests {
     use super::*;
     use std::path::PathBuf;
 
-    #[test_log::test(tokio::test)]
-    async fn test_new() -> Result<()> {
+    #[test_log::test]
+    fn test_new() {
         let name = "test";
-        let class_loader = ClassLoader::new(name, ClassPath::from(".").await?);
+        let class_loader = ClassLoader::new(name, ClassPath::from("."));
         assert_eq!(name, class_loader.name());
-        assert_eq!(&ClassPath::from(".").await?, class_loader.class_path());
+        assert_eq!(&ClassPath::from("."), class_loader.class_path());
         assert!(class_loader.parent().is_none());
-        Ok(())
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_equality() -> Result<()> {
-        let class_loader1 = ClassLoader::new("test", ClassPath::from(".").await?);
-        let class_loader2 = ClassLoader::new("test", ClassPath::from(".").await?);
+    #[test_log::test]
+    fn test_equality() {
+        let class_loader1 = ClassLoader::new("test", ClassPath::from("."));
+        let class_loader2 = ClassLoader::new("test", ClassPath::from("."));
         assert_eq!(class_loader1, class_loader2);
-        Ok(())
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_inequality() -> Result<()> {
-        let class_loader1 = ClassLoader::new("test1", ClassPath::from(".").await?);
-        let class_loader2 = ClassLoader::new("test2", ClassPath::from(".").await?);
+    #[test_log::test]
+    fn test_inequality() {
+        let class_loader1 = ClassLoader::new("test1", ClassPath::from("."));
+        let class_loader2 = ClassLoader::new("test2", ClassPath::from("."));
         assert_ne!(class_loader1, class_loader2);
-        Ok(())
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_set_parent() -> Result<()> {
-        let mut class_loader1 = ClassLoader::new("test1", ClassPath::from(".").await?);
-        let class_loader2 = ClassLoader::new("test2", ClassPath::from(".").await?);
+    #[test_log::test]
+    fn test_set_parent() {
+        let mut class_loader1 = ClassLoader::new("test1", ClassPath::from("."));
+        let class_loader2 = ClassLoader::new("test2", ClassPath::from("."));
         class_loader1.set_parent(Some(Arc::new(class_loader2)));
         assert_eq!("test2", class_loader1.parent().expect("parent").name());
-        Ok(())
     }
 
     #[test_log::test(tokio::test)]
@@ -135,10 +131,7 @@ mod tests {
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
 
         let class_path = class_path_entries.join(":");
-        let class_loader = Arc::new(ClassLoader::new(
-            "test",
-            ClassPath::from(&class_path).await?,
-        ));
+        let class_loader = Arc::new(ClassLoader::new("test", ClassPath::from(&class_path)));
         let class_name = "HelloWorld";
         let class = ClassLoader::load_class(&class_loader, class_name).await?;
         let class_file = class.get_class_file();
@@ -157,8 +150,8 @@ mod tests {
         let classes_directory = cargo_manifest.join("../classes");
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
         let class_path = class_path_entries.join(":");
-        let boot_class_loader = ClassLoader::new("test", ClassPath::from(&class_path).await?);
-        let mut class_loader = ClassLoader::new("test", ClassPath::from("foo").await?);
+        let boot_class_loader = ClassLoader::new("test", ClassPath::from(&class_path));
+        let mut class_loader = ClassLoader::new("test", ClassPath::from("foo"));
         class_loader.set_parent(Some(Arc::new(boot_class_loader)));
 
         let class = ClassLoader::load_class(&Arc::new(class_loader), "HelloWorld").await?;
@@ -169,7 +162,7 @@ mod tests {
 
     #[test_log::test(tokio::test)]
     async fn test_load_class_not_found() -> Result<()> {
-        let class_path = ClassPath::from(".").await?;
+        let class_path = ClassPath::from(".");
         let class_loader = ClassLoader::new("test", class_path);
         let result = ClassLoader::load_class(&Arc::new(class_loader), "Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
