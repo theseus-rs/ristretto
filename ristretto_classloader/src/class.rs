@@ -53,7 +53,7 @@ mod tests {
     #[test_log::test]
     fn test_new() -> Result<()> {
         let class_path = ClassPath::from(".");
-        let class_loader = ClassLoader::new("test", class_path);
+        let class_loader = ClassLoader::new("test", Arc::new(class_path));
         let bytes = include_bytes!("../../classes/Simple.class").to_vec();
         let mut cursor = Cursor::new(bytes);
         let class_file = ClassFile::from_bytes(&mut cursor)?;
@@ -66,7 +66,7 @@ mod tests {
     #[test_log::test]
     fn test_debug() -> Result<()> {
         let class_path = ClassPath::from(".");
-        let class_loader = ClassLoader::new("test", class_path);
+        let class_loader = ClassLoader::new("test", Arc::new(class_path));
         let bytes = include_bytes!("../../classes/Minimum.class").to_vec();
         let mut cursor = Cursor::new(bytes);
         let class_file = ClassFile::from_bytes(&mut cursor)?;

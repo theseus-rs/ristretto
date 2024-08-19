@@ -28,13 +28,15 @@ dashmap = "6.0.1"
 flate2 = "1.0.31"
 home = "0.5.9"
 indoc = "2.0.5"
-reqwest = "0.12.5"
+indexmap = "2.4.0"
+reqwest = "0.12.6"
 serde = "1.0.207"
+serde_plain = "1.0.2"
 tar = "0.4.41"
 tempfile = "3.11.0"
 test-log = { version = "0.2.16", features = ["trace"] }
 thiserror = "1.0.63"
-tokio = { version = "1.39.2", default-features = false, features = ["macros", "rt", "sync"] }
+tokio = { version = "1.39.3", default-features = false, features = ["macros", "rt", "sync"] }
 tracing = "0.1.40"
 zip = { version = "2.1.6", default-features = false, features = ["deflate"] }
 

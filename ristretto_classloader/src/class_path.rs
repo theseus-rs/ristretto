@@ -29,7 +29,7 @@ impl ClassPath {
     pub fn from<S: AsRef<str>>(class_path: S) -> Self {
         let class_path = class_path.as_ref();
         let class_paths = class_path.split(':').collect::<Vec<_>>();
-        let mut class_path_entries = Vec::new();
+        let mut class_path_entries = Vec::with_capacity(class_paths.len());
         for path in class_paths {
             #[cfg(feature = "url")]
             let path = path

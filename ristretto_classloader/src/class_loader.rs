@@ -9,14 +9,14 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct ClassLoader {
     name: String,
-    class_path: ClassPath,
+    class_path: Arc<ClassPath>,
     parent: Option<Arc<ClassLoader>>,
     classes: DashMap<String, Arc<Class>>,
 }
 
 impl ClassLoader {
     /// Create a new class loader with the given name and parent.
-    pub fn new<S: AsRef<str>>(name: S, class_path: ClassPath) -> Self {
+    pub fn new<S: AsRef<str>>(name: S, class_path: Arc<ClassPath>) -> Self {
         Self {
             name: name.as_ref().to_string(),
             class_path,
@@ -96,7 +96,8 @@ mod tests {
     #[test_log::test]
     fn test_new() {
         let name = "test";
-        let class_loader = ClassLoader::new(name, ClassPath::from("."));
+        let class_path = Arc::new(ClassPath::from("."));
+        let class_loader = ClassLoader::new(name, class_path);
         assert_eq!(name, class_loader.name());
         assert_eq!(&ClassPath::from("."), class_loader.class_path());
         assert!(class_loader.parent().is_none());
@@ -104,22 +105,28 @@ mod tests {
 
     #[test_log::test]
     fn test_equality() {
-        let class_loader1 = ClassLoader::new("test", ClassPath::from("."));
-        let class_loader2 = ClassLoader::new("test", ClassPath::from("."));
+        let class_path1 = Arc::new(ClassPath::from("."));
+        let class_loader1 = ClassLoader::new("test", class_path1);
+        let class_path2 = Arc::new(ClassPath::from("."));
+        let class_loader2 = ClassLoader::new("test", class_path2);
         assert_eq!(class_loader1, class_loader2);
     }
 
     #[test_log::test]
     fn test_inequality() {
-        let class_loader1 = ClassLoader::new("test1", ClassPath::from("."));
-        let class_loader2 = ClassLoader::new("test2", ClassPath::from("."));
+        let class_path1 = Arc::new(ClassPath::from("."));
+        let class_loader1 = ClassLoader::new("test1", class_path1);
+        let class_path2 = Arc::new(ClassPath::from("."));
+        let class_loader2 = ClassLoader::new("test2", class_path2);
         assert_ne!(class_loader1, class_loader2);
     }
 
     #[test_log::test]
     fn test_set_parent() {
-        let mut class_loader1 = ClassLoader::new("test1", ClassPath::from("."));
-        let class_loader2 = ClassLoader::new("test2", ClassPath::from("."));
+        let class_path1 = Arc::new(ClassPath::from("."));
+        let mut class_loader1 = ClassLoader::new("test1", class_path1);
+        let class_path2 = Arc::new(ClassPath::from("."));
+        let class_loader2 = ClassLoader::new("test2", class_path2);
         class_loader1.set_parent(Some(Arc::new(class_loader2)));
         assert_eq!("test2", class_loader1.parent().expect("parent").name());
     }
@@ -130,8 +137,8 @@ mod tests {
         let classes_directory = cargo_manifest.join("../classes");
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
 
-        let class_path = class_path_entries.join(":");
-        let class_loader = Arc::new(ClassLoader::new("test", ClassPath::from(&class_path)));
+        let class_path = Arc::new(ClassPath::from(class_path_entries.join(":")));
+        let class_loader = Arc::new(ClassLoader::new("test", class_path));
         let class_name = "HelloWorld";
         let class = ClassLoader::load_class(&class_loader, class_name).await?;
         let class_file = class.get_class_file();
@@ -149,9 +156,10 @@ mod tests {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
-        let class_path = class_path_entries.join(":");
-        let boot_class_loader = ClassLoader::new("test", ClassPath::from(&class_path));
-        let mut class_loader = ClassLoader::new("test", ClassPath::from("foo"));
+        let class_path = Arc::new(ClassPath::from(class_path_entries.join(":")));
+        let boot_class_loader = ClassLoader::new("test", class_path);
+        let foo_class_path = Arc::new(ClassPath::from("foo"));
+        let mut class_loader = ClassLoader::new("test", foo_class_path);
         class_loader.set_parent(Some(Arc::new(boot_class_loader)));
 
         let class = ClassLoader::load_class(&Arc::new(class_loader), "HelloWorld").await?;
@@ -162,7 +170,7 @@ mod tests {
 
     #[test_log::test(tokio::test)]
     async fn test_load_class_not_found() -> Result<()> {
-        let class_path = ClassPath::from(".");
+        let class_path = Arc::new(ClassPath::from("."));
         let class_loader = ClassLoader::new("test", class_path);
         let result = ClassLoader::load_class(&Arc::new(class_loader), "Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
