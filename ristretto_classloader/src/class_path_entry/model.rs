@@ -32,6 +32,7 @@ impl ClassPathEntry {
     }
 
     /// Get the name of the class path entry.
+    #[must_use]
     pub fn name(&self) -> &String {
         match self {
             ClassPathEntry::Directory(directory) => directory.name(),
@@ -50,6 +51,14 @@ impl ClassPathEntry {
             ClassPathEntry::Jar(jar) => jar.read_class(name).await,
         }
     }
+}
+
+/// Represents a Jar manifest.
+/// See: <https://docs.oracle.com/en/java/javase/22/docs/specs/jar/jar.html>
+#[derive(Debug)]
+struct Manifest {
+    class_path: String,
+    main_class: String,
 }
 
 #[cfg(test)]

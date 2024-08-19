@@ -1,16 +1,19 @@
-use crate::Error::{ArchiveError, ClassNotFound};
+use crate::class_path_entry::manifest::Manifest;
+use crate::Error::{ArchiveError, ClassNotFound, FileNotFound, ParseError};
 use crate::Result;
 use dashmap::DashMap;
 use ristretto_classfile::ClassFile;
 use std::fmt::Debug;
 use std::io;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::instrument;
 use zip::ZipArchive;
 
 /// A jar or zip in the class path.
+/// See: <https://docs.oracle.com/en/java/javase/22/docs/specs/jar/jar.html>
 #[derive(Debug)]
 pub struct Jar {
     name: String,
@@ -59,6 +62,30 @@ impl Jar {
     /// Get the name of the jar.
     pub fn name(&self) -> &String {
         &self.name
+    }
+
+    /// Get the manifest of the jar.
+    ///
+    /// # Errors
+    /// if the manifest cannot be read.
+    pub async fn manifest(&self) -> Result<Manifest> {
+        let file_name = "META-INF/MANIFEST.MF";
+        let Some(file) = self.read_file(file_name).await? else {
+            return Err(FileNotFound(file_name.to_string()));
+        };
+        let file = String::from_utf8(file).map_err(|error| ParseError(error.to_string()))?;
+        let manifest = Manifest::from_str(file.as_str())?;
+        Ok(manifest)
+    }
+
+    /// Read a file from the jar.
+    ///
+    /// # Errors
+    /// if the file is not found or cannot be read.
+    #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
+    pub async fn read_file<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
+        let mut archive = self.archive.write().await;
+        archive.load_file(name.as_ref()).await
     }
 
     /// Read a class from the jar.
@@ -195,15 +222,30 @@ impl Archive {
     #[instrument(level = "trace")]
     async fn load_class_file(&mut self, class_name: &str) -> Result<Option<ClassFile>> {
         let class_file_name = format!("{}.class", class_name.replace('.', "/"));
-        let zip_archive = self.zip_archive().await?;
-        if let Some(index) = zip_archive.index_for_name(&class_file_name) {
-            let mut file = zip_archive.by_index(index)?;
-            let mut bytes = Vec::new();
-            io::copy(&mut file, &mut bytes)?;
+        let file = self.load_file(&class_file_name).await?;
+        if let Some(bytes) = file {
             let mut cursor = io::Cursor::new(bytes);
             let class_file = ClassFile::from_bytes(&mut cursor)?;
             class_file.verify()?;
             return Ok(Some(class_file));
+        }
+        Ok(None)
+    }
+
+    /// Load file from a jar.
+    ///
+    /// # Errors
+    /// if the jar cannot be read or the class file cannot be loaded.
+    #[allow(clippy::case_sensitive_file_extension_comparisons)]
+    #[instrument(level = "trace")]
+    async fn load_file(&mut self, file_name: &str) -> Result<Option<Vec<u8>>> {
+        let zip_archive = self.zip_archive().await?;
+        if let Some(index) = zip_archive.index_for_name(file_name) {
+            let mut file = zip_archive.by_index(index)?;
+            let file_size = usize::try_from(file.size())?;
+            let mut bytes = Vec::with_capacity(file_size);
+            io::copy(&mut file, &mut bytes)?;
+            return Ok(Some(bytes));
         }
         Ok(None)
     }
@@ -227,6 +269,7 @@ impl Archive {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::class_path_entry::manifest::{MAIN_CLASS, MANIFEST_VERSION};
     use crate::Error::ClassFileError;
     use std::io::Write;
     use std::path::PathBuf;
@@ -275,6 +318,17 @@ mod tests {
         // Test class file initialization
         let result = jar.read_class("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
+        Ok(())
+    }
+
+    #[test_log::test(tokio::test)]
+    async fn test_read_manifest() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let jar = Jar::new(classes_jar.to_string_lossy());
+        let manifest = jar.manifest().await?;
+        assert_eq!(Some("1.0"), manifest.attribute(MANIFEST_VERSION));
+        assert_eq!(Some("HelloWorld"), manifest.attribute(MAIN_CLASS));
         Ok(())
     }
 

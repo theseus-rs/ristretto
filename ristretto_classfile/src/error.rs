@@ -1,7 +1,7 @@
 use std::num::TryFromIntError;
 use std::string::FromUtf8Error;
 
-/// Ristretto result type
+/// Ristretto classfile result type
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 /// Errors that can occur processing ristretto classes

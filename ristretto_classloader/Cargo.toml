@@ -3,7 +3,7 @@ authors.workspace = true
 categories.workspace = true
 description = "A library for loading Java classes."
 edition.workspace = true
-keywords = ["java", "jvm", "classloader", "class", ]
+keywords = ["java", "jvm", "classloader", "class"]
 license.workspace = true
 name = "ristretto_classloader"
 repository.workspace = true
@@ -12,9 +12,11 @@ version.workspace = true
 [dependencies]
 dashmap = { workspace = true, features = ["inline", "rayon"] }
 flate2 = { workspace = true }
+indexmap = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.6.0" }
 serde = { workspace = true, features = ["derive"] }
+serde_plain = { workspace = true }
 tar = { workspace = true }
 tempfile = { workspace = true }
 thiserror = { workspace = true }

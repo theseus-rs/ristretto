@@ -64,4 +64,5 @@ pub mod runtime;
 pub use class::Class;
 pub use class_loader::ClassLoader;
 pub use class_path::ClassPath;
+pub use class_path_entry::{manifest, ClassPathEntry, Manifest};
 pub use error::{Error, Result};
