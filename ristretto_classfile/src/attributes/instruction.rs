@@ -222,8 +222,15 @@ pub enum Instruction {
     Ifnonnull(u16),
     Goto_w(i32),
     Jsr_w(i32),
+    // Breakpoint, Impdep1 and Impdep2 instructions are reserved for debugging and implementation
+    // dependent operations.
+    // See: https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-6.html#jvms-6.2
     Breakpoint,
+    Impdep1,
+    Impdep2,
     // Wide instructions
+    // These are virtual instructions that are not part of the JVM spec but are used to
+    // represent wide instructions.
     Iload_w(u16),
     Lload_w(u16),
     Fload_w(u16),
@@ -448,6 +455,8 @@ impl Instruction {
             Instruction::Goto_w(..) => 200,          // 0xc8
             Instruction::Jsr_w(..) => 201,           // 0xc9
             Instruction::Breakpoint => 202,          // 0xca
+            Instruction::Impdep1 => 254,             // 0xfe
+            Instruction::Impdep2 => 255,             // 0xff
             // Wide instructions
             Instruction::Iload_w(..) => 196,  // 0xc4
             Instruction::Lload_w(..) => 196,  // 0xc4
@@ -753,6 +762,8 @@ impl Instruction {
                 Instruction::Jsr_w(position)
             }
             202 => Instruction::Breakpoint,
+            254 => Instruction::Impdep1,
+            255 => Instruction::Impdep2,
             _ => return Err(InvalidInstruction(code)),
         };
         Ok(instruction)
@@ -1179,6 +1190,8 @@ impl fmt::Display for Instruction {
             Instruction::Goto_w(value) => write!(f, "goto_w {value}"),
             Instruction::Jsr_w(value) => write!(f, "jsr_w {value}"),
             Instruction::Breakpoint => write!(f, "breakpoint"),
+            Instruction::Impdep1 => write!(f, "impdep1"),
+            Instruction::Impdep2 => write!(f, "impdep2"),
             // Wide instructions
             Instruction::Iload_w(value) => write!(f, "iload_w {value}"),
             Instruction::Lload_w(value) => write!(f, "lload_w {value}"),
@@ -1205,15 +1218,15 @@ mod test {
     use std::io::Read;
 
     #[test_log::test]
-    fn test_invalid_instruction() -> Result<()> {
-        let mut bytes = Vec::new();
-        let code = u8::MAX;
-        bytes.write_u8(code)?;
-
-        assert_eq!(
-            Err(InvalidInstruction(code)),
-            Instruction::from_bytes(&mut Cursor::new(bytes))
-        );
+    fn test_invalid_instructions() -> Result<()> {
+        for code in 203..253 {
+            let mut bytes = Vec::new();
+            bytes.write_u8(code)?;
+            assert_eq!(
+                Err(InvalidInstruction(code)),
+                Instruction::from_bytes(&mut Cursor::new(bytes))
+            );
+        }
         Ok(())
     }
 
@@ -3288,6 +3301,26 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("breakpoint", instruction.to_string());
+        test_instruction(&instruction, &expected_bytes, code)
+    }
+
+    #[test_log::test]
+    fn test_impdep1() -> Result<()> {
+        let instruction = Instruction::Impdep1;
+        let code = 254;
+        let expected_bytes = [code];
+
+        assert_eq!("impdep1", instruction.to_string());
+        test_instruction(&instruction, &expected_bytes, code)
+    }
+
+    #[test_log::test]
+    fn test_impdep2() -> Result<()> {
+        let instruction = Instruction::Impdep2;
+        let code = 255;
+        let expected_bytes = [code];
+
+        assert_eq!("impdep2", instruction.to_string());
         test_instruction(&instruction, &expected_bytes, code)
     }
 
