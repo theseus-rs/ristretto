@@ -234,7 +234,7 @@ checksum = "1462739cb27611015575c0c11df5df7601141071f07518d56fcc1be504cbec97"
 
 [[package]]
 name = "class_loader"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "ristretto_classloader",
  "tokio",
@@ -1087,7 +1087,7 @@ dependencies = [
 
 [[package]]
 name = "read_class"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "ristretto_classfile",
@@ -1206,7 +1206,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classfile"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1224,7 +1224,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classloader"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "criterion",
  "dashmap",
@@ -1247,7 +1247,7 @@ dependencies = [
 
 [[package]]
 name = "runtime_class_loader"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "ristretto_classloader",
  "tokio",
@@ -2075,7 +2075,7 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "write_class"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "ristretto_classfile",
 ]
