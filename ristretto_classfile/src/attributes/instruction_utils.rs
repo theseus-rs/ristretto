@@ -40,12 +40,21 @@ pub(crate) fn to_bytes(instructions: &[Instruction]) -> Result<Vec<u8>> {
             | Instruction::Goto(ref mut offset)
             | Instruction::Jsr(ref mut offset)
             | Instruction::Ifnull(ref mut offset)
-            | Instruction::Ifnonnull(ref mut offset)
-            | Instruction::Goto_w(ref mut offset)
-            | Instruction::Jsr_w(ref mut offset) => {
+            | Instruction::Ifnonnull(ref mut offset) => {
                 *offset = *instruction_to_byte_map
                     .get(offset)
                     .ok_or(InvalidInstructionOffset(u32::from(*offset)))?;
+            }
+            Instruction::Goto_w(ref mut offset) | Instruction::Jsr_w(ref mut offset) => {
+                // Note the map may need to be updated to use 32-bit offsets if/when the JVM spec
+                // is updated to support 32-bit offsets for goto_w and jsr_w.
+                // See: https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-6.html#jvms-6.5.goto_w
+                let map_offset = u16::try_from(*offset)?;
+                *offset = i32::from(
+                    *instruction_to_byte_map
+                        .get(&map_offset)
+                        .ok_or(InvalidInstructionOffset(u32::from(map_offset)))?,
+                );
             }
             Instruction::Tableswitch {
                 ref mut default,
@@ -140,12 +149,21 @@ pub(crate) fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Vec<Instruction>
             | Instruction::Goto(ref mut offset)
             | Instruction::Jsr(ref mut offset)
             | Instruction::Ifnull(ref mut offset)
-            | Instruction::Ifnonnull(ref mut offset)
-            | Instruction::Goto_w(ref mut offset)
-            | Instruction::Jsr_w(ref mut offset) => {
+            | Instruction::Ifnonnull(ref mut offset) => {
                 *offset = *byte_to_instruction_map
                     .get(offset)
                     .ok_or(InvalidInstructionOffset(u32::from(*offset)))?;
+            }
+            Instruction::Goto_w(ref mut offset) | Instruction::Jsr_w(ref mut offset) => {
+                // Note the map may need to be updated to use 32-bit offsets if/when the JVM spec
+                // is updated to support 32-bit offsets for goto_w and jsr_w.
+                // See: https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-6.html#jvms-6.5.goto_w
+                let map_offset = u16::try_from(*offset)?;
+                *offset = i32::from(
+                    *byte_to_instruction_map
+                        .get(&map_offset)
+                        .ok_or(InvalidInstructionOffset(u32::from(map_offset)))?,
+                );
             }
             Instruction::Tableswitch {
                 ref mut default,
