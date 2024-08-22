@@ -1,12 +1,11 @@
-use ristretto_classloader::{runtime, ClassLoader, Result};
-use std::sync::Arc;
+use ristretto_classloader::{runtime, Result};
 
 async fn test_runtime(version: &str, class: &str) -> Result<()> {
     let (runtime_version, class_loader) = runtime::class_loader(version).await?;
     assert!(runtime_version.starts_with(version));
     let class_name = class.replace('.', "/");
-    let class = ClassLoader::load_class(&Arc::new(class_loader), class).await?;
-    let class_file = class.get_class_file();
+    let class = class_loader.load(class).await?;
+    let class_file = class.class_file();
     assert_eq!(&class_name, class_file.class_name()?);
     Ok(())
 }

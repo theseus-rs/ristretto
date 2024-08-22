@@ -1,7 +1,9 @@
 use crate::Error::ClassNotFound;
 use crate::{Class, ClassPath, Result};
-use dashmap::DashMap;
+use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
 /// Implementation of a Java class loader.
 ///
@@ -9,19 +11,21 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct ClassLoader {
     name: String,
-    class_path: Arc<ClassPath>,
-    parent: Option<Arc<ClassLoader>>,
-    classes: DashMap<String, Arc<Class>>,
+    class_path: ClassPath,
+    parent: Option<Rc<ClassLoader>>,
+    classes: Arc<RwLock<HashMap<String, Class>>>,
 }
 
 impl ClassLoader {
     /// Create a new class loader with the given name and parent.
-    pub fn new<S: AsRef<str>>(name: S, class_path: Arc<ClassPath>) -> Self {
+    // TODO: Fix cyclic dependency between Attribute and Record in ClassFile
+    #[allow(clippy::arc_with_non_send_sync)]
+    pub fn new<S: AsRef<str>>(name: S, class_path: ClassPath) -> Self {
         Self {
             name: name.as_ref().to_string(),
             class_path,
             parent: None,
-            classes: DashMap::new(),
+            classes: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -38,40 +42,52 @@ impl ClassLoader {
     }
 
     /// Get the parent class loader.
-    pub fn parent(&self) -> Option<Arc<ClassLoader>> {
-        self.parent.as_ref().map(Arc::clone)
+    #[must_use]
+    pub fn parent(&self) -> Option<&ClassLoader> {
+        if let Some(parent) = self.parent.as_ref() {
+            return Some(parent);
+        }
+        None
     }
 
     /// Set the parent class loader.
-    pub fn set_parent(&mut self, parent: Option<Arc<ClassLoader>>) {
-        self.parent = parent;
+    pub fn set_parent(&mut self, parent: Option<ClassLoader>) {
+        if let Some(parent) = parent {
+            self.parent = Some(Rc::new(parent));
+        } else {
+            self.parent = None;
+        }
     }
 
     /// Load a class by name.
     ///
     /// # Errors
     /// if the class file cannot be read.
-    pub async fn load_class<S: AsRef<str>>(loader: &Arc<Self>, name: S) -> Result<Arc<Class>> {
+    pub async fn load<S: AsRef<str>>(&self, name: S) -> Result<Class> {
         let name = name.as_ref();
-        if let Some(class) = loader.classes.get(name) {
-            return Ok(Arc::clone(&class));
+
+        {
+            let classes = self.classes.read().await;
+            if let Some(class) = classes.get(name) {
+                return Ok(class.clone());
+            }
         }
 
         // Convert hierarchy of class loaders to a flat list.
-        let mut class_loader = Arc::clone(loader);
-        let mut class_loaders = vec![Arc::clone(&class_loader)];
+        let mut class_loader = self;
+        let mut class_loaders = vec![class_loader];
         while let Some(parent) = class_loader.parent() {
             class_loader = parent;
-            class_loaders.push(Arc::clone(&class_loader));
+            class_loaders.push(parent);
         }
 
         // Iterate over class loaders in reverse order.
         for class_loader in class_loaders.into_iter().rev() {
-            if let Ok(class_file) = class_loader.class_path.read_class(name).await {
-                let class = Arc::new(Class::new(class_loader.clone(), class_file));
-                class_loader
-                    .classes
-                    .insert(name.to_string(), Arc::clone(&class));
+            let class_path = class_loader.class_path();
+            if let Ok(class_file) = class_path.read_class(name).await {
+                let class = Class::new(class_loader.clone(), class_file);
+                let mut classes = class_loader.classes.write().await;
+                classes.insert(name.to_string(), class.clone());
                 return Ok(class);
             }
         }
@@ -80,11 +96,23 @@ impl ClassLoader {
     }
 }
 
+impl Clone for ClassLoader {
+    /// Clone the class loader.
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            class_path: self.class_path.clone(),
+            parent: self.parent.as_ref().map(Clone::clone),
+            classes: Arc::clone(&self.classes),
+        }
+    }
+}
+
 /// Implement equality for class loaders.
 impl PartialEq for ClassLoader {
     /// Compare class loaders by name.
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.parent() == other.parent()
+        self.name == other.name
     }
 }
 
@@ -96,7 +124,7 @@ mod tests {
     #[test_log::test]
     fn test_new() {
         let name = "test";
-        let class_path = Arc::new(ClassPath::from("."));
+        let class_path = ClassPath::from(".");
         let class_loader = ClassLoader::new(name, class_path);
         assert_eq!(name, class_loader.name());
         assert_eq!(&ClassPath::from("."), class_loader.class_path());
@@ -105,29 +133,29 @@ mod tests {
 
     #[test_log::test]
     fn test_equality() {
-        let class_path1 = Arc::new(ClassPath::from("."));
+        let class_path1 = ClassPath::from(".");
         let class_loader1 = ClassLoader::new("test", class_path1);
-        let class_path2 = Arc::new(ClassPath::from("."));
+        let class_path2 = ClassPath::from(".");
         let class_loader2 = ClassLoader::new("test", class_path2);
         assert_eq!(class_loader1, class_loader2);
     }
 
     #[test_log::test]
     fn test_inequality() {
-        let class_path1 = Arc::new(ClassPath::from("."));
+        let class_path1 = ClassPath::from(".");
         let class_loader1 = ClassLoader::new("test1", class_path1);
-        let class_path2 = Arc::new(ClassPath::from("."));
+        let class_path2 = ClassPath::from(".");
         let class_loader2 = ClassLoader::new("test2", class_path2);
         assert_ne!(class_loader1, class_loader2);
     }
 
     #[test_log::test]
     fn test_set_parent() {
-        let class_path1 = Arc::new(ClassPath::from("."));
+        let class_path1 = ClassPath::from(".");
         let mut class_loader1 = ClassLoader::new("test1", class_path1);
-        let class_path2 = Arc::new(ClassPath::from("."));
+        let class_path2 = ClassPath::from(".");
         let class_loader2 = ClassLoader::new("test2", class_path2);
-        class_loader1.set_parent(Some(Arc::new(class_loader2)));
+        class_loader1.set_parent(Some(class_loader2));
         assert_eq!("test2", class_loader1.parent().expect("parent").name());
     }
 
@@ -137,16 +165,16 @@ mod tests {
         let classes_directory = cargo_manifest.join("../classes");
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
 
-        let class_path = Arc::new(ClassPath::from(class_path_entries.join(":")));
-        let class_loader = Arc::new(ClassLoader::new("test", class_path));
+        let class_path = ClassPath::from(class_path_entries.join(":"));
+        let class_loader = ClassLoader::new("test", class_path);
         let class_name = "HelloWorld";
-        let class = ClassLoader::load_class(&class_loader, class_name).await?;
-        let class_file = class.get_class_file();
+        let class = class_loader.load(class_name).await?;
+        let class_file = class.class_file();
         assert_eq!(class_name, class_file.class_name()?);
 
         // Load the same class again to test caching
-        let class = ClassLoader::load_class(&class_loader, class_name).await?;
-        let class_file = class.get_class_file();
+        let class = class_loader.load(class_name).await?;
+        let class_file = class.class_file();
         assert_eq!(class_name, class_file.class_name()?);
         Ok(())
     }
@@ -156,24 +184,23 @@ mod tests {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
-        let class_path = Arc::new(ClassPath::from(class_path_entries.join(":")));
+        let class_path = ClassPath::from(class_path_entries.join(":"));
         let boot_class_loader = ClassLoader::new("test", class_path);
-        let foo_class_path = Arc::new(ClassPath::from("foo"));
+        let foo_class_path = ClassPath::from("foo");
         let mut class_loader = ClassLoader::new("test", foo_class_path);
-        class_loader.set_parent(Some(Arc::new(boot_class_loader)));
+        class_loader.set_parent(Some(boot_class_loader));
 
-        let class = ClassLoader::load_class(&Arc::new(class_loader), "HelloWorld").await?;
-        let class_file = class.get_class_file();
+        let class = class_loader.load("HelloWorld").await?;
+        let class_file = class.class_file();
         assert_eq!("HelloWorld", class_file.class_name()?);
         Ok(())
     }
 
     #[test_log::test(tokio::test)]
-    async fn test_load_class_not_found() -> Result<()> {
-        let class_path = Arc::new(ClassPath::from("."));
+    async fn test_load_class_not_found() {
+        let class_path = ClassPath::from(".");
         let class_loader = ClassLoader::new("test", class_path);
-        let result = ClassLoader::load_class(&Arc::new(class_loader), "Foo").await;
+        let result = class_loader.load("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
-        Ok(())
     }
 }

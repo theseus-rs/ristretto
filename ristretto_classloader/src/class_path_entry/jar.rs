@@ -1,7 +1,6 @@
 use crate::class_path_entry::manifest::Manifest;
 use crate::Error::{ArchiveError, ClassNotFound, FileNotFound, ParseError};
 use crate::Result;
-use dashmap::DashMap;
 use ristretto_classfile::ClassFile;
 use std::fmt::Debug;
 use std::io;
@@ -18,7 +17,6 @@ use zip::ZipArchive;
 pub struct Jar {
     name: String,
     archive: Arc<RwLock<Archive>>,
-    class_files: DashMap<String, Arc<ClassFile>>,
 }
 
 /// Implement the `Jar` struct.
@@ -31,7 +29,6 @@ impl Jar {
         Self {
             name: path.to_string(),
             archive: Arc::new(RwLock::new(archive)),
-            class_files: DashMap::new(),
         }
     }
 
@@ -44,7 +41,6 @@ impl Jar {
         Self {
             name: url.to_string(),
             archive: Arc::new(RwLock::new(archive)),
-            class_files: DashMap::new(),
         }
     }
 
@@ -55,7 +51,6 @@ impl Jar {
         Self {
             name: name.as_ref().to_string(),
             archive: Arc::new(RwLock::new(archive)),
-            class_files: DashMap::new(),
         }
     }
 
@@ -93,12 +88,8 @@ impl Jar {
     /// # Errors
     /// if the class file is not found or cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
-    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<Arc<ClassFile>> {
+    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         let name = name.as_ref();
-        if let Some(class_file) = self.class_files.get(name) {
-            return Ok(Arc::clone(class_file.value()));
-        }
-
         let mut archive = self.archive.write().await;
         let class_file = if archive.is_module().await? {
             let name = format!("classes.{name}");
@@ -106,14 +97,10 @@ impl Jar {
         } else {
             archive.load_class_file(name).await?
         };
-        if let Some(class_file) = class_file {
-            let class_file = Arc::new(class_file);
-            self.class_files
-                .insert(name.to_string(), class_file.clone());
-            return Ok(class_file);
-        }
-
-        Err(ClassNotFound(name.to_string()))
+        let Some(class_file) = class_file else {
+            return Err(ClassNotFound(name.to_string()));
+        };
+        Ok(class_file)
     }
 }
 
@@ -262,6 +249,16 @@ impl Archive {
             let is_module = module_info.is_some();
             self.is_module = Some(is_module);
             Ok(is_module)
+        }
+    }
+}
+
+impl Clone for Jar {
+    /// Clone the jar.
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            archive: Arc::clone(&self.archive),
         }
     }
 }

@@ -1,19 +1,16 @@
 use crate::Error::ClassNotFound;
 use crate::Result;
-use dashmap::DashMap;
 use ristretto_classfile::ClassFile;
 use std::fmt::Debug;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::{fs, io};
 use tracing::instrument;
 
 /// A directory in the class path.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Directory {
     name: String,
     path: PathBuf,
-    class_files: DashMap<String, Arc<ClassFile>>,
 }
 
 /// Implement the `Directory` struct.
@@ -24,7 +21,6 @@ impl Directory {
         Self {
             name: path.to_string(),
             path: PathBuf::from(path),
-            class_files: DashMap::new(),
         }
     }
 
@@ -38,12 +34,8 @@ impl Directory {
     /// # Errors
     /// if the class file is not found or cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
-    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<Arc<ClassFile>> {
+    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         let name = name.as_ref();
-        if let Some(class_file) = self.class_files.get(name) {
-            return Ok(Arc::clone(class_file.value()));
-        }
-
         let parts = name.split('.').collect::<Vec<_>>();
         let path = self.path.clone();
         let path = parts.iter().fold(path, |path, part| path.join(part));
@@ -55,9 +47,7 @@ impl Directory {
 
         let bytes = fs::read(path)?;
         let mut cursor = io::Cursor::new(bytes);
-        let class_file = Arc::new(ClassFile::from_bytes(&mut cursor)?);
-        self.class_files
-            .insert(name.to_string(), Arc::clone(&class_file));
+        let class_file = ClassFile::from_bytes(&mut cursor)?;
         Ok(class_file)
     }
 }
