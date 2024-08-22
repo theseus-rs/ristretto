@@ -1,4 +1,4 @@
-use ristretto_classfile::ClassFile;
+use ristretto_classfile::{ClassFile, ConstantPool};
 use std::fmt::Debug;
 
 /// A representation of a Java class.
@@ -18,6 +18,22 @@ impl Class {
     #[must_use]
     pub fn class_file(&self) -> &ClassFile {
         &self.class_file
+    }
+
+    /// Get a mutable class file.
+    pub fn class_file_mut(&mut self) -> &mut ClassFile {
+        &mut self.class_file
+    }
+
+    /// Get the constant pool
+    #[must_use]
+    pub fn constant_pool(&self) -> &ConstantPool {
+        &self.class_file.constant_pool
+    }
+
+    /// Get a mutable constant pool
+    pub fn constant_pool_mut(&mut self) -> &mut ConstantPool {
+        &mut self.class_file.constant_pool
     }
 }
 

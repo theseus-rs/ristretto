@@ -11,7 +11,7 @@
 //! that is used to load Java classes. Classes can be loaded from the file system or from a URL;
 //! jar and modules are supported.  A runtime Java class loader can be created from any version of
 //! [AWS Corretto](https://github.com/corretto).  The runtime class loader will download and install
-//! the requested version of Corretto into and create a class loader that can be used to load Java
+//! the requested version of Corretto and create a class loader that can be used to load Java
 //! classes.
 //!
 //! The AWS Corretto runtime is installed in the following directory:

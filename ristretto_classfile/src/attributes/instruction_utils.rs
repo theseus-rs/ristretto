@@ -223,6 +223,7 @@ pub(crate) fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Vec<Instruction>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use indexmap::IndexMap;
 
     #[test_log::test]
     fn test_to_bytes() -> Result<()> {
@@ -281,7 +282,7 @@ mod tests {
     fn test_to_bytes_invalid_lookup_switch_default_offset() {
         let instructions = vec![Instruction::Lookupswitch {
             default: 42,
-            pairs: vec![],
+            pairs: IndexMap::new(),
         }];
         let result = to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
@@ -293,7 +294,7 @@ mod tests {
             Instruction::Nop,
             Instruction::Lookupswitch {
                 default: 0,
-                pairs: vec![(0, 42)],
+                pairs: IndexMap::from([(0, 42)]),
             },
         ];
         let result = to_bytes(&instructions);
@@ -554,7 +555,7 @@ mod tests {
     fn test_lookupswitch() -> Result<()> {
         let instruction = Instruction::Lookupswitch {
             default: 3,
-            pairs: vec![(1, 2)],
+            pairs: IndexMap::from([(1, 2)]),
         };
         let expected_bytes = [
             instruction.code(),

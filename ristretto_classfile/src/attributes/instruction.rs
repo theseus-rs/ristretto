@@ -3,6 +3,7 @@ use crate::error::Error::InvalidInstruction;
 use crate::error::Result;
 use crate::Error::InvalidWideInstruction;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use indexmap::IndexMap;
 use std::fmt;
 use std::io::Cursor;
 
@@ -190,7 +191,7 @@ pub enum Instruction {
     },
     Lookupswitch {
         default: i32,
-        pairs: Vec<(i32, i32)>,
+        pairs: IndexMap<i32, i32>,
     },
     Ireturn,
     Lreturn,
@@ -229,7 +230,7 @@ pub enum Instruction {
     Impdep1,
     Impdep2,
     // Wide instructions
-    // These are virtual instructions that are not part of the JVM spec but are used to
+    // These are virtual instructions that are not part of the JVM spec but are used internally to
     // represent wide instructions.
     Iload_w(u16),
     Lload_w(u16),
@@ -682,11 +683,11 @@ impl Instruction {
                 }
                 let default = bytes.read_i32::<BigEndian>()?;
                 let npairs = bytes.read_i32::<BigEndian>()?;
-                let mut pairs = Vec::new();
+                let mut pairs = IndexMap::new();
                 for _ in 0..npairs {
                     let match_ = bytes.read_i32::<BigEndian>()?;
                     let offset = bytes.read_i32::<BigEndian>()?;
-                    pairs.push((match_, offset));
+                    pairs.insert(match_, offset);
                 }
                 Instruction::Lookupswitch { default, pairs }
             }
@@ -2972,7 +2973,7 @@ mod test {
     fn test_lookupswitch() -> Result<()> {
         let instruction = Instruction::Lookupswitch {
             default: 42,
-            pairs: vec![(1, 2)],
+            pairs: IndexMap::from([(1, 2)]),
         };
         let code = 171;
         let expected_bytes = [
