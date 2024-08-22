@@ -1042,7 +1042,7 @@ impl fmt::Display for Attribute {
                         } => {
                             let position = i32::try_from(index).map_err(|_| fmt::Error)?;
                             *default += position;
-                            for (_match, offset) in pairs {
+                            for offset in pairs.values_mut() {
                                 *offset += position;
                             }
                         }
