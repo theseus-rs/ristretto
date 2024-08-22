@@ -18,8 +18,6 @@ pub struct ClassLoader {
 
 impl ClassLoader {
     /// Create a new class loader with the given name and parent.
-    // TODO: Fix cyclic dependency between Attribute and Record in ClassFile
-    #[allow(clippy::arc_with_non_send_sync)]
     pub fn new<S: AsRef<str>>(name: S, class_path: ClassPath) -> Self {
         Self {
             name: name.as_ref().to_string(),
@@ -65,7 +63,6 @@ impl ClassLoader {
     /// if the class file cannot be read.
     pub async fn load<S: AsRef<str>>(&self, name: S) -> Result<Class> {
         let name = name.as_ref();
-
         {
             let classes = self.classes.read().await;
             if let Some(class) = classes.get(name) {
@@ -85,8 +82,8 @@ impl ClassLoader {
         for class_loader in class_loaders.into_iter().rev() {
             let class_path = class_loader.class_path();
             if let Ok(class_file) = class_path.read_class(name).await {
-                let class = Class::new(class_loader.clone(), class_file);
-                let mut classes = class_loader.classes.write().await;
+                let class = Class::new(class_file);
+                let mut classes = self.classes.write().await;
                 classes.insert(name.to_string(), class.clone());
                 return Ok(class);
             }
