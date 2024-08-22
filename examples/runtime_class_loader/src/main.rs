@@ -1,8 +1,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
 
-use ristretto_classloader::{runtime, ClassLoader, Result};
-use std::sync::Arc;
+use ristretto_classloader::{runtime, Result};
 
 /// Example that loads a class from the Java runtime.
 #[tokio::main]

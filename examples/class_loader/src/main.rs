@@ -2,7 +2,6 @@
 #![deny(clippy::pedantic)]
 
 use ristretto_classloader::{ClassLoader, ClassPath, Result};
-use std::sync::Arc;
 
 /// Example that uses a class loader to load a class.
 #[tokio::main]
