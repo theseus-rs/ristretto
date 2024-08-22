@@ -3,13 +3,12 @@ use crate::Error::ClassNotFound;
 use crate::Result;
 use ristretto_classfile::ClassFile;
 use std::fmt::Display;
-use std::sync::Arc;
 use tracing::instrument;
 
 /// Represents a class path.
 ///
 /// The class path is a list of directories and JAR files that contain class files.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ClassPath {
     class_path: Vec<ClassPathEntry>,
 }
@@ -50,7 +49,7 @@ impl ClassPath {
     /// # Errors
     /// if the class file is not found or cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
-    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<Arc<ClassFile>> {
+    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         let name = name.as_ref();
 
         for class_path_entry in self.iter() {

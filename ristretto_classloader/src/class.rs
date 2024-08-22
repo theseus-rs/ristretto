@@ -1,18 +1,17 @@
 use crate::ClassLoader;
 use ristretto_classfile::ClassFile;
 use std::fmt::Debug;
-use std::sync::Arc;
 
 /// A class loaded by the class loader.
 pub struct Class {
-    class_loader: Arc<ClassLoader>,
-    class_file: Arc<ClassFile>,
+    class_loader: ClassLoader,
+    class_file: ClassFile,
 }
 
 impl Class {
     /// Create a new class with the given class file.
     #[must_use]
-    pub fn new(class_loader: Arc<ClassLoader>, class_file: Arc<ClassFile>) -> Self {
+    pub fn new(class_loader: ClassLoader, class_file: ClassFile) -> Self {
         Self {
             class_loader,
             class_file,
@@ -21,14 +20,24 @@ impl Class {
 
     /// Get the class loader.
     #[must_use]
-    fn get_class_loader(&self) -> Arc<ClassLoader> {
-        Arc::clone(&self.class_loader)
+    fn class_loader(&self) -> &ClassLoader {
+        &self.class_loader
     }
 
     /// Get the class file.
     #[must_use]
-    pub fn get_class_file(&self) -> Arc<ClassFile> {
-        Arc::clone(&self.class_file)
+    pub fn class_file(&self) -> &ClassFile {
+        &self.class_file
+    }
+}
+
+impl Clone for Class {
+    /// Clone the class.
+    fn clone(&self) -> Self {
+        Self {
+            class_loader: self.class_loader.clone(),
+            class_file: self.class_file.clone(),
+        }
     }
 }
 
@@ -53,24 +62,24 @@ mod tests {
     #[test_log::test]
     fn test_new() -> Result<()> {
         let class_path = ClassPath::from(".");
-        let class_loader = ClassLoader::new("test", Arc::new(class_path));
+        let class_loader = ClassLoader::new("test", class_path);
         let bytes = include_bytes!("../../classes/Simple.class").to_vec();
         let mut cursor = Cursor::new(bytes);
         let class_file = ClassFile::from_bytes(&mut cursor)?;
-        let class = Class::new(Arc::new(class_loader), Arc::new(class_file));
-        assert_eq!("test", class.get_class_loader().name());
-        assert_eq!("Simple", class.get_class_file().class_name()?);
+        let class = Class::new(class_loader, class_file);
+        assert_eq!("test", class.class_loader().name());
+        assert_eq!("Simple", class.class_file().class_name()?);
         Ok(())
     }
 
     #[test_log::test]
     fn test_debug() -> Result<()> {
         let class_path = ClassPath::from(".");
-        let class_loader = ClassLoader::new("test", Arc::new(class_path));
+        let class_loader = ClassLoader::new("test", class_path);
         let bytes = include_bytes!("../../classes/Minimum.class").to_vec();
         let mut cursor = Cursor::new(bytes);
         let class_file = ClassFile::from_bytes(&mut cursor)?;
-        let class = Class::new(Arc::new(class_loader), Arc::new(class_file));
+        let class = Class::new(class_loader, class_file);
         let debug = format!("{class:?}");
         assert_eq!(
             debug,

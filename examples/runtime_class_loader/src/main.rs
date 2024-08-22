@@ -10,7 +10,7 @@ async fn main() -> Result<()> {
     let (version, class_loader) = runtime::class_loader("21").await?;
     let class_name = "java.util.HashMap";
     println!("Loading {class_name} from Java runtime {version}");
-    let class = ClassLoader::load_class(&Arc::new(class_loader), class_name).await?;
+    let class = class_loader.load(class_name).await?;
     println!("{class:?}");
     Ok(())
 }

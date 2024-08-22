@@ -2,7 +2,6 @@ use crate::runtime::util;
 use crate::{ClassLoader, ClassPath, Error, Result};
 use flate2::bufread::GzDecoder;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::{env, io};
 use tar::Archive;
 use tracing::{debug, instrument};
@@ -32,7 +31,7 @@ pub async fn class_loader(version: &str) -> Result<(String, ClassLoader)> {
     }
 
     let class_path = get_class_path(&archive_version, &installation_dir)?;
-    let class_loader = ClassLoader::new("bootstrap", Arc::new(class_path));
+    let class_loader = ClassLoader::new("bootstrap", class_path);
     Ok((archive_version, class_loader))
 }
 

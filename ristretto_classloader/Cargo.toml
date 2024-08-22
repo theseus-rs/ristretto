@@ -10,7 +10,6 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-dashmap = { workspace = true, features = ["inline", "rayon"] }
 flate2 = { workspace = true }
 indexmap = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }

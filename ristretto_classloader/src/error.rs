@@ -22,6 +22,9 @@ pub enum Error {
     /// Error parsing data
     #[error("Parse error: {0}")]
     ParseError(String),
+    /// Poisoned lock
+    #[error("Poisoned lock: {0}")]
+    PoisonedLock(String),
     /// An error occurred while performing a request
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),
