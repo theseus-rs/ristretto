@@ -7,8 +7,7 @@ use std::io::Cursor;
 
 /// Implementation of `StackFrame`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.4>
-#[allow(non_camel_case_types)]
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.4>
 #[derive(Clone, Debug, PartialEq)]
 pub enum StackFrame {
     SameFrame {
@@ -140,7 +139,6 @@ impl StackFrame {
     /// # Errors
     /// - If the number of locals or stack items exceeds 65,534.
     /// - If a stack frame fails to serialize.
-    #[allow(clippy::match_same_arms)]
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         match self {
             StackFrame::SameFrame { frame_type } => {
@@ -303,7 +301,7 @@ mod test {
     use super::*;
     use indoc::indoc;
 
-    #[test_log::test]
+    #[test]
     fn test_invalid_stack_frame() -> Result<()> {
         let mut bytes = Vec::new();
         let frame_type = 128;
@@ -326,7 +324,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_same_frame() -> Result<()> {
         let frame_type = 0;
         let stack_frame = StackFrame::SameFrame { frame_type: 0 };
@@ -340,7 +338,7 @@ mod test {
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_same_locales_1_stack_item_frame() -> Result<()> {
         let frame_type = 64;
         let stack_frame = StackFrame::SameLocals1StackItemFrame {
@@ -359,7 +357,7 @@ mod test {
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_same_locales_1_stack_item_frame_extended() -> Result<()> {
         let frame_type = 247;
         let stack_frame = StackFrame::SameLocals1StackItemFrameExtended {
@@ -380,7 +378,7 @@ mod test {
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_chop_frame() -> Result<()> {
         let frame_type = 248;
         let stack_frame = StackFrame::ChopFrame {
@@ -399,7 +397,7 @@ mod test {
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_same_frame_extended() -> Result<()> {
         let frame_type = 251;
         let stack_frame = StackFrame::SameFrameExtended {
@@ -418,7 +416,7 @@ mod test {
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_append_frame() -> Result<()> {
         let frame_type = 252;
         let stack_frame = StackFrame::AppendFrame {
@@ -439,7 +437,7 @@ mod test {
         test_stack_frame(&stack_frame, &expected_bytes)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_full_frame() -> Result<()> {
         let frame_type = 255;
         let stack_frame = StackFrame::FullFrame {

@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of an annotation value pair.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.16>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.16>
 #[derive(Clone, Debug, PartialEq)]
 pub struct AnnotationValuePair {
     pub name_index: u16,
@@ -46,7 +46,7 @@ impl fmt::Display for AnnotationValuePair {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         let annotation_value_pair = AnnotationValuePair {
             name_index: 1,
@@ -61,7 +61,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let annotation_value_pair = AnnotationValuePair {
             name_index: 1,

@@ -8,7 +8,7 @@ const JAVA_PREVIEW_MINOR_VERSION: u16 = 65535;
 
 /// Implementation of Version based on `ClassFile` format for major/minor versions.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.1>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.1>
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum Version {
     Java1_0_2 { minor: u16 },
@@ -142,6 +142,12 @@ impl Version {
         }
     }
 
+    /// Returns the major version for Java (e.g. 8 for Java 8).
+    #[must_use]
+    pub fn java(&self) -> u16 {
+        self.major() - 44
+    }
+
     /// Returns true if the current major version supports the given version.
     #[must_use]
     pub fn supports(self, version: &Version) -> bool {
@@ -192,7 +198,7 @@ impl Version {
 
 impl Default for Version {
     fn default() -> Self {
-        Version::Java21 { minor: 0 }
+        Version::Java1_0_2 { minor: 0 }
     }
 }
 
@@ -236,7 +242,7 @@ mod test {
     const MIN_MAJOR: u16 = 45;
     const MAX_MAJOR: u16 = 68;
 
-    #[test_log::test]
+    #[test]
     fn all_known_versions() -> Result<()> {
         let versions = [
             Version::Java1_0_2 { minor: 0 },
@@ -277,12 +283,13 @@ mod test {
             assert!(version.to_string().starts_with("Java "));
             assert_eq!(major, MIN_MAJOR + index);
             assert_eq!(version.minor(), 0);
+            assert_eq!(version.java(), version.major() - 44);
         }
 
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from() -> Result<()> {
         for major in MIN_MAJOR..=MAX_MAJOR {
             // Test with minor version 0
@@ -295,7 +302,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from_invalid_version() {
         assert_eq!(
             Err(InvalidVersion {
@@ -313,26 +320,26 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_major() {
         let version = Version::Java21 { minor: 0 };
         assert_eq!(version.major(), 65);
     }
 
-    #[test_log::test]
+    #[test]
     fn test_minor() {
         let minor = 3;
         let version = Version::Java11 { minor };
         assert_eq!(version.minor(), minor);
     }
 
-    #[test_log::test]
+    #[test]
     fn test_supports() {
         assert!(Version::Java11 { minor: 0 }.supports(&Version::Java5_0 { minor: 0 }));
         assert!(!Version::Java5_0 { minor: 0 }.supports(&Version::Java11 { minor: 0 }));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_is_preview() {
         assert!(!Version::Java11 { minor: 0 }.is_preview());
         assert!(Version::Java21 {
@@ -341,13 +348,13 @@ mod test {
         .is_preview());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_default() {
         let version = Version::default();
-        assert_eq!(version, Version::Java21 { minor: 0 });
+        assert_eq!(version, Version::Java1_0_2 { minor: 0 });
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let version = Version::Java21 {
             minor: JAVA_PREVIEW_MINOR_VERSION,

@@ -5,7 +5,7 @@ use std::io::Cursor;
 
 /// Implementation of `CodeException`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.3>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.3>
 #[derive(Clone, Debug, PartialEq)]
 pub struct CodeException {
     pub start_pc: u16,
@@ -60,7 +60,7 @@ impl fmt::Display for CodeException {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         let code_exception = CodeException {
             start_pc: 1,
@@ -74,7 +74,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let bootstrap_method = CodeException {
             start_pc: 1,

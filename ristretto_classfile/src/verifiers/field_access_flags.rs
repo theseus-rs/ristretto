@@ -42,7 +42,7 @@ mod test {
     use crate::class_file::ClassFile;
     use crate::{BaseType, FieldType};
 
-    #[test_log::test]
+    #[test]
     fn test_interface_success() {
         let class_file = ClassFile {
             access_flags: ClassAccessFlags::INTERFACE,
@@ -77,7 +77,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_class_invalid_flag() {
         test_invalid_flag_error(
             FieldAccessFlags::PUBLIC | FieldAccessFlags::PROTECTED | FieldAccessFlags::PRIVATE,
@@ -87,7 +87,7 @@ mod test {
         test_invalid_flag_error(FieldAccessFlags::PROTECTED | FieldAccessFlags::PRIVATE);
     }
 
-    #[test_log::test]
+    #[test]
     fn test_interface_invalid_signature() {
         let class_file = ClassFile {
             access_flags: ClassAccessFlags::INTERFACE,
@@ -123,7 +123,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_interface_invalid_flag() {
         test_interface_invalid_flag_error(FieldAccessFlags::PRIVATE);
         test_interface_invalid_flag_error(FieldAccessFlags::PROTECTED);
@@ -132,7 +132,7 @@ mod test {
         test_interface_invalid_flag_error(FieldAccessFlags::ENUM);
     }
 
-    #[test_log::test]
+    #[test]
     fn test_class_success() {
         let class_file = ClassFile::default();
         let field = Field {
@@ -146,7 +146,7 @@ mod test {
         assert_eq!(Ok(()), verify(&class_file, &field));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_class_final_and_volatile_error() {
         let class_file = ClassFile::default();
         let field = Field {

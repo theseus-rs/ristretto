@@ -5,7 +5,7 @@ use std::io::Cursor;
 
 /// Implementation of `Provides`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.25>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.25>
 #[derive(Clone, Debug, PartialEq)]
 pub struct Provides {
     pub index: u16,
@@ -59,7 +59,7 @@ impl fmt::Display for Provides {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         let provides = Provides {
             index: 1,
@@ -68,7 +68,7 @@ mod test {
         assert_eq!("Provides[index=1, with_index=[2]]", provides.to_string());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let provides = Provides {
             index: 1,

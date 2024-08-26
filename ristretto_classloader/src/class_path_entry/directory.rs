@@ -34,7 +34,7 @@ impl Directory {
     /// # Errors
     /// if the class file is not found or cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
-    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
+    pub fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         let name = name.as_ref();
         let parts = name.split('.').collect::<Vec<_>>();
         let path = self.path.clone();
@@ -64,54 +64,52 @@ impl PartialEq for Directory {
 mod tests {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_new() {
         let directory = Directory::new("test");
         assert_eq!("test", directory.name());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_equality() {
         let directory1 = Directory::new("test");
         let directory2 = Directory::new("test");
         assert_eq!(directory1, directory2);
     }
 
-    #[test_log::test]
+    #[test]
     fn test_inequality() {
         let directory1 = Directory::new("test1");
         let directory2 = Directory::new("test2");
         assert_ne!(directory1, directory2);
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_read_class_invalid_directory() -> Result<()> {
+    #[test]
+    fn test_read_class_invalid_directory() {
         let directory = Directory::new("foo");
-        let result = directory.read_class("HelloWorld").await;
+        let result = directory.read_class("HelloWorld");
         assert!(matches!(result, Err(ClassNotFound(_))));
-        Ok(())
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_read_class() -> Result<()> {
+    #[test]
+    fn test_read_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
         let directory = Directory::new(classes_directory.to_string_lossy());
         // Read the class file twice to test caching
         for _ in 0..2 {
-            let class_file = directory.read_class("HelloWorld").await?;
+            let class_file = directory.read_class("HelloWorld")?;
             assert_eq!("HelloWorld", class_file.class_name()?);
         }
         Ok(())
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_read_class_invalid_class_name() -> Result<()> {
+    #[test]
+    fn test_read_class_invalid_class_name() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
         let directory = Directory::new(classes_directory.to_string_lossy());
-        let result = directory.read_class("Foo").await;
+        let result = directory.read_class("Foo");
         assert!(matches!(result, Err(ClassNotFound(_))));
-        Ok(())
     }
 }

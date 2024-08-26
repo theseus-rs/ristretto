@@ -53,7 +53,7 @@ mod test {
     use super::*;
     use crate::class_file::ClassFile;
 
-    #[test_log::test]
+    #[test]
     fn test_verify_this_class_success() -> Result<()> {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
@@ -63,7 +63,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_this_class_invalid_index() {
         let class_file = ClassFile {
             this_class: u16::MAX,
@@ -75,7 +75,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_this_class_invalid_index_type() -> Result<()> {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
@@ -89,7 +89,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_super_class_success() -> Result<()> {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
@@ -99,7 +99,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_super_class_zero() {
         let class_file = ClassFile {
             super_class: 0,
@@ -108,7 +108,7 @@ mod test {
         assert_eq!(Ok(()), verify_super_class(&class_file));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_super_class_invalid_index() {
         let class_file = ClassFile {
             super_class: u16::MAX,
@@ -120,7 +120,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_super_class_invalid_index_type() -> Result<()> {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
@@ -134,7 +134,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_super_class_interface_invalid() {
         let class_file = ClassFile {
             access_flags: ClassAccessFlags::INTERFACE,

@@ -8,7 +8,6 @@ use std::io::Cursor;
 /// idiomatic way to represent the instructions, but the JVM uses a byte representation.  This
 /// function converts the instruction enums to a byte representation and adjusts offsets where
 /// necessary.
-#[allow(clippy::too_many_lines)]
 pub(crate) fn to_bytes(instructions: &[Instruction]) -> Result<Vec<u8>> {
     let mut bytes = Cursor::new(Vec::new());
     let mut instruction_to_byte_map = HashMap::new();
@@ -48,7 +47,7 @@ pub(crate) fn to_bytes(instructions: &[Instruction]) -> Result<Vec<u8>> {
             Instruction::Goto_w(ref mut offset) | Instruction::Jsr_w(ref mut offset) => {
                 // Note the map may need to be updated to use 32-bit offsets if/when the JVM spec
                 // is updated to support 32-bit offsets for goto_w and jsr_w.
-                // See: https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-6.html#jvms-6.5.goto_w
+                // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.goto_w
                 let map_offset = u16::try_from(*offset)?;
                 *offset = i32::from(
                     *instruction_to_byte_map
@@ -116,7 +115,6 @@ pub(crate) fn to_bytes(instructions: &[Instruction]) -> Result<Vec<u8>> {
 /// Converts a vector of bytes to a vector of instructions. Using the instruction enum is a more
 /// idiomatic way to represent the instructions, but the JVM uses a byte representation.  This
 /// function converts bytes to instruction enums and adjusts offsets where necessary.
-#[allow(clippy::too_many_lines)]
 pub(crate) fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Vec<Instruction>> {
     let mut instructions = Vec::new();
     let mut byte_to_instruction_map = HashMap::new();
@@ -157,7 +155,7 @@ pub(crate) fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Vec<Instruction>
             Instruction::Goto_w(ref mut offset) | Instruction::Jsr_w(ref mut offset) => {
                 // Note the map may need to be updated to use 32-bit offsets if/when the JVM spec
                 // is updated to support 32-bit offsets for goto_w and jsr_w.
-                // See: https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-6.html#jvms-6.5.goto_w
+                // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.goto_w
                 let map_offset = u16::try_from(*offset)?;
                 *offset = i32::from(
                     *byte_to_instruction_map
@@ -225,7 +223,7 @@ mod tests {
     use super::*;
     use indexmap::IndexMap;
 
-    #[test_log::test]
+    #[test]
     fn test_to_bytes() -> Result<()> {
         let instructions = vec![
             Instruction::Iconst_0,
@@ -244,14 +242,14 @@ mod tests {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_to_bytes_invalid() {
         let instructions = vec![Instruction::Iflt(42)];
         let result = to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_to_bytes_invalid_table_switch_default_offset() {
         let instructions = vec![Instruction::Tableswitch {
             default: 42,
@@ -263,7 +261,7 @@ mod tests {
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_to_bytes_invalid_table_switch_offset() {
         let instructions = vec![
             Instruction::Nop,
@@ -278,7 +276,7 @@ mod tests {
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_to_bytes_invalid_lookup_switch_default_offset() {
         let instructions = vec![Instruction::Lookupswitch {
             default: 42,
@@ -288,7 +286,7 @@ mod tests {
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_to_bytes_invalid_lookup_switch_pairs_offset() {
         let instructions = vec![
             Instruction::Nop,
@@ -301,7 +299,7 @@ mod tests {
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from_bytes() -> Result<()> {
         let instructions = vec![
             Instruction::Iconst_0,
@@ -323,7 +321,7 @@ mod tests {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from_bytes_invalid() {
         let bytes = vec![155, 0, 42];
         let mut cursor = Cursor::new(bytes);
@@ -331,7 +329,7 @@ mod tests {
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from_bytes_invalid_table_switch_default_offset() {
         let bytes = vec![
             170, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4,
@@ -341,7 +339,7 @@ mod tests {
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from_bytes_invalid_table_switch_offset() {
         let bytes = vec![
             0, 170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4,
@@ -351,7 +349,7 @@ mod tests {
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from_bytes_invalid_lookup_switch_default_offset() {
         let bytes = vec![
             171, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2,
@@ -361,7 +359,7 @@ mod tests {
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from_bytes_invalid_lookup_switch_offset() {
         let bytes = vec![0, 171, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2];
         let mut cursor = Cursor::new(bytes);
@@ -381,97 +379,97 @@ mod tests {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_ifeq() -> Result<()> {
         test_instruction(Instruction::Ifeq(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_ifne() -> Result<()> {
         test_instruction(Instruction::Ifne(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_iflt() -> Result<()> {
         test_instruction(Instruction::Iflt(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_ifge() -> Result<()> {
         test_instruction(Instruction::Ifge(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_ifgt() -> Result<()> {
         test_instruction(Instruction::Ifgt(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_ifle() -> Result<()> {
         test_instruction(Instruction::Ifle(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_if_icmpeq() -> Result<()> {
         test_instruction(Instruction::If_icmpeq(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_if_icmpne() -> Result<()> {
         test_instruction(Instruction::If_icmpne(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_if_icmplt() -> Result<()> {
         test_instruction(Instruction::If_icmplt(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_if_icmpge() -> Result<()> {
         test_instruction(Instruction::If_icmpge(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_if_icmpgt() -> Result<()> {
         test_instruction(Instruction::If_icmpgt(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_if_icmple() -> Result<()> {
         test_instruction(Instruction::If_icmple(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_if_acmpeq() -> Result<()> {
         test_instruction(Instruction::If_acmpeq(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_if_acmpne() -> Result<()> {
         test_instruction(Instruction::If_acmpne(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_goto() -> Result<()> {
         test_instruction(Instruction::Goto(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_jsr() -> Result<()> {
         test_instruction(Instruction::Jsr(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_ifnull() -> Result<()> {
         test_instruction(Instruction::Ifnull(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_ifnonnull() -> Result<()> {
         test_instruction(Instruction::Ifnonnull(0))
     }
 
-    #[test_log::test]
+    #[test]
     fn test_goto_w() -> Result<()> {
         let instruction = Instruction::Goto_w(1);
         let expected_bytes = [instruction.code(), 0, 0, 0, 5, Instruction::Nop.code()];
@@ -485,7 +483,7 @@ mod tests {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_jsr_w() -> Result<()> {
         let instruction = Instruction::Jsr_w(1);
         let expected_bytes = [instruction.code(), 0, 0, 0, 5, Instruction::Nop.code()];
@@ -499,7 +497,7 @@ mod tests {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_tableswitch() -> Result<()> {
         let instruction = Instruction::Tableswitch {
             default: 3,
@@ -551,7 +549,7 @@ mod tests {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_lookupswitch() -> Result<()> {
         let instruction = Instruction::Lookupswitch {
             default: 3,

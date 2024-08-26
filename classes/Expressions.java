@@ -40,4 +40,8 @@ public class Expressions {
                 System.out.println("default");
         }
     }
+
+    public static int add(int a, int b) {
+        return a + b;
+    }
 }

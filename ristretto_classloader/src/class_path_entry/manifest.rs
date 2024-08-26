@@ -146,7 +146,7 @@ mod tests {
         SHA-256-Digest: 0987654321fedcba
     "};
 
-    #[test_log::test]
+    #[test]
     fn test_attribute() -> Result<()> {
         let manifest = Manifest::from_str(EXPECTED)?;
         let main_class = manifest.attribute(MAIN_CLASS).expect("main class");
@@ -154,7 +154,7 @@ mod tests {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serde() -> Result<()> {
         let manifest = Manifest::from_str(EXPECTED)?;
         let serialized = manifest.to_string();

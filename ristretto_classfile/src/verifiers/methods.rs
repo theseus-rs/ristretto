@@ -13,7 +13,7 @@ pub fn verify(class_file: &ClassFile) -> Result<()> {
         verify_descriptor_index(class_file, method)?;
 
         // TODO: verify instructions match method return type:
-        // See: https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-6.html#jvms-6.5.ireturn
+        // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ireturn
 
         // TODO: verify attributes
     }
@@ -59,20 +59,20 @@ mod test {
         (class_file, method)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_success() {
         let (class_file, _method) = get_test_class_file_and_method();
         assert_eq!(Ok(()), crate::verifiers::methods::verify(&class_file));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_invalid_access_flag_error() {
         let (class_file, mut method) = get_test_class_file_and_method();
         method.access_flags = MethodAccessFlags::FINAL | MethodAccessFlags::SYNCHRONIZED;
         assert_eq!(Ok(()), crate::verifiers::methods::verify(&class_file));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_invalid_name_index() {
         let (class_file, mut method) = get_test_class_file_and_method();
         method.name_index = u16::MAX;
@@ -82,7 +82,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_invalid_name_index_type() -> Result<()> {
         let (mut class_file, mut method) = get_test_class_file_and_method();
         let constant_pool = &mut class_file.constant_pool;
@@ -95,7 +95,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_invalid_descriptor_index() {
         let (class_file, mut method) = get_test_class_file_and_method();
         method.descriptor_index = u16::MAX;
@@ -105,7 +105,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_invalid_descriptor_index_type() -> Result<()> {
         let (mut class_file, mut method) = get_test_class_file_and_method();
         let constant_pool = &mut class_file.constant_pool;
