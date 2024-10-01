@@ -24,7 +24,7 @@ anyhow = "1.0.44"
 bitflags = "2.6.0"
 byteorder = "1.5.0"
 criterion = { version = "0.5.1", default-features = false }
-flate2 = "1.0.32"
+flate2 = "1.0.34"
 home = "0.5.9"
 indoc = "2.0.5"
 indexmap = "2.4.0"
