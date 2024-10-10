@@ -70,6 +70,8 @@ lto = "thin"
 cargo-dist-version = "0.22.1"
 # CI backends to support
 ci = "github"
+# Whether cargo-dist should create a Github Release or use an existing draft
+create-release = false
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
 # Whether to install an updater program
