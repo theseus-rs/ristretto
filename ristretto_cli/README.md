@@ -1,7 +1,6 @@
-# Ristretto VM
+# Ristretto CLI
 
 [![ci](https://github.com/theseus-rs/ristretto/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/theseus-rs/ristretto/actions/workflows/ci.yml)
-[![Documentation](https://docs.rs/ristretto_cli/badge.svg)](https://docs.rs/ristretto_cli)
 [![Code Coverage](https://codecov.io/gh/theseus-rs/ristretto/branch/main/graph/badge.svg)](https://codecov.io/gh/theseus-rs/ristretto)
 [![Benchmarks](https://img.shields.io/badge/%F0%9F%90%B0_bencher-enabled-6ec241)](https://bencher.dev/perf/theseus-rs-ristretto)
 [![Latest version](https://img.shields.io/crates/v/ristretto_cli.svg)](https://crates.io/crates/ristretto_cli)
