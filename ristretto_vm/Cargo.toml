@@ -25,7 +25,7 @@ whoami = { workspace = true }
 criterion = { workspace = true }
 
 [features]
-default = ["native-tls"]
+default = ["rustls-tls"]
 native-tls = [
     "ristretto_classloader/native-tls",
 ]

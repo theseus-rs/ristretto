@@ -30,7 +30,7 @@ criterion = { workspace = true }
 indoc = { workspace = true }
 
 [features]
-default = ["native-tls"]
+default = ["rustls-tls"]
 native-tls = [
     "reqwest/native-tls",
 ]
