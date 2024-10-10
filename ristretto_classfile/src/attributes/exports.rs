@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of `Exports`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.25>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.25>
 #[derive(Clone, Debug, PartialEq)]
 pub struct Exports {
     pub index: u16,
@@ -66,7 +66,7 @@ impl fmt::Display for Exports {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         let exports = Exports {
             index: 1,
@@ -79,7 +79,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let exports = Exports {
             index: 1,

@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of `InnerClass`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.6>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.6>
 #[derive(Clone, Debug, PartialEq)]
 pub struct InnerClass {
     pub class_info_index: u16,
@@ -61,7 +61,7 @@ impl fmt::Display for InnerClass {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         let inner_class = InnerClass {
             class_info_index: 1,
@@ -75,7 +75,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let inner_class = InnerClass {
             class_info_index: 1,

@@ -10,7 +10,7 @@
 
 ## Getting Started
 
-Implementation of a [JVM Class Loader](https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html)
+Implementation of a [JVM Class Loader](https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html)
 that is used to load Java classes. Classes can be loaded from the file system or from a URL;
 jar and modules are supported. A runtime Java class loader can be created from any version of
 [AWS Corretto](https://github.com/corretto). The runtime class loader will download and install
@@ -28,14 +28,12 @@ The AWS Corretto runtime is installed in the following directory:
 use ristretto_classloader::{ClassLoader, ClassPath, Result};
 use std::sync::Arc;
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    #[tokio::main]
-    async fn main() -> Result<()> {
-        let (version, class_loader) = runtime::class_loader("21").await?;
+fn main() -> Result<()> {
+    fn main() -> Result<()> {
+        let (version, class_loader) = runtime::class_loader("21")?;
         let class_name = "java.util.HashMap";
         println!("Loading {class_name} from Java runtime {version}");
-        let class = class_loader.load(class_name).await?;
+        let class = class_loader.load(class_name)?;
         println!("{class:?}");
         Ok(())
     }

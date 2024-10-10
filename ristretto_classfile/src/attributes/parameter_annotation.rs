@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of a parameter annotation.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.18>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.18>
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParameterAnnotation {
     pub annotations: Vec<Annotation>,
@@ -57,7 +57,7 @@ mod test {
     use super::*;
     use crate::attributes::{AnnotationElement, AnnotationValuePair};
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         let annotation_value_pair = AnnotationValuePair {
             name_index: 1,
@@ -78,7 +78,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let annotation_value_pair = AnnotationValuePair {
             name_index: 1,

@@ -1,4 +1,5 @@
 .idea/
+.run/
 /fuzz/artifacts/
 /fuzz/corpus/
 /fuzz/target/

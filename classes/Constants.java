@@ -19,4 +19,9 @@ public class Constants {
     public static final String[] STRING_VALUES = {"14"};
     public static final Object OBJECT_VALUE = new Object();
     public static final Object[] OBJECT_VALUES = {new Object()};
+    // TODO: uncomment the following lines when the multiarray instruction is implemented
+//     public static final int[][] MULTI_DIMENSIONAL_TWO = new int[1][2];
+//     public static final int[][][] MULTI_DIMENSIONAL_THREE = new int[1][2][3];
+//     public static final int[][][][] MULTI_DIMENSIONAL_FOUR = new int[1][2][3][4];
+//     public static final int[][][][][] MULTI_DIMENSIONAL_FIVE = new int[1][2][3][4][5];
 }

@@ -1,0 +1,21 @@
+use crate::arguments::Arguments;
+use crate::call_stack::CallStack;
+use crate::native_methods::registry::MethodRegistry;
+use crate::{Result, VM};
+use ristretto_classloader::Value;
+
+/// Register all native methods for java.lang.ClassLoader.
+pub(crate) fn register(registry: &mut MethodRegistry) {
+    let class_name = "java/lang/ClassLoader";
+    registry.register(class_name, "registerNatives", "()V", register_natives);
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[expect(clippy::unnecessary_wraps)]
+fn register_natives(
+    _vm: &VM,
+    _call_stack: &mut CallStack,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    Ok(None)
+}

@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of Annotation.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.16>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.16>
 #[derive(Clone, Debug, PartialEq)]
 pub struct Annotation {
     pub type_index: u16,
@@ -65,7 +65,7 @@ mod test {
     use super::*;
     use crate::attributes::AnnotationElement;
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         let annotation_value_pair = AnnotationValuePair {
             name_index: 1,
@@ -84,7 +84,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let annotation_value_pair = AnnotationValuePair {
             name_index: 1,

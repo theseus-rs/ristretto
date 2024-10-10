@@ -12,7 +12,7 @@ version.workspace = true
 [dependencies]
 flate2 = { workspace = true }
 indexmap = { workspace = true }
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true, features = ["blocking", "json"] }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.7.0" }
 serde = { workspace = true, features = ["derive"] }
 serde_plain = { workspace = true }
@@ -22,23 +22,12 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 zip = { workspace = true }
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-tokio = { workspace = true }
-
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 home = { workspace = true }
-tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
 criterion = { workspace = true }
 indoc = { workspace = true }
-test-log = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-tokio = { workspace = true }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
 all = ["url"]

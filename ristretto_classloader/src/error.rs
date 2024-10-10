@@ -13,12 +13,34 @@ pub enum Error {
     /// A class was not found
     #[error("Class not found: {0}")]
     ClassNotFound(String),
+    /// Specified field not found
+    #[error("Field not found: {class_name}.{field_name}")]
+    FieldNotFound {
+        class_name: String,
+        field_name: String,
+    },
     /// A file was not found
     #[error("File not found: {0}")]
     FileNotFound(String),
+    /// Illegal access attempt
+    #[error("Illegal access: {0}")]
+    IllegalAccessError(String),
+    /// An error occurred while parsing a method descriptor
+    #[error("Invalid method descriptor: {0}")]
+    InvalidMethodDescriptor(String),
+    /// Invalid value type
+    #[error("Invalid value type: {0}")]
+    InvalidValueType(String),
     /// An error occurred while performing an IO operation
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+    /// Specified method not found
+    #[error("Method not found: {class_name}.{method_name}{method_descriptor}")]
+    MethodNotFound {
+        class_name: String,
+        method_name: String,
+        method_descriptor: String,
+    },
     /// Error parsing data
     #[error("Parse error: {0}")]
     ParseError(String),

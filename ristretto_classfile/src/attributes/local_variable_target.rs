@@ -5,7 +5,7 @@ use std::io::Cursor;
 
 /// Implementation of `LocalVariableTarget`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.20>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.20>
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalVariableTarget {
     pub start_pc: u16,
@@ -57,7 +57,7 @@ impl fmt::Display for LocalVariableTarget {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_display() {
         let local_variable_target = LocalVariableTarget {
             start_pc: 1,
@@ -70,7 +70,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let local_variable_target = LocalVariableTarget {
             start_pc: 1,

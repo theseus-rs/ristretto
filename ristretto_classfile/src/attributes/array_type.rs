@@ -86,7 +86,7 @@ mod test {
     use super::*;
     use std::io::Read;
 
-    #[test_log::test]
+    #[test]
     fn test_invalid_code() {
         let mut bytes = Cursor::new(vec![0]);
         assert_eq!(
@@ -110,49 +110,49 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_boolean() -> Result<()> {
         assert_eq!("boolean", ArrayType::Boolean.to_string());
         test_array_type(&ArrayType::Boolean, 4)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_char() -> Result<()> {
         assert_eq!("char", ArrayType::Char.to_string());
         test_array_type(&ArrayType::Char, 5)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_float() -> Result<()> {
         assert_eq!("float", ArrayType::Float.to_string());
         test_array_type(&ArrayType::Float, 6)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_double() -> Result<()> {
         assert_eq!("double", ArrayType::Double.to_string());
         test_array_type(&ArrayType::Double, 7)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_byte() -> Result<()> {
         assert_eq!("byte", ArrayType::Byte.to_string());
         test_array_type(&ArrayType::Byte, 8)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_short() -> Result<()> {
         assert_eq!("short", ArrayType::Short.to_string());
         test_array_type(&ArrayType::Short, 9)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_int() -> Result<()> {
         assert_eq!("int", ArrayType::Int.to_string());
         test_array_type(&ArrayType::Int, 10)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_long() -> Result<()> {
         assert_eq!("long", ArrayType::Long.to_string());
         test_array_type(&ArrayType::Long, 11)

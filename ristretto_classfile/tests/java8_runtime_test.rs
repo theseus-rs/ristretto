@@ -2,15 +2,15 @@ mod utilities;
 
 use anyhow::{anyhow, Result};
 use flate2::read::GzDecoder;
-use reqwest::Client;
+use reqwest::blocking::Client;
 use std::io::Read;
 use tar::Archive;
 
-#[tokio::test]
-async fn verify() -> Result<()> {
+#[test]
+fn verify() -> Result<()> {
     let url = "https://corretto.aws/downloads/latest/amazon-corretto-8-x64-linux-jdk.tar.gz";
     let client = Client::new();
-    let archive = client.get(url).send().await?.bytes().await?.to_vec();
+    let archive = client.get(url).send()?.bytes()?.to_vec();
     let jar_bytes = get_runtime_jar(archive)?;
 
     utilities::jar::verify(jar_bytes)?;

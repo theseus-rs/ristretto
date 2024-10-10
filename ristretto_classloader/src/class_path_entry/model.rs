@@ -44,10 +44,10 @@ impl ClassPathEntry {
     /// # Errors
     /// if the class file cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
-    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
+    pub fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         match self {
-            ClassPathEntry::Directory(directory) => directory.read_class(name).await,
-            ClassPathEntry::Jar(jar) => jar.read_class(name).await,
+            ClassPathEntry::Directory(directory) => directory.read_class(name),
+            ClassPathEntry::Jar(jar) => jar.read_class(name),
         }
     }
 }
@@ -68,7 +68,7 @@ mod tests {
     // Directory Tests
     //
 
-    #[test_log::test]
+    #[test]
     fn test_new_directory() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
@@ -81,12 +81,12 @@ mod tests {
         );
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_read_class_directory() -> Result<()> {
+    #[test]
+    fn test_read_class_directory() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
         let class_path_entry = ClassPathEntry::new(classes_directory.to_string_lossy());
-        let class_file = class_path_entry.read_class("HelloWorld").await?;
+        let class_file = class_path_entry.read_class("HelloWorld")?;
 
         assert!(matches!(class_path_entry, ClassPathEntry::Directory(_)));
         assert_eq!(
@@ -101,7 +101,7 @@ mod tests {
     // Jar Tests
     //
 
-    #[test_log::test]
+    #[test]
     fn test_new_jar() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_jar = cargo_manifest.join("../classes/classes.jar");
@@ -114,12 +114,12 @@ mod tests {
         );
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_read_class_jar() -> Result<()> {
+    #[test]
+    fn test_read_class_jar() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_jar = cargo_manifest.join("../classes/classes.jar");
         let class_path_entry = ClassPathEntry::new(classes_jar.to_string_lossy());
-        let class_file = class_path_entry.read_class("HelloWorld").await?;
+        let class_file = class_path_entry.read_class("HelloWorld")?;
 
         assert!(matches!(class_path_entry, ClassPathEntry::Jar(_)));
         assert_eq!(
@@ -135,7 +135,7 @@ mod tests {
     //
 
     #[cfg(feature = "url")]
-    #[test_log::test]
+    #[test]
     fn test_new_url() {
         let url = "https://repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar";
         let class_path_entry = ClassPathEntry::new(url);
@@ -145,13 +145,12 @@ mod tests {
     }
 
     #[cfg(feature = "url")]
-    #[test_log::test(tokio::test)]
-    async fn test_read_class_url() -> Result<()> {
+    #[test]
+    fn test_read_class_url() -> Result<()> {
         let url = "https://repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar";
         let class_path_entry = ClassPathEntry::new(url);
-        let class_file = class_path_entry
-            .read_class("org.springframework.boot.SpringApplication")
-            .await?;
+        let class_file =
+            class_path_entry.read_class("org/springframework/boot/SpringApplication")?;
 
         assert!(matches!(class_path_entry, ClassPathEntry::Jar(_)));
         assert_eq!(class_path_entry.name(), url);

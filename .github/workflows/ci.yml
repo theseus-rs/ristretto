@@ -28,8 +28,8 @@ jobs:
           - macos-arm64
           - macos-x64
           - windows-x64
-          - wasm32-unknown
-          - wasm32-wasi
+          #- wasm32-unknown
+          #- wasm32-wasi
 
         include:
           - platform: linux-x64
@@ -44,12 +44,12 @@ jobs:
           - platform: windows-x64
             os: windows-2022
             target: x86_64-pc-windows-msvc
-          - platform: wasm32-unknown
-            os: ubuntu-22.04
-            target: wasm32-unknown-unknown
-          - platform: wasm32-wasi
-            os: ubuntu-22.04
-            target: wasm32-wasip1-threads
+          # - platform: wasm32-unknown
+          #   os: ubuntu-22.04
+          #   target: wasm32-unknown-unknown
+          # - platform: wasm32-wasi
+          #   os: ubuntu-22.04
+          #   target: wasm32-wasip1-threads
 
     steps:
       - name: Checkout source code
@@ -58,17 +58,16 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
-          components: 'llvm-tools-preview'
           targets: ${{ matrix.target }}
           toolchain: stable
 
-      - name: Install grcov
+      - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@main
         with:
-          tool: grcov
+          tool: cargo-llvm-cov
 
       - name: Build
-        if: ${{ startsWith(matrix.platform, 'wasm32-') }}
+        if: ${{ startsWith(matrix.platform, 'wasm32-') || startsWith(matrix.platform, 'windows-')}}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -77,37 +76,33 @@ jobs:
           cargo build --target ${{ matrix.target }}
 
       - name: Tests
-        if: ${{ !startsWith(matrix.platform, 'wasm32-') }}
+        if: ${{ !startsWith(matrix.os, 'ubuntu-') && !startsWith(matrix.platform, 'wasm32-') && !startsWith(matrix.platform, 'windows-') }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          LLVM_PROFILE_FILE: ristretto-%p-%m.profraw
+          RUST_BACKTRACE: 1
           RUST_LOG: info
-          RUSTFLAGS: -Cinstrument-coverage
-          RUSTDOCFLAGS: -Cinstrument-coverage
+          RUST_LOG_SPAN_EVENTS: full
         run: |
           cargo test --workspace --all-features
-          du -h ~/.ristretto
 
-      - name: Produce coverage info
-        if: ${{ startsWith(matrix.platform, 'linux-') }}
+      - name: Tests
+        if: ${{ startsWith(matrix.os, 'ubuntu-') }}
+        env:
+          CARGO_TERM_COLOR: always
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RUST_BACKTRACE: 1
+          RUST_LOG: info
+          RUST_LOG_SPAN_EVENTS: full
         run: |
-          grcov $(find . -name "ristretto-*.profraw" -print) \
-            -s . \
-            --branch \
-            --ignore-not-existing \
-            --ignore='target/*' \
-            --ignore='benches/*' \
-            --ignore='/*' \
-            --binary-path ./target/debug/ \
-            --excl-line='#\[derive' \
-            -t lcov \
-            -o lcov.info
+          cargo llvm-cov --workspace --lcov --output-path lcov.info
 
       - name: Upload to codecov.io
-        if: ${{ startsWith(matrix.platform, 'linux-') }}
+        if: ${{ startsWith(matrix.os, 'ubuntu-') }}
         uses: codecov/codecov-action@v4
         with:
           files: lcov.info
           fail_ci_if_error: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

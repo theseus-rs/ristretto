@@ -1,0 +1,29 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "A Java Virtual Machine (JVM) CLI."
+documentation = "https://theseus-rs.github.io/ristretto/ristretto_cli/"
+edition.workspace = true
+keywords = ["java", "jvm", "cli"]
+homepage = "https://theseus-rs.github.io/ristretto/ristretto_cli/"
+license.workspace = true
+name = "ristretto_cli"
+repository.workspace = true
+version.workspace = true
+
+[package.metadata.wix]
+upgrade-guid = "F6B5B513-84DC-4554-8DFB-50263541E9C9"
+path-guid = "F561CAE1-E27E-4A3C-AE43-318392119D63"
+license = false
+eula = false
+
+[[bin]]
+name = "java"
+path = "src/main.rs"  # path to your main.rs or other binary file
+
+[dependencies]
+clap = { workspace = true, features = ["derive"] }
+os_info = { workspace = true }
+ristretto_vm = { path = "../ristretto_vm", version = "0.7.0" }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
