@@ -7,7 +7,7 @@ use std::io::Cursor;
 bitflags! {
     /// Nest class access flags.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.6-300-D.1-D.1>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.6-300-D.1-D.1>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct NestedClassAccessFlags: u16 {
         /// Declared public; may be accessed from outside its package.
@@ -54,8 +54,6 @@ impl NestedClassAccessFlags {
     ///
     /// # Errors
     /// Should not occur; reserved for future use.
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    #[allow(clippy::wrong_self_convention)]
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.bits())?;
         Ok(())
@@ -103,7 +101,7 @@ impl fmt::Display for NestedClassAccessFlags {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_default() {
         assert_eq!(
             NestedClassAccessFlags::empty(),
@@ -111,7 +109,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
         let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
@@ -130,7 +128,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_access_flags() -> Result<()> {
         let access_flags = NestedClassAccessFlags::PUBLIC | NestedClassAccessFlags::FINAL;
         let mut bytes = Vec::new();
@@ -143,7 +141,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         assert_eq!(
             "(0x0001) ACC_PUBLIC",

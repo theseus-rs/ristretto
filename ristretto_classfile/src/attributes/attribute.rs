@@ -32,7 +32,7 @@ const VERSION_61_0: Version = Version::Java17 { minor: 0 };
 
 /// Attribute.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7>
 #[derive(Clone, Debug, PartialEq)]
 pub enum Attribute {
     ConstantValue {
@@ -215,7 +215,7 @@ impl Attribute {
     }
 
     /// Check if the Attribute is valid for the given version.
-    #[allow(clippy::match_same_arms)]
+    #[expect(clippy::match_same_arms)]
     #[must_use]
     pub fn valid_for_version(&self, version: &Version) -> bool {
         match self {
@@ -258,7 +258,7 @@ impl Attribute {
     /// # Errors
     /// - If the attribute name index is invalid.
     /// - If the attribute length is invalid.
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     pub fn from_bytes(
         constant_pool: &ConstantPool,
         bytes: &mut Cursor<Vec<u8>>,
@@ -652,8 +652,8 @@ impl Attribute {
     ///
     /// # Errors
     /// If there is an issue serializing an attribute
-    #[allow(clippy::too_many_lines)]
-    #[allow(clippy::match_same_arms)]
+    #[expect(clippy::too_many_lines)]
+    #[expect(clippy::match_same_arms)]
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         let (name_index, info) = match self {
             Attribute::ConstantValue {
@@ -1094,7 +1094,7 @@ mod test {
     use crate::method_access_flags::MethodAccessFlags;
     use indoc::indoc;
 
-    #[test_log::test]
+    #[test]
     fn test_invalid_attribute_name_index_error() {
         let expected_bytes = [0, 1, 0, 0, 0, 0];
 
@@ -1142,12 +1142,12 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_constant_value_from_bytes_error() -> Result<()> {
         test_invalid_attribute_from_bytes_error("ConstantValue")
     }
 
-    #[test_log::test]
+    #[test]
     fn test_constant_value() -> Result<()> {
         let attribute = Attribute::ConstantValue {
             name_index: 1,
@@ -1158,7 +1158,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_code() -> Result<()> {
         let constant = Attribute::ConstantValue {
             name_index: 2,
@@ -1210,7 +1210,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_stack_map_table() -> Result<()> {
         let attribute = Attribute::StackMapTable {
             name_index: 1,
@@ -1228,7 +1228,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_50_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_exceptions() -> Result<()> {
         let attribute = Attribute::Exceptions {
             name_index: 1,
@@ -1243,7 +1243,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_inner_classes() -> Result<()> {
         let inner_class = InnerClass {
             class_info_index: 1,
@@ -1264,12 +1264,12 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_enclosing_method_from_bytes_error() -> Result<()> {
         test_invalid_attribute_from_bytes_error("EnclosingMethod")
     }
 
-    #[test_log::test]
+    #[test]
     fn test_enclosing_method() -> Result<()> {
         let attribute = Attribute::EnclosingMethod {
             name_index: 1,
@@ -1285,12 +1285,12 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_synthetic_from_bytes_error() -> Result<()> {
         test_invalid_attribute_from_bytes_error("Synthetic")
     }
 
-    #[test_log::test]
+    #[test]
     fn test_synthetic() -> Result<()> {
         let attribute = Attribute::Synthetic { name_index: 1 };
         let expected_bytes = [0, 1, 0, 0, 0, 0];
@@ -1299,12 +1299,12 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_signature_from_bytes_error() -> Result<()> {
         test_invalid_attribute_from_bytes_error("Signature")
     }
 
-    #[test_log::test]
+    #[test]
     fn test_signature() -> Result<()> {
         let attribute = Attribute::Signature {
             name_index: 1,
@@ -1319,12 +1319,12 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_source_file_from_bytes_error() -> Result<()> {
         test_invalid_attribute_from_bytes_error("SourceFile")
     }
 
-    #[test_log::test]
+    #[test]
     fn test_source_file() -> Result<()> {
         let attribute = Attribute::SourceFile {
             name_index: 1,
@@ -1339,7 +1339,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_source_debug_extension() -> Result<()> {
         let attribute = Attribute::SourceDebugExtension {
             name_index: 1,
@@ -1354,7 +1354,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_line_number_table() -> Result<()> {
         let attribute = Attribute::LineNumberTable {
             name_index: 1,
@@ -1373,7 +1373,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_locale_variable_table() -> Result<()> {
         let variable = LocalVariableTable {
             start_pc: 1,
@@ -1395,7 +1395,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_local_variable_type_table() -> Result<()> {
         let variable_type = LocalVariableTypeTable {
             start_pc: 1,
@@ -1417,12 +1417,12 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_deprecated_from_bytes_error() -> Result<()> {
         test_invalid_attribute_from_bytes_error("Deprecated")
     }
 
-    #[test_log::test]
+    #[test]
     fn test_deprecated() -> Result<()> {
         let attribute = Attribute::Deprecated { name_index: 1 };
         let expected_bytes = [0, 1, 0, 0, 0, 0];
@@ -1431,7 +1431,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_runtime_visible_annotations() -> Result<()> {
         let attribute = Attribute::RuntimeVisibleAnnotations {
             name_index: 1,
@@ -1454,7 +1454,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_runtime_invisible_annotations() -> Result<()> {
         let attribute = Attribute::RuntimeInvisibleAnnotations {
             name_index: 1,
@@ -1477,7 +1477,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_runtime_visible_parameter_annotations() -> Result<()> {
         let annotation_value_pair = AnnotationValuePair {
             name_index: 1,
@@ -1505,7 +1505,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_runtime_invisible_parameter_annotations() -> Result<()> {
         let annotation_value_pair = AnnotationValuePair {
             name_index: 1,
@@ -1533,7 +1533,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_runtime_visible_type_annotations() -> Result<()> {
         let element = AnnotationValuePair {
             name_index: 1,
@@ -1565,7 +1565,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_52_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_runtime_invisible_type_annotations() -> Result<()> {
         let element = AnnotationValuePair {
             name_index: 1,
@@ -1597,7 +1597,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_52_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_annotation_default() -> Result<()> {
         let attribute = Attribute::AnnotationDefault {
             name_index: 1,
@@ -1614,7 +1614,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_bootstrap_methods() -> Result<()> {
         let method = BootstrapMethod {
             bootstrap_method_ref: 3,
@@ -1633,7 +1633,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_51_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_method_parameters() -> Result<()> {
         let parameter = MethodParameter {
             name_index: 2,
@@ -1652,7 +1652,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_52_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_module() -> Result<()> {
         let attribute = Attribute::Module {
             name_index: 1,
@@ -1692,7 +1692,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_53_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_module_packages() -> Result<()> {
         let attribute = Attribute::ModulePackages {
             name_index: 1,
@@ -1707,12 +1707,12 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_53_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_module_main_class_from_bytes_error() -> Result<()> {
         test_invalid_attribute_from_bytes_error("ModuleMainClass")
     }
 
-    #[test_log::test]
+    #[test]
     fn test_module_main_class() -> Result<()> {
         let attribute = Attribute::ModuleMainClass {
             name_index: 1,
@@ -1727,12 +1727,12 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_53_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_nest_host_from_bytes_error() -> Result<()> {
         test_invalid_attribute_from_bytes_error("NestHost")
     }
 
-    #[test_log::test]
+    #[test]
     fn test_nest_host() -> Result<()> {
         let attribute = Attribute::NestHost {
             name_index: 1,
@@ -1747,7 +1747,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_55_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_nest_members() -> Result<()> {
         let attribute = Attribute::NestMembers {
             name_index: 1,
@@ -1762,7 +1762,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_55_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_record() -> Result<()> {
         let constant = Attribute::ConstantValue {
             name_index: 1,
@@ -1806,7 +1806,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_permitted_subclasses() -> Result<()> {
         let attribute = Attribute::PermittedSubclasses {
             name_index: 1,
@@ -1821,7 +1821,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_61_0)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_unknown() -> Result<()> {
         let attribute = Attribute::Unknown {
             name_index: 1,

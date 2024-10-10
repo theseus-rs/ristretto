@@ -10,56 +10,49 @@
 [![License](https://img.shields.io/crates/l/ristretto_classfile)](https://github.com/theseus-rs/ristretto#license)
 [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
 
-Crates for the [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se22/html/)
+[JVM](https://docs.oracle.com/javase/specs/jvms/se23/html/) implementation that does not use a garbage collector and
+allocates / deallocates memory in a deterministic way.
+
+**This is a work in progress and is not ready for production use.**
 
 ## Getting Started
 
-Crates for the [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se22/html/)
+`ristretto` java can be installed using the following methods:
+
+### Linux / MacOS
+
+```shell
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/theseus-rs/ristretto/releases/latest/download/ristretto_cli-installer.sh | sh
+```
+
+### Windows
+
+```shell
+irm https://github.com/theseus-rs/ristretto/releases/latest/download/ristretto_cli-installer.ps1 | iex
+```
+
+For more information, and additional installations instructions (cargo, homebrew, msi),
+visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) site.
 
 ### Features
 
-* loading classes from any version of [AWS Corretto](https://github.com/corretto)
-* load classes from directories, jars, modules
-* url classes loading from jars and modules
-* reading, writing, verifying classes for any version of Java version up to 24
-* verification of class files is supported, but is still a work in progress.
+- Deterministic memory allocation / deallocation
+- No garbage collector
+- Loading classes from any version of [AWS Corretto](https://github.com/corretto)
+- Load classes from directories, jars, modules
+- Url class loading from jars and modules
+- Reading, writing, verifying classes for any version of Java version up to 24
+- Verification of class files is supported, but is still a work in progress.
 
-# Examples
+# Limitations
 
-## Load a class from the Java runtime
-
-```rust
-use ristretto_classloader::{runtime, ClassLoader, Result};
-use std::sync::Arc;
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    let (version, class_loader) = runtime::class_loader("21").await?;
-    let class_name = "java.util.HashMap";
-    println!("Loading {class_name} from Java runtime {version}");
-    let class = ClassLoader::load_class(&Arc::new(class_loader), class_name).await?;
-    println!("{class:?}");
-    Ok(())
-}
-```
-
-## Create a class file
-
-```rust
-use ristretto_classfile::{ClassFile, ConstantPool, Result, Version};
-
-fn main() -> Result<()> {
-    let mut constant_pool = ConstantPool::default();
-    let this_class = constant_pool.add_class("Foo")?;
-    let class_file = ClassFile {
-        version: Version::Java21 { minor: 0 },
-        constant_pool,
-        this_class,
-        ..Default::default()
-    };
-    class_file.verify()
-}
-```
+- The instructions Athrow, Multianewarray and Invokedynamic are not implemented
+- Exceptions are not implemented
+- Threading is not implemented
+- Numerous JDK native methods are not implemented
+- JNI is not implemented
+- JIT is not implemented
+- No Security manager; see: [JEP 411](https://openjdk.org/jeps/411)
 
 ## Safety
 

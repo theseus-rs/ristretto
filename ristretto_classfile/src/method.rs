@@ -9,7 +9,7 @@ use std::io::Cursor;
 
 /// Method.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.6>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.6>
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Method {
     pub access_flags: MethodAccessFlags,
@@ -81,7 +81,7 @@ mod test {
     use crate::attributes::Attribute;
     use indoc::indoc;
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         let attribute1 = Attribute::ConstantValue {
             name_index: 1,
@@ -108,7 +108,7 @@ mod test {
         assert_eq!(expected, method.to_string());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8("ConstantValue")?;

@@ -5,7 +5,7 @@ use std::io::Cursor;
 
 /// Implementation of `LocalVariableTypeTable`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.14>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.14>
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalVariableTypeTable {
     pub start_pc: u16,
@@ -65,7 +65,7 @@ impl fmt::Display for LocalVariableTypeTable {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_display() {
         let local_variable_type_table = LocalVariableTypeTable {
             start_pc: 1,
@@ -80,7 +80,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let local_variable_type_table = LocalVariableTypeTable {
             start_pc: 1,

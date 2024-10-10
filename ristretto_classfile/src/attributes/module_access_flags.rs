@@ -7,7 +7,7 @@ use std::io::Cursor;
 bitflags! {
     /// Module access flags.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.25>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.25>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ModuleAccessFlags: u16 {
         /// Indicates that this module is open.
@@ -66,12 +66,12 @@ impl fmt::Display for ModuleAccessFlags {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_default() {
         assert_eq!(ModuleAccessFlags::empty(), ModuleAccessFlags::default());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
         let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
@@ -83,7 +83,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_access_flags() -> Result<()> {
         let access_flags = ModuleAccessFlags::OPEN;
         let mut bytes = Vec::new();
@@ -93,7 +93,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         assert_eq!("(0x0020) ACC_OPEN", ModuleAccessFlags::OPEN.to_string());
         assert_eq!(

@@ -44,7 +44,7 @@ mod test {
     use crate::constant_pool::ConstantPool;
     use std::io::Cursor;
 
-    #[test_log::test]
+    #[test]
     fn test_verify_success() -> Result<()> {
         let class_bytes = include_bytes!("../../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
@@ -71,45 +71,45 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_annotation_not_interface_error() -> Result<()> {
         test_verify_error(ClassAccessFlags::ANNOTATION)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_interface_not_abstract_error() -> Result<()> {
         test_verify_error(ClassAccessFlags::INTERFACE)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_interface_is_final_error() -> Result<()> {
         test_verify_error(
             ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT | ClassAccessFlags::FINAL,
         )
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_interface_is_super_error() -> Result<()> {
         test_verify_error(
             ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT | ClassAccessFlags::SUPER,
         )
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_interface_is_enum_error() -> Result<()> {
         test_verify_error(
             ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT | ClassAccessFlags::ENUM,
         )
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_interface_is_module_error() -> Result<()> {
         test_verify_error(
             ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT | ClassAccessFlags::MODULE,
         )
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_not_abstract_and_finale_error() -> Result<()> {
         test_verify_error(ClassAccessFlags::ABSTRACT | ClassAccessFlags::FINAL)
     }

@@ -8,7 +8,7 @@ use std::{fmt, io};
 
 /// Constant pool.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4>
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConstantPool {
     constants: Vec<ConstantEntry>,
@@ -48,7 +48,7 @@ impl ConstantPool {
 
     /// Get a constant from the pool by index; indexes are 1-based.
     /// Returns None if the index is out of bounds.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
     #[must_use]
     pub fn get(&self, index: u16) -> Option<&Constant> {
         match self.try_get(index) {
@@ -59,7 +59,7 @@ impl ConstantPool {
 
     /// Get a constant from the pool by index; indexes are 1-based.
     /// Returns an error if the index is out of bounds.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds.
@@ -136,14 +136,13 @@ impl ConstantPool {
 
     /// Get a UTF-8 constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a UTF-8 constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.7>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.7>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a UTF-8 constant.
     pub fn try_get_utf8(&self, index: u16) -> Result<&String> {
-        match self.try_get(index) {
-            Ok(Constant::Utf8(value)) => Ok(value),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+        match self.try_get(index)? {
+            Constant::Utf8(value) => Ok(value),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -158,14 +157,13 @@ impl ConstantPool {
 
     /// Get an integer constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not an integer constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.4>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.4>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not an integer constant.
     pub fn try_get_integer(&self, index: u16) -> Result<&i32> {
-        match self.try_get(index) {
-            Ok(Constant::Integer(value)) => Ok(value),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+        match self.try_get(index)? {
+            Constant::Integer(value) => Ok(value),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -180,14 +178,13 @@ impl ConstantPool {
 
     /// Get a float constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a float constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.4>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.4>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a float constant.
     pub fn try_get_float(&self, index: u16) -> Result<&f32> {
-        match self.try_get(index) {
-            Ok(Constant::Float(value)) => Ok(value),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+        match self.try_get(index)? {
+            Constant::Float(value) => Ok(value),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -202,14 +199,13 @@ impl ConstantPool {
 
     /// Get a long constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a long constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.5>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.5>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a long constant.
     pub fn try_get_long(&self, index: u16) -> Result<&i64> {
-        match self.try_get(index) {
-            Ok(Constant::Long(value)) => Ok(value),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+        match self.try_get(index)? {
+            Constant::Long(value) => Ok(value),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -224,14 +220,13 @@ impl ConstantPool {
 
     /// Get a double constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a double constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.5>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.5>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a double constant.
     pub fn try_get_double(&self, index: u16) -> Result<&f64> {
-        match self.try_get(index) {
-            Ok(Constant::Double(value)) => Ok(value),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+        match self.try_get(index)? {
+            Constant::Double(value) => Ok(value),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -247,14 +242,13 @@ impl ConstantPool {
 
     /// Get a class constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a class constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.1>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.1>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a class constant.
     pub fn try_get_class(&self, index: u16) -> Result<&String> {
-        match self.try_get(index) {
-            Ok(Constant::Class(value)) => self.try_get_utf8(*value),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+        match self.try_get(index)? {
+            Constant::Class(utf8_index) => self.try_get_utf8(*utf8_index),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -270,14 +264,13 @@ impl ConstantPool {
 
     /// Get a string constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a string constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.3>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.3>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a string constant.
     pub fn try_get_string(&self, index: u16) -> Result<&String> {
-        match self.try_get(index) {
-            Ok(Constant::String(value)) => self.try_get_utf8(*value),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+        match self.try_get(index)? {
+            Constant::String(value) => self.try_get_utf8(*value),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -301,17 +294,16 @@ impl ConstantPool {
 
     /// Get a field constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a field constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a field constant.
     pub fn try_get_field_ref(&self, index: u16) -> Result<(&u16, &u16)> {
-        match self.try_get(index) {
-            Ok(Constant::FieldRef {
+        match self.try_get(index)? {
+            Constant::FieldRef {
                 class_index,
                 name_and_type_index,
-            }) => Ok((class_index, name_and_type_index)),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+            } => Ok((class_index, name_and_type_index)),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -335,17 +327,16 @@ impl ConstantPool {
 
     /// Get a method constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a method constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a method constant.
     pub fn try_get_method_ref(&self, index: u16) -> Result<(&u16, &u16)> {
-        match self.try_get(index) {
-            Ok(Constant::MethodRef {
+        match self.try_get(index)? {
+            Constant::MethodRef {
                 class_index,
                 name_and_type_index,
-            }) => Ok((class_index, name_and_type_index)),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+            } => Ok((class_index, name_and_type_index)),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -369,18 +360,17 @@ impl ConstantPool {
 
     /// Get an interface method constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not an interface method constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not an interface method
     /// constant.
     pub fn try_get_interface_method_ref(&self, index: u16) -> Result<(&u16, &u16)> {
-        match self.try_get(index) {
-            Ok(Constant::InterfaceMethodRef {
+        match self.try_get(index)? {
+            Constant::InterfaceMethodRef {
                 class_index,
                 name_and_type_index,
-            }) => Ok((class_index, name_and_type_index)),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+            } => Ok((class_index, name_and_type_index)),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -400,18 +390,17 @@ impl ConstantPool {
 
     /// Get a name and type constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a name and type constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a name and type
     /// constant.
     pub fn try_get_name_and_type(&self, index: u16) -> Result<(&u16, &u16)> {
-        match self.try_get(index) {
-            Ok(Constant::NameAndType {
+        match self.try_get(index)? {
+            Constant::NameAndType {
                 name_index,
                 descriptor_index,
-            }) => Ok((name_index, descriptor_index)),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+            } => Ok((name_index, descriptor_index)),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -433,18 +422,17 @@ impl ConstantPool {
 
     /// Get a method handle constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a method handle constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.8>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.8>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a method handle
     /// constant.
     pub fn try_get_method_handle(&self, index: u16) -> Result<(&ReferenceKind, &u16)> {
-        match self.try_get(index) {
-            Ok(Constant::MethodHandle {
+        match self.try_get(index)? {
+            Constant::MethodHandle {
                 reference_kind,
                 reference_index,
-            }) => Ok((reference_kind, reference_index)),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+            } => Ok((reference_kind, reference_index)),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -460,15 +448,14 @@ impl ConstantPool {
 
     /// Get a method type constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a method type constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.9>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.9>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a method type
     /// constant.
     pub fn try_get_method_type(&self, index: u16) -> Result<&u16> {
-        match self.try_get(index) {
-            Ok(Constant::MethodType(value)) => Ok(value),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+        match self.try_get(index)? {
+            Constant::MethodType(name_and_type_index) => Ok(name_and_type_index),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -492,17 +479,16 @@ impl ConstantPool {
 
     /// Get a dynamic constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a dynamic constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.10>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.10>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a dynamic constant.
     pub fn try_get_dynamic(&self, index: u16) -> Result<(&u16, &u16)> {
-        match self.try_get(index) {
-            Ok(Constant::Dynamic {
+        match self.try_get(index)? {
+            Constant::Dynamic {
                 bootstrap_method_attr_index,
                 name_and_type_index,
-            }) => Ok((bootstrap_method_attr_index, name_and_type_index)),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+            } => Ok((bootstrap_method_attr_index, name_and_type_index)),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -526,18 +512,17 @@ impl ConstantPool {
 
     /// Get an invoke dynamic constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not an invoke dynamic constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.10>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.10>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not an invoke
     /// dynamic constant.
     pub fn try_get_invoke_dynamic(&self, index: u16) -> Result<(&u16, &u16)> {
-        match self.try_get(index) {
-            Ok(Constant::InvokeDynamic {
+        match self.try_get(index)? {
+            Constant::InvokeDynamic {
                 bootstrap_method_attr_index,
                 name_and_type_index,
-            }) => Ok((bootstrap_method_attr_index, name_and_type_index)),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+            } => Ok((bootstrap_method_attr_index, name_and_type_index)),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -553,14 +538,13 @@ impl ConstantPool {
 
     /// Get a module constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a module constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.11>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.11>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a module constant.
     pub fn try_get_module(&self, index: u16) -> Result<&String> {
-        match self.try_get(index) {
-            Ok(Constant::Module(value)) => self.try_get_utf8(*value),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+        match self.try_get(index)? {
+            Constant::Module(name_index) => self.try_get_utf8(*name_index),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -576,16 +560,112 @@ impl ConstantPool {
 
     /// Get a package constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a package constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.12>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.12>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a package constant.
     pub fn try_get_package(&self, index: u16) -> Result<&String> {
-        match self.try_get(index) {
-            Ok(Constant::Package(value)) => self.try_get_utf8(*value),
-            Err(_) => Err(InvalidConstantPoolIndex(index)),
+        match self.try_get(index)? {
+            Constant::Package(name_index) => self.try_get_utf8(*name_index),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
+    }
+
+    /// Get a formatted string constant from the pool by index; indexes are 1-based.
+    ///
+    /// # Errors
+    /// Returns an error if the index is out of bounds
+    pub fn try_get_formatted_string(&self, index: u16) -> Result<String> {
+        let value = match self.try_get(index)? {
+            Constant::Utf8(value) => value.to_string(),
+            Constant::Integer(integer) => format!("{integer}"),
+            Constant::Float(float) => format!("{float}"),
+            Constant::Long(long) => format!("{long}"),
+            Constant::Double(double) => format!("{double}"),
+            Constant::Class(utf8_index) => {
+                format!("Class {}", self.try_get_utf8(*utf8_index)?)
+            }
+            Constant::String(utf8_index) => {
+                format!("String {}", self.try_get_utf8(*utf8_index)?)
+            }
+            Constant::FieldRef {
+                class_index,
+                name_and_type_index,
+            } => {
+                let (name_index, _descriptor_index) =
+                    self.try_get_name_and_type(*name_and_type_index)?;
+                let class_name = self.try_get_class(*class_index)?;
+                let field_name = self.try_get_utf8(*name_index)?;
+                format!("Field {class_name}.{field_name}")
+            }
+            Constant::MethodRef {
+                class_index,
+                name_and_type_index,
+            } => {
+                let class_name = self.try_get_class(*class_index)?;
+                let (name_index, descriptor_index) =
+                    self.try_get_name_and_type(*name_and_type_index)?;
+                let method_name = self.try_get_utf8(*name_index)?;
+                let method_descriptor = self.try_get_utf8(*descriptor_index)?;
+                format!("Method {class_name}.{method_name}{method_descriptor}")
+            }
+            Constant::InterfaceMethodRef {
+                class_index,
+                name_and_type_index,
+            } => {
+                let class_name = self.try_get_class(*class_index)?;
+                let (name_index, descriptor_index) =
+                    self.try_get_name_and_type(*name_and_type_index)?;
+                let method_name = self.try_get_utf8(*name_index)?;
+                let method_descriptor = self.try_get_utf8(*descriptor_index)?;
+                format!("Interface method {class_name}.{method_name}{method_descriptor}")
+            }
+            Constant::NameAndType {
+                name_index,
+                descriptor_index,
+            } => {
+                let name = self.try_get_utf8(*name_index)?;
+                let descriptor = self.try_get_utf8(*descriptor_index)?;
+                format!("Name {name}, Descriptor {descriptor}")
+            }
+            Constant::MethodHandle {
+                reference_kind,
+                reference_index,
+            } => {
+                let reference = self.try_get_formatted_string(*reference_index)?;
+                format!("Method handle {reference_kind} {reference}")
+            }
+            Constant::MethodType(name_and_type_index) => {
+                let (name_index, descriptor_index) =
+                    self.try_get_name_and_type(*name_and_type_index)?;
+                let method_name = self.try_get_utf8(*name_index)?;
+                let method_descriptor = self.try_get_utf8(*descriptor_index)?;
+                format!("Method type{method_name}{method_descriptor}")
+            }
+            Constant::Dynamic {
+                bootstrap_method_attr_index,
+                name_and_type_index,
+            } => {
+                let method = self.try_get_formatted_string(*bootstrap_method_attr_index)?;
+                let name_and_type = self.try_get_formatted_string(*name_and_type_index)?;
+                format!("Dynamic Bootstrap {method}, {name_and_type}")
+            }
+            Constant::InvokeDynamic {
+                bootstrap_method_attr_index,
+                name_and_type_index,
+            } => {
+                let method = self.try_get_formatted_string(*bootstrap_method_attr_index)?;
+                let name_and_type = self.try_get_formatted_string(*name_and_type_index)?;
+                format!("Dynamic Bootstrap {method}, {name_and_type}")
+            }
+            Constant::Module(name_index) => {
+                format!("Package {}", self.try_get_utf8(*name_index)?)
+            }
+            Constant::Package(name_index) => {
+                format!("Package {}", self.try_get_utf8(*name_index)?)
+            }
+        };
+        Ok(value)
     }
 }
 
@@ -597,7 +677,7 @@ impl Default for ConstantPool {
 
 /// All 8 byte constants (long and double) take up two entries in the constant pool; a placeholder
 /// is used to facilitate efficient indexed access of constants in the pool. See the JVM spec for:
-/// <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.4.5>
+/// <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.5>
 #[derive(Clone, Debug, PartialEq)]
 enum ConstantEntry {
     Constant(Constant),
@@ -613,7 +693,7 @@ impl fmt::Display for ConstantEntry {
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct ConstantPoolIterator<'a> {
     constant_pool: &'a ConstantPool,
     index: usize,
@@ -682,7 +762,7 @@ mod test {
     use crate::Error::IoError;
     use std::fmt::Debug;
 
-    #[test_log::test]
+    #[test]
     fn test_constant_pool_entry_to_string() {
         assert_eq!(
             "Integer 42",
@@ -691,13 +771,13 @@ mod test {
         assert_eq!("", ConstantEntry::Placeholder.to_string());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_get_zero_none() {
         let constant_pool = ConstantPool::default();
         assert!(constant_pool.get(0).is_none());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_get() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.get(1).is_none());
@@ -705,13 +785,13 @@ mod test {
         assert!(constant_pool.get(1).is_some());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_zero_error() {
         let constant_pool = ConstantPool::default();
         assert_eq!(Err(InvalidConstantPoolIndex(0)), constant_pool.try_get(0));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.try_get(1).is_err());
@@ -719,7 +799,7 @@ mod test {
         assert!(constant_pool.try_get(1).is_ok());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_utf8() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Utf8("foo".to_string()));
@@ -727,7 +807,7 @@ mod test {
         assert_eq!(1, constant_pool.len());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_integer() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Integer(42));
@@ -735,7 +815,7 @@ mod test {
         assert_eq!(1, constant_pool.len());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_long() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Long(1_234_567_890));
@@ -744,7 +824,7 @@ mod test {
         assert_eq!(2, constant_pool.len());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_len() {
         let mut constant_pool = ConstantPool::default();
         assert_eq!(0, constant_pool.len());
@@ -752,7 +832,7 @@ mod test {
         assert_eq!(1, constant_pool.len());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_is_empty() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.is_empty());
@@ -760,7 +840,7 @@ mod test {
         assert!(!constant_pool.is_empty());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_iter() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Utf8("foo".to_string()));
@@ -773,7 +853,7 @@ mod test {
         assert_eq!(None, iter.next());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_into_iter() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Utf8("foo".to_string()));
@@ -782,7 +862,7 @@ mod test {
         }
     }
 
-    #[test_log::test]
+    #[test]
     fn test_double() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Double(std::f64::consts::PI));
@@ -791,7 +871,7 @@ mod test {
         assert_eq!(2, constant_pool.len());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         let mut constant_pool = ConstantPool::default();
         constant_pool.push(Constant::Utf8("foo".to_string()));
@@ -801,7 +881,7 @@ mod test {
         assert_eq!(expected, constant_pool.to_string());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let integer_constant = Constant::Integer(42);
@@ -850,7 +930,7 @@ mod test {
         assert!(f(&constant_pool, 2).is_ok());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_utf8() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_utf8("foo")?;
@@ -862,7 +942,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_utf8() {
         test_try_get_constant(
             ConstantPool::try_get_utf8,
@@ -870,7 +950,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_integer() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_integer(42)?;
@@ -879,12 +959,12 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_integer() {
         test_try_get_constant(ConstantPool::try_get_integer, Constant::Integer(42));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_float() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_float(std::f32::consts::PI)?;
@@ -896,7 +976,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_float() {
         test_try_get_constant(
             ConstantPool::try_get_float,
@@ -904,7 +984,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_long() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_long(i64::MAX)?;
@@ -913,12 +993,12 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_long() {
         test_try_get_constant(ConstantPool::try_get_long, Constant::Long(i64::MAX));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_double() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_double(std::f64::consts::PI)?;
@@ -930,7 +1010,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_double() {
         test_try_get_constant(
             ConstantPool::try_get_double,
@@ -938,7 +1018,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_class() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_class("java/lang/Object")?;
@@ -947,12 +1027,22 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_class() {
         test_try_get_constant(ConstantPool::try_get_class, Constant::Class(1));
     }
 
-    #[test_log::test]
+    #[test]
+    fn test_try_get_class_name() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.push(Constant::Utf8("java/lang/Object".to_string()));
+        constant_pool.push(Constant::Class(1));
+        let class_name = constant_pool.try_get_class(2)?;
+        assert_eq!("java/lang/Object", class_name);
+        Ok(())
+    }
+
+    #[test]
     fn test_add_string() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_string("foo")?;
@@ -961,12 +1051,12 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_string() {
         test_try_get_constant(ConstantPool::try_get_string, Constant::String(1));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_field_ref() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_field_ref(1, "out", "Ljava/io/PrintStream;")?;
@@ -981,7 +1071,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_field_ref() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_field_ref,
@@ -992,7 +1082,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_method_ref() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_method_ref(1, "println", "(Ljava/lang/String;)V")?;
@@ -1007,7 +1097,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_method_ref() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_method_ref,
@@ -1018,7 +1108,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_interface_method_ref() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index =
@@ -1034,7 +1124,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_interface_method_ref() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_interface_method_ref,
@@ -1045,7 +1135,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_name_and_type() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_name_and_type("name", "type")?;
@@ -1060,7 +1150,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_name_and_type() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_name_and_type,
@@ -1071,7 +1161,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_method_handle() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_method_handle(ReferenceKind::GetField, 1)?;
@@ -1086,7 +1176,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_method_handle() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_method_handle,
@@ -1097,7 +1187,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_method_type() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_method_type("()V")?;
@@ -1106,12 +1196,12 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_method_type() {
         test_try_get_constant(ConstantPool::try_get_method_type, Constant::MethodType(1));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_dynamic() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_dynamic(1, "name", "type")?;
@@ -1126,7 +1216,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_dynamic() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_dynamic,
@@ -1137,7 +1227,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_invoke_dynamic() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_invoke_dynamic(1, "name", "type")?;
@@ -1152,7 +1242,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_invoke_dynamic() {
         test_try_get_constant_tuple(
             ConstantPool::try_get_invoke_dynamic,
@@ -1163,7 +1253,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_module() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_module("module")?;
@@ -1172,12 +1262,12 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_module() {
         test_try_get_constant(ConstantPool::try_get_module, Constant::Module(1));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_add_package() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_package("package")?;
@@ -1186,12 +1276,12 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_try_get_package() {
         test_try_get_constant(ConstantPool::try_get_package, Constant::Package(1));
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from_bytes_invalid_tag() {
         let mut bytes = Cursor::new(vec![0, 0, 10]);
         assert_eq!(

@@ -7,7 +7,7 @@ use std::io::Cursor;
 bitflags! {
     /// Exports flags.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.25>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.25>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ExportsFlags: u16 {
         /// Indicates that this export was not explicitly or implicitly declared in the source of
@@ -63,12 +63,12 @@ impl fmt::Display for ExportsFlags {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_default() {
         assert_eq!(ExportsFlags::empty(), ExportsFlags::default());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
         let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
@@ -78,7 +78,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_access_flags() -> Result<()> {
         let access_flags = ExportsFlags::MANDATED;
         let mut bytes = Vec::new();
@@ -88,7 +88,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         assert_eq!(
             "(0x1000) ACC_SYNTHETIC",

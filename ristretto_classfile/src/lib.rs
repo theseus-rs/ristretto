@@ -7,7 +7,7 @@
 //!
 //! ## Getting Started
 //!
-//! Implementation of the [JVM Class File Format](https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html) that
+//! Implementation of the [JVM Class File Format](https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html) that
 //! is used to read, write and verify Java classes.
 //!
 //! Supports reading and writing class files for any version of Java version up to 24. Verification
@@ -33,9 +33,10 @@
 //!
 //! ## Safety
 //!
-//! These crates use `#![forbid(unsafe_code)]` to ensure everything is implemented in 100% safe Rust.
+//! This crate uses `#![forbid(unsafe_code)]` to ensure everything is implemented in 100% safe Rust.
 
 #![forbid(unsafe_code)]
+#![forbid(clippy::allow_attributes)]
 #![allow(dead_code)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::unwrap_in_result)]

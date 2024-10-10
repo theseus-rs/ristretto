@@ -2,7 +2,7 @@ use crate::runtime::util;
 use crate::{ClassLoader, ClassPath, Error, Result};
 use flate2::bufread::GzDecoder;
 use std::path::{Path, PathBuf};
-use std::{env, io};
+use std::{env, fs, io};
 use tar::Archive;
 use tracing::{debug, instrument};
 
@@ -13,7 +13,7 @@ use tracing::{debug, instrument};
 /// # Errors
 /// An error will be returned if the class loader cannot be created.
 #[instrument(level = "debug")]
-pub async fn class_loader(version: &str) -> Result<(String, ClassLoader)> {
+pub fn class_loader(version: &str) -> Result<(String, ClassLoader)> {
     let mut archive_version = version.to_string();
     let current_dir = env::current_dir().unwrap_or_default();
     #[cfg(target_arch = "wasm32")]
@@ -24,9 +24,9 @@ pub async fn class_loader(version: &str) -> Result<(String, ClassLoader)> {
     let mut installation_dir = base_path.join(version);
 
     if !installation_dir.exists() {
-        let (version, file_name, archive) = util::get_runtime_archive(version).await?;
+        let (version, file_name, archive) = util::get_runtime_archive(version)?;
         installation_dir =
-            extract_archive(version.as_str(), file_name.as_str(), &archive, &base_path).await?;
+            extract_archive(version.as_str(), file_name.as_str(), &archive, &base_path)?;
         archive_version = version;
     }
 
@@ -67,7 +67,6 @@ fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
         class_paths.sort_by(Ord::cmp);
         class_paths.join(":")
     };
-    debug!("Class loader for {version}: {class_path}");
     Ok(ClassPath::from(class_path))
 }
 
@@ -75,17 +74,14 @@ fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
 ///
 /// # Errors
 /// An error will be returned if the archive cannot be extracted.
-#[instrument(level = "debug")]
-async fn extract_archive(
+#[instrument(level = "debug", skip(archive))]
+fn extract_archive(
     version: &str,
     file_name: &str,
     archive: &Vec<u8>,
     out_dir: &PathBuf,
 ) -> Result<PathBuf> {
-    #[cfg(target_arch = "wasm32")]
-    std::fs::create_dir_all(out_dir)?;
-    #[cfg(not(target_arch = "wasm32"))]
-    tokio::fs::create_dir_all(out_dir).await?;
+    fs::create_dir_all(out_dir)?;
 
     let Some(extension) = file_name.split('.').last() else {
         return Err(Error::ArchiveError(
@@ -109,7 +105,6 @@ async fn extract_archive(
         tar.unpack(extract_dir.clone())?;
     };
 
-    #[cfg(target_arch = "wasm32")]
     let runtime_dir = {
         let mut entries = std::fs::read_dir(&extract_dir)?;
         let Some(runtime_dir) = entries.next() else {
@@ -119,26 +114,13 @@ async fn extract_archive(
         };
         runtime_dir?
     };
-    #[cfg(not(target_arch = "wasm32"))]
-    let runtime_dir = {
-        let mut entries = tokio::fs::read_dir(&extract_dir).await?;
-        let Some(runtime_dir) = entries.next_entry().await? else {
-            return Err(Error::ArchiveError(
-                "No directory found in archive".to_string(),
-            ));
-        };
-        runtime_dir
-    };
     let runtime_dir = runtime_dir.path();
     let installation_dir = out_dir.join(version);
 
     // Rename the runtime directory to the installation directory. Another process may have
     // already installed the runtime, so we need to check if the installation directory exists.
     // If it does, we can ignore the error.
-    #[cfg(target_arch = "wasm32")]
-    let rename_result = std::fs::rename(runtime_dir.clone(), installation_dir.clone());
-    #[cfg(not(target_arch = "wasm32"))]
-    let rename_result = tokio::fs::rename(runtime_dir.clone(), installation_dir.clone()).await;
+    let rename_result = fs::rename(runtime_dir.clone(), installation_dir.clone());
     if let Err(error) = rename_result {
         debug!(
             "Failed to rename {} to {}",
@@ -149,10 +131,7 @@ async fn extract_archive(
             return Err(Error::ArchiveError(error.to_string()));
         }
     }
-    #[cfg(target_arch = "wasm32")]
-    std::fs::remove_dir_all(&extract_dir)?;
-    #[cfg(not(target_arch = "wasm32"))]
-    tokio::fs::remove_dir_all(&extract_dir).await?;
+    fs::remove_dir_all(&extract_dir)?;
     debug!(
         "Installed {version} to: {}",
         installation_dir.to_string_lossy()
@@ -165,19 +144,19 @@ async fn extract_archive(
 mod tests {
     use super::*;
 
-    #[test_log::test(tokio::test)]
-    async fn test_class_loader_v8() -> Result<()> {
+    #[test]
+    fn test_class_loader_v8() -> Result<()> {
         let version = "8.422.05.1";
-        let (archive_version, class_loader) = class_loader(version).await?;
+        let (archive_version, class_loader) = class_loader(version)?;
         assert_eq!(version, archive_version);
         assert_eq!("bootstrap", class_loader.name());
         Ok(())
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_class_loader_v21() -> Result<()> {
+    #[test]
+    fn test_class_loader_v21() -> Result<()> {
         let version = "21.0.4.7.1";
-        let (archive_version, class_loader) = class_loader(version).await?;
+        let (archive_version, class_loader) = class_loader(version)?;
         assert_eq!(version, archive_version);
         assert_eq!("bootstrap", class_loader.name());
         Ok(())

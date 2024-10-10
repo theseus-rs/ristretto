@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of `MethodParameter`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.24>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.24>
 #[derive(Clone, Debug, PartialEq)]
 pub struct MethodParameter {
     pub name_index: u16,
@@ -52,7 +52,7 @@ impl fmt::Display for MethodParameter {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         let method_parameter = MethodParameter {
             name_index: 3,
@@ -64,7 +64,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let method_parameter = MethodParameter {
             name_index: 3,

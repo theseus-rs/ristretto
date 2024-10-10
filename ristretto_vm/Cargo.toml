@@ -1,0 +1,37 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "Java Virtual Machine"
+edition.workspace = true
+keywords = ["java", "jvm"]
+license.workspace = true
+name = "ristretto_vm"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+dirs = { workspace = true }
+indexmap = { workspace = true }
+os_info = { workspace = true }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.8.0" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.8.0" }
+sysinfo = { workspace = true }
+sys-locale = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+whoami = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[features]
+default = ["native-tls"]
+native-tls = [
+    "ristretto_classloader/native-tls",
+]
+rustls-tls = [
+    "ristretto_classloader/rustls-tls",
+]
+url = [
+    "ristretto_classloader/url",
+]

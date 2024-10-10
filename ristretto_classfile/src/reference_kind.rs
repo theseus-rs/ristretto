@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of the `ReferenceKind`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-5.html#jvms-5.4.3.5>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-5.html#jvms-5.4.3.5>
 #[derive(Clone, Debug, PartialEq)]
 pub enum ReferenceKind {
     GetField,
@@ -117,7 +117,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_get_field() -> Result<()> {
         let reference_kind = ReferenceKind::GetField;
 
@@ -125,7 +125,7 @@ mod test {
         test_reference_kind(&reference_kind, 1)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_get_static() -> Result<()> {
         let reference_kind = ReferenceKind::GetStatic;
 
@@ -133,7 +133,7 @@ mod test {
         test_reference_kind(&reference_kind, 2)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_put_field() -> Result<()> {
         let reference_kind = ReferenceKind::PutField;
 
@@ -141,7 +141,7 @@ mod test {
         test_reference_kind(&reference_kind, 3)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_put_static() -> Result<()> {
         let reference_kind = ReferenceKind::PutStatic;
 
@@ -149,7 +149,7 @@ mod test {
         test_reference_kind(&reference_kind, 4)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_invoke_virtual() -> Result<()> {
         let reference_kind = ReferenceKind::InvokeVirtual;
 
@@ -157,7 +157,7 @@ mod test {
         test_reference_kind(&reference_kind, 5)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_invoke_static() -> Result<()> {
         let reference_kind = ReferenceKind::InvokeStatic;
 
@@ -165,7 +165,7 @@ mod test {
         test_reference_kind(&reference_kind, 6)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_invoke_special() -> Result<()> {
         let reference_kind = ReferenceKind::InvokeSpecial;
 
@@ -173,7 +173,7 @@ mod test {
         test_reference_kind(&reference_kind, 7)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_new_invoke_special() -> Result<()> {
         let reference_kind = ReferenceKind::NewInvokeSpecial;
 
@@ -181,7 +181,7 @@ mod test {
         test_reference_kind(&reference_kind, 8)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_invoke_interface() -> Result<()> {
         let reference_kind = ReferenceKind::InvokeInterface;
 
@@ -189,7 +189,7 @@ mod test {
         test_reference_kind(&reference_kind, 9)
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from_bytes_invalid_reference_kind() {
         let mut bytes = Cursor::new(vec![0]);
         assert_eq!(

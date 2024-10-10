@@ -2,11 +2,15 @@
 default-members = [
     "ristretto_classfile",
     "ristretto_classloader",
+    "ristretto_cli",
+    "ristretto_vm",
 ]
 members = [
     "examples/*",
     "ristretto_classfile",
     "ristretto_classloader",
+    "ristretto_cli",
+    "ristretto_vm",
 ]
 resolver = "2"
 
@@ -17,26 +21,31 @@ edition = "2021"
 keywords = ["java", "jvm"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/theseus-rs/ristretto"
-version = "0.7.0"
+version = "0.8.0"
 
 [workspace.dependencies]
-anyhow = "1.0.44"
+anyhow = "1.0.88"
 bitflags = "2.6.0"
 byteorder = "1.5.0"
+clap = "4.5.20"
 criterion = { version = "0.5.1", default-features = false }
-flate2 = "1.0.32"
+dirs = "5.0.1"
+flate2 = "1.0.33"
 home = "0.5.9"
 indoc = "2.0.5"
-indexmap = "2.4.0"
-reqwest = "0.12.7"
-serde = "1.0.207"
+indexmap = "2.6.0"
+os_info = "3.8.2"
+reqwest = { version = "0.12.7", default-features = false }
+serde = "1.0.210"
 serde_plain = "1.0.2"
-tar = "0.4.41"
-tempfile = "3.11.0"
-test-log = { version = "0.2.16", features = ["trace"] }
-thiserror = "1.0.63"
-tokio = { version = "1.40.0", default-features = false, features = ["macros", "rt", "sync"] }
+sysinfo = "0.32.0"
+sys-locale = "0.3.1"
+tar = "0.4.42"
+tempfile = "3.13.0"
+thiserror = "1.0.64"
 tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+whoami = "1.5.2"
 zip = { version = "2.2.0", default-features = false, features = ["deflate"] }
 
 [workspace.metadata.release]
@@ -49,4 +58,34 @@ codegen-units = 1
 lto = true
 opt-level = "z"
 panic = "abort"
-strip = true
+
+# The profile that 'cargo dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+# Config for 'cargo dist'
+[workspace.metadata.dist]
+# The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
+cargo-dist-version = "0.22.1"
+# CI backends to support
+ci = "github"
+# Path that installers should place binaries in
+install-path = "CARGO_HOME"
+# Whether to install an updater program
+install-updater = true
+# The installers to generate for each app
+installers = ["shell", "powershell", "homebrew", "msi"]
+# Post-announce jobs to run in CI
+post-announce-jobs = ["./release-post-announce"]
+# Which actions to run on pull requests
+pr-run-mode = "upload"
+# Publish jobs to run in CI
+publish-jobs = ["homebrew"]
+# A GitHub repo to push Homebrew formulas to
+tap = "theseus-rs/homebrew-tap"
+# Target platforms to build apps for (Rust target-triple syntax)
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+
+[workspace.metadata.dist.github-custom-runners]
+aarch64-apple-darwin = "macos-14"
