@@ -13,7 +13,7 @@ version.workspace = true
 flate2 = { workspace = true }
 indexmap = { workspace = true }
 reqwest = { workspace = true, features = ["blocking", "json"] }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.7.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.8.0" }
 serde = { workspace = true, features = ["derive"] }
 serde_plain = { workspace = true }
 tar = { workspace = true }

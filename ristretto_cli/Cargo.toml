@@ -24,6 +24,6 @@ path = "src/main.rs"  # path to your main.rs or other binary file
 [dependencies]
 clap = { workspace = true, features = ["derive"] }
 os_info = { workspace = true }
-ristretto_vm = { path = "../ristretto_vm", version = "0.7.0" }
+ristretto_vm = { path = "../ristretto_vm", version = "0.8.0" }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
