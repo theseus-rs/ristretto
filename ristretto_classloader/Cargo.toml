@@ -30,8 +30,13 @@ criterion = { workspace = true }
 indoc = { workspace = true }
 
 [features]
-all = ["url"]
-default = []
+default = ["native-tls"]
+native-tls = [
+    "reqwest/native-tls",
+]
+rustls-tls = [
+    "reqwest/rustls-tls-native-roots",
+]
 url = []
 
 [[bench]]

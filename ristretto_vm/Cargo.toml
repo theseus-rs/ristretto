@@ -23,3 +23,15 @@ whoami = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
+
+[features]
+default = ["native-tls"]
+native-tls = [
+    "ristretto_classloader/native-tls",
+]
+rustls-tls = [
+    "ristretto_classloader/rustls-tls",
+]
+url = [
+    "ristretto_classloader/url",
+]

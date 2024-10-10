@@ -27,3 +27,15 @@ os_info = { workspace = true }
 ristretto_vm = { path = "../ristretto_vm", version = "0.8.0" }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+[features]
+default = ["native-tls"]
+native-tls = [
+    "ristretto_vm/native-tls",
+]
+rustls-tls = [
+    "ristretto_vm/rustls-tls",
+]
+url = [
+    "ristretto_vm/url",
+]
