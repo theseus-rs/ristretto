@@ -16,7 +16,7 @@ const MAGIC: u32 = 0xCAFE_BABE;
 
 /// `ClassFile` represents the content of a Java .class file.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.1>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.1>
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ClassFile {
     pub version: Version,
@@ -31,7 +31,7 @@ pub struct ClassFile {
 }
 
 impl ClassFile {
-    /// Get the class name.
+    /// Get the fully qualified class name.
     ///
     /// # Errors
     /// Returns an error if the class name is not found.
@@ -223,7 +223,7 @@ mod test {
     use crate::Error::{InvalidConstantPoolIndexType, IoError};
     use indoc::indoc;
 
-    #[test_log::test]
+    #[test]
     fn test_invalid_magic() {
         let invalid_magic: u32 = 0x0102_0304;
         let mut bytes = Cursor::new(invalid_magic.to_be_bytes().to_vec());
@@ -233,7 +233,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_class_name() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
@@ -243,7 +243,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_class_name_invalid_constant_pool() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let utf8_index = constant_pool.add_utf8("Test")?;
@@ -260,7 +260,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
@@ -270,13 +270,14 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_verify_error() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let this_class = constant_pool.add_class("Test")?;
         // Add an invalid constant to trigger a verification error.
         constant_pool.push(Constant::Class(u16::MAX));
         let class_file = ClassFile {
+            version: Version::Java21 { minor: 0 },
             constant_pool: constant_pool.clone(),
             this_class,
             ..Default::default()
@@ -292,7 +293,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_minimum_to_string() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
@@ -300,7 +301,7 @@ mod test {
         let expected = indoc! {r"
             public class Minimum
               minor version: 0
-              major version: 65 (Java 21)
+              major version: 52 (Java 8)
               flags: (0x0021) ACC_PUBLIC, ACC_SUPER
               this_class: #7
               super_class: #2
@@ -339,13 +340,13 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_minimum_serialization() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
 
-        assert_eq!(Version::Java21 { minor: 0 }, class_file.version);
+        assert_eq!(Version::Java8 { minor: 0 }, class_file.version);
         assert_eq!(
             ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER,
             class_file.access_flags
@@ -358,13 +359,13 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_simple_serialization() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Simple.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
 
-        assert_eq!(Version::Java21 { minor: 0 }, class_file.version);
+        assert_eq!(Version::Java8 { minor: 0 }, class_file.version);
         assert_eq!(
             ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER,
             class_file.access_flags
@@ -377,7 +378,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from_bytes_invalid() {
         let bytes = vec![
             202, 254, 186, 190, 254, 0, 0, 48, 0, 0, 160, 93, 37, 0, 212, 186,

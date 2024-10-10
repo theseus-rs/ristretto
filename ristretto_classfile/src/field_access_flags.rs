@@ -7,7 +7,7 @@ use std::io::Cursor;
 bitflags! {
     /// Field access flags.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.5:~:text=field_info%20structure%20are%20as%20follows%3A-,access_flags,-The%20value%20of%20the%20access_flags>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.5:~:text=field_info%20structure%20are%20as%20follows%3A-,access_flags,-The%20value%20of%20the%20access_flags>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct FieldAccessFlags: u16 {
         /// Declared public; may be accessed from outside its package.
@@ -59,7 +59,6 @@ impl FieldAccessFlags {
 
     /// Get the Field Access Flags as a string of code.
     #[must_use]
-    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_code(&self) -> String {
         let mut modifiers = Vec::new();
         if self.contains(FieldAccessFlags::PUBLIC) {
@@ -132,12 +131,12 @@ impl fmt::Display for FieldAccessFlags {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_default() {
         assert_eq!(FieldAccessFlags::empty(), FieldAccessFlags::default());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
         let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
@@ -155,7 +154,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_access_flags() -> Result<()> {
         let access_flags = FieldAccessFlags::PUBLIC | FieldAccessFlags::FINAL;
         let mut bytes = Vec::new();
@@ -165,7 +164,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_as_code() {
         assert_eq!("public", FieldAccessFlags::PUBLIC.as_code());
         assert_eq!("private", FieldAccessFlags::PRIVATE.as_code());
@@ -181,7 +180,7 @@ mod test {
         assert_eq!("public static final", access_flags.as_code());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         assert_eq!("(0x0001) ACC_PUBLIC", FieldAccessFlags::PUBLIC.to_string());
         assert_eq!(

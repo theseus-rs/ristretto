@@ -56,7 +56,7 @@ mod test {
     use super::*;
     use crate::class_file::ClassFile;
 
-    #[test_log::test]
+    #[test]
     fn test_method_success() {
         let class_file = ClassFile::default();
         let method = Method::default();
@@ -77,7 +77,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_visibility_errors() {
         test_method_flag_error(
             MethodAccessFlags::PUBLIC | MethodAccessFlags::PROTECTED | MethodAccessFlags::PRIVATE,
@@ -103,7 +103,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_interface_access_flag_errors() {
         test_interface_method_error(MethodAccessFlags::PROTECTED);
         test_interface_method_error(MethodAccessFlags::FINAL);
@@ -111,7 +111,7 @@ mod test {
         test_interface_method_error(MethodAccessFlags::NATIVE);
     }
 
-    #[test_log::test]
+    #[test]
     fn test_abstract_access_flag_errors() {
         test_method_flag_error(MethodAccessFlags::ABSTRACT | MethodAccessFlags::PRIVATE);
         test_method_flag_error(MethodAccessFlags::ABSTRACT | MethodAccessFlags::STATIC);
@@ -137,7 +137,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_strict_version_errors() {
         test_strict_version_error(Version::Java1_2 { minor: 0 });
         test_strict_version_error(Version::Java1_3 { minor: 0 });

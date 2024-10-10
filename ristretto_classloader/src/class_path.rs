@@ -3,7 +3,7 @@ use crate::Error::ClassNotFound;
 use crate::Result;
 use ristretto_classfile::ClassFile;
 use std::fmt::Display;
-use tracing::instrument;
+use tracing::{info, instrument};
 
 /// Represents a class path.
 ///
@@ -49,11 +49,12 @@ impl ClassPath {
     /// # Errors
     /// if the class file is not found or cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
-    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
+    pub fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         let name = name.as_ref();
 
         for class_path_entry in self.iter() {
-            if let Ok(class_file) = class_path_entry.read_class(name).await {
+            if let Ok(class_file) = class_path_entry.read_class(name) {
+                info!("load class {name} source: {}", class_path_entry.name());
                 return Ok(class_file);
             }
         }
@@ -90,19 +91,19 @@ mod tests {
     use crate::Result;
     use std::path::PathBuf;
 
-    #[test_log::test]
+    #[test]
     fn test_new() {
         let class_path = ClassPath::new(vec![ClassPathEntry::new("."), ClassPathEntry::new("..")]);
         assert_eq!(".:..", class_path.to_string());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_from() {
         let class_path = ClassPath::from(".:..");
         assert_eq!(".:..", class_path.to_string());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_iter() {
         let class_path = ClassPath::from(".:..");
         let mut iter = class_path.iter();
@@ -110,7 +111,7 @@ mod tests {
         assert_eq!("..", iter.next().expect("next").name());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_into_iter() {
         let class_path = ClassPath::from(".:..");
         let mut iter = class_path.into_iter();
@@ -118,8 +119,8 @@ mod tests {
         assert_eq!("..", iter.next().expect("next").name());
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_read_class() -> Result<()> {
+    #[test]
+    fn test_read_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
         let classes_jar = cargo_manifest.join("../classes/classes.jar");
@@ -134,14 +135,13 @@ mod tests {
         let class_path = class_path_entries.join(":");
         let class_path_entry = ClassPath::from(&class_path);
 
-        let class_file = class_path_entry.read_class("HelloWorld").await?;
+        let class_file = class_path_entry.read_class("HelloWorld")?;
         assert_eq!("HelloWorld", class_file.class_name()?);
 
         #[cfg(feature = "url")]
         {
-            let class_file = class_path_entry
-                .read_class("org.springframework.boot.SpringApplication")
-                .await?;
+            let class_file =
+                class_path_entry.read_class("org/springframework/boot/SpringApplication")?;
             assert_eq!(
                 "org/springframework/boot/SpringApplication",
                 class_file.class_name()?

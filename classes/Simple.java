@@ -13,6 +13,12 @@ public class Simple implements SimpleInterface {
     public static final short SHORT = Short.MAX_VALUE;
     public static final String STRING = "foo";
 
+    private static int ANSWER;
+
+    static {
+        ANSWER = 6 * 7;
+    }
+
     @Deprecated
     public int publicValue;
     protected int protectedValue;
@@ -25,6 +31,10 @@ public class Simple implements SimpleInterface {
         this.protectedValue = 1;
         this.defaultValue = 2;
         this.privateValue = 3;
+    }
+
+    public static int getAnswer() {
+        return ANSWER;
     }
 
     @Deprecated

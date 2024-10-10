@@ -5,7 +5,7 @@ use std::io::Cursor;
 
 /// Implementation of `TargetPath`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.20.2>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.20.2>
 #[derive(Clone, Debug, PartialEq)]
 pub struct TargetPath {
     pub type_path_kind: u8,
@@ -53,7 +53,7 @@ impl fmt::Display for TargetPath {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let target_path = TargetPath {
             type_path_kind: 1,

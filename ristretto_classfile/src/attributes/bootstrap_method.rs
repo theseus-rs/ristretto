@@ -5,7 +5,7 @@ use std::io::Cursor;
 
 /// Implementation of `BootstrapMethod`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.23>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.23>
 #[derive(Clone, Debug, PartialEq)]
 pub struct BootstrapMethod {
     pub bootstrap_method_ref: u16,
@@ -61,7 +61,7 @@ impl fmt::Display for BootstrapMethod {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         let bootstrap_method = BootstrapMethod {
             bootstrap_method_ref: 3,
@@ -73,7 +73,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let bootstrap_method = BootstrapMethod {
             bootstrap_method_ref: 3,

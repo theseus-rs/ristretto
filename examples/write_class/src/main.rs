@@ -16,7 +16,6 @@ use std::fs;
 ///     }
 /// }
 /// ```
-#[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
     let mut constant_pool = ConstantPool::default();
     let super_class = constant_pool.add_class("java/lang/Object")?;

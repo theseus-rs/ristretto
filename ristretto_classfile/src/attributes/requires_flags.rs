@@ -7,7 +7,7 @@ use std::io::Cursor;
 bitflags! {
     /// Requires flags.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.25>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.25>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct RequiresFlags: u16 {
         /// Indicates that any module which depends on the current module, implicitly declares a
@@ -75,12 +75,12 @@ impl fmt::Display for RequiresFlags {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_default() {
         assert_eq!(RequiresFlags::empty(), RequiresFlags::default());
     }
 
-    #[test_log::test]
+    #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
         let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
@@ -93,7 +93,7 @@ mod test {
         );
     }
 
-    #[test_log::test]
+    #[test]
     fn test_access_flags() -> Result<()> {
         let access_flags = RequiresFlags::TRANSITIVE;
         let mut bytes = Vec::new();
@@ -103,7 +103,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() {
         assert_eq!(
             "(0x0020) ACC_TRANSITIVE",

@@ -10,7 +10,7 @@ use std::io::Cursor;
 
 /// Field.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.5>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.5>
 #[derive(Clone, Debug, PartialEq)]
 pub struct Field {
     pub access_flags: FieldAccessFlags,
@@ -90,7 +90,7 @@ mod test {
     use crate::BaseType;
     use indoc::indoc;
 
-    #[test_log::test]
+    #[test]
     fn test_to_string() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8("ConstantValue")?;
@@ -117,7 +117,7 @@ mod test {
         Ok(())
     }
 
-    #[test_log::test]
+    #[test]
     fn test_field() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8("ConstantValue")?;

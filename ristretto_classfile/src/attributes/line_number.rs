@@ -5,7 +5,7 @@ use std::io::Cursor;
 
 /// Implementation of `LineNumber`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se22/html/jvms-4.html#jvms-4.7.12>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.12>
 #[derive(Clone, Debug, PartialEq)]
 pub struct LineNumber {
     pub start_pc: u16,
@@ -46,7 +46,7 @@ impl LineNumber {
 mod test {
     use super::*;
 
-    #[test_log::test]
+    #[test]
     fn test_serialization() -> Result<()> {
         let line_number = LineNumber {
             start_pc: 1,

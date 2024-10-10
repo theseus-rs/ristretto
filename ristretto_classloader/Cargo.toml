@@ -12,8 +12,8 @@ version.workspace = true
 [dependencies]
 flate2 = { workspace = true }
 indexmap = { workspace = true }
-reqwest = { workspace = true, features = ["json"] }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.7.0" }
+reqwest = { workspace = true, features = ["blocking", "json"] }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.8.0" }
 serde = { workspace = true, features = ["derive"] }
 serde_plain = { workspace = true }
 tar = { workspace = true }
@@ -22,27 +22,21 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 zip = { workspace = true }
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-tokio = { workspace = true }
-
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 home = { workspace = true }
-tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
 criterion = { workspace = true }
 indoc = { workspace = true }
-test-log = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-tokio = { workspace = true }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
-all = ["url"]
-default = []
+default = ["native-tls"]
+native-tls = [
+    "reqwest/native-tls",
+]
+rustls-tls = [
+    "reqwest/rustls-tls-native-roots",
+]
 url = []
 
 [[bench]]
