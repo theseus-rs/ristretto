@@ -19,7 +19,7 @@ eula = false
 
 [[bin]]
 name = "java"
-path = "src/main.rs"  # path to your main.rs or other binary file
+path = "src/main.rs"
 
 [dependencies]
 clap = { workspace = true, features = ["derive"] }
