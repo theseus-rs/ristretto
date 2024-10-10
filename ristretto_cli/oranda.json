@@ -1,0 +1,18 @@
+{
+  "project": {
+    "name": "ristretto"
+  },
+  "components": {
+    "artifacts": {
+      "package_managers": {
+        "preferred": {
+          "cargo": "cargo install ristretto_cli",
+          "binstall": "cargo binstall ristretto_cli"
+        }
+      }
+    },
+    "changelog": {
+      "read_changelog_file": false
+    }
+  }
+}
