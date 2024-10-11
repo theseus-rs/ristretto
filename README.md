@@ -43,9 +43,9 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - Reading, writing, verifying classes for any version of Java version up to 24
 - Verification of class files is supported, but is still a work in progress.
 
-# Limitations
+### Limitations
 
-- The instructions Athrow, Multianewarray and Invokedynamic are not implemented
+- Instructions Athrow, Multianewarray and Invokedynamic are not implemented
 - Exceptions are not implemented
 - Threading is not implemented
 - Numerous JDK native methods are not implemented
