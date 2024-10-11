@@ -227,13 +227,13 @@ pub(crate) fn new(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.checkcast>
 #[inline]
 pub(crate) fn checkcast(stack: &mut OperandStack, class_name: &str) -> Result<ExecutionResult> {
-    let Value::Object(reference) = stack.peek()? else {
+    let Value::Object(object) = stack.peek()? else {
         return Err(RuntimeError("Expected object".to_string()));
     };
-    if reference.is_none() {
+    let Some(object) = object else {
         return Ok(Continue);
-    }
-    if !is_instanceof(reference, class_name)? {
+    };
+    if !is_instanceof(object, class_name)? {
         return Err(ClassCastError(class_name.to_string()));
     }
     Ok(Continue)
@@ -243,10 +243,10 @@ pub(crate) fn checkcast(stack: &mut OperandStack, class_name: &str) -> Result<Ex
 #[inline]
 pub(crate) fn instanceof(stack: &mut OperandStack, class_name: &str) -> Result<ExecutionResult> {
     let object = stack.pop_object()?;
-    if object.is_none() {
+    let Some(object) = object else {
         stack.push_int(0)?;
         return Ok(Continue);
-    }
+    };
     if is_instanceof(&object, class_name)? {
         stack.push_int(1)?;
     } else {
@@ -256,11 +256,7 @@ pub(crate) fn instanceof(stack: &mut OperandStack, class_name: &str) -> Result<E
 }
 
 #[inline]
-fn is_instanceof(object: &Option<Reference>, class_name: &str) -> Result<bool> {
-    let Some(object) = object else {
-        return Ok(false);
-    };
-
+fn is_instanceof(object: &Reference, class_name: &str) -> Result<bool> {
     match object {
         Reference::ByteArray(_)
         | Reference::CharArray(_)

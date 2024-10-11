@@ -4,7 +4,7 @@ use crate::operand_stack::OperandStack;
 use crate::Error::InvalidStackValue;
 use crate::Result;
 use ristretto_classfile::ConstantPool;
-use ristretto_classloader::Reference;
+use ristretto_classloader::{Reference, Value};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.getfield>
 #[inline]
@@ -13,8 +13,9 @@ pub(crate) fn getfield(
     constant_pool: &ConstantPool,
     index: u16,
 ) -> Result<ExecutionResult> {
-    match stack.pop_object()? {
-        Some(Reference::Object(object)) => {
+    let value = stack.pop()?;
+    match value {
+        Value::Object(Some(Reference::Object(object))) => {
             let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
             let (name_index, _descriptor_index) =
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
@@ -24,13 +25,9 @@ pub(crate) fn getfield(
             stack.push(value)?;
             Ok(Continue)
         }
-        Some(object) => Err(InvalidStackValue {
+        _ => Err(InvalidStackValue {
             expected: "object".to_string(),
-            actual: object.to_string(),
-        }),
-        None => Err(InvalidStackValue {
-            expected: "object".to_string(),
-            actual: "null".to_string(),
+            actual: value.to_string(),
         }),
     }
 }
@@ -43,9 +40,9 @@ pub(crate) fn putfield(
     index: u16,
 ) -> Result<ExecutionResult> {
     let value = stack.pop()?;
-    let mut object = stack.pop_object()?;
-    match object {
-        Some(Reference::Object(ref mut object)) => {
+    let mut object_value = stack.pop()?;
+    match object_value {
+        Value::Object(Some(Reference::Object(ref mut object))) => {
             let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
             let (name_index, _descriptor_index) =
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
@@ -54,13 +51,9 @@ pub(crate) fn putfield(
             field.set_value(value)?;
             Ok(Continue)
         }
-        Some(object) => Err(InvalidStackValue {
+        _ => Err(InvalidStackValue {
             expected: "object".to_string(),
-            actual: object.to_string(),
-        }),
-        None => Err(InvalidStackValue {
-            expected: "object".to_string(),
-            actual: "null".to_string(),
+            actual: object_value.to_string(),
         }),
     }
 }
@@ -153,7 +146,7 @@ mod test {
         assert!(matches!(result, Err(InvalidStackValue {
             expected,
             actual
-        }) if expected == "object" && actual == "null"));
+        }) if expected == "object" && actual == "object(null)"));
 
         Ok(())
     }
@@ -190,7 +183,7 @@ mod test {
         assert!(matches!(result, Err(InvalidStackValue {
             expected,
             actual
-        }) if expected == "object" && actual == "null"));
+        }) if expected == "object" && actual == "object(null)"));
 
         Ok(())
     }

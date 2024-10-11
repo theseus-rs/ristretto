@@ -404,8 +404,33 @@ mod tests {
         Ok(())
     }
 
-    // #[test]
-    // fn test_multianewarray() -> Result<()> {
-    //     todo!()
-    // }
+    #[test]
+    fn test_multianewarray_single_dimension() -> Result<()> {
+        let (vm, mut call_stack, mut class) = crate::test::class()?;
+        let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
+        let class_index = constant_pool.add_class("java/lang/Object")?;
+        let method = Method::new(
+            MethodAccessFlags::STATIC,
+            "test",
+            "()V",
+            10,
+            10,
+            Vec::new(),
+            Vec::new(),
+        )?;
+        let arguments = Vec::new();
+        let mut frame = Frame::new(&class, &Arc::new(method), arguments)?;
+        let stack = &mut frame.stack;
+        let class = frame.class;
+
+        stack.push_int(0)?;
+        let result = multianewarray(&vm, &mut call_stack, stack, &class, class_index, 1)?;
+        assert_eq!(Continue, result);
+        let object = stack.pop()?;
+        assert!(matches!(
+            object,
+            Value::Object(Some(Reference::Array(_, _)))
+        ));
+        Ok(())
+    }
 }
