@@ -122,6 +122,22 @@ mod tests {
     use std::io::Cursor;
     use std::sync::Arc;
 
+    fn minimum_class() -> Result<Arc<Class>> {
+        let bytes = include_bytes!("../../classes/Minimum.class").to_vec();
+        let mut cursor = Cursor::new(bytes);
+        let class_file = ClassFile::from_bytes(&mut cursor)?;
+        let class = Arc::new(Class::from(class_file)?);
+        Ok(class)
+    }
+
+    fn simple_class() -> Result<Arc<Class>> {
+        let bytes = include_bytes!("../../classes/Simple.class").to_vec();
+        let mut cursor = Cursor::new(bytes);
+        let class_file = ClassFile::from_bytes(&mut cursor)?;
+        let class = Arc::new(Class::from(class_file)?);
+        Ok(class)
+    }
+
     #[test]
     fn test_display_byte_array() -> Result<()> {
         let reference = Reference::ByteArray(ConcurrentVec::from(vec![1, 2, 3]));
@@ -200,16 +216,158 @@ mod tests {
 
     #[test]
     fn test_display_reference() -> Result<()> {
-        let bytes = include_bytes!("../../classes/Minimum.class").to_vec();
-        let mut cursor = Cursor::new(bytes);
-        let class_file = ClassFile::from_bytes(&mut cursor)?;
-        let class = Arc::new(Class::from(class_file)?);
+        let class = minimum_class()?;
         let object = Object::new(class)?;
         let reference = Reference::Object(object);
         assert_eq!(reference.class_name(), "Minimum");
         assert_eq!(reference.class()?.name(), "Minimum");
         assert!(reference.to_string().starts_with("class Minimum"));
         assert!(reference.to_string().contains("Minimum"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_array_eq() -> Result<()> {
+        let class = minimum_class()?;
+        let ref1 = Reference::Array(class.clone(), ConcurrentVec::from(vec![]));
+        let ref2 = Reference::Array(class, ConcurrentVec::from(vec![]));
+        assert_eq!(ref1, ref2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_array_eq_class_ne() -> Result<()> {
+        let minimum_class = minimum_class()?;
+        let ref1 = Reference::Array(minimum_class, ConcurrentVec::from(vec![]));
+        let simple_class = simple_class()?;
+        let ref2 = Reference::Array(simple_class, ConcurrentVec::from(vec![]));
+        assert_ne!(ref1, ref2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_array_eq_value_ne() -> Result<()> {
+        let minimum_class = minimum_class()?;
+        let ref1 = Reference::Array(minimum_class.clone(), ConcurrentVec::from(vec![]));
+        let ref2 = Reference::Array(minimum_class, ConcurrentVec::from(vec![None]));
+        assert_ne!(ref1, ref2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_byte_array_eq() {
+        let ref1 = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        let ref2 = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        assert_eq!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_byte_array_ne() {
+        let ref1 = Reference::ByteArray(ConcurrentVec::from(vec![3]));
+        let ref2 = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        assert_ne!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_char_array_eq() {
+        let ref1 = Reference::CharArray(ConcurrentVec::from(vec![42]));
+        let ref2 = Reference::CharArray(ConcurrentVec::from(vec![42]));
+        assert_eq!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_char_array_ne() {
+        let ref1 = Reference::CharArray(ConcurrentVec::from(vec![3]));
+        let ref2 = Reference::CharArray(ConcurrentVec::from(vec![42]));
+        assert_ne!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_double_array_eq() {
+        let ref1 = Reference::DoubleArray(ConcurrentVec::from(vec![42.1]));
+        let ref2 = Reference::DoubleArray(ConcurrentVec::from(vec![42.1]));
+        assert_eq!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_double_array_ne() {
+        let ref1 = Reference::DoubleArray(ConcurrentVec::from(vec![3.1]));
+        let ref2 = Reference::DoubleArray(ConcurrentVec::from(vec![42.1]));
+        assert_ne!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_float_array_eq() {
+        let ref1 = Reference::FloatArray(ConcurrentVec::from(vec![42.1]));
+        let ref2 = Reference::FloatArray(ConcurrentVec::from(vec![42.1]));
+        assert_eq!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_float_array_ne() {
+        let ref1 = Reference::FloatArray(ConcurrentVec::from(vec![3.1]));
+        let ref2 = Reference::FloatArray(ConcurrentVec::from(vec![42.1]));
+        assert_ne!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_int_array_eq() {
+        let ref1 = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        let ref2 = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        assert_eq!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_int_array_ne() {
+        let ref1 = Reference::IntArray(ConcurrentVec::from(vec![3]));
+        let ref2 = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        assert_ne!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_long_array_eq() {
+        let ref1 = Reference::LongArray(ConcurrentVec::from(vec![42]));
+        let ref2 = Reference::LongArray(ConcurrentVec::from(vec![42]));
+        assert_eq!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_long_array_ne() {
+        let ref1 = Reference::LongArray(ConcurrentVec::from(vec![3]));
+        let ref2 = Reference::LongArray(ConcurrentVec::from(vec![42]));
+        assert_ne!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_short_array_eq() {
+        let ref1 = Reference::ShortArray(ConcurrentVec::from(vec![42]));
+        let ref2 = Reference::ShortArray(ConcurrentVec::from(vec![42]));
+        assert_eq!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_short_array_ne() {
+        let ref1 = Reference::ShortArray(ConcurrentVec::from(vec![3]));
+        let ref2 = Reference::ShortArray(ConcurrentVec::from(vec![42]));
+        assert_ne!(ref1, ref2);
+    }
+
+    #[test]
+    fn test_object_eq() -> Result<()> {
+        let minimum_class = minimum_class()?;
+        let ref1 = Reference::Object(Object::new(minimum_class.clone())?);
+        let ref2 = Reference::Object(Object::new(minimum_class)?);
+        assert_eq!(ref1, ref2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_object_ne() -> Result<()> {
+        let minimum_class = minimum_class()?;
+        let ref1 = Reference::Object(Object::new(minimum_class)?);
+        let simple_class = simple_class()?;
+        let ref2 = Reference::Object(Object::new(simple_class)?);
+        assert_ne!(ref1, ref2);
         Ok(())
     }
 }
