@@ -5,7 +5,7 @@ use crate::Result;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.bipush>
 #[inline]
-pub(crate) fn bipush(stack: &mut OperandStack, value: u8) -> Result<ExecutionResult> {
+pub(crate) fn bipush(stack: &mut OperandStack, value: i8) -> Result<ExecutionResult> {
     stack.push_int(i32::from(value))?;
     Ok(Continue)
 }

@@ -28,8 +28,8 @@ fn initialize_from_archive(
     _call_stack: &mut CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let class = arguments.pop_object()?;
-    Ok(Some(Value::Object(class)))
+    let _class = arguments.pop_object()?;
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]

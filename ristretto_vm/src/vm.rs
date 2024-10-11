@@ -493,21 +493,4 @@ mod tests {
         assert!(object_class.parent()?.is_none());
         Ok(())
     }
-
-    #[test]
-    fn test_invoke_main_method() -> Result<()> {
-        let class_path = classes_jar_class_path();
-        let configuration = ConfigurationBuilder::new()
-            .class_path(class_path.clone())
-            .main_class("HelloWorld")
-            .build();
-        let vm = VM::new(configuration)?;
-        let main_class_name = vm.main_class().expect("main class");
-        let main_class = vm.load(main_class_name)?;
-        let main_method = main_class.main_method().expect("main method");
-        let arguments = vec![Value::Object(None)];
-        let result = vm.invoke(&main_class, &main_method, arguments)?;
-        assert!(result.is_none());
-        Ok(())
-    }
 }

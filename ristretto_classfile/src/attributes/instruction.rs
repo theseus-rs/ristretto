@@ -30,7 +30,7 @@ pub enum Instruction {
     Fconst_2,
     Dconst_0,
     Dconst_1,
-    Bipush(u8),
+    Bipush(i8),
     Sipush(i16),
     Ldc(u8),
     Ldc_w(u16),
@@ -501,7 +501,7 @@ impl Instruction {
             13 => Instruction::Fconst_2,
             14 => Instruction::Dconst_0,
             15 => Instruction::Dconst_1,
-            16 => Instruction::Bipush(bytes.read_u8()?),
+            16 => Instruction::Bipush(bytes.read_i8()?),
             17 => Instruction::Sipush(bytes.read_i16::<BigEndian>()?),
             18 => Instruction::Ldc(bytes.read_u8()?),
             19 => Instruction::Ldc_w(bytes.read_u16::<BigEndian>()?),
@@ -790,7 +790,7 @@ impl Instruction {
         bytes.write_u8(self.code())?;
 
         match self {
-            Instruction::Bipush(value) => bytes.write_u8(*value)?,
+            Instruction::Bipush(value) => bytes.write_i8(*value)?,
             Instruction::Sipush(value) => bytes.write_i16::<BigEndian>(*value)?,
             Instruction::Ldc(value) => bytes.write_u8(*value)?,
             Instruction::Ldc_w(value) => bytes.write_u16::<BigEndian>(*value)?,
