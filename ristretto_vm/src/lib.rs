@@ -36,7 +36,6 @@ mod native_methods;
 mod operand_stack;
 #[cfg(test)]
 pub(crate) mod test;
-mod thread;
 mod vm;
 
 pub(crate) use call_stack::CallStack;

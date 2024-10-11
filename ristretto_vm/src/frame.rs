@@ -1,4 +1,3 @@
-use crate::call_stack::CallStack;
 use crate::frame::ExecutionResult::{Continue, ContinueAtPosition, Return};
 use crate::instruction::{
     aaload, aastore, aconst_null, aload, aload_0, aload_1, aload_2, aload_3, aload_w, anewarray,
@@ -22,7 +21,7 @@ use crate::instruction::{
     ret, ret_w, saload, sastore, sipush, swap, tableswitch,
 };
 use crate::Error::{InvalidOperand, InvalidProgramCounter};
-use crate::{LocalVariables, OperandStack, Result, VM};
+use crate::{CallStack, LocalVariables, OperandStack, Result, VM};
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::{Class, Method, Value};
 use std::sync::Arc;
