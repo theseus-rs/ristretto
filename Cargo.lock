@@ -237,7 +237,7 @@ checksum = "1462739cb27611015575c0c11df5df7601141071f07518d56fcc1be504cbec97"
 
 [[package]]
 name = "class_loader"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "ristretto_classloader",
 ]
@@ -1123,7 +1123,7 @@ dependencies = [
 
 [[package]]
 name = "read_class"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "anyhow",
  "ristretto_classfile",
@@ -1256,7 +1256,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classfile"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1273,7 +1273,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classloader"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "criterion",
  "flate2",
@@ -1293,7 +1293,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_cli"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "clap",
  "os_info",
@@ -1304,7 +1304,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_vm"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "criterion",
  "dirs",
@@ -1321,7 +1321,7 @@ dependencies = [
 
 [[package]]
 name = "runtime_class_loader"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "ristretto_classloader",
 ]
@@ -2238,7 +2238,7 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "write_class"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "ristretto_classfile",
 ]
