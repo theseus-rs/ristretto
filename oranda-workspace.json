@@ -1,0 +1,14 @@
+{
+  "build": {
+    "path_prefix": "ristretto"
+  },
+  "workspace": {
+    "name": "ristretto",
+    "members": [
+      {
+        "slug": "ristretto_cli",
+        "path": "./ristretto_cli"
+      }
+    ]
+  }
+}
