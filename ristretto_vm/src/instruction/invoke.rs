@@ -4,7 +4,8 @@ use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
 use crate::Error::RuntimeError;
 use crate::{Result, VM};
-use ristretto_classfile::ConstantPool;
+use ristretto_classfile::Error::InvalidConstantPoolIndexType;
+use ristretto_classfile::{Constant, ConstantPool};
 use ristretto_classloader::{Class, Method, Reference, Value};
 use std::sync::Arc;
 
@@ -81,7 +82,18 @@ pub(crate) fn invokestatic(
     constant_pool: &ConstantPool,
     method_index: u16,
 ) -> Result<ExecutionResult> {
-    let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
+    let constant = constant_pool.try_get(method_index)?;
+    let (Constant::MethodRef {
+        class_index,
+        name_and_type_index,
+    }
+    | Constant::InterfaceMethodRef {
+        class_index,
+        name_and_type_index,
+    }) = constant
+    else {
+        return Err(InvalidConstantPoolIndexType(method_index).into());
+    };
     let class_name = constant_pool.try_get_class(*class_index)?;
     let class = vm.class(call_stack, class_name)?;
     let (name_index, descriptor_index) =
