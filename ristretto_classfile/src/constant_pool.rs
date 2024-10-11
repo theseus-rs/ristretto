@@ -635,12 +635,9 @@ impl ConstantPool {
                 let reference = self.try_get_formatted_string(*reference_index)?;
                 format!("Method handle {reference_kind} {reference}")
             }
-            Constant::MethodType(name_and_type_index) => {
-                let (name_index, descriptor_index) =
-                    self.try_get_name_and_type(*name_and_type_index)?;
-                let method_name = self.try_get_utf8(*name_index)?;
-                let method_descriptor = self.try_get_utf8(*descriptor_index)?;
-                format!("Method type{method_name}{method_descriptor}")
+            Constant::MethodType(utf8_index) => {
+                let method_descriptor = self.try_get_utf8(*utf8_index)?;
+                format!("Method type {method_descriptor}")
             }
             Constant::Dynamic {
                 bootstrap_method_attr_index,
@@ -648,7 +645,7 @@ impl ConstantPool {
             } => {
                 let method = self.try_get_formatted_string(*bootstrap_method_attr_index)?;
                 let name_and_type = self.try_get_formatted_string(*name_and_type_index)?;
-                format!("Dynamic Bootstrap {method}, {name_and_type}")
+                format!("Dynamic bootstrap {method}, {name_and_type}")
             }
             Constant::InvokeDynamic {
                 bootstrap_method_attr_index,
@@ -656,10 +653,10 @@ impl ConstantPool {
             } => {
                 let method = self.try_get_formatted_string(*bootstrap_method_attr_index)?;
                 let name_and_type = self.try_get_formatted_string(*name_and_type_index)?;
-                format!("Dynamic Bootstrap {method}, {name_and_type}")
+                format!("Invoke dynamic {method}, {name_and_type}")
             }
             Constant::Module(name_index) => {
-                format!("Package {}", self.try_get_utf8(*name_index)?)
+                format!("Module {}", self.try_get_utf8(*name_index)?)
             }
             Constant::Package(name_index) => {
                 format!("Package {}", self.try_get_utf8(*name_index)?)
@@ -951,6 +948,15 @@ mod test {
     }
 
     #[test]
+    fn test_try_get_formatted_string_utf8() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_utf8("foo")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("foo", value);
+        Ok(())
+    }
+
+    #[test]
     fn test_add_integer() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_integer(42)?;
@@ -962,6 +968,15 @@ mod test {
     #[test]
     fn test_try_get_integer() {
         test_try_get_constant(ConstantPool::try_get_integer, Constant::Integer(42));
+    }
+
+    #[test]
+    fn test_try_get_formatted_string_integer() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_integer(42)?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("42", value);
+        Ok(())
     }
 
     #[test]
@@ -985,6 +1000,15 @@ mod test {
     }
 
     #[test]
+    fn test_try_get_formatted_string_float() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_float(std::f32::consts::PI)?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("3.1415927", value);
+        Ok(())
+    }
+
+    #[test]
     fn test_add_long() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_long(i64::MAX)?;
@@ -996,6 +1020,15 @@ mod test {
     #[test]
     fn test_try_get_long() {
         test_try_get_constant(ConstantPool::try_get_long, Constant::Long(i64::MAX));
+    }
+
+    #[test]
+    fn test_try_get_formatted_string_long() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_long(42)?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("42", value);
+        Ok(())
     }
 
     #[test]
@@ -1019,6 +1052,15 @@ mod test {
     }
 
     #[test]
+    fn test_try_get_formatted_string_double() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_double(std::f64::consts::PI)?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("3.141592653589793", value);
+        Ok(())
+    }
+
+    #[test]
     fn test_add_class() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_class("java/lang/Object")?;
@@ -1030,6 +1072,15 @@ mod test {
     #[test]
     fn test_try_get_class() {
         test_try_get_constant(ConstantPool::try_get_class, Constant::Class(1));
+    }
+
+    #[test]
+    fn test_try_get_formatted_string_class() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_class("Foo")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("Class Foo", value);
+        Ok(())
     }
 
     #[test]
@@ -1054,6 +1105,15 @@ mod test {
     #[test]
     fn test_try_get_string() {
         test_try_get_constant(ConstantPool::try_get_string, Constant::String(1));
+    }
+
+    #[test]
+    fn test_try_get_formatted_string_string() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_string("foo")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("String foo", value);
+        Ok(())
     }
 
     #[test]
@@ -1083,6 +1143,16 @@ mod test {
     }
 
     #[test]
+    fn test_try_get_formatted_string_field_ref() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let class_index = constant_pool.add_class("Foo")?;
+        let index = constant_pool.add_field_ref(class_index, "x", "I")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("Field Foo.x", value);
+        Ok(())
+    }
+
+    #[test]
     fn test_add_method_ref() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_method_ref(1, "println", "(Ljava/lang/String;)V")?;
@@ -1106,6 +1176,16 @@ mod test {
                 name_and_type_index: 3,
             },
         );
+    }
+
+    #[test]
+    fn test_try_get_formatted_string_method_ref() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let class_index = constant_pool.add_class("Foo")?;
+        let index = constant_pool.add_method_ref(class_index, "x", "()V")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("Method Foo.x()V", value);
+        Ok(())
     }
 
     #[test]
@@ -1136,6 +1216,16 @@ mod test {
     }
 
     #[test]
+    fn test_try_get_formatted_string_interface_method_ref() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let class_index = constant_pool.add_class("Foo")?;
+        let index = constant_pool.add_interface_method_ref(class_index, "x", "()V")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("Interface method Foo.x()V", value);
+        Ok(())
+    }
+
+    #[test]
     fn test_add_name_and_type() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_name_and_type("name", "type")?;
@@ -1159,6 +1249,15 @@ mod test {
                 descriptor_index: 2,
             },
         );
+    }
+
+    #[test]
+    fn test_try_get_formatted_string_name_and_type() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_name_and_type("x", "I")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("Name x, Descriptor I", value);
+        Ok(())
     }
 
     #[test]
@@ -1188,6 +1287,17 @@ mod test {
     }
 
     #[test]
+    fn test_try_get_formatted_string_method_handle() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let class_index = constant_pool.add_class("Foo")?;
+        let field_index = constant_pool.add_field_ref(class_index, "x", "I")?;
+        let index = constant_pool.add_method_handle(ReferenceKind::GetField, field_index)?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("Method handle GetField Field Foo.x", value);
+        Ok(())
+    }
+
+    #[test]
     fn test_add_method_type() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_method_type("()V")?;
@@ -1199,6 +1309,15 @@ mod test {
     #[test]
     fn test_try_get_method_type() {
         test_try_get_constant(ConstantPool::try_get_method_type, Constant::MethodType(1));
+    }
+
+    #[test]
+    fn test_try_get_formatted_string_method_type() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_method_type("()V")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("Method type ()V", value);
+        Ok(())
     }
 
     #[test]
@@ -1228,6 +1347,20 @@ mod test {
     }
 
     #[test]
+    fn test_try_get_formatted_string_dynamic() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let class_index = constant_pool.add_class("Foo")?;
+        let method_index = constant_pool.add_method_ref(class_index, "x", "()V")?;
+        let index = constant_pool.add_dynamic(method_index, "x", "I")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!(
+            "Dynamic bootstrap Method Foo.x()V, Name x, Descriptor I",
+            value
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_add_invoke_dynamic() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_invoke_dynamic(1, "name", "type")?;
@@ -1254,6 +1387,20 @@ mod test {
     }
 
     #[test]
+    fn test_try_get_formatted_string_invoke_dynamic() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let class_index = constant_pool.add_class("Foo")?;
+        let method_index = constant_pool.add_method_ref(class_index, "x", "()V")?;
+        let index = constant_pool.add_invoke_dynamic(method_index, "x", "I")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!(
+            "Invoke dynamic Method Foo.x()V, Name x, Descriptor I",
+            value
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_add_module() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_module("module")?;
@@ -1268,6 +1415,15 @@ mod test {
     }
 
     #[test]
+    fn test_try_get_formatted_string_module() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_module("foo")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("Module foo", value);
+        Ok(())
+    }
+
+    #[test]
     fn test_add_package() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_package("package")?;
@@ -1279,6 +1435,15 @@ mod test {
     #[test]
     fn test_try_get_package() {
         test_try_get_constant(ConstantPool::try_get_package, Constant::Package(1));
+    }
+
+    #[test]
+    fn test_try_get_formatted_string_package() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let index = constant_pool.add_package("foo")?;
+        let value = constant_pool.try_get_formatted_string(index)?;
+        assert_eq!("Package foo", value);
+        Ok(())
     }
 
     #[test]
