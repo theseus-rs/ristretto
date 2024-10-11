@@ -2,7 +2,6 @@ use crate::Error::PoisonedLock;
 use crate::Result;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
-use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
 /// A concurrent vector.
@@ -172,15 +171,6 @@ impl<T: Clone + Debug + PartialEq> Default for ConcurrentVec<T> {
     /// Create a default concurrent vector.
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl<T: Clone + Debug + PartialEq> Deref for ConcurrentVec<T> {
-    type Target = RwLock<Vec<T>>;
-
-    /// Get a reference to the inner vector.
-    fn deref(&self) -> &Self::Target {
-        &self.inner
     }
 }
 
