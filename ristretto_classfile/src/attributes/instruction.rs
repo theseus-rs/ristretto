@@ -1285,6 +1285,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("nop", instruction.to_string());
+        assert_eq!(
+            "nop",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1295,6 +1299,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("aconst_null", instruction.to_string());
+        assert_eq!(
+            "aconst_null",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1305,6 +1313,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iconst_m1", instruction.to_string());
+        assert_eq!(
+            "iconst_m1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1315,6 +1327,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iconst_0", instruction.to_string());
+        assert_eq!(
+            "iconst_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1325,6 +1341,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iconst_1", instruction.to_string());
+        assert_eq!(
+            "iconst_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1335,6 +1355,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iconst_2", instruction.to_string());
+        assert_eq!(
+            "iconst_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1345,6 +1369,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iconst_3", instruction.to_string());
+        assert_eq!(
+            "iconst_3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1355,6 +1383,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iconst_4", instruction.to_string());
+        assert_eq!(
+            "iconst_4",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1365,6 +1397,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iconst_5", instruction.to_string());
+        assert_eq!(
+            "iconst_5",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1375,6 +1411,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lconst_0", instruction.to_string());
+        assert_eq!(
+            "lconst_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1385,6 +1425,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lconst_1", instruction.to_string());
+        assert_eq!(
+            "lconst_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1395,6 +1439,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fconst_0", instruction.to_string());
+        assert_eq!(
+            "fconst_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1405,6 +1453,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fconst_1", instruction.to_string());
+        assert_eq!(
+            "fconst_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1415,6 +1467,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fconst_2", instruction.to_string());
+        assert_eq!(
+            "fconst_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1425,6 +1481,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dconst_0", instruction.to_string());
+        assert_eq!(
+            "dconst_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1435,6 +1495,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dconst_1", instruction.to_string());
+        assert_eq!(
+            "dconst_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1445,6 +1509,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("bipush 42", instruction.to_string());
+        assert_eq!(
+            "bipush 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1455,6 +1523,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("sipush 42", instruction.to_string());
+        assert_eq!(
+            "sipush 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1465,6 +1537,12 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("ldc #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let index = constant_pool.add_string("foo")?;
+        assert_eq!(
+            "ldc #2 // String foo",
+            Instruction::Ldc(u8::try_from(index)?).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1475,6 +1553,12 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("ldc_w #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let index = constant_pool.add_string("foo")?;
+        assert_eq!(
+            "ldc_w #2 // String foo",
+            Instruction::Ldc_w(index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1485,6 +1569,12 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("ldc2_w #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let index = constant_pool.add_string("foo")?;
+        assert_eq!(
+            "ldc2_w #2 // String foo",
+            Instruction::Ldc2_w(index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1495,6 +1585,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("iload 42", instruction.to_string());
+        assert_eq!(
+            "iload 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1505,6 +1599,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("lload 42", instruction.to_string());
+        assert_eq!(
+            "lload 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1515,6 +1613,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("fload 42", instruction.to_string());
+        assert_eq!(
+            "fload 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1525,6 +1627,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("dload 42", instruction.to_string());
+        assert_eq!(
+            "dload 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1535,6 +1641,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("aload 42", instruction.to_string());
+        assert_eq!(
+            "aload 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1545,6 +1655,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iload_0", instruction.to_string());
+        assert_eq!(
+            "iload_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1555,6 +1669,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iload_1", instruction.to_string());
+        assert_eq!(
+            "iload_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1565,6 +1683,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iload_2", instruction.to_string());
+        assert_eq!(
+            "iload_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1575,6 +1697,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iload_3", instruction.to_string());
+        assert_eq!(
+            "iload_3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1585,6 +1711,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lload_0", instruction.to_string());
+        assert_eq!(
+            "lload_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1595,6 +1725,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lload_1", instruction.to_string());
+        assert_eq!(
+            "lload_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1605,6 +1739,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lload_2", instruction.to_string());
+        assert_eq!(
+            "lload_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1615,6 +1753,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lload_3", instruction.to_string());
+        assert_eq!(
+            "lload_3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1625,6 +1767,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fload_0", instruction.to_string());
+        assert_eq!(
+            "fload_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1635,6 +1781,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fload_1", instruction.to_string());
+        assert_eq!(
+            "fload_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1645,6 +1795,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fload_2", instruction.to_string());
+        assert_eq!(
+            "fload_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1655,6 +1809,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fload_3", instruction.to_string());
+        assert_eq!(
+            "fload_3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1665,6 +1823,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dload_0", instruction.to_string());
+        assert_eq!(
+            "dload_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1675,6 +1837,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dload_1", instruction.to_string());
+        assert_eq!(
+            "dload_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1685,6 +1851,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dload_2", instruction.to_string());
+        assert_eq!(
+            "dload_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1695,6 +1865,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dload_3", instruction.to_string());
+        assert_eq!(
+            "dload_3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1705,6 +1879,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("aload_0", instruction.to_string());
+        assert_eq!(
+            "aload_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1715,6 +1893,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("aload_1", instruction.to_string());
+        assert_eq!(
+            "aload_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1725,6 +1907,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("aload_2", instruction.to_string());
+        assert_eq!(
+            "aload_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1735,6 +1921,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("aload_3", instruction.to_string());
+        assert_eq!(
+            "aload_3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1745,6 +1935,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iaload", instruction.to_string());
+        assert_eq!(
+            "iaload",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1755,6 +1949,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("laload", instruction.to_string());
+        assert_eq!(
+            "laload",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1765,6 +1963,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("faload", instruction.to_string());
+        assert_eq!(
+            "faload",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1775,6 +1977,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("daload", instruction.to_string());
+        assert_eq!(
+            "daload",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1785,6 +1991,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("aaload", instruction.to_string());
+        assert_eq!(
+            "aaload",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1795,6 +2005,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("baload", instruction.to_string());
+        assert_eq!(
+            "baload",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1805,6 +2019,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("caload", instruction.to_string());
+        assert_eq!(
+            "caload",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1815,6 +2033,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("saload", instruction.to_string());
+        assert_eq!(
+            "saload",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1825,6 +2047,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("istore 42", instruction.to_string());
+        assert_eq!(
+            "istore 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1835,6 +2061,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("lstore 42", instruction.to_string());
+        assert_eq!(
+            "lstore 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1845,6 +2075,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("fstore 42", instruction.to_string());
+        assert_eq!(
+            "fstore 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1855,6 +2089,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("dstore 42", instruction.to_string());
+        assert_eq!(
+            "dstore 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1865,6 +2103,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("astore 42", instruction.to_string());
+        assert_eq!(
+            "astore 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1875,6 +2117,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("istore_0", instruction.to_string());
+        assert_eq!(
+            "istore_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1885,6 +2131,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("istore_1", instruction.to_string());
+        assert_eq!(
+            "istore_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1895,6 +2145,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("istore_2", instruction.to_string());
+        assert_eq!(
+            "istore_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1905,6 +2159,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("istore_3", instruction.to_string());
+        assert_eq!(
+            "istore_3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1915,6 +2173,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lstore_0", instruction.to_string());
+        assert_eq!(
+            "lstore_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1925,6 +2187,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lstore_1", instruction.to_string());
+        assert_eq!(
+            "lstore_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1935,6 +2201,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lstore_2", instruction.to_string());
+        assert_eq!(
+            "lstore_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1945,6 +2215,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lstore_3", instruction.to_string());
+        assert_eq!(
+            "lstore_3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1955,6 +2229,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fstore_0", instruction.to_string());
+        assert_eq!(
+            "fstore_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1965,6 +2243,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fstore_1", instruction.to_string());
+        assert_eq!(
+            "fstore_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1975,6 +2257,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fstore_2", instruction.to_string());
+        assert_eq!(
+            "fstore_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1985,6 +2271,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fstore_3", instruction.to_string());
+        assert_eq!(
+            "fstore_3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1995,6 +2285,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dstore_0", instruction.to_string());
+        assert_eq!(
+            "dstore_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2005,6 +2299,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dstore_1", instruction.to_string());
+        assert_eq!(
+            "dstore_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2015,6 +2313,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dstore_2", instruction.to_string());
+        assert_eq!(
+            "dstore_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2025,6 +2327,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dstore_3", instruction.to_string());
+        assert_eq!(
+            "dstore_3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2035,6 +2341,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("astore_0", instruction.to_string());
+        assert_eq!(
+            "astore_0",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2045,6 +2355,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("astore_1", instruction.to_string());
+        assert_eq!(
+            "astore_1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2055,6 +2369,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("astore_2", instruction.to_string());
+        assert_eq!(
+            "astore_2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2065,6 +2383,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("astore_3", instruction.to_string());
+        assert_eq!(
+            "astore_3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2075,6 +2397,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iastore", instruction.to_string());
+        assert_eq!(
+            "iastore",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2085,6 +2411,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lastore", instruction.to_string());
+        assert_eq!(
+            "lastore",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2095,6 +2425,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fastore", instruction.to_string());
+        assert_eq!(
+            "fastore",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2105,6 +2439,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dastore", instruction.to_string());
+        assert_eq!(
+            "dastore",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2115,6 +2453,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("aastore", instruction.to_string());
+        assert_eq!(
+            "aastore",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2125,6 +2467,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("bastore", instruction.to_string());
+        assert_eq!(
+            "bastore",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2135,6 +2481,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("castore", instruction.to_string());
+        assert_eq!(
+            "castore",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2145,6 +2495,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("sastore", instruction.to_string());
+        assert_eq!(
+            "sastore",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2155,6 +2509,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("pop", instruction.to_string());
+        assert_eq!(
+            "pop",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2165,6 +2523,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("pop2", instruction.to_string());
+        assert_eq!(
+            "pop2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2175,6 +2537,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dup", instruction.to_string());
+        assert_eq!(
+            "dup",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2185,6 +2551,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dup_x1", instruction.to_string());
+        assert_eq!(
+            "dup_x1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2195,6 +2565,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dup_x2", instruction.to_string());
+        assert_eq!(
+            "dup_x2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2205,6 +2579,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dup2", instruction.to_string());
+        assert_eq!(
+            "dup2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2215,6 +2593,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dup2_x1", instruction.to_string());
+        assert_eq!(
+            "dup2_x1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2225,6 +2607,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dup2_x2", instruction.to_string());
+        assert_eq!(
+            "dup2_x2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2235,6 +2621,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("swap", instruction.to_string());
+        assert_eq!(
+            "swap",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2245,6 +2635,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iadd", instruction.to_string());
+        assert_eq!(
+            "iadd",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2255,6 +2649,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("ladd", instruction.to_string());
+        assert_eq!(
+            "ladd",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2265,6 +2663,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fadd", instruction.to_string());
+        assert_eq!(
+            "fadd",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2275,6 +2677,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dadd", instruction.to_string());
+        assert_eq!(
+            "dadd",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2285,6 +2691,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("isub", instruction.to_string());
+        assert_eq!(
+            "isub",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2295,6 +2705,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lsub", instruction.to_string());
+        assert_eq!(
+            "lsub",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2305,6 +2719,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fsub", instruction.to_string());
+        assert_eq!(
+            "fsub",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2315,6 +2733,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dsub", instruction.to_string());
+        assert_eq!(
+            "dsub",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2325,6 +2747,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("imul", instruction.to_string());
+        assert_eq!(
+            "imul",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2335,6 +2761,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lmul", instruction.to_string());
+        assert_eq!(
+            "lmul",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2345,6 +2775,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fmul", instruction.to_string());
+        assert_eq!(
+            "fmul",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2355,6 +2789,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dmul", instruction.to_string());
+        assert_eq!(
+            "dmul",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2365,6 +2803,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("idiv", instruction.to_string());
+        assert_eq!(
+            "idiv",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2375,6 +2817,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("ldiv", instruction.to_string());
+        assert_eq!(
+            "ldiv",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2385,6 +2831,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fdiv", instruction.to_string());
+        assert_eq!(
+            "fdiv",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2395,6 +2845,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("ddiv", instruction.to_string());
+        assert_eq!(
+            "ddiv",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2405,6 +2859,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("irem", instruction.to_string());
+        assert_eq!(
+            "irem",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2415,6 +2873,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lrem", instruction.to_string());
+        assert_eq!(
+            "lrem",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2425,6 +2887,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("frem", instruction.to_string());
+        assert_eq!(
+            "frem",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2435,6 +2901,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("drem", instruction.to_string());
+        assert_eq!(
+            "drem",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2445,6 +2915,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("ineg", instruction.to_string());
+        assert_eq!(
+            "ineg",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2455,6 +2929,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lneg", instruction.to_string());
+        assert_eq!(
+            "lneg",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2465,6 +2943,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fneg", instruction.to_string());
+        assert_eq!(
+            "fneg",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2475,6 +2957,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dneg", instruction.to_string());
+        assert_eq!(
+            "dneg",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2485,6 +2971,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("ishl", instruction.to_string());
+        assert_eq!(
+            "ishl",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2495,6 +2985,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lshl", instruction.to_string());
+        assert_eq!(
+            "lshl",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2505,6 +2999,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("ishr", instruction.to_string());
+        assert_eq!(
+            "ishr",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2515,6 +3013,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lshr", instruction.to_string());
+        assert_eq!(
+            "lshr",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2525,6 +3027,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iushr", instruction.to_string());
+        assert_eq!(
+            "iushr",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2535,6 +3041,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lushr", instruction.to_string());
+        assert_eq!(
+            "lushr",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2545,6 +3055,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("iand", instruction.to_string());
+        assert_eq!(
+            "iand",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2555,6 +3069,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("land", instruction.to_string());
+        assert_eq!(
+            "land",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2565,6 +3083,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("ior", instruction.to_string());
+        assert_eq!(
+            "ior",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2575,6 +3097,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lor", instruction.to_string());
+        assert_eq!(
+            "lor",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2585,6 +3111,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("ixor", instruction.to_string());
+        assert_eq!(
+            "ixor",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2595,6 +3125,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lxor", instruction.to_string());
+        assert_eq!(
+            "lxor",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2605,6 +3139,10 @@ mod test {
         let expected_bytes = [code, 42, 3];
 
         assert_eq!("iinc 42, 3", instruction.to_string());
+        assert_eq!(
+            "iinc 42, 3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2615,6 +3153,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("i2l", instruction.to_string());
+        assert_eq!(
+            "i2l",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2625,6 +3167,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("i2f", instruction.to_string());
+        assert_eq!(
+            "i2f",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2635,6 +3181,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("i2d", instruction.to_string());
+        assert_eq!(
+            "i2d",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2645,6 +3195,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("l2i", instruction.to_string());
+        assert_eq!(
+            "l2i",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2655,6 +3209,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("l2f", instruction.to_string());
+        assert_eq!(
+            "l2f",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2665,6 +3223,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("l2d", instruction.to_string());
+        assert_eq!(
+            "l2d",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2675,6 +3237,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("f2i", instruction.to_string());
+        assert_eq!(
+            "f2i",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2685,6 +3251,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("f2l", instruction.to_string());
+        assert_eq!(
+            "f2l",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2695,6 +3265,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("f2d", instruction.to_string());
+        assert_eq!(
+            "f2d",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2705,6 +3279,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("d2i", instruction.to_string());
+        assert_eq!(
+            "d2i",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2715,6 +3293,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("d2l", instruction.to_string());
+        assert_eq!(
+            "d2l",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2725,6 +3307,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("d2f", instruction.to_string());
+        assert_eq!(
+            "d2f",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2735,6 +3321,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("i2b", instruction.to_string());
+        assert_eq!(
+            "i2b",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2745,6 +3335,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("i2c", instruction.to_string());
+        assert_eq!(
+            "i2c",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2755,6 +3349,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("i2s", instruction.to_string());
+        assert_eq!(
+            "i2s",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2765,6 +3363,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lcmp", instruction.to_string());
+        assert_eq!(
+            "lcmp",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2775,6 +3377,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fcmpl", instruction.to_string());
+        assert_eq!(
+            "fcmpl",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2785,6 +3391,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("fcmpg", instruction.to_string());
+        assert_eq!(
+            "fcmpg",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2795,6 +3405,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dcmpl", instruction.to_string());
+        assert_eq!(
+            "dcmpl",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2805,6 +3419,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dcmpg", instruction.to_string());
+        assert_eq!(
+            "dcmpg",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2815,6 +3433,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("ifeq 42", instruction.to_string());
+        assert_eq!(
+            "ifeq 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2825,6 +3447,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("ifne 42", instruction.to_string());
+        assert_eq!(
+            "ifne 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2835,6 +3461,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("iflt 42", instruction.to_string());
+        assert_eq!(
+            "iflt 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2845,6 +3475,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("ifge 42", instruction.to_string());
+        assert_eq!(
+            "ifge 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2855,6 +3489,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("ifgt 42", instruction.to_string());
+        assert_eq!(
+            "ifgt 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2865,6 +3503,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("ifle 42", instruction.to_string());
+        assert_eq!(
+            "ifle 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2875,6 +3517,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("if_icmpeq 42", instruction.to_string());
+        assert_eq!(
+            "if_icmpeq 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2885,6 +3531,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("if_icmpne 42", instruction.to_string());
+        assert_eq!(
+            "if_icmpne 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2895,6 +3545,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("if_icmplt 42", instruction.to_string());
+        assert_eq!(
+            "if_icmplt 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2905,6 +3559,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("if_icmpge 42", instruction.to_string());
+        assert_eq!(
+            "if_icmpge 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2915,6 +3573,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("if_icmpgt 42", instruction.to_string());
+        assert_eq!(
+            "if_icmpgt 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2925,6 +3587,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("if_icmple 42", instruction.to_string());
+        assert_eq!(
+            "if_icmple 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2935,6 +3601,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("if_acmpeq 42", instruction.to_string());
+        assert_eq!(
+            "if_acmpeq 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2945,6 +3615,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("if_acmpne 42", instruction.to_string());
+        assert_eq!(
+            "if_acmpne 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2955,6 +3629,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("goto 42", instruction.to_string());
+        assert_eq!(
+            "goto 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2965,6 +3643,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("jsr 42", instruction.to_string());
+        assert_eq!(
+            "jsr 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2975,6 +3657,10 @@ mod test {
         let expected_bytes = [code, 42];
 
         assert_eq!("ret 42", instruction.to_string());
+        assert_eq!(
+            "ret 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2998,6 +3684,10 @@ mod test {
                          default: 42
                     }"};
         assert_eq!(expected, instruction.to_string());
+        assert_eq!(
+            expected,
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3018,6 +3708,10 @@ mod test {
                          default: 42
                     }"};
         assert_eq!(expected, instruction.to_string());
+        assert_eq!(
+            expected,
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3028,6 +3722,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("ireturn", instruction.to_string());
+        assert_eq!(
+            "ireturn",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3038,6 +3736,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("lreturn", instruction.to_string());
+        assert_eq!(
+            "lreturn",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3048,6 +3750,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("freturn", instruction.to_string());
+        assert_eq!(
+            "freturn",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3058,6 +3764,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("dreturn", instruction.to_string());
+        assert_eq!(
+            "dreturn",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3068,6 +3778,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("areturn", instruction.to_string());
+        assert_eq!(
+            "areturn",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3078,6 +3792,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("return", instruction.to_string());
+        assert_eq!(
+            "return",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3088,6 +3806,13 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("getstatic #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("Foo")?;
+        let field_index = constant_pool.add_field_ref(class_index, "x", "I")?;
+        assert_eq!(
+            "getstatic #6 // Field Foo.x",
+            Instruction::Getstatic(field_index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3098,6 +3823,13 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("putstatic #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("Foo")?;
+        let field_index = constant_pool.add_field_ref(class_index, "x", "I")?;
+        assert_eq!(
+            "putstatic #6 // Field Foo.x",
+            Instruction::Putstatic(field_index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3108,6 +3840,13 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("getfield #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("Foo")?;
+        let field_index = constant_pool.add_field_ref(class_index, "x", "I")?;
+        assert_eq!(
+            "getfield #6 // Field Foo.x",
+            Instruction::Getfield(field_index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3118,6 +3857,13 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("putfield #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("Foo")?;
+        let field_index = constant_pool.add_field_ref(class_index, "x", "I")?;
+        assert_eq!(
+            "putfield #6 // Field Foo.x",
+            Instruction::Putfield(field_index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3128,6 +3874,13 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("invokevirtual #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("Foo")?;
+        let method_index = constant_pool.add_method_ref(class_index, "x", "()V")?;
+        assert_eq!(
+            "invokevirtual #6 // Method Foo.x()V",
+            Instruction::Invokevirtual(method_index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3138,6 +3891,13 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("invokespecial #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("Foo")?;
+        let method_index = constant_pool.add_method_ref(class_index, "x", "()V")?;
+        assert_eq!(
+            "invokespecial #6 // Method Foo.x()V",
+            Instruction::Invokespecial(method_index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3148,6 +3908,13 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("invokestatic #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("Foo")?;
+        let method_index = constant_pool.add_method_ref(class_index, "x", "()V")?;
+        assert_eq!(
+            "invokestatic #6 // Method Foo.x()V",
+            Instruction::Invokestatic(method_index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3158,6 +3925,13 @@ mod test {
         let expected_bytes = [code, 0, 42, 3, 0];
 
         assert_eq!("invokeinterface #42, 3", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("Foo")?;
+        let method_index = constant_pool.add_method_ref(class_index, "x", "()V")?;
+        assert_eq!(
+            "invokeinterface #6, 1 // Method Foo.x()V",
+            Instruction::Invokeinterface(method_index, 1).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3178,6 +3952,13 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("invokedynamic #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("Foo")?;
+        let method_index = constant_pool.add_method_ref(class_index, "x", "()V")?;
+        assert_eq!(
+            "invokedynamic #6 // Method Foo.x()V",
+            Instruction::Invokedynamic(method_index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3188,6 +3969,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("new #42", instruction.to_string());
+        assert_eq!(
+            "new #42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3198,6 +3983,10 @@ mod test {
         let expected_bytes = [code, 4];
 
         assert_eq!("newarray boolean", instruction.to_string());
+        assert_eq!(
+            "newarray boolean",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3208,6 +3997,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("anewarray #42", instruction.to_string());
+        assert_eq!(
+            "anewarray #42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3218,6 +4011,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("arraylength", instruction.to_string());
+        assert_eq!(
+            "arraylength",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3228,6 +4025,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("athrow", instruction.to_string());
+        assert_eq!(
+            "athrow",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3238,6 +4039,12 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("checkcast #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let index = constant_pool.add_class("Foo")?;
+        assert_eq!(
+            "checkcast #2 // Class Foo",
+            Instruction::Checkcast(index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3248,6 +4055,12 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("instanceof #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let index = constant_pool.add_class("Foo")?;
+        assert_eq!(
+            "instanceof #2 // Class Foo",
+            Instruction::Instanceof(index).to_formatted_string(&constant_pool)?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3258,6 +4071,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("monitorenter", instruction.to_string());
+        assert_eq!(
+            "monitorenter",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3268,13 +4085,22 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("monitorexit", instruction.to_string());
+        assert_eq!(
+            "monitorexit",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
     #[test]
-    fn test_wide() {
+    fn test_wide() -> Result<()> {
         assert_eq!(196, Instruction::Wide.code());
         assert_eq!("wide", Instruction::Wide.to_string());
+        assert_eq!(
+            "wide",
+            Instruction::Wide.to_formatted_string(&ConstantPool::new())?
+        );
+        Ok(())
     }
 
     #[test]
@@ -3284,6 +4110,10 @@ mod test {
         let expected_bytes = [code, 0, 42, 3];
 
         assert_eq!("multianewarray #42, 3", instruction.to_string());
+        assert_eq!(
+            "multianewarray #42, 3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3294,6 +4124,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("ifnull 42", instruction.to_string());
+        assert_eq!(
+            "ifnull 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3304,6 +4138,10 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("ifnonnull 42", instruction.to_string());
+        assert_eq!(
+            "ifnonnull 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3314,6 +4152,10 @@ mod test {
         let expected_bytes = [code, 0, 0, 0, 42];
 
         assert_eq!("goto_w 42", instruction.to_string());
+        assert_eq!(
+            "goto_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3324,6 +4166,10 @@ mod test {
         let expected_bytes = [code, 0, 0, 0, 42];
 
         assert_eq!("jsr_w 42", instruction.to_string());
+        assert_eq!(
+            "jsr_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3334,6 +4180,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("breakpoint", instruction.to_string());
+        assert_eq!(
+            "breakpoint",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3344,6 +4194,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("impdep1", instruction.to_string());
+        assert_eq!(
+            "impdep1",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3354,6 +4208,10 @@ mod test {
         let expected_bytes = [code];
 
         assert_eq!("impdep2", instruction.to_string());
+        assert_eq!(
+            "impdep2",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3367,6 +4225,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42];
 
         assert_eq!("iload_w 42", instruction.to_string());
+        assert_eq!(
+            "iload_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -3378,6 +4240,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42];
 
         assert_eq!("lload_w 42", instruction.to_string());
+        assert_eq!(
+            "lload_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -3389,6 +4255,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42];
 
         assert_eq!("fload_w 42", instruction.to_string());
+        assert_eq!(
+            "fload_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -3400,6 +4270,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42];
 
         assert_eq!("dload_w 42", instruction.to_string());
+        assert_eq!(
+            "dload_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -3411,6 +4285,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42];
 
         assert_eq!("aload_w 42", instruction.to_string());
+        assert_eq!(
+            "aload_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -3422,6 +4300,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42];
 
         assert_eq!("istore_w 42", instruction.to_string());
+        assert_eq!(
+            "istore_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -3433,6 +4315,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42];
 
         assert_eq!("lstore_w 42", instruction.to_string());
+        assert_eq!(
+            "lstore_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -3444,6 +4330,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42];
 
         assert_eq!("fstore_w 42", instruction.to_string());
+        assert_eq!(
+            "fstore_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -3455,6 +4345,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42];
 
         assert_eq!("dstore_w 42", instruction.to_string());
+        assert_eq!(
+            "dstore_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -3466,6 +4360,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42];
 
         assert_eq!("astore_w 42", instruction.to_string());
+        assert_eq!(
+            "astore_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -3477,6 +4375,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42, 0, 3];
 
         assert_eq!("iinc_w 42, 3", instruction.to_string());
+        assert_eq!(
+            "iinc_w 42, 3",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -3488,6 +4390,10 @@ mod test {
         let expected_bytes = [wide_code, code, 0, 42];
 
         assert_eq!("ret_w 42", instruction.to_string());
+        assert_eq!(
+            "ret_w 42",
+            instruction.to_formatted_string(&ConstantPool::new())?
+        );
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
