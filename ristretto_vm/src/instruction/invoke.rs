@@ -120,6 +120,7 @@ pub(crate) fn invokeinterface(
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     method_index: u16,
+    _count: u8,
 ) -> Result<ExecutionResult> {
     let (class_index, name_and_type_index) =
         constant_pool.try_get_interface_method_ref(method_index)?;

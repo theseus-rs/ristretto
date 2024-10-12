@@ -221,18 +221,47 @@ impl VM {
     /// # Errors
     /// if the class cannot be resolved
     fn prepare_class_initialization(&self, class: &Arc<Class>) -> Result<Vec<Arc<Class>>> {
-        let mut classes = Vec::new();
         let class_loader = self
             .class_loader
             .write()
             .map_err(|error| PoisonedLock(error.to_string()))?;
-        let mut current_class = class.clone();
-        loop {
+        let mut classes = Vec::new();
+        let mut index = 0;
+        classes.push(class.clone());
+
+        while index < classes.len() {
+            let Some(current_class) = classes.get(index) else {
+                break;
+            };
+            let current_class = current_class.clone();
+
             if current_class.class_file().version > self.java_version {
                 return Err(UnsupportedClassFileVersion(
                     current_class.class_file().version.major(),
                 ));
             }
+
+            let mut interfaces = Vec::new();
+            for interface_index in &current_class.class_file().interfaces {
+                let interface_name = current_class
+                    .constant_pool()
+                    .try_get_class(*interface_index)?;
+                let (interface_class, previously_loaded) =
+                    class_loader.load_with_status(interface_name)?;
+                interfaces.push(interface_class.clone());
+                if !previously_loaded && !classes.contains(&interface_class) {
+                    classes.push(interface_class);
+                }
+            }
+            current_class.set_interfaces(interfaces)?;
+
+            // If the current class is java.lang.Object, skip the parent class logic since Object is
+            // the root class.
+            if current_class.name() == "java/lang/Object" {
+                index += 1;
+                continue;
+            }
+
             let super_class_index = current_class.class_file().super_class;
             let super_class_name = if super_class_index == 0 {
                 "java/lang/Object"
@@ -241,33 +270,16 @@ impl VM {
                 constant_pool.try_get_class(super_class_index)?
             };
 
-            classes.push(current_class.clone());
-            let current_class_name = current_class.name();
-            if current_class_name == "java/lang/Object" {
-                break;
-            }
-
-            let mut interfaces = Vec::new();
-            for interface_index in &current_class.class_file().interfaces {
-                let interface_name = current_class
-                    .constant_pool()
-                    .try_get_class(*interface_index)?;
-                let interface_class = class_loader.load(interface_name)?;
-                interfaces.push(interface_class);
-            }
-            classes.extend(interfaces.clone());
-            current_class.set_interfaces(interfaces)?;
-
             let (super_class, previously_loaded) =
                 class_loader.load_with_status(super_class_name)?;
             current_class.set_parent(Some(super_class.clone()))?;
-
-            if previously_loaded {
-                break;
+            if !previously_loaded && !classes.contains(&super_class) {
+                classes.push(super_class);
             }
 
-            current_class = super_class;
+            index += 1;
         }
+
         // Classes are discovered from the top of the hierarchy to the bottom.  However, the class
         // initialization order is from the bottom to the top.  Reverse the classes so that the
         // classes are initialized from the bottom to the top.
@@ -478,19 +490,27 @@ mod tests {
     fn test_class_inheritance() -> Result<()> {
         let vm = test_vm()?;
         let call_stack = &mut CallStack::new();
-        let child_class = vm.class(call_stack, "Child")?;
-        assert_eq!("Child", child_class.name());
+        let hash_map = vm.class(call_stack, "java/util/HashMap")?;
+        assert_eq!("java/util/HashMap", hash_map.name());
 
-        let parent_class = child_class.parent()?.expect("parent");
-        assert_eq!("Parent", parent_class.name());
+        let abstract_map = hash_map.parent()?.expect("HashMap parent");
+        assert_eq!("java/util/AbstractMap", abstract_map.name());
 
-        let grandparent_class = parent_class.parent()?.expect("grand parent");
-        assert_eq!("GrandParent", grandparent_class.name());
+        let object = abstract_map.parent()?.expect("AbstractMap parent");
+        assert_eq!("java/lang/Object", object.name());
+        assert!(object.parent()?.is_none());
+        Ok(())
+    }
 
-        let object_class = grandparent_class.parent()?.expect("object");
-        assert_eq!("java/lang/Object", object_class.name());
+    #[test]
+    fn test_class_interfaces() -> Result<()> {
+        let vm = test_vm()?;
+        let call_stack = &mut CallStack::new();
 
-        assert!(object_class.parent()?.is_none());
+        let interface = vm.class(call_stack, "java/util/NavigableMap")?;
+        let method = interface.try_get_virtual_method("size", "()I");
+        assert!(method.is_ok());
+
         Ok(())
     }
 }

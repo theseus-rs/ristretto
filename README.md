@@ -36,7 +36,7 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 ### Features
 
 - Deterministic memory allocation / deallocation
-- No garbage collector
+- No tracing garbage collector
 - Loading classes from any version of [AWS Corretto](https://github.com/corretto)
 - Load classes from directories, jars, modules
 - Url class loading from jars and modules
