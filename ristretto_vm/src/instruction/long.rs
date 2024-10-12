@@ -279,7 +279,7 @@ pub(crate) fn lushr(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_long()?;
     let result = if value1 > 0 {
-        value1 >> (value2 & 0x1f)
+        value1 >> (value2 & 0x3f)
     } else {
         #[expect(clippy::cast_sign_loss)]
         let value1 = value1 as u64;
@@ -716,6 +716,17 @@ mod tests {
         let result = lushr(stack)?;
         assert_eq!(Continue, result);
         assert_eq!(2, stack.pop_long()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_lushr_mask() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_long(57_558_190_860)?;
+        stack.push_int(32)?;
+        let result = lushr(stack)?;
+        assert_eq!(Continue, result);
+        assert_eq!(13, stack.pop_long()?);
         Ok(())
     }
 
