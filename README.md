@@ -49,6 +49,7 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - Exceptions are not implemented
 - Threading is not implemented
 - Numerous JDK native methods are not implemented
+- Finalizers are not implemented
 - JNI is not implemented
 - JIT is not implemented
 - No Security manager; see: [JEP 411](https://openjdk.org/jeps/411)
