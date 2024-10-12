@@ -364,12 +364,13 @@ impl Frame {
                 self.class.constant_pool(),
                 *index,
             ),
-            Instruction::Invokeinterface(index, _count) => invokeinterface(
+            Instruction::Invokeinterface(index, count) => invokeinterface(
                 vm,
                 call_stack,
                 &mut self.stack,
                 self.class.constant_pool(),
                 *index,
+                *count,
             ),
             Instruction::Invokedynamic(index) => invokedynamic(
                 vm,

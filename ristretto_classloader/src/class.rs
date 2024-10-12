@@ -393,6 +393,13 @@ impl Class {
         if let Some(method) = self.method(name, descriptor) {
             return Ok(method);
         }
+
+        for interface in self.interfaces()? {
+            if let Ok(method) = interface.try_get_virtual_method(name, descriptor) {
+                return Ok(method);
+            }
+        }
+
         let Some(parent) = self.parent()? else {
             return Err(MethodNotFound {
                 class_name: self.name().to_string(),
