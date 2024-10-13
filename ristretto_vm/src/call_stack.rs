@@ -3,7 +3,9 @@ use crate::Error::{PoisonedLock, RuntimeError};
 use crate::{native_methods, Frame, Result, VM};
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Value};
-use std::sync::{Arc, RwLock, Weak};
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::{Arc, Weak};
 use tracing::{debug, event_enabled, Level};
 
 /// A call stack is a stack of frames that are executed in order.
@@ -12,7 +14,7 @@ use tracing::{debug, event_enabled, Level};
 pub struct CallStack {
     vm: Weak<VM>,
     call_stack: Weak<CallStack>,
-    pub(crate) frames: Arc<RwLock<Vec<Arc<RwLock<Frame>>>>>,
+    frames: RefCell<Vec<Rc<Frame>>>,
 }
 
 impl CallStack {
@@ -22,7 +24,7 @@ impl CallStack {
         Arc::new_cyclic(|call_stack| CallStack {
             vm: vm.clone(),
             call_stack: call_stack.clone(),
-            frames: Arc::new(RwLock::new(Vec::new())),
+            frames: RefCell::new(Vec::new()),
         })
     }
 
@@ -35,6 +37,18 @@ impl CallStack {
             Some(vm) => Ok(vm),
             None => Err(RuntimeError("VM is not available".to_string())),
         }
+    }
+
+    /// Get the frames in the call stack.
+    ///
+    /// # Errors
+    /// if the frames cannot be accessed.
+    pub fn frames(&self) -> Result<Vec<Rc<Frame>>> {
+        let frames = self
+            .frames
+            .try_borrow()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        Ok(frames.clone())
     }
 
     /// Add a new frame to the call stack and invoke the method. To invoke a method on an object
@@ -76,25 +90,17 @@ impl CallStack {
             .into());
         } else {
             let arguments = CallStack::adjust_arguments(arguments);
-            let frame = Arc::new(RwLock::new(Frame::new(
-                &self.call_stack,
-                class,
-                method,
-                arguments,
-            )?));
+            let frame = Rc::new(Frame::new(&self.call_stack, class, method, arguments)?);
 
-            // Limit the scope of the write lock to just adding the frame to the call stack.  This
+            // Limit the scope of the write lock to just adding the frame to the call stack. This
             // is necessary because the call stack is re-entrant.
             {
                 let mut frames = self
                     .frames
-                    .write()
+                    .try_borrow_mut()
                     .map_err(|error| PoisonedLock(error.to_string()))?;
                 frames.push(frame.clone());
             }
-            let mut frame = frame
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
             let result = frame.execute();
             (result, true)
         };
@@ -119,7 +125,7 @@ impl CallStack {
         if frame_added {
             let mut frames = self
                 .frames
-                .write()
+                .try_borrow_mut()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
             frames.pop();
         }

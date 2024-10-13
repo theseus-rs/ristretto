@@ -7,20 +7,20 @@ use ristretto_classloader::Value;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ldc>
 #[inline]
-pub(crate) fn ldc(frame: &mut Frame, index: u8) -> Result<ExecutionResult> {
+pub(crate) fn ldc(frame: &Frame, index: u8) -> Result<ExecutionResult> {
     let index = u16::from(index);
     load_constant(frame, index)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ldc_w>
 #[inline]
-pub(crate) fn ldc_w(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
+pub(crate) fn ldc_w(frame: &Frame, index: u16) -> Result<ExecutionResult> {
     load_constant(frame, index)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ldc2_w>
 #[inline]
-pub(crate) fn ldc2_w(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
+pub(crate) fn ldc2_w(frame: &Frame, index: u16) -> Result<ExecutionResult> {
     let constant_pool = frame.class().constant_pool();
     let constant = constant_pool
         .get(index)
@@ -36,7 +36,7 @@ pub(crate) fn ldc2_w(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
             })
         }
     };
-    frame.stack_mut().push(value)?;
+    frame.stack().push(value)?;
     Ok(Continue)
 }
 
@@ -44,7 +44,7 @@ pub(crate) fn ldc2_w(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
 ///
 /// # Errors
 /// if the constant is not an integer, float, string or class
-fn load_constant(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
+fn load_constant(frame: &Frame, index: u16) -> Result<ExecutionResult> {
     let constant_pool = frame.class().constant_pool();
     let constant = constant_pool
         .get(index)
@@ -72,7 +72,7 @@ fn load_constant(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
             })
         }
     };
-    frame.stack_mut().push(value)?;
+    frame.stack().push(value)?;
     Ok(Continue)
 }
 
@@ -88,9 +88,9 @@ mod test {
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_integer(42)?;
         let index = u8::try_from(index)?;
-        let process_result = ldc(&mut frame, index)?;
+        let process_result = ldc(&frame, index)?;
         assert_eq!(process_result, Continue);
-        assert_eq!(42, frame.stack_mut().pop_int()?);
+        assert_eq!(42, frame.stack().pop_int()?);
         Ok(())
     }
 
@@ -100,9 +100,9 @@ mod test {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_integer(42)?;
-        let process_result = ldc_w(&mut frame, index)?;
+        let process_result = ldc_w(&frame, index)?;
         assert_eq!(process_result, Continue);
-        assert_eq!(42, frame.stack_mut().pop_int()?);
+        assert_eq!(42, frame.stack().pop_int()?);
         Ok(())
     }
 
@@ -112,9 +112,9 @@ mod test {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_integer(42)?;
-        let process_result = load_constant(&mut frame, index)?;
+        let process_result = load_constant(&frame, index)?;
         assert_eq!(process_result, Continue);
-        assert_eq!(42, frame.stack_mut().pop_int()?);
+        assert_eq!(42, frame.stack().pop_int()?);
         Ok(())
     }
 
@@ -124,9 +124,9 @@ mod test {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_float(42.1)?;
-        let process_result = load_constant(&mut frame, index)?;
+        let process_result = load_constant(&frame, index)?;
         assert_eq!(process_result, Continue);
-        let value = frame.stack_mut().pop_float()? - 42.1f32;
+        let value = frame.stack().pop_float()? - 42.1f32;
         assert!(value.abs() < 0.1f32);
         Ok(())
     }
@@ -137,9 +137,9 @@ mod test {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_string("foo")?;
-        let process_result = load_constant(&mut frame, index)?;
+        let process_result = load_constant(&frame, index)?;
         assert_eq!(process_result, Continue);
-        let object = frame.stack_mut().pop_object()?.expect("object");
+        let object = frame.stack().pop_object()?.expect("object");
         assert_eq!("string(foo)", format!("{object}"));
         Ok(())
     }
@@ -150,17 +150,17 @@ mod test {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_class("java/lang/Object")?;
-        let process_result = load_constant(&mut frame, index)?;
+        let process_result = load_constant(&frame, index)?;
         assert_eq!(process_result, Continue);
-        let object = frame.stack_mut().pop_object()?.expect("object");
+        let object = frame.stack().pop_object()?.expect("object");
         assert_eq!("class java/lang/Class", format!("{object}"));
         Ok(())
     }
 
     #[test]
     fn test_load_constant_invalid_index() -> Result<()> {
-        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
-        let result = load_constant(&mut frame, 42);
+        let (_vm, _call_stack, frame) = crate::test::frame()?;
+        let result = load_constant(&frame, 42);
         assert!(matches!(result, Err(InvalidConstantIndex(42))));
         Ok(())
     }
@@ -171,7 +171,7 @@ mod test {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_long(42)?;
-        let result = load_constant(&mut frame, index);
+        let result = load_constant(&frame, index);
         assert!(matches!(
             result,
             Err(InvalidConstant {
@@ -188,9 +188,9 @@ mod test {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_long(42)?;
-        let result = ldc2_w(&mut frame, index)?;
+        let result = ldc2_w(&frame, index)?;
         assert_eq!(Continue, result);
-        assert_eq!(42, frame.stack_mut().pop_long()?);
+        assert_eq!(42, frame.stack().pop_long()?);
         Ok(())
     }
 
@@ -200,17 +200,17 @@ mod test {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_double(42.1)?;
-        let result = ldc2_w(&mut frame, index)?;
+        let result = ldc2_w(&frame, index)?;
         assert_eq!(Continue, result);
-        let value = frame.stack_mut().pop_double()? - 42.1f64;
+        let value = frame.stack().pop_double()? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
     }
 
     #[test]
     fn test_ldc2_w_invalid_index() -> Result<()> {
-        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
-        let result = ldc2_w(&mut frame, 42);
+        let (_vm, _call_stack, frame) = crate::test::frame()?;
+        let result = ldc2_w(&frame, 42);
         assert!(matches!(result, Err(InvalidConstantIndex(42))));
         Ok(())
     }
@@ -221,7 +221,7 @@ mod test {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_integer(42)?;
-        let result = ldc2_w(&mut frame, index);
+        let result = ldc2_w(&frame, index);
         assert!(matches!(
             result,
             Err(InvalidConstant {

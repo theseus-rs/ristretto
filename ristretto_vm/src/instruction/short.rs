@@ -7,7 +7,7 @@ use ristretto_classloader::Reference;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.saload>
 #[inline]
-pub(crate) fn saload(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn saload(stack: &OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
         None => Err(NullPointer),
@@ -28,7 +28,7 @@ pub(crate) fn saload(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.sastore>
 #[inline]
-pub(crate) fn sastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn sastore(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {

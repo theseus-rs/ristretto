@@ -10,7 +10,7 @@ use ristretto_classloader::{Object, Reference};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aconst_null>
 #[inline]
-pub(crate) fn aconst_null(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aconst_null(stack: &OperandStack) -> Result<ExecutionResult> {
     stack.push_object(None)?;
     Ok(Continue)
 }
@@ -19,7 +19,7 @@ pub(crate) fn aconst_null(stack: &mut OperandStack) -> Result<ExecutionResult> {
 #[inline]
 pub(crate) fn aload(
     locals: &LocalVariables,
-    stack: &mut OperandStack,
+    stack: &OperandStack,
     index: u8,
 ) -> Result<ExecutionResult> {
     let object = locals.get_object(usize::from(index))?;
@@ -32,7 +32,7 @@ pub(crate) fn aload(
 #[inline]
 pub(crate) fn aload_w(
     locals: &LocalVariables,
-    stack: &mut OperandStack,
+    stack: &OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
     let object = locals.get_object(usize::from(index))?;
@@ -42,10 +42,7 @@ pub(crate) fn aload_w(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
-pub(crate) fn aload_0(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn aload_0(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let object = locals.get_object(0)?;
     stack.push_object(object)?;
     Ok(Continue)
@@ -53,10 +50,7 @@ pub(crate) fn aload_0(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
-pub(crate) fn aload_1(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn aload_1(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let object = locals.get_object(1)?;
     stack.push_object(object)?;
     Ok(Continue)
@@ -64,10 +58,7 @@ pub(crate) fn aload_1(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
-pub(crate) fn aload_2(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn aload_2(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let object = locals.get_object(2)?;
     stack.push_object(object)?;
     Ok(Continue)
@@ -75,10 +66,7 @@ pub(crate) fn aload_2(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
-pub(crate) fn aload_3(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn aload_3(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let object = locals.get_object(3)?;
     stack.push_object(object)?;
     Ok(Continue)
@@ -87,8 +75,8 @@ pub(crate) fn aload_3(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.astore>
 #[inline]
 pub(crate) fn astore(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
+    locals: &LocalVariables,
+    stack: &OperandStack,
     index: u8,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
@@ -100,8 +88,8 @@ pub(crate) fn astore(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
 pub(crate) fn astore_w(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
+    locals: &LocalVariables,
+    stack: &OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
@@ -111,10 +99,7 @@ pub(crate) fn astore_w(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.astore_n>
 #[inline]
-pub(crate) fn astore_0(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn astore_0(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     locals.set_object(0, value)?;
     Ok(Continue)
@@ -122,10 +107,7 @@ pub(crate) fn astore_0(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.astore_n>
 #[inline]
-pub(crate) fn astore_1(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn astore_1(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     locals.set_object(1, value)?;
     Ok(Continue)
@@ -133,10 +115,7 @@ pub(crate) fn astore_1(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.astore_n>
 #[inline]
-pub(crate) fn astore_2(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn astore_2(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     locals.set_object(2, value)?;
     Ok(Continue)
@@ -144,10 +123,7 @@ pub(crate) fn astore_2(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.astore_n>
 #[inline]
-pub(crate) fn astore_3(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn astore_3(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     locals.set_object(3, value)?;
     Ok(Continue)
@@ -155,7 +131,7 @@ pub(crate) fn astore_3(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aaload>
 #[inline]
-pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aaload(stack: &OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
         None => Err(NullPointer),
@@ -176,7 +152,7 @@ pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aastore>
 #[inline]
-pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aastore(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {
@@ -200,14 +176,14 @@ pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.areturn>
 #[inline]
-pub(crate) fn areturn(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn areturn(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     Ok(Return(Some(Value::Object(value))))
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.new>
 #[inline]
-pub(crate) fn new(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
+pub(crate) fn new(frame: &Frame, index: u16) -> Result<ExecutionResult> {
     let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
@@ -215,21 +191,21 @@ pub(crate) fn new(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
     let class = vm.class(&call_stack, class_name)?;
     let object = Object::new(class)?;
     let reference = Reference::Object(object);
-    let stack = frame.stack_mut();
+    let stack = frame.stack();
     stack.push_object(Some(reference))?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.checkcast>
 #[inline]
-pub(crate) fn checkcast(stack: &mut OperandStack, class_name: &str) -> Result<ExecutionResult> {
+pub(crate) fn checkcast(stack: &OperandStack, class_name: &str) -> Result<ExecutionResult> {
     let Value::Object(object) = stack.peek()? else {
         return Err(RuntimeError("Expected object".to_string()));
     };
     let Some(object) = object else {
         return Ok(Continue);
     };
-    if !is_instanceof(object, class_name)? {
+    if !is_instanceof(&object, class_name)? {
         return Err(ClassCastError(class_name.to_string()));
     }
     Ok(Continue)
@@ -237,7 +213,7 @@ pub(crate) fn checkcast(stack: &mut OperandStack, class_name: &str) -> Result<Ex
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.instanceof>
 #[inline]
-pub(crate) fn instanceof(stack: &mut OperandStack, class_name: &str) -> Result<ExecutionResult> {
+pub(crate) fn instanceof(stack: &OperandStack, class_name: &str) -> Result<ExecutionResult> {
     let object = stack.pop_object()?;
     let Some(object) = object else {
         stack.push_int(0)?;
@@ -305,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_aload() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(1);
+        let locals = LocalVariables::with_max_size(1);
         locals.set_object(0, None)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload(&locals, stack, 0)?;
@@ -316,7 +292,7 @@ mod tests {
 
     #[test]
     fn test_aload_w() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(1);
+        let locals = LocalVariables::with_max_size(1);
         locals.set_object(0, None)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload_w(&locals, stack, 0)?;
@@ -327,7 +303,7 @@ mod tests {
 
     #[test]
     fn test_aload_0() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(1);
+        let locals = LocalVariables::with_max_size(1);
         locals.set_object(0, None)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload_0(&locals, stack)?;
@@ -338,7 +314,7 @@ mod tests {
 
     #[test]
     fn test_aload_1() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(2);
+        let locals = LocalVariables::with_max_size(2);
         locals.set_object(1, None)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload_1(&locals, stack)?;
@@ -349,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_aload_2() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(3);
+        let locals = LocalVariables::with_max_size(3);
         locals.set_object(2, None)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload_2(&locals, stack)?;
@@ -360,7 +336,7 @@ mod tests {
 
     #[test]
     fn test_aload_3() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(4);
+        let locals = LocalVariables::with_max_size(4);
         locals.set_object(3, None)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload_3(&locals, stack)?;
@@ -371,7 +347,7 @@ mod tests {
 
     #[test]
     fn test_astore() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(1);
+        let locals = &LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
         let result = astore(locals, stack, 0)?;
@@ -382,7 +358,7 @@ mod tests {
 
     #[test]
     fn test_astore_w() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(1);
+        let locals = &LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
         let result = astore_w(locals, stack, 0)?;
@@ -393,7 +369,7 @@ mod tests {
 
     #[test]
     fn test_astore_0() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(1);
+        let locals = &LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
         let result = astore_0(locals, stack)?;
@@ -404,7 +380,7 @@ mod tests {
 
     #[test]
     fn test_astore_1() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(2);
+        let locals = &LocalVariables::with_max_size(2);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
         let result = astore_1(locals, stack)?;
@@ -415,7 +391,7 @@ mod tests {
 
     #[test]
     fn test_astore_2() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(3);
+        let locals = &LocalVariables::with_max_size(3);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
         let result = astore_2(locals, stack)?;
@@ -426,7 +402,7 @@ mod tests {
 
     #[test]
     fn test_astore_3() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(4);
+        let locals = &LocalVariables::with_max_size(4);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
         let result = astore_3(locals, stack)?;
@@ -437,8 +413,8 @@ mod tests {
 
     #[test]
     fn test_aaload() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let stack = frame.stack_mut();
+        let (vm, call_stack, frame) = crate::test::frame()?;
+        let stack = frame.stack();
         let class = vm.class(&call_stack, "java/lang/Object")?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
@@ -469,8 +445,8 @@ mod tests {
 
     #[test]
     fn test_aaload_invalid_index() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let stack = frame.stack_mut();
+        let (vm, call_stack, frame) = crate::test::frame()?;
+        let stack = frame.stack();
         let class = vm.class(&call_stack, "java/lang/Object")?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
@@ -493,8 +469,8 @@ mod tests {
 
     #[test]
     fn test_aastore() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let stack = frame.stack_mut();
+        let (vm, call_stack, frame) = crate::test::frame()?;
+        let stack = frame.stack();
         let class = vm.class(&call_stack, "java/lang/Object")?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![3]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object)]));
@@ -526,8 +502,8 @@ mod tests {
 
     #[test]
     fn test_aastore_invalid_index() -> crate::Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let stack = frame.stack_mut();
+        let (vm, call_stack, frame) = crate::test::frame()?;
+        let stack = frame.stack();
         let class = vm.class(&call_stack, "java/lang/Object")?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![3]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
@@ -591,9 +567,9 @@ mod tests {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("Child")?;
-        let process_result = new(&mut frame, class_index)?;
+        let process_result = new(&frame, class_index)?;
         assert_eq!(process_result, Continue);
-        let stack = frame.stack_mut();
+        let stack = frame.stack();
         let object = stack.pop()?;
         assert!(matches!(object, Value::Object(Some(Reference::Object(_)))));
         Ok(())

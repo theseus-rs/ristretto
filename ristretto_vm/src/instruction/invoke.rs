@@ -18,7 +18,7 @@ enum InvocationType {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokevirtual>
 #[inline]
-pub(crate) fn invokevirtual(frame: &mut Frame, method_index: u16) -> Result<ExecutionResult> {
+pub(crate) fn invokevirtual(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
     let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
@@ -43,7 +43,7 @@ pub(crate) fn invokevirtual(frame: &mut Frame, method_index: u16) -> Result<Exec
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokespecial>
 #[inline]
-pub(crate) fn invokespecial(frame: &mut Frame, method_index: u16) -> Result<ExecutionResult> {
+pub(crate) fn invokespecial(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
     let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
@@ -68,7 +68,7 @@ pub(crate) fn invokespecial(frame: &mut Frame, method_index: u16) -> Result<Exec
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokestatic>
 #[inline]
-pub(crate) fn invokestatic(frame: &mut Frame, method_index: u16) -> Result<ExecutionResult> {
+pub(crate) fn invokestatic(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
     let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
@@ -105,7 +105,7 @@ pub(crate) fn invokestatic(frame: &mut Frame, method_index: u16) -> Result<Execu
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokeinterface>
 #[inline]
 pub(crate) fn invokeinterface(
-    frame: &mut Frame,
+    frame: &Frame,
     method_index: u16,
     _count: u8,
 ) -> Result<ExecutionResult> {
@@ -134,7 +134,7 @@ pub(crate) fn invokeinterface(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokedynamic>
 #[inline]
-pub(crate) fn invokedynamic(_frame: &mut Frame, _method_index: u16) -> Result<ExecutionResult> {
+pub(crate) fn invokedynamic(_frame: &Frame, _method_index: u16) -> Result<ExecutionResult> {
     todo!()
 }
 
@@ -146,12 +146,12 @@ pub(crate) fn invokedynamic(_frame: &mut Frame, _method_index: u16) -> Result<Ex
 fn invoke_method(
     vm: &Arc<VM>,
     call_stack: &CallStack,
-    frame: &mut Frame,
+    frame: &Frame,
     mut class: Arc<Class>,
     mut method: Arc<Method>,
     invocation_type: &InvocationType,
 ) -> Result<ExecutionResult> {
-    let stack = frame.stack_mut();
+    let stack = frame.stack();
     let parameters = method.parameters().len();
     let mut arguments = if method.is_static() {
         Vec::with_capacity(parameters)

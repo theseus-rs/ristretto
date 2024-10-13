@@ -9,7 +9,7 @@ use ristretto_classloader::{Reference, Value};
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.getfield>
 #[inline]
 pub(crate) fn getfield(
-    stack: &mut OperandStack,
+    stack: &OperandStack,
     constant_pool: &ConstantPool,
     index: u16,
 ) -> Result<ExecutionResult> {
@@ -35,7 +35,7 @@ pub(crate) fn getfield(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.putfield>
 #[inline]
 pub(crate) fn putfield(
-    stack: &mut OperandStack,
+    stack: &OperandStack,
     constant_pool: &ConstantPool,
     index: u16,
 ) -> Result<ExecutionResult> {
@@ -99,13 +99,13 @@ mod test {
     }
 
     fn test_put_and_get_field() -> Result<()> {
-        let (_vm, _call_stack, mut frame, class_index, field_index) =
+        let (_vm, _call_stack, frame, class_index, field_index) =
             test_class_field("Child", "zero", "I")?;
         let constant_pool = frame.class().constant_pool().clone();
-        let result = new(&mut frame, class_index)?;
+        let result = new(&frame, class_index)?;
         assert_eq!(Continue, result);
 
-        let stack = frame.stack_mut();
+        let stack = frame.stack();
         let result = dup(stack)?;
         assert_eq!(Continue, result);
 
@@ -130,12 +130,12 @@ mod test {
 
     #[test]
     fn test_getfield_field_not_found() -> Result<()> {
-        let (_vm, _call_stack, mut frame, class_index, field_index) =
+        let (_vm, _call_stack, frame, class_index, field_index) =
             test_class_field("Child", "foo", "I")?;
-        let result = new(&mut frame, class_index)?;
+        let result = new(&frame, class_index)?;
         assert_eq!(Continue, result);
         let constant_pool = frame.class().constant_pool().clone();
-        let stack = frame.stack_mut();
+        let stack = frame.stack();
         let result = getfield(stack, &constant_pool, field_index);
         assert!(result.is_err());
         Ok(())
@@ -163,11 +163,11 @@ mod test {
 
     #[test]
     fn test_putfield_field_not_found() -> Result<()> {
-        let (_vm, _call_stack, mut frame, class_index, field_index) =
+        let (_vm, _call_stack, frame, class_index, field_index) =
             test_class_field("Child", "foo", "I")?;
         let constant_pool = frame.class().constant_pool().clone();
-        let result = new(&mut frame, class_index)?;
-        let stack = frame.stack_mut();
+        let result = new(&frame, class_index)?;
+        let stack = frame.stack();
         assert_eq!(Continue, result);
         let result = dup(stack)?;
         assert_eq!(Continue, result);

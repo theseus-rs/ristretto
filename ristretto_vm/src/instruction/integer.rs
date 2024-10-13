@@ -8,49 +8,49 @@ use ristretto_classloader::Reference;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iconst_i>
 #[inline]
-pub(crate) fn iconst_m1(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iconst_m1(stack: &OperandStack) -> Result<ExecutionResult> {
     stack.push_int(-1)?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iconst_i>
 #[inline]
-pub(crate) fn iconst_0(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iconst_0(stack: &OperandStack) -> Result<ExecutionResult> {
     stack.push_int(0)?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iconst_i>
 #[inline]
-pub(crate) fn iconst_1(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iconst_1(stack: &OperandStack) -> Result<ExecutionResult> {
     stack.push_int(1)?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iconst_i>
 #[inline]
-pub(crate) fn iconst_2(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iconst_2(stack: &OperandStack) -> Result<ExecutionResult> {
     stack.push_int(2)?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iconst_i>
 #[inline]
-pub(crate) fn iconst_3(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iconst_3(stack: &OperandStack) -> Result<ExecutionResult> {
     stack.push_int(3)?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iconst_i>
 #[inline]
-pub(crate) fn iconst_4(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iconst_4(stack: &OperandStack) -> Result<ExecutionResult> {
     stack.push_int(4)?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iconst_i>
 #[inline]
-pub(crate) fn iconst_5(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iconst_5(stack: &OperandStack) -> Result<ExecutionResult> {
     stack.push_int(5)?;
     Ok(Continue)
 }
@@ -59,7 +59,7 @@ pub(crate) fn iconst_5(stack: &mut OperandStack) -> Result<ExecutionResult> {
 #[inline]
 pub(crate) fn iload(
     locals: &LocalVariables,
-    stack: &mut OperandStack,
+    stack: &OperandStack,
     index: u8,
 ) -> Result<ExecutionResult> {
     let value = locals.get_int(usize::from(index))?;
@@ -72,7 +72,7 @@ pub(crate) fn iload(
 #[inline]
 pub(crate) fn iload_w(
     locals: &LocalVariables,
-    stack: &mut OperandStack,
+    stack: &OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
     let value = locals.get_int(usize::from(index))?;
@@ -82,10 +82,7 @@ pub(crate) fn iload_w(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iload_n>
 #[inline]
-pub(crate) fn iload_0(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn iload_0(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = locals.get_int(0)?;
     stack.push_int(value)?;
     Ok(Continue)
@@ -93,10 +90,7 @@ pub(crate) fn iload_0(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iload_n>
 #[inline]
-pub(crate) fn iload_1(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn iload_1(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = locals.get_int(1)?;
     stack.push_int(value)?;
     Ok(Continue)
@@ -104,10 +98,7 @@ pub(crate) fn iload_1(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iload_n>
 #[inline]
-pub(crate) fn iload_2(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn iload_2(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = locals.get_int(2)?;
     stack.push_int(value)?;
     Ok(Continue)
@@ -115,10 +106,7 @@ pub(crate) fn iload_2(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iload_n>
 #[inline]
-pub(crate) fn iload_3(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn iload_3(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = locals.get_int(3)?;
     stack.push_int(value)?;
     Ok(Continue)
@@ -127,8 +115,8 @@ pub(crate) fn iload_3(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.istore>
 #[inline]
 pub(crate) fn istore(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
+    locals: &LocalVariables,
+    stack: &OperandStack,
     index: u8,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
@@ -140,8 +128,8 @@ pub(crate) fn istore(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
 pub(crate) fn istore_w(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
+    locals: &LocalVariables,
+    stack: &OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
@@ -151,10 +139,7 @@ pub(crate) fn istore_w(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.istore_n>
 #[inline]
-pub(crate) fn istore_0(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn istore_0(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     locals.set_int(0, value)?;
     Ok(Continue)
@@ -162,10 +147,7 @@ pub(crate) fn istore_0(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.istore_n>
 #[inline]
-pub(crate) fn istore_1(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn istore_1(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     locals.set_int(1, value)?;
     Ok(Continue)
@@ -173,10 +155,7 @@ pub(crate) fn istore_1(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.istore_n>
 #[inline]
-pub(crate) fn istore_2(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn istore_2(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     locals.set_int(2, value)?;
     Ok(Continue)
@@ -184,10 +163,7 @@ pub(crate) fn istore_2(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.istore_n>
 #[inline]
-pub(crate) fn istore_3(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn istore_3(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     locals.set_int(3, value)?;
     Ok(Continue)
@@ -195,7 +171,7 @@ pub(crate) fn istore_3(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iaload>
 #[inline]
-pub(crate) fn iaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iaload(stack: &OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
         None => Err(NullPointer),
@@ -216,7 +192,7 @@ pub(crate) fn iaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iastore>
 #[inline]
-pub(crate) fn iastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iastore(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {
@@ -238,7 +214,7 @@ pub(crate) fn iastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iadd>
 #[inline]
-pub(crate) fn iadd(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iadd(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     stack.push_int(i32::wrapping_add(value1, value2))?;
@@ -247,7 +223,7 @@ pub(crate) fn iadd(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.isub>
 #[inline]
-pub(crate) fn isub(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn isub(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     stack.push_int(i32::wrapping_sub(value1, value2))?;
@@ -256,7 +232,7 @@ pub(crate) fn isub(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.imul>
 #[inline]
-pub(crate) fn imul(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn imul(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     stack.push_int(i32::wrapping_mul(value1, value2))?;
@@ -265,7 +241,7 @@ pub(crate) fn imul(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.idiv>
 #[inline]
-pub(crate) fn idiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn idiv(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     stack.push_int(i32::wrapping_div(value1, value2))?;
@@ -274,7 +250,7 @@ pub(crate) fn idiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.irem>
 #[inline]
-pub(crate) fn irem(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn irem(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     stack.push_int(i32::wrapping_rem(value1, value2))?;
@@ -283,7 +259,7 @@ pub(crate) fn irem(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ineg>
 #[inline]
-pub(crate) fn ineg(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn ineg(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     stack.push_int(-value)?;
     Ok(Continue)
@@ -291,7 +267,7 @@ pub(crate) fn ineg(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ishl>
 #[inline]
-pub(crate) fn ishl(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn ishl(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     stack.push_int(value1 << (value2 & 0x1f))?;
@@ -300,7 +276,7 @@ pub(crate) fn ishl(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ishr>
 #[inline]
-pub(crate) fn ishr(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn ishr(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     stack.push_int(value1 >> (value2 & 0x1f))?;
@@ -309,7 +285,7 @@ pub(crate) fn ishr(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iushr>
 #[inline]
-pub(crate) fn iushr(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iushr(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     let result = if value1 > 0 {
@@ -328,7 +304,7 @@ pub(crate) fn iushr(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iand>
 #[inline]
-pub(crate) fn iand(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn iand(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     stack.push_int(value1 & value2)?;
@@ -337,7 +313,7 @@ pub(crate) fn iand(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ior>
 #[inline]
-pub(crate) fn ior(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn ior(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     stack.push_int(value1 | value2)?;
@@ -346,7 +322,7 @@ pub(crate) fn ior(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ixor>
 #[inline]
-pub(crate) fn ixor(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn ixor(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     stack.push_int(value1 ^ value2)?;
@@ -355,11 +331,7 @@ pub(crate) fn ixor(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iinc>
 #[inline]
-pub(crate) fn iinc(
-    locals: &mut LocalVariables,
-    index: u8,
-    constant: i8,
-) -> Result<ExecutionResult> {
+pub(crate) fn iinc(locals: &LocalVariables, index: u8, constant: i8) -> Result<ExecutionResult> {
     let index = usize::from(index);
     let local = locals.get_int(index)?;
     locals.set_int(index, local + i32::from(constant))?;
@@ -370,7 +342,7 @@ pub(crate) fn iinc(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
 pub(crate) fn iinc_w(
-    locals: &mut LocalVariables,
+    locals: &LocalVariables,
     index: u16,
     constant: i16,
 ) -> Result<ExecutionResult> {
@@ -382,7 +354,7 @@ pub(crate) fn iinc_w(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ireturn>
 #[inline]
-pub(crate) fn ireturn(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn ireturn(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     Ok(Return(Some(Value::Int(value))))
 }
@@ -458,7 +430,7 @@ mod tests {
 
     #[test]
     fn test_iload() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(1);
+        let locals = LocalVariables::with_max_size(1);
         locals.set_int(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload(&locals, stack, 0)?;
@@ -469,7 +441,7 @@ mod tests {
 
     #[test]
     fn test_iload_w() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(1);
+        let locals = LocalVariables::with_max_size(1);
         locals.set_int(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload_w(&locals, stack, 0)?;
@@ -480,7 +452,7 @@ mod tests {
 
     #[test]
     fn test_iload_0() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(1);
+        let locals = LocalVariables::with_max_size(1);
         locals.set_int(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload_0(&locals, stack)?;
@@ -491,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_iload_1() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(2);
+        let locals = LocalVariables::with_max_size(2);
         locals.set_int(1, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload_1(&locals, stack)?;
@@ -502,7 +474,7 @@ mod tests {
 
     #[test]
     fn test_iload_2() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(3);
+        let locals = LocalVariables::with_max_size(3);
         locals.set_int(2, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload_2(&locals, stack)?;
@@ -513,7 +485,7 @@ mod tests {
 
     #[test]
     fn test_iload_3() -> Result<()> {
-        let mut locals = LocalVariables::with_max_size(4);
+        let locals = LocalVariables::with_max_size(4);
         locals.set_int(3, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload_3(&locals, stack)?;
@@ -524,7 +496,7 @@ mod tests {
 
     #[test]
     fn test_istore() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(1);
+        let locals = &LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore(locals, stack, 0)?;
@@ -535,7 +507,7 @@ mod tests {
 
     #[test]
     fn test_istore_w() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(1);
+        let locals = &LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore_w(locals, stack, 0)?;
@@ -546,7 +518,7 @@ mod tests {
 
     #[test]
     fn test_istore_0() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(1);
+        let locals = &LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore_0(locals, stack)?;
@@ -557,7 +529,7 @@ mod tests {
 
     #[test]
     fn test_istore_1() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(2);
+        let locals = &LocalVariables::with_max_size(2);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore_1(locals, stack)?;
@@ -568,7 +540,7 @@ mod tests {
 
     #[test]
     fn test_istore_2() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(3);
+        let locals = &LocalVariables::with_max_size(3);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore_2(locals, stack)?;
@@ -579,7 +551,7 @@ mod tests {
 
     #[test]
     fn test_istore_3() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(4);
+        let locals = &LocalVariables::with_max_size(4);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore_3(locals, stack)?;
@@ -857,7 +829,7 @@ mod tests {
 
     #[test]
     fn test_iinc() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(1);
+        let locals = &LocalVariables::with_max_size(1);
         locals.set_int(0, 1)?;
         let result = iinc(locals, 0, 2)?;
         assert_eq!(Continue, result);
@@ -867,7 +839,7 @@ mod tests {
 
     #[test]
     fn test_iinc_w() -> Result<()> {
-        let locals = &mut LocalVariables::with_max_size(1);
+        let locals = &LocalVariables::with_max_size(1);
         locals.set_int(0, 1)?;
         let result = iinc_w(locals, 0, 2)?;
         assert_eq!(Continue, result);
