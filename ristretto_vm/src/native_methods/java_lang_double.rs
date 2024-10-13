@@ -3,6 +3,7 @@ use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Result;
 use ristretto_classloader::Value;
+use std::sync::Arc;
 
 /// Register all native methods for java.lang.Double.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -17,7 +18,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 fn double_to_raw_long_bits(
-    _call_stack: &CallStack,
+    _call_stack: &Arc<CallStack>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let double = arguments.pop_double()?;
@@ -26,7 +27,10 @@ fn double_to_raw_long_bits(
     Ok(Some(Value::Long(bits)))
 }
 
-fn long_bits_to_double(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn long_bits_to_double(
+    _call_stack: &Arc<CallStack>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
     let long = arguments.pop_long()?;
     #[expect(clippy::cast_sign_loss)]
     let bits = long as u64;

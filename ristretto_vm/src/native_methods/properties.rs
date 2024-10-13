@@ -6,9 +6,10 @@ use std::collections::HashMap;
 use std::env;
 use std::env::consts::{ARCH, OS};
 use std::path::MAIN_SEPARATOR_STR;
+use std::sync::Arc;
 
 /// Get the system properties.
-pub(crate) fn system(call_stack: &CallStack) -> Result<HashMap<&'static str, Value>> {
+pub(crate) fn system(call_stack: &Arc<CallStack>) -> Result<HashMap<&'static str, Value>> {
     let vm = call_stack.vm()?;
     let system_properties = system_properties(&vm)?;
     let mut properties = HashMap::new();

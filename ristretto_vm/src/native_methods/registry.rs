@@ -11,7 +11,7 @@ use crate::native_methods::{
 use crate::Result;
 use ristretto_classloader::Value;
 use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use tracing::debug;
 
 /// Lazy static reference to the registry.
@@ -22,7 +22,8 @@ pub fn registry() -> &'static MethodRegistry {
 
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
-pub type RustMethod = fn(call_stack: &CallStack, arguments: Arguments) -> Result<Option<Value>>;
+pub type RustMethod =
+    fn(call_stack: &Arc<CallStack>, arguments: Arguments) -> Result<Option<Value>>;
 
 #[expect(clippy::module_name_repetitions)]
 #[derive(Debug)]

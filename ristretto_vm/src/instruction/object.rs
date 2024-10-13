@@ -1,13 +1,11 @@
-use crate::call_stack::CallStack;
 use crate::frame::ExecutionResult::Return;
-use crate::frame::{ExecutionResult, ExecutionResult::Continue};
+use crate::frame::{ExecutionResult, ExecutionResult::Continue, Frame};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::Error::{
     ArrayIndexOutOfBounds, ClassCastError, InvalidStackValue, NullPointer, RuntimeError,
 };
 use crate::{Result, Value};
-use ristretto_classfile::ConstantPool;
 use ristretto_classloader::{Object, Reference};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aconst_null>
@@ -209,17 +207,15 @@ pub(crate) fn areturn(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.new>
 #[inline]
-pub(crate) fn new(
-    call_stack: &CallStack,
-    stack: &mut OperandStack,
-    constant_pool: &ConstantPool,
-    index: u16,
-) -> Result<ExecutionResult> {
+pub(crate) fn new(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
+    let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
+    let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.class(call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name)?;
     let object = Object::new(class)?;
     let reference = Reference::Object(object);
+    let stack = frame.stack_mut();
     stack.push_object(Some(reference))?;
     Ok(Continue)
 }
@@ -442,7 +438,7 @@ mod tests {
     #[test]
     fn test_aaload() -> Result<()> {
         let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let stack = &mut frame.stack;
+        let stack = frame.stack_mut();
         let class = vm.class(&call_stack, "java/lang/Object")?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
@@ -474,7 +470,7 @@ mod tests {
     #[test]
     fn test_aaload_invalid_index() -> Result<()> {
         let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let stack = &mut frame.stack;
+        let stack = frame.stack_mut();
         let class = vm.class(&call_stack, "java/lang/Object")?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
@@ -498,7 +494,7 @@ mod tests {
     #[test]
     fn test_aastore() -> Result<()> {
         let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let stack = &mut frame.stack;
+        let stack = frame.stack_mut();
         let class = vm.class(&call_stack, "java/lang/Object")?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![3]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object)]));
@@ -531,7 +527,7 @@ mod tests {
     #[test]
     fn test_aastore_invalid_index() -> crate::Result<()> {
         let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let stack = &mut frame.stack;
+        let stack = frame.stack_mut();
         let class = vm.class(&call_stack, "java/lang/Object")?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![3]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
@@ -591,14 +587,14 @@ mod tests {
 
     #[test]
     fn test_new() -> Result<()> {
-        let (_vm, call_stack, mut frame) = crate::test::frame()?;
-        let stack = &mut frame.stack;
-        let class = &mut frame.class;
+        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("Child")?;
-        let process_result = new(&call_stack, stack, constant_pool, class_index)?;
+        let process_result = new(&mut frame, class_index)?;
         assert_eq!(process_result, Continue);
-        let object = frame.stack.pop()?;
+        let stack = frame.stack_mut();
+        let object = stack.pop()?;
         assert!(matches!(object, Value::Object(Some(Reference::Object(_)))));
         Ok(())
     }

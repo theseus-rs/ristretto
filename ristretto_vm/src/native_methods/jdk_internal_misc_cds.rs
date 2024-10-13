@@ -4,6 +4,7 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::Result;
 use ristretto_classloader::Value;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::sync::Arc;
 
 /// Register all native methods for jdk.internal.misc.CDS.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -34,7 +35,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
 fn get_random_seed_for_dumping(
-    _call_stack: &CallStack,
+    _call_stack: &Arc<CallStack>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     let version = env!("CARGO_PKG_VERSION");
@@ -45,7 +46,7 @@ fn get_random_seed_for_dumping(
 }
 
 fn initialize_from_archive(
-    _call_stack: &CallStack,
+    _call_stack: &Arc<CallStack>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let _class = arguments.pop_object()?;
@@ -54,14 +55,8 @@ fn initialize_from_archive(
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn is_dumping_archive_0(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
-}
-
-#[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
-fn is_dumping_class_list_0(
-    _call_stack: &CallStack,
+fn is_dumping_archive_0(
+    _call_stack: &Arc<CallStack>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
@@ -69,6 +64,18 @@ fn is_dumping_class_list_0(
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn is_sharing_enabled_0(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn is_dumping_class_list_0(
+    _call_stack: &Arc<CallStack>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::Int(0)))
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[expect(clippy::unnecessary_wraps)]
+fn is_sharing_enabled_0(
+    _call_stack: &Arc<CallStack>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
 }

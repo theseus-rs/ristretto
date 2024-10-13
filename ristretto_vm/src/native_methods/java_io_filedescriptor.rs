@@ -3,6 +3,7 @@ use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Result;
 use ristretto_classloader::Value;
+use std::sync::Arc;
 
 /// Register all native methods for java.io.FileDescriptor.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -13,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::match_same_arms)]
-fn get_append(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn get_append(_call_stack: &Arc<CallStack>, mut arguments: Arguments) -> Result<Option<Value>> {
     let handle = arguments.pop_int()?;
     let append = match handle {
         0 => {
@@ -34,7 +35,7 @@ fn get_append(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Optio
     Ok(Some(Value::Int(append)))
 }
 
-fn get_handle(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn get_handle(_call_stack: &Arc<CallStack>, mut arguments: Arguments) -> Result<Option<Value>> {
     let handle = arguments.pop_int()?;
     let handle = i64::from(handle);
     Ok(Some(Value::Long(handle)))
@@ -42,6 +43,6 @@ fn get_handle(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Optio
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn init_ids(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn init_ids(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }

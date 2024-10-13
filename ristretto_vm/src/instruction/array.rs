@@ -1,12 +1,10 @@
-use crate::call_stack::CallStack;
-use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
+use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 use crate::Error::{InvalidStackValue, NullPointer};
 use crate::Result;
 use ristretto_classfile::attributes::ArrayType;
-use ristretto_classloader::{Class, ConcurrentVec, Reference};
-use std::sync::Arc;
+use ristretto_classloader::{ConcurrentVec, Reference};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.newarray>
 #[inline]
@@ -33,18 +31,15 @@ pub(crate) fn newarray(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.anewarray>
 #[inline]
-pub(crate) fn anewarray(
-    call_stack: &CallStack,
-    stack: &mut OperandStack,
-    class: &Arc<Class>,
-    index: u16,
-) -> Result<ExecutionResult> {
+pub(crate) fn anewarray(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
+    let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
+    let constant_pool = frame.class().constant_pool();
+    let class_name = constant_pool.try_get_class(index)?;
+    let class = vm.class(&call_stack, class_name)?;
+    let stack = frame.stack_mut();
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
-    let constant_pool = class.constant_pool();
-    let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.class(call_stack, class_name)?;
     let array = Reference::Array(class, ConcurrentVec::from(vec![None; count]));
     stack.push_object(Some(array))?;
     Ok(Continue)
@@ -77,18 +72,18 @@ pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.multianewarray>
 #[inline]
 pub(crate) fn multianewarray(
-    call_stack: &CallStack,
-    stack: &mut OperandStack,
-    class: &Arc<Class>,
+    frame: &mut Frame,
     index: u16,
     dimensions: u8,
 ) -> Result<ExecutionResult> {
+    let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
+    let constant_pool = frame.class().constant_pool();
+    let class_name = constant_pool.try_get_class(index)?;
+    let class = vm.class(&call_stack, class_name)?;
+    let stack = frame.stack_mut();
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
-    let constant_pool = class.constant_pool();
-    let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.class(call_stack, class_name)?;
     let array = Reference::Array(class, ConcurrentVec::from(vec![None; count]));
 
     for _ in 1..dimensions {
@@ -238,13 +233,19 @@ mod tests {
             Vec::new(),
         )?;
         let arguments = Vec::new();
-        let mut frame = Frame::new(&class, &Arc::new(method), arguments)?;
-        let stack = &mut frame.stack;
-        let class = frame.class;
-
-        stack.push_int(0)?;
-        let result = anewarray(&call_stack, stack, &class, class_index)?;
+        let mut frame = Frame::new(
+            &Arc::downgrade(&call_stack),
+            &class,
+            &Arc::new(method),
+            arguments,
+        )?;
+        {
+            let stack = frame.stack_mut();
+            stack.push_int(0)?;
+        }
+        let result = anewarray(&mut frame, class_index)?;
         assert_eq!(Continue, result);
+        let stack = frame.stack_mut();
         let object = stack.pop()?;
         assert!(matches!(
             object,
@@ -364,14 +365,20 @@ mod tests {
             Vec::new(),
         )?;
         let arguments = Vec::new();
-        let mut frame = Frame::new(&class, &Arc::new(method), arguments)?;
-        let stack = &mut frame.stack;
-        let class = frame.class;
-
-        stack.push_int(3)?;
-        let result = anewarray(&call_stack, stack, &class, class_index)?;
+        let mut frame = Frame::new(
+            &Arc::downgrade(&call_stack),
+            &class,
+            &Arc::new(method),
+            arguments,
+        )?;
+        {
+            let stack = frame.stack_mut();
+            stack.push_int(3)?;
+        }
+        let result = anewarray(&mut frame, class_index)?;
         assert_eq!(Continue, result);
 
+        let stack = frame.stack_mut();
         let result = arraylength(stack)?;
         assert_eq!(Continue, result);
         assert_eq!(3, stack.pop_int()?);
@@ -391,7 +398,7 @@ mod tests {
     fn test_arraylength_invalid_type() -> Result<()> {
         let (vm, call_stack, mut frame) = crate::test::frame()?;
         let invalid_value = vm.to_string_value(&call_stack, "foo")?;
-        let stack = &mut frame.stack;
+        let stack = frame.stack_mut();
         stack.push(invalid_value)?;
         let result = arraylength(stack);
         assert!(matches!(
@@ -419,13 +426,19 @@ mod tests {
             Vec::new(),
         )?;
         let arguments = Vec::new();
-        let mut frame = Frame::new(&class, &Arc::new(method), arguments)?;
-        let stack = &mut frame.stack;
-        let class = frame.class;
-
-        stack.push_int(0)?;
-        let result = multianewarray(&call_stack, stack, &class, class_index, 1)?;
+        let mut frame = Frame::new(
+            &Arc::downgrade(&call_stack),
+            &class,
+            &Arc::new(method),
+            arguments,
+        )?;
+        {
+            let stack = frame.stack_mut();
+            stack.push_int(0)?;
+        }
+        let result = multianewarray(&mut frame, class_index, 1)?;
         assert_eq!(Continue, result);
+        let stack = frame.stack_mut();
         let object = stack.pop()?;
         assert!(matches!(
             object,
