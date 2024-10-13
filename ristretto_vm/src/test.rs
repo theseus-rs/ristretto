@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Get the specific class for testing.
-pub(crate) fn load_class(class_name: &str) -> Result<(Arc<VM>, CallStack, Arc<Class>)> {
+pub(crate) fn load_class(class_name: &str) -> Result<(Arc<VM>, Arc<CallStack>, Arc<Class>)> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let classes_path = cargo_manifest.join("../classes");
     let class_path = ClassPath::from(classes_path.to_string_lossy());
@@ -20,7 +20,7 @@ pub(crate) fn load_class(class_name: &str) -> Result<(Arc<VM>, CallStack, Arc<Cl
 }
 
 /// Get a test class for testing.
-pub(crate) fn class() -> Result<(Arc<VM>, CallStack, Arc<Class>)> {
+pub(crate) fn class() -> Result<(Arc<VM>, Arc<CallStack>, Arc<Class>)> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let classes_path = cargo_manifest.join("../classes");
     let class_path = ClassPath::from(classes_path.to_string_lossy());
@@ -41,7 +41,7 @@ pub(crate) fn class() -> Result<(Arc<VM>, CallStack, Arc<Class>)> {
 }
 
 /// Get a test frame for testing.
-pub(crate) fn frame() -> Result<(Arc<VM>, CallStack, Frame)> {
+pub(crate) fn frame() -> Result<(Arc<VM>, Arc<CallStack>, Frame)> {
     let (vm, call_stack, class) = class()?;
     let method = Method::new(
         MethodAccessFlags::STATIC,
@@ -53,6 +53,11 @@ pub(crate) fn frame() -> Result<(Arc<VM>, CallStack, Frame)> {
         Vec::new(),
     )?;
     let arguments = Vec::new();
-    let frame = Frame::new(&class, &Arc::new(method), arguments)?;
+    let frame = Frame::new(
+        &Arc::downgrade(&call_stack),
+        &class,
+        &Arc::new(method),
+        arguments,
+    )?;
     Ok((vm, call_stack, frame))
 }

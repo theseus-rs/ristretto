@@ -322,7 +322,11 @@ impl VM {
     ///
     /// # Errors
     /// if the class object cannot be created
-    pub(crate) fn to_class_value(&self, call_stack: &CallStack, class_name: &str) -> Result<Value> {
+    pub(crate) fn to_class_value(
+        &self,
+        call_stack: &Arc<CallStack>,
+        class_name: &str,
+    ) -> Result<Value> {
         let object_class_name = "java/lang/Class";
         let class = self.class(call_stack, object_class_name)?;
         let object = Object::new(class)?;
@@ -352,7 +356,11 @@ impl VM {
     ///
     /// # Errors
     /// if the string object cannot be created
-    pub(crate) fn to_string_value(&self, call_stack: &CallStack, value: &str) -> Result<Value> {
+    pub(crate) fn to_string_value(
+        &self,
+        call_stack: &Arc<CallStack>,
+        value: &str,
+    ) -> Result<Value> {
         let class_name = "java/lang/String";
         let class = self.class(call_stack, class_name)?;
         let object = Object::new(class)?;

@@ -4,6 +4,7 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::Error::RuntimeError;
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
+use std::sync::Arc;
 
 /// Register all native methods for java.lang.Class.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -27,13 +28,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
 fn desired_assertion_status_0(
-    _call_stack: &CallStack,
+    _call_stack: &Arc<CallStack>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
 }
 
-fn get_primitive_class(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn get_primitive_class(
+    call_stack: &Arc<CallStack>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
     let Some(Reference::Object(primitive)) = arguments.pop_object()? else {
         return Err(RuntimeError("getPrimitiveClass: no arguments".to_string()));
     };
@@ -61,7 +65,7 @@ fn get_primitive_class(call_stack: &CallStack, mut arguments: Arguments) -> Resu
     Ok(Some(class))
 }
 
-fn is_primitive(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn is_primitive(_call_stack: &Arc<CallStack>, mut arguments: Arguments) -> Result<Option<Value>> {
     let Some(Reference::Object(object)) = arguments.pop_object()? else {
         return Err(RuntimeError("isPrimitive: no arguments".to_string()));
     };
@@ -83,6 +87,6 @@ fn is_primitive(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Opt
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn register_natives(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn register_natives(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }

@@ -7,20 +7,23 @@ use std::sync::{Arc, RwLock, Weak};
 use tracing::{debug, event_enabled, Level};
 
 /// A call stack is a stack of frames that are executed in order.
+#[expect(clippy::struct_field_names)]
 #[derive(Debug, Default)]
 pub struct CallStack {
-    pub(crate) vm: Weak<VM>,
+    vm: Weak<VM>,
+    call_stack: Weak<CallStack>,
     pub(crate) frames: Arc<RwLock<Vec<Arc<RwLock<Frame>>>>>,
 }
 
 impl CallStack {
     /// Create a new call stack.
     #[must_use]
-    pub fn new(vm: &Weak<VM>) -> Self {
-        CallStack {
+    pub fn new(vm: &Weak<VM>) -> Arc<Self> {
+        Arc::new_cyclic(|call_stack| CallStack {
             vm: vm.clone(),
+            call_stack: call_stack.clone(),
             frames: Arc::new(RwLock::new(Vec::new())),
-        }
+        })
     }
 
     /// Get the virtual machine that owns the call stack.
@@ -59,7 +62,10 @@ impl CallStack {
 
         let (result, frame_added) = if let Some(rust_method) = rust_method {
             let arguments = Arguments::new(arguments);
-            let result = rust_method(self, arguments);
+            let Some(call_stack) = self.call_stack.upgrade() else {
+                return Err(RuntimeError("Call stack is not available".to_string()));
+            };
+            let result = rust_method(&call_stack, arguments);
             (result, false)
         } else if method.is_native() {
             return Err(MethodNotFound {
@@ -70,7 +76,13 @@ impl CallStack {
             .into());
         } else {
             let arguments = CallStack::adjust_arguments(arguments);
-            let frame = Arc::new(RwLock::new(Frame::new(class, method, arguments)?));
+            let frame = Arc::new(RwLock::new(Frame::new(
+                &self.call_stack,
+                class,
+                method,
+                arguments,
+            )?));
+
             // Limit the scope of the write lock to just adding the frame to the call stack.  This
             // is necessary because the call stack is re-entrant.
             {
@@ -83,7 +95,7 @@ impl CallStack {
             let mut frame = frame
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
-            let result = frame.execute(self);
+            let result = frame.execute();
             (result, true)
         };
 

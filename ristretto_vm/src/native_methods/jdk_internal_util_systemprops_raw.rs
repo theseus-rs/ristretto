@@ -7,6 +7,7 @@ use crate::Result;
 use ristretto_classfile::Version;
 use ristretto_classloader::{ConcurrentVec, Reference, Value};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 const JAVA_19: Version = Version::Java19 { minor: 0 };
 
@@ -28,7 +29,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn platform_properties(call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn platform_properties(
+    call_stack: &Arc<CallStack>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     let vm = call_stack.vm()?;
     let string_class = vm.class(call_stack, "java/lang/String")?;
     let system_properties = &mut properties::system(call_stack)?;
@@ -104,7 +108,7 @@ fn push_property(
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn vm_properties(call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn vm_properties(call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
     let vm = call_stack.vm()?;
     let string_class = vm.class(call_stack, "java/lang/String")?;
     // TODO: Implement platform command properties (e.g. -Dkey=value)

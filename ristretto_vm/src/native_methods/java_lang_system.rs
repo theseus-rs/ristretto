@@ -63,7 +63,7 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq>(
     Ok(())
 }
 
-fn arraycopy(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn arraycopy(_call_stack: &Arc<CallStack>, mut arguments: Arguments) -> Result<Option<Value>> {
     let length = arguments.pop_int()?;
     let destination_position = arguments.pop_int()?;
     let Some(destination) = arguments.pop_object()? else {
@@ -162,12 +162,18 @@ fn arraycopy(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn allow_security_manager(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn allow_security_manager(
+    _call_stack: &Arc<CallStack>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn current_time_millis(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn current_time_millis(
+    _call_stack: &Arc<CallStack>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     let now = SystemTime::now();
     let duration = now
         .duration_since(UNIX_EPOCH)
@@ -178,12 +184,12 @@ fn current_time_millis(_call_stack: &CallStack, _arguments: Arguments) -> Result
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn gc(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn gc(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
 /// Mechanism for initializing properties for Java versions <= 8
-fn init_properties(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn init_properties(call_stack: &Arc<CallStack>, mut arguments: Arguments) -> Result<Option<Value>> {
     let properties = arguments.pop_object()?;
     let _system_properties = &mut properties::system(call_stack)?;
     // TODO: add system properties to the properties object
@@ -191,7 +197,7 @@ fn init_properties(call_stack: &CallStack, mut arguments: Arguments) -> Result<O
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn nano_time(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn nano_time(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
     let now = SystemTime::now();
     let duration = now
         .duration_since(UNIX_EPOCH)
@@ -201,7 +207,7 @@ fn nano_time(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Va
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn register_natives(call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn register_natives(call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
     // Force the initialization of the system properties; this is required because no security
     // manager is installed and when System::initPhase1() is called, the resulting call chain:
     //
@@ -262,7 +268,7 @@ fn register_natives(call_stack: &CallStack, _arguments: Arguments) -> Result<Opt
     Ok(None)
 }
 
-fn set_in_0(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn set_in_0(call_stack: &Arc<CallStack>, mut arguments: Arguments) -> Result<Option<Value>> {
     let input_stream = arguments.pop_object()?;
     let vm = call_stack.vm()?;
     let system = vm.class(call_stack, "java/lang/System")?;
@@ -271,7 +277,7 @@ fn set_in_0(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<V
     Ok(None)
 }
 
-fn set_out_0(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn set_out_0(call_stack: &Arc<CallStack>, mut arguments: Arguments) -> Result<Option<Value>> {
     let print_stream = arguments.pop_object()?;
     let vm = call_stack.vm()?;
     let system = vm.class(call_stack, "java/lang/System")?;
@@ -280,7 +286,7 @@ fn set_out_0(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<
     Ok(None)
 }
 
-fn set_err_0(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn set_err_0(call_stack: &Arc<CallStack>, mut arguments: Arguments) -> Result<Option<Value>> {
     let print_stream = arguments.pop_object()?;
     let vm = call_stack.vm()?;
     let system = vm.class(call_stack, "java/lang/System")?;

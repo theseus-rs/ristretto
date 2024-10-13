@@ -4,6 +4,7 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::Error::PoisonedLock;
 use crate::Result;
 use ristretto_classloader::{Object, Reference, Value};
+use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
@@ -23,7 +24,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn count_stack_frames(call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn count_stack_frames(call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
     let frames = call_stack
         .frames
         .read()
@@ -33,7 +34,7 @@ fn count_stack_frames(call_stack: &CallStack, _arguments: Arguments) -> Result<O
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn current_thread(call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn current_thread(call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: correct this once threading is implemented
     let vm = call_stack.vm()?;
     let thread_class = vm.class(call_stack, "java/lang/Thread")?;
@@ -43,11 +44,11 @@ fn current_thread(call_stack: &CallStack, _arguments: Arguments) -> Result<Optio
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn register_natives(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn register_natives(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-fn sleep(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn sleep(_call_stack: &Arc<CallStack>, mut arguments: Arguments) -> Result<Option<Value>> {
     let millis = arguments.pop_long()?;
     let millis = u64::try_from(millis)?;
     let duration = Duration::from_millis(millis);
@@ -57,7 +58,7 @@ fn sleep(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Val
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn r#yield(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn r#yield(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
     thread::yield_now();
     Ok(None)
 }

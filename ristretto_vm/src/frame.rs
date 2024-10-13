@@ -20,11 +20,11 @@ use crate::instruction::{
     lstore_w, lsub, lushr, lxor, multianewarray, new, newarray, pop, pop2, putfield, putstatic,
     ret, ret_w, saload, sastore, sipush, swap, tableswitch,
 };
-use crate::Error::{InvalidOperand, InvalidProgramCounter};
+use crate::Error::{InvalidOperand, InvalidProgramCounter, RuntimeError};
 use crate::{CallStack, LocalVariables, OperandStack, Result};
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::{Class, Method, Value};
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use tracing::{debug, event_enabled, Level};
 
 #[derive(Debug, PartialEq)]
@@ -40,17 +40,23 @@ pub(crate) enum ExecutionResult {
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-2.html#jvms-2.6>
 #[derive(Clone, Debug)]
 pub(crate) struct Frame {
-    pub(crate) class: Arc<Class>,
-    pub(crate) method: Arc<Method>,
-    pub(crate) locals: LocalVariables,
-    pub(crate) stack: OperandStack,
-    pub(crate) program_counter: usize,
+    call_stack: Weak<CallStack>,
+    class: Arc<Class>,
+    method: Arc<Method>,
+    locals: LocalVariables,
+    stack: OperandStack,
+    program_counter: usize,
 }
 
 impl Frame {
     /// Create a new frame for the specified class. To invoke a method on an object reference, the
     /// object reference must be the first argument in the arguments vector.
-    pub fn new(class: &Arc<Class>, method: &Arc<Method>, arguments: Vec<Value>) -> Result<Self> {
+    pub fn new(
+        call_stack: &Weak<CallStack>,
+        class: &Arc<Class>,
+        method: &Arc<Method>,
+        arguments: Vec<Value>,
+    ) -> Result<Self> {
         let max_locals = method.max_locals();
         let mut locals = LocalVariables::with_max_size(max_locals);
         for (index, argument) in arguments.into_iter().enumerate() {
@@ -59,6 +65,7 @@ impl Frame {
         let max_stack = method.max_stack();
         let stack = OperandStack::with_max_size(max_stack);
         Ok(Frame {
+            call_stack: call_stack.clone(),
             class: class.clone(),
             method: method.clone(),
             locals,
@@ -67,12 +74,58 @@ impl Frame {
         })
     }
 
+    /// Get the call stack that owns this frame.
+    ///
+    /// # Errors
+    /// if the call stack is not available.
+    pub fn call_stack(&self) -> Result<Arc<CallStack>> {
+        match self.call_stack.upgrade() {
+            Some(call_stack) => Ok(call_stack),
+            None => Err(RuntimeError("Call stack is not available".to_string())),
+        }
+    }
+
+    /// Get the class that owns this frame.
+    pub fn class(&self) -> &Arc<Class> {
+        &self.class
+    }
+
+    /// Get a mutable reference to the class that owns this frame.
+    pub fn class_mut(&mut self) -> &mut Arc<Class> {
+        &mut self.class
+    }
+
+    /// Get the method in this frame
+    pub fn method(&self) -> &Arc<Method> {
+        &self.method
+    }
+
+    /// Get the local variables in this frame
+    pub fn locals(&self) -> &LocalVariables {
+        &self.locals
+    }
+
+    /// Get the operand stack in this frame
+    pub fn stack(&self) -> &OperandStack {
+        &self.stack
+    }
+
+    /// Get a mutable reference to the stack in this frame
+    pub fn stack_mut(&mut self) -> &mut OperandStack {
+        &mut self.stack
+    }
+
+    /// Get the program counter in this frame
+    pub fn program_counter(&self) -> usize {
+        self.program_counter
+    }
+
     /// Execute the method in this frame
     ///
     /// # Errors
     /// * if the program counter is invalid
     /// * if an invalid instruction is encountered
-    pub fn execute(&mut self, call_stack: &CallStack) -> Result<Option<Value>> {
+    pub fn execute(&mut self) -> Result<Option<Value>> {
         // TODO: avoid cloning code
         let code = self.method.code().clone();
 
@@ -85,7 +138,7 @@ impl Frame {
                 self.debug_execute(instruction)?;
             }
 
-            let result = self.process(call_stack, instruction);
+            let result = self.process(instruction);
             match result {
                 Ok(Continue) => self.program_counter += 1,
                 Ok(ContinueAtPosition(pc)) => self.program_counter = pc,
@@ -124,11 +177,7 @@ impl Frame {
 
     /// Process an instruction in this frame
     #[expect(clippy::too_many_lines)]
-    fn process(
-        &mut self,
-        call_stack: &CallStack,
-        instruction: &Instruction,
-    ) -> Result<ExecutionResult> {
+    fn process(&mut self, instruction: &Instruction) -> Result<ExecutionResult> {
         match instruction {
             Instruction::Nop => Ok(Continue), // Do nothing
             Instruction::Aconst_null => aconst_null(&mut self.stack),
@@ -148,8 +197,8 @@ impl Frame {
             Instruction::Dconst_1 => dconst_1(&mut self.stack),
             Instruction::Bipush(value) => bipush(&mut self.stack, *value),
             Instruction::Sipush(value) => sipush(&mut self.stack, *value),
-            Instruction::Ldc(index) => ldc(call_stack, self, *index),
-            Instruction::Ldc_w(index) => ldc_w(call_stack, self, *index),
+            Instruction::Ldc(index) => ldc(self, *index),
+            Instruction::Ldc_w(index) => ldc_w(self, *index),
             Instruction::Ldc2_w(index) => ldc2_w(self, *index),
             Instruction::Iload(index) => iload(&self.locals, &mut self.stack, *index),
             Instruction::Lload(index) => lload(&self.locals, &mut self.stack, *index),
@@ -322,65 +371,22 @@ impl Frame {
             Instruction::Dreturn => dreturn(&mut self.stack),
             Instruction::Areturn => areturn(&mut self.stack),
             Instruction::Return => Ok(Return(None)),
-            Instruction::Getstatic(index) => getstatic(
-                call_stack,
-                &mut self.stack,
-                self.class.constant_pool(),
-                *index,
-            ),
-            Instruction::Putstatic(index) => putstatic(
-                call_stack,
-                &mut self.stack,
-                self.class.constant_pool(),
-                *index,
-            ),
+            Instruction::Getstatic(index) => getstatic(self, *index),
+            Instruction::Putstatic(index) => putstatic(self, *index),
             Instruction::Getfield(index) => {
                 getfield(&mut self.stack, self.class.constant_pool(), *index)
             }
             Instruction::Putfield(index) => {
                 putfield(&mut self.stack, self.class.constant_pool(), *index)
             }
-            Instruction::Invokevirtual(index) => invokevirtual(
-                call_stack,
-                &mut self.stack,
-                self.class.constant_pool(),
-                *index,
-            ),
-            Instruction::Invokespecial(index) => invokespecial(
-                call_stack,
-                &mut self.stack,
-                self.class.constant_pool(),
-                *index,
-            ),
-            Instruction::Invokestatic(index) => invokestatic(
-                call_stack,
-                &mut self.stack,
-                self.class.constant_pool(),
-                *index,
-            ),
-            Instruction::Invokeinterface(index, count) => invokeinterface(
-                call_stack,
-                &mut self.stack,
-                self.class.constant_pool(),
-                *index,
-                *count,
-            ),
-            Instruction::Invokedynamic(index) => invokedynamic(
-                call_stack,
-                &mut self.stack,
-                self.class.constant_pool(),
-                *index,
-            ),
-            Instruction::New(index) => new(
-                call_stack,
-                &mut self.stack,
-                self.class.constant_pool(),
-                *index,
-            ),
+            Instruction::Invokevirtual(index) => invokevirtual(self, *index),
+            Instruction::Invokespecial(index) => invokespecial(self, *index),
+            Instruction::Invokestatic(index) => invokestatic(self, *index),
+            Instruction::Invokeinterface(index, count) => invokeinterface(self, *index, *count),
+            Instruction::Invokedynamic(index) => invokedynamic(self, *index),
+            Instruction::New(index) => new(self, *index),
             Instruction::Newarray(array_type) => newarray(&mut self.stack, array_type),
-            Instruction::Anewarray(index) => {
-                anewarray(call_stack, &mut self.stack, &self.class, *index)
-            }
+            Instruction::Anewarray(index) => anewarray(self, *index),
             Instruction::Arraylength => arraylength(&mut self.stack),
             Instruction::Athrow => todo!(),
             Instruction::Checkcast(class_index) => {
@@ -409,13 +415,9 @@ impl Frame {
                     actual: "Wide".to_string(),
                 })
             }
-            Instruction::Multianewarray(index, dimensions) => multianewarray(
-                call_stack,
-                &mut self.stack,
-                &self.class,
-                *index,
-                *dimensions,
-            ),
+            Instruction::Multianewarray(index, dimensions) => {
+                multianewarray(self, *index, *dimensions)
+            }
             Instruction::Ifnull(address) => ifnull(&mut self.stack, *address),
             Instruction::Ifnonnull(address) => ifnonnull(&mut self.stack, *address),
             Instruction::Goto_w(address) => goto_w(*address),
@@ -452,7 +454,7 @@ mod tests {
     use ristretto_classloader::ClassPath;
     use std::path::PathBuf;
 
-    fn get_class(class_name: &str) -> Result<(CallStack, Arc<Class>)> {
+    fn get_class(class_name: &str) -> Result<(Arc<CallStack>, Arc<Class>)> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_path = cargo_manifest.join("../classes");
         let class_path = ClassPath::from(classes_path.to_string_lossy());
@@ -470,8 +472,8 @@ mod tests {
         let (call_stack, class) = get_class("Expressions")?;
         let method = class.method("add", "(II)I").expect("method not found");
         let arguments = vec![Value::Int(1), Value::Int(2)];
-        let mut frame = Frame::new(&class, &method, arguments)?;
-        let result = frame.execute(&call_stack)?;
+        let mut frame = Frame::new(&Arc::downgrade(&call_stack), &class, &method, arguments)?;
+        let result = frame.execute()?;
         assert!(matches!(result, Some(Value::Int(3))));
         Ok(())
     }
@@ -486,8 +488,8 @@ mod tests {
 
     #[test]
     fn test_process_nop() -> Result<()> {
-        let (_vm, call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&call_stack, &Instruction::Nop)?;
+        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&Instruction::Nop)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());
@@ -496,8 +498,8 @@ mod tests {
 
     #[test]
     fn test_process_return() -> Result<()> {
-        let (_vm, call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&call_stack, &Instruction::Return)?;
+        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&Instruction::Return)?;
         assert!(matches!(process_result, Return(None)));
         Ok(())
     }
@@ -509,27 +511,27 @@ mod tests {
 
     #[test]
     fn test_process_monitorenter() -> Result<()> {
-        let (_vm, call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
         frame.stack.push_object(None)?;
-        let process_result = frame.process(&call_stack, &Instruction::Monitorenter)?;
+        let process_result = frame.process(&Instruction::Monitorenter)?;
         assert_eq!(Continue, process_result);
         Ok(())
     }
 
     #[test]
     fn test_process_monitorexit() -> Result<()> {
-        let (_vm, call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
         frame.stack.push_object(None)?;
-        let process_result = frame.process(&call_stack, &Instruction::Monitorexit)?;
+        let process_result = frame.process(&Instruction::Monitorexit)?;
         assert_eq!(Continue, process_result);
         Ok(())
     }
 
     #[test]
     fn test_process_wide() -> Result<()> {
-        let (_vm, call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
         assert!(matches!(
-            frame.process(&call_stack, &Instruction::Wide),
+            frame.process(&Instruction::Wide),
             Err(InvalidOperand {
                 expected,
                 actual
@@ -540,8 +542,8 @@ mod tests {
 
     #[test]
     fn test_process_breakpoint() -> Result<()> {
-        let (_vm, call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&call_stack, &Instruction::Breakpoint)?;
+        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&Instruction::Breakpoint)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());
@@ -550,8 +552,8 @@ mod tests {
 
     #[test]
     fn test_process_impdep1() -> Result<()> {
-        let (_vm, call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&call_stack, &Instruction::Impdep1)?;
+        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&Instruction::Impdep1)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());
@@ -560,8 +562,8 @@ mod tests {
 
     #[test]
     fn test_process_impdep2() -> Result<()> {
-        let (_vm, call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&call_stack, &Instruction::Impdep2)?;
+        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&Instruction::Impdep2)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());

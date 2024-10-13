@@ -1,11 +1,10 @@
 use crate::call_stack::CallStack;
-use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
-use crate::operand_stack::OperandStack;
+use crate::frame::{ExecutionResult, Frame};
 use crate::Error::RuntimeError;
 use crate::{Result, VM};
+use ristretto_classfile::Constant;
 use ristretto_classfile::Error::InvalidConstantPoolIndexType;
-use ristretto_classfile::{Constant, ConstantPool};
 use ristretto_classloader::{Class, Method, Reference, Value};
 use std::sync::Arc;
 
@@ -19,16 +18,13 @@ enum InvocationType {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokevirtual>
 #[inline]
-pub(crate) fn invokevirtual(
-    call_stack: &CallStack,
-    stack: &mut OperandStack,
-    constant_pool: &ConstantPool,
-    method_index: u16,
-) -> Result<ExecutionResult> {
+pub(crate) fn invokevirtual(frame: &mut Frame, method_index: u16) -> Result<ExecutionResult> {
+    let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
+    let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name)?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -37,8 +33,8 @@ pub(crate) fn invokevirtual(
 
     invoke_method(
         &vm,
-        call_stack,
-        stack,
+        &call_stack,
+        frame,
         class,
         method,
         &InvocationType::Virtual,
@@ -47,16 +43,13 @@ pub(crate) fn invokevirtual(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokespecial>
 #[inline]
-pub(crate) fn invokespecial(
-    call_stack: &CallStack,
-    stack: &mut OperandStack,
-    constant_pool: &ConstantPool,
-    method_index: u16,
-) -> Result<ExecutionResult> {
+pub(crate) fn invokespecial(frame: &mut Frame, method_index: u16) -> Result<ExecutionResult> {
+    let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
+    let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name)?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -65,8 +58,8 @@ pub(crate) fn invokespecial(
 
     invoke_method(
         &vm,
-        call_stack,
-        stack,
+        &call_stack,
+        frame,
         class,
         method,
         &InvocationType::Special,
@@ -75,12 +68,10 @@ pub(crate) fn invokespecial(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokestatic>
 #[inline]
-pub(crate) fn invokestatic(
-    call_stack: &CallStack,
-    stack: &mut OperandStack,
-    constant_pool: &ConstantPool,
-    method_index: u16,
-) -> Result<ExecutionResult> {
+pub(crate) fn invokestatic(frame: &mut Frame, method_index: u16) -> Result<ExecutionResult> {
+    let call_stack = frame.call_stack()?;
+    let vm = call_stack.vm()?;
+    let constant_pool = frame.class().constant_pool();
     let constant = constant_pool.try_get(method_index)?;
     let (Constant::MethodRef {
         class_index,
@@ -93,9 +84,8 @@ pub(crate) fn invokestatic(
     else {
         return Err(InvalidConstantPoolIndexType(method_index).into());
     };
-    let vm = call_stack.vm()?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name)?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -104,8 +94,8 @@ pub(crate) fn invokestatic(
 
     invoke_method(
         &vm,
-        call_stack,
-        stack,
+        &call_stack,
+        frame,
         class,
         method,
         &InvocationType::Static,
@@ -115,17 +105,17 @@ pub(crate) fn invokestatic(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokeinterface>
 #[inline]
 pub(crate) fn invokeinterface(
-    call_stack: &CallStack,
-    stack: &mut OperandStack,
-    constant_pool: &ConstantPool,
+    frame: &mut Frame,
     method_index: u16,
     _count: u8,
 ) -> Result<ExecutionResult> {
+    let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
+    let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) =
         constant_pool.try_get_interface_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name)?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -134,8 +124,8 @@ pub(crate) fn invokeinterface(
 
     invoke_method(
         &vm,
-        call_stack,
-        stack,
+        &call_stack,
+        frame,
         class,
         method,
         &InvocationType::Interface,
@@ -144,12 +134,7 @@ pub(crate) fn invokeinterface(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokedynamic>
 #[inline]
-pub(crate) fn invokedynamic(
-    _call_stack: &CallStack,
-    _stack: &mut OperandStack,
-    _constant_pool: &ConstantPool,
-    _method_index: u16,
-) -> Result<ExecutionResult> {
+pub(crate) fn invokedynamic(_frame: &mut Frame, _method_index: u16) -> Result<ExecutionResult> {
     todo!()
 }
 
@@ -161,11 +146,12 @@ pub(crate) fn invokedynamic(
 fn invoke_method(
     vm: &Arc<VM>,
     call_stack: &CallStack,
-    stack: &mut OperandStack,
+    frame: &mut Frame,
     mut class: Arc<Class>,
     mut method: Arc<Method>,
     invocation_type: &InvocationType,
 ) -> Result<ExecutionResult> {
+    let stack = frame.stack_mut();
     let parameters = method.parameters().len();
     let mut arguments = if method.is_static() {
         Vec::with_capacity(parameters)
