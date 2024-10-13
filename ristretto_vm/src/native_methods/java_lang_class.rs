@@ -28,7 +28,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::unnecessary_wraps)]
 fn desired_assertion_status_0(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
@@ -36,7 +36,7 @@ fn desired_assertion_status_0(
 
 fn get_primitive_class(
     vm: &VM,
-    call_stack: &mut CallStack,
+    call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let Some(Reference::Object(primitive)) = arguments.pop_object()? else {
@@ -67,7 +67,7 @@ fn get_primitive_class(
 
 fn is_primitive(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let Some(Reference::Object(object)) = arguments.pop_object()? else {
@@ -93,7 +93,7 @@ fn is_primitive(
 #[expect(clippy::unnecessary_wraps)]
 fn register_natives(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(None)

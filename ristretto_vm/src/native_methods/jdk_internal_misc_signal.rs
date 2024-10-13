@@ -17,11 +17,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "handle0", "(IJ)J", handle_0);
 }
 
-fn handle_0(
-    _vm: &VM,
-    _call_stack: &mut CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn handle_0(_vm: &VM, _call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let _handler = arguments.pop_long()?;
     let _signal = arguments.pop_int()?;
     // TODO: implement signal handling
@@ -30,7 +26,7 @@ fn handle_0(
 
 fn find_signal_0(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let value = arguments.pop()?;

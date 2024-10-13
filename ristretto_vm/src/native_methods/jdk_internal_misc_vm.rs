@@ -12,10 +12,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn initialize(
-    _vm: &VM,
-    _call_stack: &mut CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn initialize(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }

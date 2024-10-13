@@ -63,11 +63,7 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq>(
     Ok(())
 }
 
-fn arraycopy(
-    _vm: &VM,
-    _call_stack: &mut CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn arraycopy(_vm: &VM, _call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let length = arguments.pop_int()?;
     let destination_position = arguments.pop_int()?;
     let Some(destination) = arguments.pop_object()? else {
@@ -168,7 +164,7 @@ fn arraycopy(
 #[expect(clippy::unnecessary_wraps)]
 fn allow_security_manager(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
@@ -177,7 +173,7 @@ fn allow_security_manager(
 #[expect(clippy::needless_pass_by_value)]
 fn current_time_millis(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     let now = SystemTime::now();
@@ -190,14 +186,14 @@ fn current_time_millis(
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn gc(_vm: &VM, _call_stack: &mut CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn gc(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
 /// Mechanism for initializing properties for Java versions <= 8
 fn init_properties(
     vm: &VM,
-    call_stack: &mut CallStack,
+    call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let properties = arguments.pop_object()?;
@@ -207,11 +203,7 @@ fn init_properties(
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn nano_time(
-    _vm: &VM,
-    _call_stack: &mut CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn nano_time(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     let now = SystemTime::now();
     let duration = now
         .duration_since(UNIX_EPOCH)
@@ -223,7 +215,7 @@ fn nano_time(
 #[expect(clippy::needless_pass_by_value)]
 fn register_natives(
     vm: &VM,
-    call_stack: &mut CallStack,
+    call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     // Force the initialization of the system properties; this is required because no security
@@ -285,11 +277,7 @@ fn register_natives(
     Ok(None)
 }
 
-fn set_in_0(
-    vm: &VM,
-    call_stack: &mut CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn set_in_0(vm: &VM, call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let input_stream = arguments.pop_object()?;
     let system = vm.class(call_stack, "java/lang/System")?;
     let in_field = system.static_field("in")?;
@@ -297,11 +285,7 @@ fn set_in_0(
     Ok(None)
 }
 
-fn set_out_0(
-    vm: &VM,
-    call_stack: &mut CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn set_out_0(vm: &VM, call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let print_stream = arguments.pop_object()?;
     let system = vm.class(call_stack, "java/lang/System")?;
     let out_field = system.static_field("out")?;
@@ -309,11 +293,7 @@ fn set_out_0(
     Ok(None)
 }
 
-fn set_err_0(
-    vm: &VM,
-    call_stack: &mut CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn set_err_0(vm: &VM, call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let print_stream = arguments.pop_object()?;
     let system = vm.class(call_stack, "java/lang/System")?;
     let err_field = system.static_field("err")?;

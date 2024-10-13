@@ -13,7 +13,7 @@ pub(crate) fn register(registry: &mut NativeRegistry) {
 #[expect(clippy::unnecessary_wraps)]
 fn register_natives(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Vec<Value>,
 ) -> Result<Option<Value>> {
     Ok(None)

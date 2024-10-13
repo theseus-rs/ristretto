@@ -23,7 +23,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::needless_pass_by_value)]
 fn available_processors(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     let sys = System::new_all();
@@ -33,11 +33,7 @@ fn available_processors(
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn free_memory(
-    _vm: &VM,
-    _call_stack: &mut CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn free_memory(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     let sys = System::new_all();
     let free_memory = sys.total_memory() - sys.used_memory();
     let free_memory = if free_memory > u64::try_from(i64::MAX)? {
@@ -49,11 +45,7 @@ fn free_memory(
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn total_memory(
-    _vm: &VM,
-    _call_stack: &mut CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn total_memory(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: This is not the correct implementation; should be the total memory of the JVM
     let sys = System::new_all();
     let used_memory = sys.used_memory();
@@ -67,16 +59,12 @@ fn total_memory(
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn max_memory(
-    _vm: &VM,
-    _call_stack: &mut CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn max_memory(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(Some(Value::Long(i64::MAX)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn gc(_vm: &VM, _call_stack: &mut CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn gc(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }

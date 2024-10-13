@@ -18,7 +18,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 fn double_to_raw_long_bits(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let double = arguments.pop_double()?;
@@ -29,7 +29,7 @@ fn double_to_raw_long_bits(
 
 fn long_bits_to_double(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let long = arguments.pop_long()?;

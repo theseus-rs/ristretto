@@ -30,7 +30,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::needless_pass_by_value)]
 fn platform_properties(
     vm: &VM,
-    call_stack: &mut CallStack,
+    call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     let string_class = vm.class(call_stack, "java/lang/String")?;
@@ -107,11 +107,7 @@ fn push_property(
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn vm_properties(
-    vm: &VM,
-    call_stack: &mut CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn vm_properties(vm: &VM, call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     let string_class = vm.class(call_stack, "java/lang/String")?;
     // TODO: Implement platform command properties (e.g. -Dkey=value)
     let mut platform_properties = HashMap::new();

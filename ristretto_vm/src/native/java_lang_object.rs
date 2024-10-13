@@ -11,7 +11,7 @@ pub(crate) fn register(registry: &mut NativeRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn get_class(vm: &VM, call_stack: &mut CallStack, arguments: Vec<Value>) -> Result<Option<Value>> {
+fn get_class(vm: &VM, call_stack: &CallStack, arguments: Vec<Value>) -> Result<Option<Value>> {
     let Some(Value::Object(Some(reference))) = arguments.first() else {
         return Err(RuntimeError("no object reference defined".to_string()));
     };

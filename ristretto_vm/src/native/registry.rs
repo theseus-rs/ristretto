@@ -13,7 +13,7 @@ lazy_static! {
 /// A native method is a method that is implemented in Rust and is called from Java code where the
 /// method is marked as `native`.
 pub type NativeMethod =
-    fn(vm: &VM, call_stack: &mut CallStack, arguments: Vec<Value>) -> Result<Option<Value>>;
+    fn(vm: &VM, call_stack: &CallStack, arguments: Vec<Value>) -> Result<Option<Value>>;
 
 #[expect(clippy::module_name_repetitions)]
 #[derive(Debug)]

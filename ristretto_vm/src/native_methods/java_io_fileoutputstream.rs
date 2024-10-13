@@ -15,14 +15,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn init_ids(_vm: &VM, _call_stack: &mut CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn init_ids(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[expect(clippy::cast_sign_loss)]
 fn write_bytes(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let _append = arguments.pop_int()? == 1;

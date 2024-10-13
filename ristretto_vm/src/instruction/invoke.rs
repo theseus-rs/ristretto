@@ -21,7 +21,7 @@ enum InvocationType {
 #[inline]
 pub(crate) fn invokevirtual(
     vm: &VM,
-    call_stack: &mut CallStack,
+    call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     method_index: u16,
@@ -49,7 +49,7 @@ pub(crate) fn invokevirtual(
 #[inline]
 pub(crate) fn invokespecial(
     vm: &VM,
-    call_stack: &mut CallStack,
+    call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     method_index: u16,
@@ -77,7 +77,7 @@ pub(crate) fn invokespecial(
 #[inline]
 pub(crate) fn invokestatic(
     vm: &VM,
-    call_stack: &mut CallStack,
+    call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     method_index: u16,
@@ -116,7 +116,7 @@ pub(crate) fn invokestatic(
 #[inline]
 pub(crate) fn invokeinterface(
     vm: &VM,
-    call_stack: &mut CallStack,
+    call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     method_index: u16,
@@ -146,7 +146,7 @@ pub(crate) fn invokeinterface(
 #[inline]
 pub(crate) fn invokedynamic(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _stack: &mut OperandStack,
     _constant_pool: &ConstantPool,
     _method_index: u16,
@@ -161,7 +161,7 @@ pub(crate) fn invokedynamic(
 #[inline]
 fn invoke_method(
     vm: &VM,
-    call_stack: &mut CallStack,
+    call_stack: &CallStack,
     stack: &mut OperandStack,
     mut class: Arc<Class>,
     mut method: Arc<Method>,

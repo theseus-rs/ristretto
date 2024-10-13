@@ -9,7 +9,7 @@ use ristretto_classfile::{ConstantPool, FieldType};
 #[inline]
 pub(crate) fn getstatic(
     vm: &VM,
-    call_stack: &mut CallStack,
+    call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     index: u16,
@@ -36,7 +36,7 @@ pub(crate) fn getstatic(
 #[inline]
 pub(crate) fn putstatic(
     vm: &VM,
-    call_stack: &mut CallStack,
+    call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     index: u16,
@@ -93,11 +93,11 @@ mod test {
 
     #[test]
     fn test_getstatic() -> Result<()> {
-        let (vm, mut call_stack, mut frame, _class_index, field_index) =
+        let (vm, call_stack, mut frame, _class_index, field_index) =
             test_class_field("Constants", "INT_VALUE", "I")?;
         let stack = &mut frame.stack;
         let constant_pool = frame.class.constant_pool();
-        let result = getstatic(&vm, &mut call_stack, stack, constant_pool, field_index)?;
+        let result = getstatic(&vm, &call_stack, stack, constant_pool, field_index)?;
         assert_eq!(Continue, result);
         let value = frame.stack.pop()?;
         assert_eq!(Value::Int(3), value);
@@ -106,26 +106,26 @@ mod test {
 
     #[test]
     fn test_getstatic_field_not_found() -> Result<()> {
-        let (vm, mut call_stack, mut frame, _class_index, field_index) =
+        let (vm, call_stack, mut frame, _class_index, field_index) =
             test_class_field("Child", "foo", "I")?;
         let stack = &mut frame.stack;
         let constant_pool = frame.class.constant_pool();
-        let result = getstatic(&vm, &mut call_stack, stack, constant_pool, field_index);
+        let result = getstatic(&vm, &call_stack, stack, constant_pool, field_index);
         assert!(result.is_err());
         Ok(())
     }
 
     #[test]
     fn test_putstatic() -> Result<()> {
-        let (vm, mut call_stack, mut frame, _class_index, field_index) =
+        let (vm, call_stack, mut frame, _class_index, field_index) =
             test_class_field("Simple", "ANSWER", "I")?;
         let stack = &mut frame.stack;
         let constant_pool = frame.class.constant_pool();
         stack.push_int(3)?;
-        let result = putstatic(&vm, &mut call_stack, stack, constant_pool, field_index)?;
+        let result = putstatic(&vm, &call_stack, stack, constant_pool, field_index)?;
         assert_eq!(Continue, result);
 
-        let result = getstatic(&vm, &mut call_stack, stack, constant_pool, field_index)?;
+        let result = getstatic(&vm, &call_stack, stack, constant_pool, field_index)?;
         assert_eq!(Continue, result);
         let value = frame.stack.pop()?;
         assert_eq!(Value::Int(3), value);
@@ -134,12 +134,12 @@ mod test {
 
     #[test]
     fn test_putstatic_field_not_found() -> Result<()> {
-        let (vm, mut call_stack, mut frame, _class_index, field_index) =
+        let (vm, call_stack, mut frame, _class_index, field_index) =
             test_class_field("Child", "foo", "I")?;
         let stack = &mut frame.stack;
         let constant_pool = frame.class.constant_pool();
         stack.push_int(3)?;
-        let result = putstatic(&vm, &mut call_stack, stack, constant_pool, field_index);
+        let result = putstatic(&vm, &call_stack, stack, constant_pool, field_index);
         assert!(result.is_err());
         Ok(())
     }

@@ -10,7 +10,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "halt0", "(I)V", halt0);
 }
 
-fn halt0(_vm: &VM, _call_stack: &mut CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn halt0(_vm: &VM, _call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let code = arguments.pop_int()?;
     std::process::exit(code);
 }
