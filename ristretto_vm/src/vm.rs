@@ -1,6 +1,6 @@
 use crate::call_stack::CallStack;
 use crate::Error::{PoisonedLock, UnsupportedClassFileVersion};
-use crate::{Configuration, ConfigurationBuilder, Result};
+use crate::{Configuration, Result};
 use ristretto_classfile::{mutf8, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::Error::ParseError;
@@ -9,7 +9,7 @@ use ristretto_classloader::{
     runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Object,
     Reference, Value,
 };
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Weak};
 use tracing::debug;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
@@ -17,6 +17,7 @@ const JAVA_8: Version = Version::Java8 { minor: 0 };
 /// Java Virtual Machine
 #[derive(Debug)]
 pub struct VM {
+    vm: Weak<VM>,
     configuration: Configuration,
     class_loader: RwLock<ClassLoader>,
     main_class: Option<String>,
@@ -35,7 +36,7 @@ impl VM {
     ///
     /// # Errors
     /// if the VM cannot be created
-    pub fn new(configuration: Configuration) -> Result<Self> {
+    pub fn new(configuration: Configuration) -> Result<Arc<Self>> {
         let runtime_version = configuration.runtime_version();
         debug!("runtime_version {runtime_version}");
 
@@ -87,13 +88,14 @@ impl VM {
             None
         };
 
-        let vm = Self {
+        let vm = Arc::new_cyclic(|vm| VM {
+            vm: vm.clone(),
             configuration,
             class_loader: RwLock::new(class_loader),
             main_class,
             runtime_version,
             java_version,
-        };
+        });
         vm.initialize()?;
         Ok(vm)
     }
@@ -169,7 +171,7 @@ impl VM {
     /// if the class cannot be loaded
     pub fn load(&self, class_name: &str) -> Result<Arc<Class>> {
         let class_name = class_name.replace('.', "/");
-        let call_stack = &mut CallStack::new();
+        let call_stack = &CallStack::new(&self.vm);
         self.class(call_stack, &class_name)
     }
 
@@ -210,7 +212,7 @@ impl VM {
         let classes = self.prepare_class_initialization(&class)?;
         for current_class in classes {
             if let Some(class_initializer) = current_class.class_initializer() {
-                call_stack.execute(self, &current_class, &class_initializer, vec![])?;
+                call_stack.execute(&current_class, &class_initializer, vec![])?;
             }
         }
         Ok(class)
@@ -312,8 +314,8 @@ impl VM {
         method: &Arc<Method>,
         arguments: Vec<Value>,
     ) -> Result<Option<Value>> {
-        let call_stack = CallStack::new();
-        call_stack.execute(self, class, method, arguments)
+        let call_stack = CallStack::new(&self.vm);
+        call_stack.execute(class, method, arguments)
     }
 
     /// Create a new java.lang.Class object as a VM Value.
@@ -341,7 +343,7 @@ impl VM {
     /// # Errors
     /// if the string object cannot be created
     pub fn string<S: AsRef<str>>(&self, value: S) -> Result<Value> {
-        let call_stack = CallStack::new();
+        let call_stack = CallStack::new(&self.vm);
         let value = value.as_ref();
         self.to_string_value(&call_stack, value)
     }
@@ -388,13 +390,6 @@ impl VM {
     }
 }
 
-impl Default for VM {
-    fn default() -> Self {
-        let configuration = ConfigurationBuilder::default().build();
-        VM::new(configuration).expect("VM")
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -412,7 +407,7 @@ mod tests {
         ClassPath::from(classes_jar_path.to_string_lossy())
     }
 
-    fn test_vm() -> Result<VM> {
+    fn test_vm() -> Result<Arc<VM>> {
         let class_path = classes_jar_class_path();
         let configuration = ConfigurationBuilder::new()
             .class_path(class_path.clone())
@@ -467,7 +462,7 @@ mod tests {
     #[test]
     fn test_hello_world_class() -> Result<()> {
         let vm = test_vm()?;
-        let call_stack = CallStack::new();
+        let call_stack = CallStack::new(&vm.vm);
         let class = vm.class(&call_stack, "HelloWorld")?;
         assert_eq!("HelloWorld", class.name());
         Ok(())
@@ -476,7 +471,7 @@ mod tests {
     #[test]
     fn test_constants_class() -> Result<()> {
         let vm = test_vm()?;
-        let call_stack = CallStack::new();
+        let call_stack = CallStack::new(&vm.vm);
         let class = vm.class(&call_stack, "Constants")?;
         assert_eq!("Constants", class.name());
         Ok(())
@@ -485,7 +480,7 @@ mod tests {
     #[test]
     fn test_class_inheritance() -> Result<()> {
         let vm = test_vm()?;
-        let call_stack = CallStack::new();
+        let call_stack = CallStack::new(&vm.vm);
         let hash_map = vm.class(&call_stack, "java/util/HashMap")?;
         assert_eq!("java/util/HashMap", hash_map.name());
 
@@ -501,7 +496,7 @@ mod tests {
     #[test]
     fn test_class_interfaces() -> Result<()> {
         let vm = test_vm()?;
-        let call_stack = CallStack::new();
+        let call_stack = CallStack::new(&vm.vm);
 
         let interface = vm.class(&call_stack, "java/util/NavigableMap")?;
         let method = interface.try_get_virtual_method("size", "()I");

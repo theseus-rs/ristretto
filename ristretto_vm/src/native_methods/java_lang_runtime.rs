@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classloader::Value;
 use sysinfo::System;
 
@@ -21,11 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn available_processors(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn available_processors(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     let sys = System::new_all();
     let cpus = sys.physical_core_count().unwrap_or(1);
     let cpus = i32::try_from(cpus)?;
@@ -33,7 +29,7 @@ fn available_processors(
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn free_memory(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn free_memory(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     let sys = System::new_all();
     let free_memory = sys.total_memory() - sys.used_memory();
     let free_memory = if free_memory > u64::try_from(i64::MAX)? {
@@ -45,7 +41,7 @@ fn free_memory(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Resu
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn total_memory(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn total_memory(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: This is not the correct implementation; should be the total memory of the JVM
     let sys = System::new_all();
     let used_memory = sys.used_memory();
@@ -59,12 +55,12 @@ fn total_memory(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Res
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn max_memory(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn max_memory(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(Some(Value::Long(i64::MAX)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn gc(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn gc(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }

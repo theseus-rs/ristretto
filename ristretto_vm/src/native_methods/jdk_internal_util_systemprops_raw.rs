@@ -3,7 +3,7 @@ use crate::call_stack::CallStack;
 use crate::native_methods::properties;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Error::RuntimeError;
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classfile::Version;
 use ristretto_classloader::{ConcurrentVec, Reference, Value};
 use std::collections::HashMap;
@@ -28,13 +28,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn platform_properties(
-    vm: &VM,
-    call_stack: &CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn platform_properties(call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+    let vm = call_stack.vm()?;
     let string_class = vm.class(call_stack, "java/lang/String")?;
-    let system_properties = &mut properties::system(vm, call_stack)?;
+    let system_properties = &mut properties::system(call_stack)?;
     let java_version = vm.java_version();
 
     // VM properties must be returned in a specific order as they are accessed by array index.
@@ -107,7 +104,8 @@ fn push_property(
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn vm_properties(vm: &VM, call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn vm_properties(call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+    let vm = call_stack.vm()?;
     let string_class = vm.class(call_stack, "java/lang/String")?;
     // TODO: Implement platform command properties (e.g. -Dkey=value)
     let mut platform_properties = HashMap::new();

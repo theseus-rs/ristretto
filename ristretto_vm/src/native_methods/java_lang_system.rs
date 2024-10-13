@@ -3,7 +3,7 @@ use crate::call_stack::CallStack;
 use crate::native_methods::properties;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Error::RuntimeError;
-use crate::{Result, VM};
+use crate::Result;
 use indexmap::IndexMap;
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classfile::{ClassFile, MethodAccessFlags};
@@ -63,7 +63,7 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq>(
     Ok(())
 }
 
-fn arraycopy(_vm: &VM, _call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn arraycopy(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let length = arguments.pop_int()?;
     let destination_position = arguments.pop_int()?;
     let Some(destination) = arguments.pop_object()? else {
@@ -162,20 +162,12 @@ fn arraycopy(_vm: &VM, _call_stack: &CallStack, mut arguments: Arguments) -> Res
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn allow_security_manager(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn allow_security_manager(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn current_time_millis(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn current_time_millis(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     let now = SystemTime::now();
     let duration = now
         .duration_since(UNIX_EPOCH)
@@ -186,24 +178,20 @@ fn current_time_millis(
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn gc(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn gc(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
 /// Mechanism for initializing properties for Java versions <= 8
-fn init_properties(
-    vm: &VM,
-    call_stack: &CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn init_properties(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let properties = arguments.pop_object()?;
-    let _system_properties = &mut properties::system(vm, call_stack)?;
+    let _system_properties = &mut properties::system(call_stack)?;
     // TODO: add system properties to the properties object
     Ok(Some(Value::Object(properties)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn nano_time(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn nano_time(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     let now = SystemTime::now();
     let duration = now
         .duration_since(UNIX_EPOCH)
@@ -213,11 +201,7 @@ fn nano_time(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn register_natives(
-    vm: &VM,
-    call_stack: &CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn register_natives(call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     // Force the initialization of the system properties; this is required because no security
     // manager is installed and when System::initPhase1() is called, the resulting call chain:
     //
@@ -230,6 +214,7 @@ fn register_natives(
     //             System::getProperties()
     //
     // will eventually call System::getProperty() which fails if this is not initialized.
+    let vm = call_stack.vm()?;
     let system = vm.class(call_stack, "java/lang/System")?;
     let set_properties = system.try_get_method("setProperties", "(Ljava/util/Properties;)V")?;
     vm.invoke(&system, &set_properties, vec![Value::Object(None)])?;
@@ -277,24 +262,27 @@ fn register_natives(
     Ok(None)
 }
 
-fn set_in_0(vm: &VM, call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn set_in_0(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let input_stream = arguments.pop_object()?;
+    let vm = call_stack.vm()?;
     let system = vm.class(call_stack, "java/lang/System")?;
     let in_field = system.static_field("in")?;
     in_field.unsafe_set_value(Value::Object(input_stream))?;
     Ok(None)
 }
 
-fn set_out_0(vm: &VM, call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn set_out_0(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let print_stream = arguments.pop_object()?;
+    let vm = call_stack.vm()?;
     let system = vm.class(call_stack, "java/lang/System")?;
     let out_field = system.static_field("out")?;
     out_field.unsafe_set_value(Value::Object(print_stream))?;
     Ok(None)
 }
 
-fn set_err_0(vm: &VM, call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn set_err_0(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let print_stream = arguments.pop_object()?;
+    let vm = call_stack.vm()?;
     let system = vm.class(call_stack, "java/lang/System")?;
     let err_field = system.static_field("err")?;
     err_field.unsafe_set_value(Value::Object(print_stream))?;

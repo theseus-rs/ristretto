@@ -8,7 +8,7 @@ use crate::native_methods::{
     jdk_internal_misc_unsafe, jdk_internal_misc_vm, jdk_internal_util_systemprops_raw,
     sun_io_win32errormode,
 };
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classloader::Value;
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -22,8 +22,7 @@ pub fn registry() -> &'static MethodRegistry {
 
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
-pub type RustMethod =
-    fn(vm: &VM, call_stack: &CallStack, arguments: Arguments) -> Result<Option<Value>>;
+pub type RustMethod = fn(call_stack: &CallStack, arguments: Arguments) -> Result<Option<Value>>;
 
 #[expect(clippy::module_name_repetitions)]
 #[derive(Debug)]
@@ -104,7 +103,7 @@ mod tests {
     #[test]
     fn test_register() {
         let mut registry = MethodRegistry::new();
-        let method: RustMethod = |_, _, _| Ok(None);
+        let method: RustMethod = |_, _| Ok(None);
         registry.register("java.lang.Object", "hashCode", "()I", method);
         assert_eq!(registry.methods.len(), 1);
     }
@@ -112,7 +111,7 @@ mod tests {
     #[test]
     fn test_get() {
         let mut registry = MethodRegistry::new();
-        let method: RustMethod = |_, _, _| Ok(None);
+        let method: RustMethod = |_, _| Ok(None);
         registry.register("java.lang.Object", "hashCode", "()I", method);
 
         let result = registry.get("java.lang.Object", "hashCode", "()I");

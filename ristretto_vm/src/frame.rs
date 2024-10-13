@@ -21,7 +21,7 @@ use crate::instruction::{
     ret, ret_w, saload, sastore, sipush, swap, tableswitch,
 };
 use crate::Error::{InvalidOperand, InvalidProgramCounter};
-use crate::{CallStack, LocalVariables, OperandStack, Result, VM};
+use crate::{CallStack, LocalVariables, OperandStack, Result};
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::{Class, Method, Value};
 use std::sync::Arc;
@@ -72,7 +72,7 @@ impl Frame {
     /// # Errors
     /// * if the program counter is invalid
     /// * if an invalid instruction is encountered
-    pub fn execute(&mut self, vm: &VM, call_stack: &CallStack) -> Result<Option<Value>> {
+    pub fn execute(&mut self, call_stack: &CallStack) -> Result<Option<Value>> {
         // TODO: avoid cloning code
         let code = self.method.code().clone();
 
@@ -85,7 +85,7 @@ impl Frame {
                 self.debug_execute(instruction)?;
             }
 
-            let result = self.process(vm, call_stack, instruction);
+            let result = self.process(call_stack, instruction);
             match result {
                 Ok(Continue) => self.program_counter += 1,
                 Ok(ContinueAtPosition(pc)) => self.program_counter = pc,
@@ -126,7 +126,6 @@ impl Frame {
     #[expect(clippy::too_many_lines)]
     fn process(
         &mut self,
-        vm: &VM,
         call_stack: &CallStack,
         instruction: &Instruction,
     ) -> Result<ExecutionResult> {
@@ -149,8 +148,8 @@ impl Frame {
             Instruction::Dconst_1 => dconst_1(&mut self.stack),
             Instruction::Bipush(value) => bipush(&mut self.stack, *value),
             Instruction::Sipush(value) => sipush(&mut self.stack, *value),
-            Instruction::Ldc(index) => ldc(vm, call_stack, self, *index),
-            Instruction::Ldc_w(index) => ldc_w(vm, call_stack, self, *index),
+            Instruction::Ldc(index) => ldc(call_stack, self, *index),
+            Instruction::Ldc_w(index) => ldc_w(call_stack, self, *index),
             Instruction::Ldc2_w(index) => ldc2_w(self, *index),
             Instruction::Iload(index) => iload(&self.locals, &mut self.stack, *index),
             Instruction::Lload(index) => lload(&self.locals, &mut self.stack, *index),
@@ -324,14 +323,12 @@ impl Frame {
             Instruction::Areturn => areturn(&mut self.stack),
             Instruction::Return => Ok(Return(None)),
             Instruction::Getstatic(index) => getstatic(
-                vm,
                 call_stack,
                 &mut self.stack,
                 self.class.constant_pool(),
                 *index,
             ),
             Instruction::Putstatic(index) => putstatic(
-                vm,
                 call_stack,
                 &mut self.stack,
                 self.class.constant_pool(),
@@ -344,28 +341,24 @@ impl Frame {
                 putfield(&mut self.stack, self.class.constant_pool(), *index)
             }
             Instruction::Invokevirtual(index) => invokevirtual(
-                vm,
                 call_stack,
                 &mut self.stack,
                 self.class.constant_pool(),
                 *index,
             ),
             Instruction::Invokespecial(index) => invokespecial(
-                vm,
                 call_stack,
                 &mut self.stack,
                 self.class.constant_pool(),
                 *index,
             ),
             Instruction::Invokestatic(index) => invokestatic(
-                vm,
                 call_stack,
                 &mut self.stack,
                 self.class.constant_pool(),
                 *index,
             ),
             Instruction::Invokeinterface(index, count) => invokeinterface(
-                vm,
                 call_stack,
                 &mut self.stack,
                 self.class.constant_pool(),
@@ -373,14 +366,12 @@ impl Frame {
                 *count,
             ),
             Instruction::Invokedynamic(index) => invokedynamic(
-                vm,
                 call_stack,
                 &mut self.stack,
                 self.class.constant_pool(),
                 *index,
             ),
             Instruction::New(index) => new(
-                vm,
                 call_stack,
                 &mut self.stack,
                 self.class.constant_pool(),
@@ -388,7 +379,7 @@ impl Frame {
             ),
             Instruction::Newarray(array_type) => newarray(&mut self.stack, array_type),
             Instruction::Anewarray(index) => {
-                anewarray(vm, call_stack, &mut self.stack, &self.class, *index)
+                anewarray(call_stack, &mut self.stack, &self.class, *index)
             }
             Instruction::Arraylength => arraylength(&mut self.stack),
             Instruction::Athrow => todo!(),
@@ -419,7 +410,6 @@ impl Frame {
                 })
             }
             Instruction::Multianewarray(index, dimensions) => multianewarray(
-                vm,
                 call_stack,
                 &mut self.stack,
                 &self.class,
@@ -458,10 +448,11 @@ mod tests {
     use super::*;
     use crate::call_stack::CallStack;
     use crate::configuration::ConfigurationBuilder;
+    use crate::VM;
     use ristretto_classloader::ClassPath;
     use std::path::PathBuf;
 
-    fn get_class(class_name: &str) -> Result<(VM, CallStack, Arc<Class>)> {
+    fn get_class(class_name: &str) -> Result<(CallStack, Arc<Class>)> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_path = cargo_manifest.join("../classes");
         let class_path = ClassPath::from(classes_path.to_string_lossy());
@@ -469,18 +460,18 @@ mod tests {
             .class_path(class_path.clone())
             .build();
         let vm = VM::new(configuration)?;
-        let call_stack = CallStack::new();
+        let call_stack = CallStack::new(&Arc::downgrade(&vm));
         let class = vm.class(&call_stack, class_name)?;
-        Ok((vm, call_stack, class))
+        Ok((call_stack, class))
     }
 
     #[test]
     fn test_execute() -> Result<()> {
-        let (vm, call_stack, class) = get_class("Expressions")?;
+        let (call_stack, class) = get_class("Expressions")?;
         let method = class.method("add", "(II)I").expect("method not found");
         let arguments = vec![Value::Int(1), Value::Int(2)];
         let mut frame = Frame::new(&class, &method, arguments)?;
-        let result = frame.execute(&vm, &call_stack)?;
+        let result = frame.execute(&call_stack)?;
         assert!(matches!(result, Some(Value::Int(3))));
         Ok(())
     }
@@ -495,8 +486,8 @@ mod tests {
 
     #[test]
     fn test_process_nop() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&vm, &call_stack, &Instruction::Nop)?;
+        let (_vm, call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&call_stack, &Instruction::Nop)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());
@@ -505,8 +496,8 @@ mod tests {
 
     #[test]
     fn test_process_return() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&vm, &call_stack, &Instruction::Return)?;
+        let (_vm, call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&call_stack, &Instruction::Return)?;
         assert!(matches!(process_result, Return(None)));
         Ok(())
     }
@@ -518,27 +509,27 @@ mod tests {
 
     #[test]
     fn test_process_monitorenter() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, call_stack, mut frame) = crate::test::frame()?;
         frame.stack.push_object(None)?;
-        let process_result = frame.process(&vm, &call_stack, &Instruction::Monitorenter)?;
+        let process_result = frame.process(&call_stack, &Instruction::Monitorenter)?;
         assert_eq!(Continue, process_result);
         Ok(())
     }
 
     #[test]
     fn test_process_monitorexit() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, call_stack, mut frame) = crate::test::frame()?;
         frame.stack.push_object(None)?;
-        let process_result = frame.process(&vm, &call_stack, &Instruction::Monitorexit)?;
+        let process_result = frame.process(&call_stack, &Instruction::Monitorexit)?;
         assert_eq!(Continue, process_result);
         Ok(())
     }
 
     #[test]
     fn test_process_wide() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, call_stack, mut frame) = crate::test::frame()?;
         assert!(matches!(
-            frame.process(&vm, &call_stack, &Instruction::Wide),
+            frame.process(&call_stack, &Instruction::Wide),
             Err(InvalidOperand {
                 expected,
                 actual
@@ -549,8 +540,8 @@ mod tests {
 
     #[test]
     fn test_process_breakpoint() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&vm, &call_stack, &Instruction::Breakpoint)?;
+        let (_vm, call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&call_stack, &Instruction::Breakpoint)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());
@@ -559,8 +550,8 @@ mod tests {
 
     #[test]
     fn test_process_impdep1() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&vm, &call_stack, &Instruction::Impdep1)?;
+        let (_vm, call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&call_stack, &Instruction::Impdep1)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());
@@ -569,8 +560,8 @@ mod tests {
 
     #[test]
     fn test_process_impdep2() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&vm, &call_stack, &Instruction::Impdep2)?;
+        let (_vm, call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&call_stack, &Instruction::Impdep2)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());

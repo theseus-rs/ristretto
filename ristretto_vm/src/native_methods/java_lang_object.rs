@@ -2,7 +2,7 @@ use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Error::RuntimeError;
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classloader::Value;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
@@ -19,30 +19,31 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn init(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn init(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     // This is a no-op method to optimize Object initialization since it is called frequently.
     // This prevents the need to create a new frame and allocate memory unnecessarily for the call
     // to the constructor for every object.
     Ok(None)
 }
 
-fn clone(_vm: &VM, _call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn clone(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let object = arguments.pop_object()?;
     let cloned_object = object.clone();
     Ok(Some(Value::Object(cloned_object)))
 }
 
-fn get_class(vm: &VM, call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn get_class(call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let Some(object) = arguments.pop_object()? else {
         return Err(RuntimeError("no object reference defined".to_string()));
     };
 
     let class_name = object.class_name();
+    let vm = call_stack.vm()?;
     let class = vm.to_class_value(call_stack, class_name.as_str())?;
     Ok(Some(class))
 }
 
-fn hash_code(_vm: &VM, _call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn hash_code(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let Some(object) = arguments.pop_object()? else {
         return Err(RuntimeError("no object reference defined".to_string()));
     };
@@ -57,16 +58,12 @@ fn hash_code(_vm: &VM, _call_stack: &CallStack, mut arguments: Arguments) -> Res
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn notify_all(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn notify_all(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn register_natives(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn register_natives(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }

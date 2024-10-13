@@ -1,7 +1,8 @@
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, Value, VM};
 use std::path::PathBuf;
+use std::sync::Arc;
 
-fn vm() -> Result<VM> {
+fn vm() -> Result<Arc<VM>> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let classes_jar_path = cargo_manifest.join("../classes/classes.jar");
     let class_path = ClassPath::from(classes_jar_path.to_string_lossy());
