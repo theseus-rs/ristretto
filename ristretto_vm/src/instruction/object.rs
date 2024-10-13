@@ -501,7 +501,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aastore_invalid_index() -> crate::Result<()> {
+    fn test_aastore_invalid_index() -> Result<()> {
         let (vm, call_stack, frame) = crate::test::frame()?;
         let stack = frame.stack();
         let class = vm.class(&call_stack, "java/lang/Object")?;
@@ -516,7 +516,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aastore_null_pointer() -> crate::Result<()> {
+    fn test_aastore_null_pointer() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let object = Reference::IntArray(ConcurrentVec::from(vec![3]));
         stack.push_object(None)?;

@@ -473,7 +473,7 @@ mod tests {
     }
 
     #[test]
-    fn test_laload() -> crate::Result<()> {
+    fn test_laload() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let array = Reference::LongArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(array))?;
@@ -485,7 +485,7 @@ mod tests {
     }
 
     #[test]
-    fn test_laload_invalid_value() -> crate::Result<()> {
+    fn test_laload_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(object))?;
@@ -502,7 +502,7 @@ mod tests {
     }
 
     #[test]
-    fn test_laload_invalid_index() -> crate::Result<()> {
+    fn test_laload_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let array = Reference::LongArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(array))?;
@@ -513,7 +513,7 @@ mod tests {
     }
 
     #[test]
-    fn test_laload_null_pointer() -> crate::Result<()> {
+    fn test_laload_null_pointer() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_object(None)?;
         stack.push_int(0)?;
@@ -523,7 +523,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lastore() -> crate::Result<()> {
+    fn test_lastore() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let array = Reference::LongArray(ConcurrentVec::from(vec![3]));
         stack.push_object(Some(array))?;
@@ -535,7 +535,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lastore_invalid_value() -> crate::Result<()> {
+    fn test_lastore_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(object))?;
@@ -553,7 +553,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lastore_invalid_index() -> crate::Result<()> {
+    fn test_lastore_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let array = Reference::LongArray(ConcurrentVec::from(vec![3]));
         stack.push_object(Some(array))?;
@@ -565,7 +565,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lastore_null_pointer() -> crate::Result<()> {
+    fn test_lastore_null_pointer() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         stack.push_object(None)?;
         stack.push_int(0)?;

@@ -442,7 +442,7 @@ mod tests {
     }
 
     #[test]
-    fn test_daload() -> crate::Result<()> {
+    fn test_daload() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let array = Reference::DoubleArray(ConcurrentVec::from(vec![42f64]));
         stack.push_object(Some(array))?;
@@ -455,7 +455,7 @@ mod tests {
     }
 
     #[test]
-    fn test_daload_invalid_value() -> crate::Result<()> {
+    fn test_daload_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(object))?;
@@ -472,7 +472,7 @@ mod tests {
     }
 
     #[test]
-    fn test_daload_invalid_index() -> crate::Result<()> {
+    fn test_daload_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let array = Reference::DoubleArray(ConcurrentVec::from(vec![42f64]));
         stack.push_object(Some(array))?;
@@ -483,7 +483,7 @@ mod tests {
     }
 
     #[test]
-    fn test_daload_null_pointer() -> crate::Result<()> {
+    fn test_daload_null_pointer() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_object(None)?;
         stack.push_int(0)?;
@@ -493,7 +493,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dastore() -> crate::Result<()> {
+    fn test_dastore() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let array = Reference::DoubleArray(ConcurrentVec::from(vec![3f64]));
         stack.push_object(Some(array))?;
@@ -505,7 +505,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dastore_invalid_value() -> crate::Result<()> {
+    fn test_dastore_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(object))?;
@@ -523,7 +523,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dastore_invalid_index() -> crate::Result<()> {
+    fn test_dastore_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let array = Reference::DoubleArray(ConcurrentVec::from(vec![3f64]));
         stack.push_object(Some(array))?;
@@ -535,7 +535,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dastore_null_pointer() -> crate::Result<()> {
+    fn test_dastore_null_pointer() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         stack.push_object(None)?;
         stack.push_int(0)?;
