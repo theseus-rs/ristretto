@@ -5,7 +5,7 @@ use ristretto_classfile::FieldType;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.getstatic>
 #[inline]
-pub(crate) fn getstatic(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
+pub(crate) fn getstatic(frame: &Frame, index: u16) -> Result<ExecutionResult> {
     let call_stack = frame.call_stack()?;
     let constant_pool = frame.class().constant_pool();
     let vm = call_stack.vm()?;
@@ -17,7 +17,7 @@ pub(crate) fn getstatic(frame: &mut Frame, index: u16) -> Result<ExecutionResult
     let field_name = constant_pool.try_get_utf8(*name_index)?;
     let field = class.static_field(field_name)?;
     let value = field.value()?;
-    let stack = frame.stack_mut();
+    let stack = frame.stack();
     stack.push(value)?;
 
     if let FieldType::Object(class_name) = field.field_type() {
@@ -30,7 +30,7 @@ pub(crate) fn getstatic(frame: &mut Frame, index: u16) -> Result<ExecutionResult
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.putstatic>
 #[inline]
-pub(crate) fn putstatic(frame: &mut Frame, index: u16) -> Result<ExecutionResult> {
+pub(crate) fn putstatic(frame: &Frame, index: u16) -> Result<ExecutionResult> {
     let call_stack = frame.call_stack()?;
     let constant_pool = frame.class().constant_pool();
     let vm = call_stack.vm()?;
@@ -41,7 +41,7 @@ pub(crate) fn putstatic(frame: &mut Frame, index: u16) -> Result<ExecutionResult
     let class = vm.class(&call_stack, class_name)?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
     let field = class.static_field(field_name)?;
-    let stack = frame.stack_mut();
+    let stack = frame.stack();
     let value = stack.pop()?;
     field.set_value(value)?;
 
@@ -94,11 +94,11 @@ mod test {
 
     #[test]
     fn test_getstatic() -> Result<()> {
-        let (_vm, _call_stack, mut frame, _class_index, field_index) =
+        let (_vm, _call_stack, frame, _class_index, field_index) =
             test_class_field("Constants", "INT_VALUE", "I")?;
-        let result = getstatic(&mut frame, field_index)?;
+        let result = getstatic(&frame, field_index)?;
         assert_eq!(Continue, result);
-        let stack = frame.stack_mut();
+        let stack = frame.stack();
         let value = stack.pop()?;
         assert_eq!(Value::Int(3), value);
         Ok(())
@@ -106,27 +106,25 @@ mod test {
 
     #[test]
     fn test_getstatic_field_not_found() -> Result<()> {
-        let (_vm, _call_stack, mut frame, _class_index, field_index) =
+        let (_vm, _call_stack, frame, _class_index, field_index) =
             test_class_field("Child", "foo", "I")?;
-        let result = getstatic(&mut frame, field_index);
+        let result = getstatic(&frame, field_index);
         assert!(result.is_err());
         Ok(())
     }
 
     #[test]
     fn test_putstatic() -> Result<()> {
-        let (_vm, _call_stack, mut frame, _class_index, field_index) =
+        let (_vm, _call_stack, frame, _class_index, field_index) =
             test_class_field("Simple", "ANSWER", "I")?;
-        {
-            let stack = frame.stack_mut();
-            stack.push_int(3)?;
-        }
-        let result = putstatic(&mut frame, field_index)?;
+        let stack = frame.stack();
+        stack.push_int(3)?;
+        let result = putstatic(&frame, field_index)?;
         assert_eq!(Continue, result);
 
-        let result = getstatic(&mut frame, field_index)?;
+        let result = getstatic(&frame, field_index)?;
         assert_eq!(Continue, result);
-        let stack = frame.stack_mut();
+        let stack = frame.stack();
         let value = stack.pop()?;
         assert_eq!(Value::Int(3), value);
         Ok(())
@@ -134,13 +132,11 @@ mod test {
 
     #[test]
     fn test_putstatic_field_not_found() -> Result<()> {
-        let (_vm, _call_stack, mut frame, _class_index, field_index) =
+        let (_vm, _call_stack, frame, _class_index, field_index) =
             test_class_field("Child", "foo", "I")?;
-        {
-            let stack = frame.stack_mut();
-            stack.push_int(3)?;
-        }
-        let result = putstatic(&mut frame, field_index);
+        let stack = frame.stack();
+        stack.push_int(3)?;
+        let result = putstatic(&frame, field_index);
         assert!(result.is_err());
         Ok(())
     }

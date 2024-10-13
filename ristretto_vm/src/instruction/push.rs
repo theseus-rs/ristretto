@@ -5,14 +5,14 @@ use crate::Result;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.bipush>
 #[inline]
-pub(crate) fn bipush(stack: &mut OperandStack, value: i8) -> Result<ExecutionResult> {
+pub(crate) fn bipush(stack: &OperandStack, value: i8) -> Result<ExecutionResult> {
     stack.push_int(i32::from(value))?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.sipush>
 #[inline]
-pub(crate) fn sipush(stack: &mut OperandStack, value: i16) -> Result<ExecutionResult> {
+pub(crate) fn sipush(stack: &OperandStack, value: i16) -> Result<ExecutionResult> {
     stack.push_int(i32::from(value))?;
     Ok(Continue)
 }

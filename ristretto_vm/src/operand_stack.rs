@@ -1,70 +1,79 @@
-use crate::Error::{InvalidOperand, OperandStackOverflow, OperandStackUnderflow};
+use crate::Error::{InvalidOperand, OperandStackOverflow, OperandStackUnderflow, PoisonedLock};
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
+use std::cell::RefCell;
 use std::fmt::Display;
 
 /// Operand stack for the Ristretto VM
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.2>
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub(crate) struct OperandStack {
-    stack: Vec<Value>,
+    stack: RefCell<Vec<Value>>,
 }
 
 impl OperandStack {
     /// Create a new operand stack with a maximum size.
     pub fn with_max_size(max_size: usize) -> Self {
         OperandStack {
-            stack: Vec::with_capacity(max_size),
+            stack: RefCell::new(Vec::with_capacity(max_size)),
         }
     }
 
     /// Push a value onto the operand stack.
     #[inline]
-    pub fn push(&mut self, value: Value) -> Result<()> {
-        if self.stack.len() >= self.stack.capacity() {
+    pub fn push(&self, value: Value) -> Result<()> {
+        let mut stack = self
+            .stack
+            .try_borrow_mut()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        if stack.len() >= stack.capacity() {
             return Err(OperandStackOverflow);
         }
-        self.stack.push(value);
+        stack.push(value);
         Ok(())
     }
 
     /// Push an int value onto the operand stack.
-    pub fn push_int(&mut self, value: i32) -> Result<()> {
+    pub fn push_int(&self, value: i32) -> Result<()> {
         self.push(Value::Int(value))
     }
 
     /// Push a long value onto the operand stack.
-    pub fn push_long(&mut self, value: i64) -> Result<()> {
+    pub fn push_long(&self, value: i64) -> Result<()> {
         self.push(Value::Long(value))
     }
 
     /// Push a float value onto the operand stack.
-    pub fn push_float(&mut self, value: f32) -> Result<()> {
+    pub fn push_float(&self, value: f32) -> Result<()> {
         self.push(Value::Float(value))
     }
 
     /// Push a double value onto the operand stack.
-    pub fn push_double(&mut self, value: f64) -> Result<()> {
+    pub fn push_double(&self, value: f64) -> Result<()> {
         self.push(Value::Double(value))
     }
 
     /// Push a reference onto the operand stack.
-    pub fn push_object(&mut self, value: Option<Reference>) -> Result<()> {
+    pub fn push_object(&self, value: Option<Reference>) -> Result<()> {
         self.push(Value::Object(value))
     }
 
     /// Pop a value from the operand stack.
     #[inline]
-    pub fn pop(&mut self) -> Result<Value> {
-        let Some(value) = self.stack.pop() else {
+    pub fn pop(&self) -> Result<Value> {
+        let mut stack = self
+            .stack
+            .try_borrow_mut()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let Some(value) = stack.pop() else {
             return Err(OperandStackUnderflow);
         };
         Ok(value)
     }
 
     /// Pop an int from the operand stack.
-    pub fn pop_int(&mut self) -> Result<i32> {
+    pub fn pop_int(&self) -> Result<i32> {
         match self.pop()? {
             Value::Int(value) => Ok(value),
             value => Err(InvalidOperand {
@@ -75,7 +84,7 @@ impl OperandStack {
     }
 
     /// Pop a long from the operand stack.
-    pub fn pop_long(&mut self) -> Result<i64> {
+    pub fn pop_long(&self) -> Result<i64> {
         let value = match self.pop()? {
             Value::Long(value) => value,
             value => {
@@ -89,7 +98,7 @@ impl OperandStack {
     }
 
     /// Pop a float from the operand stack.
-    pub fn pop_float(&mut self) -> Result<f32> {
+    pub fn pop_float(&self) -> Result<f32> {
         match self.pop()? {
             Value::Float(value) => Ok(value),
             value => Err(InvalidOperand {
@@ -100,7 +109,7 @@ impl OperandStack {
     }
 
     /// Pop a double from the operand stack.
-    pub fn pop_double(&mut self) -> Result<f64> {
+    pub fn pop_double(&self) -> Result<f64> {
         let value = match self.pop()? {
             Value::Double(value) => value,
             value => {
@@ -114,7 +123,7 @@ impl OperandStack {
     }
 
     /// Pop a null or object from the operand stack.
-    pub fn pop_object(&mut self) -> Result<Option<Reference>> {
+    pub fn pop_object(&self) -> Result<Option<Reference>> {
         let value = self.pop()?;
         match value {
             Value::Object(reference) => Ok(reference),
@@ -126,36 +135,56 @@ impl OperandStack {
     }
 
     /// Peek at the top value on the operand stack.
-    pub fn peek(&self) -> Result<&Value> {
-        let Some(value) = self.stack.last() else {
+    pub fn peek(&self) -> Result<Value> {
+        let stack = self
+            .stack
+            .try_borrow_mut()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let Some(value) = stack.last() else {
             return Err(OperandStackUnderflow);
         };
-        Ok(value)
+        // TODO: cloning the data here should be unnecessary
+        Ok(value.clone())
     }
 
     /// Get the number of values on the operand stack.
-    pub fn len(&self) -> usize {
-        self.stack.len()
+    pub fn len(&self) -> Result<usize> {
+        let stack = self
+            .stack
+            .try_borrow()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        Ok(stack.len())
     }
 
     /// Check if the operand stack is empty.
-    pub fn is_empty(&self) -> bool {
-        self.stack.is_empty()
+    pub fn is_empty(&self) -> Result<bool> {
+        let stack = self
+            .stack
+            .try_borrow()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        Ok(stack.is_empty())
     }
 }
 
 impl Display for OperandStack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut stack = Vec::new();
-        for stack_entry in &self.stack {
-            let value = stack_entry.to_string();
-            if value.len() > 100 {
-                stack.push(format!("{}...", &value[..97]));
-            } else {
-                stack.push(value);
+        match self.stack.try_borrow() {
+            Ok(stack) => {
+                let mut values = Vec::new();
+                for stack_entry in stack.iter() {
+                    let value = stack_entry.to_string();
+                    if value.len() > 100 {
+                        values.push(format!("{}...", &value[..97]));
+                    } else {
+                        values.push(value);
+                    }
+                }
+                write!(f, "[{}]", values.join(", "))
+            }
+            Err(error) => {
+                write!(f, "poisoned lock: {error}")
             }
         }
-        write!(f, "[{}]", stack.join(", "))
     }
 }
 
@@ -167,11 +196,11 @@ mod tests {
 
     #[test]
     fn test_can_push_and_pop_values() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(2);
+        let stack = OperandStack::with_max_size(2);
         stack.push_int(1)?;
         stack.push_int(2)?;
 
-        assert_eq!(stack.len(), 2);
+        assert_eq!(stack.len()?, 2);
 
         assert_eq!(stack.pop()?, Value::Int(2));
         assert_eq!(stack.pop()?, Value::Int(1));
@@ -180,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_pop_int() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(1);
+        let stack = OperandStack::with_max_size(1);
         stack.push_int(42)?;
         assert_eq!(stack.pop_int()?, 42);
         Ok(())
@@ -188,7 +217,7 @@ mod tests {
 
     #[test]
     fn test_pop_int_invalid_operand() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(1);
+        let stack = OperandStack::with_max_size(1);
         stack.push_object(None)?;
         assert!(matches!(
             stack.pop_int(),
@@ -202,7 +231,7 @@ mod tests {
 
     #[test]
     fn test_pop_long() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(2);
+        let stack = OperandStack::with_max_size(2);
         stack.push_long(42)?;
         assert_eq!(stack.pop_long()?, 42);
         Ok(())
@@ -210,7 +239,7 @@ mod tests {
 
     #[test]
     fn test_pop_long_invalid_operand() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(2);
+        let stack = OperandStack::with_max_size(2);
         stack.push_double(42.1)?;
         assert!(matches!(
             stack.pop_long(),
@@ -224,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_pop_float() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(1);
+        let stack = OperandStack::with_max_size(1);
         stack.push_float(42.1)?;
         let value = stack.pop_float()? - 42.1f32;
         assert!(value.abs() < 0.1f32);
@@ -233,7 +262,7 @@ mod tests {
 
     #[test]
     fn test_pop_float_invalid_operand() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(1);
+        let stack = OperandStack::with_max_size(1);
         stack.push_object(None)?;
         assert!(matches!(
             stack.pop_float(),
@@ -247,7 +276,7 @@ mod tests {
 
     #[test]
     fn test_pop_double() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(2);
+        let stack = OperandStack::with_max_size(2);
         stack.push_double(42.1)?;
         let value = stack.pop_double()? - 42.1f64;
         assert!(value.abs() < 0.1f64);
@@ -256,7 +285,7 @@ mod tests {
 
     #[test]
     fn test_pop_double_invalid_operand() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(2);
+        let stack = OperandStack::with_max_size(2);
         stack.push_long(42)?;
         assert!(matches!(
             stack.pop_double(),
@@ -270,7 +299,7 @@ mod tests {
 
     #[test]
     fn test_pop_object() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(2);
+        let stack = OperandStack::with_max_size(2);
         let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
         stack.push_object(None)?;
         stack.push_object(Some(object.clone()))?;
@@ -281,7 +310,7 @@ mod tests {
 
     #[test]
     fn test_pop_object_invalid_operand() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(1);
+        let stack = OperandStack::with_max_size(1);
         stack.push_int(42)?;
         assert!(matches!(
             stack.pop_object(),
@@ -295,14 +324,14 @@ mod tests {
 
     #[test]
     fn test_pop_underflow() {
-        let mut stack = OperandStack::with_max_size(1);
+        let stack = OperandStack::with_max_size(1);
         let result = stack.pop();
         assert!(matches!(result, Err(OperandStackUnderflow)));
     }
 
     #[test]
     fn test_push_overflow() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(1);
+        let stack = OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = stack.push_int(43);
         assert!(matches!(result, Err(OperandStackOverflow)));
@@ -311,12 +340,12 @@ mod tests {
 
     #[test]
     fn test_peek_top_value() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(2);
+        let stack = OperandStack::with_max_size(2);
         stack.push_int(1)?;
         stack.push_int(2)?;
 
-        assert_eq!(stack.peek()?, &Value::Int(2));
-        assert_eq!(stack.len(), 2);
+        assert_eq!(stack.peek()?, Value::Int(2));
+        assert_eq!(stack.len()?, 2);
         Ok(())
     }
 
@@ -329,17 +358,17 @@ mod tests {
 
     #[test]
     fn test_is_empty() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(1);
-        assert!(stack.is_empty());
+        let stack = OperandStack::with_max_size(1);
+        assert!(stack.is_empty()?);
 
         stack.push_int(42)?;
-        assert!(!stack.is_empty());
+        assert!(!stack.is_empty()?);
         Ok(())
     }
 
     #[test]
     fn test_display() -> Result<()> {
-        let mut stack = OperandStack::with_max_size(4);
+        let stack = OperandStack::with_max_size(4);
         stack.push_int(1)?;
         stack.push_int(2)?;
         assert_eq!("[int(1), int(2)]", stack.to_string());

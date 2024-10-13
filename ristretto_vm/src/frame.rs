@@ -20,10 +20,11 @@ use crate::instruction::{
     lstore_w, lsub, lushr, lxor, multianewarray, new, newarray, pop, pop2, putfield, putstatic,
     ret, ret_w, saload, sastore, sipush, swap, tableswitch,
 };
-use crate::Error::{InvalidOperand, InvalidProgramCounter, RuntimeError};
+use crate::Error::{InvalidOperand, InvalidProgramCounter, PoisonedLock, RuntimeError};
 use crate::{CallStack, LocalVariables, OperandStack, Result};
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::{Class, Method, Value};
+use std::cell::RefCell;
 use std::sync::{Arc, Weak};
 use tracing::{debug, event_enabled, Level};
 
@@ -38,14 +39,14 @@ pub(crate) enum ExecutionResult {
 /// dispatches exceptions.
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-2.html#jvms-2.6>
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub(crate) struct Frame {
     call_stack: Weak<CallStack>,
     class: Arc<Class>,
     method: Arc<Method>,
     locals: LocalVariables,
     stack: OperandStack,
-    program_counter: usize,
+    program_counter: RefCell<usize>,
 }
 
 impl Frame {
@@ -58,7 +59,7 @@ impl Frame {
         arguments: Vec<Value>,
     ) -> Result<Self> {
         let max_locals = method.max_locals();
-        let mut locals = LocalVariables::with_max_size(max_locals);
+        let locals = LocalVariables::with_max_size(max_locals);
         for (index, argument) in arguments.into_iter().enumerate() {
             locals.set(index, argument)?;
         }
@@ -70,7 +71,7 @@ impl Frame {
             method: method.clone(),
             locals,
             stack,
-            program_counter: 0,
+            program_counter: RefCell::new(0),
         })
     }
 
@@ -110,14 +111,14 @@ impl Frame {
         &self.stack
     }
 
-    /// Get a mutable reference to the stack in this frame
-    pub fn stack_mut(&mut self) -> &mut OperandStack {
-        &mut self.stack
-    }
-
     /// Get the program counter in this frame
-    pub fn program_counter(&self) -> usize {
-        self.program_counter
+    #[inline]
+    pub fn program_counter(&self) -> Result<usize> {
+        let program_counter = *self
+            .program_counter
+            .try_borrow()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        Ok(program_counter)
     }
 
     /// Execute the method in this frame
@@ -125,13 +126,17 @@ impl Frame {
     /// # Errors
     /// * if the program counter is invalid
     /// * if an invalid instruction is encountered
-    pub fn execute(&mut self) -> Result<Option<Value>> {
+    pub fn execute(&self) -> Result<Option<Value>> {
         // TODO: avoid cloning code
         let code = self.method.code().clone();
 
         loop {
-            let Some(instruction) = code.get(self.program_counter) else {
-                return Err(InvalidProgramCounter(self.program_counter));
+            let program_counter = *self
+                .program_counter
+                .try_borrow()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(instruction) = code.get(program_counter) else {
+                return Err(InvalidProgramCounter(program_counter));
             };
 
             if event_enabled!(Level::DEBUG) {
@@ -140,8 +145,12 @@ impl Frame {
 
             let result = self.process(instruction);
             match result {
-                Ok(Continue) => self.program_counter += 1,
-                Ok(ContinueAtPosition(pc)) => self.program_counter = pc,
+                Ok(Continue) => {
+                    self.program_counter.replace(program_counter + 1);
+                }
+                Ok(ContinueAtPosition(program_counter)) => {
+                    self.program_counter.replace(program_counter);
+                }
                 Ok(Return(value)) => return Ok(value.clone()),
                 Err(error) => {
                     // TODO: implement exception handling
@@ -154,11 +163,12 @@ impl Frame {
     /// Debug the execution of an instruction in this frame
     #[inline]
     fn debug_execute(&self, instruction: &Instruction) -> Result<()> {
+        let program_counter = self.program_counter()?;
         let class_name = self.class.name();
         let method_name = self.method.name();
         let method_descriptor = self.method.descriptor();
         let source = if let Some(source_file) = self.class.source_file() {
-            let line_number = self.method.line_number(self.program_counter);
+            let line_number = self.method.line_number(program_counter);
             format!(" ({source_file}:{line_number})")
         } else {
             String::new()
@@ -168,216 +178,216 @@ impl Frame {
         debug!("  frame: {class_name}.{method_name}{method_descriptor}{source}");
         debug!("    locals: {}", self.locals);
         debug!("    stack: {}", self.stack);
-        debug!(
-            "    pc: {}; instruction: {instruction}",
-            self.program_counter
-        );
+        debug!("    pc: {program_counter}; instruction: {instruction}");
         Ok(())
     }
 
     /// Process an instruction in this frame
     #[expect(clippy::too_many_lines)]
-    fn process(&mut self, instruction: &Instruction) -> Result<ExecutionResult> {
+    fn process(&self, instruction: &Instruction) -> Result<ExecutionResult> {
         match instruction {
             Instruction::Nop => Ok(Continue), // Do nothing
-            Instruction::Aconst_null => aconst_null(&mut self.stack),
-            Instruction::Iconst_m1 => iconst_m1(&mut self.stack),
-            Instruction::Iconst_0 => iconst_0(&mut self.stack),
-            Instruction::Iconst_1 => iconst_1(&mut self.stack),
-            Instruction::Iconst_2 => iconst_2(&mut self.stack),
-            Instruction::Iconst_3 => iconst_3(&mut self.stack),
-            Instruction::Iconst_4 => iconst_4(&mut self.stack),
-            Instruction::Iconst_5 => iconst_5(&mut self.stack),
-            Instruction::Lconst_0 => lconst_0(&mut self.stack),
-            Instruction::Lconst_1 => lconst_1(&mut self.stack),
-            Instruction::Fconst_0 => fconst_0(&mut self.stack),
-            Instruction::Fconst_1 => fconst_1(&mut self.stack),
-            Instruction::Fconst_2 => fconst_2(&mut self.stack),
-            Instruction::Dconst_0 => dconst_0(&mut self.stack),
-            Instruction::Dconst_1 => dconst_1(&mut self.stack),
-            Instruction::Bipush(value) => bipush(&mut self.stack, *value),
-            Instruction::Sipush(value) => sipush(&mut self.stack, *value),
+            Instruction::Aconst_null => aconst_null(&self.stack),
+            Instruction::Iconst_m1 => iconst_m1(&self.stack),
+            Instruction::Iconst_0 => iconst_0(&self.stack),
+            Instruction::Iconst_1 => iconst_1(&self.stack),
+            Instruction::Iconst_2 => iconst_2(&self.stack),
+            Instruction::Iconst_3 => iconst_3(&self.stack),
+            Instruction::Iconst_4 => iconst_4(&self.stack),
+            Instruction::Iconst_5 => iconst_5(&self.stack),
+            Instruction::Lconst_0 => lconst_0(&self.stack),
+            Instruction::Lconst_1 => lconst_1(&self.stack),
+            Instruction::Fconst_0 => fconst_0(&self.stack),
+            Instruction::Fconst_1 => fconst_1(&self.stack),
+            Instruction::Fconst_2 => fconst_2(&self.stack),
+            Instruction::Dconst_0 => dconst_0(&self.stack),
+            Instruction::Dconst_1 => dconst_1(&self.stack),
+            Instruction::Bipush(value) => bipush(&self.stack, *value),
+            Instruction::Sipush(value) => sipush(&self.stack, *value),
             Instruction::Ldc(index) => ldc(self, *index),
             Instruction::Ldc_w(index) => ldc_w(self, *index),
             Instruction::Ldc2_w(index) => ldc2_w(self, *index),
-            Instruction::Iload(index) => iload(&self.locals, &mut self.stack, *index),
-            Instruction::Lload(index) => lload(&self.locals, &mut self.stack, *index),
-            Instruction::Fload(index) => fload(&self.locals, &mut self.stack, *index),
-            Instruction::Dload(index) => dload(&self.locals, &mut self.stack, *index),
-            Instruction::Aload(index) => aload(&self.locals, &mut self.stack, *index),
-            Instruction::Iload_0 => iload_0(&self.locals, &mut self.stack),
-            Instruction::Iload_1 => iload_1(&self.locals, &mut self.stack),
-            Instruction::Iload_2 => iload_2(&self.locals, &mut self.stack),
-            Instruction::Iload_3 => iload_3(&self.locals, &mut self.stack),
-            Instruction::Lload_0 => lload_0(&self.locals, &mut self.stack),
-            Instruction::Lload_1 => lload_1(&self.locals, &mut self.stack),
-            Instruction::Lload_2 => lload_2(&self.locals, &mut self.stack),
-            Instruction::Lload_3 => lload_3(&self.locals, &mut self.stack),
-            Instruction::Fload_0 => fload_0(&self.locals, &mut self.stack),
-            Instruction::Fload_1 => fload_1(&self.locals, &mut self.stack),
-            Instruction::Fload_2 => fload_2(&self.locals, &mut self.stack),
-            Instruction::Fload_3 => fload_3(&self.locals, &mut self.stack),
-            Instruction::Dload_0 => dload_0(&self.locals, &mut self.stack),
-            Instruction::Dload_1 => dload_1(&self.locals, &mut self.stack),
-            Instruction::Dload_2 => dload_2(&self.locals, &mut self.stack),
-            Instruction::Dload_3 => dload_3(&self.locals, &mut self.stack),
-            Instruction::Aload_0 => aload_0(&self.locals, &mut self.stack),
-            Instruction::Aload_1 => aload_1(&self.locals, &mut self.stack),
-            Instruction::Aload_2 => aload_2(&self.locals, &mut self.stack),
-            Instruction::Aload_3 => aload_3(&self.locals, &mut self.stack),
-            Instruction::Iaload => iaload(&mut self.stack),
-            Instruction::Laload => laload(&mut self.stack),
-            Instruction::Faload => faload(&mut self.stack),
-            Instruction::Daload => daload(&mut self.stack),
-            Instruction::Aaload => aaload(&mut self.stack),
-            Instruction::Baload => baload(&mut self.stack),
-            Instruction::Caload => caload(&mut self.stack),
-            Instruction::Saload => saload(&mut self.stack),
-            Instruction::Istore(index) => istore(&mut self.locals, &mut self.stack, *index),
-            Instruction::Lstore(index) => lstore(&mut self.locals, &mut self.stack, *index),
-            Instruction::Fstore(index) => fstore(&mut self.locals, &mut self.stack, *index),
-            Instruction::Dstore(index) => dstore(&mut self.locals, &mut self.stack, *index),
-            Instruction::Astore(index) => astore(&mut self.locals, &mut self.stack, *index),
-            Instruction::Istore_0 => istore_0(&mut self.locals, &mut self.stack),
-            Instruction::Istore_1 => istore_1(&mut self.locals, &mut self.stack),
-            Instruction::Istore_2 => istore_2(&mut self.locals, &mut self.stack),
-            Instruction::Istore_3 => istore_3(&mut self.locals, &mut self.stack),
-            Instruction::Lstore_0 => lstore_0(&mut self.locals, &mut self.stack),
-            Instruction::Lstore_1 => lstore_1(&mut self.locals, &mut self.stack),
-            Instruction::Lstore_2 => lstore_2(&mut self.locals, &mut self.stack),
-            Instruction::Lstore_3 => lstore_3(&mut self.locals, &mut self.stack),
-            Instruction::Fstore_0 => fstore_0(&mut self.locals, &mut self.stack),
-            Instruction::Fstore_1 => fstore_1(&mut self.locals, &mut self.stack),
-            Instruction::Fstore_2 => fstore_2(&mut self.locals, &mut self.stack),
-            Instruction::Fstore_3 => fstore_3(&mut self.locals, &mut self.stack),
-            Instruction::Dstore_0 => dstore_0(&mut self.locals, &mut self.stack),
-            Instruction::Dstore_1 => dstore_1(&mut self.locals, &mut self.stack),
-            Instruction::Dstore_2 => dstore_2(&mut self.locals, &mut self.stack),
-            Instruction::Dstore_3 => dstore_3(&mut self.locals, &mut self.stack),
-            Instruction::Astore_0 => astore_0(&mut self.locals, &mut self.stack),
-            Instruction::Astore_1 => astore_1(&mut self.locals, &mut self.stack),
-            Instruction::Astore_2 => astore_2(&mut self.locals, &mut self.stack),
-            Instruction::Astore_3 => astore_3(&mut self.locals, &mut self.stack),
-            Instruction::Iastore => iastore(&mut self.stack),
-            Instruction::Lastore => lastore(&mut self.stack),
-            Instruction::Fastore => fastore(&mut self.stack),
-            Instruction::Dastore => dastore(&mut self.stack),
-            Instruction::Aastore => aastore(&mut self.stack),
-            Instruction::Bastore => bastore(&mut self.stack),
-            Instruction::Castore => castore(&mut self.stack),
-            Instruction::Sastore => sastore(&mut self.stack),
-            Instruction::Pop => pop(&mut self.stack),
-            Instruction::Pop2 => pop2(&mut self.stack),
-            Instruction::Dup => dup(&mut self.stack),
-            Instruction::Dup_x1 => dup_x1(&mut self.stack),
-            Instruction::Dup_x2 => dup_x2(&mut self.stack),
-            Instruction::Dup2 => dup2(&mut self.stack),
-            Instruction::Dup2_x1 => dup2_x1(&mut self.stack),
-            Instruction::Dup2_x2 => dup2_x2(&mut self.stack),
-            Instruction::Swap => swap(&mut self.stack),
-            Instruction::Iadd => iadd(&mut self.stack),
-            Instruction::Ladd => ladd(&mut self.stack),
-            Instruction::Fadd => fadd(&mut self.stack),
-            Instruction::Dadd => dadd(&mut self.stack),
-            Instruction::Isub => isub(&mut self.stack),
-            Instruction::Lsub => lsub(&mut self.stack),
-            Instruction::Fsub => fsub(&mut self.stack),
-            Instruction::Dsub => dsub(&mut self.stack),
-            Instruction::Imul => imul(&mut self.stack),
-            Instruction::Lmul => lmul(&mut self.stack),
-            Instruction::Fmul => fmul(&mut self.stack),
-            Instruction::Dmul => dmul(&mut self.stack),
-            Instruction::Idiv => idiv(&mut self.stack),
-            Instruction::Ldiv => ldiv(&mut self.stack),
-            Instruction::Fdiv => fdiv(&mut self.stack),
-            Instruction::Ddiv => ddiv(&mut self.stack),
-            Instruction::Irem => irem(&mut self.stack),
-            Instruction::Lrem => lrem(&mut self.stack),
-            Instruction::Frem => frem(&mut self.stack),
-            Instruction::Drem => drem(&mut self.stack),
-            Instruction::Ineg => ineg(&mut self.stack),
-            Instruction::Lneg => lneg(&mut self.stack),
-            Instruction::Fneg => fneg(&mut self.stack),
-            Instruction::Dneg => dneg(&mut self.stack),
-            Instruction::Ishl => ishl(&mut self.stack),
-            Instruction::Lshl => lshl(&mut self.stack),
-            Instruction::Ishr => ishr(&mut self.stack),
-            Instruction::Lshr => lshr(&mut self.stack),
-            Instruction::Iushr => iushr(&mut self.stack),
-            Instruction::Lushr => lushr(&mut self.stack),
-            Instruction::Iand => iand(&mut self.stack),
-            Instruction::Land => land(&mut self.stack),
-            Instruction::Ior => ior(&mut self.stack),
-            Instruction::Lor => lor(&mut self.stack),
-            Instruction::Ixor => ixor(&mut self.stack),
-            Instruction::Lxor => lxor(&mut self.stack),
-            Instruction::Iinc(index, constant) => iinc(&mut self.locals, *index, *constant),
-            Instruction::I2l => i2l(&mut self.stack),
-            Instruction::I2f => i2f(&mut self.stack),
-            Instruction::I2d => i2d(&mut self.stack),
-            Instruction::L2i => l2i(&mut self.stack),
-            Instruction::L2f => l2f(&mut self.stack),
-            Instruction::L2d => l2d(&mut self.stack),
-            Instruction::F2i => f2i(&mut self.stack),
-            Instruction::F2l => f2l(&mut self.stack),
-            Instruction::F2d => f2d(&mut self.stack),
-            Instruction::D2i => d2i(&mut self.stack),
-            Instruction::D2l => d2l(&mut self.stack),
-            Instruction::D2f => d2f(&mut self.stack),
-            Instruction::I2b => i2b(&mut self.stack),
-            Instruction::I2c => i2c(&mut self.stack),
-            Instruction::I2s => i2s(&mut self.stack),
-            Instruction::Lcmp => lcmp(&mut self.stack),
-            Instruction::Fcmpl => fcmpl(&mut self.stack),
-            Instruction::Fcmpg => fcmpg(&mut self.stack),
-            Instruction::Dcmpl => dcmpl(&mut self.stack),
-            Instruction::Dcmpg => dcmpg(&mut self.stack),
-            Instruction::Ifeq(address) => ifeq(&mut self.stack, *address),
-            Instruction::Ifne(address) => ifne(&mut self.stack, *address),
-            Instruction::Iflt(address) => iflt(&mut self.stack, *address),
-            Instruction::Ifge(address) => ifge(&mut self.stack, *address),
-            Instruction::Ifgt(address) => ifgt(&mut self.stack, *address),
-            Instruction::Ifle(address) => ifle(&mut self.stack, *address),
-            Instruction::If_icmpeq(address) => if_icmpeq(&mut self.stack, *address),
-            Instruction::If_icmpne(address) => if_icmpne(&mut self.stack, *address),
-            Instruction::If_icmplt(address) => if_icmplt(&mut self.stack, *address),
-            Instruction::If_icmpge(address) => if_icmpge(&mut self.stack, *address),
-            Instruction::If_icmpgt(address) => if_icmpgt(&mut self.stack, *address),
-            Instruction::If_icmple(address) => if_icmple(&mut self.stack, *address),
-            Instruction::If_acmpeq(address) => if_acmpeq(&mut self.stack, *address),
-            Instruction::If_acmpne(address) => if_acmpne(&mut self.stack, *address),
+            Instruction::Iload(index) => iload(&self.locals, &self.stack, *index),
+            Instruction::Lload(index) => lload(&self.locals, &self.stack, *index),
+            Instruction::Fload(index) => fload(&self.locals, &self.stack, *index),
+            Instruction::Dload(index) => dload(&self.locals, &self.stack, *index),
+            Instruction::Aload(index) => aload(&self.locals, &self.stack, *index),
+            Instruction::Iload_0 => iload_0(&self.locals, &self.stack),
+            Instruction::Iload_1 => iload_1(&self.locals, &self.stack),
+            Instruction::Iload_2 => iload_2(&self.locals, &self.stack),
+            Instruction::Iload_3 => iload_3(&self.locals, &self.stack),
+            Instruction::Lload_0 => lload_0(&self.locals, &self.stack),
+            Instruction::Lload_1 => lload_1(&self.locals, &self.stack),
+            Instruction::Lload_2 => lload_2(&self.locals, &self.stack),
+            Instruction::Lload_3 => lload_3(&self.locals, &self.stack),
+            Instruction::Fload_0 => fload_0(&self.locals, &self.stack),
+            Instruction::Fload_1 => fload_1(&self.locals, &self.stack),
+            Instruction::Fload_2 => fload_2(&self.locals, &self.stack),
+            Instruction::Fload_3 => fload_3(&self.locals, &self.stack),
+            Instruction::Dload_0 => dload_0(&self.locals, &self.stack),
+            Instruction::Dload_1 => dload_1(&self.locals, &self.stack),
+            Instruction::Dload_2 => dload_2(&self.locals, &self.stack),
+            Instruction::Dload_3 => dload_3(&self.locals, &self.stack),
+            Instruction::Aload_0 => aload_0(&self.locals, &self.stack),
+            Instruction::Aload_1 => aload_1(&self.locals, &self.stack),
+            Instruction::Aload_2 => aload_2(&self.locals, &self.stack),
+            Instruction::Aload_3 => aload_3(&self.locals, &self.stack),
+            Instruction::Iaload => iaload(&self.stack),
+            Instruction::Laload => laload(&self.stack),
+            Instruction::Faload => faload(&self.stack),
+            Instruction::Daload => daload(&self.stack),
+            Instruction::Aaload => aaload(&self.stack),
+            Instruction::Baload => baload(&self.stack),
+            Instruction::Caload => caload(&self.stack),
+            Instruction::Saload => saload(&self.stack),
+            Instruction::Istore(index) => istore(&self.locals, &self.stack, *index),
+            Instruction::Lstore(index) => lstore(&self.locals, &self.stack, *index),
+            Instruction::Fstore(index) => fstore(&self.locals, &self.stack, *index),
+            Instruction::Dstore(index) => dstore(&self.locals, &self.stack, *index),
+            Instruction::Astore(index) => astore(&self.locals, &self.stack, *index),
+            Instruction::Istore_0 => istore_0(&self.locals, &self.stack),
+            Instruction::Istore_1 => istore_1(&self.locals, &self.stack),
+            Instruction::Istore_2 => istore_2(&self.locals, &self.stack),
+            Instruction::Istore_3 => istore_3(&self.locals, &self.stack),
+            Instruction::Lstore_0 => lstore_0(&self.locals, &self.stack),
+            Instruction::Lstore_1 => lstore_1(&self.locals, &self.stack),
+            Instruction::Lstore_2 => lstore_2(&self.locals, &self.stack),
+            Instruction::Lstore_3 => lstore_3(&self.locals, &self.stack),
+            Instruction::Fstore_0 => fstore_0(&self.locals, &self.stack),
+            Instruction::Fstore_1 => fstore_1(&self.locals, &self.stack),
+            Instruction::Fstore_2 => fstore_2(&self.locals, &self.stack),
+            Instruction::Fstore_3 => fstore_3(&self.locals, &self.stack),
+            Instruction::Dstore_0 => dstore_0(&self.locals, &self.stack),
+            Instruction::Dstore_1 => dstore_1(&self.locals, &self.stack),
+            Instruction::Dstore_2 => dstore_2(&self.locals, &self.stack),
+            Instruction::Dstore_3 => dstore_3(&self.locals, &self.stack),
+            Instruction::Astore_0 => astore_0(&self.locals, &self.stack),
+            Instruction::Astore_1 => astore_1(&self.locals, &self.stack),
+            Instruction::Astore_2 => astore_2(&self.locals, &self.stack),
+            Instruction::Astore_3 => astore_3(&self.locals, &self.stack),
+            Instruction::Iastore => iastore(&self.stack),
+            Instruction::Lastore => lastore(&self.stack),
+            Instruction::Fastore => fastore(&self.stack),
+            Instruction::Dastore => dastore(&self.stack),
+            Instruction::Aastore => aastore(&self.stack),
+            Instruction::Bastore => bastore(&self.stack),
+            Instruction::Castore => castore(&self.stack),
+            Instruction::Sastore => sastore(&self.stack),
+            Instruction::Pop => pop(&self.stack),
+            Instruction::Pop2 => pop2(&self.stack),
+            Instruction::Dup => dup(&self.stack),
+            Instruction::Dup_x1 => dup_x1(&self.stack),
+            Instruction::Dup_x2 => dup_x2(&self.stack),
+            Instruction::Dup2 => dup2(&self.stack),
+            Instruction::Dup2_x1 => dup2_x1(&self.stack),
+            Instruction::Dup2_x2 => dup2_x2(&self.stack),
+            Instruction::Swap => swap(&self.stack),
+            Instruction::Iadd => iadd(&self.stack),
+            Instruction::Ladd => ladd(&self.stack),
+            Instruction::Fadd => fadd(&self.stack),
+            Instruction::Dadd => dadd(&self.stack),
+            Instruction::Isub => isub(&self.stack),
+            Instruction::Lsub => lsub(&self.stack),
+            Instruction::Fsub => fsub(&self.stack),
+            Instruction::Dsub => dsub(&self.stack),
+            Instruction::Imul => imul(&self.stack),
+            Instruction::Lmul => lmul(&self.stack),
+            Instruction::Fmul => fmul(&self.stack),
+            Instruction::Dmul => dmul(&self.stack),
+            Instruction::Idiv => idiv(&self.stack),
+            Instruction::Ldiv => ldiv(&self.stack),
+            Instruction::Fdiv => fdiv(&self.stack),
+            Instruction::Ddiv => ddiv(&self.stack),
+            Instruction::Irem => irem(&self.stack),
+            Instruction::Lrem => lrem(&self.stack),
+            Instruction::Frem => frem(&self.stack),
+            Instruction::Drem => drem(&self.stack),
+            Instruction::Ineg => ineg(&self.stack),
+            Instruction::Lneg => lneg(&self.stack),
+            Instruction::Fneg => fneg(&self.stack),
+            Instruction::Dneg => dneg(&self.stack),
+            Instruction::Ishl => ishl(&self.stack),
+            Instruction::Lshl => lshl(&self.stack),
+            Instruction::Ishr => ishr(&self.stack),
+            Instruction::Lshr => lshr(&self.stack),
+            Instruction::Iushr => iushr(&self.stack),
+            Instruction::Lushr => lushr(&self.stack),
+            Instruction::Iand => iand(&self.stack),
+            Instruction::Land => land(&self.stack),
+            Instruction::Ior => ior(&self.stack),
+            Instruction::Lor => lor(&self.stack),
+            Instruction::Ixor => ixor(&self.stack),
+            Instruction::Lxor => lxor(&self.stack),
+            Instruction::Iinc(index, constant) => iinc(&self.locals, *index, *constant),
+            Instruction::I2l => i2l(&self.stack),
+            Instruction::I2f => i2f(&self.stack),
+            Instruction::I2d => i2d(&self.stack),
+            Instruction::L2i => l2i(&self.stack),
+            Instruction::L2f => l2f(&self.stack),
+            Instruction::L2d => l2d(&self.stack),
+            Instruction::F2i => f2i(&self.stack),
+            Instruction::F2l => f2l(&self.stack),
+            Instruction::F2d => f2d(&self.stack),
+            Instruction::D2i => d2i(&self.stack),
+            Instruction::D2l => d2l(&self.stack),
+            Instruction::D2f => d2f(&self.stack),
+            Instruction::I2b => i2b(&self.stack),
+            Instruction::I2c => i2c(&self.stack),
+            Instruction::I2s => i2s(&self.stack),
+            Instruction::Lcmp => lcmp(&self.stack),
+            Instruction::Fcmpl => fcmpl(&self.stack),
+            Instruction::Fcmpg => fcmpg(&self.stack),
+            Instruction::Dcmpl => dcmpl(&self.stack),
+            Instruction::Dcmpg => dcmpg(&self.stack),
+            Instruction::Ifeq(address) => ifeq(&self.stack, *address),
+            Instruction::Ifne(address) => ifne(&self.stack, *address),
+            Instruction::Iflt(address) => iflt(&self.stack, *address),
+            Instruction::Ifge(address) => ifge(&self.stack, *address),
+            Instruction::Ifgt(address) => ifgt(&self.stack, *address),
+            Instruction::Ifle(address) => ifle(&self.stack, *address),
+            Instruction::If_icmpeq(address) => if_icmpeq(&self.stack, *address),
+            Instruction::If_icmpne(address) => if_icmpne(&self.stack, *address),
+            Instruction::If_icmplt(address) => if_icmplt(&self.stack, *address),
+            Instruction::If_icmpge(address) => if_icmpge(&self.stack, *address),
+            Instruction::If_icmpgt(address) => if_icmpgt(&self.stack, *address),
+            Instruction::If_icmple(address) => if_icmple(&self.stack, *address),
+            Instruction::If_acmpeq(address) => if_acmpeq(&self.stack, *address),
+            Instruction::If_acmpne(address) => if_acmpne(&self.stack, *address),
             Instruction::Goto(address) => goto(*address),
-            Instruction::Jsr(address) => jsr(&mut self.stack, *address),
+            Instruction::Jsr(address) => jsr(&self.stack, *address),
             Instruction::Ret(index) => ret(&self.locals, *index),
             Instruction::Tableswitch {
                 default,
                 low,
                 high,
                 offsets,
-            } => tableswitch(
-                &mut self.stack,
-                self.program_counter,
-                *default,
-                *low,
-                *high,
-                offsets,
-            ),
-            Instruction::Lookupswitch { default, pairs } => {
-                lookupswitch(&mut self.stack, self.program_counter, *default, pairs)
+            } => {
+                let program_counter = *self
+                    .program_counter
+                    .try_borrow()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                tableswitch(&self.stack, program_counter, *default, *low, *high, offsets)
             }
-            Instruction::Ireturn => ireturn(&mut self.stack),
-            Instruction::Lreturn => lreturn(&mut self.stack),
-            Instruction::Freturn => freturn(&mut self.stack),
-            Instruction::Dreturn => dreturn(&mut self.stack),
-            Instruction::Areturn => areturn(&mut self.stack),
+            Instruction::Lookupswitch { default, pairs } => {
+                let program_counter = *self
+                    .program_counter
+                    .try_borrow()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                lookupswitch(&self.stack, program_counter, *default, pairs)
+            }
+            Instruction::Ireturn => ireturn(&self.stack),
+            Instruction::Lreturn => lreturn(&self.stack),
+            Instruction::Freturn => freturn(&self.stack),
+            Instruction::Dreturn => dreturn(&self.stack),
+            Instruction::Areturn => areturn(&self.stack),
             Instruction::Return => Ok(Return(None)),
             Instruction::Getstatic(index) => getstatic(self, *index),
             Instruction::Putstatic(index) => putstatic(self, *index),
             Instruction::Getfield(index) => {
-                getfield(&mut self.stack, self.class.constant_pool(), *index)
+                getfield(&self.stack, self.class.constant_pool(), *index)
             }
             Instruction::Putfield(index) => {
-                putfield(&mut self.stack, self.class.constant_pool(), *index)
+                putfield(&self.stack, self.class.constant_pool(), *index)
             }
             Instruction::Invokevirtual(index) => invokevirtual(self, *index),
             Instruction::Invokespecial(index) => invokespecial(self, *index),
@@ -385,19 +395,19 @@ impl Frame {
             Instruction::Invokeinterface(index, count) => invokeinterface(self, *index, *count),
             Instruction::Invokedynamic(index) => invokedynamic(self, *index),
             Instruction::New(index) => new(self, *index),
-            Instruction::Newarray(array_type) => newarray(&mut self.stack, array_type),
+            Instruction::Newarray(array_type) => newarray(&self.stack, array_type),
             Instruction::Anewarray(index) => anewarray(self, *index),
-            Instruction::Arraylength => arraylength(&mut self.stack),
+            Instruction::Arraylength => arraylength(&self.stack),
             Instruction::Athrow => todo!(),
             Instruction::Checkcast(class_index) => {
                 let constant_pool = self.class.constant_pool();
                 let class_name = constant_pool.try_get_class(*class_index)?;
-                checkcast(&mut self.stack, class_name)
+                checkcast(&self.stack, class_name)
             }
             Instruction::Instanceof(class_index) => {
                 let constant_pool = self.class.constant_pool();
                 let class_name = constant_pool.try_get_class(*class_index)?;
-                instanceof(&mut self.stack, class_name)
+                instanceof(&self.stack, class_name)
             }
             Instruction::Monitorenter | Instruction::Monitorexit => {
                 // The monitorenter and monitorexit instructions are not currently used by this
@@ -418,10 +428,10 @@ impl Frame {
             Instruction::Multianewarray(index, dimensions) => {
                 multianewarray(self, *index, *dimensions)
             }
-            Instruction::Ifnull(address) => ifnull(&mut self.stack, *address),
-            Instruction::Ifnonnull(address) => ifnonnull(&mut self.stack, *address),
+            Instruction::Ifnull(address) => ifnull(&self.stack, *address),
+            Instruction::Ifnonnull(address) => ifnonnull(&self.stack, *address),
             Instruction::Goto_w(address) => goto_w(*address),
-            Instruction::Jsr_w(address) => jsr_w(&mut self.stack, *address),
+            Instruction::Jsr_w(address) => jsr_w(&self.stack, *address),
             Instruction::Breakpoint | Instruction::Impdep1 | Instruction::Impdep2 => {
                 // Breakpoint, Impdep1 and Impdep2 instructions are reserved for debugging and implementation
                 // dependent operations.
@@ -429,17 +439,17 @@ impl Frame {
                 Ok(Continue)
             }
             // Wide instructions
-            Instruction::Iload_w(index) => iload_w(&self.locals, &mut self.stack, *index),
-            Instruction::Lload_w(index) => lload_w(&self.locals, &mut self.stack, *index),
-            Instruction::Fload_w(index) => fload_w(&self.locals, &mut self.stack, *index),
-            Instruction::Dload_w(index) => dload_w(&self.locals, &mut self.stack, *index),
-            Instruction::Aload_w(index) => aload_w(&self.locals, &mut self.stack, *index),
-            Instruction::Istore_w(index) => istore_w(&mut self.locals, &mut self.stack, *index),
-            Instruction::Lstore_w(index) => lstore_w(&mut self.locals, &mut self.stack, *index),
-            Instruction::Fstore_w(index) => fstore_w(&mut self.locals, &mut self.stack, *index),
-            Instruction::Dstore_w(index) => dstore_w(&mut self.locals, &mut self.stack, *index),
-            Instruction::Astore_w(index) => astore_w(&mut self.locals, &mut self.stack, *index),
-            Instruction::Iinc_w(index, constant) => iinc_w(&mut self.locals, *index, *constant),
+            Instruction::Iload_w(index) => iload_w(&self.locals, &self.stack, *index),
+            Instruction::Lload_w(index) => lload_w(&self.locals, &self.stack, *index),
+            Instruction::Fload_w(index) => fload_w(&self.locals, &self.stack, *index),
+            Instruction::Dload_w(index) => dload_w(&self.locals, &self.stack, *index),
+            Instruction::Aload_w(index) => aload_w(&self.locals, &self.stack, *index),
+            Instruction::Istore_w(index) => istore_w(&self.locals, &self.stack, *index),
+            Instruction::Lstore_w(index) => lstore_w(&self.locals, &self.stack, *index),
+            Instruction::Fstore_w(index) => fstore_w(&self.locals, &self.stack, *index),
+            Instruction::Dstore_w(index) => dstore_w(&self.locals, &self.stack, *index),
+            Instruction::Astore_w(index) => astore_w(&self.locals, &self.stack, *index),
+            Instruction::Iinc_w(index, constant) => iinc_w(&self.locals, *index, *constant),
             Instruction::Ret_w(index) => ret_w(&self.locals, *index),
         }
     }
@@ -472,7 +482,7 @@ mod tests {
         let (call_stack, class) = get_class("Expressions")?;
         let method = class.method("add", "(II)I").expect("method not found");
         let arguments = vec![Value::Int(1), Value::Int(2)];
-        let mut frame = Frame::new(&Arc::downgrade(&call_stack), &class, &method, arguments)?;
+        let frame = Frame::new(&Arc::downgrade(&call_stack), &class, &method, arguments)?;
         let result = frame.execute()?;
         assert!(matches!(result, Some(Value::Int(3))));
         Ok(())
@@ -481,24 +491,24 @@ mod tests {
     #[test]
     fn test_initial_frame() -> Result<()> {
         let (_vm, _call_stack, frame) = crate::test::frame()?;
-        assert!(frame.locals.is_empty());
-        assert!(frame.stack.is_empty());
+        assert!(frame.locals.is_empty()?);
+        assert!(frame.stack.is_empty()?);
         Ok(())
     }
 
     #[test]
     fn test_process_nop() -> Result<()> {
-        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, _call_stack, frame) = crate::test::frame()?;
         let process_result = frame.process(&Instruction::Nop)?;
         assert_eq!(Continue, process_result);
-        assert!(frame.locals.is_empty());
-        assert!(frame.stack.is_empty());
+        assert!(frame.locals.is_empty()?);
+        assert!(frame.stack.is_empty()?);
         Ok(())
     }
 
     #[test]
     fn test_process_return() -> Result<()> {
-        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, _call_stack, frame) = crate::test::frame()?;
         let process_result = frame.process(&Instruction::Return)?;
         assert!(matches!(process_result, Return(None)));
         Ok(())
@@ -511,7 +521,7 @@ mod tests {
 
     #[test]
     fn test_process_monitorenter() -> Result<()> {
-        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, _call_stack, frame) = crate::test::frame()?;
         frame.stack.push_object(None)?;
         let process_result = frame.process(&Instruction::Monitorenter)?;
         assert_eq!(Continue, process_result);
@@ -520,7 +530,7 @@ mod tests {
 
     #[test]
     fn test_process_monitorexit() -> Result<()> {
-        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, _call_stack, frame) = crate::test::frame()?;
         frame.stack.push_object(None)?;
         let process_result = frame.process(&Instruction::Monitorexit)?;
         assert_eq!(Continue, process_result);
@@ -529,7 +539,7 @@ mod tests {
 
     #[test]
     fn test_process_wide() -> Result<()> {
-        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, _call_stack, frame) = crate::test::frame()?;
         assert!(matches!(
             frame.process(&Instruction::Wide),
             Err(InvalidOperand {
@@ -542,31 +552,31 @@ mod tests {
 
     #[test]
     fn test_process_breakpoint() -> Result<()> {
-        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, _call_stack, frame) = crate::test::frame()?;
         let process_result = frame.process(&Instruction::Breakpoint)?;
         assert_eq!(Continue, process_result);
-        assert!(frame.locals.is_empty());
-        assert!(frame.stack.is_empty());
+        assert!(frame.locals.is_empty()?);
+        assert!(frame.stack.is_empty()?);
         Ok(())
     }
 
     #[test]
     fn test_process_impdep1() -> Result<()> {
-        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, _call_stack, frame) = crate::test::frame()?;
         let process_result = frame.process(&Instruction::Impdep1)?;
         assert_eq!(Continue, process_result);
-        assert!(frame.locals.is_empty());
-        assert!(frame.stack.is_empty());
+        assert!(frame.locals.is_empty()?);
+        assert!(frame.stack.is_empty()?);
         Ok(())
     }
 
     #[test]
     fn test_process_impdep2() -> Result<()> {
-        let (_vm, _call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, _call_stack, frame) = crate::test::frame()?;
         let process_result = frame.process(&Instruction::Impdep2)?;
         assert_eq!(Continue, process_result);
-        assert!(frame.locals.is_empty());
-        assert!(frame.stack.is_empty());
+        assert!(frame.locals.is_empty()?);
+        assert!(frame.stack.is_empty()?);
         Ok(())
     }
 }

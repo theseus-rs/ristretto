@@ -1,7 +1,6 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::Error::PoisonedLock;
 use crate::Result;
 use ristretto_classloader::{Object, Reference, Value};
 use std::sync::Arc;
@@ -25,10 +24,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 fn count_stack_frames(call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
-    let frames = call_stack
-        .frames
-        .read()
-        .map_err(|error| PoisonedLock(error.to_string()))?;
+    let frames = call_stack.frames()?;
     let frames = i32::try_from(frames.len())?;
     Ok(Some(Value::Int(frames)))
 }
