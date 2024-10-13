@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classloader::Value;
 
 /// Register all native methods for java.lang.Throwable.
@@ -15,11 +15,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-fn fill_in_stack_trace(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn fill_in_stack_trace(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let _dummy = arguments.pop_int()?;
     let throwable = arguments.pop_object()?;
     // TODO: Implement fillInStackTrace

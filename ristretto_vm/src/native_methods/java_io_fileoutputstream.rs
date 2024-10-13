@@ -2,7 +2,7 @@ use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Error::RuntimeError;
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classloader::{Reference, Value};
 use std::io::Write;
 
@@ -15,16 +15,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn init_ids(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn init_ids(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[expect(clippy::cast_sign_loss)]
-fn write_bytes(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn write_bytes(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let _append = arguments.pop_int()? == 1;
     let length = usize::try_from(arguments.pop_int()?)?;
     let offset = usize::try_from(arguments.pop_int()?)?;

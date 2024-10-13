@@ -2,7 +2,7 @@ use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Error::{InvalidOperand, RuntimeError};
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classloader::{Reference, Value};
 
 /// Register all native methods for jdk.internal.misc.Unsafe.
@@ -185,7 +185,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn init(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn init(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     // Unsafe <init> is a no-op and the class is deprecated; override the default behavior to avoid
     // the performance penalty of creating a new frame.
     Ok(None)
@@ -193,29 +193,17 @@ fn init(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Opti
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn array_base_offset_0(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn array_base_offset_0(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn array_index_scale_0(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn array_index_scale_0(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(Some(Value::Int(1)))
 }
 
-fn compare_and_set_int(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn compare_and_set_int(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let x = arguments.pop_int()?;
     let expected = arguments.pop_int()?;
     let offset = arguments.pop_long()?;
@@ -240,7 +228,6 @@ fn compare_and_set_int(
 }
 
 fn compare_and_set_long(
-    _vm: &VM,
     _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -268,7 +255,6 @@ fn compare_and_set_long(
 }
 
 fn compare_and_set_reference(
-    _vm: &VM,
     _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -306,7 +292,6 @@ fn compare_and_set_reference(
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
 fn ensure_class_initialized_0(
-    _vm: &VM,
     _call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -315,15 +300,11 @@ fn ensure_class_initialized_0(
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn full_fence(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn full_fence(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-fn get_reference(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn get_reference(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let offset = arguments.pop_long()?;
     let offset = usize::try_from(offset)?;
     let Some(reference) = arguments.pop_object()? else {
@@ -349,22 +330,17 @@ fn get_reference(
 }
 
 #[inline]
-fn get_reference_volatile(
-    vm: &VM,
-    call_stack: &CallStack,
-    arguments: Arguments,
-) -> Result<Option<Value>> {
-    get_reference(vm, call_stack, arguments)
+fn get_reference_volatile(call_stack: &CallStack, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference(call_stack, arguments)
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn load_fence(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn load_fence(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
 fn object_field_offset_1(
-    vm: &VM,
     call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -385,6 +361,7 @@ fn object_field_offset_1(
     };
     let name_field = class_object.field("name")?;
     let class_name = name_field.value()?.as_string()?;
+    let vm = call_stack.vm()?;
     let class = vm.class(call_stack, &class_name)?;
     let offset = class.field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
@@ -392,7 +369,6 @@ fn object_field_offset_1(
 }
 
 fn put_reference_volatile(
-    _vm: &VM,
     _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -417,16 +393,12 @@ fn put_reference_volatile(
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn register_natives(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn register_natives(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn store_fence(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn store_fence(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }

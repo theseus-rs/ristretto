@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Get the specific class for testing.
-pub(crate) fn load_class(class_name: &str) -> Result<(VM, CallStack, Arc<Class>)> {
+pub(crate) fn load_class(class_name: &str) -> Result<(Arc<VM>, CallStack, Arc<Class>)> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let classes_path = cargo_manifest.join("../classes");
     let class_path = ClassPath::from(classes_path.to_string_lossy());
@@ -14,13 +14,13 @@ pub(crate) fn load_class(class_name: &str) -> Result<(VM, CallStack, Arc<Class>)
         .class_path(class_path.clone())
         .build();
     let vm = VM::new(configuration)?;
-    let call_stack = CallStack::new();
+    let call_stack = CallStack::new(&Arc::downgrade(&vm));
     let class = vm.class(&call_stack, class_name)?;
     Ok((vm, call_stack, class))
 }
 
 /// Get a test class for testing.
-pub(crate) fn class() -> Result<(VM, CallStack, Arc<Class>)> {
+pub(crate) fn class() -> Result<(Arc<VM>, CallStack, Arc<Class>)> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let classes_path = cargo_manifest.join("../classes");
     let class_path = ClassPath::from(classes_path.to_string_lossy());
@@ -28,7 +28,7 @@ pub(crate) fn class() -> Result<(VM, CallStack, Arc<Class>)> {
         .class_path(class_path.clone())
         .build();
     let vm = VM::new(configuration)?;
-    let call_stack = CallStack::new();
+    let call_stack = CallStack::new(&Arc::downgrade(&vm));
     let mut constant_pool = ConstantPool::default();
     let this_class = constant_pool.add_class("Test")?;
     let class_file = ClassFile {
@@ -41,7 +41,7 @@ pub(crate) fn class() -> Result<(VM, CallStack, Arc<Class>)> {
 }
 
 /// Get a test frame for testing.
-pub(crate) fn frame() -> Result<(VM, CallStack, Frame)> {
+pub(crate) fn frame() -> Result<(Arc<VM>, CallStack, Frame)> {
     let (vm, call_stack, class) = class()?;
     let method = Method::new(
         MethodAccessFlags::STATIC,

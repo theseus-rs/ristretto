@@ -20,12 +20,12 @@ enum InvocationType {
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokevirtual>
 #[inline]
 pub(crate) fn invokevirtual(
-    vm: &VM,
     call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     method_index: u16,
 ) -> Result<ExecutionResult> {
+    let vm = call_stack.vm()?;
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
     let class = vm.class(call_stack, class_name)?;
@@ -36,7 +36,7 @@ pub(crate) fn invokevirtual(
     let method = class.try_get_virtual_method(method_name, method_descriptor)?;
 
     invoke_method(
-        vm,
+        &vm,
         call_stack,
         stack,
         class,
@@ -48,12 +48,12 @@ pub(crate) fn invokevirtual(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokespecial>
 #[inline]
 pub(crate) fn invokespecial(
-    vm: &VM,
     call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     method_index: u16,
 ) -> Result<ExecutionResult> {
+    let vm = call_stack.vm()?;
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
     let class = vm.class(call_stack, class_name)?;
@@ -64,7 +64,7 @@ pub(crate) fn invokespecial(
     let method = class.try_get_method(method_name, method_descriptor)?;
 
     invoke_method(
-        vm,
+        &vm,
         call_stack,
         stack,
         class,
@@ -76,7 +76,6 @@ pub(crate) fn invokespecial(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokestatic>
 #[inline]
 pub(crate) fn invokestatic(
-    vm: &VM,
     call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
@@ -94,6 +93,7 @@ pub(crate) fn invokestatic(
     else {
         return Err(InvalidConstantPoolIndexType(method_index).into());
     };
+    let vm = call_stack.vm()?;
     let class_name = constant_pool.try_get_class(*class_index)?;
     let class = vm.class(call_stack, class_name)?;
     let (name_index, descriptor_index) =
@@ -103,7 +103,7 @@ pub(crate) fn invokestatic(
     let method = class.try_get_method(method_name, method_descriptor)?;
 
     invoke_method(
-        vm,
+        &vm,
         call_stack,
         stack,
         class,
@@ -115,13 +115,13 @@ pub(crate) fn invokestatic(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokeinterface>
 #[inline]
 pub(crate) fn invokeinterface(
-    vm: &VM,
     call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     method_index: u16,
     _count: u8,
 ) -> Result<ExecutionResult> {
+    let vm = call_stack.vm()?;
     let (class_index, name_and_type_index) =
         constant_pool.try_get_interface_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
@@ -133,7 +133,7 @@ pub(crate) fn invokeinterface(
     let method = class.try_get_virtual_method(method_name, method_descriptor)?;
 
     invoke_method(
-        vm,
+        &vm,
         call_stack,
         stack,
         class,
@@ -145,7 +145,6 @@ pub(crate) fn invokeinterface(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokedynamic>
 #[inline]
 pub(crate) fn invokedynamic(
-    _vm: &VM,
     _call_stack: &CallStack,
     _stack: &mut OperandStack,
     _constant_pool: &ConstantPool,
@@ -160,7 +159,7 @@ pub(crate) fn invokedynamic(
 /// if the method is not found
 #[inline]
 fn invoke_method(
-    vm: &VM,
+    vm: &Arc<VM>,
     call_stack: &CallStack,
     stack: &mut OperandStack,
     mut class: Arc<Class>,
@@ -221,7 +220,7 @@ fn invoke_method(
         _ => {}
     }
 
-    let result = call_stack.execute(vm, &class, &method, arguments)?;
+    let result = call_stack.execute(&class, &method, arguments)?;
     if let Some(result) = result {
         stack.push(result)?;
     }

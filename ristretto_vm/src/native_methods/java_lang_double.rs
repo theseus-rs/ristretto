@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classloader::Value;
 
 /// Register all native methods for java.lang.Double.
@@ -17,7 +17,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 fn double_to_raw_long_bits(
-    _vm: &VM,
     _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -27,11 +26,7 @@ fn double_to_raw_long_bits(
     Ok(Some(Value::Long(bits)))
 }
 
-fn long_bits_to_double(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn long_bits_to_double(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let long = arguments.pop_long()?;
     #[expect(clippy::cast_sign_loss)]
     let bits = long as u64;

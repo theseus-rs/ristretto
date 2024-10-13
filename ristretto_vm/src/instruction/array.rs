@@ -3,7 +3,7 @@ use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
 use crate::Error::{InvalidStackValue, NullPointer};
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classfile::attributes::ArrayType;
 use ristretto_classloader::{Class, ConcurrentVec, Reference};
 use std::sync::Arc;
@@ -34,12 +34,12 @@ pub(crate) fn newarray(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.anewarray>
 #[inline]
 pub(crate) fn anewarray(
-    vm: &VM,
     call_stack: &CallStack,
     stack: &mut OperandStack,
     class: &Arc<Class>,
     index: u16,
 ) -> Result<ExecutionResult> {
+    let vm = call_stack.vm()?;
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
     let constant_pool = class.constant_pool();
@@ -77,13 +77,13 @@ pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.multianewarray>
 #[inline]
 pub(crate) fn multianewarray(
-    vm: &VM,
     call_stack: &CallStack,
     stack: &mut OperandStack,
     class: &Arc<Class>,
     index: u16,
     dimensions: u8,
 ) -> Result<ExecutionResult> {
+    let vm = call_stack.vm()?;
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
     let constant_pool = class.constant_pool();
@@ -225,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_anewarray() -> Result<()> {
-        let (vm, call_stack, mut class) = crate::test::class()?;
+        let (_vm, call_stack, mut class) = crate::test::class()?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("java/lang/Object")?;
         let method = Method::new(
@@ -243,7 +243,7 @@ mod tests {
         let class = frame.class;
 
         stack.push_int(0)?;
-        let result = anewarray(&vm, &call_stack, stack, &class, class_index)?;
+        let result = anewarray(&call_stack, stack, &class, class_index)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
         assert!(matches!(
@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_arraylength_object() -> Result<()> {
-        let (vm, call_stack, mut class) = crate::test::class()?;
+        let (_vm, call_stack, mut class) = crate::test::class()?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("java/lang/Object")?;
         let method = Method::new(
@@ -369,7 +369,7 @@ mod tests {
         let class = frame.class;
 
         stack.push_int(3)?;
-        let result = anewarray(&vm, &call_stack, stack, &class, class_index)?;
+        let result = anewarray(&call_stack, stack, &class, class_index)?;
         assert_eq!(Continue, result);
 
         let result = arraylength(stack)?;
@@ -406,7 +406,7 @@ mod tests {
 
     #[test]
     fn test_multianewarray_single_dimension() -> Result<()> {
-        let (vm, call_stack, mut class) = crate::test::class()?;
+        let (_vm, call_stack, mut class) = crate::test::class()?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("java/lang/Object")?;
         let method = Method::new(
@@ -424,7 +424,7 @@ mod tests {
         let class = frame.class;
 
         stack.push_int(0)?;
-        let result = multianewarray(&vm, &call_stack, stack, &class, class_index, 1)?;
+        let result = multianewarray(&call_stack, stack, &class, class_index, 1)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
         assert!(matches!(

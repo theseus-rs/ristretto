@@ -2,7 +2,7 @@ use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Error::PoisonedLock;
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classloader::{Object, Reference, Value};
 use std::thread;
 use std::time::Duration;
@@ -23,11 +23,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn count_stack_frames(
-    _vm: &VM,
-    call_stack: &CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn count_stack_frames(call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     let frames = call_stack
         .frames
         .read()
@@ -37,8 +33,9 @@ fn count_stack_frames(
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn current_thread(vm: &VM, call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn current_thread(call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: correct this once threading is implemented
+    let vm = call_stack.vm()?;
     let thread_class = vm.class(call_stack, "java/lang/Thread")?;
     let thread = Value::Object(Some(Reference::Object(Object::new(thread_class)?)));
     Ok(Some(thread))
@@ -46,15 +43,11 @@ fn current_thread(vm: &VM, call_stack: &CallStack, _arguments: Arguments) -> Res
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn register_natives(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+fn register_natives(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-fn sleep(_vm: &VM, _call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn sleep(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let millis = arguments.pop_long()?;
     let millis = u64::try_from(millis)?;
     let duration = Duration::from_millis(millis);
@@ -64,7 +57,7 @@ fn sleep(_vm: &VM, _call_stack: &CallStack, mut arguments: Arguments) -> Result<
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn r#yield(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn r#yield(_call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     thread::yield_now();
     Ok(None)
 }

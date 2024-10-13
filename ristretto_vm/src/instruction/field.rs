@@ -73,8 +73,8 @@ mod test {
         class_name: &str,
         field_name: &str,
         field_type: &str,
-    ) -> Result<(VM, CallStack, Frame, u16, u16)> {
-        let (vm, _call_stack, mut class) = crate::test::class()?;
+    ) -> Result<(Arc<VM>, CallStack, Frame, u16, u16)> {
+        let (vm, call_stack, mut class) = crate::test::class()?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class(class_name)?;
         let field_index = constant_pool.add_field_ref(class_index, field_name, field_type)?;
@@ -88,17 +88,16 @@ mod test {
             Vec::new(),
         )?;
         let arguments = Vec::new();
-        let call_stack = CallStack::new();
         let frame = Frame::new(&class, &Arc::new(method), arguments)?;
         Ok((vm, call_stack, frame, class_index, field_index))
     }
 
     fn test_put_and_get_field() -> Result<()> {
-        let (vm, call_stack, mut frame, class_index, field_index) =
+        let (_vm, call_stack, mut frame, class_index, field_index) =
             test_class_field("Child", "zero", "I")?;
         let stack = &mut frame.stack;
         let constant_pool = frame.class.constant_pool();
-        let result = new(&vm, &call_stack, stack, constant_pool, class_index)?;
+        let result = new(&call_stack, stack, constant_pool, class_index)?;
         assert_eq!(Continue, result);
 
         let result = dup(stack)?;
@@ -125,11 +124,11 @@ mod test {
 
     #[test]
     fn test_getfield_field_not_found() -> Result<()> {
-        let (vm, call_stack, mut frame, class_index, field_index) =
+        let (_vm, call_stack, mut frame, class_index, field_index) =
             test_class_field("Child", "foo", "I")?;
         let stack = &mut frame.stack;
         let constant_pool = frame.class.constant_pool();
-        let result = new(&vm, &call_stack, stack, constant_pool, class_index)?;
+        let result = new(&call_stack, stack, constant_pool, class_index)?;
         assert_eq!(Continue, result);
         let result = getfield(stack, constant_pool, field_index);
         assert!(result.is_err());
@@ -158,11 +157,11 @@ mod test {
 
     #[test]
     fn test_putfield_field_not_found() -> Result<()> {
-        let (vm, call_stack, mut frame, class_index, field_index) =
+        let (_vm, call_stack, mut frame, class_index, field_index) =
             test_class_field("Child", "foo", "I")?;
         let stack = &mut OperandStack::with_max_size(2);
         let constant_pool = frame.class.constant_pool();
-        let result = new(&vm, &call_stack, stack, constant_pool, class_index)?;
+        let result = new(&call_stack, stack, constant_pool, class_index)?;
         assert_eq!(Continue, result);
         let result = dup(stack)?;
         assert_eq!(Continue, result);

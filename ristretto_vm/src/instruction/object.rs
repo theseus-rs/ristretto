@@ -6,7 +6,7 @@ use crate::operand_stack::OperandStack;
 use crate::Error::{
     ArrayIndexOutOfBounds, ClassCastError, InvalidStackValue, NullPointer, RuntimeError,
 };
-use crate::{Result, Value, VM};
+use crate::{Result, Value};
 use ristretto_classfile::ConstantPool;
 use ristretto_classloader::{Object, Reference};
 
@@ -210,12 +210,12 @@ pub(crate) fn areturn(stack: &mut OperandStack) -> Result<ExecutionResult> {
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.new>
 #[inline]
 pub(crate) fn new(
-    vm: &VM,
     call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     index: u16,
 ) -> Result<ExecutionResult> {
+    let vm = call_stack.vm()?;
     let class_name = constant_pool.try_get_class(index)?;
     let class = vm.class(call_stack, class_name)?;
     let object = Object::new(class)?;
@@ -591,12 +591,12 @@ mod tests {
 
     #[test]
     fn test_new() -> Result<()> {
-        let (vm, call_stack, mut frame) = crate::test::frame()?;
+        let (_vm, call_stack, mut frame) = crate::test::frame()?;
         let stack = &mut frame.stack;
         let class = &mut frame.class;
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("Child")?;
-        let process_result = new(&vm, &call_stack, stack, constant_pool, class_index)?;
+        let process_result = new(&call_stack, stack, constant_pool, class_index)?;
         assert_eq!(process_result, Continue);
         let object = frame.stack.pop()?;
         assert!(matches!(object, Value::Object(Some(Reference::Object(_)))));
@@ -615,7 +615,7 @@ mod tests {
     #[test]
     fn test_checkcast_string_to_object() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let (vm, _, object_class) = crate::test::load_class("java/lang/Object")?;
+        let (vm, _call_stack, object_class) = crate::test::load_class("java/lang/Object")?;
         let string = vm.string("foo")?;
         stack.push(string)?;
         let result = checkcast(stack, object_class.name())?;
@@ -626,8 +626,8 @@ mod tests {
     #[test]
     fn test_checkcast_object_to_string() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let (_, _, object_class) = crate::test::load_class("java/lang/Object")?;
-        let (_, _, string_class) = crate::test::load_class("java/lang/String")?;
+        let (_vm, _call_stack, object_class) = crate::test::load_class("java/lang/Object")?;
+        let (_vm, _call_stack, string_class) = crate::test::load_class("java/lang/String")?;
         let object = Object::new(object_class)?;
         stack.push_object(Some(Reference::Object(object)))?;
         let result = checkcast(stack, string_class.name());
@@ -641,7 +641,7 @@ mod tests {
     #[test]
     fn test_instanceof_null() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let (_, _, object_class) = crate::test::load_class("java/lang/Object")?;
+        let (_vm, _call_stack, object_class) = crate::test::load_class("java/lang/Object")?;
         stack.push_object(None)?;
         let result = instanceof(stack, object_class.name())?;
         assert_eq!(Continue, result);
@@ -652,7 +652,7 @@ mod tests {
     #[test]
     fn test_instanceof_string_to_object() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let (vm, _, object_class) = crate::test::load_class("java/lang/Object")?;
+        let (vm, _call_stack, object_class) = crate::test::load_class("java/lang/Object")?;
         let string = vm.string("foo")?;
         stack.push(string)?;
         let result = instanceof(stack, object_class.name())?;
@@ -664,8 +664,8 @@ mod tests {
     #[test]
     fn test_instanceof_object_to_string() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let (_, _, object_class) = crate::test::load_class("java/lang/Object")?;
-        let (_, _, string_class) = crate::test::load_class("java/lang/String")?;
+        let (_vm, _call_stack, object_class) = crate::test::load_class("java/lang/Object")?;
+        let (_vm, _call_stack, string_class) = crate::test::load_class("java/lang/String")?;
         let object = Object::new(object_class)?;
         stack.push_object(Some(Reference::Object(object)))?;
         let result = instanceof(stack, string_class.name())?;
@@ -677,8 +677,8 @@ mod tests {
     #[test]
     fn test_instanceof_string_array_to_object() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let (_, _, object_class) = crate::test::load_class("java/lang/Object")?;
-        let (_, _, string_class) = crate::test::load_class("java/lang/String")?;
+        let (_vm, _call_stack, object_class) = crate::test::load_class("java/lang/Object")?;
+        let (_vm, _call_stack, string_class) = crate::test::load_class("java/lang/String")?;
         let string_array = Reference::Array(string_class, ConcurrentVec::default());
         stack.push_object(Some(string_array))?;
         let result = instanceof(stack, object_class.name())?;
@@ -690,8 +690,8 @@ mod tests {
     #[test]
     fn test_instanceof_object_array_to_string() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let (_, _, object_class) = crate::test::load_class("java/lang/Object")?;
-        let (_, _, string_class) = crate::test::load_class("java/lang/String")?;
+        let (_vm, _call_stack, object_class) = crate::test::load_class("java/lang/Object")?;
+        let (_vm, _call_stack, string_class) = crate::test::load_class("java/lang/String")?;
         let object_array = Reference::Array(object_class, ConcurrentVec::default());
         stack.push_object(Some(object_array))?;
         let result = instanceof(stack, string_class.name())?;

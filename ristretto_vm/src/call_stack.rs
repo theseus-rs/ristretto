@@ -1,23 +1,36 @@
 use crate::arguments::Arguments;
-use crate::Error::PoisonedLock;
+use crate::Error::{PoisonedLock, RuntimeError};
 use crate::{native_methods, Frame, Result, VM};
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Value};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Weak};
 use tracing::{debug, event_enabled, Level};
 
 /// A call stack is a stack of frames that are executed in order.
 #[derive(Debug, Default)]
 pub struct CallStack {
+    pub(crate) vm: Weak<VM>,
     pub(crate) frames: Arc<RwLock<Vec<Arc<RwLock<Frame>>>>>,
 }
 
 impl CallStack {
     /// Create a new call stack.
     #[must_use]
-    pub fn new() -> Self {
+    pub fn new(vm: &Weak<VM>) -> Self {
         CallStack {
+            vm: vm.clone(),
             frames: Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+
+    /// Get the virtual machine that owns the call stack.
+    ///
+    /// # Errors
+    /// if the virtual machine cannot be accessed.
+    pub fn vm(&self) -> Result<Arc<VM>> {
+        match self.vm.upgrade() {
+            Some(vm) => Ok(vm),
+            None => Err(RuntimeError("VM is not available".to_string())),
         }
     }
 
@@ -28,7 +41,6 @@ impl CallStack {
     /// if the method cannot be invoked.
     pub fn execute(
         &self,
-        vm: &VM,
         class: &Arc<Class>,
         method: &Arc<Method>,
         arguments: Vec<Value>,
@@ -47,7 +59,7 @@ impl CallStack {
 
         let (result, frame_added) = if let Some(rust_method) = rust_method {
             let arguments = Arguments::new(arguments);
-            let result = rust_method(vm, self, arguments);
+            let result = rust_method(self, arguments);
             (result, false)
         } else if method.is_native() {
             return Err(MethodNotFound {
@@ -71,7 +83,7 @@ impl CallStack {
             let mut frame = frame
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
-            let result = frame.execute(vm, self);
+            let result = frame.execute(self);
             (result, true)
         };
 

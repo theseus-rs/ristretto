@@ -2,18 +2,18 @@ use crate::call_stack::CallStack;
 use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classfile::{ConstantPool, FieldType};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.getstatic>
 #[inline]
 pub(crate) fn getstatic(
-    vm: &VM,
     call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     index: u16,
 ) -> Result<ExecutionResult> {
+    let vm = call_stack.vm()?;
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
@@ -35,12 +35,12 @@ pub(crate) fn getstatic(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.putstatic>
 #[inline]
 pub(crate) fn putstatic(
-    vm: &VM,
     call_stack: &CallStack,
     stack: &mut OperandStack,
     constant_pool: &ConstantPool,
     index: u16,
 ) -> Result<ExecutionResult> {
+    let vm = call_stack.vm()?;
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
@@ -63,6 +63,7 @@ pub(crate) fn putstatic(
 mod test {
     use super::*;
     use crate::frame::Frame;
+    use crate::VM;
     use ristretto_classfile::MethodAccessFlags;
     use ristretto_classloader::{Method, Value};
     use std::sync::Arc;
@@ -71,8 +72,8 @@ mod test {
         class_name: &str,
         field_name: &str,
         field_type: &str,
-    ) -> Result<(VM, CallStack, Frame, u16, u16)> {
-        let (vm, _call_stack, mut class) = crate::test::class()?;
+    ) -> Result<(Arc<VM>, CallStack, Frame, u16, u16)> {
+        let (vm, call_stack, mut class) = crate::test::class()?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class(class_name)?;
         let field_index = constant_pool.add_field_ref(class_index, field_name, field_type)?;
@@ -86,18 +87,17 @@ mod test {
             Vec::new(),
         )?;
         let arguments = Vec::new();
-        let call_stack = CallStack::new();
         let frame = Frame::new(&class, &Arc::new(method), arguments)?;
         Ok((vm, call_stack, frame, class_index, field_index))
     }
 
     #[test]
     fn test_getstatic() -> Result<()> {
-        let (vm, call_stack, mut frame, _class_index, field_index) =
+        let (_vm, call_stack, mut frame, _class_index, field_index) =
             test_class_field("Constants", "INT_VALUE", "I")?;
         let stack = &mut frame.stack;
         let constant_pool = frame.class.constant_pool();
-        let result = getstatic(&vm, &call_stack, stack, constant_pool, field_index)?;
+        let result = getstatic(&call_stack, stack, constant_pool, field_index)?;
         assert_eq!(Continue, result);
         let value = frame.stack.pop()?;
         assert_eq!(Value::Int(3), value);
@@ -106,26 +106,26 @@ mod test {
 
     #[test]
     fn test_getstatic_field_not_found() -> Result<()> {
-        let (vm, call_stack, mut frame, _class_index, field_index) =
+        let (_vm, call_stack, mut frame, _class_index, field_index) =
             test_class_field("Child", "foo", "I")?;
         let stack = &mut frame.stack;
         let constant_pool = frame.class.constant_pool();
-        let result = getstatic(&vm, &call_stack, stack, constant_pool, field_index);
+        let result = getstatic(&call_stack, stack, constant_pool, field_index);
         assert!(result.is_err());
         Ok(())
     }
 
     #[test]
     fn test_putstatic() -> Result<()> {
-        let (vm, call_stack, mut frame, _class_index, field_index) =
+        let (_vm, call_stack, mut frame, _class_index, field_index) =
             test_class_field("Simple", "ANSWER", "I")?;
         let stack = &mut frame.stack;
         let constant_pool = frame.class.constant_pool();
         stack.push_int(3)?;
-        let result = putstatic(&vm, &call_stack, stack, constant_pool, field_index)?;
+        let result = putstatic(&call_stack, stack, constant_pool, field_index)?;
         assert_eq!(Continue, result);
 
-        let result = getstatic(&vm, &call_stack, stack, constant_pool, field_index)?;
+        let result = getstatic(&call_stack, stack, constant_pool, field_index)?;
         assert_eq!(Continue, result);
         let value = frame.stack.pop()?;
         assert_eq!(Value::Int(3), value);
@@ -134,12 +134,12 @@ mod test {
 
     #[test]
     fn test_putstatic_field_not_found() -> Result<()> {
-        let (vm, call_stack, mut frame, _class_index, field_index) =
+        let (_vm, call_stack, mut frame, _class_index, field_index) =
             test_class_field("Child", "foo", "I")?;
         let stack = &mut frame.stack;
         let constant_pool = frame.class.constant_pool();
         stack.push_int(3)?;
-        let result = putstatic(&vm, &call_stack, stack, constant_pool, field_index);
+        let result = putstatic(&call_stack, stack, constant_pool, field_index);
         assert!(result.is_err());
         Ok(())
     }

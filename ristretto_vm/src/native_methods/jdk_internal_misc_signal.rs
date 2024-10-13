@@ -2,7 +2,7 @@ use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Error::{InvalidOperand, RuntimeError};
-use crate::{Result, VM};
+use crate::Result;
 use ristretto_classloader::Value;
 
 /// Register all native methods for jdk.internal.misc.Signal.
@@ -17,18 +17,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "handle0", "(IJ)J", handle_0);
 }
 
-fn handle_0(_vm: &VM, _call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
+fn handle_0(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let _handler = arguments.pop_long()?;
     let _signal = arguments.pop_int()?;
     // TODO: implement signal handling
     Ok(Some(Value::Long(0)))
 }
 
-fn find_signal_0(
-    _vm: &VM,
-    _call_stack: &CallStack,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
+fn find_signal_0(_call_stack: &CallStack, mut arguments: Arguments) -> Result<Option<Value>> {
     let value = arguments.pop()?;
     let signal_name = match value {
         Value::Object(_) => value.as_string()?,
