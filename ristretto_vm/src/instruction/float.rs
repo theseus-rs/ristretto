@@ -459,7 +459,7 @@ mod tests {
     }
 
     #[test]
-    fn test_faload() -> crate::Result<()> {
+    fn test_faload() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let array = Reference::FloatArray(ConcurrentVec::from(vec![42f32]));
         stack.push_object(Some(array))?;
@@ -472,7 +472,7 @@ mod tests {
     }
 
     #[test]
-    fn test_faload_invalid_value() -> crate::Result<()> {
+    fn test_faload_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(object))?;
@@ -489,7 +489,7 @@ mod tests {
     }
 
     #[test]
-    fn test_faload_invalid_index() -> crate::Result<()> {
+    fn test_faload_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let array = Reference::FloatArray(ConcurrentVec::from(vec![42f32]));
         stack.push_object(Some(array))?;
@@ -500,7 +500,7 @@ mod tests {
     }
 
     #[test]
-    fn test_faload_null_pointer() -> crate::Result<()> {
+    fn test_faload_null_pointer() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_object(None)?;
         stack.push_int(0)?;
@@ -510,7 +510,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fastore() -> crate::Result<()> {
+    fn test_fastore() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let array = Reference::FloatArray(ConcurrentVec::from(vec![3f32]));
         stack.push_object(Some(array))?;
@@ -522,7 +522,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fastore_invalid_value() -> crate::Result<()> {
+    fn test_fastore_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(object))?;
@@ -540,7 +540,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fastore_invalid_index() -> crate::Result<()> {
+    fn test_fastore_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let array = Reference::FloatArray(ConcurrentVec::from(vec![3f32]));
         stack.push_object(Some(array))?;
@@ -552,7 +552,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fastore_null_pointer() -> crate::Result<()> {
+    fn test_fastore_null_pointer() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         stack.push_object(None)?;
         stack.push_int(0)?;

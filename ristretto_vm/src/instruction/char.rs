@@ -54,7 +54,7 @@ mod test {
     use ristretto_classloader::ConcurrentVec;
 
     #[test]
-    fn test_caload() -> crate::Result<()> {
+    fn test_caload() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let array = Reference::CharArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(array))?;
@@ -66,7 +66,7 @@ mod test {
     }
 
     #[test]
-    fn test_caload_invalid_value() -> crate::Result<()> {
+    fn test_caload_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(object))?;
@@ -83,7 +83,7 @@ mod test {
     }
 
     #[test]
-    fn test_caload_invalid_index() -> crate::Result<()> {
+    fn test_caload_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let array = Reference::CharArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(array))?;
@@ -94,7 +94,7 @@ mod test {
     }
 
     #[test]
-    fn test_caload_null_pointer() -> crate::Result<()> {
+    fn test_caload_null_pointer() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_object(None)?;
         stack.push_int(0)?;
@@ -104,7 +104,7 @@ mod test {
     }
 
     #[test]
-    fn test_castore() -> crate::Result<()> {
+    fn test_castore() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let array = Reference::CharArray(ConcurrentVec::from(vec![3]));
         stack.push_object(Some(array))?;
@@ -116,7 +116,7 @@ mod test {
     }
 
     #[test]
-    fn test_castore_invalid_value() -> crate::Result<()> {
+    fn test_castore_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         stack.push_object(Some(object))?;
@@ -134,7 +134,7 @@ mod test {
     }
 
     #[test]
-    fn test_castore_invalid_index() -> crate::Result<()> {
+    fn test_castore_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         let array = Reference::CharArray(ConcurrentVec::from(vec![3]));
         stack.push_object(Some(array))?;
@@ -146,7 +146,7 @@ mod test {
     }
 
     #[test]
-    fn test_castore_null_pointer() -> crate::Result<()> {
+    fn test_castore_null_pointer() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
         stack.push_object(None)?;
         stack.push_int(0)?;
