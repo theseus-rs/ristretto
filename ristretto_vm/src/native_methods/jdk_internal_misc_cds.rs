@@ -35,7 +35,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::unnecessary_wraps)]
 fn get_random_seed_for_dumping(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     let version = env!("CARGO_PKG_VERSION");
@@ -47,7 +47,7 @@ fn get_random_seed_for_dumping(
 
 fn initialize_from_archive(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let _class = arguments.pop_object()?;
@@ -58,7 +58,7 @@ fn initialize_from_archive(
 #[expect(clippy::unnecessary_wraps)]
 fn is_dumping_archive_0(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
@@ -68,7 +68,7 @@ fn is_dumping_archive_0(
 #[expect(clippy::unnecessary_wraps)]
 fn is_dumping_class_list_0(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
@@ -78,7 +78,7 @@ fn is_dumping_class_list_0(
 #[expect(clippy::unnecessary_wraps)]
 fn is_sharing_enabled_0(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))

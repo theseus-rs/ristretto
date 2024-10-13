@@ -17,7 +17,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 fn fill_in_stack_trace(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let _dummy = arguments.pop_int()?;

@@ -8,7 +8,7 @@ use std::env::consts::{ARCH, OS};
 use std::path::MAIN_SEPARATOR_STR;
 
 /// Get the system properties.
-pub(crate) fn system(vm: &VM, call_stack: &mut CallStack) -> Result<HashMap<&'static str, Value>> {
+pub(crate) fn system(vm: &VM, call_stack: &CallStack) -> Result<HashMap<&'static str, Value>> {
     let system_properties = system_properties(vm)?;
     let mut properties = HashMap::new();
     for (key, value) in system_properties {

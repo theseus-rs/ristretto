@@ -1,23 +1,24 @@
 use crate::arguments::Arguments;
+use crate::Error::PoisonedLock;
 use crate::{native_methods, Frame, Result, VM};
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Value};
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use tracing::{debug, event_enabled, Level};
 
 /// A call stack is a stack of frames that are executed in order.
 #[derive(Debug, Default)]
 pub struct CallStack {
-    pub(crate) frames: Vec<Rc<RefCell<Frame>>>,
+    pub(crate) frames: Arc<RwLock<Vec<Arc<RwLock<Frame>>>>>,
 }
 
 impl CallStack {
     /// Create a new call stack.
     #[must_use]
     pub fn new() -> Self {
-        CallStack { frames: Vec::new() }
+        CallStack {
+            frames: Arc::new(RwLock::new(Vec::new())),
+        }
     }
 
     /// Add a new frame to the call stack and invoke the method. To invoke a method on an object
@@ -26,7 +27,7 @@ impl CallStack {
     /// # Errors
     /// if the method cannot be invoked.
     pub fn execute(
-        &mut self,
+        &self,
         vm: &VM,
         class: &Arc<Class>,
         method: &Arc<Method>,
@@ -57,9 +58,19 @@ impl CallStack {
             .into());
         } else {
             let arguments = CallStack::adjust_arguments(arguments);
-            let frame = Rc::new(RefCell::new(Frame::new(class, method, arguments)?));
-            self.frames.push(frame.clone());
-            let mut frame = frame.borrow_mut();
+            let frame = Arc::new(RwLock::new(Frame::new(class, method, arguments)?));
+            // Limit the scope of the write lock to just adding the frame to the call stack.  This
+            // is necessary because the call stack is re-entrant.
+            {
+                let mut frames = self
+                    .frames
+                    .write()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                frames.push(frame.clone());
+            }
+            let mut frame = frame
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let result = frame.execute(vm, self);
             (result, true)
         };
@@ -82,7 +93,11 @@ impl CallStack {
         }
 
         if frame_added {
-            self.frames.pop();
+            let mut frames = self
+                .frames
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            frames.pop();
         }
 
         match result {

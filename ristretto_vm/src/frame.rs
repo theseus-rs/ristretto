@@ -72,7 +72,7 @@ impl Frame {
     /// # Errors
     /// * if the program counter is invalid
     /// * if an invalid instruction is encountered
-    pub fn execute(&mut self, vm: &VM, call_stack: &mut CallStack) -> Result<Option<Value>> {
+    pub fn execute(&mut self, vm: &VM, call_stack: &CallStack) -> Result<Option<Value>> {
         // TODO: avoid cloning code
         let code = self.method.code().clone();
 
@@ -127,7 +127,7 @@ impl Frame {
     fn process(
         &mut self,
         vm: &VM,
-        call_stack: &mut CallStack,
+        call_stack: &CallStack,
         instruction: &Instruction,
     ) -> Result<ExecutionResult> {
         match instruction {
@@ -469,18 +469,18 @@ mod tests {
             .class_path(class_path.clone())
             .build();
         let vm = VM::new(configuration)?;
-        let mut call_stack = CallStack::new();
-        let class = vm.class(&mut call_stack, class_name)?;
+        let call_stack = CallStack::new();
+        let class = vm.class(&call_stack, class_name)?;
         Ok((vm, call_stack, class))
     }
 
     #[test]
     fn test_execute() -> Result<()> {
-        let (vm, mut call_stack, class) = get_class("Expressions")?;
+        let (vm, call_stack, class) = get_class("Expressions")?;
         let method = class.method("add", "(II)I").expect("method not found");
         let arguments = vec![Value::Int(1), Value::Int(2)];
         let mut frame = Frame::new(&class, &method, arguments)?;
-        let result = frame.execute(&vm, &mut call_stack)?;
+        let result = frame.execute(&vm, &call_stack)?;
         assert!(matches!(result, Some(Value::Int(3))));
         Ok(())
     }
@@ -495,8 +495,8 @@ mod tests {
 
     #[test]
     fn test_process_nop() -> Result<()> {
-        let (vm, mut call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&vm, &mut call_stack, &Instruction::Nop)?;
+        let (vm, call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&vm, &call_stack, &Instruction::Nop)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());
@@ -505,8 +505,8 @@ mod tests {
 
     #[test]
     fn test_process_return() -> Result<()> {
-        let (vm, mut call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&vm, &mut call_stack, &Instruction::Return)?;
+        let (vm, call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&vm, &call_stack, &Instruction::Return)?;
         assert!(matches!(process_result, Return(None)));
         Ok(())
     }
@@ -518,27 +518,27 @@ mod tests {
 
     #[test]
     fn test_process_monitorenter() -> Result<()> {
-        let (vm, mut call_stack, mut frame) = crate::test::frame()?;
+        let (vm, call_stack, mut frame) = crate::test::frame()?;
         frame.stack.push_object(None)?;
-        let process_result = frame.process(&vm, &mut call_stack, &Instruction::Monitorenter)?;
+        let process_result = frame.process(&vm, &call_stack, &Instruction::Monitorenter)?;
         assert_eq!(Continue, process_result);
         Ok(())
     }
 
     #[test]
     fn test_process_monitorexit() -> Result<()> {
-        let (vm, mut call_stack, mut frame) = crate::test::frame()?;
+        let (vm, call_stack, mut frame) = crate::test::frame()?;
         frame.stack.push_object(None)?;
-        let process_result = frame.process(&vm, &mut call_stack, &Instruction::Monitorexit)?;
+        let process_result = frame.process(&vm, &call_stack, &Instruction::Monitorexit)?;
         assert_eq!(Continue, process_result);
         Ok(())
     }
 
     #[test]
     fn test_process_wide() -> Result<()> {
-        let (vm, mut call_stack, mut frame) = crate::test::frame()?;
+        let (vm, call_stack, mut frame) = crate::test::frame()?;
         assert!(matches!(
-            frame.process(&vm, &mut call_stack, &Instruction::Wide),
+            frame.process(&vm, &call_stack, &Instruction::Wide),
             Err(InvalidOperand {
                 expected,
                 actual
@@ -549,8 +549,8 @@ mod tests {
 
     #[test]
     fn test_process_breakpoint() -> Result<()> {
-        let (vm, mut call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&vm, &mut call_stack, &Instruction::Breakpoint)?;
+        let (vm, call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&vm, &call_stack, &Instruction::Breakpoint)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());
@@ -559,8 +559,8 @@ mod tests {
 
     #[test]
     fn test_process_impdep1() -> Result<()> {
-        let (vm, mut call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&vm, &mut call_stack, &Instruction::Impdep1)?;
+        let (vm, call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&vm, &call_stack, &Instruction::Impdep1)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());
@@ -569,8 +569,8 @@ mod tests {
 
     #[test]
     fn test_process_impdep2() -> Result<()> {
-        let (vm, mut call_stack, mut frame) = crate::test::frame()?;
-        let process_result = frame.process(&vm, &mut call_stack, &Instruction::Impdep2)?;
+        let (vm, call_stack, mut frame) = crate::test::frame()?;
+        let process_result = frame.process(&vm, &call_stack, &Instruction::Impdep2)?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty());
         assert!(frame.stack.is_empty());

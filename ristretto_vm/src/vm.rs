@@ -179,7 +179,7 @@ impl VM {
     ///
     /// # Errors
     /// if the class cannot be loaded
-    pub(crate) fn class(&self, call_stack: &mut CallStack, class_name: &str) -> Result<Arc<Class>> {
+    pub(crate) fn class(&self, call_stack: &CallStack, class_name: &str) -> Result<Arc<Class>> {
         let class_load_result = {
             let class_loader = self
                 .class_loader
@@ -312,7 +312,7 @@ impl VM {
         method: &Arc<Method>,
         arguments: Vec<Value>,
     ) -> Result<Option<Value>> {
-        let call_stack = &mut CallStack::new();
+        let call_stack = CallStack::new();
         call_stack.execute(self, class, method, arguments)
     }
 
@@ -320,11 +320,7 @@ impl VM {
     ///
     /// # Errors
     /// if the class object cannot be created
-    pub(crate) fn to_class_value(
-        &self,
-        call_stack: &mut CallStack,
-        class_name: &str,
-    ) -> Result<Value> {
+    pub(crate) fn to_class_value(&self, call_stack: &CallStack, class_name: &str) -> Result<Value> {
         let object_class_name = "java/lang/Class";
         let class = self.class(call_stack, object_class_name)?;
         let object = Object::new(class)?;
@@ -345,16 +341,16 @@ impl VM {
     /// # Errors
     /// if the string object cannot be created
     pub fn string<S: AsRef<str>>(&self, value: S) -> Result<Value> {
-        let call_stack = &mut CallStack::new();
+        let call_stack = CallStack::new();
         let value = value.as_ref();
-        self.to_string_value(call_stack, value)
+        self.to_string_value(&call_stack, value)
     }
 
     /// Create a new java.lang.String object as a VM Value.
     ///
     /// # Errors
     /// if the string object cannot be created
-    pub(crate) fn to_string_value(&self, call_stack: &mut CallStack, value: &str) -> Result<Value> {
+    pub(crate) fn to_string_value(&self, call_stack: &CallStack, value: &str) -> Result<Value> {
         let class_name = "java/lang/String";
         let class = self.class(call_stack, class_name)?;
         let object = Object::new(class)?;
@@ -471,8 +467,8 @@ mod tests {
     #[test]
     fn test_hello_world_class() -> Result<()> {
         let vm = test_vm()?;
-        let call_stack = &mut CallStack::new();
-        let class = vm.class(call_stack, "HelloWorld")?;
+        let call_stack = CallStack::new();
+        let class = vm.class(&call_stack, "HelloWorld")?;
         assert_eq!("HelloWorld", class.name());
         Ok(())
     }
@@ -480,8 +476,8 @@ mod tests {
     #[test]
     fn test_constants_class() -> Result<()> {
         let vm = test_vm()?;
-        let call_stack = &mut CallStack::new();
-        let class = vm.class(call_stack, "Constants")?;
+        let call_stack = CallStack::new();
+        let class = vm.class(&call_stack, "Constants")?;
         assert_eq!("Constants", class.name());
         Ok(())
     }
@@ -489,8 +485,8 @@ mod tests {
     #[test]
     fn test_class_inheritance() -> Result<()> {
         let vm = test_vm()?;
-        let call_stack = &mut CallStack::new();
-        let hash_map = vm.class(call_stack, "java/util/HashMap")?;
+        let call_stack = CallStack::new();
+        let hash_map = vm.class(&call_stack, "java/util/HashMap")?;
         assert_eq!("java/util/HashMap", hash_map.name());
 
         let abstract_map = hash_map.parent()?.expect("HashMap parent");
@@ -505,9 +501,9 @@ mod tests {
     #[test]
     fn test_class_interfaces() -> Result<()> {
         let vm = test_vm()?;
-        let call_stack = &mut CallStack::new();
+        let call_stack = CallStack::new();
 
-        let interface = vm.class(call_stack, "java/util/NavigableMap")?;
+        let interface = vm.class(&call_stack, "java/util/NavigableMap")?;
         let method = interface.try_get_virtual_method("size", "()I");
         assert!(method.is_ok());
 

@@ -23,7 +23,7 @@ pub fn registry() -> &'static MethodRegistry {
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
 pub type RustMethod =
-    fn(vm: &VM, call_stack: &mut CallStack, arguments: Arguments) -> Result<Option<Value>>;
+    fn(vm: &VM, call_stack: &CallStack, arguments: Arguments) -> Result<Option<Value>>;
 
 #[expect(clippy::module_name_repetitions)]
 #[derive(Debug)]

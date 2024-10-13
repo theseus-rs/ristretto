@@ -12,7 +12,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 fn set_error_mode(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let _error_mode = arguments.pop_long()?;

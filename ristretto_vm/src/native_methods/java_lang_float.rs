@@ -17,7 +17,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 fn float_to_raw_int_bits(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let float = arguments.pop_float()?;

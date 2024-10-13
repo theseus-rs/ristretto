@@ -15,7 +15,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::match_same_arms)]
 fn get_append(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let handle = arguments.pop_int()?;
@@ -40,7 +40,7 @@ fn get_append(
 
 fn get_handle(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let handle = arguments.pop_int()?;
@@ -50,6 +50,6 @@ fn get_handle(
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn init_ids(_vm: &VM, _call_stack: &mut CallStack, _arguments: Arguments) -> Result<Option<Value>> {
+fn init_ids(_vm: &VM, _call_stack: &CallStack, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }

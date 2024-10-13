@@ -14,8 +14,8 @@ pub(crate) fn load_class(class_name: &str) -> Result<(VM, CallStack, Arc<Class>)
         .class_path(class_path.clone())
         .build();
     let vm = VM::new(configuration)?;
-    let mut call_stack = CallStack::new();
-    let class = vm.class(&mut call_stack, class_name)?;
+    let call_stack = CallStack::new();
+    let class = vm.class(&call_stack, class_name)?;
     Ok((vm, call_stack, class))
 }
 

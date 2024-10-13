@@ -17,7 +17,7 @@ pub(crate) fn register(registry: &mut NativeRegistry) {
 #[expect(clippy::needless_pass_by_value)]
 fn current_time_millis(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Vec<Value>,
 ) -> Result<Option<Value>> {
     let now = SystemTime::now();
@@ -29,7 +29,7 @@ fn current_time_millis(
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn exit(_vm: &VM, _call_stack: &mut CallStack, arguments: Vec<Value>) -> Result<Option<Value>> {
+fn exit(_vm: &VM, _call_stack: &CallStack, arguments: Vec<Value>) -> Result<Option<Value>> {
     let Some(Value::Int(code)) = arguments.first() else {
         return Err(RuntimeError("exit status must be an integer".to_string()));
     };
@@ -38,16 +38,12 @@ fn exit(_vm: &VM, _call_stack: &mut CallStack, arguments: Vec<Value>) -> Result<
 
 #[expect(clippy::needless_pass_by_value)]
 #[expect(clippy::unnecessary_wraps)]
-fn gc(_vm: &VM, _call_stack: &mut CallStack, _arguments: Vec<Value>) -> Result<Option<Value>> {
+fn gc(_vm: &VM, _call_stack: &CallStack, _arguments: Vec<Value>) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn nano_time(
-    _vm: &VM,
-    _call_stack: &mut CallStack,
-    _arguments: Vec<Value>,
-) -> Result<Option<Value>> {
+fn nano_time(_vm: &VM, _call_stack: &CallStack, _arguments: Vec<Value>) -> Result<Option<Value>> {
     let now = SystemTime::now();
     let duration = now
         .duration_since(UNIX_EPOCH)
@@ -60,7 +56,7 @@ fn nano_time(
 #[expect(clippy::unnecessary_wraps)]
 fn register_natives(
     _vm: &VM,
-    _call_stack: &mut CallStack,
+    _call_stack: &CallStack,
     _arguments: Vec<Value>,
 ) -> Result<Option<Value>> {
     Ok(None)
