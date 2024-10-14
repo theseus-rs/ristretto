@@ -3,7 +3,7 @@ use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Error::RuntimeError;
 use crate::Result;
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use std::future::Future;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::pin::Pin;
@@ -68,14 +68,19 @@ fn hash_code(
         let Some(object) = arguments.pop_object()? else {
             return Err(RuntimeError("no object reference defined".to_string()));
         };
-        let value = format!("{object}");
-        let mut hasher = DefaultHasher::new();
-        value.hash(&mut hasher);
-        let hash_code = hasher.finish();
-        #[expect(clippy::cast_possible_truncation)]
-        let hash_code = hash_code as i32;
+        let hash_code = object_hash_code(&object);
         Ok(Some(Value::Int(hash_code)))
     })
+}
+
+pub(crate) fn object_hash_code(object: &Reference) -> i32 {
+    let value = format!("{object}");
+    let mut hasher = DefaultHasher::new();
+    value.hash(&mut hasher);
+    let hash_code = hasher.finish();
+    #[expect(clippy::cast_possible_truncation)]
+    let hash_code = hash_code as i32;
+    hash_code
 }
 
 #[expect(clippy::needless_pass_by_value)]
