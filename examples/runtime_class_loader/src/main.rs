@@ -4,7 +4,7 @@
 use ristretto_classloader::{runtime, Result};
 
 /// Example that loads a class from the Java runtime.
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let (version, class_loader) = runtime::class_loader("21").await?;
     let class_name = "java/util/HashMap";
