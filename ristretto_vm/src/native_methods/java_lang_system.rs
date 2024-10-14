@@ -11,6 +11,7 @@ use ristretto_classfile::{ClassFile, MethodAccessFlags};
 use ristretto_classloader::{Class, ConcurrentVec, Method, Object, Reference, Value};
 use std::cmp::min;
 use std::collections::HashMap;
+use std::env::consts::OS;
 use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
@@ -45,6 +46,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "initProperties",
         "(Ljava/util/Properties;)Ljava/util/Properties;",
         init_properties,
+    );
+    registry.register(
+        class_name,
+        "mapLibraryName",
+        "(Ljava/lang/String;)Ljava/lang/String;",
+        map_library_name,
     );
     registry.register(class_name, "nanoTime", "()J", nano_time);
     registry.register(class_name, "registerNatives", "()V", register_natives);
@@ -229,6 +236,26 @@ fn init_properties(
         let _system_properties = &mut properties::system(call_stack).await?;
         // TODO: add system properties to the properties object
         Ok(Some(Value::Object(properties)))
+    })
+}
+
+fn map_library_name(
+    call_stack: Arc<CallStack>,
+    mut arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let Some(Reference::Object(object)) = arguments.pop_object()? else {
+            return Err(RuntimeError("argument must be an object".to_string()));
+        };
+        let libname = object.as_string()?;
+        let library_name = match OS {
+            "macos" => format!("lib{libname}.dylib"),
+            "windows" => format!("{libname}.dll"),
+            _ => format!("lib{libname}.so"),
+        };
+        let vm = call_stack.vm()?;
+        let library_name = vm.string(library_name).await?;
+        Ok(Some(library_name))
     })
 }
 
