@@ -13,7 +13,7 @@ use tracing::{debug, instrument};
 /// # Errors
 /// An error will be returned if the class loader cannot be created.
 #[instrument(level = "debug")]
-pub fn class_loader(version: &str) -> Result<(String, ClassLoader)> {
+pub async fn class_loader(version: &str) -> Result<(String, ClassLoader)> {
     let mut archive_version = version.to_string();
     let current_dir = env::current_dir().unwrap_or_default();
     #[cfg(target_arch = "wasm32")]
@@ -24,7 +24,7 @@ pub fn class_loader(version: &str) -> Result<(String, ClassLoader)> {
     let mut installation_dir = base_path.join(version);
 
     if !installation_dir.exists() {
-        let (version, file_name, archive) = util::get_runtime_archive(version)?;
+        let (version, file_name, archive) = util::get_runtime_archive(version).await?;
         installation_dir =
             extract_archive(version.as_str(), file_name.as_str(), &archive, &base_path)?;
         archive_version = version;
@@ -144,19 +144,19 @@ fn extract_archive(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_class_loader_v8() -> Result<()> {
+    #[tokio::test]
+    async fn test_class_loader_v8() -> Result<()> {
         let version = "8.422.05.1";
-        let (archive_version, class_loader) = class_loader(version)?;
+        let (archive_version, class_loader) = class_loader(version).await?;
         assert_eq!(version, archive_version);
         assert_eq!("bootstrap", class_loader.name());
         Ok(())
     }
 
-    #[test]
-    fn test_class_loader_v21() -> Result<()> {
+    #[tokio::test]
+    async fn test_class_loader_v21() -> Result<()> {
         let version = "21.0.4.7.1";
-        let (archive_version, class_loader) = class_loader(version)?;
+        let (archive_version, class_loader) = class_loader(version).await?;
         assert_eq!(version, archive_version);
         assert_eq!("bootstrap", class_loader.name());
         Ok(())

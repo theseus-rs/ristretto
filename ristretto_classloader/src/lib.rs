@@ -25,11 +25,12 @@
 //! use ristretto_classloader::{runtime, ClassLoader, Result};
 //! use std::sync::Arc;
 //!
-//! fn main() -> Result<()> {
-//!     let (version, class_loader) = runtime::class_loader("21")?;
+//! #[tokio::main]
+//! async fn main() -> Result<()> {
+//!     let (version, class_loader) = runtime::class_loader("21").await?;
 //!     let class_name = "java/util/HashMap";
 //!     println!("Loading {class_name} from Java runtime {version}");
-//!     let class = class_loader.load(class_name)?;
+//!     let class = class_loader.load(class_name).await?;
 //!     println!("{class:?}");
 //!     Ok(())
 //! }
@@ -53,6 +54,7 @@
 #![deny(clippy::pedantic)]
 #![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
+#![recursion_limit = "512"]
 
 mod class;
 mod class_loader;

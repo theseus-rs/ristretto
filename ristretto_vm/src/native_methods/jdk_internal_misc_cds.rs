@@ -3,7 +3,9 @@ use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Result;
 use ristretto_classloader::Value;
+use std::future::Future;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::pin::Pin;
 use std::sync::Arc;
 
 /// Register all native methods for jdk.internal.misc.CDS.
@@ -33,49 +35,50 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::cast_possible_wrap)]
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
 fn get_random_seed_for_dumping(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     _arguments: Arguments,
-) -> Result<Option<Value>> {
-    let version = env!("CARGO_PKG_VERSION");
-    let mut hasher = DefaultHasher::new();
-    version.hash(&mut hasher);
-    let hash = hasher.finish() as i64;
-    Ok(Some(Value::Long(hash)))
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let version = env!("CARGO_PKG_VERSION");
+        let mut hasher = DefaultHasher::new();
+        version.hash(&mut hasher);
+        let hash = hasher.finish() as i64;
+        Ok(Some(Value::Long(hash)))
+    })
 }
 
+#[expect(clippy::needless_pass_by_value)]
 fn initialize_from_archive(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     mut arguments: Arguments,
-) -> Result<Option<Value>> {
-    let _class = arguments.pop_object()?;
-    Ok(None)
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let _class = arguments.pop_object()?;
+        Ok(None)
+    })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
 fn is_dumping_archive_0(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     _arguments: Arguments,
-) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(Some(Value::Int(0))) })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
 fn is_dumping_class_list_0(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     _arguments: Arguments,
-) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(Some(Value::Int(0))) })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
 fn is_sharing_enabled_0(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     _arguments: Arguments,
-) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(Some(Value::Int(0))) })
 }

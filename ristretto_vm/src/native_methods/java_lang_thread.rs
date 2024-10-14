@@ -3,6 +3,8 @@ use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Result;
 use ristretto_classloader::{Object, Reference, Value};
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -23,38 +25,62 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn count_stack_frames(call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
-    let frames = call_stack.frames()?;
-    let frames = i32::try_from(frames.len())?;
-    Ok(Some(Value::Int(frames)))
+fn count_stack_frames(
+    call_stack: Arc<CallStack>,
+    _arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let frames = call_stack.frames()?;
+        let frames = i32::try_from(frames.len())?;
+        Ok(Some(Value::Int(frames)))
+    })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn current_thread(call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
-    // TODO: correct this once threading is implemented
-    let vm = call_stack.vm()?;
-    let thread_class = vm.class(call_stack, "java/lang/Thread")?;
-    let thread = Value::Object(Some(Reference::Object(Object::new(thread_class)?)));
-    Ok(Some(thread))
+fn current_thread(
+    call_stack: Arc<CallStack>,
+    _arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        // TODO: correct this once threading is implemented
+        let vm = call_stack.vm()?;
+        let thread_class = vm.class(&call_stack, "java/lang/Thread").await?;
+        let object = Object::new(thread_class)?;
+        let reference = Reference::Object(object);
+        let thread = Value::Object(Some(reference));
+        Ok(Some(thread))
+    })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
-fn register_natives(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(None)
-}
-
-fn sleep(_call_stack: &Arc<CallStack>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let millis = arguments.pop_long()?;
-    let millis = u64::try_from(millis)?;
-    let duration = Duration::from_millis(millis);
-    thread::sleep(duration);
-    Ok(None)
+fn register_natives(
+    _call_stack: Arc<CallStack>,
+    _arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(None) })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
-fn r#yield(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
-    thread::yield_now();
-    Ok(None)
+fn sleep(
+    _call_stack: Arc<CallStack>,
+    mut arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let millis = arguments.pop_long()?;
+        let millis = u64::try_from(millis)?;
+        let duration = Duration::from_millis(millis);
+        thread::sleep(duration);
+        Ok(None)
+    })
+}
+
+#[expect(clippy::needless_pass_by_value)]
+fn r#yield(
+    _call_stack: Arc<CallStack>,
+    _arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        thread::yield_now();
+        Ok(None)
+    })
 }

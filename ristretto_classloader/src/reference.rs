@@ -214,8 +214,8 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_display_reference() -> Result<()> {
+    #[tokio::test]
+    async fn test_display_reference() -> Result<()> {
         let class = minimum_class()?;
         let object = Object::new(class)?;
         let reference = Reference::Object(object);

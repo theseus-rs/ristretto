@@ -1,21 +1,21 @@
-use crate::Error::{InvalidLocalVariable, InvalidLocalVariableIndex, PoisonedLock};
+use crate::Error::{InvalidLocalVariable, InvalidLocalVariableIndex};
 use crate::Result;
-use ristretto_classloader::{Reference, Value};
-use std::cell::{Ref, RefCell};
+use ristretto_classloader::{ConcurrentVec, Reference, Value};
 use std::fmt::Display;
+use std::sync::Arc;
 
 /// Represents the local variables in a frame.
 #[derive(Clone, Debug)]
 pub(crate) struct LocalVariables {
-    locals: Vec<RefCell<Value>>,
+    locals: ConcurrentVec<Arc<Value>>,
 }
 
 impl LocalVariables {
     /// Create a new local variables with a maximum size.
+    #[expect(clippy::rc_clone_in_vec_init)]
     pub fn with_max_size(max_size: usize) -> Self {
-        LocalVariables {
-            locals: vec![RefCell::new(Value::Unused); max_size],
-        }
+        let locals = ConcurrentVec::from(vec![Arc::new(Value::Unused); max_size]);
+        LocalVariables { locals }
     }
 
     /// Get a value from the local variables.
@@ -23,14 +23,9 @@ impl LocalVariables {
     /// # Errors
     /// if the local variable at the given index was not found.
     #[inline]
-    pub fn get(&self, index: usize) -> Result<Ref<Value>> {
-        match self.locals.get(index) {
-            Some(value) => {
-                let value = value
-                    .try_borrow()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(value)
-            }
+    pub fn get(&self, index: usize) -> Result<Arc<Value>> {
+        match self.locals.get(index)? {
+            Some(value) => Ok(value),
             None => Err(InvalidLocalVariableIndex(index)),
         }
     }
@@ -41,10 +36,13 @@ impl LocalVariables {
     /// if the local variable at the given index was not found or if the value is not an int.
     pub fn get_int(&self, index: usize) -> Result<i32> {
         let value = self.get(index)?;
-        value.as_int().map_err(|_error| InvalidLocalVariable {
-            expected: "int".to_string(),
-            actual: value.to_string(),
-        })
+        match value.as_int() {
+            Ok(value) => Ok(value),
+            Err(_error) => Err(InvalidLocalVariable {
+                expected: "int".to_string(),
+                actual: value.to_string(),
+            }),
+        }
     }
 
     /// Get a long from the local variables.
@@ -53,10 +51,13 @@ impl LocalVariables {
     /// if the local variable at the given index was not found or if the value is not a long.
     pub fn get_long(&self, index: usize) -> Result<i64> {
         let value = self.get(index)?;
-        value.as_long().map_err(|_error| InvalidLocalVariable {
-            expected: "long".to_string(),
-            actual: value.to_string(),
-        })
+        match value.as_long() {
+            Ok(value) => Ok(value),
+            Err(_error) => Err(InvalidLocalVariable {
+                expected: "long".to_string(),
+                actual: value.to_string(),
+            }),
+        }
     }
 
     /// Get a float from the local variables.
@@ -65,10 +66,13 @@ impl LocalVariables {
     /// if the local variable at the given index was not found or if the value is not a float.
     pub fn get_float(&self, index: usize) -> Result<f32> {
         let value = self.get(index)?;
-        value.as_float().map_err(|_error| InvalidLocalVariable {
-            expected: "float".to_string(),
-            actual: value.to_string(),
-        })
+        match value.as_float() {
+            Ok(value) => Ok(value),
+            Err(_error) => Err(InvalidLocalVariable {
+                expected: "float".to_string(),
+                actual: value.to_string(),
+            }),
+        }
     }
 
     /// Get a double from the local variables.
@@ -77,10 +81,13 @@ impl LocalVariables {
     /// if the local variable at the given index was not found or if the value is not a double.
     pub fn get_double(&self, index: usize) -> Result<f64> {
         let value = self.get(index)?;
-        value.as_double().map_err(|_error| InvalidLocalVariable {
-            expected: "double".to_string(),
-            actual: value.to_string(),
-        })
+        match value.as_double() {
+            Ok(value) => Ok(value),
+            Err(_error) => Err(InvalidLocalVariable {
+                expected: "double".to_string(),
+                actual: value.to_string(),
+            }),
+        }
     }
 
     /// Get a null or object from the local variables.
@@ -90,11 +97,13 @@ impl LocalVariables {
     /// object.
     pub fn get_object(&self, index: usize) -> Result<Option<Reference>> {
         let value = self.get(index)?;
-        let reference = value.as_object().map_err(|_error| InvalidLocalVariable {
-            expected: "object".to_string(),
-            actual: value.to_string(),
-        })?;
-        Ok(reference.cloned())
+        match value.as_object() {
+            Ok(value) => Ok(value.cloned()),
+            Err(_error) => Err(InvalidLocalVariable {
+                expected: "object".to_string(),
+                actual: value.to_string(),
+            }),
+        }
     }
 
     /// Set a value in the local variables.
@@ -103,8 +112,8 @@ impl LocalVariables {
     /// if the index is out of bounds.
     #[inline]
     pub fn set(&self, index: usize, value: Value) -> Result<()> {
-        if index < self.locals.capacity() {
-            self.locals[index].replace(value);
+        if index < self.locals.capacity()? {
+            self.locals.set(index, Arc::new(value))?;
             Ok(())
         } else {
             Err(InvalidLocalVariableIndex(index))
@@ -154,10 +163,10 @@ impl LocalVariables {
     /// Get the length of the local variables.
     pub fn len(&self) -> Result<usize> {
         let mut length = 0;
-        for (index, value) in self.locals.iter().enumerate() {
-            let value = value
-                .try_borrow()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+        for index in 0..self.locals.capacity()? {
+            let Some(value) = self.locals.get(index)? else {
+                continue;
+            };
             if *value != Value::Unused {
                 length = index + 1;
             }
@@ -174,11 +183,12 @@ impl LocalVariables {
 impl Display for LocalVariables {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut locals = Vec::new();
-        for local in &self.locals {
-            let value = match local.try_borrow() {
-                Ok(value) => value.to_string(),
-                Err(error) => format!("poisoned lock: {error}"),
+        for index in 0..self.locals.capacity().unwrap_or_default() {
+            let Ok(Some(local)) = self.locals.get(index) else {
+                locals.push(String::new());
+                continue;
             };
+            let value = local.to_string();
             if value.len() > 100 {
                 locals.push(format!("{}...", &value[..97]));
             } else {
@@ -198,8 +208,7 @@ mod tests {
     fn test_get() -> Result<()> {
         let locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Int(42))?;
-        let result = locals.get(0)?.as_int()?;
-        assert_eq!(result, 42);
+        assert_eq!(locals.get(0)?.as_int()?, 42);
         Ok(())
     }
 
@@ -363,8 +372,7 @@ mod tests {
     fn test_set() -> Result<()> {
         let locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Int(42))?;
-        let result = locals.get(0)?.as_int()?;
-        assert_eq!(result, 42);
+        assert_eq!(locals.get(0)?.as_int()?, 42);
         Ok(())
     }
 

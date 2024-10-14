@@ -6,28 +6,28 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Get the specific class for testing.
-pub(crate) fn load_class(class_name: &str) -> Result<(Arc<VM>, Arc<CallStack>, Arc<Class>)> {
+pub(crate) async fn load_class(class_name: &str) -> Result<(Arc<VM>, Arc<CallStack>, Arc<Class>)> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let classes_path = cargo_manifest.join("../classes");
     let class_path = ClassPath::from(classes_path.to_string_lossy());
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())
         .build();
-    let vm = VM::new(configuration)?;
+    let vm = VM::new(configuration).await?;
     let call_stack = CallStack::new(&Arc::downgrade(&vm));
-    let class = vm.class(&call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name).await?;
     Ok((vm, call_stack, class))
 }
 
 /// Get a test class for testing.
-pub(crate) fn class() -> Result<(Arc<VM>, Arc<CallStack>, Arc<Class>)> {
+pub(crate) async fn class() -> Result<(Arc<VM>, Arc<CallStack>, Arc<Class>)> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let classes_path = cargo_manifest.join("../classes");
     let class_path = ClassPath::from(classes_path.to_string_lossy());
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())
         .build();
-    let vm = VM::new(configuration)?;
+    let vm = VM::new(configuration).await?;
     let call_stack = CallStack::new(&Arc::downgrade(&vm));
     let mut constant_pool = ConstantPool::default();
     let this_class = constant_pool.add_class("Test")?;
@@ -41,8 +41,8 @@ pub(crate) fn class() -> Result<(Arc<VM>, Arc<CallStack>, Arc<Class>)> {
 }
 
 /// Get a test frame for testing.
-pub(crate) fn frame() -> Result<(Arc<VM>, Arc<CallStack>, Frame)> {
-    let (vm, call_stack, class) = class()?;
+pub(crate) async fn frame() -> Result<(Arc<VM>, Arc<CallStack>, Frame)> {
+    let (vm, call_stack, class) = class().await?;
     let method = Method::new(
         MethodAccessFlags::STATIC,
         "test",

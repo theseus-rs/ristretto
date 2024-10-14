@@ -4,6 +4,8 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::Error::{InvalidOperand, RuntimeError};
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
 /// Register all native methods for jdk.internal.misc.Unsafe.
@@ -185,233 +187,260 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
-fn init(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
+fn init(
+    _call_stack: Arc<CallStack>,
+    _arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     // Unsafe <init> is a no-op and the class is deprecated; override the default behavior to avoid
     // the performance penalty of creating a new frame.
-    Ok(None)
+    Box::pin(async move { Ok(None) })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
 fn array_base_offset_0(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     _arguments: Arguments,
-) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(Some(Value::Int(0))) })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
 fn array_index_scale_0(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     _arguments: Arguments,
-) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(1)))
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(Some(Value::Int(1))) })
 }
 
+#[expect(clippy::needless_pass_by_value)]
 fn compare_and_set_int(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     mut arguments: Arguments,
-) -> Result<Option<Value>> {
-    let x = arguments.pop_int()?;
-    let expected = arguments.pop_int()?;
-    let offset = arguments.pop_long()?;
-    let Some(Reference::Object(object)) = arguments.pop_object()? else {
-        return Err(RuntimeError(
-            "compareAndSetInt: Invalid reference".to_string(),
-        ));
-    };
-    let class = object.class();
-    let offset = usize::try_from(offset)?;
-    let field_name = class.field_name(offset)?;
-    let field = object.field(&field_name)?;
-    let value = field.value()?.as_int()?;
-    // TODO: the compare and set operation should be atomic
-    let result = if value == expected {
-        field.set_value(Value::Int(x))?;
-        1
-    } else {
-        0
-    };
-    Ok(Some(Value::Int(result)))
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let x = arguments.pop_int()?;
+        let expected = arguments.pop_int()?;
+        let offset = arguments.pop_long()?;
+        let Some(Reference::Object(object)) = arguments.pop_object()? else {
+            return Err(RuntimeError(
+                "compareAndSetInt: Invalid reference".to_string(),
+            ));
+        };
+        let class = object.class();
+        let offset = usize::try_from(offset)?;
+        let field_name = class.field_name(offset)?;
+        let field = object.field(&field_name)?;
+        let value = field.value()?.as_int()?;
+        // TODO: the compare and set operation should be atomic
+        let result = if value == expected {
+            field.set_value(Value::Int(x))?;
+            1
+        } else {
+            0
+        };
+        Ok(Some(Value::Int(result)))
+    })
 }
 
+#[expect(clippy::needless_pass_by_value)]
 fn compare_and_set_long(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     mut arguments: Arguments,
-) -> Result<Option<Value>> {
-    let x = arguments.pop_long()?;
-    let expected = arguments.pop_long()?;
-    let offset = arguments.pop_long()?;
-    let Some(Reference::Object(object)) = arguments.pop_object()? else {
-        return Err(RuntimeError(
-            "compareAndSetLong: Invalid reference".to_string(),
-        ));
-    };
-    let class = object.class();
-    let offset = usize::try_from(offset)?;
-    let field_name = class.field_name(offset)?;
-    let field = object.field(&field_name)?;
-    let value = field.value()?.as_long()?;
-    // TODO: the compare and set operation should be atomic
-    let result = if value == expected {
-        field.set_value(Value::Long(x))?;
-        1
-    } else {
-        0
-    };
-    Ok(Some(Value::Int(result)))
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let x = arguments.pop_long()?;
+        let expected = arguments.pop_long()?;
+        let offset = arguments.pop_long()?;
+        let Some(Reference::Object(object)) = arguments.pop_object()? else {
+            return Err(RuntimeError(
+                "compareAndSetLong: Invalid reference".to_string(),
+            ));
+        };
+        let class = object.class();
+        let offset = usize::try_from(offset)?;
+        let field_name = class.field_name(offset)?;
+        let field = object.field(&field_name)?;
+        let value = field.value()?.as_long()?;
+        // TODO: the compare and set operation should be atomic
+        let result = if value == expected {
+            field.set_value(Value::Long(x))?;
+            1
+        } else {
+            0
+        };
+        Ok(Some(Value::Int(result)))
+    })
 }
 
+#[expect(clippy::needless_pass_by_value)]
 fn compare_and_set_reference(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     mut arguments: Arguments,
-) -> Result<Option<Value>> {
-    let x = arguments.pop_object()?;
-    let expected = arguments.pop_object()?;
-    let offset = arguments.pop_long()?;
-    let offset = usize::try_from(offset)?;
-    let Some(object) = arguments.pop_object()? else {
-        return Err(RuntimeError(
-            "compareAndSetReference: Invalid reference".to_string(),
-        ));
-    };
-    let result = match object {
-        Reference::Array(_class, array) => {
-            let Some(reference) = array.get(offset)? else {
-                return Err(RuntimeError(
-                    "getReference: Invalid reference index".to_string(),
-                ));
-            };
-            // TODO: the compare and set operation should be atomic
-            if reference == expected {
-                array.set(offset, x)?;
-                1
-            } else {
-                0
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let x = arguments.pop_object()?;
+        let expected = arguments.pop_object()?;
+        let offset = arguments.pop_long()?;
+        let offset = usize::try_from(offset)?;
+        let Some(object) = arguments.pop_object()? else {
+            return Err(RuntimeError(
+                "compareAndSetReference: Invalid reference".to_string(),
+            ));
+        };
+        let result = match object {
+            Reference::Array(_class, array) => {
+                let Some(reference) = array.get(offset)? else {
+                    return Err(RuntimeError(
+                        "getReference: Invalid reference index".to_string(),
+                    ));
+                };
+                // TODO: the compare and set operation should be atomic
+                if reference == expected {
+                    array.set(offset, x)?;
+                    1
+                } else {
+                    0
+                }
             }
-        }
-        _ => {
-            return Err(RuntimeError("getReference: Invalid reference".to_string()));
-        }
-    };
-    Ok(Some(Value::Int(result)))
+            _ => {
+                return Err(RuntimeError("getReference: Invalid reference".to_string()));
+            }
+        };
+        Ok(Some(Value::Int(result)))
+    })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
 fn ensure_class_initialized_0(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     _arguments: Arguments,
-) -> Result<Option<Value>> {
-    Ok(None)
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(None) })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
-fn full_fence(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(None)
+fn full_fence(
+    _call_stack: Arc<CallStack>,
+    _arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(None) })
 }
 
-fn get_reference(_call_stack: &Arc<CallStack>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let offset = arguments.pop_long()?;
-    let offset = usize::try_from(offset)?;
-    let Some(reference) = arguments.pop_object()? else {
-        return Err(RuntimeError("getReference: Invalid reference".to_string()));
-    };
-    match reference {
-        Reference::Array(_class, array) => {
-            let Some(reference) = array.get(offset)? else {
-                return Err(RuntimeError(
-                    "getReference: Invalid reference index".to_string(),
-                ));
-            };
-            Ok(Some(Value::Object(reference)))
+#[expect(clippy::needless_pass_by_value)]
+fn get_reference(
+    _call_stack: Arc<CallStack>,
+    mut arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let offset = arguments.pop_long()?;
+        let offset = usize::try_from(offset)?;
+        let Some(reference) = arguments.pop_object()? else {
+            return Err(RuntimeError("getReference: Invalid reference".to_string()));
+        };
+        match reference {
+            Reference::Array(_class, array) => {
+                let Some(reference) = array.get(offset)? else {
+                    return Err(RuntimeError(
+                        "getReference: Invalid reference index".to_string(),
+                    ));
+                };
+                Ok(Some(Value::Object(reference)))
+            }
+            Reference::Object(object) => {
+                let field_name = object.class().field_name(offset)?;
+                let field = object.field(&field_name)?;
+                let value = field.value()?;
+                Ok(Some(value))
+            }
+            _ => Err(RuntimeError("getReference: Invalid reference".to_string())),
         }
-        Reference::Object(object) => {
-            let field_name = object.class().field_name(offset)?;
-            let field = object.field(&field_name)?;
-            let value = field.value()?;
-            Ok(Some(value))
-        }
-        _ => Err(RuntimeError("getReference: Invalid reference".to_string())),
-    }
+    })
 }
 
 #[inline]
 fn get_reference_volatile(
-    call_stack: &Arc<CallStack>,
+    call_stack: Arc<CallStack>,
     arguments: Arguments,
-) -> Result<Option<Value>> {
-    get_reference(call_stack, arguments)
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { get_reference(call_stack, arguments).await })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
-fn load_fence(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(None)
+fn load_fence(
+    _call_stack: Arc<CallStack>,
+    _arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(None) })
 }
 
 fn object_field_offset_1(
-    call_stack: &Arc<CallStack>,
+    call_stack: Arc<CallStack>,
     mut arguments: Arguments,
-) -> Result<Option<Value>> {
-    let value = arguments.pop()?;
-    let field_name = match value {
-        Value::Object(_) => value.as_string()?,
-        value => {
-            return Err(InvalidOperand {
-                expected: "object".to_string(),
-                actual: value.to_string(),
-            });
-        }
-    };
-    let Some(Reference::Object(class_object)) = arguments.pop_object()? else {
-        return Err(RuntimeError(
-            "objectFieldOffset1: Invalid class reference".to_string(),
-        ));
-    };
-    let name_field = class_object.field("name")?;
-    let class_name = name_field.value()?.as_string()?;
-    let vm = call_stack.vm()?;
-    let class = vm.class(call_stack, &class_name)?;
-    let offset = class.field_offset(&field_name)?;
-    let offset = i64::try_from(offset)?;
-    Ok(Some(Value::Long(offset)))
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let value = arguments.pop()?;
+        let field_name = match value {
+            Value::Object(_) => value.as_string()?,
+            value => {
+                return Err(InvalidOperand {
+                    expected: "object".to_string(),
+                    actual: value.to_string(),
+                });
+            }
+        };
+        let Some(Reference::Object(class_object)) = arguments.pop_object()? else {
+            return Err(RuntimeError(
+                "objectFieldOffset1: Invalid class reference".to_string(),
+            ));
+        };
+        let name_field = class_object.field("name")?;
+        let class_name = name_field.value()?.as_string()?;
+        let vm = call_stack.vm()?;
+        let class = vm.class(&call_stack, &class_name).await?;
+        let offset = class.field_offset(&field_name)?;
+        let offset = i64::try_from(offset)?;
+        Ok(Some(Value::Long(offset)))
+    })
 }
 
+#[expect(clippy::needless_pass_by_value)]
 fn put_reference_volatile(
-    _call_stack: &Arc<CallStack>,
+    _call_stack: Arc<CallStack>,
     mut arguments: Arguments,
-) -> Result<Option<Value>> {
-    let x = arguments.pop_object()?;
-    let offset = arguments.pop_long()?;
-    let offset = usize::try_from(offset)?;
-    let Some(object) = arguments.pop_object()? else {
-        return Err(RuntimeError(
-            "compareAndSetReference: Invalid reference".to_string(),
-        ));
-    };
-    match object {
-        Reference::Array(_class, array) => {
-            array.set(offset, x)?;
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let x = arguments.pop_object()?;
+        let offset = arguments.pop_long()?;
+        let offset = usize::try_from(offset)?;
+        let Some(object) = arguments.pop_object()? else {
+            return Err(RuntimeError(
+                "compareAndSetReference: Invalid reference".to_string(),
+            ));
+        };
+        match object {
+            Reference::Array(_class, array) => {
+                array.set(offset, x)?;
+            }
+            _ => {
+                return Err(RuntimeError("getReference: Invalid reference".to_string()));
+            }
         }
-        _ => {
-            return Err(RuntimeError("getReference: Invalid reference".to_string()));
-        }
-    }
-    Ok(None)
+        Ok(None)
+    })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
-fn register_natives(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(None)
+fn register_natives(
+    _call_stack: Arc<CallStack>,
+    _arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(None) })
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
-fn store_fence(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(None)
+fn store_fence(
+    _call_stack: Arc<CallStack>,
+    _arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(None) })
 }

@@ -48,7 +48,8 @@ struct Cli {
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     logging::initialize();
 
     let cli = Cli::parse();
@@ -72,20 +73,20 @@ fn main() -> Result<()> {
     }
 
     let configuration = configuration_builder.build();
-    let vm = VM::new(configuration)?;
+    let vm = VM::new(configuration).await?;
     let Some(main_class_name) = vm.main_class() else {
         return Err(RuntimeError("No main class specified".into()));
     };
-    let main_class = vm.load(main_class_name)?;
+    let main_class = vm.load(main_class_name).await?;
     let Some(main_method) = main_class.main_method() else {
         return Err(RuntimeError("No main method found".into()));
     };
 
     let mut arguments = Vec::new();
     for argument in cli.arguments.unwrap_or_default() {
-        arguments.push(vm.string(argument.as_str())?);
+        arguments.push(vm.string(argument.as_str()).await?);
     }
 
-    vm.invoke(&main_class, &main_method, arguments)?;
+    vm.invoke(&main_class, &main_method, arguments).await?;
     Ok(())
 }

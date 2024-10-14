@@ -155,9 +155,9 @@ checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
 name = "cc"
-version = "1.1.28"
+version = "1.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e80e3b6a3ab07840e1cae9b0666a63970dc28e8ed5ffbcdacbfc760c281bfc1"
+checksum = "b16803a61b81d9eabb7eae2588776c4c1e584b738ede45fdbb4c972cec1e9945"
 dependencies = [
  "shlex",
 ]
@@ -240,6 +240,7 @@ name = "class_loader"
 version = "0.8.1"
 dependencies = [
  "ristretto_classloader",
+ "tokio",
 ]
 
 [[package]]
@@ -468,7 +469,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dff15bf788c671c1934e366d07e30c1814a8ef514e1af724a602e8a2fbe1b10"
 dependencies = [
  "futures-core",
- "futures-sink",
 ]
 
 [[package]]
@@ -476,18 +476,6 @@ name = "futures-core"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05f29059c0c2090612e8d742178b0580d2dc940c837851ad723096f87af6663e"
-
-[[package]]
-name = "futures-io"
-version = "0.3.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e5c1b78ca4aae1ac06c48a526a655760685149f0d465d21f37abfe57ce075c6"
-
-[[package]]
-name = "futures-sink"
-version = "0.3.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e575fab7d1e0dcb8d0c7bcf9a63ee213816ab51902e6d244a95819acacf1d4f7"
 
 [[package]]
 name = "futures-task"
@@ -502,13 +490,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fa08315bb612088cc391249efdc3bc77536f16c91f6cf495e6fbe85b20a4a81"
 dependencies = [
  "futures-core",
- "futures-io",
- "futures-sink",
  "futures-task",
- "memchr",
  "pin-project-lite",
  "pin-utils",
- "slab",
 ]
 
 [[package]]
@@ -749,9 +733,9 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "js-sys"
-version = "0.3.71"
+version = "0.3.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cb94a0ffd3f3ee755c20f7d8752f45cac88605a4dcf808abcff72873296ec7b"
+checksum = "6a88f1bda2bd75b0452a14784937d796722fdebfe50df998aeb3f0b7603019a9"
 dependencies = [
  "wasm-bindgen",
 ]
@@ -1201,7 +1185,6 @@ checksum = "f713147fbe92361e52392c73b8c9e48c04c6625bce969ef54dc901e58e042a7b"
 dependencies = [
  "base64",
  "bytes",
- "futures-channel",
  "futures-core",
  "futures-util",
  "http",
@@ -1268,6 +1251,7 @@ dependencies = [
  "reqwest",
  "tar",
  "thiserror",
+ "tokio",
  "zip",
 ]
 
@@ -1287,6 +1271,7 @@ dependencies = [
  "tar",
  "tempfile",
  "thiserror",
+ "tokio",
  "tracing",
  "zip",
 ]
@@ -1298,6 +1283,7 @@ dependencies = [
  "clap",
  "os_info",
  "ristretto_vm",
+ "tokio",
  "tracing",
  "tracing-subscriber",
 ]
@@ -1315,6 +1301,7 @@ dependencies = [
  "sys-locale",
  "sysinfo",
  "thiserror",
+ "tokio",
  "tracing",
  "whoami",
 ]
@@ -1324,6 +1311,7 @@ name = "runtime_class_loader"
 version = "0.8.1"
 dependencies = [
  "ristretto_classloader",
+ "tokio",
 ]
 
 [[package]]
@@ -1702,7 +1690,19 @@ dependencies = [
  "mio",
  "pin-project-lite",
  "socket2",
+ "tokio-macros",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "693d596312e88961bc67d7f1f97af8a70227d9f90c31bba5806eec004978d752"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1888,9 +1888,9 @@ checksum = "b8dad83b4f25e74f184f64c43b150b91efe7647395b42289f38e50566d82855b"
 
 [[package]]
 name = "wasm-bindgen"
-version = "0.2.94"
+version = "0.2.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef073ced962d62984fb38a36e5fdc1a2b23c9e0e1fa0689bb97afa4202ef6887"
+checksum = "128d1e363af62632b8eb57219c8fd7877144af57558fb2ef0368d0087bddeb2e"
 dependencies = [
  "cfg-if",
  "once_cell",
@@ -1899,9 +1899,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-backend"
-version = "0.2.94"
+version = "0.2.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4bfab14ef75323f4eb75fa52ee0a3fb59611977fd3240da19b2cf36ff85030e"
+checksum = "cb6dd4d3ca0ddffd1dd1c9c04f94b868c37ff5fac97c30b97cff2d74fce3a358"
 dependencies = [
  "bumpalo",
  "log",
@@ -1914,9 +1914,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-futures"
-version = "0.4.44"
+version = "0.4.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65471f79c1022ffa5291d33520cbbb53b7687b01c2f8e83b57d102eed7ed479d"
+checksum = "cc7ec4f8827a71586374db3e87abdb5a2bb3a15afed140221307c3ec06b1f63b"
 dependencies = [
  "cfg-if",
  "js-sys",
@@ -1926,9 +1926,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro"
-version = "0.2.94"
+version = "0.2.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7bec9830f60924d9ceb3ef99d55c155be8afa76954edffbb5936ff4509474e7"
+checksum = "e79384be7f8f5a9dd5d7167216f022090cf1f9ec128e6e6a482a2cb5c5422c56"
 dependencies = [
  "quote",
  "wasm-bindgen-macro-support",
@@ -1936,9 +1936,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro-support"
-version = "0.2.94"
+version = "0.2.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c74f6e152a76a2ad448e223b0fc0b6b5747649c3d769cc6bf45737bf97d0ed6"
+checksum = "26c6ab57572f7a24a4985830b120de1594465e5d500f24afe89e16b4e833ef68"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1949,15 +1949,15 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-shared"
-version = "0.2.94"
+version = "0.2.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a42f6c679374623f295a8623adfe63d9284091245c3504bde47c17a3ce2777d9"
+checksum = "65fc09f10666a9f147042251e0dda9c18f166ff7de300607007e96bdebc1068d"
 
 [[package]]
 name = "web-sys"
-version = "0.3.71"
+version = "0.3.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44188d185b5bdcae1052d08bcbcf9091a5524038d4572cc4f4f2bb9d5554ddd9"
+checksum = "f6488b90108c040df0fe62fa815cbdee25124641df01814dd7282749234c6112"
 dependencies = [
  "js-sys",
  "wasm-bindgen",

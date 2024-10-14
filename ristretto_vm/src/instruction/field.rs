@@ -69,13 +69,12 @@ mod test {
     use ristretto_classloader::{Method, Value};
     use std::sync::Arc;
 
-    #[expect(clippy::type_complexity)]
-    fn test_class_field(
+    async fn test_class_field(
         class_name: &str,
         field_name: &str,
         field_type: &str,
     ) -> Result<(Arc<VM>, Arc<CallStack>, Frame, u16, u16)> {
-        let (vm, call_stack, mut class) = crate::test::class()?;
+        let (vm, call_stack, mut class) = crate::test::class().await?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class(class_name)?;
         let field_index = constant_pool.add_field_ref(class_index, field_name, field_type)?;
@@ -98,11 +97,11 @@ mod test {
         Ok((vm, call_stack, frame, class_index, field_index))
     }
 
-    fn test_put_and_get_field() -> Result<()> {
+    async fn test_put_and_get_field() -> Result<()> {
         let (_vm, _call_stack, frame, class_index, field_index) =
-            test_class_field("Child", "zero", "I")?;
+            test_class_field("Child", "zero", "I").await?;
         let constant_pool = frame.class().constant_pool().clone();
-        let result = new(&frame, class_index)?;
+        let result = new(&frame, class_index).await?;
         assert_eq!(Continue, result);
 
         let stack = frame.stack();
@@ -123,16 +122,16 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_getfield() -> Result<()> {
-        test_put_and_get_field()
+    #[tokio::test]
+    async fn test_getfield() -> Result<()> {
+        test_put_and_get_field().await
     }
 
-    #[test]
-    fn test_getfield_field_not_found() -> Result<()> {
+    #[tokio::test]
+    async fn test_getfield_field_not_found() -> Result<()> {
         let (_vm, _call_stack, frame, class_index, field_index) =
-            test_class_field("Child", "foo", "I")?;
-        let result = new(&frame, class_index)?;
+            test_class_field("Child", "foo", "I").await?;
+        let result = new(&frame, class_index).await?;
         assert_eq!(Continue, result);
         let constant_pool = frame.class().constant_pool().clone();
         let stack = frame.stack();
@@ -141,9 +140,9 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_getfield_invalid_value() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame()?;
+    #[tokio::test]
+    async fn test_getfield_invalid_value() -> Result<()> {
+        let (_vm, _call_stack, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
         let constant_pool = frame.class().constant_pool();
         stack.push_object(None)?;
@@ -156,17 +155,17 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_putfield() -> Result<()> {
-        test_put_and_get_field()
+    #[tokio::test]
+    async fn test_putfield() -> Result<()> {
+        test_put_and_get_field().await
     }
 
-    #[test]
-    fn test_putfield_field_not_found() -> Result<()> {
+    #[tokio::test]
+    async fn test_putfield_field_not_found() -> Result<()> {
         let (_vm, _call_stack, frame, class_index, field_index) =
-            test_class_field("Child", "foo", "I")?;
+            test_class_field("Child", "foo", "I").await?;
         let constant_pool = frame.class().constant_pool().clone();
-        let result = new(&frame, class_index)?;
+        let result = new(&frame, class_index).await?;
         let stack = frame.stack();
         assert_eq!(Continue, result);
         let result = dup(stack)?;
@@ -177,9 +176,9 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_putfield_invalid_value() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame()?;
+    #[tokio::test]
+    async fn test_putfield_invalid_value() -> Result<()> {
+        let (_vm, _call_stack, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
         let constant_pool = frame.class().constant_pool();
         stack.push_object(None)?;

@@ -18,13 +18,13 @@ enum InvocationType {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokevirtual>
 #[inline]
-pub(crate) fn invokevirtual(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn invokevirtual(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
     let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(&call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -39,17 +39,18 @@ pub(crate) fn invokevirtual(frame: &Frame, method_index: u16) -> Result<Executio
         method,
         &InvocationType::Virtual,
     )
+    .await
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokespecial>
 #[inline]
-pub(crate) fn invokespecial(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn invokespecial(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
     let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(&call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -64,11 +65,12 @@ pub(crate) fn invokespecial(frame: &Frame, method_index: u16) -> Result<Executio
         method,
         &InvocationType::Special,
     )
+    .await
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokestatic>
 #[inline]
-pub(crate) fn invokestatic(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn invokestatic(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
     let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
@@ -85,7 +87,7 @@ pub(crate) fn invokestatic(frame: &Frame, method_index: u16) -> Result<Execution
         return Err(InvalidConstantPoolIndexType(method_index).into());
     };
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(&call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -100,11 +102,12 @@ pub(crate) fn invokestatic(frame: &Frame, method_index: u16) -> Result<Execution
         method,
         &InvocationType::Static,
     )
+    .await
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokeinterface>
 #[inline]
-pub(crate) fn invokeinterface(
+pub(crate) async fn invokeinterface(
     frame: &Frame,
     method_index: u16,
     _count: u8,
@@ -115,7 +118,7 @@ pub(crate) fn invokeinterface(
     let (class_index, name_and_type_index) =
         constant_pool.try_get_interface_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(&call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -130,11 +133,12 @@ pub(crate) fn invokeinterface(
         method,
         &InvocationType::Interface,
     )
+    .await
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokedynamic>
 #[inline]
-pub(crate) fn invokedynamic(_frame: &Frame, _method_index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn invokedynamic(_frame: &Frame, _method_index: u16) -> Result<ExecutionResult> {
     todo!()
 }
 
@@ -143,7 +147,7 @@ pub(crate) fn invokedynamic(_frame: &Frame, _method_index: u16) -> Result<Execut
 /// # Errors
 /// if the method is not found
 #[inline]
-fn invoke_method(
+async fn invoke_method(
     vm: &Arc<VM>,
     call_stack: &CallStack,
     frame: &Frame,
@@ -181,7 +185,7 @@ fn invoke_method(
                     // Primitive types do not have a class associated with them so the class must be
                     // created from the class name.
                     let class_name = reference.class_name();
-                    vm.class(call_stack, &class_name)?
+                    vm.class(call_stack, &class_name).await?
                 }
             };
             let method_name = method.name();
@@ -206,7 +210,7 @@ fn invoke_method(
         _ => {}
     }
 
-    let result = call_stack.execute(&class, &method, arguments)?;
+    let result = call_stack.execute(&class, &method, arguments).await?;
     if let Some(result) = result {
         stack.push(result)?;
     }

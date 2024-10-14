@@ -1,7 +1,7 @@
 use crate::runtime::models::Release;
 use crate::{Error, Result};
-use reqwest::blocking::Client;
 use reqwest::header;
+use reqwest::Client;
 use std::env;
 use std::env::consts;
 use std::sync::LazyLock;
@@ -36,7 +36,7 @@ static USER_AGENT: LazyLock<String> = LazyLock::new(|| {
 /// # Errors
 /// An error will be returned if the request fails or if the version requirement is not supported.
 #[instrument(level = "debug")]
-pub(crate) fn get_runtime_archive(version: &str) -> Result<(String, String, Vec<u8>)> {
+pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String, Vec<u8>)> {
     let version = if version == "*" {
         DEFAULT_MAJOR_VERSION.to_string()
     } else {
@@ -51,15 +51,15 @@ pub(crate) fn get_runtime_archive(version: &str) -> Result<(String, String, Vec<
 
     let version_parts = version.chars().filter(|&c| c == '.').count() + 1;
     if major_version == 8 && version_parts == 4 || version_parts == 5 {
-        let (file_name, archive) = download_archive(version)?;
+        let (file_name, archive) = download_archive(version).await?;
         return Ok((version.to_string(), file_name, archive));
     }
 
     let major_version = major_version.to_string();
-    let release_versions = get_release_versions(major_version.as_str())?;
+    let release_versions = get_release_versions(major_version.as_str()).await?;
     for release_version in release_versions {
         if release_version.starts_with(version) {
-            let (file_name, archive) = download_archive(release_version.as_str())?;
+            let (file_name, archive) = download_archive(release_version.as_str()).await?;
             return Ok((release_version, file_name, archive));
         }
     }
@@ -72,7 +72,7 @@ pub(crate) fn get_runtime_archive(version: &str) -> Result<(String, String, Vec<
 /// # Errors
 /// An error will be returned if the request fails
 #[instrument(level = "debug")]
-fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
+async fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
     let client = Client::new();
     let mut headers = header::HeaderMap::new();
     headers.insert(
@@ -117,9 +117,10 @@ fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
     let response = client
         .get(url)
         .headers(headers)
-        .send()?
+        .send()
+        .await?
         .error_for_status()?;
-    let archive = response.bytes()?;
+    let archive = response.bytes().await?;
     Ok((file_name, archive.to_vec()))
 }
 
@@ -129,7 +130,7 @@ fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
 /// # Errors
 /// An error will be returned if the request fails
 #[instrument(level = "debug")]
-fn get_release_versions(major_version: &str) -> Result<Vec<String>> {
+async fn get_release_versions(major_version: &str) -> Result<Vec<String>> {
     let url = format!("https://api.github.com/repos/corretto/corretto-{major_version}/releases");
     let client = Client::new();
     let mut headers = header::HeaderMap::new();
@@ -159,9 +160,10 @@ fn get_release_versions(major_version: &str) -> Result<Vec<String>> {
             .get(&url)
             .headers(headers.clone())
             .query(&[("page", page.to_string().as_str()), ("per_page", "100")])
-            .send()?
+            .send()
+            .await?
             .error_for_status()?;
-        let response_releases = response.json::<Vec<Release>>()?;
+        let response_releases = response.json::<Vec<Release>>().await?;
         if response_releases.is_empty() {
             break;
         }
@@ -188,69 +190,69 @@ pub(crate) fn parse_major_version(version: &str) -> u64 {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_get_runtime_archive_latest_exact() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_runtime_archive_latest_exact() -> Result<()> {
         let expected_version = "11.0.24.8.1";
-        let (version, file_name, archive) = get_runtime_archive(expected_version)?;
+        let (version, file_name, archive) = get_runtime_archive(expected_version).await?;
         assert_eq!(expected_version, version);
         assert!(file_name.contains(expected_version));
         assert!(!archive.is_empty());
         Ok(())
     }
 
-    #[test]
-    fn test_get_runtime_archive_partial_version() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_runtime_archive_partial_version() -> Result<()> {
         let partial_version = "8.422";
-        let (version, file_name, archive) = get_runtime_archive(partial_version)?;
+        let (version, file_name, archive) = get_runtime_archive(partial_version).await?;
         assert!(version.starts_with(partial_version));
         assert!(file_name.contains(partial_version));
         assert!(!archive.is_empty());
         Ok(())
     }
 
-    #[test]
-    fn test_get_runtime_archive_latest_major_version() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_runtime_archive_latest_major_version() -> Result<()> {
         let major_version = "17";
-        let (version, file_name, archive) = get_runtime_archive(major_version)?;
+        let (version, file_name, archive) = get_runtime_archive(major_version).await?;
         assert!(version.starts_with(major_version));
         assert!(file_name.contains(major_version));
         assert!(!archive.is_empty());
         Ok(())
     }
 
-    #[test]
-    fn test_get_runtime_archive_latest_lts() -> Result<()> {
-        let (version, _file_name, archive) = get_runtime_archive("*")?;
+    #[tokio::test]
+    async fn test_get_runtime_archive_latest_lts() -> Result<()> {
+        let (version, _file_name, archive) = get_runtime_archive("*").await?;
         let expected_major_version = DEFAULT_MAJOR_VERSION.to_string();
         assert!(version.starts_with(expected_major_version.as_str()));
         assert!(!archive.is_empty());
         Ok(())
     }
 
-    #[test]
-    fn test_get_runtime_archive_unsupported_version() {
-        let result = get_runtime_archive("21.0.0.0.0");
+    #[tokio::test]
+    async fn test_get_runtime_archive_unsupported_version() {
+        let result = get_runtime_archive("21.0.0.0.0").await;
         assert!(matches!(result, Err(Error::RequestError(_))));
     }
 
-    #[test]
-    fn test_get_runtime_archive_invalid() {
-        let result = get_runtime_archive("0");
+    #[tokio::test]
+    async fn test_get_runtime_archive_invalid() {
+        let result = get_runtime_archive("0").await;
         assert!(matches!(result, Err(Error::UnsupportedVersion(_))));
     }
 
-    #[test]
-    fn test_download_archive() -> Result<()> {
+    #[tokio::test]
+    async fn test_download_archive() -> Result<()> {
         let version = "21.0.4.7.1";
-        let (_file_name, archive) = download_archive(version)?;
+        let (_file_name, archive) = download_archive(version).await?;
         assert!(!archive.is_empty());
         Ok(())
     }
 
-    #[test]
-    fn test_get_release_versions() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_release_versions() -> Result<()> {
         let major_version = "21";
-        let release_versions = get_release_versions(major_version)?;
+        let release_versions = get_release_versions(major_version).await?;
         let expected_version = "21.0.4.7.1".to_string();
         assert!(release_versions.contains(&expected_version));
         Ok(())

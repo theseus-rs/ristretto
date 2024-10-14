@@ -18,6 +18,7 @@ ristretto_classloader = { path = "../ristretto_classloader", version = "0.8.1" }
 sysinfo = { workspace = true }
 sys-locale = { workspace = true }
 thiserror = { workspace = true }
+tokio = { workspace = true }
 tracing = { workspace = true }
 whoami = { workspace = true }
 
