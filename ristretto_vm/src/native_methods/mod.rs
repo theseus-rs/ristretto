@@ -9,6 +9,7 @@ mod java_lang_float;
 mod java_lang_object;
 mod java_lang_runtime;
 mod java_lang_shutdown;
+mod java_lang_stacktraceelement;
 mod java_lang_system;
 mod java_lang_thread;
 mod java_lang_throwable;
