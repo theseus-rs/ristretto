@@ -20,11 +20,11 @@ use crate::instruction::{
     lstore_w, lsub, lushr, lxor, multianewarray, new, newarray, pop, pop2, putfield, putstatic,
     ret, ret_w, saload, sastore, sipush, swap, tableswitch,
 };
-use crate::Error::{InvalidOperand, InvalidProgramCounter, PoisonedLock, RuntimeError};
+use crate::Error::{InvalidOperand, InvalidProgramCounter, RuntimeError};
 use crate::{CallStack, LocalVariables, OperandStack, Result};
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::{Class, Method, Value};
-use std::cell::RefCell;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 use tracing::{debug, event_enabled, Level};
 
@@ -44,9 +44,9 @@ pub(crate) struct Frame {
     call_stack: Weak<CallStack>,
     class: Arc<Class>,
     method: Arc<Method>,
-    locals: LocalVariables,
-    stack: OperandStack,
-    program_counter: RefCell<usize>,
+    locals: Arc<LocalVariables>,
+    stack: Arc<OperandStack>,
+    program_counter: AtomicUsize,
 }
 
 impl Frame {
@@ -69,9 +69,9 @@ impl Frame {
             call_stack: call_stack.clone(),
             class: class.clone(),
             method: method.clone(),
-            locals,
-            stack,
-            program_counter: RefCell::new(0),
+            locals: Arc::new(locals),
+            stack: Arc::new(stack),
+            program_counter: AtomicUsize::new(0),
         })
     }
 
@@ -113,12 +113,8 @@ impl Frame {
 
     /// Get the program counter in this frame
     #[inline]
-    pub fn program_counter(&self) -> Result<usize> {
-        let program_counter = *self
-            .program_counter
-            .try_borrow()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        Ok(program_counter)
+    pub fn program_counter(&self) -> usize {
+        self.program_counter.load(Ordering::Relaxed)
     }
 
     /// Execute the method in this frame
@@ -126,15 +122,12 @@ impl Frame {
     /// # Errors
     /// * if the program counter is invalid
     /// * if an invalid instruction is encountered
-    pub fn execute(&self) -> Result<Option<Value>> {
+    pub async fn execute(&self) -> Result<Option<Value>> {
         // TODO: avoid cloning code
         let code = self.method.code().clone();
 
         loop {
-            let program_counter = *self
-                .program_counter
-                .try_borrow()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let program_counter = self.program_counter.load(Ordering::Relaxed);
             let Some(instruction) = code.get(program_counter) else {
                 return Err(InvalidProgramCounter(program_counter));
             };
@@ -143,13 +136,15 @@ impl Frame {
                 self.debug_execute(instruction)?;
             }
 
-            let result = self.process(instruction);
+            let result = self.process(instruction).await;
             match result {
                 Ok(Continue) => {
-                    self.program_counter.replace(program_counter + 1);
+                    self.program_counter
+                        .store(program_counter + 1, Ordering::Relaxed);
                 }
                 Ok(ContinueAtPosition(program_counter)) => {
-                    self.program_counter.replace(program_counter);
+                    self.program_counter
+                        .store(program_counter, Ordering::Relaxed);
                 }
                 Ok(Return(value)) => return Ok(value.clone()),
                 Err(error) => {
@@ -163,7 +158,7 @@ impl Frame {
     /// Debug the execution of an instruction in this frame
     #[inline]
     fn debug_execute(&self, instruction: &Instruction) -> Result<()> {
-        let program_counter = self.program_counter()?;
+        let program_counter = self.program_counter();
         let class_name = self.class.name();
         let method_name = self.method.name();
         let method_descriptor = self.method.descriptor();
@@ -184,7 +179,7 @@ impl Frame {
 
     /// Process an instruction in this frame
     #[expect(clippy::too_many_lines)]
-    fn process(&self, instruction: &Instruction) -> Result<ExecutionResult> {
+    async fn process(&self, instruction: &Instruction) -> Result<ExecutionResult> {
         match instruction {
             Instruction::Nop => Ok(Continue), // Do nothing
             Instruction::Aconst_null => aconst_null(&self.stack),
@@ -204,8 +199,8 @@ impl Frame {
             Instruction::Dconst_1 => dconst_1(&self.stack),
             Instruction::Bipush(value) => bipush(&self.stack, *value),
             Instruction::Sipush(value) => sipush(&self.stack, *value),
-            Instruction::Ldc(index) => ldc(self, *index),
-            Instruction::Ldc_w(index) => ldc_w(self, *index),
+            Instruction::Ldc(index) => ldc(self, *index).await,
+            Instruction::Ldc_w(index) => ldc_w(self, *index).await,
             Instruction::Ldc2_w(index) => ldc2_w(self, *index),
             Instruction::Iload(index) => iload(&self.locals, &self.stack, *index),
             Instruction::Lload(index) => lload(&self.locals, &self.stack, *index),
@@ -362,17 +357,11 @@ impl Frame {
                 high,
                 offsets,
             } => {
-                let program_counter = *self
-                    .program_counter
-                    .try_borrow()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                let program_counter = self.program_counter.load(Ordering::Relaxed);
                 tableswitch(&self.stack, program_counter, *default, *low, *high, offsets)
             }
             Instruction::Lookupswitch { default, pairs } => {
-                let program_counter = *self
-                    .program_counter
-                    .try_borrow()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                let program_counter = self.program_counter.load(Ordering::Relaxed);
                 lookupswitch(&self.stack, program_counter, *default, pairs)
             }
             Instruction::Ireturn => ireturn(&self.stack),
@@ -381,22 +370,24 @@ impl Frame {
             Instruction::Dreturn => dreturn(&self.stack),
             Instruction::Areturn => areturn(&self.stack),
             Instruction::Return => Ok(Return(None)),
-            Instruction::Getstatic(index) => getstatic(self, *index),
-            Instruction::Putstatic(index) => putstatic(self, *index),
+            Instruction::Getstatic(index) => getstatic(self, *index).await,
+            Instruction::Putstatic(index) => putstatic(self, *index).await,
             Instruction::Getfield(index) => {
                 getfield(&self.stack, self.class.constant_pool(), *index)
             }
             Instruction::Putfield(index) => {
                 putfield(&self.stack, self.class.constant_pool(), *index)
             }
-            Instruction::Invokevirtual(index) => invokevirtual(self, *index),
-            Instruction::Invokespecial(index) => invokespecial(self, *index),
-            Instruction::Invokestatic(index) => invokestatic(self, *index),
-            Instruction::Invokeinterface(index, count) => invokeinterface(self, *index, *count),
-            Instruction::Invokedynamic(index) => invokedynamic(self, *index),
-            Instruction::New(index) => new(self, *index),
+            Instruction::Invokevirtual(index) => invokevirtual(self, *index).await,
+            Instruction::Invokespecial(index) => invokespecial(self, *index).await,
+            Instruction::Invokestatic(index) => invokestatic(self, *index).await,
+            Instruction::Invokeinterface(index, count) => {
+                invokeinterface(self, *index, *count).await
+            }
+            Instruction::Invokedynamic(index) => invokedynamic(self, *index).await,
+            Instruction::New(index) => new(self, *index).await,
             Instruction::Newarray(array_type) => newarray(&self.stack, array_type),
-            Instruction::Anewarray(index) => anewarray(self, *index),
+            Instruction::Anewarray(index) => anewarray(self, *index).await,
             Instruction::Arraylength => arraylength(&self.stack),
             Instruction::Athrow => todo!(),
             Instruction::Checkcast(class_index) => {
@@ -426,7 +417,7 @@ impl Frame {
                 })
             }
             Instruction::Multianewarray(index, dimensions) => {
-                multianewarray(self, *index, *dimensions)
+                multianewarray(self, *index, *dimensions).await
             }
             Instruction::Ifnull(address) => ifnull(&self.stack, *address),
             Instruction::Ifnonnull(address) => ifnonnull(&self.stack, *address),
@@ -464,52 +455,52 @@ mod tests {
     use ristretto_classloader::ClassPath;
     use std::path::PathBuf;
 
-    fn get_class(class_name: &str) -> Result<(Arc<CallStack>, Arc<Class>)> {
+    async fn get_class(class_name: &str) -> Result<(Arc<CallStack>, Arc<Class>)> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_path = cargo_manifest.join("../classes");
         let class_path = ClassPath::from(classes_path.to_string_lossy());
         let configuration = ConfigurationBuilder::new()
             .class_path(class_path.clone())
             .build();
-        let vm = VM::new(configuration)?;
+        let vm = VM::new(configuration).await?;
         let call_stack = CallStack::new(&Arc::downgrade(&vm));
-        let class = vm.class(&call_stack, class_name)?;
+        let class = vm.class(&call_stack, class_name).await?;
         Ok((call_stack, class))
     }
 
-    #[test]
-    fn test_execute() -> Result<()> {
-        let (call_stack, class) = get_class("Expressions")?;
+    #[tokio::test]
+    async fn test_execute() -> Result<()> {
+        let (call_stack, class) = get_class("Expressions").await?;
         let method = class.method("add", "(II)I").expect("method not found");
         let arguments = vec![Value::Int(1), Value::Int(2)];
         let frame = Frame::new(&Arc::downgrade(&call_stack), &class, &method, arguments)?;
-        let result = frame.execute()?;
+        let result = frame.execute().await?;
         assert!(matches!(result, Some(Value::Int(3))));
         Ok(())
     }
 
-    #[test]
-    fn test_initial_frame() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame()?;
+    #[tokio::test]
+    async fn test_initial_frame() -> Result<()> {
+        let (_vm, _call_stack, frame) = crate::test::frame().await?;
         assert!(frame.locals.is_empty()?);
         assert!(frame.stack.is_empty()?);
         Ok(())
     }
 
-    #[test]
-    fn test_process_nop() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame()?;
-        let process_result = frame.process(&Instruction::Nop)?;
+    #[tokio::test]
+    async fn test_process_nop() -> Result<()> {
+        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let process_result = frame.process(&Instruction::Nop).await?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty()?);
         assert!(frame.stack.is_empty()?);
         Ok(())
     }
 
-    #[test]
-    fn test_process_return() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame()?;
-        let process_result = frame.process(&Instruction::Return)?;
+    #[tokio::test]
+    async fn test_process_return() -> Result<()> {
+        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let process_result = frame.process(&Instruction::Return).await?;
         assert!(matches!(process_result, Return(None)));
         Ok(())
     }
@@ -519,29 +510,30 @@ mod tests {
     //     todo!()
     // }
 
-    #[test]
-    fn test_process_monitorenter() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame()?;
+    #[tokio::test]
+    async fn test_process_monitorenter() -> Result<()> {
+        let (_vm, _call_stack, frame) = crate::test::frame().await?;
         frame.stack.push_object(None)?;
-        let process_result = frame.process(&Instruction::Monitorenter)?;
+        let process_result = frame.process(&Instruction::Monitorenter).await?;
         assert_eq!(Continue, process_result);
         Ok(())
     }
 
-    #[test]
-    fn test_process_monitorexit() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame()?;
+    #[tokio::test]
+    async fn test_process_monitorexit() -> Result<()> {
+        let (_vm, _call_stack, frame) = crate::test::frame().await?;
         frame.stack.push_object(None)?;
-        let process_result = frame.process(&Instruction::Monitorexit)?;
+        let process_result = frame.process(&Instruction::Monitorexit).await?;
         assert_eq!(Continue, process_result);
         Ok(())
     }
 
-    #[test]
-    fn test_process_wide() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame()?;
+    #[tokio::test]
+    async fn test_process_wide() -> Result<()> {
+        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let result = frame.process(&Instruction::Wide).await;
         assert!(matches!(
-            frame.process(&Instruction::Wide),
+            result,
             Err(InvalidOperand {
                 expected,
                 actual
@@ -550,30 +542,30 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_process_breakpoint() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame()?;
-        let process_result = frame.process(&Instruction::Breakpoint)?;
+    #[tokio::test]
+    async fn test_process_breakpoint() -> Result<()> {
+        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let process_result = frame.process(&Instruction::Breakpoint).await?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty()?);
         assert!(frame.stack.is_empty()?);
         Ok(())
     }
 
-    #[test]
-    fn test_process_impdep1() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame()?;
-        let process_result = frame.process(&Instruction::Impdep1)?;
+    #[tokio::test]
+    async fn test_process_impdep1() -> Result<()> {
+        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let process_result = frame.process(&Instruction::Impdep1).await?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty()?);
         assert!(frame.stack.is_empty()?);
         Ok(())
     }
 
-    #[test]
-    fn test_process_impdep2() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame()?;
-        let process_result = frame.process(&Instruction::Impdep2)?;
+    #[tokio::test]
+    async fn test_process_impdep2() -> Result<()> {
+        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let process_result = frame.process(&Instruction::Impdep2).await?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty()?);
         assert!(frame.stack.is_empty()?);

@@ -7,3 +7,4 @@ version.workspace = true
 
 [dependencies]
 ristretto_classloader = { path = "../../ristretto_classloader" }
+tokio = { workspace = true, features = ["rt-multi-thread"] }

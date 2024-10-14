@@ -28,12 +28,12 @@ pub(crate) fn newarray(stack: &OperandStack, array_type: &ArrayType) -> Result<E
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.anewarray>
 #[inline]
-pub(crate) fn anewarray(frame: &Frame, index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn anewarray(frame: &Frame, index: u16) -> Result<ExecutionResult> {
     let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.class(&call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name).await?;
     let stack = frame.stack();
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
@@ -68,12 +68,16 @@ pub(crate) fn arraylength(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.multianewarray>
 #[inline]
-pub(crate) fn multianewarray(frame: &Frame, index: u16, dimensions: u8) -> Result<ExecutionResult> {
+pub(crate) async fn multianewarray(
+    frame: &Frame,
+    index: u16,
+    dimensions: u8,
+) -> Result<ExecutionResult> {
     let call_stack = frame.call_stack()?;
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.class(&call_stack, class_name)?;
+    let class = vm.class(&call_stack, class_name).await?;
     let stack = frame.stack();
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
@@ -211,9 +215,9 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_anewarray() -> Result<()> {
-        let (_vm, call_stack, mut class) = crate::test::class()?;
+    #[tokio::test]
+    async fn test_anewarray() -> Result<()> {
+        let (_vm, call_stack, mut class) = crate::test::class().await?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("java/lang/Object")?;
         let method = Method::new(
@@ -234,7 +238,7 @@ mod tests {
         )?;
         let stack = frame.stack();
         stack.push_int(0)?;
-        let result = anewarray(&frame, class_index)?;
+        let result = anewarray(&frame, class_index).await?;
         assert_eq!(Continue, result);
         let stack = frame.stack();
         let object = stack.pop()?;
@@ -341,9 +345,9 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_arraylength_object() -> Result<()> {
-        let (_vm, call_stack, mut class) = crate::test::class()?;
+    #[tokio::test]
+    async fn test_arraylength_object() -> Result<()> {
+        let (_vm, call_stack, mut class) = crate::test::class().await?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("java/lang/Object")?;
         let method = Method::new(
@@ -364,7 +368,7 @@ mod tests {
         )?;
         let stack = frame.stack();
         stack.push_int(3)?;
-        let result = anewarray(&frame, class_index)?;
+        let result = anewarray(&frame, class_index).await?;
         assert_eq!(Continue, result);
 
         let stack = frame.stack();
@@ -383,10 +387,10 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_arraylength_invalid_type() -> Result<()> {
-        let (vm, call_stack, frame) = crate::test::frame()?;
-        let invalid_value = vm.to_string_value(&call_stack, "foo")?;
+    #[tokio::test]
+    async fn test_arraylength_invalid_type() -> Result<()> {
+        let (vm, call_stack, frame) = crate::test::frame().await?;
+        let invalid_value = vm.to_string_value(&call_stack, "foo").await?;
         let stack = frame.stack();
         stack.push(invalid_value)?;
         let result = arraylength(stack);
@@ -400,9 +404,9 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_multianewarray_single_dimension() -> Result<()> {
-        let (_vm, call_stack, mut class) = crate::test::class()?;
+    #[tokio::test]
+    async fn test_multianewarray_single_dimension() -> Result<()> {
+        let (_vm, call_stack, mut class) = crate::test::class().await?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("java/lang/Object")?;
         let method = Method::new(
@@ -423,7 +427,7 @@ mod tests {
         )?;
         let stack = frame.stack();
         stack.push_int(0)?;
-        let result = multianewarray(&frame, class_index, 1)?;
+        let result = multianewarray(&frame, class_index, 1).await?;
         assert_eq!(Continue, result);
         let stack = frame.stack();
         let object = stack.pop()?;

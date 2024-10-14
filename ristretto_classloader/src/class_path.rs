@@ -49,11 +49,11 @@ impl ClassPath {
     /// # Errors
     /// if the class file is not found or cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
-    pub fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
+    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         let name = name.as_ref();
 
         for class_path_entry in self.iter() {
-            if let Ok(class_file) = class_path_entry.read_class(name) {
+            if let Ok(class_file) = class_path_entry.read_class(name).await {
                 info!("load class {name} source: {}", class_path_entry.name());
                 return Ok(class_file);
             }
@@ -119,8 +119,8 @@ mod tests {
         assert_eq!("..", iter.next().expect("next").name());
     }
 
-    #[test]
-    fn test_read_class() -> Result<()> {
+    #[tokio::test]
+    async fn test_read_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
         let classes_jar = cargo_manifest.join("../classes/classes.jar");
@@ -135,13 +135,14 @@ mod tests {
         let class_path = class_path_entries.join(":");
         let class_path_entry = ClassPath::from(&class_path);
 
-        let class_file = class_path_entry.read_class("HelloWorld")?;
+        let class_file = class_path_entry.read_class("HelloWorld").await?;
         assert_eq!("HelloWorld", class_file.class_name()?);
 
         #[cfg(feature = "url")]
         {
-            let class_file =
-                class_path_entry.read_class("org/springframework/boot/SpringApplication")?;
+            let class_file = class_path_entry
+                .read_class("org/springframework/boot/SpringApplication")
+                .await?;
             assert_eq!(
                 "org/springframework/boot/SpringApplication",
                 class_file.class_name()?

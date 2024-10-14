@@ -3,6 +3,8 @@ use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Result;
 use ristretto_classloader::Value;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
 /// Register all native methods for jdk.internal.misc.ScopedMemoryAccess.
@@ -12,7 +14,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[expect(clippy::unnecessary_wraps)]
-fn register_natives(_call_stack: &Arc<CallStack>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(None)
+fn register_natives(
+    _call_stack: Arc<CallStack>,
+    _arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(None) })
 }

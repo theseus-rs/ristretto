@@ -11,6 +11,8 @@ use crate::native_methods::{
 use crate::Result;
 use ristretto_classloader::Value;
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::{Arc, OnceLock};
 use tracing::debug;
 
@@ -22,8 +24,14 @@ pub fn registry() -> &'static MethodRegistry {
 
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
-pub type RustMethod =
-    fn(call_stack: &Arc<CallStack>, arguments: Arguments) -> Result<Option<Value>>;
+// pub type RustMethod = fn(
+//     call_stack: Arc<CallStack>,
+//     arguments: Arguments,
+// ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>>;
+pub type RustMethod = fn(
+    call_stack: Arc<CallStack>,
+    arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>>;
 
 #[expect(clippy::module_name_repetitions)]
 #[derive(Debug)]
@@ -102,19 +110,25 @@ impl Default for MethodRegistry {
 mod tests {
     use super::*;
 
+    #[expect(clippy::needless_pass_by_value)]
+    fn test_none(
+        _call_stack: Arc<CallStack>,
+        _arguments: Arguments,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+        Box::pin(async move { Ok(None) })
+    }
+
     #[test]
     fn test_register() {
         let mut registry = MethodRegistry::new();
-        let method: RustMethod = |_, _| Ok(None);
-        registry.register("java.lang.Object", "hashCode", "()I", method);
+        registry.register("java.lang.Object", "hashCode", "()I", test_none);
         assert_eq!(registry.methods.len(), 1);
     }
 
     #[test]
     fn test_get() {
         let mut registry = MethodRegistry::new();
-        let method: RustMethod = |_, _| Ok(None);
-        registry.register("java.lang.Object", "hashCode", "()I", method);
+        registry.register("java.lang.Object", "hashCode", "()I", test_none);
 
         let result = registry.get("java.lang.Object", "hashCode", "()I");
         assert!(result.is_some());

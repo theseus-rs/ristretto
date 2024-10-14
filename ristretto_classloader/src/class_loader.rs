@@ -1,8 +1,9 @@
-use crate::Error::{ClassNotFound, PoisonedLock};
+use crate::Error::ClassNotFound;
 use crate::{Class, ClassPath, Result};
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 /// Implementation of a Java class loader.
 ///
@@ -60,21 +61,18 @@ impl ClassLoader {
     ///
     /// # Errors
     /// if the class file cannot be read.
-    pub fn load<S: AsRef<str>>(&self, name: S) -> Result<Arc<Class>> {
-        self.load_with_status(name).map(|(class, _)| class)
+    pub async fn load<S: AsRef<str>>(&self, name: S) -> Result<Arc<Class>> {
+        self.load_with_status(name).await.map(|(class, _)| class)
     }
 
     /// Load a class by name with a boolean status indicating if the class was loaded previously.
     ///
     /// # Errors
     /// if the class file cannot be read.
-    pub fn load_with_status<S: AsRef<str>>(&self, name: S) -> Result<(Arc<Class>, bool)> {
+    pub async fn load_with_status<S: AsRef<str>>(&self, name: S) -> Result<(Arc<Class>, bool)> {
         let name = name.as_ref();
         {
-            let classes = self
-                .classes
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let classes = self.classes.read().await;
             if let Some(class) = classes.get(name) {
                 return Ok((Arc::clone(class), true));
             }
@@ -91,11 +89,8 @@ impl ClassLoader {
 
         for class_loader in class_loaders.into_iter().rev() {
             let class_path = class_loader.class_path();
-            if let Ok(class_file) = class_path.read_class(name) {
-                let mut classes = self
-                    .classes
-                    .write()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Ok(class_file) = class_path.read_class(name).await {
+                let mut classes = self.classes.write().await;
                 // Check if the class was loaded while waiting for the lock.
                 if let Some(class) = classes.get(name) {
                     return Ok((class.clone(), true));
@@ -113,11 +108,8 @@ impl ClassLoader {
     ///
     /// # Errors
     /// if the class cannot be registered.
-    pub fn register(&mut self, class: Arc<Class>) -> Result<()> {
-        let mut classes = self
-            .classes
-            .write()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+    pub async fn register(&mut self, class: Arc<Class>) -> Result<()> {
+        let mut classes = self.classes.write().await;
         let class_name = class.name().to_string();
         classes.insert(class_name, class);
         Ok(())
@@ -202,8 +194,8 @@ mod tests {
         assert_eq!("test2", class_loader1.parent().expect("parent").name());
     }
 
-    #[test]
-    fn test_load_class() -> Result<()> {
+    #[tokio::test]
+    async fn test_load_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
@@ -211,19 +203,19 @@ mod tests {
         let class_path = ClassPath::from(class_path_entries.join(":"));
         let class_loader = ClassLoader::new("test", class_path);
         let class_name = "HelloWorld";
-        let class = class_loader.load(class_name)?;
+        let class = class_loader.load(class_name).await?;
         let class_file = class.class_file();
         assert_eq!(class_name, class_file.class_name()?);
 
         // Load the same class again to test caching
-        let class = class_loader.load(class_name)?;
+        let class = class_loader.load(class_name).await?;
         let class_file = class.class_file();
         assert_eq!(class_name, class_file.class_name()?);
         Ok(())
     }
 
-    #[test]
-    fn test_load_class_more_than_once() -> Result<()> {
+    #[tokio::test]
+    async fn test_load_class_more_than_once() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
@@ -234,20 +226,20 @@ mod tests {
 
         // Set a static value on the class to test class caching
         let expected_value = Value::Int(21);
-        let class = &mut class_loader.load(class_name)?;
+        let class = &mut class_loader.load(class_name).await?;
         let answer_field = class.static_field("ANSWER")?;
         answer_field.set_value(expected_value.clone())?;
 
         // Load the same class again and verify that the static value is still set
-        let class = class_loader.load(class_name)?;
+        let class = class_loader.load(class_name).await?;
         let answer_field = class.static_field("ANSWER")?;
         let value = answer_field.value()?;
         assert_eq!(expected_value, value);
         Ok(())
     }
 
-    #[test]
-    fn test_load_class_parent() -> Result<()> {
+    #[tokio::test]
+    async fn test_load_class_parent() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("../classes");
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
@@ -257,17 +249,17 @@ mod tests {
         let mut class_loader = ClassLoader::new("test", foo_class_path);
         class_loader.set_parent(Some(boot_class_loader));
 
-        let class = class_loader.load("HelloWorld")?;
+        let class = class_loader.load("HelloWorld").await?;
         let class_file = class.class_file();
         assert_eq!("HelloWorld", class_file.class_name()?);
         Ok(())
     }
 
-    #[test]
-    fn test_load_class_not_found() {
+    #[tokio::test]
+    async fn test_load_class_not_found() {
         let class_path = ClassPath::from(".");
         let class_loader = ClassLoader::new("test", class_path);
-        let result = class_loader.load("Foo");
+        let result = class_loader.load("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
     }
 }

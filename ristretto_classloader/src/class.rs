@@ -457,27 +457,27 @@ mod tests {
 
     const JAVA_VERSION: &str = "21.0.4.7.1";
 
-    fn object_class() -> Result<Arc<Class>> {
-        let (_version, class_loader) = runtime::class_loader(JAVA_VERSION)?;
-        class_loader.load("java/lang/Object")
+    async fn object_class() -> Result<Arc<Class>> {
+        let (_version, class_loader) = runtime::class_loader(JAVA_VERSION).await?;
+        class_loader.load("java/lang/Object").await
     }
 
-    fn string_class() -> Result<Arc<Class>> {
-        let (_version, class_loader) = runtime::class_loader(JAVA_VERSION)?;
-        let string_class = class_loader.load("java/lang/String")?;
+    async fn string_class() -> Result<Arc<Class>> {
+        let (_version, class_loader) = runtime::class_loader(JAVA_VERSION).await?;
+        let string_class = class_loader.load("java/lang/String").await?;
 
-        let object_class = object_class()?;
+        let object_class = object_class().await?;
         string_class.set_parent(Some(object_class))?;
 
-        let serializable_class = serializable_class()?;
+        let serializable_class = serializable_class().await?;
         string_class.set_interfaces(vec![serializable_class])?;
 
         Ok(string_class)
     }
 
-    fn serializable_class() -> Result<Arc<Class>> {
-        let (_version, class_loader) = runtime::class_loader(JAVA_VERSION)?;
-        class_loader.load("java/io/Serializable")
+    async fn serializable_class() -> Result<Arc<Class>> {
+        let (_version, class_loader) = runtime::class_loader(JAVA_VERSION).await?;
+        class_loader.load("java/io/Serializable").await
     }
 
     fn simple_class() -> Result<Class> {
@@ -648,34 +648,34 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_string_instanceof_object() -> Result<()> {
-        let string_class = string_class()?;
-        let object_class = object_class()?;
+    #[tokio::test]
+    async fn test_string_instanceof_object() -> Result<()> {
+        let string_class = string_class().await?;
+        let object_class = object_class().await?;
         assert!(string_class.is_assignable_from(&object_class.name)?);
         Ok(())
     }
 
-    #[test]
-    fn test_object_instanceof_string() -> Result<()> {
-        let object_class = object_class()?;
-        let string_class = string_class()?;
+    #[tokio::test]
+    async fn test_object_instanceof_string() -> Result<()> {
+        let object_class = object_class().await?;
+        let string_class = string_class().await?;
         assert!(!object_class.is_assignable_from(&string_class.name)?);
         Ok(())
     }
 
-    #[test]
-    fn test_string_instanceof_serializable() -> Result<()> {
-        let string_class = string_class()?;
-        let serializable_class = serializable_class()?;
+    #[tokio::test]
+    async fn test_string_instanceof_serializable() -> Result<()> {
+        let string_class = string_class().await?;
+        let serializable_class = serializable_class().await?;
         assert!(string_class.is_assignable_from(&serializable_class.name)?);
         Ok(())
     }
 
-    #[test]
-    fn test_object_instanceof_serializable_class() -> Result<()> {
-        let object_class = object_class()?;
-        let serializable_class = serializable_class()?;
+    #[tokio::test]
+    async fn test_object_instanceof_serializable_class() -> Result<()> {
+        let object_class = object_class().await?;
+        let serializable_class = serializable_class().await?;
         assert!(!object_class.is_assignable_from(&serializable_class.name)?);
         Ok(())
     }

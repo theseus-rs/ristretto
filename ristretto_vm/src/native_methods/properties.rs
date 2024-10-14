@@ -9,12 +9,12 @@ use std::path::MAIN_SEPARATOR_STR;
 use std::sync::Arc;
 
 /// Get the system properties.
-pub(crate) fn system(call_stack: &Arc<CallStack>) -> Result<HashMap<&'static str, Value>> {
+pub(crate) async fn system(call_stack: Arc<CallStack>) -> Result<HashMap<&'static str, Value>> {
     let vm = call_stack.vm()?;
     let system_properties = system_properties(&vm)?;
     let mut properties = HashMap::new();
     for (key, value) in system_properties {
-        let value = vm.to_string_value(call_stack, &value)?;
+        let value = vm.to_string_value(&call_stack, &value).await?;
         properties.insert(key, value);
     }
     Ok(properties)

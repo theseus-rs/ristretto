@@ -1,5 +1,5 @@
 use crate::call_stack::CallStack;
-use crate::Error::{PoisonedLock, UnsupportedClassFileVersion};
+use crate::Error::UnsupportedClassFileVersion;
 use crate::{Configuration, Result};
 use ristretto_classfile::{mutf8, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
@@ -9,7 +9,8 @@ use ristretto_classloader::{
     runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Object,
     Reference, Value,
 };
-use std::sync::{Arc, RwLock, Weak};
+use std::sync::{Arc, Weak};
+use tokio::sync::RwLock;
 use tracing::debug;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
@@ -36,7 +37,7 @@ impl VM {
     ///
     /// # Errors
     /// if the VM cannot be created
-    pub fn new(configuration: Configuration) -> Result<Arc<Self>> {
+    pub async fn new(configuration: Configuration) -> Result<Arc<Self>> {
         let runtime_version = configuration.runtime_version();
         debug!("runtime_version {runtime_version}");
 
@@ -44,7 +45,8 @@ impl VM {
         let java_version = Version::from(major_version + Self::CLASS_FILE_MAJOR_VERSION_OFFSET, 0)?;
         debug!("Java version {java_version}");
 
-        let (runtime_version, boostrap_class_loader) = runtime::class_loader(runtime_version)?;
+        let (runtime_version, boostrap_class_loader) =
+            runtime::class_loader(runtime_version).await?;
         let boostrap_class_loader = boostrap_class_loader;
 
         // TODO: implement extension class loader
@@ -66,7 +68,7 @@ impl VM {
             if main_class_name.is_none() {
                 for class_path_entry in jar_class_loader.class_path().iter() {
                     if let ClassPathEntry::Jar(jar) = class_path_entry {
-                        let manifest = jar.manifest()?;
+                        let manifest = jar.manifest().await?;
                         if let Some(jar_main_class) = manifest.attribute(MAIN_CLASS) {
                             main_class_name = Some(jar_main_class.to_string());
                             break;
@@ -96,7 +98,7 @@ impl VM {
             runtime_version,
             java_version,
         });
-        vm.initialize()?;
+        vm.initialize().await?;
         Ok(vm)
     }
 
@@ -128,16 +130,18 @@ impl VM {
     ///
     /// # Errors
     /// if the VM cannot be initialized
-    fn initialize(&self) -> Result<()> {
-        let system_class = self.load("java.lang.System")?;
+    async fn initialize(&self) -> Result<()> {
+        let system_class = self.load("java.lang.System").await?;
 
         if self.java_version <= JAVA_8 {
             let initialize_system_class_method =
                 system_class.try_get_method("initializeSystemClass", "()V")?;
-            self.invoke(&system_class, &initialize_system_class_method, vec![])?;
+            self.invoke(&system_class, &initialize_system_class_method, vec![])
+                .await?;
         } else {
             let init_phase1_method = system_class.try_get_method("initPhase1", "()V")?;
-            self.invoke(&system_class, &init_phase1_method, vec![])?;
+            self.invoke(&system_class, &init_phase1_method, vec![])
+                .await?;
 
             // TODO: Implement System::initPhase2()
             // let init_phase2_method = system_class.try_get_method("initPhase2", "(ZZ)I")?;
@@ -169,10 +173,10 @@ impl VM {
     ///
     /// # Errors
     /// if the class cannot be loaded
-    pub fn load(&self, class_name: &str) -> Result<Arc<Class>> {
+    pub async fn load(&self, class_name: &str) -> Result<Arc<Class>> {
         let class_name = class_name.replace('.', "/");
         let call_stack = &CallStack::new(&self.vm);
-        self.class(call_stack, &class_name)
+        self.class(call_stack, &class_name).await
     }
 
     /// Get a class.
@@ -181,13 +185,14 @@ impl VM {
     ///
     /// # Errors
     /// if the class cannot be loaded
-    pub(crate) fn class(&self, call_stack: &CallStack, class_name: &str) -> Result<Arc<Class>> {
+    pub(crate) async fn class(
+        &self,
+        call_stack: &CallStack,
+        class_name: &str,
+    ) -> Result<Arc<Class>> {
         let class_load_result = {
-            let class_loader = self
-                .class_loader
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
-            class_loader.load_with_status(class_name)
+            let class_loader = self.class_loader.read().await;
+            class_loader.load_with_status(class_name).await
         };
 
         let class = match class_load_result {
@@ -201,7 +206,7 @@ impl VM {
                 if class_name.starts_with('[') {
                     let array_class = Arc::new(Class::new_array(class_name)?);
                     // Register the array class so that it will be available for future lookups.
-                    self.register_class(array_class.clone())?;
+                    self.register_class(array_class.clone()).await?;
                     array_class
                 } else {
                     return Err(error.into());
@@ -209,10 +214,12 @@ impl VM {
             }
         };
 
-        let classes = self.prepare_class_initialization(&class)?;
+        let classes = self.prepare_class_initialization(&class).await?;
         for current_class in classes {
             if let Some(class_initializer) = current_class.class_initializer() {
-                call_stack.execute(&current_class, &class_initializer, vec![])?;
+                call_stack
+                    .execute(&current_class, &class_initializer, vec![])
+                    .await?;
             }
         }
         Ok(class)
@@ -222,11 +229,8 @@ impl VM {
     ///
     /// # Errors
     /// if the class cannot be resolved
-    fn prepare_class_initialization(&self, class: &Arc<Class>) -> Result<Vec<Arc<Class>>> {
-        let class_loader = self
-            .class_loader
-            .write()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+    async fn prepare_class_initialization(&self, class: &Arc<Class>) -> Result<Vec<Arc<Class>>> {
+        let class_loader = self.class_loader.write().await;
         let mut classes = Vec::new();
         let mut index = 0;
         classes.push(class.clone());
@@ -249,7 +253,7 @@ impl VM {
                     .constant_pool()
                     .try_get_class(*interface_index)?;
                 let (interface_class, previously_loaded) =
-                    class_loader.load_with_status(interface_name)?;
+                    class_loader.load_with_status(interface_name).await?;
                 interfaces.push(interface_class.clone());
                 if !previously_loaded && !classes.contains(&interface_class) {
                     classes.push(interface_class);
@@ -273,7 +277,7 @@ impl VM {
             };
 
             let (super_class, previously_loaded) =
-                class_loader.load_with_status(super_class_name)?;
+                class_loader.load_with_status(super_class_name).await?;
             current_class.set_parent(Some(super_class.clone()))?;
             if !previously_loaded && !classes.contains(&super_class) {
                 classes.push(super_class);
@@ -293,13 +297,10 @@ impl VM {
     ///
     /// # Errors
     /// if the class cannot be registered
-    pub(crate) fn register_class(&self, class: Arc<Class>) -> Result<()> {
+    pub(crate) async fn register_class(&self, class: Arc<Class>) -> Result<()> {
         debug!("register class: {class}");
-        let mut class_loader = self
-            .class_loader
-            .write()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        class_loader.register(class)?;
+        let mut class_loader = self.class_loader.write().await;
+        class_loader.register(class).await?;
         Ok(())
     }
 
@@ -308,29 +309,29 @@ impl VM {
     ///
     /// # Errors
     /// if the method cannot be invoked
-    pub fn invoke(
+    pub async fn invoke(
         &self,
         class: &Arc<Class>,
         method: &Arc<Method>,
         arguments: Vec<Value>,
     ) -> Result<Option<Value>> {
         let call_stack = CallStack::new(&self.vm);
-        call_stack.execute(class, method, arguments)
+        call_stack.execute(class, method, arguments).await
     }
 
     /// Create a new java.lang.Class object as a VM Value.
     ///
     /// # Errors
     /// if the class object cannot be created
-    pub(crate) fn to_class_value(
+    pub(crate) async fn to_class_value(
         &self,
         call_stack: &Arc<CallStack>,
         class_name: &str,
     ) -> Result<Value> {
         let object_class_name = "java/lang/Class";
-        let class = self.class(call_stack, object_class_name)?;
+        let class = self.class(call_stack, object_class_name).await?;
         let object = Object::new(class)?;
-        let name = self.to_string_value(call_stack, class_name)?;
+        let name = self.to_string_value(call_stack, class_name).await?;
         let name_field = object.field("name")?;
         name_field.set_value(name)?;
         // TODO: a "null" class loader indicates a system class loader; this should be re-evaluated
@@ -346,23 +347,23 @@ impl VM {
     ///
     /// # Errors
     /// if the string object cannot be created
-    pub fn string<S: AsRef<str>>(&self, value: S) -> Result<Value> {
+    pub async fn string<S: AsRef<str>>(&self, value: S) -> Result<Value> {
         let call_stack = CallStack::new(&self.vm);
         let value = value.as_ref();
-        self.to_string_value(&call_stack, value)
+        self.to_string_value(&call_stack, value).await
     }
 
     /// Create a new java.lang.String object as a VM Value.
     ///
     /// # Errors
     /// if the string object cannot be created
-    pub(crate) fn to_string_value(
+    pub(crate) async fn to_string_value(
         &self,
         call_stack: &Arc<CallStack>,
         value: &str,
     ) -> Result<Value> {
         let class_name = "java/lang/String";
-        let class = self.class(call_stack, class_name)?;
+        let class = self.class(call_stack, class_name).await?;
         let object = Object::new(class)?;
 
         // The String implementation changed in Java 9.
@@ -415,17 +416,17 @@ mod tests {
         ClassPath::from(classes_jar_path.to_string_lossy())
     }
 
-    fn test_vm() -> Result<Arc<VM>> {
+    async fn test_vm() -> Result<Arc<VM>> {
         let class_path = classes_jar_class_path();
         let configuration = ConfigurationBuilder::new()
             .class_path(class_path.clone())
             .build();
-        VM::new(configuration)
+        VM::new(configuration).await
     }
 
-    #[test]
-    fn test_vm_new() -> Result<()> {
-        let vm = test_vm()?;
+    #[tokio::test]
+    async fn test_vm_new() -> Result<()> {
+        let vm = test_vm().await?;
         assert!(vm
             .configuration
             .class_path()
@@ -436,60 +437,60 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_vm_set_main_class() -> Result<()> {
+    #[tokio::test]
+    async fn test_vm_set_main_class() -> Result<()> {
         let class_path = classes_jar_class_path();
         let configuration = ConfigurationBuilder::new()
             .class_path(class_path.clone())
             .main_class("HelloWorld")
             .build();
-        let vm = VM::new(configuration)?;
+        let vm = VM::new(configuration).await?;
         let main_class = vm.main_class().expect("main class");
         assert_eq!("HelloWorld", main_class);
         Ok(())
     }
 
-    #[test]
-    fn test_vm_set_jar_with_main_class() -> Result<()> {
+    #[tokio::test]
+    async fn test_vm_set_jar_with_main_class() -> Result<()> {
         let classes_jar_path = classes_jar_path();
         let configuration = ConfigurationBuilder::new().jar(classes_jar_path).build();
-        let vm = VM::new(configuration)?;
+        let vm = VM::new(configuration).await?;
         let main_class = vm.main_class().expect("main class");
         assert_eq!("HelloWorld", main_class);
         Ok(())
     }
 
-    #[test]
-    fn test_vm_load_java_lang_object() -> Result<()> {
-        let vm = test_vm()?;
-        let class = vm.load("java.lang.Object")?;
+    #[tokio::test]
+    async fn test_vm_load_java_lang_object() -> Result<()> {
+        let vm = test_vm().await?;
+        let class = vm.load("java.lang.Object").await?;
         assert_eq!("java/lang/Object", class.name());
         Ok(())
     }
 
-    #[test]
-    fn test_hello_world_class() -> Result<()> {
-        let vm = test_vm()?;
+    #[tokio::test]
+    async fn test_hello_world_class() -> Result<()> {
+        let vm = test_vm().await?;
         let call_stack = CallStack::new(&vm.vm);
-        let class = vm.class(&call_stack, "HelloWorld")?;
+        let class = vm.class(&call_stack, "HelloWorld").await?;
         assert_eq!("HelloWorld", class.name());
         Ok(())
     }
 
-    #[test]
-    fn test_constants_class() -> Result<()> {
-        let vm = test_vm()?;
+    #[tokio::test]
+    async fn test_constants_class() -> Result<()> {
+        let vm = test_vm().await?;
         let call_stack = CallStack::new(&vm.vm);
-        let class = vm.class(&call_stack, "Constants")?;
+        let class = vm.class(&call_stack, "Constants").await?;
         assert_eq!("Constants", class.name());
         Ok(())
     }
 
-    #[test]
-    fn test_class_inheritance() -> Result<()> {
-        let vm = test_vm()?;
+    #[tokio::test]
+    async fn test_class_inheritance() -> Result<()> {
+        let vm = test_vm().await?;
         let call_stack = CallStack::new(&vm.vm);
-        let hash_map = vm.class(&call_stack, "java/util/HashMap")?;
+        let hash_map = vm.class(&call_stack, "java/util/HashMap").await?;
         assert_eq!("java/util/HashMap", hash_map.name());
 
         let abstract_map = hash_map.parent()?.expect("HashMap parent");
@@ -501,12 +502,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_class_interfaces() -> Result<()> {
-        let vm = test_vm()?;
+    #[tokio::test]
+    async fn test_class_interfaces() -> Result<()> {
+        let vm = test_vm().await?;
         let call_stack = CallStack::new(&vm.vm);
 
-        let interface = vm.class(&call_stack, "java/util/NavigableMap")?;
+        let interface = vm.class(&call_stack, "java/util/NavigableMap").await?;
         let method = interface.try_get_virtual_method("size", "()I");
         assert!(method.is_ok());
 

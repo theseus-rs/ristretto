@@ -1,7 +1,6 @@
-use crate::Error::{InvalidOperand, OperandStackOverflow, OperandStackUnderflow, PoisonedLock};
+use crate::Error::{InvalidOperand, OperandStackOverflow, OperandStackUnderflow};
 use crate::Result;
-use ristretto_classloader::{Reference, Value};
-use std::cell::RefCell;
+use ristretto_classloader::{ConcurrentVec, Reference, Value};
 use std::fmt::Display;
 
 /// Operand stack for the Ristretto VM
@@ -9,28 +8,24 @@ use std::fmt::Display;
 /// See: <https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.2>
 #[derive(Debug)]
 pub(crate) struct OperandStack {
-    stack: RefCell<Vec<Value>>,
+    stack: ConcurrentVec<Value>,
 }
 
 impl OperandStack {
     /// Create a new operand stack with a maximum size.
     pub fn with_max_size(max_size: usize) -> Self {
         OperandStack {
-            stack: RefCell::new(Vec::with_capacity(max_size)),
+            stack: ConcurrentVec::with_capacity(max_size),
         }
     }
 
     /// Push a value onto the operand stack.
     #[inline]
     pub fn push(&self, value: Value) -> Result<()> {
-        let mut stack = self
-            .stack
-            .try_borrow_mut()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        if stack.len() >= stack.capacity() {
+        if self.stack.len()? >= self.stack.capacity()? {
             return Err(OperandStackOverflow);
         }
-        stack.push(value);
+        self.stack.push(value)?;
         Ok(())
     }
 
@@ -62,11 +57,7 @@ impl OperandStack {
     /// Pop a value from the operand stack.
     #[inline]
     pub fn pop(&self) -> Result<Value> {
-        let mut stack = self
-            .stack
-            .try_borrow_mut()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        let Some(value) = stack.pop() else {
+        let Ok(Some(value)) = self.stack.pop() else {
             return Err(OperandStackUnderflow);
         };
         Ok(value)
@@ -136,42 +127,30 @@ impl OperandStack {
 
     /// Peek at the top value on the operand stack.
     pub fn peek(&self) -> Result<Value> {
-        let stack = self
-            .stack
-            .try_borrow_mut()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        let Some(value) = stack.last() else {
+        let Ok(Some(value)) = self.stack.pop() else {
             return Err(OperandStackUnderflow);
         };
-        // TODO: cloning the data here should be unnecessary
-        Ok(value.clone())
+        self.stack.push(value.clone())?;
+        Ok(value)
     }
 
     /// Get the number of values on the operand stack.
     pub fn len(&self) -> Result<usize> {
-        let stack = self
-            .stack
-            .try_borrow()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        Ok(stack.len())
+        Ok(self.stack.len()?)
     }
 
     /// Check if the operand stack is empty.
     pub fn is_empty(&self) -> Result<bool> {
-        let stack = self
-            .stack
-            .try_borrow()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        Ok(stack.is_empty())
+        Ok(self.stack.is_empty()?)
     }
 }
 
 impl Display for OperandStack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.stack.try_borrow() {
+        match self.stack.to_vec() {
             Ok(stack) => {
                 let mut values = Vec::new();
-                for stack_entry in stack.iter() {
+                for stack_entry in &stack {
                     let value = stack_entry.to_string();
                     if value.len() > 100 {
                         values.push(format!("{}...", &value[..97]));

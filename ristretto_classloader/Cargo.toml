@@ -12,13 +12,14 @@ version.workspace = true
 [dependencies]
 flate2 = { workspace = true }
 indexmap = { workspace = true }
-reqwest = { workspace = true, features = ["blocking", "json"] }
+reqwest = { workspace = true, features = ["json"] }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.8.1" }
 serde = { workspace = true, features = ["derive"] }
 serde_plain = { workspace = true }
 tar = { workspace = true }
 tempfile = { workspace = true }
 thiserror = { workspace = true }
+tokio = { workspace = true }
 tracing = { workspace = true }
 zip = { workspace = true }
 
@@ -28,6 +29,12 @@ home = { workspace = true }
 [dev-dependencies]
 criterion = { workspace = true }
 indoc = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+tokio = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
 default = ["rustls-tls"]
