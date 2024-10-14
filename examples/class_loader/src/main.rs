@@ -4,7 +4,7 @@
 use ristretto_classloader::{ClassLoader, ClassPath, Result};
 
 /// Example that uses a class loader to load a class.
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let class_path = ClassPath::from("classes");
     let class_loader = ClassLoader::new("example", class_path);
