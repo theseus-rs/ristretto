@@ -1,5 +1,6 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
+use crate::native_methods::java_lang_object::object_hash_code;
 use crate::native_methods::properties;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Error::RuntimeError;
@@ -33,6 +34,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(class_name, "currentTimeMillis", "()J", current_time_millis);
     registry.register(class_name, "gc", "()V", gc);
+    registry.register(
+        class_name,
+        "identityHashCode",
+        "(Ljava/lang/Object;)I",
+        identity_hash_code,
+    );
     registry.register(
         class_name,
         "initProperties",
@@ -199,6 +206,19 @@ fn gc(
     Box::pin(async move { Ok(None) })
 }
 
+#[expect(clippy::needless_pass_by_value)]
+fn identity_hash_code(
+    _call_stack: Arc<CallStack>,
+    mut arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let hash_code = match arguments.pop_object()? {
+            Some(object) => object_hash_code(&object),
+            None => 0,
+        };
+        Ok(Some(Value::Int(hash_code)))
+    })
+}
 /// Mechanism for initializing properties for Java versions <= 8
 fn init_properties(
     call_stack: Arc<CallStack>,
