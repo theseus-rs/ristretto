@@ -23,6 +23,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/String;)Ljava/lang/Class;",
         get_primitive_class,
     );
+    registry.register(class_name, "isArray", "()Z", is_array);
     registry.register(class_name, "isPrimitive", "()Z", is_primitive);
     registry.register(class_name, "registerNatives", "()V", register_natives);
 }
@@ -65,6 +66,24 @@ fn get_primitive_class(
         let vm = call_stack.vm()?;
         let class = vm.to_class_value(&call_stack, class_name).await?;
         Ok(Some(class))
+    })
+}
+
+#[expect(clippy::needless_pass_by_value)]
+fn is_array(
+    _call_stack: Arc<CallStack>,
+    mut arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let Some(Reference::Object(object)) = arguments.pop_object()? else {
+            return Err(RuntimeError("isPrimitive: no arguments".to_string()));
+        };
+        let class = object.class();
+        if class.is_array() {
+            Ok(Some(Value::Int(1)))
+        } else {
+            Ok(Some(Value::Int(0)))
+        }
     })
 }
 
