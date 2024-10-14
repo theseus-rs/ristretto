@@ -379,6 +379,31 @@ impl Class {
         Ok(method)
     }
 
+    /// Get a special method by name and descriptor.
+    ///
+    /// # Errors
+    /// if the method is not found.
+    pub fn try_get_special_method<S: AsRef<str>>(
+        &self,
+        name: S,
+        descriptor: S,
+    ) -> Result<Arc<Method>> {
+        let name = name.as_ref();
+        let descriptor = descriptor.as_ref();
+        if let Some(method) = self.method(name, descriptor) {
+            return Ok(method);
+        }
+
+        let Some(parent) = self.parent()? else {
+            return Err(MethodNotFound {
+                class_name: self.name().to_string(),
+                method_name: name.to_string(),
+                method_descriptor: descriptor.to_string(),
+            });
+        };
+        parent.try_get_special_method(name, descriptor)
+    }
+
     /// Get a virtual method by name and descriptor.
     ///
     /// # Errors

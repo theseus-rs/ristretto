@@ -55,7 +55,7 @@ pub(crate) async fn invokespecial(frame: &Frame, method_index: u16) -> Result<Ex
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-    let method = class.try_get_method(method_name, method_descriptor)?;
+    let method = class.try_get_special_method(method_name, method_descriptor)?;
 
     invoke_method(
         &vm,
