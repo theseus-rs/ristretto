@@ -178,7 +178,16 @@ impl<T: Clone + Debug + PartialEq> Display for ConcurrentVec<T> {
     /// Display the concurrent vector.
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let vec = self.inner.read().map_err(|_| fmt::Error)?;
-        write!(f, "{:?}", &*vec)
+        let mut values = Vec::new();
+        for value in &*vec {
+            let value = format!("{value:?}");
+            if value.len() > 100 {
+                values.push(format!("{}...", &value[..97]));
+            } else {
+                values.push(value);
+            }
+        }
+        write!(f, "[{}]", values.join(", "))
     }
 }
 
