@@ -22,6 +22,7 @@ use crate::instruction::{
 };
 use crate::Error::{InvalidOperand, InvalidProgramCounter, RuntimeError};
 use crate::{CallStack, LocalVariables, OperandStack, Result};
+use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::{Class, Method, Value};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -170,9 +171,11 @@ impl Frame {
         };
         let constant_pool = self.class.constant_pool();
         let instruction = instruction.to_formatted_string(constant_pool)?;
+        let stack_size = u64::try_from(stacker::remaining_stack().unwrap_or(0))?;
+        let stack_size = Byte::from_u64(stack_size).get_appropriate_unit(UnitType::Decimal);
         debug!("  frame: {class_name}.{method_name}{method_descriptor}{source}");
         debug!("    locals: {}", self.locals);
-        debug!("    stack: {}", self.stack);
+        debug!("    stack ({stack_size:#.0}): {}", self.stack);
         debug!("    pc: {program_counter}; instruction: {instruction}");
         Ok(())
     }
