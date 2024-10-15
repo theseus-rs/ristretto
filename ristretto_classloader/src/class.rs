@@ -379,37 +379,6 @@ impl Class {
         Ok(method)
     }
 
-    /// Get a virtual method by name and descriptor.
-    ///
-    /// # Errors
-    /// if the method is not found.
-    pub fn try_get_virtual_method<S: AsRef<str>>(
-        &self,
-        name: S,
-        descriptor: S,
-    ) -> Result<Arc<Method>> {
-        let name = name.as_ref();
-        let descriptor = descriptor.as_ref();
-        if let Some(method) = self.method(name, descriptor) {
-            return Ok(method);
-        }
-
-        for interface in self.interfaces()? {
-            if let Ok(method) = interface.try_get_virtual_method(name, descriptor) {
-                return Ok(method);
-            }
-        }
-
-        let Some(parent) = self.parent()? else {
-            return Err(MethodNotFound {
-                class_name: self.name().to_string(),
-                method_name: name.to_string(),
-                method_descriptor: descriptor.to_string(),
-            });
-        };
-        parent.try_get_virtual_method(name, descriptor)
-    }
-
     /// Determine if this class is assignable from the given class.
     ///
     /// # Errors
