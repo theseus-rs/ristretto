@@ -10,11 +10,11 @@ use std::sync::Arc;
 /// Register all native methods for java.lang.Shutdown.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Shutdown";
-    registry.register(class_name, "halt0", "(I)V", halt0);
+    registry.register(class_name, "halt0", "(I)V", halt_0);
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn halt0(
+fn halt_0(
     _call_stack: Arc<CallStack>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {

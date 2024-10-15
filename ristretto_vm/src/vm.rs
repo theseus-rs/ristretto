@@ -172,7 +172,8 @@ impl VM {
 
             // TODO: Implement System::initPhase3()
             // let init_phase3_method = system_class.try_get_method("initPhase3", "()V")?;
-            // self.invoke(&system_class, &init_phase3_method, vec![]).await?;
+            // self.invoke(&system_class, &init_phase3_method, vec![])
+            //     .await?;
         }
 
         Ok(())
