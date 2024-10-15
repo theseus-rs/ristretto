@@ -293,14 +293,14 @@ fn register_natives(
     // will eventually call System::getProperty() which fails if this is not initialized.
     Box::pin(async move {
         let vm = call_stack.vm()?;
-        let system = vm.class(&call_stack, "java/lang/System").await?;
+        let system = vm.load_class(&call_stack, "java/lang/System").await?;
         let set_properties = system.try_get_method("setProperties", "(Ljava/util/Properties;)V")?;
         vm.invoke(&system, &set_properties, vec![Value::Object(None)])
             .await?;
 
         // TODO: remove this once threading is implemented
         let jdk_java_lang_ref_access = vm
-            .class(&call_stack, "jdk/internal/access/JavaLangRefAccess")
+            .load_class(&call_stack, "jdk/internal/access/JavaLangRefAccess")
             .await?;
         let interfaces = vec![jdk_java_lang_ref_access];
         let mut methods = HashMap::new();
@@ -330,7 +330,7 @@ fn register_natives(
         let java_lang_ref_access =
             Value::Object(Some(Reference::Object(Object::new(java_lang_ref_access)?)));
         let shared_secrets = vm
-            .class(&call_stack, "jdk/internal/access/SharedSecrets")
+            .load_class(&call_stack, "jdk/internal/access/SharedSecrets")
             .await?;
         let set_java_lang_ref_access = shared_secrets.try_get_method(
             "setJavaLangRefAccess",
@@ -354,7 +354,7 @@ fn set_in_0(
     Box::pin(async move {
         let input_stream = arguments.pop_object()?;
         let vm = call_stack.vm()?;
-        let system = vm.class(&call_stack, "java/lang/System").await?;
+        let system = vm.load_class(&call_stack, "java/lang/System").await?;
         let in_field = system.static_field("in")?;
         in_field.unsafe_set_value(Value::Object(input_stream))?;
         Ok(None)
@@ -368,7 +368,7 @@ fn set_out_0(
     Box::pin(async move {
         let print_stream = arguments.pop_object()?;
         let vm = call_stack.vm()?;
-        let system = vm.class(&call_stack, "java/lang/System").await?;
+        let system = vm.load_class(&call_stack, "java/lang/System").await?;
         let out_field = system.static_field("out")?;
         out_field.unsafe_set_value(Value::Object(print_stream))?;
         Ok(None)
@@ -382,7 +382,7 @@ fn set_err_0(
     Box::pin(async move {
         let print_stream = arguments.pop_object()?;
         let vm = call_stack.vm()?;
-        let system = vm.class(&call_stack, "java/lang/System").await?;
+        let system = vm.load_class(&call_stack, "java/lang/System").await?;
         let err_field = system.static_field("err")?;
         err_field.unsafe_set_value(Value::Object(print_stream))?;
         Ok(None)

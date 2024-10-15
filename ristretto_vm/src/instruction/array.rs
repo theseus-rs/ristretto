@@ -33,7 +33,7 @@ pub(crate) async fn anewarray(frame: &Frame, index: u16) -> Result<ExecutionResu
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.class(&call_stack, class_name).await?;
+    let class = vm.load_class(&call_stack, class_name).await?;
     let stack = frame.stack();
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
@@ -77,7 +77,7 @@ pub(crate) async fn multianewarray(
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.class(&call_stack, class_name).await?;
+    let class = vm.load_class(&call_stack, class_name).await?;
     let stack = frame.stack();
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;

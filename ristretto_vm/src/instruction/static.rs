@@ -13,7 +13,7 @@ pub(crate) async fn getstatic(frame: &Frame, index: u16) -> Result<ExecutionResu
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(&call_stack, class_name).await?;
+    let class = vm.load_class(&call_stack, class_name).await?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
     let field = class.static_field(field_name)?;
     let value = field.value()?;
@@ -23,7 +23,7 @@ pub(crate) async fn getstatic(frame: &Frame, index: u16) -> Result<ExecutionResu
     if let FieldType::Object(class_name) = field.field_type() {
         // Load the class of the field value if it is an object.
         // https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-5.html#jvms-5.4.3
-        vm.class(&call_stack, class_name).await?;
+        vm.load_class(&call_stack, class_name).await?;
     }
     Ok(Continue)
 }
@@ -38,7 +38,7 @@ pub(crate) async fn putstatic(frame: &Frame, index: u16) -> Result<ExecutionResu
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(&call_stack, class_name).await?;
+    let class = vm.load_class(&call_stack, class_name).await?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
     let field = class.static_field(field_name)?;
     let stack = frame.stack();
@@ -48,7 +48,7 @@ pub(crate) async fn putstatic(frame: &Frame, index: u16) -> Result<ExecutionResu
     if let FieldType::Object(class_name) = field.field_type() {
         // Load the class of the field value if it is an object.
         // https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-5.html#jvms-5.4.3
-        vm.class(&call_stack, class_name).await?;
+        vm.load_class(&call_stack, class_name).await?;
     }
     Ok(Continue)
 }

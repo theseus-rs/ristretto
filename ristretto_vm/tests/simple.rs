@@ -17,7 +17,7 @@ async fn vm() -> Result<Arc<VM>> {
 async fn test_main_method() -> Result<()> {
     let vm = vm().await?;
     let main_class_name = vm.main_class().expect("main class");
-    let main_class = vm.load(main_class_name).await?;
+    let main_class = vm.class(main_class_name).await?;
     let main_method = main_class.main_method().expect("main method");
     let arguments = vec![Value::Object(None)];
     let result = vm.invoke(&main_class, &main_method, arguments).await?;

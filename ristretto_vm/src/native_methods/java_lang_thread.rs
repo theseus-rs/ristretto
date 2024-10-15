@@ -44,7 +44,7 @@ fn current_thread(
     Box::pin(async move {
         // TODO: correct this once threading is implemented
         let vm = call_stack.vm()?;
-        let thread_class = vm.class(&call_stack, "java/lang/Thread").await?;
+        let thread_class = vm.load_class(&call_stack, "java/lang/Thread").await?;
         let object = Object::new(thread_class)?;
         let reference = Reference::Object(object);
         let thread = Value::Object(Some(reference));

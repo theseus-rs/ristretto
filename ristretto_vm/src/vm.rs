@@ -140,7 +140,7 @@ impl VM {
     /// # Errors
     /// if the VM cannot be initialized
     async fn initialize(&self) -> Result<()> {
-        let system_class = self.load("java.lang.System").await?;
+        let system_class = self.class("java.lang.System").await?;
 
         if self.java_version <= JAVA_8 {
             let initialize_system_class_method =
@@ -182,10 +182,10 @@ impl VM {
     ///
     /// # Errors
     /// if the class cannot be loaded
-    pub async fn load(&self, class_name: &str) -> Result<Arc<Class>> {
+    pub async fn class(&self, class_name: &str) -> Result<Arc<Class>> {
         let class_name = class_name.replace('.', "/");
         let call_stack = &CallStack::new(&self.vm);
-        self.class(call_stack, &class_name).await
+        self.load_class(call_stack, &class_name).await
     }
 
     /// Get a class.
@@ -194,7 +194,7 @@ impl VM {
     ///
     /// # Errors
     /// if the class cannot be loaded
-    pub(crate) async fn class(
+    pub(crate) async fn load_class(
         &self,
         call_stack: &CallStack,
         class_name: &str,
@@ -338,7 +338,7 @@ impl VM {
         class_name: &str,
     ) -> Result<Value> {
         let object_class_name = "java/lang/Class";
-        let class = self.class(call_stack, object_class_name).await?;
+        let class = self.load_class(call_stack, object_class_name).await?;
         let object = Object::new(class)?;
         let name = self.to_string_value(call_stack, class_name).await?;
         let name_field = object.field("name")?;
@@ -372,7 +372,7 @@ impl VM {
         value: &str,
     ) -> Result<Value> {
         let class_name = "java/lang/String";
-        let class = self.class(call_stack, class_name).await?;
+        let class = self.load_class(call_stack, class_name).await?;
         let object = Object::new(class)?;
 
         // The String implementation changed in Java 9.
@@ -472,7 +472,7 @@ mod tests {
     #[tokio::test]
     async fn test_vm_load_java_lang_object() -> Result<()> {
         let vm = test_vm().await?;
-        let class = vm.load("java.lang.Object").await?;
+        let class = vm.class("java.lang.Object").await?;
         assert_eq!("java/lang/Object", class.name());
         Ok(())
     }
@@ -481,7 +481,7 @@ mod tests {
     async fn test_hello_world_class() -> Result<()> {
         let vm = test_vm().await?;
         let call_stack = CallStack::new(&vm.vm);
-        let class = vm.class(&call_stack, "HelloWorld").await?;
+        let class = vm.load_class(&call_stack, "HelloWorld").await?;
         assert_eq!("HelloWorld", class.name());
         Ok(())
     }
@@ -490,7 +490,7 @@ mod tests {
     async fn test_constants_class() -> Result<()> {
         let vm = test_vm().await?;
         let call_stack = CallStack::new(&vm.vm);
-        let class = vm.class(&call_stack, "Constants").await?;
+        let class = vm.load_class(&call_stack, "Constants").await?;
         assert_eq!("Constants", class.name());
         Ok(())
     }
@@ -499,7 +499,7 @@ mod tests {
     async fn test_class_inheritance() -> Result<()> {
         let vm = test_vm().await?;
         let call_stack = CallStack::new(&vm.vm);
-        let hash_map = vm.class(&call_stack, "java/util/HashMap").await?;
+        let hash_map = vm.load_class(&call_stack, "java/util/HashMap").await?;
         assert_eq!("java/util/HashMap", hash_map.name());
 
         let abstract_map = hash_map.parent()?.expect("HashMap parent");

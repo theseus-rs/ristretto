@@ -88,7 +88,7 @@ async fn common_main() -> Result<()> {
     let Some(main_class_name) = vm.main_class() else {
         return Err(RuntimeError("No main class specified".into()));
     };
-    let main_class = vm.load(main_class_name).await?;
+    let main_class = vm.class(main_class_name).await?;
     let Some(main_method) = main_class.main_method() else {
         return Err(RuntimeError("No main method found".into()));
     };

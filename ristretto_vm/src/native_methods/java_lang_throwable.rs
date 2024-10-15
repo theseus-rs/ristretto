@@ -31,7 +31,9 @@ fn fill_in_stack_trace(
         };
 
         let vm = call_stack.vm()?;
-        let stack_element_class = vm.class(&call_stack, "java/lang/StackTraceElement").await?;
+        let stack_element_class = vm
+            .load_class(&call_stack, "java/lang/StackTraceElement")
+            .await?;
         let stack_elements = ConcurrentVec::new();
         for frame in call_stack.frames()?.iter().rev() {
             let class = frame.class();
