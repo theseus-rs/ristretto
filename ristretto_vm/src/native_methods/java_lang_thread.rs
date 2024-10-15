@@ -6,7 +6,6 @@ use ristretto_classloader::{Object, Reference, Value};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::thread;
 use std::time::Duration;
 
 /// Register all native methods for java.lang.Thread.
@@ -69,7 +68,7 @@ fn sleep(
         let millis = arguments.pop_long()?;
         let millis = u64::try_from(millis)?;
         let duration = Duration::from_millis(millis);
-        thread::sleep(duration);
+        tokio::time::sleep(duration).await;
         Ok(None)
     })
 }
@@ -80,7 +79,7 @@ fn r#yield(
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
-        thread::yield_now();
+        tokio::task::yield_now().await;
         Ok(None)
     })
 }
