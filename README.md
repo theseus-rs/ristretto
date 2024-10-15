@@ -37,7 +37,7 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 
 - Deterministic memory allocation / deallocation
 - No tracing garbage collector
-- Loading classes from any version of [AWS Corretto](https://github.com/corretto)
+- Runtime classes based on any version of [AWS Corretto](https://github.com/corretto)
 - Load classes from directories, jars, modules
 - Url class loading from jars and modules
 - Reading, writing, verifying classes for any version of Java version up to 24
