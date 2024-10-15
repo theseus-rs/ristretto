@@ -124,9 +124,7 @@ impl Frame {
     /// * if the program counter is invalid
     /// * if an invalid instruction is encountered
     pub async fn execute(&self) -> Result<Option<Value>> {
-        // TODO: avoid cloning code
-        let code = self.method.code().clone();
-
+        let code = self.method.code();
         loop {
             let program_counter = self.program_counter.load(Ordering::Relaxed);
             let Some(instruction) = code.get(program_counter) else {
