@@ -14,7 +14,7 @@ Implementation of a [JVM](https://docs.oracle.com/javase/specs/jvms/se23/html/in
 
 ## Safety
 
-These crates use `#![forbid(unsafe_code)]` to ensure everything is implemented in 100% safe Rust.
+This crate uses `#![forbid(unsafe_code)]` to ensure everything is implemented in 100% safe Rust.
 
 ## License
 
