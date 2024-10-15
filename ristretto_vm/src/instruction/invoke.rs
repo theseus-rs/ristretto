@@ -2,9 +2,10 @@ use crate::call_stack::CallStack;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::Error::RuntimeError;
-use crate::{Result, VM};
+use crate::{Error, Result, VM};
 use ristretto_classfile::Constant;
 use ristretto_classfile::Error::InvalidConstantPoolIndexType;
+use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Reference, Value};
 use std::sync::Arc;
 
@@ -55,17 +56,41 @@ pub(crate) async fn invokespecial(frame: &Frame, method_index: u16) -> Result<Ex
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-    let method = class.try_get_special_method(method_name, method_descriptor)?;
+    let (method_class, method) = try_get_special_method(class, method_name, method_descriptor)?;
 
     invoke_method(
         &vm,
         &call_stack,
         frame,
-        class,
+        method_class,
         method,
         &InvocationType::Special,
     )
     .await
+}
+
+/// Get a special method by name and descriptor.
+///
+/// # Errors
+/// if the method is not found.
+fn try_get_special_method<S: AsRef<str>>(
+    class: Arc<Class>,
+    name: S,
+    descriptor: S,
+) -> Result<(Arc<Class>, Arc<Method>)> {
+    let name = name.as_ref();
+    let descriptor = descriptor.as_ref();
+    if let Some(method) = class.method(name, descriptor) {
+        return Ok((class, method));
+    }
+    let Some(parent) = class.parent()? else {
+        return Err(Error::from(MethodNotFound {
+            class_name: class.name().to_string(),
+            method_name: name.to_string(),
+            method_descriptor: descriptor.to_string(),
+        }));
+    };
+    try_get_special_method(parent, name, descriptor)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokestatic>

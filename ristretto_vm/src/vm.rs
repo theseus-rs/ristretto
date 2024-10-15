@@ -149,7 +149,7 @@ impl VM {
             //     &system_class,
             //     &init_phase2_method,
             //     vec![Value::Int(1), Value::Int(1)],
-            // )?;
+            // ).await?;
             // let Some(Value::Int(result)) = phase2_result else {
             //     return Err(RuntimeError(format!(
             //         "System::initPhase2() call failed: {phase2_result:?}"
@@ -163,7 +163,7 @@ impl VM {
 
             // TODO: Implement System::initPhase3()
             // let init_phase3_method = system_class.try_get_method("initPhase3", "()V")?;
-            // self.invoke(&system_class, &init_phase3_method, vec![])?;
+            // self.invoke(&system_class, &init_phase3_method, vec![]).await?;
         }
 
         Ok(())
