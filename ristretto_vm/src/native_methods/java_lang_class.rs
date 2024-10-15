@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::Error::RuntimeError;
+use crate::Error::{NullPointer, RuntimeError};
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
 use std::future::Future;
@@ -23,7 +23,19 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/String;)Ljava/lang/Class;",
         get_primitive_class,
     );
+    registry.register(
+        class_name,
+        "getSuperclass",
+        "()Ljava/lang/Class;",
+        get_super_class,
+    );
     registry.register(class_name, "isArray", "()Z", is_array);
+    registry.register(
+        class_name,
+        "isAssignableFrom",
+        "(Ljava/lang/Class;)Z",
+        is_assignable_from,
+    );
     registry.register(class_name, "isPrimitive", "()Z", is_primitive);
     registry.register(class_name, "registerNatives", "()V", register_natives);
 }
@@ -69,6 +81,27 @@ fn get_primitive_class(
     })
 }
 
+fn get_super_class(
+    call_stack: Arc<CallStack>,
+    mut arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let Some(Reference::Object(object)) = arguments.pop_object()? else {
+            return Err(RuntimeError("getSuperclass: no arguments".to_string()));
+        };
+        let class = object.class();
+        match class.parent()? {
+            Some(parent) => {
+                let class_name = parent.name();
+                let vm = call_stack.vm()?;
+                let class = vm.to_class_value(&call_stack, class_name).await?;
+                Ok(Some(class))
+            }
+            None => Ok(None),
+        }
+    })
+}
+
 #[expect(clippy::needless_pass_by_value)]
 fn is_array(
     _call_stack: Arc<CallStack>,
@@ -76,10 +109,34 @@ fn is_array(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let Some(Reference::Object(object)) = arguments.pop_object()? else {
-            return Err(RuntimeError("isPrimitive: no arguments".to_string()));
+            return Err(RuntimeError("isArray: no arguments".to_string()));
         };
         let class = object.class();
         if class.is_array() {
+            Ok(Some(Value::Int(1)))
+        } else {
+            Ok(Some(Value::Int(0)))
+        }
+    })
+}
+
+#[expect(clippy::needless_pass_by_value)]
+fn is_assignable_from(
+    _call_stack: Arc<CallStack>,
+    mut arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        let object_argument = match arguments.pop_object()? {
+            Some(Reference::Object(object)) => object,
+            None => return Err(NullPointer),
+            _ => return Err(RuntimeError("isAssignableFrom: no arguments".to_string())),
+        };
+        let class_argument = object_argument.class();
+        let Some(Reference::Object(object)) = arguments.pop_object()? else {
+            return Err(RuntimeError("isAssignableFrom: no instance".to_string()));
+        };
+        let class = object.class();
+        if class.is_assignable_from(class_argument.name())? {
             Ok(Some(Value::Int(1)))
         } else {
             Ok(Some(Value::Int(0)))
