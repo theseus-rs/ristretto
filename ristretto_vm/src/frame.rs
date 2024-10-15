@@ -175,7 +175,7 @@ impl Frame {
         let stack_size = Byte::from_u64(stack_size).get_appropriate_unit(UnitType::Decimal);
         debug!("  frame: {class_name}.{method_name}{method_descriptor}{source}");
         debug!("    locals: {}", self.locals);
-        debug!("    stack ({stack_size:#.0}): {}", self.stack);
+        debug!("    stack ({stack_size:#.2}): {}", self.stack);
         debug!("    pc: {program_counter}; instruction: {instruction}");
         Ok(())
     }
