@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::Error::RuntimeError;
+use crate::Error::InternalError;
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
 use std::future::Future;
@@ -35,25 +35,25 @@ fn write_bytes(
         let length = usize::try_from(arguments.pop_int()?)?;
         let offset = usize::try_from(arguments.pop_int()?)?;
         let Some(Reference::ByteArray(bytes)) = arguments.pop_object()? else {
-            return Err(RuntimeError(
+            return Err(InternalError(
                 "Invalid argument type; expected byte[]".to_string(),
             ));
         };
         let bytes: Vec<u8> = bytes.to_vec()?.iter().map(|&x| x as u8).collect();
         let Some(Reference::Object(file_output_stream)) = arguments.pop_object()? else {
-            return Err(RuntimeError(
+            return Err(InternalError(
                 "Invalid argument type; expected object".to_string(),
             ));
         };
         let Value::Object(Some(Reference::Object(file_descriptor))) =
             file_output_stream.field("fd")?.value()?
         else {
-            return Err(RuntimeError(
+            return Err(InternalError(
                 "Invalid argument type; expected object".to_string(),
             ));
         };
         let Value::Long(handle) = file_descriptor.field("handle")?.value()? else {
-            return Err(RuntimeError(
+            return Err(InternalError(
                 "Invalid argument type; expected long".to_string(),
             ));
         };
@@ -64,23 +64,23 @@ fn write_bytes(
                 let mut stdout = stdout.lock();
                 stdout
                     .write_all(&bytes[offset..offset + length])
-                    .map_err(|error| RuntimeError(error.to_string()))?;
+                    .map_err(|error| InternalError(error.to_string()))?;
                 stdout
                     .flush()
-                    .map_err(|error| RuntimeError(error.to_string()))?;
+                    .map_err(|error| InternalError(error.to_string()))?;
             }
             2 => {
                 let stderr = std::io::stderr();
                 let mut stderr = stderr.lock();
                 stderr
                     .write_all(&bytes[offset..offset + length])
-                    .map_err(|error| RuntimeError(error.to_string()))?;
+                    .map_err(|error| InternalError(error.to_string()))?;
                 stderr
                     .flush()
-                    .map_err(|error| RuntimeError(error.to_string()))?;
+                    .map_err(|error| InternalError(error.to_string()))?;
             }
             _ => {
-                return Err(RuntimeError(format!("Invalid file handle: {handle}")));
+                return Err(InternalError(format!("Invalid file handle: {handle}")));
             }
         }
         Ok(None)

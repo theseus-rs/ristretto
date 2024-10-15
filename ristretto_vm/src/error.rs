@@ -19,6 +19,9 @@ pub enum Error {
     /// An error occurred while loading a class
     #[error(transparent)]
     ClassLoaderError(#[from] ristretto_classloader::Error),
+    /// Internal error
+    #[error("Internal error: {0}")]
+    InternalError(String),
     /// Invalid constant
     #[error("Invalid constant; expected {expected}, found {actual}")]
     InvalidConstant { expected: String, actual: String },
@@ -55,9 +58,6 @@ pub enum Error {
     /// Poisoned lock
     #[error("Poisoned lock: {0}")]
     PoisonedLock(String),
-    /// Runtime error
-    #[error("Runtime error: {0}")]
-    RuntimeError(String),
     /// An error occurred while converting from an integer
     #[error(transparent)]
     TryFromIntError(#[from] std::num::TryFromIntError),

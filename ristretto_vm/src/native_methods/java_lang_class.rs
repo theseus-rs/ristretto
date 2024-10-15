@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::Error::{NullPointer, RuntimeError};
+use crate::Error::{InternalError, NullPointer};
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
 use std::future::Future;
@@ -54,7 +54,7 @@ fn get_primitive_class(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let Some(Reference::Object(primitive)) = arguments.pop_object()? else {
-            return Err(RuntimeError("getPrimitiveClass: no arguments".to_string()));
+            return Err(InternalError("getPrimitiveClass: no arguments".to_string()));
         };
 
         let primitive = primitive.as_string()?;
@@ -69,7 +69,7 @@ fn get_primitive_class(
             "short" => "java/lang/Short",
             "void" => "java/lang/Void",
             _ => {
-                return Err(RuntimeError(format!(
+                return Err(InternalError(format!(
                     "getPrimitiveClass: unrecognized primitive: {primitive}"
                 )));
             }
@@ -87,7 +87,7 @@ fn get_super_class(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let Some(Reference::Object(object)) = arguments.pop_object()? else {
-            return Err(RuntimeError("getSuperclass: no arguments".to_string()));
+            return Err(InternalError("getSuperclass: no arguments".to_string()));
         };
         let class = object.class();
         match class.parent()? {
@@ -109,7 +109,7 @@ fn is_array(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let Some(Reference::Object(object)) = arguments.pop_object()? else {
-            return Err(RuntimeError("isArray: no arguments".to_string()));
+            return Err(InternalError("isArray: no arguments".to_string()));
         };
         let class = object.class();
         if class.is_array() {
@@ -129,11 +129,11 @@ fn is_assignable_from(
         let object_argument = match arguments.pop_object()? {
             Some(Reference::Object(object)) => object,
             None => return Err(NullPointer),
-            _ => return Err(RuntimeError("isAssignableFrom: no arguments".to_string())),
+            _ => return Err(InternalError("isAssignableFrom: no arguments".to_string())),
         };
         let class_argument = object_argument.class();
         let Some(Reference::Object(object)) = arguments.pop_object()? else {
-            return Err(RuntimeError("isAssignableFrom: no instance".to_string()));
+            return Err(InternalError("isAssignableFrom: no instance".to_string()));
         };
         let class = object.class();
         if class.is_assignable_from(class_argument.name())? {
@@ -151,7 +151,7 @@ fn is_primitive(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let Some(Reference::Object(object)) = arguments.pop_object()? else {
-            return Err(RuntimeError("isPrimitive: no arguments".to_string()));
+            return Err(InternalError("isPrimitive: no arguments".to_string()));
         };
         let field = object.field("name")?;
         let class_name = field.value()?.as_string()?;

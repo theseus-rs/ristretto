@@ -1,7 +1,7 @@
 use crate::call_stack::CallStack;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
-use crate::Error::RuntimeError;
+use crate::Error::InternalError;
 use crate::{Error, Result, VM};
 use ristretto_classfile::Constant;
 use ristretto_classfile::Error::InvalidConstantPoolIndexType;
@@ -230,7 +230,7 @@ async fn invoke_method(
     match invocation_type {
         InvocationType::Interface | InvocationType::Virtual => {
             let Some(Value::Object(Some(reference))) = arguments.first() else {
-                return Err(RuntimeError("No reference found".to_string()));
+                return Err(InternalError("No reference found".to_string()));
             };
             class = match reference {
                 Reference::Array(class, _) => class.clone(),
@@ -254,7 +254,7 @@ async fn invoke_method(
                     break;
                 }
                 let Some(parent_class) = class.parent()? else {
-                    return Err(RuntimeError(
+                    return Err(InternalError(
                         "No virtual method found for class".to_string(),
                     ));
                 };

@@ -3,7 +3,7 @@ use crate::call_stack::CallStack;
 use crate::native_methods::java_lang_object::object_hash_code;
 use crate::native_methods::properties;
 use crate::native_methods::registry::MethodRegistry;
-use crate::Error::RuntimeError;
+use crate::Error::InternalError;
 use crate::Result;
 use indexmap::IndexMap;
 use ristretto_classfile::attributes::Instruction;
@@ -71,7 +71,7 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq>(
     let max_length = min(source_position + length, source.len()?);
     for i in source_position..max_length {
         let Some(value) = source.get(i)? else {
-            return Err(RuntimeError("invalid source array index".to_string()));
+            return Err(InternalError("invalid source array index".to_string()));
         };
         destination.set(destination_position, value)?;
         destination_position += 1;
@@ -88,11 +88,11 @@ fn arraycopy(
         let length = arguments.pop_int()?;
         let destination_position = arguments.pop_int()?;
         let Some(destination) = arguments.pop_object()? else {
-            return Err(RuntimeError("destination must be an object".to_string()));
+            return Err(InternalError("destination must be an object".to_string()));
         };
         let source_position = arguments.pop_int()?;
         let Some(source) = arguments.pop_object()? else {
-            return Err(RuntimeError("source must be an object".to_string()));
+            return Err(InternalError("source must be an object".to_string()));
         };
 
         let source_position = usize::try_from(source_position)?;
@@ -173,7 +173,7 @@ fn arraycopy(
                 )?;
             }
             _ => {
-                return Err(RuntimeError(
+                return Err(InternalError(
                     "source and destination must be arrays of the same type".to_string(),
                 ))
             }
@@ -199,7 +199,7 @@ fn current_time_millis(
         let now = SystemTime::now();
         let duration = now
             .duration_since(UNIX_EPOCH)
-            .map_err(|error| RuntimeError(error.to_string()))?;
+            .map_err(|error| InternalError(error.to_string()))?;
         let time = i64::try_from(duration.as_millis())?;
         Ok(Some(Value::Long(time)))
     })
@@ -245,7 +245,7 @@ fn map_library_name(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let Some(Reference::Object(object)) = arguments.pop_object()? else {
-            return Err(RuntimeError("argument must be an object".to_string()));
+            return Err(InternalError("argument must be an object".to_string()));
         };
         let libname = object.as_string()?;
         let library_name = match OS {
@@ -268,7 +268,7 @@ fn nano_time(
         let now = SystemTime::now();
         let duration = now
             .duration_since(UNIX_EPOCH)
-            .map_err(|error| RuntimeError(error.to_string()))?;
+            .map_err(|error| InternalError(error.to_string()))?;
         let time = i64::try_from(duration.as_nanos())?;
         Ok(Some(Value::Long(time)))
     })

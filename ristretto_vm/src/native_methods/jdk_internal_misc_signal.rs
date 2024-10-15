@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::Error::{InvalidOperand, RuntimeError};
+use crate::Error::{InternalError, InvalidOperand};
 use crate::Result;
 use ristretto_classloader::Value;
 use std::future::Future;
@@ -84,7 +84,7 @@ fn find_signal_0(
             "PWR" => 30,
             "SYS" | "UNUSED" => 31,
             _ => {
-                return Err(RuntimeError(format!("Unknown signal: {signal_name}")));
+                return Err(InternalError(format!("Unknown signal: {signal_name}")));
             }
         };
         Ok(Some(Value::Int(signal)))

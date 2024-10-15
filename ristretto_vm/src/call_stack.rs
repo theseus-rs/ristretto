@@ -1,5 +1,5 @@
 use crate::arguments::Arguments;
-use crate::Error::{PoisonedLock, RuntimeError};
+use crate::Error::{InternalError, PoisonedLock};
 use crate::{native_methods, Frame, Result, VM};
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Value};
@@ -33,7 +33,7 @@ impl CallStack {
     pub fn vm(&self) -> Result<Arc<VM>> {
         match self.vm.upgrade() {
             Some(vm) => Ok(vm),
-            None => Err(RuntimeError("VM is not available".to_string())),
+            None => Err(InternalError("VM is not available".to_string())),
         }
     }
 
@@ -75,7 +75,7 @@ impl CallStack {
         let (result, frame_added) = if let Some(rust_method) = rust_method {
             let arguments = Arguments::new(arguments);
             let Some(call_stack) = self.call_stack.upgrade() else {
-                return Err(RuntimeError("Call stack is not available".to_string()));
+                return Err(InternalError("Call stack is not available".to_string()));
             };
             let result = Box::pin(rust_method(call_stack, arguments)).await;
             (result, false)
