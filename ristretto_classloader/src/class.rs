@@ -617,6 +617,44 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn test_method_not_fount() -> Result<()> {
+        let class = simple_class()?;
+        let method = class.method("foo", "()V");
+        assert!(method.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn test_try_get_method() -> Result<()> {
+        let class = simple_class()?;
+        let name = "getPublicValue";
+        let descriptor = "()I";
+        let method = class.try_get_method(name, descriptor)?;
+        assert_eq!(name, method.name());
+        assert_eq!(descriptor, method.descriptor());
+        Ok(())
+    }
+
+    #[test]
+    fn test_try_get_method_not_fount() -> Result<()> {
+        let class = simple_class()?;
+        let name = "foo";
+        let descriptor = "()V";
+        let result = class.try_get_method(name, descriptor);
+        assert!(matches!(
+            result,
+            Err(MethodNotFound {
+                class_name,
+                method_name,
+                method_descriptor,
+            }) if class.name() == class_name
+                && method_name == "foo"
+                && method_descriptor == "()V"
+        ));
+        Ok(())
+    }
+
     #[tokio::test]
     async fn test_string_instanceof_object() -> Result<()> {
         let string_class = string_class().await?;
