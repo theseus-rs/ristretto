@@ -25,7 +25,7 @@ pub(crate) async fn invokevirtual(frame: &Frame, method_index: u16) -> Result<Ex
     let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(&call_stack, class_name).await?;
+    let class = vm.load_class(&call_stack, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -80,7 +80,7 @@ pub(crate) async fn invokespecial(frame: &Frame, method_index: u16) -> Result<Ex
     let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(&call_stack, class_name).await?;
+    let class = vm.load_class(&call_stack, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -141,7 +141,7 @@ pub(crate) async fn invokestatic(frame: &Frame, method_index: u16) -> Result<Exe
         return Err(InvalidConstantPoolIndexType(method_index).into());
     };
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(&call_stack, class_name).await?;
+    let class = vm.load_class(&call_stack, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -172,7 +172,7 @@ pub(crate) async fn invokeinterface(
     let (class_index, name_and_type_index) =
         constant_pool.try_get_interface_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.class(&call_stack, class_name).await?;
+    let class = vm.load_class(&call_stack, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -239,7 +239,7 @@ async fn invoke_method(
                     // Primitive types do not have a class associated with them so the class must be
                     // created from the class name.
                     let class_name = reference.class_name();
-                    vm.class(call_stack, &class_name).await?
+                    vm.load_class(call_stack, &class_name).await?
                 }
             };
             let method_name = method.name();
@@ -285,7 +285,7 @@ mod test {
     #[tokio::test]
     async fn test_try_get_virtual_method_hierarchy() -> Result<()> {
         let vm = VM::default().await?;
-        let class = vm.load("java/util/TreeMap").await?;
+        let class = vm.class("java/util/TreeMap").await?;
         let method = try_get_virtual_method(&class, "size", "()I");
         assert!(method.is_ok());
         Ok(())
@@ -294,7 +294,7 @@ mod test {
     #[tokio::test]
     async fn test_try_get_virtual_method_interface_hierarchy() -> Result<()> {
         let vm = VM::default().await?;
-        let class = vm.load("java/util/NavigableMap").await?;
+        let class = vm.class("java/util/NavigableMap").await?;
         let method = try_get_virtual_method(&class, "size", "()I");
         assert!(method.is_ok());
         Ok(())
@@ -303,7 +303,7 @@ mod test {
     #[tokio::test]
     async fn test_try_get_virtual_method_not_found() -> Result<()> {
         let vm = VM::default().await?;
-        let class = vm.load("java/util/TreeMap").await?;
+        let class = vm.class("java/util/TreeMap").await?;
         let result = try_get_special_method(&class, "foo", "()V");
         assert!(matches!(
             result,
@@ -324,7 +324,7 @@ mod test {
     #[tokio::test]
     async fn test_try_get_special_method() -> Result<()> {
         let vm = VM::default().await?;
-        let class = vm.load("java/util/AbstractSet").await?;
+        let class = vm.class("java/util/AbstractSet").await?;
         let (method_class, method) =
             try_get_special_method(&class, "addAll", "(Ljava/util/Collection;)Z")?;
         assert_eq!(method_class.name(), "java/util/AbstractCollection");
@@ -336,7 +336,7 @@ mod test {
     #[tokio::test]
     async fn test_try_get_special_method_not_found() -> Result<()> {
         let vm = VM::default().await?;
-        let class = vm.load("java/util/AbstractSet").await?;
+        let class = vm.class("java/util/AbstractSet").await?;
         let result = try_get_special_method(&class, "foo", "()V");
         assert!(matches!(
             result,

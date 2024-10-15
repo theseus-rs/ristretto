@@ -396,7 +396,7 @@ fn object_field_offset_1(
         let name_field = class_object.field("name")?;
         let class_name = name_field.value()?.as_string()?;
         let vm = call_stack.vm()?;
-        let class = vm.class(&call_stack, &class_name).await?;
+        let class = vm.load_class(&call_stack, &class_name).await?;
         let offset = class.field_offset(&field_name)?;
         let offset = i64::try_from(offset)?;
         Ok(Some(Value::Long(offset)))

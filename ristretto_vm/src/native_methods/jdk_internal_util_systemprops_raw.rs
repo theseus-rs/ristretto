@@ -37,7 +37,7 @@ fn platform_properties(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let vm = call_stack.vm()?;
-        let string_class = vm.class(&call_stack, "java/lang/String").await?;
+        let string_class = vm.load_class(&call_stack, "java/lang/String").await?;
         let system_properties = &mut properties::system(call_stack).await?;
         let java_version = vm.java_version();
 
@@ -118,7 +118,7 @@ fn vm_properties(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let vm = call_stack.vm()?;
-        let string_class = vm.class(&call_stack, "java/lang/String").await?;
+        let string_class = vm.load_class(&call_stack, "java/lang/String").await?;
         // TODO: Implement platform command properties (e.g. -Dkey=value)
         let mut platform_properties = HashMap::new();
         platform_properties.insert("java.home", String::new());

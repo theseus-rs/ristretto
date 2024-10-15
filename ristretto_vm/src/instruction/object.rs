@@ -188,7 +188,7 @@ pub(crate) async fn new(frame: &Frame, index: u16) -> Result<ExecutionResult> {
     let vm = call_stack.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.class(&call_stack, class_name).await?;
+    let class = vm.load_class(&call_stack, class_name).await?;
     let object = Object::new(class)?;
     let reference = Reference::Object(object);
     let stack = frame.stack();
@@ -415,7 +415,7 @@ mod tests {
     async fn test_aaload() -> Result<()> {
         let (vm, call_stack, frame) = crate::test::frame().await?;
         let stack = frame.stack();
-        let class = vm.class(&call_stack, "java/lang/Object").await?;
+        let class = vm.load_class(&call_stack, "java/lang/Object").await?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
         stack.push_object(Some(array))?;
@@ -447,7 +447,7 @@ mod tests {
     async fn test_aaload_invalid_index() -> Result<()> {
         let (vm, call_stack, frame) = crate::test::frame().await?;
         let stack = frame.stack();
-        let class = vm.class(&call_stack, "java/lang/Object").await?;
+        let class = vm.load_class(&call_stack, "java/lang/Object").await?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
         stack.push_object(Some(array))?;
@@ -471,7 +471,7 @@ mod tests {
     async fn test_aastore() -> Result<()> {
         let (vm, call_stack, frame) = crate::test::frame().await?;
         let stack = frame.stack();
-        let class = vm.class(&call_stack, "java/lang/Object").await?;
+        let class = vm.load_class(&call_stack, "java/lang/Object").await?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![3]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object)]));
         stack.push_object(Some(array))?;
@@ -504,7 +504,7 @@ mod tests {
     async fn test_aastore_invalid_index() -> Result<()> {
         let (vm, call_stack, frame) = crate::test::frame().await?;
         let stack = frame.stack();
-        let class = vm.class(&call_stack, "java/lang/Object").await?;
+        let class = vm.load_class(&call_stack, "java/lang/Object").await?;
         let object = Reference::IntArray(ConcurrentVec::from(vec![3]));
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
         stack.push_object(Some(array))?;

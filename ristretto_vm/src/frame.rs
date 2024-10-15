@@ -467,7 +467,7 @@ mod tests {
             .build();
         let vm = VM::new(configuration).await?;
         let call_stack = CallStack::new(&Arc::downgrade(&vm));
-        let class = vm.class(&call_stack, class_name).await?;
+        let class = vm.load_class(&call_stack, class_name).await?;
         Ok((call_stack, class))
     }
 
