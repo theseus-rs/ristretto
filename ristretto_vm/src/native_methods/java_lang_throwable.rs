@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::Error::RuntimeError;
+use crate::Error::InternalError;
 use crate::Result;
 use ristretto_classloader::{ConcurrentVec, Object, Reference, Value};
 use std::future::Future;
@@ -27,7 +27,7 @@ fn fill_in_stack_trace(
         let _dummy = usize::try_from(arguments.pop_int()?)?;
         let object = arguments.pop_object()?;
         let Some(Reference::Object(ref throwable)) = object else {
-            return Err(RuntimeError("No throwable object found".to_string()));
+            return Err(InternalError("No throwable object found".to_string()));
         };
 
         let vm = call_stack.vm()?;

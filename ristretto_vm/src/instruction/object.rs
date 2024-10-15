@@ -3,7 +3,7 @@ use crate::frame::{ExecutionResult, ExecutionResult::Continue, Frame};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::Error::{
-    ArrayIndexOutOfBounds, ClassCastError, InvalidStackValue, NullPointer, RuntimeError,
+    ArrayIndexOutOfBounds, ClassCastError, InternalError, InvalidStackValue, NullPointer,
 };
 use crate::{Result, Value};
 use ristretto_classloader::{Object, Reference};
@@ -200,7 +200,7 @@ pub(crate) async fn new(frame: &Frame, index: u16) -> Result<ExecutionResult> {
 #[inline]
 pub(crate) fn checkcast(stack: &OperandStack, class_name: &str) -> Result<ExecutionResult> {
     let Value::Object(object) = stack.peek()? else {
-        return Err(RuntimeError("Expected object".to_string()));
+        return Err(InternalError("Expected object".to_string()));
     };
     let Some(object) = object else {
         return Ok(Continue);

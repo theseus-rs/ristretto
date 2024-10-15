@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::Error::{InvalidOperand, RuntimeError};
+use crate::Error::{InternalError, InvalidOperand};
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
 use std::future::Future;
@@ -222,7 +222,7 @@ fn compare_and_set_int(
         let expected = arguments.pop_int()?;
         let offset = arguments.pop_long()?;
         let Some(Reference::Object(object)) = arguments.pop_object()? else {
-            return Err(RuntimeError(
+            return Err(InternalError(
                 "compareAndSetInt: Invalid reference".to_string(),
             ));
         };
@@ -252,7 +252,7 @@ fn compare_and_set_long(
         let expected = arguments.pop_long()?;
         let offset = arguments.pop_long()?;
         let Some(Reference::Object(object)) = arguments.pop_object()? else {
-            return Err(RuntimeError(
+            return Err(InternalError(
                 "compareAndSetLong: Invalid reference".to_string(),
             ));
         };
@@ -283,14 +283,14 @@ fn compare_and_set_reference(
         let offset = arguments.pop_long()?;
         let offset = usize::try_from(offset)?;
         let Some(object) = arguments.pop_object()? else {
-            return Err(RuntimeError(
+            return Err(InternalError(
                 "compareAndSetReference: Invalid reference".to_string(),
             ));
         };
         let result = match object {
             Reference::Array(_class, array) => {
                 let Some(reference) = array.get(offset)? else {
-                    return Err(RuntimeError(
+                    return Err(InternalError(
                         "getReference: Invalid reference index".to_string(),
                     ));
                 };
@@ -303,7 +303,7 @@ fn compare_and_set_reference(
                 }
             }
             _ => {
-                return Err(RuntimeError("getReference: Invalid reference".to_string()));
+                return Err(InternalError("getReference: Invalid reference".to_string()));
             }
         };
         Ok(Some(Value::Int(result)))
@@ -335,12 +335,12 @@ fn get_reference(
         let offset = arguments.pop_long()?;
         let offset = usize::try_from(offset)?;
         let Some(reference) = arguments.pop_object()? else {
-            return Err(RuntimeError("getReference: Invalid reference".to_string()));
+            return Err(InternalError("getReference: Invalid reference".to_string()));
         };
         match reference {
             Reference::Array(_class, array) => {
                 let Some(reference) = array.get(offset)? else {
-                    return Err(RuntimeError(
+                    return Err(InternalError(
                         "getReference: Invalid reference index".to_string(),
                     ));
                 };
@@ -352,7 +352,7 @@ fn get_reference(
                 let value = field.value()?;
                 Ok(Some(value))
             }
-            _ => Err(RuntimeError("getReference: Invalid reference".to_string())),
+            _ => Err(InternalError("getReference: Invalid reference".to_string())),
         }
     })
 }
@@ -389,7 +389,7 @@ fn object_field_offset_1(
             }
         };
         let Some(Reference::Object(class_object)) = arguments.pop_object()? else {
-            return Err(RuntimeError(
+            return Err(InternalError(
                 "objectFieldOffset1: Invalid class reference".to_string(),
             ));
         };
@@ -413,7 +413,7 @@ fn put_reference_volatile(
         let offset = arguments.pop_long()?;
         let offset = usize::try_from(offset)?;
         let Some(object) = arguments.pop_object()? else {
-            return Err(RuntimeError(
+            return Err(InternalError(
                 "compareAndSetReference: Invalid reference".to_string(),
             ));
         };
@@ -422,7 +422,7 @@ fn put_reference_volatile(
                 array.set(offset, x)?;
             }
             _ => {
-                return Err(RuntimeError("getReference: Invalid reference".to_string()));
+                return Err(InternalError("getReference: Invalid reference".to_string()));
             }
         }
         Ok(None)

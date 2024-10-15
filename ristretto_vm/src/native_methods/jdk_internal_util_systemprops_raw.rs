@@ -2,7 +2,7 @@ use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::properties;
 use crate::native_methods::registry::MethodRegistry;
-use crate::Error::RuntimeError;
+use crate::Error::InternalError;
 use crate::Result;
 use ristretto_classfile::Version;
 use ristretto_classloader::{ConcurrentVec, Reference, Value};
@@ -105,7 +105,9 @@ fn push_property(
     property_name: &str,
 ) -> Result<()> {
     let Some(Value::Object(value)) = system_properties.remove(property_name) else {
-        return Err(RuntimeError(format!("Property not found: {property_name}")));
+        return Err(InternalError(format!(
+            "Property not found: {property_name}"
+        )));
     };
     properties.push(value);
     Ok(())
@@ -126,14 +128,14 @@ fn vm_properties(
         let mut properties: Vec<Option<Reference>> = Vec::new();
         for (key, value) in platform_properties {
             let Value::Object(key) = vm.to_string_value(&call_stack, key).await? else {
-                return Err(RuntimeError(format!(
+                return Err(InternalError(format!(
                     "Unable to convert key to string: {key}"
                 )));
             };
             properties.push(key);
             let Value::Object(value) = vm.to_string_value(&call_stack, value.as_str()).await?
             else {
-                return Err(RuntimeError(format!(
+                return Err(InternalError(format!(
                     "Unable to convert value to string: {value}"
                 )));
             };

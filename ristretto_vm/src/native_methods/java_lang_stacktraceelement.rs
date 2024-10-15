@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::Error::RuntimeError;
+use crate::Error::InternalError;
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
 use std::future::Future;
@@ -27,14 +27,14 @@ fn init_stack_trace_elements(
     Box::pin(async move {
         let depth = usize::try_from(arguments.pop_int()?)?;
         let Some(Reference::Array(_class, back_trace)) = arguments.pop_object()? else {
-            return Err(RuntimeError("No back trace object found".to_string()));
+            return Err(InternalError("No back trace object found".to_string()));
         };
         let Some(Reference::Array(_class, stack_trace)) = arguments.pop_object()? else {
-            return Err(RuntimeError("No stack trace object found".to_string()));
+            return Err(InternalError("No stack trace object found".to_string()));
         };
         for index in 0..depth {
             let Some(value) = back_trace.get(index)? else {
-                return Err(RuntimeError("No back trace element found".to_string()));
+                return Err(InternalError("No back trace element found".to_string()));
             };
             stack_trace.set(index, value)?;
         }

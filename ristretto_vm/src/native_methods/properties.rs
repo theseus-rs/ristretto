@@ -1,5 +1,5 @@
 use crate::call_stack::CallStack;
-use crate::Error::RuntimeError;
+use crate::Error::InternalError;
 use crate::{Result, VM};
 use ristretto_classloader::Value;
 use std::collections::HashMap;
@@ -167,7 +167,7 @@ fn system_properties(vm: &VM) -> Result<HashMap<&'static str, String>> {
     properties.insert("sun.stdout.encoding", "UTF-8".to_string());
 
     properties.insert("user.country", country.to_string());
-    let current_dir = env::current_dir().map_err(|error| RuntimeError(error.to_string()))?;
+    let current_dir = env::current_dir().map_err(|error| InternalError(error.to_string()))?;
     properties.insert("user.dir", format!("{}", current_dir.to_string_lossy()));
     let home_dir = dirs::home_dir().unwrap_or_default();
     properties.insert("user.home", format!("{}", home_dir.to_string_lossy()));

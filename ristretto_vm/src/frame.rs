@@ -20,7 +20,7 @@ use crate::instruction::{
     lstore_w, lsub, lushr, lxor, multianewarray, new, newarray, pop, pop2, putfield, putstatic,
     ret, ret_w, saload, sastore, sipush, swap, tableswitch,
 };
-use crate::Error::{InvalidOperand, InvalidProgramCounter, RuntimeError};
+use crate::Error::{InternalError, InvalidOperand, InvalidProgramCounter};
 use crate::{CallStack, LocalVariables, OperandStack, Result};
 use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::Instruction;
@@ -83,7 +83,7 @@ impl Frame {
     pub fn call_stack(&self) -> Result<Arc<CallStack>> {
         match self.call_stack.upgrade() {
             Some(call_stack) => Ok(call_stack),
-            None => Err(RuntimeError("Call stack is not available".to_string())),
+            None => Err(InternalError("Call stack is not available".to_string())),
         }
     }
 

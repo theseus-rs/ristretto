@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
-use crate::Error::RuntimeError;
+use crate::Error::InternalError;
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
 use std::future::Future;
@@ -49,7 +49,7 @@ fn get_class(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let Some(object) = arguments.pop_object()? else {
-            return Err(RuntimeError("no object reference defined".to_string()));
+            return Err(InternalError("no object reference defined".to_string()));
         };
 
         let class_name = object.class_name();
@@ -66,7 +66,7 @@ fn hash_code(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let Some(object) = arguments.pop_object()? else {
-            return Err(RuntimeError("no object reference defined".to_string()));
+            return Err(InternalError("no object reference defined".to_string()));
         };
         let hash_code = object_hash_code(&object);
         Ok(Some(Value::Int(hash_code)))

@@ -4,7 +4,7 @@ mod logging;
 mod version;
 
 use clap::{ArgGroup, Parser};
-use ristretto_vm::Error::RuntimeError;
+use ristretto_vm::Error::InternalError;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
 use std::env::consts::{ARCH, OS};
 use std::path::PathBuf;
@@ -86,11 +86,11 @@ async fn common_main() -> Result<()> {
     let configuration = configuration_builder.build();
     let vm = VM::new(configuration).await?;
     let Some(main_class_name) = vm.main_class() else {
-        return Err(RuntimeError("No main class specified".into()));
+        return Err(InternalError("No main class specified".into()));
     };
     let main_class = vm.class(main_class_name).await?;
     let Some(main_method) = main_class.main_method() else {
-        return Err(RuntimeError("No main method found".into()));
+        return Err(InternalError("No main method found".into()));
     };
 
     let mut arguments = Vec::new();
