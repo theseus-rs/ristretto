@@ -3,6 +3,7 @@ use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Result;
 use ristretto_classloader::Value;
+use std::cmp::min;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -76,7 +77,12 @@ fn max_memory(
     _call_stack: Arc<CallStack>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
-    Box::pin(async move { Ok(Some(Value::Long(i64::MAX))) })
+    Box::pin(async move {
+        let sys = System::new_all();
+        let total_memory = min(sys.total_memory(), u64::try_from(i64::MAX)?);
+        let total_memory = i64::try_from(total_memory)?;
+        Ok(Some(Value::Long(total_memory)))
+    })
 }
 
 #[expect(clippy::needless_pass_by_value)]
