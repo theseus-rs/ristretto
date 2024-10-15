@@ -2,9 +2,10 @@ use crate::call_stack::CallStack;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::Error::RuntimeError;
-use crate::{Result, VM};
+use crate::{Error, Result, VM};
 use ristretto_classfile::Constant;
 use ristretto_classfile::Error::InvalidConstantPoolIndexType;
+use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Reference, Value};
 use std::sync::Arc;
 
@@ -29,7 +30,7 @@ pub(crate) async fn invokevirtual(frame: &Frame, method_index: u16) -> Result<Ex
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-    let method = class.try_get_virtual_method(method_name, method_descriptor)?;
+    let method = try_get_virtual_method(&class, method_name, method_descriptor)?;
 
     invoke_method(
         &vm,
@@ -40,6 +41,35 @@ pub(crate) async fn invokevirtual(frame: &Frame, method_index: u16) -> Result<Ex
         &InvocationType::Virtual,
     )
     .await
+}
+
+/// Get a virtual method by name and descriptor.
+///
+/// # Errors
+/// if the method is not found.
+fn try_get_virtual_method<S: AsRef<str>>(
+    class: &Arc<Class>,
+    name: S,
+    descriptor: S,
+) -> Result<Arc<Method>> {
+    let name = name.as_ref();
+    let descriptor = descriptor.as_ref();
+    if let Some(method) = class.method(name, descriptor) {
+        return Ok(method);
+    }
+    for interface in class.interfaces()? {
+        if let Ok(method) = try_get_virtual_method(&interface, name, descriptor) {
+            return Ok(method);
+        }
+    }
+    let Some(parent) = class.parent()? else {
+        return Err(Error::from(MethodNotFound {
+            class_name: class.name().to_string(),
+            method_name: name.to_string(),
+            method_descriptor: descriptor.to_string(),
+        }));
+    };
+    try_get_virtual_method(&parent, name, descriptor)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokespecial>
@@ -55,17 +85,41 @@ pub(crate) async fn invokespecial(frame: &Frame, method_index: u16) -> Result<Ex
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-    let method = class.try_get_special_method(method_name, method_descriptor)?;
+    let (method_class, method) = try_get_special_method(&class, method_name, method_descriptor)?;
 
     invoke_method(
         &vm,
         &call_stack,
         frame,
-        class,
+        method_class,
         method,
         &InvocationType::Special,
     )
     .await
+}
+
+/// Get a special method by name and descriptor.
+///
+/// # Errors
+/// if the method is not found.
+fn try_get_special_method<S: AsRef<str>>(
+    class: &Arc<Class>,
+    name: S,
+    descriptor: S,
+) -> Result<(Arc<Class>, Arc<Method>)> {
+    let name = name.as_ref();
+    let descriptor = descriptor.as_ref();
+    if let Some(method) = class.method(name, descriptor) {
+        return Ok((class.clone(), method));
+    }
+    let Some(parent) = class.parent()? else {
+        return Err(Error::from(MethodNotFound {
+            class_name: class.name().to_string(),
+            method_name: name.to_string(),
+            method_descriptor: descriptor.to_string(),
+        }));
+    };
+    try_get_special_method(&parent, name, descriptor)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokestatic>
@@ -123,7 +177,7 @@ pub(crate) async fn invokeinterface(
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-    let method = class.try_get_virtual_method(method_name, method_descriptor)?;
+    let method = try_get_virtual_method(&class, method_name, method_descriptor)?;
 
     invoke_method(
         &vm,
@@ -219,15 +273,81 @@ async fn invoke_method(
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    use crate::Error::ClassLoaderError;
+    use crate::VM;
+
     // #[test]
     // fn test_invokevirtual() -> Result<()> {
     //     todo!()
     // }
 
+    #[tokio::test]
+    async fn test_try_get_virtual_method_hierarchy() -> Result<()> {
+        let vm = VM::default().await?;
+        let class = vm.load("java/util/TreeMap").await?;
+        let method = try_get_virtual_method(&class, "size", "()I");
+        assert!(method.is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_get_virtual_method_interface_hierarchy() -> Result<()> {
+        let vm = VM::default().await?;
+        let class = vm.load("java/util/NavigableMap").await?;
+        let method = try_get_virtual_method(&class, "size", "()I");
+        assert!(method.is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_get_virtual_method_not_found() -> Result<()> {
+        let vm = VM::default().await?;
+        let class = vm.load("java/util/TreeMap").await?;
+        let result = try_get_special_method(&class, "foo", "()V");
+        assert!(matches!(
+            result,
+            Err(ClassLoaderError(MethodNotFound {
+                class_name,
+                method_name,
+                method_descriptor
+            })) if class_name == "java/lang/Object" && method_name == "foo" && method_descriptor == "()V"
+        ));
+        Ok(())
+    }
+
     // #[test]
     // fn test_invokespecial() -> Result<()> {
     //     todo!()
     // }
+
+    #[tokio::test]
+    async fn test_try_get_special_method() -> Result<()> {
+        let vm = VM::default().await?;
+        let class = vm.load("java/util/AbstractSet").await?;
+        let (method_class, method) =
+            try_get_special_method(&class, "addAll", "(Ljava/util/Collection;)Z")?;
+        assert_eq!(method_class.name(), "java/util/AbstractCollection");
+        assert_eq!(method.name(), "addAll");
+        assert_eq!(method.descriptor(), "(Ljava/util/Collection;)Z");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_get_special_method_not_found() -> Result<()> {
+        let vm = VM::default().await?;
+        let class = vm.load("java/util/AbstractSet").await?;
+        let result = try_get_special_method(&class, "foo", "()V");
+        assert!(matches!(
+            result,
+            Err(ClassLoaderError(MethodNotFound {
+                class_name,
+                method_name,
+                method_descriptor
+            })) if class_name == "java/lang/Object" && method_name == "foo" && method_descriptor == "()V"
+        ));
+        Ok(())
+    }
 
     // #[test]
     // fn test_invokestatic() -> Result<()> {

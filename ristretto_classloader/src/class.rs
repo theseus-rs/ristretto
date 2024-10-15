@@ -379,62 +379,6 @@ impl Class {
         Ok(method)
     }
 
-    /// Get a special method by name and descriptor.
-    ///
-    /// # Errors
-    /// if the method is not found.
-    pub fn try_get_special_method<S: AsRef<str>>(
-        &self,
-        name: S,
-        descriptor: S,
-    ) -> Result<Arc<Method>> {
-        let name = name.as_ref();
-        let descriptor = descriptor.as_ref();
-        if let Some(method) = self.method(name, descriptor) {
-            return Ok(method);
-        }
-
-        let Some(parent) = self.parent()? else {
-            return Err(MethodNotFound {
-                class_name: self.name().to_string(),
-                method_name: name.to_string(),
-                method_descriptor: descriptor.to_string(),
-            });
-        };
-        parent.try_get_special_method(name, descriptor)
-    }
-
-    /// Get a virtual method by name and descriptor.
-    ///
-    /// # Errors
-    /// if the method is not found.
-    pub fn try_get_virtual_method<S: AsRef<str>>(
-        &self,
-        name: S,
-        descriptor: S,
-    ) -> Result<Arc<Method>> {
-        let name = name.as_ref();
-        let descriptor = descriptor.as_ref();
-        if let Some(method) = self.method(name, descriptor) {
-            return Ok(method);
-        }
-
-        for interface in self.interfaces()? {
-            if let Ok(method) = interface.try_get_virtual_method(name, descriptor) {
-                return Ok(method);
-            }
-        }
-
-        let Some(parent) = self.parent()? else {
-            return Err(MethodNotFound {
-                class_name: self.name().to_string(),
-                method_name: name.to_string(),
-                method_descriptor: descriptor.to_string(),
-            });
-        };
-        parent.try_get_virtual_method(name, descriptor)
-    }
-
     /// Determine if this class is assignable from the given class.
     ///
     /// # Errors
@@ -670,6 +614,44 @@ mod tests {
         let method = class.method(name, descriptor).expect("class initializer");
         assert_eq!(name, method.name());
         assert_eq!(descriptor, method.descriptor());
+        Ok(())
+    }
+
+    #[test]
+    fn test_method_not_fount() -> Result<()> {
+        let class = simple_class()?;
+        let method = class.method("foo", "()V");
+        assert!(method.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn test_try_get_method() -> Result<()> {
+        let class = simple_class()?;
+        let name = "getPublicValue";
+        let descriptor = "()I";
+        let method = class.try_get_method(name, descriptor)?;
+        assert_eq!(name, method.name());
+        assert_eq!(descriptor, method.descriptor());
+        Ok(())
+    }
+
+    #[test]
+    fn test_try_get_method_not_fount() -> Result<()> {
+        let class = simple_class()?;
+        let name = "foo";
+        let descriptor = "()V";
+        let result = class.try_get_method(name, descriptor);
+        assert!(matches!(
+            result,
+            Err(MethodNotFound {
+                class_name,
+                method_name,
+                method_descriptor,
+            }) if class.name() == class_name
+                && method_name == "foo"
+                && method_descriptor == "()V"
+        ));
         Ok(())
     }
 

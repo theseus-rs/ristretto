@@ -1,6 +1,6 @@
 use crate::call_stack::CallStack;
 use crate::Error::UnsupportedClassFileVersion;
-use crate::{Configuration, Result};
+use crate::{Configuration, ConfigurationBuilder, Result};
 use ristretto_classfile::{mutf8, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::Error::ParseError;
@@ -102,6 +102,15 @@ impl VM {
         Ok(vm)
     }
 
+    /// Create a new VM with the default configuration
+    ///
+    /// # Errors
+    /// if the VM cannot be created
+    pub async fn default() -> Result<Arc<VM>> {
+        let configuration = ConfigurationBuilder::default().build();
+        VM::new(configuration).await
+    }
+
     /// Get the configuration
     #[must_use]
     pub fn configuration(&self) -> &Configuration {
@@ -149,7 +158,7 @@ impl VM {
             //     &system_class,
             //     &init_phase2_method,
             //     vec![Value::Int(1), Value::Int(1)],
-            // )?;
+            // ).await?;
             // let Some(Value::Int(result)) = phase2_result else {
             //     return Err(RuntimeError(format!(
             //         "System::initPhase2() call failed: {phase2_result:?}"
@@ -163,7 +172,7 @@ impl VM {
 
             // TODO: Implement System::initPhase3()
             // let init_phase3_method = system_class.try_get_method("initPhase3", "()V")?;
-            // self.invoke(&system_class, &init_phase3_method, vec![])?;
+            // self.invoke(&system_class, &init_phase3_method, vec![]).await?;
         }
 
         Ok(())
@@ -499,18 +508,6 @@ mod tests {
         let object = abstract_map.parent()?.expect("AbstractMap parent");
         assert_eq!("java/lang/Object", object.name());
         assert!(object.parent()?.is_none());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_class_interfaces() -> Result<()> {
-        let vm = test_vm().await?;
-        let call_stack = CallStack::new(&vm.vm);
-
-        let interface = vm.class(&call_stack, "java/util/NavigableMap").await?;
-        let method = interface.try_get_virtual_method("size", "()I");
-        assert!(method.is_ok());
-
         Ok(())
     }
 }
