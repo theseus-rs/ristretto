@@ -370,4 +370,11 @@ mod tests {
         assert_ne!(ref1, ref2);
         Ok(())
     }
+
+    #[test]
+    fn test_different_types_ne() {
+        let ref1 = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        let ref2 = Reference::LongArray(ConcurrentVec::from(vec![42]));
+        assert_ne!(ref1, ref2);
+    }
 }

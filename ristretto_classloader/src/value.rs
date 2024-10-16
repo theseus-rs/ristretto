@@ -123,44 +123,79 @@ impl Display for Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ConcurrentVec;
+    use crate::{runtime, ConcurrentVec, Object};
 
     #[test]
-    fn test_int_format() {
+    fn test_int_format() -> Result<()> {
         let value = Value::Int(42);
-        assert_eq!("int(42)", format!("{value}"));
+        assert_eq!(42, value.as_int()?);
+        assert_eq!("int(42)", value.to_string());
         assert!(value.is_category_1());
         assert!(!value.is_category_2());
+        Ok(())
     }
 
     #[test]
-    fn test_long_format() {
+    fn test_as_int_error() {
+        let result = Value::Long(42).as_int();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_long_format() -> Result<()> {
         let value = Value::Long(42);
-        assert_eq!("long(42)", format!("{value}"));
+        assert_eq!(42, value.as_long()?);
+        assert_eq!("long(42)", value.to_string());
         assert!(!value.is_category_1());
         assert!(value.is_category_2());
+        Ok(())
     }
 
     #[test]
-    fn test_float_format() {
+    fn test_as_long_error() {
+        let result = Value::Int(42).as_long();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_float_format() -> Result<()> {
         let value = Value::Float(42.1);
-        assert_eq!("float(42.1)", format!("{value}"));
+        let compare_value = value.as_float()? - 42.1f32;
+        assert!(compare_value.abs() < 0.1f32);
+        assert_eq!("float(42.1)", value.to_string());
         assert!(value.is_category_1());
         assert!(!value.is_category_2());
+        Ok(())
     }
 
     #[test]
-    fn test_double_format() {
+    fn test_as_float_error() {
+        let result = Value::Int(42).as_float();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_double_format() -> Result<()> {
         let value = Value::Double(42.1);
-        assert_eq!("double(42.1)", format!("{value}"));
+        let compare_value = value.as_double()? - 42.1f64;
+        assert!(compare_value.abs() < 0.1f64);
+        assert_eq!("double(42.1)", value.to_string());
         assert!(!value.is_category_1());
         assert!(value.is_category_2());
+        Ok(())
     }
 
     #[test]
-    fn test_object_format() {
+    fn test_as_double_error() {
+        let result = Value::Int(42).as_double();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_object_format() -> Result<()> {
         let value = Value::Object(None);
-        assert_eq!("object(null)", format!("{value}"));
+        assert_eq!(None, value.as_object()?);
+        assert_eq!("object(null)", value.to_string());
         assert!(value.is_category_1());
         assert!(!value.is_category_2());
         assert_eq!(
@@ -172,12 +207,42 @@ mod tests {
                 ]))))
             )
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_object_error() {
+        let result = Value::Int(42).as_object();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[expect(clippy::cast_possible_wrap)]
+    #[tokio::test]
+    async fn test_string_format() -> Result<()> {
+        let (_runtime_version, class_loader) = runtime::class_loader("21.0.4.7.1").await?;
+        let class = class_loader.load("java/lang/String").await?;
+        let object = Object::new(class)?;
+        let string_bytes = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
+        let string_value = Value::Object(Some(Reference::ByteArray(ConcurrentVec::from(
+            string_bytes,
+        ))));
+        object.field("value")?.set_value(string_value)?;
+        let value = Value::Object(Some(Reference::Object(object)));
+        assert_eq!("string(foo)", value.to_string());
+        assert_eq!("foo".to_string(), value.as_string()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_string_error() {
+        let result = Value::Int(42).as_string();
+        assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_unused_format() {
         let value = Value::Unused;
-        assert_eq!("unused", format!("{value}"));
+        assert_eq!("unused", value.to_string());
         assert!(value.is_category_1());
         assert!(!value.is_category_2());
     }
