@@ -54,7 +54,6 @@
 #![deny(clippy::pedantic)]
 #![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
-#![recursion_limit = "512"]
 
 mod class;
 mod class_loader;

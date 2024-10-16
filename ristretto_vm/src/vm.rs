@@ -309,7 +309,7 @@ impl VM {
     /// if the class cannot be registered
     pub(crate) async fn register_class(&self, class: Arc<Class>) -> Result<()> {
         debug!("register class: {class}");
-        let mut class_loader = self.class_loader.write().await;
+        let class_loader = self.class_loader.write().await;
         class_loader.register(class).await?;
         Ok(())
     }

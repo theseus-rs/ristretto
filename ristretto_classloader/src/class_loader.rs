@@ -108,7 +108,7 @@ impl ClassLoader {
     ///
     /// # Errors
     /// if the class cannot be registered.
-    pub async fn register(&mut self, class: Arc<Class>) -> Result<()> {
+    pub async fn register(&self, class: Arc<Class>) -> Result<()> {
         let mut classes = self.classes.write().await;
         let class_name = class.name().to_string();
         classes.insert(class_name, class);
@@ -187,11 +187,13 @@ mod tests {
     #[test]
     fn test_set_parent() {
         let class_path1 = ClassPath::from(".");
-        let mut class_loader1 = ClassLoader::new("test1", class_path1);
+        let class_loader1 = ClassLoader::new("test1", class_path1);
         let class_path2 = ClassPath::from(".");
-        let class_loader2 = ClassLoader::new("test2", class_path2);
-        class_loader1.set_parent(Some(class_loader2));
-        assert_eq!("test2", class_loader1.parent().expect("parent").name());
+        let mut class_loader2 = ClassLoader::new("test2", class_path2);
+        class_loader2.set_parent(Some(class_loader1));
+        assert_eq!("test1", class_loader2.parent().expect("parent").name());
+        class_loader2.set_parent(None);
+        assert_eq!(None, class_loader2.parent());
     }
 
     #[tokio::test]
@@ -261,5 +263,41 @@ mod tests {
         let class_loader = ClassLoader::new("test", class_path);
         let result = class_loader.load("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
+    }
+
+    #[test]
+    fn test_to_string() {
+        let class_path = ClassPath::from(".");
+        let class_loader = ClassLoader::new("test", class_path);
+        assert_eq!("test=.", class_loader.to_string());
+    }
+
+    #[test]
+    fn test_to_string_parent() {
+        let class_path1 = ClassPath::from(".");
+        let class_loader1 = ClassLoader::new("test1", class_path1);
+        let class_path2 = ClassPath::from(".");
+        let mut class_loader2 = ClassLoader::new("test2", class_path2);
+        class_loader2.set_parent(Some(class_loader1));
+        assert_eq!("test2=.; test1=.", class_loader2.to_string());
+    }
+
+    #[tokio::test]
+    async fn test_clone() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let class_path = ClassPath::from(classes_jar.to_string_lossy());
+        let class_loader = ClassLoader::new("test", class_path);
+        let class_name = "HelloWorld";
+        let _class = class_loader.load(class_name).await?;
+        let clone = class_loader.clone();
+        assert_eq!(class_loader, clone);
+        assert_eq!(class_loader.class_path(), clone.class_path());
+        assert_eq!(class_loader.parent(), clone.parent());
+        assert_eq!(
+            class_loader.classes.read().await.len(),
+            clone.classes.read().await.len()
+        );
+        Ok(())
     }
 }
