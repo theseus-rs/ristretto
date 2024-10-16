@@ -274,7 +274,12 @@ impl Class {
             });
         };
 
-        let field = parent.static_field(name)?;
+        let Ok(field) = parent.static_field(name) else {
+            return Err(FieldNotFound {
+                class_name: self.name.to_string(),
+                field_name: name.to_string(),
+            });
+        };
         Ok(field)
     }
 
@@ -421,7 +426,7 @@ impl Display for Class {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{runtime, Result};
+    use crate::{runtime, Error, Result};
     use std::io::Cursor;
 
     const JAVA_VERSION: &str = "21.0.4.7.1";
@@ -456,13 +461,11 @@ mod tests {
         Class::from(class_file)
     }
 
-    #[test]
-    fn test_new() -> Result<()> {
-        let class = simple_class()?;
-        assert_eq!("Simple", class.name());
-        assert_eq!(Some("Simple.java"), class.source_file());
-        assert_eq!("Simple", class.class_file().class_name()?);
-        assert_eq!("Simple", format!("{class}"));
+    #[tokio::test]
+    async fn test_new() -> Result<()> {
+        let class = string_class().await?;
+        assert_eq!("java/lang/String", class.name());
+        assert_eq!(None, class.component_type());
         assert_eq!(0, class.array_dimensions());
         assert!(!class.is_array());
         assert!(!class.is_primitive());
@@ -579,18 +582,149 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_source_file() -> Result<()> {
+        let class = string_class().await?;
+        assert_eq!(Some("String.java"), class.source_file());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_class_file() -> Result<()> {
+        let class = string_class().await?;
+        let class_file = class.class_file();
+        assert_eq!("java/lang/String", class_file.class_name()?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_parent() -> Result<()> {
+        let string_class = string_class().await?;
+        let parent = string_class
+            .parent()?
+            .ok_or(Error::ClassNotFound("java/lang/Object".to_string()))?;
+        assert_eq!("java/lang/Object", parent.name());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_interfaces() -> Result<()> {
+        let string_class = string_class().await?;
+        let serializable_class = serializable_class().await?;
+        let interfaces = string_class.interfaces()?;
+        assert!(interfaces.contains(&serializable_class));
+        Ok(())
+    }
+
     #[test]
-    fn test_class_initializer() -> Result<()> {
-        let class = simple_class()?;
+    fn test_constant_pool() -> Result<()> {
+        let class = Class::new_array("[Z")?;
+        let constant_pool = class.constant_pool();
+        assert!(!constant_pool.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn test_constant_pool_mut() -> Result<()> {
+        let mut class = Class::new_array("[Z")?;
+        let constant_pool = class.constant_pool_mut();
+        let index = constant_pool.add_string("foo")?;
+        assert!(index > 0);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_static_field() -> Result<()> {
+        let class = string_class().await?;
+        let result = class.static_field("serialVersionUID");
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_static_field_not_found() -> Result<()> {
+        let class = string_class().await?;
+        let result = class.static_field("foo");
+        assert!(matches!(
+            result,
+            Err(FieldNotFound { class_name, field_name })
+            if class.name() == class_name && field_name == "foo"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_static_field_found_but_not_static() -> Result<()> {
+        let class = string_class().await?;
+        let result = class.static_field("value");
+        assert!(matches!(
+            result,
+            Err(FieldNotFound { class_name, field_name })
+            if class.name() == class_name && field_name == "value"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_field_names() -> Result<()> {
+        let class = string_class().await?;
+        let field_names = class.field_names()?;
+        assert!(field_names.contains(&"value".to_string()));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_field_offset() -> Result<()> {
+        let class = string_class().await?;
+        let offset = class.field_offset("value")?;
+        assert_eq!(0, offset);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_field_offset_not_found() -> Result<()> {
+        let class = string_class().await?;
+        let result = class.field_offset("foo");
+        assert!(matches!(
+            result,
+            Err(FieldNotFound { class_name, field_name })
+            if class.name() == class_name && field_name == "foo"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_field_name() -> Result<()> {
+        let class = string_class().await?;
+        let name = class.field_name(0)?;
+        assert_eq!("value", name);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_field_name_not_found() -> Result<()> {
+        let class = string_class().await?;
+        let result = class.field_name(usize::MAX);
+        assert!(matches!(
+            result,
+            Err(FieldNotFound { class_name, field_name })
+            if class.name() == class_name && field_name == usize::MAX.to_string()
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_class_initializer() -> Result<()> {
+        let class = string_class().await?;
         let method = class.class_initializer().expect("class initializer");
         assert_eq!("<clinit>", method.name());
         assert_eq!("()V", method.descriptor());
         Ok(())
     }
 
-    #[test]
-    fn test_object_initializer() -> Result<()> {
-        let class = simple_class()?;
+    #[tokio::test]
+    async fn test_object_initializer() -> Result<()> {
+        let class = string_class().await?;
         let method = class.object_initializer("()V").expect("class initializer");
         assert_eq!("<init>", method.name());
         assert_eq!("()V", method.descriptor());
@@ -606,39 +740,39 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_method() -> Result<()> {
-        let class = simple_class()?;
-        let name = "getPublicValue";
-        let descriptor = "()I";
+    #[tokio::test]
+    async fn test_method() -> Result<()> {
+        let class = string_class().await?;
+        let name = "isEmpty";
+        let descriptor = "()Z";
         let method = class.method(name, descriptor).expect("class initializer");
         assert_eq!(name, method.name());
         assert_eq!(descriptor, method.descriptor());
         Ok(())
     }
 
-    #[test]
-    fn test_method_not_fount() -> Result<()> {
-        let class = simple_class()?;
+    #[tokio::test]
+    async fn test_method_not_fount() -> Result<()> {
+        let class = string_class().await?;
         let method = class.method("foo", "()V");
         assert!(method.is_none());
         Ok(())
     }
 
-    #[test]
-    fn test_try_get_method() -> Result<()> {
-        let class = simple_class()?;
-        let name = "getPublicValue";
-        let descriptor = "()I";
+    #[tokio::test]
+    async fn test_try_get_method() -> Result<()> {
+        let class = string_class().await?;
+        let name = "isEmpty";
+        let descriptor = "()Z";
         let method = class.try_get_method(name, descriptor)?;
         assert_eq!(name, method.name());
         assert_eq!(descriptor, method.descriptor());
         Ok(())
     }
 
-    #[test]
-    fn test_try_get_method_not_fount() -> Result<()> {
-        let class = simple_class()?;
+    #[tokio::test]
+    async fn test_try_get_method_not_fount() -> Result<()> {
+        let class = string_class().await?;
         let name = "foo";
         let descriptor = "()V";
         let result = class.try_get_method(name, descriptor);
@@ -656,7 +790,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_string_instanceof_object() -> Result<()> {
+    async fn test_string_is_assignable_from_object() -> Result<()> {
         let string_class = string_class().await?;
         let object_class = object_class().await?;
         assert!(string_class.is_assignable_from(&object_class.name)?);
@@ -664,7 +798,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_object_instanceof_string() -> Result<()> {
+    async fn test_object_is_assignable_from_string() -> Result<()> {
         let object_class = object_class().await?;
         let string_class = string_class().await?;
         assert!(!object_class.is_assignable_from(&string_class.name)?);
@@ -672,7 +806,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_string_instanceof_serializable() -> Result<()> {
+    async fn test_string_is_assignable_from_serializable() -> Result<()> {
         let string_class = string_class().await?;
         let serializable_class = serializable_class().await?;
         assert!(string_class.is_assignable_from(&serializable_class.name)?);
@@ -684,6 +818,13 @@ mod tests {
         let object_class = object_class().await?;
         let serializable_class = serializable_class().await?;
         assert!(!object_class.is_assignable_from(&serializable_class.name)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_to_string() -> Result<()> {
+        let class = string_class().await?;
+        assert_eq!("java/lang/String", class.to_string());
         Ok(())
     }
 }
