@@ -1,6 +1,6 @@
 use crate::Error::InvalidMethodDescriptor;
 use crate::Result;
-use ristretto_classfile::attributes::{Attribute, Instruction, LineNumber};
+use ristretto_classfile::attributes::{Attribute, ExceptionTableEntry, Instruction, LineNumber};
 use ristretto_classfile::{BaseType, ClassFile, FieldType, MethodAccessFlags};
 use std::fmt::Display;
 
@@ -15,6 +15,7 @@ pub struct Method {
     max_locals: usize,
     code: Vec<Instruction>,
     line_numbers: Vec<LineNumber>,
+    exception_table: Vec<ExceptionTableEntry>,
 }
 
 impl Method {
@@ -22,6 +23,7 @@ impl Method {
     ///
     /// # Errors
     /// if the method descriptor cannot be parsed
+    #[expect(clippy::too_many_arguments)]
     pub fn new<S: AsRef<str>>(
         access_flags: MethodAccessFlags,
         name: S,
@@ -30,6 +32,7 @@ impl Method {
         max_locals: usize,
         code: Vec<Instruction>,
         line_numbers: Vec<LineNumber>,
+        exception_table: Vec<ExceptionTableEntry>,
     ) -> Result<Self> {
         let (parameters, return_type) = Method::parse_descriptor(descriptor.as_ref())?;
         Ok(Self {
@@ -42,6 +45,7 @@ impl Method {
             max_locals,
             code,
             line_numbers,
+            exception_table,
         })
     }
 
@@ -53,7 +57,7 @@ impl Method {
         let constant_pool = &class_file.constant_pool;
         let name = constant_pool.try_get_utf8(definition.name_index)?;
         let descriptor = constant_pool.try_get_utf8(definition.descriptor_index)?;
-        let (max_stack, max_locals, code, line_numbers) = match definition
+        let (max_stack, max_locals, code, line_numbers, exception_table) = match definition
             .attributes
             .iter()
             .find(|attribute| matches!(attribute, Attribute::Code { .. }))
@@ -63,6 +67,7 @@ impl Method {
                 max_locals,
                 code,
                 attributes,
+                exception_table,
                 ..
             }) => {
                 let line_numbers = match attributes
@@ -80,9 +85,10 @@ impl Method {
                     usize::from(*max_locals),
                     code.clone(), // TODO: avoid cloning code
                     line_numbers,
+                    exception_table.clone(), // TODO: avoid cloning exception_table
                 )
             }
-            _ => (0, 0, Vec::new(), Vec::new()),
+            _ => (0, 0, Vec::new(), Vec::new(), Vec::new()),
         };
 
         Method::new(
@@ -93,6 +99,7 @@ impl Method {
             max_locals,
             code,
             line_numbers,
+            exception_table,
         )
     }
 
@@ -178,6 +185,12 @@ impl Method {
             .unwrap_or_else(|index| index - 1);
         let line_number = self.line_numbers[index].line_number;
         usize::from(line_number)
+    }
+
+    /// Get the exception table.
+    #[must_use]
+    pub fn exception_table(&self) -> &Vec<ExceptionTableEntry> {
+        &self.exception_table
     }
 
     /// Parse the method descriptor. The descriptor is a string representing the method signature.
