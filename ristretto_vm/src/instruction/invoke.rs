@@ -54,14 +54,17 @@ fn try_get_virtual_method<S: AsRef<str>>(
 ) -> Result<Arc<Method>> {
     let name = name.as_ref();
     let descriptor = descriptor.as_ref();
+
     if let Some(method) = class.method(name, descriptor) {
         return Ok(method);
     }
+
     for interface in class.interfaces()? {
         if let Ok(method) = try_get_virtual_method(&interface, name, descriptor) {
             return Ok(method);
         }
     }
+
     let Some(parent) = class.parent()? else {
         return Err(Error::from(MethodNotFound {
             class_name: class.name().to_string(),
@@ -69,7 +72,15 @@ fn try_get_virtual_method<S: AsRef<str>>(
             method_descriptor: descriptor.to_string(),
         }));
     };
-    try_get_virtual_method(&parent, name, descriptor)
+
+    let Ok(method) = try_get_virtual_method(&parent, name, descriptor) else {
+        return Err(Error::from(MethodNotFound {
+            class_name: class.name().to_string(),
+            method_name: name.to_string(),
+            method_descriptor: descriptor.to_string(),
+        }));
+    };
+    Ok(method)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokespecial>
@@ -109,9 +120,11 @@ fn try_get_special_method<S: AsRef<str>>(
 ) -> Result<(Arc<Class>, Arc<Method>)> {
     let name = name.as_ref();
     let descriptor = descriptor.as_ref();
+
     if let Some(method) = class.method(name, descriptor) {
         return Ok((class.clone(), method));
     }
+
     let Some(parent) = class.parent()? else {
         return Err(Error::from(MethodNotFound {
             class_name: class.name().to_string(),
@@ -119,7 +132,15 @@ fn try_get_special_method<S: AsRef<str>>(
             method_descriptor: descriptor.to_string(),
         }));
     };
-    try_get_special_method(&parent, name, descriptor)
+
+    let Ok((class, method)) = try_get_special_method(&parent, name, descriptor) else {
+        return Err(Error::from(MethodNotFound {
+            class_name: class.name().to_string(),
+            method_name: name.to_string(),
+            method_descriptor: descriptor.to_string(),
+        }));
+    };
+    Ok((class, method))
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokestatic>
@@ -304,14 +325,14 @@ mod test {
     async fn test_try_get_virtual_method_not_found() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java/util/TreeMap").await?;
-        let result = try_get_special_method(&class, "foo", "()V");
+        let result = try_get_virtual_method(&class, "foo", "()V");
         assert!(matches!(
             result,
             Err(ClassLoaderError(MethodNotFound {
                 class_name,
                 method_name,
                 method_descriptor
-            })) if class_name == "java/lang/Object" && method_name == "foo" && method_descriptor == "()V"
+            })) if class_name == "java/util/TreeMap" && method_name == "foo" && method_descriptor == "()V"
         ));
         Ok(())
     }
@@ -344,7 +365,7 @@ mod test {
                 class_name,
                 method_name,
                 method_descriptor
-            })) if class_name == "java/lang/Object" && method_name == "foo" && method_descriptor == "()V"
+            })) if class_name == "java/util/AbstractSet" && method_name == "foo" && method_descriptor == "()V"
         ));
         Ok(())
     }
