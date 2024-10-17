@@ -45,8 +45,7 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 
 ### Limitations
 
-- Instructions Athrow, Multianewarray and Invokedynamic are not implemented
-- Exceptions are not implemented
+- Instructions Multianewarray and Invokedynamic are not implemented
 - Threading is not implemented
 - Numerous JDK native methods are not implemented
 - Finalizers are not implemented

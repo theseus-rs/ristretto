@@ -4,8 +4,7 @@ async fn test_runtime(version: &str, class_name: &str) -> Result<()> {
     let (runtime_version, class_loader) = runtime::class_loader(version).await?;
     assert!(runtime_version.starts_with(version));
     let class = class_loader.load(class_name).await?;
-    let class_file = class.class_file();
-    assert_eq!(class_name, class_file.class_name()?);
+    assert_eq!(class_name, class.name());
     Ok(())
 }
 

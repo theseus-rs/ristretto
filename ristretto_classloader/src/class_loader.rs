@@ -206,13 +206,11 @@ mod tests {
         let class_loader = ClassLoader::new("test", class_path);
         let class_name = "HelloWorld";
         let class = class_loader.load(class_name).await?;
-        let class_file = class.class_file();
-        assert_eq!(class_name, class_file.class_name()?);
+        assert_eq!(class_name, class.name());
 
         // Load the same class again to test caching
         let class = class_loader.load(class_name).await?;
-        let class_file = class.class_file();
-        assert_eq!(class_name, class_file.class_name()?);
+        assert_eq!(class_name, class.name());
         Ok(())
     }
 
@@ -252,8 +250,7 @@ mod tests {
         class_loader.set_parent(Some(boot_class_loader));
 
         let class = class_loader.load("HelloWorld").await?;
-        let class_file = class.class_file();
-        assert_eq!("HelloWorld", class_file.class_name()?);
+        assert_eq!("HelloWorld", class.name());
         Ok(())
     }
 

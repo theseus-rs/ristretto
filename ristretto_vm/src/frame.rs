@@ -1,24 +1,25 @@
 use crate::frame::ExecutionResult::{Continue, ContinueAtPosition, Return};
 use crate::instruction::{
     aaload, aastore, aconst_null, aload, aload_0, aload_1, aload_2, aload_3, aload_w, anewarray,
-    areturn, arraylength, astore, astore_0, astore_1, astore_2, astore_3, astore_w, baload,
-    bastore, bipush, caload, castore, checkcast, d2f, d2i, d2l, dadd, daload, dastore, dcmpg,
-    dcmpl, dconst_0, dconst_1, ddiv, dload, dload_0, dload_1, dload_2, dload_3, dload_w, dmul,
-    dneg, drem, dreturn, dstore, dstore_0, dstore_1, dstore_2, dstore_3, dstore_w, dsub, dup, dup2,
-    dup2_x1, dup2_x2, dup_x1, dup_x2, f2d, f2i, f2l, fadd, faload, fastore, fcmpg, fcmpl, fconst_0,
-    fconst_1, fconst_2, fdiv, fload, fload_0, fload_1, fload_2, fload_3, fload_w, fmul, fneg, frem,
-    freturn, fstore, fstore_0, fstore_1, fstore_2, fstore_3, fstore_w, fsub, getfield, getstatic,
-    goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iaload, iand, iastore, iconst_0, iconst_1,
-    iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv, if_acmpeq, if_acmpne, if_icmpeq,
-    if_icmpge, if_icmpgt, if_icmple, if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne,
-    ifnonnull, ifnull, iinc, iinc_w, iload, iload_0, iload_1, iload_2, iload_3, iload_w, imul,
-    ineg, instanceof, invokedynamic, invokeinterface, invokespecial, invokestatic, invokevirtual,
-    ior, irem, ireturn, ishl, ishr, istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub,
-    iushr, ixor, jsr, jsr_w, l2d, l2f, l2i, ladd, laload, land, lastore, lcmp, lconst_0, lconst_1,
-    ldc, ldc2_w, ldc_w, ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg,
-    lookupswitch, lor, lrem, lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3,
-    lstore_w, lsub, lushr, lxor, multianewarray, new, newarray, pop, pop2, putfield, putstatic,
-    ret, ret_w, saload, sastore, sipush, swap, tableswitch,
+    areturn, arraylength, astore, astore_0, astore_1, astore_2, astore_3, astore_w, athrow, baload,
+    bastore, bipush, caload, castore, checkcast, convert_error_to_throwable, d2f, d2i, d2l, dadd,
+    daload, dastore, dcmpg, dcmpl, dconst_0, dconst_1, ddiv, dload, dload_0, dload_1, dload_2,
+    dload_3, dload_w, dmul, dneg, drem, dreturn, dstore, dstore_0, dstore_1, dstore_2, dstore_3,
+    dstore_w, dsub, dup, dup2, dup2_x1, dup2_x2, dup_x1, dup_x2, f2d, f2i, f2l, fadd, faload,
+    fastore, fcmpg, fcmpl, fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1, fload_2,
+    fload_3, fload_w, fmul, fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2, fstore_3,
+    fstore_w, fsub, getfield, getstatic, goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iaload,
+    iand, iastore, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv,
+    if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple, if_icmplt, if_icmpne, ifeq,
+    ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, iinc, iinc_w, iload, iload_0, iload_1,
+    iload_2, iload_3, iload_w, imul, ineg, instanceof, invokedynamic, invokeinterface,
+    invokespecial, invokestatic, invokevirtual, ior, irem, ireturn, ishl, ishr, istore, istore_0,
+    istore_1, istore_2, istore_3, istore_w, isub, iushr, ixor, jsr, jsr_w, l2d, l2f, l2i, ladd,
+    laload, land, lastore, lcmp, lconst_0, lconst_1, ldc, ldc2_w, ldc_w, ldiv, lload, lload_0,
+    lload_1, lload_2, lload_3, lload_w, lmul, lneg, lookupswitch, lor, lrem, lreturn, lshl, lshr,
+    lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr, lxor, multianewarray,
+    new, newarray, pop, pop2, process_throwable, putfield, putstatic, ret, ret_w, saload, sastore,
+    sipush, swap, tableswitch,
 };
 use crate::Error::{InternalError, InvalidOperand, InvalidProgramCounter};
 use crate::{CallStack, LocalVariables, OperandStack, Result};
@@ -125,6 +126,7 @@ impl Frame {
     /// * if an invalid instruction is encountered
     pub async fn execute(&self) -> Result<Option<Value>> {
         let code = self.method.code();
+
         loop {
             let program_counter = self.program_counter.load(Ordering::Relaxed);
             let Some(instruction) = code.get(program_counter) else {
@@ -147,8 +149,11 @@ impl Frame {
                 }
                 Ok(Return(value)) => return Ok(value.clone()),
                 Err(error) => {
-                    // TODO: implement exception handling
-                    return Err(error);
+                    let vm = self.call_stack()?.vm()?;
+                    let throwable = convert_error_to_throwable(vm, error).await?;
+                    let handler_program_counter = process_throwable(self, throwable)?;
+                    self.program_counter
+                        .store(handler_program_counter, Ordering::Relaxed);
                 }
             }
         }
@@ -390,7 +395,7 @@ impl Frame {
             Instruction::Newarray(array_type) => newarray(&self.stack, array_type),
             Instruction::Anewarray(index) => anewarray(self, *index).await,
             Instruction::Arraylength => arraylength(&self.stack),
-            Instruction::Athrow => todo!(),
+            Instruction::Athrow => athrow(self).await,
             Instruction::Checkcast(class_index) => {
                 let constant_pool = self.class.constant_pool();
                 let class_name = constant_pool.try_get_class(*class_index)?;

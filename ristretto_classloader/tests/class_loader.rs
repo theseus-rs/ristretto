@@ -8,8 +8,7 @@ async fn test_load_class_from_class_path_directory() -> Result<()> {
     let class_path = classes_directory.to_string_lossy();
     let class_loader = ClassLoader::new("directory-test", ClassPath::from(&class_path));
     let class = class_loader.load("HelloWorld").await?;
-    let class_file = class.class_file();
-    assert_eq!("HelloWorld", class_file.class_name()?);
+    assert_eq!("HelloWorld", class.name());
     Ok(())
 }
 
@@ -20,8 +19,7 @@ async fn test_load_class_from_class_path_jar() -> Result<()> {
     let class_path = ClassPath::from(classes_directory.to_string_lossy());
     let class_loader = ClassLoader::new("jar-test", class_path);
     let class = class_loader.load("HelloWorld").await?;
-    let class_file = class.class_file();
-    assert_eq!("HelloWorld", class_file.class_name()?);
+    assert_eq!("HelloWorld", class.name());
     Ok(())
 }
 
@@ -34,10 +32,6 @@ async fn test_load_class_from_class_path_url() -> Result<()> {
     let class = class_loader
         .load("org/springframework/boot/SpringApplication")
         .await?;
-    let class_file = class.class_file();
-    assert_eq!(
-        "org/springframework/boot/SpringApplication",
-        class_file.class_name()?
-    );
+    assert_eq!("org/springframework/boot/SpringApplication", class.name());
     Ok(())
 }

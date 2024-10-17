@@ -58,6 +58,9 @@ pub enum Error {
     /// Poisoned lock
     #[error("Poisoned lock: {0}")]
     PoisonedLock(String),
+    /// Error that represents a JVM throwable object
+    #[error("java.lang.Throwable: {0}")]
+    Throwable(ristretto_classloader::Object),
     /// An error occurred while converting from an integer
     #[error(transparent)]
     TryFromIntError(#[from] std::num::TryFromIntError),

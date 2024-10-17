@@ -51,6 +51,7 @@ pub(crate) async fn frame() -> Result<(Arc<VM>, Arc<CallStack>, Frame)> {
         10,
         Vec::new(),
         Vec::new(),
+        Vec::new(),
     )?;
     let arguments = Vec::new();
     let frame = Frame::new(

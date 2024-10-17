@@ -41,6 +41,7 @@
 #![deny(clippy::pedantic)]
 #![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
+extern crate core;
 
 pub mod attributes;
 mod base_type;
