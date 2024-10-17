@@ -1,9 +1,7 @@
-use ristretto_classloader::ClassPath;
+use ristretto_classloader::{ClassPath, DEFAULT_RUNTIME_VERSION};
 use std::env;
 use std::path::PathBuf;
 use std::string::ToString;
-
-pub(crate) const DEFAULT_RUNTIME_VERSION: &str = "21.0.4.7.1";
 
 /// Configuration
 #[derive(Debug, PartialEq)]

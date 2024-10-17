@@ -219,7 +219,7 @@ mod tests {
     #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
     async fn test_string_format() -> Result<()> {
-        let (_runtime_version, class_loader) = runtime::class_loader("21.0.4.7.1").await?;
+        let (_runtime_version, class_loader) = runtime::default_class_loader().await?;
         let class = class_loader.load("java/lang/String").await?;
         let object = Object::new(class)?;
         let string_bytes = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();

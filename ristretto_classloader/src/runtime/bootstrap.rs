@@ -6,6 +6,17 @@ use std::{env, fs, io};
 use tar::Archive;
 use tracing::{debug, instrument};
 
+pub const DEFAULT_RUNTIME_VERSION: &str = "21.0.4.7.1";
+
+/// Get a class loader for the default Java runtime version. If the version is not installed, the
+/// archive will be downloaded and extracted.
+///
+/// # Errors
+/// An error will be returned if the class loader cannot be created.
+pub async fn default_class_loader() -> Result<(String, ClassLoader)> {
+    class_loader(DEFAULT_RUNTIME_VERSION).await
+}
+
 /// Get a class loader for the given Java runtime version. If the version is not installed, the
 /// archive will be downloaded and extracted. A version can be a partial version, a major version,
 /// or a `*` to get the latest LTS release supported by the runtime.

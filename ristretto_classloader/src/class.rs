@@ -429,15 +429,13 @@ mod tests {
     use crate::{runtime, Error, Result};
     use std::io::Cursor;
 
-    const JAVA_VERSION: &str = "21.0.4.7.1";
-
     async fn object_class() -> Result<Arc<Class>> {
-        let (_version, class_loader) = runtime::class_loader(JAVA_VERSION).await?;
+        let (_version, class_loader) = runtime::default_class_loader().await?;
         class_loader.load("java/lang/Object").await
     }
 
     async fn string_class() -> Result<Arc<Class>> {
-        let (_version, class_loader) = runtime::class_loader(JAVA_VERSION).await?;
+        let (_version, class_loader) = runtime::default_class_loader().await?;
         let string_class = class_loader.load("java/lang/String").await?;
 
         let object_class = object_class().await?;
@@ -450,7 +448,7 @@ mod tests {
     }
 
     async fn serializable_class() -> Result<Arc<Class>> {
-        let (_version, class_loader) = runtime::class_loader(JAVA_VERSION).await?;
+        let (_version, class_loader) = runtime::default_class_loader().await?;
         class_loader.load("java/io/Serializable").await
     }
 
