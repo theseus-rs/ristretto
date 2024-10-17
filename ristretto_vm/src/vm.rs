@@ -412,8 +412,8 @@ impl VM {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::configuration::{ConfigurationBuilder, DEFAULT_RUNTIME_VERSION};
-    use ristretto_classloader::ClassPath;
+    use crate::configuration::ConfigurationBuilder;
+    use ristretto_classloader::{ClassPath, DEFAULT_RUNTIME_VERSION};
     use std::path::PathBuf;
 
     fn classes_jar_path() -> PathBuf {

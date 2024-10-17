@@ -79,4 +79,5 @@ pub use method::Method;
 pub use object::Object;
 pub use reference::Reference;
 pub use ristretto_classfile::{BaseType, FieldAccessFlags, FieldType, MethodAccessFlags};
+pub use runtime::DEFAULT_RUNTIME_VERSION;
 pub use value::Value;
