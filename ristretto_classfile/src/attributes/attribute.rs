@@ -4,7 +4,7 @@ use crate::attributes::instruction_utils;
 use crate::attributes::line_number::LineNumber;
 use crate::attributes::parameter_annotation::ParameterAnnotation;
 use crate::attributes::{
-    Annotation, AnnotationElement, CodeException, Exports, Instruction, LocalVariableTable,
+    Annotation, AnnotationElement, ExceptionTableEntry, Exports, Instruction, LocalVariableTable,
     LocalVariableTypeTable, MethodParameter, ModuleAccessFlags, Opens, Provides, Record, Requires,
     StackFrame, TypeAnnotation,
 };
@@ -44,7 +44,7 @@ pub enum Attribute {
         max_stack: u16,
         max_locals: u16,
         code: Vec<Instruction>,
-        exceptions: Vec<CodeException>,
+        exception_table: Vec<ExceptionTableEntry>,
         attributes: Vec<Attribute>,
     },
     StackMapTable {
@@ -290,10 +290,10 @@ impl Attribute {
                 let instructions = instruction_utils::from_bytes(&mut Cursor::new(code))?;
 
                 let exception_length = bytes.read_u16::<BigEndian>()?;
-                let mut exceptions = Vec::with_capacity(exception_length as usize);
+                let mut exception_table = Vec::with_capacity(exception_length as usize);
                 for _ in 0..exception_length {
-                    let exception = CodeException::from_bytes(bytes)?;
-                    exceptions.push(exception);
+                    let exception = ExceptionTableEntry::from_bytes(bytes)?;
+                    exception_table.push(exception);
                 }
                 let attributes_count = bytes.read_u16::<BigEndian>()?;
                 let mut attributes = Vec::with_capacity(attributes_count as usize);
@@ -306,7 +306,7 @@ impl Attribute {
                     max_stack,
                     max_locals,
                     code: instructions,
-                    exceptions,
+                    exception_table,
                     attributes,
                 }
             }
@@ -665,7 +665,7 @@ impl Attribute {
                 max_stack,
                 max_locals,
                 code,
-                exceptions,
+                exception_table,
                 attributes,
             } => {
                 let mut bytes = Vec::new();
@@ -677,9 +677,9 @@ impl Attribute {
                 bytes.write_u32::<BigEndian>(code_length)?;
                 bytes.extend_from_slice(code_bytes.as_slice());
 
-                let exceptions_length = u16::try_from(exceptions.len())?;
+                let exceptions_length = u16::try_from(exception_table.len())?;
                 bytes.write_u16::<BigEndian>(exceptions_length)?;
-                for exception in exceptions {
+                for exception in exception_table {
                     exception.to_bytes(&mut bytes)?;
                 }
 
@@ -1010,7 +1010,7 @@ impl fmt::Display for Attribute {
                 max_stack,
                 max_locals,
                 code,
-                exceptions,
+                exception_table,
                 attributes,
                 ..
             } => {
@@ -1054,8 +1054,8 @@ impl fmt::Display for Attribute {
                     writeln!(f, "{index:>6}: {}", value.trim())?;
                 }
 
-                if !exceptions.is_empty() {
-                    writeln!(f, "  {exceptions:?}")?;
+                if !exception_table.is_empty() {
+                    writeln!(f, "  {exception_table:?}")?;
                 }
 
                 for attribute in attributes {
@@ -1164,9 +1164,8 @@ mod test {
             name_index: 2,
             constant_value_index: 42,
         };
-        let exception = CodeException {
-            start_pc: 1,
-            end_pc: 2,
+        let exception_table_entry = ExceptionTableEntry {
+            range_pc: 1..2,
             handler_pc: 3,
             catch_type: 4,
         };
@@ -1175,7 +1174,7 @@ mod test {
             max_stack: 2,
             max_locals: 3,
             code: vec![Instruction::Iconst_1],
-            exceptions: vec![exception],
+            exception_table: vec![exception_table_entry],
             attributes: vec![constant.clone()],
         };
         let expected_bytes = [
@@ -1186,7 +1185,7 @@ mod test {
             Code:
               stack=2, locals=3
                  0: iconst_1
-              [CodeException { start_pc: 1, end_pc: 2, handler_pc: 3, catch_type: 4 }]
+              [ExceptionTableEntry { range_pc: 1..2, handler_pc: 3, catch_type: 4 }]
               ConstantValue { name_index: 2, constant_value_index: 42 }
         "};
 

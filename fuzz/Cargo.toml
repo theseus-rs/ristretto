@@ -96,8 +96,8 @@ name = "bootstrap_method_from_bytes"
 path = "fuzz_targets/classfile/attributes/bootstrap_method_from_bytes.rs"
 
 [[bin]]
-name = "code_exception_from_bytes"
-path = "fuzz_targets/classfile/attributes/code_exception_from_bytes.rs"
+name = "exception_table_entry_from_bytes"
+path = "fuzz_targets/classfile/attributes/exception_table_entry_from_bytes.rs"
 
 [[bin]]
 name = "exports_flags_from_bytes"
