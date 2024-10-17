@@ -4,11 +4,118 @@ use crate::Result;
 use std::collections::HashMap;
 use std::io::Cursor;
 
-/// Converts a vector of instructions to a vector of bytes. Using the instruction enum is a more
-/// idiomatic way to represent the instructions, but the JVM uses a byte representation.  This
-/// function converts the instruction enums to a byte representation and adjusts offsets where
-/// necessary.
-pub(crate) fn to_bytes(instructions: &[Instruction]) -> Result<Vec<u8>> {
+/// Converts bytes to a vector of instructions with all instruction offsets converted from a
+/// physical byte offset to a logical instruction offset where necessary.
+pub(crate) fn instructions_from_bytes(
+    bytes: &mut Cursor<Vec<u8>>,
+) -> Result<(HashMap<u16, u16>, Vec<Instruction>)> {
+    let mut instructions = Vec::new();
+    let mut byte_to_instruction_map = HashMap::new();
+    let mut instruction_to_byte_map = HashMap::new();
+    while bytes.position() < bytes.get_ref().len() as u64 {
+        let byte_position = u16::try_from(bytes.position())?;
+        let instruction_position = u16::try_from(instructions.len())?;
+        byte_to_instruction_map.insert(byte_position, instruction_position);
+        instruction_to_byte_map.insert(instruction_position, byte_position);
+        let instruction = Instruction::from_bytes(bytes)?;
+        instructions.push(instruction);
+    }
+
+    for (index, instruction) in instructions.iter_mut().enumerate() {
+        match instruction {
+            Instruction::Ifeq(ref mut offset)
+            | Instruction::Ifne(ref mut offset)
+            | Instruction::Iflt(ref mut offset)
+            | Instruction::Ifge(ref mut offset)
+            | Instruction::Ifgt(ref mut offset)
+            | Instruction::Ifle(ref mut offset)
+            | Instruction::If_icmpeq(ref mut offset)
+            | Instruction::If_icmpne(ref mut offset)
+            | Instruction::If_icmplt(ref mut offset)
+            | Instruction::If_icmpge(ref mut offset)
+            | Instruction::If_icmpgt(ref mut offset)
+            | Instruction::If_icmple(ref mut offset)
+            | Instruction::If_acmpeq(ref mut offset)
+            | Instruction::If_acmpne(ref mut offset)
+            | Instruction::Goto(ref mut offset)
+            | Instruction::Jsr(ref mut offset)
+            | Instruction::Ifnull(ref mut offset)
+            | Instruction::Ifnonnull(ref mut offset) => {
+                *offset = *byte_to_instruction_map
+                    .get(offset)
+                    .ok_or(InvalidInstructionOffset(u32::from(*offset)))?;
+            }
+            Instruction::Goto_w(ref mut offset) | Instruction::Jsr_w(ref mut offset) => {
+                // Note the map may need to be updated to use 32-bit offsets if/when the JVM spec
+                // is updated to support 32-bit offsets for goto_w and jsr_w.
+                // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.goto_w
+                let map_offset = u16::try_from(*offset)?;
+                *offset = i32::from(
+                    *byte_to_instruction_map
+                        .get(&map_offset)
+                        .ok_or(InvalidInstructionOffset(u32::from(map_offset)))?,
+                );
+            }
+            Instruction::Tableswitch {
+                ref mut default,
+                ref mut offsets,
+                ..
+            } => {
+                let position = instruction_to_byte_map
+                    .get(&u16::try_from(index)?)
+                    .expect("instruction byte");
+                let position = u32::from(*position);
+                let default_offset = position + u32::try_from(*default)?;
+                let instruction_default = byte_to_instruction_map
+                    .get(&u16::try_from(default_offset)?)
+                    .ok_or(InvalidInstructionOffset(default_offset))?
+                    - u16::try_from(index)?;
+                *default = i32::from(instruction_default);
+
+                for offset in offsets.iter_mut() {
+                    let byte_offset = position + u32::try_from(*offset)?;
+                    let instruction_offset = byte_to_instruction_map
+                        .get(&u16::try_from(byte_offset)?)
+                        .ok_or(InvalidInstructionOffset(byte_offset))?
+                        - u16::try_from(index)?;
+                    *offset = i32::from(instruction_offset);
+                }
+            }
+            Instruction::Lookupswitch {
+                ref mut default,
+                ref mut pairs,
+            } => {
+                let position = instruction_to_byte_map
+                    .get(&u16::try_from(index)?)
+                    .expect("instruction byte");
+                let position = u32::from(*position);
+                let default_offset = position + u32::try_from(*default)?;
+                let instruction_default = byte_to_instruction_map
+                    .get(&u16::try_from(default_offset)?)
+                    .ok_or(InvalidInstructionOffset(default_offset))?
+                    - u16::try_from(index)?;
+                *default = i32::from(instruction_default);
+
+                for (_match, offset) in pairs.iter_mut() {
+                    let byte_offset = position + u32::try_from(*offset)?;
+                    let instruction_offset = byte_to_instruction_map
+                        .get(&u16::try_from(byte_offset)?)
+                        .ok_or(InvalidInstructionOffset(byte_offset))?
+                        - u16::try_from(index)?;
+                    *offset = i32::from(instruction_offset);
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok((byte_to_instruction_map, instructions))
+}
+
+/// Converts instructions to a vector bytes with all instruction offsets converted from a
+/// logical instruction offset to a physical byte offset where necessary.
+pub(crate) fn instructions_to_bytes(
+    instructions: &[Instruction],
+) -> Result<(HashMap<u16, u16>, Vec<u8>)> {
     let mut bytes = Cursor::new(Vec::new());
     let mut instruction_to_byte_map = HashMap::new();
     for (index, instruction) in instructions.iter().enumerate() {
@@ -109,113 +216,7 @@ pub(crate) fn to_bytes(instructions: &[Instruction]) -> Result<Vec<u8>> {
 
         instruction.to_bytes(&mut bytes)?;
     }
-    Ok(bytes.into_inner())
-}
-
-/// Converts a vector of bytes to a vector of instructions. Using the instruction enum is a more
-/// idiomatic way to represent the instructions, but the JVM uses a byte representation.  This
-/// function converts bytes to instruction enums and adjusts offsets where necessary.
-pub(crate) fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Vec<Instruction>> {
-    let mut instructions = Vec::new();
-    let mut byte_to_instruction_map = HashMap::new();
-    let mut instruction_to_byte_map = HashMap::new();
-    while bytes.position() < bytes.get_ref().len() as u64 {
-        let byte_position = u16::try_from(bytes.position())?;
-        let instruction_position = u16::try_from(instructions.len())?;
-        byte_to_instruction_map.insert(byte_position, instruction_position);
-        instruction_to_byte_map.insert(instruction_position, byte_position);
-        let instruction = Instruction::from_bytes(bytes)?;
-        instructions.push(instruction);
-    }
-
-    for (index, instruction) in instructions.iter_mut().enumerate() {
-        match instruction {
-            Instruction::Ifeq(ref mut offset)
-            | Instruction::Ifne(ref mut offset)
-            | Instruction::Iflt(ref mut offset)
-            | Instruction::Ifge(ref mut offset)
-            | Instruction::Ifgt(ref mut offset)
-            | Instruction::Ifle(ref mut offset)
-            | Instruction::If_icmpeq(ref mut offset)
-            | Instruction::If_icmpne(ref mut offset)
-            | Instruction::If_icmplt(ref mut offset)
-            | Instruction::If_icmpge(ref mut offset)
-            | Instruction::If_icmpgt(ref mut offset)
-            | Instruction::If_icmple(ref mut offset)
-            | Instruction::If_acmpeq(ref mut offset)
-            | Instruction::If_acmpne(ref mut offset)
-            | Instruction::Goto(ref mut offset)
-            | Instruction::Jsr(ref mut offset)
-            | Instruction::Ifnull(ref mut offset)
-            | Instruction::Ifnonnull(ref mut offset) => {
-                *offset = *byte_to_instruction_map
-                    .get(offset)
-                    .ok_or(InvalidInstructionOffset(u32::from(*offset)))?;
-            }
-            Instruction::Goto_w(ref mut offset) | Instruction::Jsr_w(ref mut offset) => {
-                // Note the map may need to be updated to use 32-bit offsets if/when the JVM spec
-                // is updated to support 32-bit offsets for goto_w and jsr_w.
-                // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.goto_w
-                let map_offset = u16::try_from(*offset)?;
-                *offset = i32::from(
-                    *byte_to_instruction_map
-                        .get(&map_offset)
-                        .ok_or(InvalidInstructionOffset(u32::from(map_offset)))?,
-                );
-            }
-            Instruction::Tableswitch {
-                ref mut default,
-                ref mut offsets,
-                ..
-            } => {
-                let position = instruction_to_byte_map
-                    .get(&u16::try_from(index)?)
-                    .expect("instruction byte");
-                let position = u32::from(*position);
-                let default_offset = position + u32::try_from(*default)?;
-                let instruction_default = byte_to_instruction_map
-                    .get(&u16::try_from(default_offset)?)
-                    .ok_or(InvalidInstructionOffset(default_offset))?
-                    - u16::try_from(index)?;
-                *default = i32::from(instruction_default);
-
-                for offset in offsets.iter_mut() {
-                    let byte_offset = position + u32::try_from(*offset)?;
-                    let instruction_offset = byte_to_instruction_map
-                        .get(&u16::try_from(byte_offset)?)
-                        .ok_or(InvalidInstructionOffset(byte_offset))?
-                        - u16::try_from(index)?;
-                    *offset = i32::from(instruction_offset);
-                }
-            }
-            Instruction::Lookupswitch {
-                ref mut default,
-                ref mut pairs,
-            } => {
-                let position = instruction_to_byte_map
-                    .get(&u16::try_from(index)?)
-                    .expect("instruction byte");
-                let position = u32::from(*position);
-                let default_offset = position + u32::try_from(*default)?;
-                let instruction_default = byte_to_instruction_map
-                    .get(&u16::try_from(default_offset)?)
-                    .ok_or(InvalidInstructionOffset(default_offset))?
-                    - u16::try_from(index)?;
-                *default = i32::from(instruction_default);
-
-                for (_match, offset) in pairs.iter_mut() {
-                    let byte_offset = position + u32::try_from(*offset)?;
-                    let instruction_offset = byte_to_instruction_map
-                        .get(&u16::try_from(byte_offset)?)
-                        .ok_or(InvalidInstructionOffset(byte_offset))?
-                        - u16::try_from(index)?;
-                    *offset = i32::from(instruction_offset);
-                }
-            }
-            _ => {}
-        }
-    }
-    Ok(instructions)
+    Ok((instruction_to_byte_map, bytes.into_inner()))
 }
 
 #[cfg(test)]
@@ -233,9 +234,9 @@ mod tests {
             Instruction::Iadd,
             Instruction::Ireturn,
         ];
-        let bytes = to_bytes(&instructions)?;
+        let (_instruction_to_byte_map, bytes) = instructions_to_bytes(&instructions)?;
         let mut cursor = Cursor::new(bytes);
-        let result = from_bytes(&mut cursor)?;
+        let (_byte_to_instruction_map, result) = instructions_from_bytes(&mut cursor)?;
 
         assert_eq!(instructions, result);
 
@@ -245,7 +246,7 @@ mod tests {
     #[test]
     fn test_to_bytes_invalid() {
         let instructions = vec![Instruction::Iflt(42)];
-        let result = to_bytes(&instructions);
+        let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -257,7 +258,7 @@ mod tests {
             high: 0,
             offsets: vec![],
         }];
-        let result = to_bytes(&instructions);
+        let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -272,7 +273,7 @@ mod tests {
                 offsets: vec![42],
             },
         ];
-        let result = to_bytes(&instructions);
+        let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -282,7 +283,7 @@ mod tests {
             default: 42,
             pairs: IndexMap::new(),
         }];
-        let result = to_bytes(&instructions);
+        let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -295,7 +296,7 @@ mod tests {
                 pairs: IndexMap::from([(0, 42)]),
             },
         ];
-        let result = to_bytes(&instructions);
+        let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -314,7 +315,7 @@ mod tests {
             .map(Instruction::code)
             .collect::<Vec<u8>>();
         let mut cursor = Cursor::new(bytes);
-        let result = from_bytes(&mut cursor)?;
+        let (_byte_to_instruction_map, result) = instructions_from_bytes(&mut cursor)?;
 
         assert_eq!(instructions, result);
 
@@ -325,7 +326,7 @@ mod tests {
     fn test_from_bytes_invalid() {
         let bytes = vec![155, 0, 42];
         let mut cursor = Cursor::new(bytes);
-        let result = from_bytes(&mut cursor);
+        let result = instructions_from_bytes(&mut cursor);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -335,7 +336,7 @@ mod tests {
             170, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4,
         ];
         let mut cursor = Cursor::new(bytes);
-        let result = from_bytes(&mut cursor);
+        let result = instructions_from_bytes(&mut cursor);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -345,7 +346,7 @@ mod tests {
             0, 170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4,
         ];
         let mut cursor = Cursor::new(bytes);
-        let result = from_bytes(&mut cursor);
+        let result = instructions_from_bytes(&mut cursor);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -355,7 +356,7 @@ mod tests {
             171, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2,
         ];
         let mut cursor = Cursor::new(bytes);
-        let result = from_bytes(&mut cursor);
+        let result = instructions_from_bytes(&mut cursor);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -363,7 +364,7 @@ mod tests {
     fn test_from_bytes_invalid_lookup_switch_offset() {
         let bytes = vec![0, 171, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2];
         let mut cursor = Cursor::new(bytes);
-        let result = from_bytes(&mut cursor);
+        let result = instructions_from_bytes(&mut cursor);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -371,10 +372,11 @@ mod tests {
         let expected_bytes = [Instruction::Nop.code(), instruction.code(), 255, 255];
         let instructions = [Instruction::Nop, instruction];
 
-        let bytes = to_bytes(instructions.as_slice())?;
+        let (_instruction_to_byte_map, bytes) = instructions_to_bytes(instructions.as_slice())?;
         assert_eq!(expected_bytes, bytes.as_slice());
 
-        let instructions_from_bytes = from_bytes(&mut Cursor::new(bytes))?;
+        let (_byte_to_instruction_map, instructions_from_bytes) =
+            instructions_from_bytes(&mut Cursor::new(bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -475,10 +477,11 @@ mod tests {
         let expected_bytes = [instruction.code(), 0, 0, 0, 5, Instruction::Nop.code()];
         let instructions = [instruction, Instruction::Nop];
 
-        let bytes = to_bytes(instructions.as_slice())?;
+        let (_instruction_to_byte_map, bytes) = instructions_to_bytes(instructions.as_slice())?;
         assert_eq!(expected_bytes, bytes.as_slice());
 
-        let instructions_from_bytes = from_bytes(&mut Cursor::new(bytes))?;
+        let (_byte_to_instruction_map, instructions_from_bytes) =
+            instructions_from_bytes(&mut Cursor::new(bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -489,10 +492,11 @@ mod tests {
         let expected_bytes = [instruction.code(), 0, 0, 0, 5, Instruction::Nop.code()];
         let instructions = [instruction, Instruction::Nop];
 
-        let bytes = to_bytes(instructions.as_slice())?;
+        let (_instruction_to_byte_map, bytes) = instructions_to_bytes(instructions.as_slice())?;
         assert_eq!(expected_bytes, bytes.as_slice());
 
-        let instructions_from_bytes = from_bytes(&mut Cursor::new(bytes))?;
+        let (_byte_to_instruction_map, instructions_from_bytes) =
+            instructions_from_bytes(&mut Cursor::new(bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -541,10 +545,11 @@ mod tests {
             Instruction::Nop,
         ];
 
-        let bytes = to_bytes(instructions.as_slice())?;
+        let (_instruction_to_byte_map, bytes) = instructions_to_bytes(instructions.as_slice())?;
         assert_eq!(expected_bytes, bytes.as_slice());
 
-        let instructions_from_bytes = from_bytes(&mut Cursor::new(bytes))?;
+        let (_byte_to_instruction_map, instructions_from_bytes) =
+            instructions_from_bytes(&mut Cursor::new(bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -587,10 +592,11 @@ mod tests {
             Instruction::Nop,
         ];
 
-        let bytes = to_bytes(instructions.as_slice())?;
+        let (_instruction_to_byte_map, bytes) = instructions_to_bytes(instructions.as_slice())?;
         assert_eq!(expected_bytes, bytes.as_slice());
 
-        let instructions_from_bytes = from_bytes(&mut Cursor::new(bytes))?;
+        let (_byte_to_instruction_map, instructions_from_bytes) =
+            instructions_from_bytes(&mut Cursor::new(bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }

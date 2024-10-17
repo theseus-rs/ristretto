@@ -1,7 +1,7 @@
 use crate::attributes::bootstrap_method::BootstrapMethod;
 use crate::attributes::inner_class::InnerClass;
-use crate::attributes::instruction_utils;
 use crate::attributes::line_number::LineNumber;
+use crate::attributes::offset_utils;
 use crate::attributes::parameter_annotation::ParameterAnnotation;
 use crate::attributes::{
     Annotation, AnnotationElement, ExceptionTableEntry, Exports, Instruction, LocalVariableTable,
@@ -15,6 +15,7 @@ use crate::error::Error::{InvalidAttributeLength, InvalidAttributeNameIndex};
 use crate::error::Result;
 use crate::mutf8;
 use crate::version::Version;
+use crate::Error::InvalidInstructionOffset;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::{Cursor, Read};
@@ -287,12 +288,19 @@ impl Attribute {
                 let code_length = bytes.read_u32::<BigEndian>()?;
                 let mut code = vec![0; code_length as usize];
                 bytes.read_exact(&mut code)?;
-                let instructions = instruction_utils::from_bytes(&mut Cursor::new(code))?;
+                let (byte_to_instruction_map, instructions) =
+                    offset_utils::instructions_from_bytes(&mut Cursor::new(code))?;
 
                 let exception_length = bytes.read_u16::<BigEndian>()?;
                 let mut exception_table = Vec::with_capacity(exception_length as usize);
                 for _ in 0..exception_length {
-                    let exception = ExceptionTableEntry::from_bytes(bytes)?;
+                    let mut exception = ExceptionTableEntry::from_bytes(bytes)?;
+                    // Convert the byte offset to instruction offset
+                    let byte_pc = exception.handler_pc;
+                    let instruction_pc = byte_to_instruction_map
+                        .get(&byte_pc)
+                        .ok_or(InvalidInstructionOffset(u32::from(byte_pc)))?;
+                    exception.handler_pc = *instruction_pc;
                     exception_table.push(exception);
                 }
                 let attributes_count = bytes.read_u16::<BigEndian>()?;
@@ -672,14 +680,21 @@ impl Attribute {
                 bytes.write_u16::<BigEndian>(*max_stack)?;
                 bytes.write_u16::<BigEndian>(*max_locals)?;
 
-                let code_bytes = instruction_utils::to_bytes(code)?;
+                let (instruction_to_byte_map, code_bytes) =
+                    offset_utils::instructions_to_bytes(code)?;
                 let code_length = u32::try_from(code_bytes.len())?;
                 bytes.write_u32::<BigEndian>(code_length)?;
                 bytes.extend_from_slice(code_bytes.as_slice());
 
                 let exceptions_length = u16::try_from(exception_table.len())?;
                 bytes.write_u16::<BigEndian>(exceptions_length)?;
-                for exception in exception_table {
+                for exception in &mut exception_table.clone() {
+                    // Convert the instruction offset to byte offset
+                    let instruction_pc = exception.handler_pc;
+                    let byte_pc = instruction_to_byte_map
+                        .get(&instruction_pc)
+                        .ok_or(InvalidInstructionOffset(u32::from(instruction_pc)))?;
+                    exception.handler_pc = *byte_pc;
                     exception.to_bytes(&mut bytes)?;
                 }
 
@@ -1017,7 +1032,8 @@ impl fmt::Display for Attribute {
                 writeln!(f, "Code:")?;
                 writeln!(f, "  stack={max_stack}, locals={max_locals}")?;
 
-                let code_bytes = instruction_utils::to_bytes(code).map_err(|_| fmt::Error)?;
+                let (instruction_to_byte_map, code_bytes) =
+                    offset_utils::instructions_to_bytes(code).map_err(|_| fmt::Error)?;
                 let code_length = u64::try_from(code_bytes.len()).map_err(|_| fmt::Error)?;
                 let mut cursor = Cursor::new(code_bytes.clone());
                 while cursor.position() < code_length {
@@ -1054,6 +1070,14 @@ impl fmt::Display for Attribute {
                     writeln!(f, "{index:>6}: {}", value.trim())?;
                 }
 
+                let mut exception_table = exception_table.clone();
+                for exception in &mut exception_table {
+                    let instruction_pc = exception.handler_pc;
+                    let byte_pc = instruction_to_byte_map
+                        .get(&instruction_pc)
+                        .ok_or(fmt::Error)?;
+                    exception.handler_pc = *byte_pc;
+                }
                 if !exception_table.is_empty() {
                     writeln!(f, "  {exception_table:?}")?;
                 }
@@ -1166,7 +1190,7 @@ mod test {
         };
         let exception_table_entry = ExceptionTableEntry {
             range_pc: 1..2,
-            handler_pc: 3,
+            handler_pc: 0,
             catch_type: 4,
         };
         let attribute = Attribute::Code {
@@ -1178,14 +1202,14 @@ mod test {
             attributes: vec![constant.clone()],
         };
         let expected_bytes = [
-            0, 1, 0, 0, 0, 29, 0, 2, 0, 3, 0, 0, 0, 1, 4, 0, 1, 0, 1, 0, 2, 0, 3, 0, 4, 0, 1, 0, 2,
+            0, 1, 0, 0, 0, 29, 0, 2, 0, 3, 0, 0, 0, 1, 4, 0, 1, 0, 1, 0, 2, 0, 0, 0, 4, 0, 1, 0, 2,
             0, 0, 0, 2, 0, 42,
         ];
         let expected = indoc! {"
             Code:
               stack=2, locals=3
                  0: iconst_1
-              [ExceptionTableEntry { range_pc: 1..2, handler_pc: 3, catch_type: 4 }]
+              [ExceptionTableEntry { range_pc: 1..2, handler_pc: 0, catch_type: 4 }]
               ConstantValue { name_index: 2, constant_value_index: 42 }
         "};
 
