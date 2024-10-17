@@ -52,7 +52,7 @@ fn main() -> Result<()> {
             Instruction::Invokespecial(object_init),
             Instruction::Return,
         ],
-        exceptions: Vec::new(),
+        exception_table: Vec::new(),
         attributes: Vec::new(),
     });
     methods.push(init_method);
@@ -73,7 +73,7 @@ fn main() -> Result<()> {
             Instruction::Invokevirtual(println_method),
             Instruction::Return,
         ],
-        exceptions: Vec::new(),
+        exception_table: Vec::new(),
         attributes: Vec::new(),
     });
     main_method.attributes.push(Attribute::LineNumberTable {

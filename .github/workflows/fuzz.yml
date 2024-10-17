@@ -44,7 +44,7 @@ jobs:
           - annotation_value_pair_from_bytes
           - array_type_from_bytes
           - bootstrap_method_from_bytes
-          - code_exception_from_bytes
+          - exception_table_entry_from_bytes
           - exports_flags_from_bytes
           - exports_from_bytes
           - inner_class_from_bytes

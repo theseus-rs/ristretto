@@ -281,7 +281,7 @@ mod tests {
             max_stack: 1,
             max_locals: 2,
             code: Vec::new(),
-            exceptions: Vec::new(),
+            exception_table: Vec::new(),
             attributes: Vec::new(),
         };
         let method = ristretto_classfile::Method {
