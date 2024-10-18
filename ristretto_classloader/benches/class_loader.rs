@@ -10,34 +10,34 @@ fn benchmarks(criterion: &mut Criterion) {
 fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
     let runtime = Runtime::new()?;
     let (_version, class_loader) =
-        runtime.block_on(async { runtime::class_loader("21.0.4.7.1").await })?;
+        runtime.block_on(async { runtime::class_loader("21.0.5.11.1").await })?;
     let class_loader = Arc::new(class_loader);
 
     criterion.bench_function("runtime_v8", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                runtime_class_loader("8.422.05.1").await.ok();
+                runtime_class_loader("8.432.06.1").await.ok();
             });
         });
     });
     criterion.bench_function("runtime_v11", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                runtime_class_loader("11.0.24.8.1").await.ok();
+                runtime_class_loader("11.0.25.9.1").await.ok();
             });
         });
     });
     criterion.bench_function("runtime_v17", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                runtime_class_loader("17.0.12.7.1").await.ok();
+                runtime_class_loader("17.0.13.11.1").await.ok();
             });
         });
     });
     criterion.bench_function("runtime_v21", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                runtime_class_loader("21.0.4.7.1").await.ok();
+                runtime_class_loader("21.0.5.11.1").await.ok();
             });
         });
     });

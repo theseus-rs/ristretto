@@ -10,12 +10,12 @@ async fn test_runtime(version: &str, class_name: &str) -> Result<()> {
 
 #[tokio::test]
 async fn test_get_runtime_v8() -> Result<()> {
-    test_runtime("8.422.05.1", "java/lang/Object").await
+    test_runtime("8.432.06.1", "java/lang/Object").await
 }
 
 #[tokio::test]
 async fn test_get_runtime_v11() -> Result<()> {
-    test_runtime("11.0.24.8.1", "java/lang/Object").await
+    test_runtime("11.0.25.9.1", "java/lang/Object").await
 }
 
 #[tokio::test]
@@ -40,7 +40,7 @@ async fn test_get_runtime_v20() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_runtime_v21() -> Result<()> {
-    test_runtime("21.0.4.7.1", "java/lang/Object").await
+    test_runtime("21.0.5.11.1", "java/lang/Object").await
 }
 
 #[tokio::test]
