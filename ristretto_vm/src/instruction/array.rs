@@ -228,6 +228,7 @@ mod tests {
             10,
             Vec::new(),
             Vec::new(),
+            Vec::new(),
         )?;
         let arguments = Vec::new();
         let frame = Frame::new(
@@ -358,6 +359,7 @@ mod tests {
             10,
             Vec::new(),
             Vec::new(),
+            Vec::new(),
         )?;
         let arguments = Vec::new();
         let frame = Frame::new(
@@ -415,6 +417,7 @@ mod tests {
             "()V",
             10,
             10,
+            Vec::new(),
             Vec::new(),
             Vec::new(),
         )?;

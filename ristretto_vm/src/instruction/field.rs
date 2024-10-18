@@ -86,6 +86,7 @@ mod test {
             10,
             Vec::new(),
             Vec::new(),
+            Vec::new(),
         )?;
         let arguments = Vec::new();
         let frame = Frame::new(

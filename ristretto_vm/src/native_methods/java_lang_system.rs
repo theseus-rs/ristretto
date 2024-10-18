@@ -312,6 +312,7 @@ fn register_natives(
             1,
             vec![Instruction::Return],
             vec![],
+            vec![],
         )?;
         methods.insert(
             format!("{}:{}", start_threads.name(), start_threads.descriptor()),
