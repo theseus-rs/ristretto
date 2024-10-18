@@ -126,15 +126,15 @@ mod tests {
     }
 
     async fn java8_string_class() -> Result<Arc<Class>> {
-        load_class("8.422.05.1", "java/lang/String").await
+        load_class("8.432.06.1", "java/lang/String").await
     }
 
     async fn java21_class(class: &str) -> Result<Arc<Class>> {
-        load_class("21.0.4.7.1", class).await
+        load_class("21.0.5.11.1", class).await
     }
 
     async fn java21_string_class() -> Result<Arc<Class>> {
-        load_class("21.0.4.7.1", "java/lang/String").await
+        load_class("21.0.5.11.1", "java/lang/String").await
     }
 
     #[tokio::test]
