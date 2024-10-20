@@ -15,6 +15,7 @@ mod java_lang_system;
 mod java_lang_thread;
 mod java_lang_throwable;
 mod jdk_internal_loader_bootloader;
+mod jdk_internal_loader_nativelibraries;
 mod jdk_internal_misc_cds;
 mod jdk_internal_misc_scopedmemoryaccess;
 mod jdk_internal_misc_signal;

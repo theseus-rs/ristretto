@@ -189,12 +189,12 @@ impl VM {
             //     vec![Value::Int(1), Value::Int(1)],
             // ).await?;
             // let Some(Value::Int(result)) = phase2_result else {
-            //     return Err(RuntimeError(format!(
+            //     return Err(InternalError(format!(
             //         "System::initPhase2() call failed: {phase2_result:?}"
             //     )));
             // };
             // if result != 0 {
-            //     return Err(RuntimeError(format!(
+            //     return Err(InternalError(format!(
             //         "System::initPhase2() call failed: {result}"
             //     )));
             // }
