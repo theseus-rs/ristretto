@@ -5,7 +5,7 @@ use ristretto_classfile::Error::IoError;
 use std::path::{Path, PathBuf};
 use std::{env, io};
 use tar::Archive;
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, warn};
 
 pub const DEFAULT_JAVA_VERSION: &str = "21.0.5.11.1";
 
@@ -195,7 +195,7 @@ async fn extract_archive(
     let rename_result = tokio::fs::rename(runtime_dir.clone(), installation_dir.clone()).await;
 
     if let Err(error) = rename_result {
-        debug!(
+        warn!(
             "Failed to rename {} to {}",
             runtime_dir.to_string_lossy(),
             installation_dir.to_string_lossy(),
