@@ -27,9 +27,9 @@
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
-//!     let (version, class_loader) = runtime::class_loader("21").await?;
+//!     let (_java_home, java_version, class_loader) = runtime::version_class_loader("21").await?;
 //!     let class_name = "java/util/HashMap";
-//!     println!("Loading {class_name} from Java runtime {version}");
+//!     println!("Loading {class_name} from Java version {java_version}");
 //!     let class = class_loader.load(class_name).await?;
 //!     println!("{class:?}");
 //!     Ok(())
@@ -79,5 +79,5 @@ pub use method::Method;
 pub use object::Object;
 pub use reference::Reference;
 pub use ristretto_classfile::{BaseType, FieldAccessFlags, FieldType, MethodAccessFlags};
-pub use runtime::DEFAULT_RUNTIME_VERSION;
+pub use runtime::DEFAULT_JAVA_VERSION;
 pub use value::Value;

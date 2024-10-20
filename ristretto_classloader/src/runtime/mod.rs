@@ -2,4 +2,6 @@ mod bootstrap;
 mod models;
 mod util;
 
-pub use bootstrap::{class_loader, default_class_loader, DEFAULT_RUNTIME_VERSION};
+pub use bootstrap::{
+    default_class_loader, home_class_loader, version_class_loader, DEFAULT_JAVA_VERSION,
+};

@@ -5,9 +5,11 @@ mod version;
 
 use clap::{ArgGroup, Parser};
 use ristretto_vm::Error::InternalError;
-use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
+use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Result, VM};
+use std::env;
 use std::env::consts::{ARCH, OS};
 use std::path::PathBuf;
+use std::process::exit;
 use tracing::debug;
 
 #[derive(Debug, Parser)]
@@ -77,14 +79,24 @@ async fn common_main() -> Result<()> {
         configuration_builder = configuration_builder.class_path(class_path);
     }
 
+    if let Ok(java_version) = env::var("JAVA_VERSION") {
+        configuration_builder = configuration_builder.java_version(java_version);
+    }
+
     if let Some(main_class) = cli.mainclass {
         configuration_builder = configuration_builder.main_class(main_class);
     } else if let Some(jar) = cli.jar {
         configuration_builder = configuration_builder.jar(PathBuf::from(jar));
     }
 
-    let configuration = configuration_builder.build();
-    let vm = VM::new(configuration).await?;
+    let configuration = configuration_builder.build()?;
+    let vm = match VM::new(configuration).await {
+        Ok(vm) => vm,
+        Err(error) => {
+            process_error(error);
+            exit(1);
+        }
+    };
     let Some(main_class_name) = vm.main_class() else {
         return Err(InternalError("No main class specified".into()));
     };
@@ -98,6 +110,24 @@ async fn common_main() -> Result<()> {
         arguments.push(vm.string(argument.as_str()).await?);
     }
 
-    vm.invoke(&main_class, &main_method, arguments).await?;
+    if let Err(error) = vm.invoke(&main_class, &main_method, arguments).await {
+        process_error(error);
+        exit(1);
+    }
     Ok(())
+}
+
+fn process_error(error: Error) {
+    let Error::Throwable(throwable) = error else {
+        eprintln!("{error}");
+        return;
+    };
+    let class = throwable.class();
+    let class_name = class.name();
+    let message = throwable
+        .field("detailMessage")
+        .and_then(|value| value.value())
+        .and_then(|value| value.as_string())
+        .unwrap_or_default();
+    eprintln!("Exception {class_name}: {message}");
 }

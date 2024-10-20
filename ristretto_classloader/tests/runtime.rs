@@ -1,8 +1,8 @@
 use ristretto_classloader::{runtime, Result};
 
 async fn test_runtime(version: &str, class_name: &str) -> Result<()> {
-    let (runtime_version, class_loader) = runtime::class_loader(version).await?;
-    assert!(runtime_version.starts_with(version));
+    let (_java_home, java_version, class_loader) = runtime::version_class_loader(version).await?;
+    assert!(java_version.starts_with(version));
     let class = class_loader.load(class_name).await?;
     assert_eq!(class_name, class.name());
     Ok(())
@@ -25,7 +25,7 @@ async fn test_get_runtime_v17() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_runtime_v18() -> Result<()> {
-    test_runtime("18.0.2.9.1", "java/lang/Object").await
+    test_runtime("18.0.2", "java/lang/Object").await
 }
 
 #[tokio::test]
@@ -50,5 +50,5 @@ async fn test_get_runtime_v22() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_runtime_v23() -> Result<()> {
-    test_runtime("23.0.0.36.1", "java/lang/Object").await
+    test_runtime("23.0.1.8.1", "java/lang/Object").await
 }

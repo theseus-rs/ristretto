@@ -12,7 +12,7 @@ pub(crate) async fn load_class(class_name: &str) -> Result<(Arc<VM>, Arc<CallSta
     let class_path = ClassPath::from(classes_path.to_string_lossy());
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())
-        .build();
+        .build()?;
     let vm = VM::new(configuration).await?;
     let call_stack = CallStack::new(&Arc::downgrade(&vm));
     let class = vm.load_class(&call_stack, class_name).await?;
@@ -26,7 +26,7 @@ pub(crate) async fn class() -> Result<(Arc<VM>, Arc<CallStack>, Arc<Class>)> {
     let class_path = ClassPath::from(classes_path.to_string_lossy());
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())
-        .build();
+        .build()?;
     let vm = VM::new(configuration).await?;
     let call_stack = CallStack::new(&Arc::downgrade(&vm));
     let mut constant_pool = ConstantPool::default();

@@ -121,7 +121,8 @@ mod tests {
     use crate::{runtime, ConcurrentVec};
 
     async fn load_class(version: &str, class: &str) -> Result<Arc<Class>> {
-        let (_runtime_version, class_loader) = runtime::class_loader(version).await?;
+        let (_java_home, _java_version, class_loader) =
+            runtime::version_class_loader(version).await?;
         class_loader.load(class).await
     }
 

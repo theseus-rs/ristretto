@@ -9,7 +9,7 @@ async fn vm() -> Result<Arc<VM>> {
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())
         .main_class("Expressions")
-        .build();
+        .build()?;
     VM::new(configuration).await
 }
 

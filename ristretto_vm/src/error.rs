@@ -19,6 +19,9 @@ pub enum Error {
     /// An error occurred while loading a class
     #[error(transparent)]
     ClassLoaderError(#[from] ristretto_classloader::Error),
+    /// Configuration error
+    #[error("Configuration error: {0}")]
+    ConfigurationError(String),
     /// Internal error
     #[error("Internal error: {0}")]
     InternalError(String),
