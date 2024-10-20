@@ -23,8 +23,12 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 zip = { workspace = true }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tokio = { workspace = true }
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 home = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
 criterion = { workspace = true }

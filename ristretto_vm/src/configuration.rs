@@ -1,5 +1,6 @@
-use ristretto_classloader::{ClassPath, DEFAULT_RUNTIME_VERSION};
-use std::env;
+use crate::Error::InternalError;
+use crate::Result;
+use ristretto_classloader::{ClassPath, DEFAULT_JAVA_VERSION};
 use std::path::PathBuf;
 use std::string::ToString;
 
@@ -9,7 +10,8 @@ pub struct Configuration {
     class_path: ClassPath,
     main_class: Option<String>,
     jar: Option<PathBuf>,
-    runtime_version: String,
+    java_home: Option<PathBuf>,
+    java_version: Option<String>,
 }
 
 /// Configuration
@@ -22,8 +24,8 @@ impl Configuration {
 
     /// Get the main class
     #[must_use]
-    pub fn main_class(&self) -> Option<String> {
-        self.main_class.clone()
+    pub fn main_class(&self) -> Option<&String> {
+        self.main_class.as_ref()
     }
 
     /// Get the jar
@@ -32,10 +34,16 @@ impl Configuration {
         self.jar.as_ref()
     }
 
-    /// Get the runtime version for the VM
+    /// Get the Java home path
     #[must_use]
-    pub fn runtime_version(&self) -> &String {
-        &self.runtime_version
+    pub fn java_home(&self) -> Option<&PathBuf> {
+        self.java_home.as_ref()
+    }
+
+    /// Get the Java version
+    #[must_use]
+    pub fn java_version(&self) -> Option<&String> {
+        self.java_version.as_ref()
     }
 }
 
@@ -45,7 +53,8 @@ pub struct ConfigurationBuilder {
     class_path: Option<ClassPath>,
     main_class: Option<String>,
     jar: Option<PathBuf>,
-    runtime_version: Option<String>,
+    java_home: Option<PathBuf>,
+    java_version: Option<String>,
 }
 
 /// Configuration builder
@@ -57,7 +66,8 @@ impl ConfigurationBuilder {
             class_path: None,
             main_class: None,
             jar: None,
-            runtime_version: None,
+            java_home: None,
+            java_version: None,
         }
     }
 
@@ -82,36 +92,52 @@ impl ConfigurationBuilder {
         self
     }
 
-    /// Set the VM runtime version
+    /// Set the Java home path
     #[must_use]
-    pub fn runtime_version<S: AsRef<str>>(mut self, version: S) -> Self {
-        self.runtime_version = Some(version.as_ref().to_string());
+    pub fn java_home(mut self, java_home: PathBuf) -> Self {
+        self.java_home = Some(java_home);
+        self
+    }
+
+    /// Set the Java version
+    #[must_use]
+    pub fn java_version<S: AsRef<str>>(mut self, version: S) -> Self {
+        self.java_version = Some(version.as_ref().to_string());
         self
     }
 
     /// Build the configuration
-    #[must_use]
-    pub fn build(self) -> Configuration {
+    ///
+    /// # Errors
+    /// An error will be returned if the configuration cannot be built.
+    pub fn build(self) -> Result<Configuration> {
         let class_path = if let Some(class_path) = self.class_path {
             class_path
         } else {
             ClassPath::from(".")
         };
 
-        let runtime_version = if let Some(runtime_version) = self.runtime_version {
-            runtime_version.to_string()
-        } else if let Ok(runtime_version) = env::var("JAVA_VERSION") {
-            runtime_version
+        let java_home = self.java_home;
+        let java_version = if let Some(java_version) = self.java_version {
+            if java_home.is_some() {
+                return Err(InternalError(
+                    "Cannot specify both Java home and version".to_string(),
+                ));
+            }
+            Some(java_version)
+        } else if java_home.is_none() {
+            Some(DEFAULT_JAVA_VERSION.to_string())
         } else {
-            DEFAULT_RUNTIME_VERSION.to_string()
+            None
         };
 
-        Configuration {
+        Ok(Configuration {
             class_path,
             main_class: self.main_class,
             jar: self.jar,
-            runtime_version,
-        }
+            java_home,
+            java_version,
+        })
     }
 }
 
@@ -128,30 +154,58 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_configuration_builder() {
+    fn test_configuration_builder() -> Result<()> {
         let configuration = ConfigurationBuilder::new()
             .class_path(ClassPath::from(".."))
             .main_class("Foo")
             .jar(PathBuf::from("test.jar"))
-            .runtime_version("21")
-            .build();
+            .java_version("21")
+            .build()?;
         assert_eq!(&ClassPath::from(".."), configuration.class_path());
-        assert_eq!(Some("Foo".to_string()), configuration.main_class());
+        assert_eq!(Some(&"Foo".to_string()), configuration.main_class());
         assert_eq!(Some(&PathBuf::from("test.jar")), configuration.jar());
-        assert_eq!("21", configuration.runtime_version());
+        assert_eq!(Some(&"21".to_string()), configuration.java_version());
+        Ok(())
     }
 
     #[test]
-    fn test_configuration_builder_new() {
-        let configuration = ConfigurationBuilder::new().build();
+    fn test_configuration_builder_new() -> Result<()> {
+        let configuration = ConfigurationBuilder::new().build()?;
         assert_eq!(&ClassPath::from("."), configuration.class_path());
-        assert_eq!(&DEFAULT_RUNTIME_VERSION, configuration.runtime_version());
+        assert_eq!(
+            Some(&DEFAULT_JAVA_VERSION.to_string()),
+            configuration.java_version()
+        );
+        Ok(())
     }
 
     #[test]
-    fn test_configuration_builder_default() {
-        let configuration = ConfigurationBuilder::default().build();
+    fn test_configuration_builder_default() -> Result<()> {
+        let configuration = ConfigurationBuilder::default().build()?;
         assert_eq!(&ClassPath::from("."), configuration.class_path());
-        assert_eq!(&DEFAULT_RUNTIME_VERSION, configuration.runtime_version());
+        assert_eq!(
+            Some(&DEFAULT_JAVA_VERSION.to_string()),
+            configuration.java_version()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_configuration_builder_java_home() -> Result<()> {
+        let configuration = ConfigurationBuilder::new()
+            .java_home(PathBuf::from("."))
+            .build()?;
+        assert_eq!(Some(&PathBuf::from(".")), configuration.java_home());
+        assert_eq!(None, configuration.java_version());
+        Ok(())
+    }
+
+    #[test]
+    fn test_configuration_builder_java_home_and_java_version_error() {
+        let result = ConfigurationBuilder::new()
+            .java_home(PathBuf::from("."))
+            .java_version("21")
+            .build();
+        assert!(matches!(result, Err(InternalError(_))));
     }
 }

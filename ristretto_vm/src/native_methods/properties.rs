@@ -23,7 +23,8 @@ pub(crate) async fn system(call_stack: Arc<CallStack>) -> Result<HashMap<&'stati
 #[expect(clippy::too_many_lines)]
 fn system_properties(vm: &VM) -> Result<HashMap<&'static str, String>> {
     let mut properties = HashMap::new();
-    let class_file_version = vm.java_version();
+    let java_home = vm.java_home().to_string_lossy().to_string();
+    let class_file_version = vm.java_class_file_version();
     let major_java_version = class_file_version.java();
     let major_class_version = class_file_version.major();
     let minor_class_version = class_file_version.minor();
@@ -69,8 +70,7 @@ fn system_properties(vm: &VM) -> Result<HashMap<&'static str, String>> {
     properties.insert("java.compiler", "no JIT".to_string());
     // TODO: implement java.ext.dirs
     properties.insert("java.ext.dirs", String::new());
-    // TODO: implement java.home
-    properties.insert("java.home", String::new());
+    properties.insert("java.home", java_home);
 
     let tmp_dir = env::temp_dir();
     properties.insert("java.io.tmpdir", format!("{}", tmp_dir.to_string_lossy()));
@@ -94,7 +94,7 @@ fn system_properties(vm: &VM) -> Result<HashMap<&'static str, String>> {
     );
     let vm_version = env!("CARGO_PKG_VERSION");
     properties.insert("java.vendor.version", vm_version.to_string());
-    let java_version = vm.runtime_version();
+    let java_version = vm.java_version();
     properties.insert("java.version", java_version.to_string());
     let architecture_bits = usize::BITS;
     let vm_name =

@@ -1,5 +1,5 @@
 use crate::call_stack::CallStack;
-use crate::Error::UnsupportedClassFileVersion;
+use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::{Configuration, ConfigurationBuilder, Result};
 use ristretto_classfile::{mutf8, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
@@ -9,6 +9,7 @@ use ristretto_classloader::{
     runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Object,
     Reference, Value,
 };
+use std::path::PathBuf;
 use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
 use tracing::debug;
@@ -22,8 +23,9 @@ pub struct VM {
     configuration: Configuration,
     class_loader: RwLock<ClassLoader>,
     main_class: Option<String>,
-    runtime_version: String,
-    java_version: Version,
+    java_home: PathBuf,
+    java_version: String,
+    java_class_file_version: Version,
 }
 
 /// VM
@@ -38,16 +40,29 @@ impl VM {
     /// # Errors
     /// if the VM cannot be created
     pub async fn new(configuration: Configuration) -> Result<Arc<Self>> {
-        let runtime_version = configuration.runtime_version();
-        debug!("runtime_version {runtime_version}");
+        let (java_home, java_version, bootstrap_class_loader) =
+            if let Some(java_version) = configuration.java_version() {
+                let (java_home, java_version, boostrap_class_loader) =
+                    runtime::version_class_loader(java_version).await?;
+                (java_home, java_version, boostrap_class_loader)
+            } else if let Some(java_home) = configuration.java_home() {
+                let (java_home, java_version, boostrap_class_loader) =
+                    runtime::home_class_loader(java_home).await?;
+                (java_home, java_version, boostrap_class_loader)
+            } else {
+                return Err(InternalError(
+                    "Java version or Java home must be specified".to_string(),
+                ));
+            };
 
-        let major_version: u16 = runtime_version.split('.').next().unwrap_or("0").parse()?;
-        let java_version = Version::from(major_version + Self::CLASS_FILE_MAJOR_VERSION_OFFSET, 0)?;
-        debug!("Java version {java_version}");
-
-        let (runtime_version, boostrap_class_loader) =
-            runtime::class_loader(runtime_version).await?;
-        let boostrap_class_loader = boostrap_class_loader;
+        debug!(
+            "Java home: {}; version: {java_version}",
+            java_home.to_string_lossy()
+        );
+        let major_version: u16 = java_version.split('.').next().unwrap_or("0").parse()?;
+        let java_class_file_version =
+            Version::from(major_version + Self::CLASS_FILE_MAJOR_VERSION_OFFSET, 0)?;
+        debug!("Java class file version {java_class_file_version}");
 
         // TODO: implement extension class loader
         // <JAVA_HOME>/jre/lib/ext directory or any other directory specified by the java.ext.dirs
@@ -55,8 +70,8 @@ impl VM {
 
         let class_path = configuration.class_path().clone();
         let mut system_class_loader = ClassLoader::new("system", class_path);
-        system_class_loader.set_parent(Some(boostrap_class_loader.clone()));
-        let mut main_class_name = configuration.main_class();
+        system_class_loader.set_parent(Some(bootstrap_class_loader.clone()));
+        let mut main_class_name = configuration.main_class().cloned();
 
         let class_loader = if let Some(jar) = configuration.jar() {
             let path = jar.to_string_lossy();
@@ -95,8 +110,9 @@ impl VM {
             configuration,
             class_loader: RwLock::new(class_loader),
             main_class,
-            runtime_version,
+            java_home,
             java_version,
+            java_class_file_version,
         });
         vm.initialize().await?;
         Ok(vm)
@@ -107,7 +123,7 @@ impl VM {
     /// # Errors
     /// if the VM cannot be created
     pub async fn default() -> Result<Arc<VM>> {
-        let configuration = ConfigurationBuilder::default().build();
+        let configuration = ConfigurationBuilder::default().build()?;
         VM::new(configuration).await
     }
 
@@ -123,16 +139,22 @@ impl VM {
         self.main_class.as_ref()
     }
 
-    /// Get the version
+    /// Get the Java home
     #[must_use]
-    pub fn runtime_version(&self) -> &str {
-        &self.runtime_version
+    pub fn java_home(&self) -> &PathBuf {
+        &self.java_home
     }
 
-    /// Get the Java version
+    /// Get the java version
     #[must_use]
-    pub fn java_version(&self) -> &Version {
+    pub fn java_version(&self) -> &str {
         &self.java_version
+    }
+
+    /// Get the Java class file version
+    #[must_use]
+    pub fn java_class_file_version(&self) -> &Version {
+        &self.java_class_file_version
     }
 
     /// Initialize the VM
@@ -142,7 +164,7 @@ impl VM {
     async fn initialize(&self) -> Result<()> {
         let system_class = self.class("java.lang.System").await?;
 
-        if self.java_version <= JAVA_8 {
+        if self.java_class_file_version <= JAVA_8 {
             let initialize_system_class_method =
                 system_class.try_get_method("initializeSystemClass", "()V")?;
             self.invoke(&system_class, &initialize_system_class_method, vec![])
@@ -251,7 +273,7 @@ impl VM {
             };
             let current_class = current_class.clone();
 
-            if current_class.class_file().version > self.java_version {
+            if current_class.class_file().version > self.java_class_file_version {
                 return Err(UnsupportedClassFileVersion(
                     current_class.class_file().version.major(),
                 ));
@@ -379,7 +401,7 @@ impl VM {
         // The String implementation changed in Java 9.
         // In Java 8 and earlier, the value field is a char array.
         // In Java 9 and later, the value field is a byte array.
-        let array = if self.java_version <= JAVA_8 {
+        let array = if self.java_class_file_version <= JAVA_8 {
             let bytes = mutf8::to_bytes(value)?;
             let utf8_string =
                 String::from_utf8(bytes).map_err(|error| ParseError(error.to_string()))?;
@@ -413,7 +435,7 @@ impl VM {
 mod tests {
     use super::*;
     use crate::configuration::ConfigurationBuilder;
-    use ristretto_classloader::{ClassPath, DEFAULT_RUNTIME_VERSION};
+    use ristretto_classloader::{ClassPath, DEFAULT_JAVA_VERSION};
     use std::path::PathBuf;
 
     fn classes_jar_path() -> PathBuf {
@@ -430,7 +452,7 @@ mod tests {
         let class_path = classes_jar_class_path();
         let configuration = ConfigurationBuilder::new()
             .class_path(class_path.clone())
-            .build();
+            .build()?;
         VM::new(configuration).await
     }
 
@@ -442,8 +464,20 @@ mod tests {
             .class_path()
             .to_string()
             .contains("classes.jar"));
-        assert_eq!(DEFAULT_RUNTIME_VERSION, vm.runtime_version());
+        assert_eq!(DEFAULT_JAVA_VERSION, vm.java_version());
         assert!(vm.main_class().is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_vm_new_java_home() -> Result<()> {
+        let vm = test_vm().await?;
+        let configuration = ConfigurationBuilder::new()
+            .java_home(vm.java_home().clone())
+            .build()?;
+        let java_home_vm = VM::new(configuration).await?;
+        assert_eq!(vm.java_home(), java_home_vm.java_home());
+        assert_eq!(vm.java_version(), java_home_vm.java_version());
         Ok(())
     }
 
@@ -453,7 +487,7 @@ mod tests {
         let configuration = ConfigurationBuilder::new()
             .class_path(class_path.clone())
             .main_class("HelloWorld")
-            .build();
+            .build()?;
         let vm = VM::new(configuration).await?;
         let main_class = vm.main_class().expect("main class");
         assert_eq!("HelloWorld", main_class);
@@ -463,7 +497,7 @@ mod tests {
     #[tokio::test]
     async fn test_vm_set_jar_with_main_class() -> Result<()> {
         let classes_jar_path = classes_jar_path();
-        let configuration = ConfigurationBuilder::new().jar(classes_jar_path).build();
+        let configuration = ConfigurationBuilder::new().jar(classes_jar_path).build()?;
         let vm = VM::new(configuration).await?;
         let main_class = vm.main_class().expect("main class");
         assert_eq!("HelloWorld", main_class);

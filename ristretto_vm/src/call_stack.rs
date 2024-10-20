@@ -128,13 +128,7 @@ impl CallStack {
             frames.pop();
         }
 
-        match result {
-            Ok(result) => Ok(result),
-            Err(error) => {
-                // TODO: Handle exceptions
-                Err(error)
-            }
-        }
+        result
     }
 
     /// The JVM specification requires that Long and Double take two places in the arguments list

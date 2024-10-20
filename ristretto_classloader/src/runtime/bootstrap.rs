@@ -1,20 +1,66 @@
 use crate::runtime::util;
 use crate::{ClassLoader, ClassPath, Error, Result};
 use flate2::bufread::GzDecoder;
+use ristretto_classfile::Error::IoError;
 use std::path::{Path, PathBuf};
-use std::{env, fs, io};
+use std::{env, io};
 use tar::Archive;
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, warn};
 
-pub const DEFAULT_RUNTIME_VERSION: &str = "21.0.5.11.1";
+pub const DEFAULT_JAVA_VERSION: &str = "21.0.5.11.1";
 
 /// Get a class loader for the default Java runtime version. If the version is not installed, the
 /// archive will be downloaded and extracted.
 ///
 /// # Errors
 /// An error will be returned if the class loader cannot be created.
-pub async fn default_class_loader() -> Result<(String, ClassLoader)> {
-    class_loader(DEFAULT_RUNTIME_VERSION).await
+pub async fn default_class_loader() -> Result<(PathBuf, String, ClassLoader)> {
+    version_class_loader(DEFAULT_JAVA_VERSION).await
+}
+
+/// Get a class loader for the given Java home.
+///
+/// # Errors
+/// An error will be returned if the class loader cannot be created.
+#[instrument(level = "debug")]
+pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, ClassLoader)> {
+    let version_file = java_home.join("version.txt");
+    // Corretto version 8 does not have a release file, but includes a version.txt file. Since most
+    // versions of Corretto include a version.txt file, and it should be faster to process, we can
+    // use this file to determine the version.  The version.txt file also includes the full version
+    // number (e.g. 21.0.5.11.1) instead of a partial version in the release file JAVA_VERSION
+    // property (e.g. 21.0.5).
+    let java_version = if version_file.exists() {
+        let version_file = java_home.join("version.txt");
+        #[cfg(target_arch = "wasm32")]
+        let java_version = std::fs::read_to_string(version_file)?;
+        #[cfg(not(target_arch = "wasm32"))]
+        let java_version = tokio::fs::read_to_string(version_file).await?;
+        java_version.trim().to_string()
+    } else {
+        let release_file = java_home.join("release");
+
+        #[cfg(target_arch = "wasm32")]
+        let release = std::fs::read_to_string(release_file)?;
+        #[cfg(not(target_arch = "wasm32"))]
+        let release = tokio::fs::read_to_string(release_file).await?;
+
+        let Some(java_version_line) = release
+            .lines()
+            .find(|line| line.starts_with("JAVA_VERSION"))
+        else {
+            return Err(IoError("JAVA_VERSION not found in release file".to_string()).into());
+        };
+        java_version_line
+            .split('=')
+            .last()
+            .unwrap_or_default()
+            .replace('"', "")
+    };
+
+    let class_path = get_class_path(&java_version, java_home)?;
+    let class_loader = ClassLoader::new("bootstrap", class_path);
+    Ok((java_home.clone(), java_version, class_loader))
 }
 
 /// Get a class loader for the given Java runtime version. If the version is not installed, the
@@ -24,26 +70,26 @@ pub async fn default_class_loader() -> Result<(String, ClassLoader)> {
 /// # Errors
 /// An error will be returned if the class loader cannot be created.
 #[instrument(level = "debug")]
-pub async fn class_loader(version: &str) -> Result<(String, ClassLoader)> {
-    let mut archive_version = version.to_string();
+pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, ClassLoader)> {
     let current_dir = env::current_dir().unwrap_or_default();
+
     #[cfg(target_arch = "wasm32")]
     let home_dir = current_dir;
     #[cfg(not(target_arch = "wasm32"))]
     let home_dir = home::home_dir().unwrap_or(current_dir);
+
     let base_path = home_dir.join(".ristretto");
     let mut installation_dir = base_path.join(version);
-
     if !installation_dir.exists() {
         let (version, file_name, archive) = util::get_runtime_archive(version).await?;
         installation_dir =
-            extract_archive(version.as_str(), file_name.as_str(), &archive, &base_path)?;
-        archive_version = version;
+            extract_archive(version.as_str(), file_name.as_str(), &archive, &base_path).await?;
     }
 
-    let class_path = get_class_path(&archive_version, &installation_dir)?;
-    let class_loader = ClassLoader::new("bootstrap", class_path);
-    Ok((archive_version, class_loader))
+    #[cfg(target_os = "macos")]
+    let installation_dir = installation_dir.join("Contents").join("Home");
+
+    home_class_loader(&installation_dir).await
 }
 
 /// Get the class path for the given version.
@@ -51,9 +97,6 @@ pub async fn class_loader(version: &str) -> Result<(String, ClassLoader)> {
 /// # Errors
 /// An error will be returned if the class path cannot be determined.
 fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
-    #[cfg(target_os = "macos")]
-    let installation_dir = installation_dir.join("Contents").join("Home");
-
     let class_path = if util::parse_major_version(version) <= 8 {
         let rt_jar_path = installation_dir.join("jre").join("lib").join("rt.jar");
         let class_path = rt_jar_path.to_string_lossy();
@@ -86,13 +129,16 @@ fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
 /// # Errors
 /// An error will be returned if the archive cannot be extracted.
 #[instrument(level = "debug", skip(archive))]
-fn extract_archive(
+async fn extract_archive(
     version: &str,
     file_name: &str,
     archive: &Vec<u8>,
     out_dir: &PathBuf,
 ) -> Result<PathBuf> {
-    fs::create_dir_all(out_dir)?;
+    #[cfg(target_arch = "wasm32")]
+    std::fs::create_dir_all(out_dir)?;
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::fs::create_dir_all(out_dir).await?;
 
     let Some(extension) = file_name.split('.').last() else {
         return Err(Error::ArchiveError(
@@ -116,6 +162,7 @@ fn extract_archive(
         tar.unpack(extract_dir.clone())?;
     };
 
+    #[cfg(target_arch = "wasm32")]
     let runtime_dir = {
         let mut entries = std::fs::read_dir(&extract_dir)?;
         let Some(runtime_dir) = entries.next() else {
@@ -125,15 +172,30 @@ fn extract_archive(
         };
         runtime_dir?
     };
+    #[cfg(not(target_arch = "wasm32"))]
+    let runtime_dir = {
+        let mut entries = tokio::fs::read_dir(&extract_dir).await?;
+        let Some(runtime_dir) = entries.next_entry().await? else {
+            return Err(Error::ArchiveError(
+                "No directory found in archive".to_string(),
+            ));
+        };
+        runtime_dir
+    };
+
     let runtime_dir = runtime_dir.path();
     let installation_dir = out_dir.join(version);
 
     // Rename the runtime directory to the installation directory. Another process may have
     // already installed the runtime, so we need to check if the installation directory exists.
     // If it does, we can ignore the error.
-    let rename_result = fs::rename(runtime_dir.clone(), installation_dir.clone());
+    #[cfg(target_arch = "wasm32")]
+    let rename_result = std::fs::rename(runtime_dir.clone(), installation_dir.clone());
+    #[cfg(not(target_arch = "wasm32"))]
+    let rename_result = tokio::fs::rename(runtime_dir.clone(), installation_dir.clone()).await;
+
     if let Err(error) = rename_result {
-        debug!(
+        warn!(
             "Failed to rename {} to {}",
             runtime_dir.to_string_lossy(),
             installation_dir.to_string_lossy(),
@@ -142,7 +204,12 @@ fn extract_archive(
             return Err(Error::ArchiveError(error.to_string()));
         }
     }
-    fs::remove_dir_all(&extract_dir)?;
+
+    #[cfg(target_arch = "wasm32")]
+    std::fs::remove_dir_all(&extract_dir)?;
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::fs::remove_dir_all(&extract_dir).await?;
+
     debug!(
         "Installed {version} to: {}",
         installation_dir.to_string_lossy()
@@ -158,8 +225,8 @@ mod tests {
     #[tokio::test]
     async fn test_class_loader_v8() -> Result<()> {
         let version = "8.432.06.1";
-        let (archive_version, class_loader) = class_loader(version).await?;
-        assert_eq!(version, archive_version);
+        let (_java_home, java_version, class_loader) = version_class_loader(version).await?;
+        assert_eq!(version, java_version);
         assert_eq!("bootstrap", class_loader.name());
         Ok(())
     }
@@ -167,8 +234,8 @@ mod tests {
     #[tokio::test]
     async fn test_class_loader_v21() -> Result<()> {
         let version = "21.0.5.11.1";
-        let (archive_version, class_loader) = class_loader(version).await?;
-        assert_eq!(version, archive_version);
+        let (_java_home, java_version, class_loader) = version_class_loader(version).await?;
+        assert_eq!(version, java_version);
         assert_eq!("bootstrap", class_loader.name());
         Ok(())
     }

@@ -39,7 +39,7 @@ fn platform_properties(
         let vm = call_stack.vm()?;
         let string_class = vm.load_class(&call_stack, "java/lang/String").await?;
         let system_properties = &mut properties::system(call_stack).await?;
-        let java_version = vm.java_version();
+        let java_version = vm.java_class_file_version();
 
         // VM properties must be returned in a specific order as they are accessed by array index.
         let mut properties: Vec<Option<Reference>> = Vec::new();
@@ -120,14 +120,18 @@ fn vm_properties(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let vm = call_stack.vm()?;
+        let java_home = vm.java_home();
         let string_class = vm.load_class(&call_stack, "java/lang/String").await?;
         // TODO: Implement platform command properties (e.g. -Dkey=value)
-        let mut platform_properties = HashMap::new();
-        platform_properties.insert("java.home", String::new());
+        let mut platform_properties: HashMap<String, String> = HashMap::new();
+        platform_properties.insert(
+            "java.home".to_string(),
+            java_home.to_string_lossy().to_string(),
+        );
 
         let mut properties: Vec<Option<Reference>> = Vec::new();
         for (key, value) in platform_properties {
-            let Value::Object(key) = vm.to_string_value(&call_stack, key).await? else {
+            let Value::Object(key) = vm.to_string_value(&call_stack, &key).await? else {
                 return Err(InternalError(format!(
                     "Unable to convert key to string: {key}"
                 )));

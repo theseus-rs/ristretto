@@ -178,7 +178,7 @@ impl Frame {
         let stack_size = Byte::from_u64(stack_size).get_appropriate_unit(UnitType::Decimal);
         debug!("  frame: {class_name}.{method_name}{method_descriptor}{source}");
         debug!("    locals: {}", self.locals);
-        debug!("    stack ({stack_size:#.2}): {}", self.stack);
+        debug!("    stack ({stack_size:#.3}): {}", self.stack);
         debug!("    pc: {program_counter}; instruction: {instruction}");
         Ok(())
     }
@@ -417,6 +417,7 @@ impl Frame {
             Instruction::Wide => {
                 // The wide instruction is not directly used by this implementation.  The wide
                 // versions of instructions are specifically enumerated in the instruction set.
+                // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide
                 Err(InvalidOperand {
                     expected: "*_w instruction".to_string(),
                     actual: "Wide".to_string(),
@@ -467,7 +468,7 @@ mod tests {
         let class_path = ClassPath::from(classes_path.to_string_lossy());
         let configuration = ConfigurationBuilder::new()
             .class_path(class_path.clone())
-            .build();
+            .build()?;
         let vm = VM::new(configuration).await?;
         let call_stack = CallStack::new(&Arc::downgrade(&vm));
         let class = vm.load_class(&call_stack, class_name).await?;
@@ -510,11 +511,6 @@ mod tests {
         assert!(matches!(process_result, Return(None)));
         Ok(())
     }
-
-    // #[test]
-    // fn test_process_athrow() -> Result<()> {
-    //     todo!()
-    // }
 
     #[tokio::test]
     async fn test_process_monitorenter() -> Result<()> {
