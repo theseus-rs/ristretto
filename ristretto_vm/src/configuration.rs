@@ -1,6 +1,7 @@
 use crate::Error::InternalError;
 use crate::Result;
 use ristretto_classloader::{ClassPath, DEFAULT_JAVA_VERSION};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::string::ToString;
 
@@ -12,6 +13,7 @@ pub struct Configuration {
     jar: Option<PathBuf>,
     java_home: Option<PathBuf>,
     java_version: Option<String>,
+    system_properties: HashMap<String, String>,
 }
 
 /// Configuration
@@ -45,6 +47,12 @@ impl Configuration {
     pub fn java_version(&self) -> Option<&String> {
         self.java_version.as_ref()
     }
+
+    /// Get the system properties
+    #[must_use]
+    pub fn system_properties(&self) -> &HashMap<String, String> {
+        &self.system_properties
+    }
 }
 
 /// Configuration builder
@@ -55,6 +63,7 @@ pub struct ConfigurationBuilder {
     jar: Option<PathBuf>,
     java_home: Option<PathBuf>,
     java_version: Option<String>,
+    system_properties: HashMap<String, String>,
 }
 
 /// Configuration builder
@@ -68,6 +77,7 @@ impl ConfigurationBuilder {
             jar: None,
             java_home: None,
             java_version: None,
+            system_properties: HashMap::new(),
         }
     }
 
@@ -106,6 +116,22 @@ impl ConfigurationBuilder {
         self
     }
 
+    /// Set the system properties
+    #[must_use]
+    pub fn add_system_property<S: AsRef<str>>(mut self, key: S, value: S) -> Self {
+        let key = key.as_ref().to_string();
+        let value = value.as_ref().to_string();
+        self.system_properties.insert(key, value);
+        self
+    }
+
+    /// Set the system properties
+    #[must_use]
+    pub fn system_properties(mut self, properties: HashMap<String, String>) -> Self {
+        self.system_properties = properties;
+        self
+    }
+
     /// Build the configuration
     ///
     /// # Errors
@@ -137,6 +163,7 @@ impl ConfigurationBuilder {
             jar: self.jar,
             java_home,
             java_version,
+            system_properties: self.system_properties,
         })
     }
 }
@@ -207,5 +234,20 @@ mod tests {
             .java_version("21")
             .build();
         assert!(matches!(result, Err(InternalError(_))));
+    }
+
+    #[test]
+    fn test_configuration_builder_system_properties() -> Result<()> {
+        let mut system_properties = HashMap::new();
+        system_properties.insert("a".to_string(), "1".to_string());
+        let configuration = ConfigurationBuilder::new()
+            .system_properties(system_properties)
+            .add_system_property("b", "2")
+            .build()?;
+
+        let system_properties = configuration.system_properties();
+        assert_eq!(Some(&"1".to_string()), system_properties.get("a"));
+        assert_eq!(Some(&"2".to_string()), system_properties.get("b"));
+        Ok(())
     }
 }

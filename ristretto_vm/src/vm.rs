@@ -9,6 +9,7 @@ use ristretto_classloader::{
     runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Object,
     Reference, Value,
 };
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
@@ -155,6 +156,12 @@ impl VM {
     #[must_use]
     pub fn java_class_file_version(&self) -> &Version {
         &self.java_class_file_version
+    }
+
+    /// Get the system properties
+    #[must_use]
+    pub fn system_properties(&self) -> &HashMap<String, String> {
+        self.configuration().system_properties()
     }
 
     /// Initialize the VM

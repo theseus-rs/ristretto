@@ -40,6 +40,9 @@ struct Cli {
     )]
     classpath: Option<String>,
 
+    #[arg(short = 'D', help = "Define a system property")]
+    properties: Option<Vec<String>>,
+
     #[arg(help = "Additional arguments to pass to the main class")]
     arguments: Option<Vec<String>>,
 
@@ -53,19 +56,20 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(target_arch = "wasm32")]
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
-    common_main().await
+    logging::initialize();
+    let cli = Cli::parse();
+    common_main(cli).await
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<()> {
-    common_main().await
+    logging::initialize();
+    let cli = Cli::parse();
+    common_main(cli).await
 }
 
-async fn common_main() -> Result<()> {
-    logging::initialize();
-
-    let cli = Cli::parse();
+async fn common_main(cli: Cli) -> Result<()> {
     if cli.version {
         let version = version::full();
         println!("{version}");
@@ -87,6 +91,19 @@ async fn common_main() -> Result<()> {
         configuration_builder = configuration_builder.main_class(main_class);
     } else if let Some(jar) = cli.jar {
         configuration_builder = configuration_builder.jar(PathBuf::from(jar));
+    }
+
+    if let Some(properties) = cli.properties {
+        for property in properties {
+            let mut parts = property.splitn(2, '=');
+            let key = parts.next().ok_or(InternalError(format!(
+                "Invalid system property key: {property}"
+            )))?;
+            let value = parts.next().ok_or(InternalError(format!(
+                "Invalid system property value: {property}"
+            )))?;
+            configuration_builder = configuration_builder.add_system_property(key, value);
+        }
     }
 
     let configuration = configuration_builder.build()?;
@@ -130,4 +147,18 @@ fn process_error(error: Error) {
         .and_then(|value| value.as_string())
         .unwrap_or_default();
     eprintln!("Exception {class_name}: {message}");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_common_main_no_arguments_error() -> Result<()> {
+        let arguments: Vec<String> = Vec::new();
+        let cli = Cli::parse_from(arguments);
+        let result = common_main(cli).await;
+        assert!(result.is_err());
+        Ok(())
+    }
 }

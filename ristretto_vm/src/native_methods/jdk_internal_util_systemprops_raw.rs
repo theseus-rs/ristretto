@@ -122,15 +122,14 @@ fn vm_properties(
         let vm = call_stack.vm()?;
         let java_home = vm.java_home();
         let string_class = vm.load_class(&call_stack, "java/lang/String").await?;
-        // TODO: Implement platform command properties (e.g. -Dkey=value)
-        let mut platform_properties: HashMap<String, String> = HashMap::new();
-        platform_properties.insert(
+        let mut system_properties = vm.system_properties().clone();
+        system_properties.insert(
             "java.home".to_string(),
             java_home.to_string_lossy().to_string(),
         );
 
         let mut properties: Vec<Option<Reference>> = Vec::new();
-        for (key, value) in platform_properties {
+        for (key, value) in system_properties {
             let Value::Object(key) = vm.to_string_value(&call_stack, &key).await? else {
                 return Err(InternalError(format!(
                     "Unable to convert key to string: {key}"
