@@ -33,8 +33,19 @@ pub(crate) fn process_throwable(frame: &Frame, throwable: Object) -> Result<usiz
             continue;
         }
 
-        let exception_class_name = constant_pool.try_get_class(exception_table_entry.catch_type)?;
-        if throwable_class.is_assignable_from(exception_class_name)? {
+        // If the catch_type is 0, the exception handler matches any exception.
+        // This is used to implement finally blocks.
+        // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.3
+        // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-3.html#jvms-3.13
+        let matching_exception_handler = if exception_table_entry.catch_type == 0 {
+            true
+        } else {
+            let exception_class_name =
+                constant_pool.try_get_class(exception_table_entry.catch_type)?;
+            throwable_class.is_assignable_from(exception_class_name)?
+        };
+
+        if matching_exception_handler {
             let stack = frame.stack();
             let handler_program_counter = usize::from(exception_table_entry.handler_pc);
             stack.push_object(Some(Reference::Object(throwable)))?;
