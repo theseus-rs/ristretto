@@ -189,4 +189,23 @@ mod tests {
         );
         Ok(())
     }
+
+    #[test]
+    fn test_configuration_builder_java_home() -> Result<()> {
+        let configuration = ConfigurationBuilder::new()
+            .java_home(PathBuf::from("."))
+            .build()?;
+        assert_eq!(Some(&PathBuf::from(".")), configuration.java_home());
+        assert_eq!(None, configuration.java_version());
+        Ok(())
+    }
+
+    #[test]
+    fn test_configuration_builder_java_home_and_java_version_error() {
+        let result = ConfigurationBuilder::new()
+            .java_home(PathBuf::from("."))
+            .java_version("21")
+            .build();
+        assert!(matches!(result, Err(InternalError(_))));
+    }
 }

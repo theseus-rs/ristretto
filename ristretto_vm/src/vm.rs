@@ -1,5 +1,5 @@
 use crate::call_stack::CallStack;
-use crate::Error::UnsupportedClassFileVersion;
+use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::{Configuration, ConfigurationBuilder, Result};
 use ristretto_classfile::{mutf8, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
@@ -50,7 +50,9 @@ impl VM {
                     runtime::home_class_loader(java_home).await?;
                 (java_home, java_version, boostrap_class_loader)
             } else {
-                unimplemented!("Java version or Java home must be specified");
+                return Err(InternalError(
+                    "Java version or Java home must be specified".to_string(),
+                ));
             };
 
         debug!(
@@ -464,6 +466,18 @@ mod tests {
             .contains("classes.jar"));
         assert_eq!(DEFAULT_JAVA_VERSION, vm.java_version());
         assert!(vm.main_class().is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_vm_new_java_home() -> Result<()> {
+        let vm = test_vm().await?;
+        let configuration = ConfigurationBuilder::new()
+            .java_home(vm.java_home().clone())
+            .build()?;
+        let java_home_vm = VM::new(configuration).await?;
+        assert_eq!(vm.java_home(), java_home_vm.java_home());
+        assert_eq!(vm.java_version(), java_home_vm.java_version());
         Ok(())
     }
 
