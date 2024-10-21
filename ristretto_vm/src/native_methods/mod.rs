@@ -2,6 +2,7 @@ mod java_io_filedescriptor;
 mod java_io_fileinputstream;
 mod java_io_fileoutputstream;
 mod java_io_unixfilesystem;
+mod java_io_winntfilesystem;
 mod java_lang_class;
 mod java_lang_classloader;
 mod java_lang_double;
