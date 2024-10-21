@@ -31,8 +31,8 @@ fn fill_in_stack_trace(
         };
 
         let vm = call_stack.vm()?;
-        let stack_element_class = vm
-            .load_class(&call_stack, "java/lang/StackTraceElement")
+        let stack_element_array_class = vm
+            .load_class(&call_stack, "[Ljava/lang/StackTraceElement;")
             .await?;
         let stack_elements = ConcurrentVec::new();
         for frame in call_stack.frames()?.iter().rev() {
@@ -42,7 +42,7 @@ fn fill_in_stack_trace(
                 continue;
             }
             let class_name = vm.to_string_value(&call_stack, class_name).await?;
-            let stack_element_object = Object::new(stack_element_class.clone())?;
+            let stack_element_object = Object::new(stack_element_array_class.clone())?;
             stack_element_object.set_value("declaringClass", class_name)?;
 
             if let Some(source_file) = class.source_file() {
@@ -63,8 +63,10 @@ fn fill_in_stack_trace(
         }
 
         let depth = i32::try_from(stack_elements.len()?)?;
-        let stack_trace =
-            Value::Object(Some(Reference::Array(stack_element_class, stack_elements)));
+        let stack_trace = Value::Object(Some(Reference::Array(
+            stack_element_array_class,
+            stack_elements,
+        )));
         throwable.set_value("backtrace", stack_trace)?;
         throwable.set_value("depth", Value::Int(depth))?;
         Ok(Some(Value::Object(object)))

@@ -37,7 +37,7 @@ fn platform_properties(
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let vm = call_stack.vm()?;
-        let string_class = vm.load_class(&call_stack, "java/lang/String").await?;
+        let string_array_class = vm.load_class(&call_stack, "[Ljava/lang/String;").await?;
         let system_properties = &mut properties::system(call_stack).await?;
         let java_version = vm.java_class_file_version();
 
@@ -94,7 +94,7 @@ fn platform_properties(
         push_property(system_properties, &mut properties, "user.name")?;
 
         let properties = ConcurrentVec::from(properties);
-        let result = Value::Object(Some(Reference::Array(string_class, properties)));
+        let result = Value::Object(Some(Reference::Array(string_array_class, properties)));
         Ok(Some(result))
     })
 }
@@ -121,7 +121,7 @@ fn vm_properties(
     Box::pin(async move {
         let vm = call_stack.vm()?;
         let java_home = vm.java_home();
-        let string_class = vm.load_class(&call_stack, "java/lang/String").await?;
+        let string_array_class = vm.load_class(&call_stack, "[Ljava/lang/String;").await?;
         let mut system_properties = vm.system_properties().clone();
         system_properties.insert(
             "java.home".to_string(),
@@ -146,7 +146,7 @@ fn vm_properties(
         }
 
         let properties = ConcurrentVec::from(properties);
-        let result = Value::Object(Some(Reference::Array(string_class, properties)));
+        let result = Value::Object(Some(Reference::Array(string_array_class, properties)));
         Ok(Some(result))
     })
 }
