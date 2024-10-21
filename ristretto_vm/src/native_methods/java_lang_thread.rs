@@ -14,6 +14,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "countStackFrames", "()I", count_stack_frames);
     registry.register(
         class_name,
+        "currentCarrierThread",
+        "()Ljava/lang/Thread;",
+        current_carrier_thread,
+    );
+    registry.register(
+        class_name,
         "currentThread",
         "()Ljava/lang/Thread;",
         current_thread,
@@ -32,6 +38,16 @@ fn count_stack_frames(
         let frames = call_stack.frames()?;
         let frames = i32::try_from(frames.len())?;
         Ok(Some(Value::Int(frames)))
+    })
+}
+
+fn current_carrier_thread(
+    call_stack: Arc<CallStack>,
+    arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move {
+        // TODO: correct this once threading is implemented
+        current_thread(call_stack, arguments).await
     })
 }
 

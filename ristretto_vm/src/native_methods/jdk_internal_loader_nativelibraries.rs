@@ -17,6 +17,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/String;)Ljava/lang/String;",
         find_builtin_lib,
     );
+    registry.register(
+        class_name,
+        "load",
+        "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z",
+        load,
+    );
 }
 
 fn find_builtin_lib(
@@ -39,4 +45,12 @@ fn find_builtin_lib(
         let library_name = vm.string(library_path).await?;
         Ok(Some(library_name))
     })
+}
+
+#[expect(clippy::needless_pass_by_value)]
+fn load(
+    _call_stack: Arc<CallStack>,
+    _arguments: Arguments,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+    Box::pin(async move { Ok(Some(Value::Int(1))) })
 }

@@ -8,7 +8,7 @@ use crate::native_methods::{
     java_lang_throwable, jdk_internal_loader_bootloader, jdk_internal_loader_nativelibraries,
     jdk_internal_misc_cds, jdk_internal_misc_scopedmemoryaccess, jdk_internal_misc_signal,
     jdk_internal_misc_unsafe, jdk_internal_misc_vm, jdk_internal_reflect_reflection,
-    jdk_internal_util_systemprops_raw, sun_io_win32errormode,
+    jdk_internal_util_systemprops_raw, sun_io_win32errormode, sun_nio_fs_unixnativedispatcher,
 };
 use crate::Result;
 use ristretto_classloader::Value;
@@ -109,6 +109,7 @@ impl Default for MethodRegistry {
         jdk_internal_reflect_reflection::register(&mut registry);
         jdk_internal_util_systemprops_raw::register(&mut registry);
         sun_io_win32errormode::register(&mut registry);
+        sun_nio_fs_unixnativedispatcher::register(&mut registry);
         registry
     }
 }
