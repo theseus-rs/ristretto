@@ -55,23 +55,23 @@ fn get_boolean_attributes_0(
         let path = file.field("path")?.value()?.as_string()?;
         let path = PathBuf::from(path);
         let mut attributes = if path.exists() {
-            BooleanAttributeFlags::EXISTS.bits()
+            BooleanAttributeFlags::EXISTS
         } else {
-            0
+            BooleanAttributeFlags::empty()
         };
         if path.is_file() {
-            attributes |= BooleanAttributeFlags::REGULAR.bits();
+            attributes |= BooleanAttributeFlags::REGULAR;
         }
         if path.is_dir() {
-            attributes |= BooleanAttributeFlags::DIRECTORY.bits();
+            attributes |= BooleanAttributeFlags::DIRECTORY;
         }
         if path
             .file_name()
             .map(|name| name.to_string_lossy().starts_with('.'))
             == Some(true)
         {
-            attributes |= BooleanAttributeFlags::HIDDEN.bits();
+            attributes |= BooleanAttributeFlags::HIDDEN;
         }
-        Ok(Some(Value::Int(attributes)))
+        Ok(Some(Value::Int(attributes.bits())))
     })
 }

@@ -26,5 +26,6 @@ mod jdk_internal_util_systemprops_raw;
 pub(crate) mod properties;
 mod registry;
 mod sun_io_win32errormode;
+mod sun_nio_fs_unixnativedispatcher;
 
 pub use registry::registry;
