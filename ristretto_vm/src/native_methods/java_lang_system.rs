@@ -239,14 +239,6 @@ fn init_properties(
     })
 }
 
-pub(crate) fn library_file_name(library_name: &str) -> String {
-    match OS {
-        "macos" => format!("lib{library_name}.dylib"),
-        "windows" => format!("{library_name}.dll"),
-        _ => format!("lib{library_name}.so"),
-    }
-}
-
 fn map_library_name(
     call_stack: Arc<CallStack>,
     mut arguments: Arguments,
@@ -256,7 +248,11 @@ fn map_library_name(
             return Err(InternalError("argument must be an object".to_string()));
         };
         let library_name = object.as_string()?;
-        let library_file_name = library_file_name(&library_name);
+        let library_file_name = match OS {
+            "macos" => format!("lib{library_name}.dylib"),
+            "windows" => format!("{library_name}.dll"),
+            _ => format!("lib{library_name}.so"),
+        };
         let vm = call_stack.vm()?;
         let library_name = vm.string(library_file_name).await?;
         Ok(Some(library_name))

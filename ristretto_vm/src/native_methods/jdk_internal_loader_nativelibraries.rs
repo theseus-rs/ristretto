@@ -1,6 +1,5 @@
 use crate::arguments::Arguments;
 use crate::call_stack::CallStack;
-use crate::native_methods::java_lang_system::library_file_name;
 use crate::native_methods::registry::MethodRegistry;
 use crate::Error::InternalError;
 use crate::Result;
@@ -29,8 +28,7 @@ fn find_builtin_lib(
             return Err(InternalError("argument must be an object".to_string()));
         };
         let vm = call_stack.vm()?;
-        let library_name = object.as_string()?;
-        let library_file_name = library_file_name(&library_name);
+        let library_file_name = object.as_string()?;
         let library_path = vm
             .java_home()
             .join("lib")
