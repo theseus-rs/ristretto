@@ -248,10 +248,10 @@ fn is_instanceof(object: &Reference, class_name: &str) -> Result<bool> {
             if class_array_depth > 0 && class_array_depth != reference_array_dimensions {
                 return Ok(false);
             }
-            // Convert an array class name (e.g. [Ljava/lang/String;) into the base class name by
-            // remove the leading '[' and 'L' and trailing ';'
-            let class_name = class_name
-                .trim_start_matches('[')
+            // Convert an array class name (e.g. [[Ljava/lang/String;) into the base class name by
+            // remove all the array indicators '[' and the leading 'L' and trailing ';'
+            let component_name = class_name.split('[').last().unwrap_or_default();
+            let class_name = component_name
                 .strip_prefix("L")
                 .unwrap_or(class_name)
                 .strip_suffix(";")

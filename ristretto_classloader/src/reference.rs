@@ -4,7 +4,6 @@ use ristretto_classfile::{ClassFile, ConstantPool};
 use std::fmt;
 use std::fmt::Display;
 use std::sync::Arc;
-// TODO: Add support for multi-dimensional array types
 
 /// Represents a reference to an object in the Ristretto VM.
 #[derive(Clone, Debug)]
@@ -24,7 +23,6 @@ impl Reference {
     /// Get the class name of the reference
     #[must_use]
     pub fn class_name(&self) -> String {
-        // TODO: Add support for multi-dimensional array types
         match self {
             Reference::ByteArray(_) => "[B".to_string(),
             Reference::CharArray(_) => "[C".to_string(),
@@ -33,7 +31,7 @@ impl Reference {
             Reference::LongArray(_) => "[J".to_string(),
             Reference::FloatArray(_) => "[F".to_string(),
             Reference::DoubleArray(_) => "[D".to_string(),
-            Reference::Array(class, _) => format!("[L{};", class.name()),
+            Reference::Array(class, _) => class.name().to_string(),
             Reference::Object(value) => value.class().name().to_string(),
         }
     }
@@ -73,7 +71,7 @@ impl Display for Reference {
             Reference::DoubleArray(value) => write!(f, "double{value}"),
             Reference::Array(class, value) => {
                 let length = value.len().unwrap_or_default();
-                write!(f, "{}[{length}]", class.name())
+                write!(f, "{}[{length}]", class.array_component_type())
             }
             Reference::Object(value) => {
                 if value.class().name() == "java/lang/String" {
@@ -203,14 +201,11 @@ mod tests {
 
     #[test]
     fn test_display_reference_array() -> Result<()> {
-        let bytes = include_bytes!("../../classes/Minimum.class").to_vec();
-        let mut cursor = Cursor::new(bytes);
-        let class_file = ClassFile::from_bytes(&mut cursor)?;
-        let class = Arc::new(Class::from(class_file)?);
+        let class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
         let reference = Reference::Array(class, ConcurrentVec::from(vec![None]));
-        assert_eq!(reference.class_name(), "[LMinimum;");
-        assert_eq!(reference.class()?.name(), "[LMinimum;");
-        assert_eq!(reference.to_string(), "Minimum[1]");
+        assert_eq!(reference.class_name(), "[Ljava/lang/Object;");
+        assert_eq!(reference.class()?.name(), "[Ljava/lang/Object;");
+        assert_eq!(reference.to_string(), "java/lang/Object[1]");
         Ok(())
     }
 
