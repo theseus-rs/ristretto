@@ -175,15 +175,15 @@ impl Method {
     /// if the program counter does not index into a valid line number
     #[must_use]
     pub fn line_number(&self, program_counter: usize) -> usize {
-        if self.line_numbers.is_empty() {
-            return 0;
-        };
-        let program_counter = u16::try_from(program_counter).unwrap_or_default();
+        let program_counter = u16::try_from(program_counter).unwrap_or(0);
         let index = self
             .line_numbers
             .binary_search_by(|line_number| line_number.start_pc.cmp(&program_counter))
-            .unwrap_or_else(|index| index - 1);
-        let line_number = self.line_numbers[index].line_number;
+            .unwrap_or_else(|index| index.saturating_sub(1));
+        let line_number = self
+            .line_numbers
+            .get(index)
+            .map_or(0, |line_number| line_number.line_number);
         usize::from(line_number)
     }
 
@@ -318,6 +318,7 @@ mod tests {
         assert_eq!(method.max_stack, 1);
         assert_eq!(method.max_locals, 2);
         assert!(method.code.is_empty());
+        assert_eq!(method.line_number(0), 0);
         Ok(())
     }
 
@@ -416,5 +417,22 @@ mod tests {
             Method::parse_field_type(&descriptor, &mut descriptor.chars()),
             Err(InvalidMethodDescriptor(_))
         ));
+    }
+
+    #[test]
+    fn test_to_string() {
+        let method = Method {
+            access_flags: MethodAccessFlags::empty(),
+            name: "test".to_string(),
+            descriptor: "()V".to_string(),
+            parameters: Vec::new(),
+            return_type: None,
+            max_stack: 1,
+            max_locals: 2,
+            code: Vec::new(),
+            line_numbers: Vec::new(),
+            exception_table: Vec::new(),
+        };
+        assert_eq!("test() -> void", method.to_string());
     }
 }
