@@ -348,8 +348,7 @@ fn get_reference(
             }
             Reference::Object(object) => {
                 let field_name = object.class().field_name(offset)?;
-                let field = object.field(&field_name)?;
-                let value = field.value()?;
+                let value = object.value(&field_name)?;
                 Ok(Some(value))
             }
             _ => Err(InternalError("getReference: Invalid reference".to_string())),
@@ -393,8 +392,7 @@ fn object_field_offset_1(
                 "objectFieldOffset1: Invalid class reference".to_string(),
             ));
         };
-        let name_field = class_object.field("name")?;
-        let class_name = name_field.value()?.as_string()?;
+        let class_name = class_object.value("name")?.as_string()?;
         let vm = call_stack.vm()?;
         let class = vm.load_class(&call_stack, &class_name).await?;
         let offset = class.field_offset(&field_name)?;

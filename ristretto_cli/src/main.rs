@@ -5,7 +5,7 @@ mod version;
 
 use clap::{ArgGroup, Parser};
 use ristretto_vm::Error::InternalError;
-use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Result, VM};
+use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Reference, Result, Value, VM};
 use std::env;
 use std::env::consts::{ARCH, OS};
 use std::path::PathBuf;
@@ -110,7 +110,7 @@ async fn common_main(cli: Cli) -> Result<()> {
     let vm = match VM::new(configuration).await {
         Ok(vm) => vm,
         Err(error) => {
-            process_error(error);
+            process_error(error)?;
             exit(1);
         }
     };
@@ -128,25 +128,78 @@ async fn common_main(cli: Cli) -> Result<()> {
     }
 
     if let Err(error) = vm.invoke(&main_class, &main_method, arguments).await {
-        process_error(error);
+        process_error(error)?;
         exit(1);
     }
     Ok(())
 }
 
-fn process_error(error: Error) {
+fn process_error(error: Error) -> Result<()> {
     let Error::Throwable(throwable) = error else {
         eprintln!("{error}");
-        return;
+        return Ok(());
     };
-    let class = throwable.class();
-    let class_name = class.name();
-    let message = throwable
-        .field("detailMessage")
-        .and_then(|value| value.value())
-        .and_then(|value| value.as_string())
-        .unwrap_or_default();
-    eprintln!("Exception {class_name}: {message}");
+
+    let mut throwable = throwable;
+    let mut first_throwable = true;
+
+    loop {
+        let class = throwable.class();
+        let class_name = class.name();
+        let message = throwable
+            .value("detailMessage")
+            .and_then(|value| value.as_string())?;
+        let prelude = if first_throwable {
+            first_throwable = false;
+            "Exception"
+        } else {
+            "Caused by"
+        };
+        eprintln!("{prelude} {class_name}: {message}");
+        let Value::Object(Some(Reference::Array(_class, stack_trace))) =
+            throwable.value("backtrace")?
+        else {
+            return Ok(());
+        };
+        let stack_trace = stack_trace.to_vec()?;
+        for stack_trace_element in stack_trace {
+            let Some(Reference::Object(stack_trace_element)) = stack_trace_element else {
+                continue;
+            };
+            let class = stack_trace_element.value("declaringClass")?.as_string()?;
+            let method = stack_trace_element.value("methodName")?.as_string()?;
+
+            let mut source = String::new();
+            let file = stack_trace_element.value("fileName")?;
+            if let Value::Object(Some(ref _file_object)) = file {
+                source = file.as_string()?;
+            };
+            let line = stack_trace_element.value("lineNumber")?.as_int()?;
+            if line > 0 {
+                if source.is_empty() {
+                    source = format!("{line}");
+                } else {
+                    source = format!("{source}:{line}");
+                }
+            }
+            if source.is_empty() {
+                eprintln!("    at {class}.{method}");
+            } else {
+                eprintln!("    at {class}.{method}({source})");
+            }
+        }
+
+        let cause = throwable.value("cause")?;
+        let Value::Object(Some(Reference::Object(cause))) = cause else {
+            break;
+        };
+        if throwable == cause {
+            break;
+        } else {
+            throwable = cause;
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

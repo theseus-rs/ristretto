@@ -69,8 +69,7 @@ pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Res
             let message = format!("{error}");
             let error_message = vm.string(&message).await?;
             let throwable = Object::new(class)?;
-            let detail_message_field = throwable.field("detailMessage")?;
-            detail_message_field.set_value(error_message)?;
+            throwable.set_value("detailMessage", error_message)?;
             throwable
         }
     };

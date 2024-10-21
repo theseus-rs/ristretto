@@ -43,28 +43,21 @@ fn fill_in_stack_trace(
             }
             let class_name = vm.to_string_value(&call_stack, class_name).await?;
             let stack_element_object = Object::new(stack_element_class.clone())?;
-            stack_element_object
-                .field("declaringClass")?
-                .set_value(class_name)?;
+            stack_element_object.set_value("declaringClass", class_name)?;
 
             if let Some(source_file) = class.source_file() {
                 let source_file = vm.to_string_value(&call_stack, source_file).await?;
-                stack_element_object
-                    .field("fileName")?
-                    .set_value(source_file)?;
+                stack_element_object.set_value("fileName", source_file)?;
             }
 
             let method = frame.method();
             let method_name = vm.to_string_value(&call_stack, method.name()).await?;
-            stack_element_object
-                .field("methodName")?
-                .set_value(method_name)?;
+            stack_element_object.set_value("methodName", method_name)?;
 
             let program_counter = frame.program_counter();
             let line_number = method.line_number(program_counter);
             stack_element_object
-                .field("lineNumber")?
-                .set_value(Value::Int(i32::try_from(line_number)?))?;
+                .set_value("lineNumber", Value::Int(i32::try_from(line_number)?))?;
 
             stack_elements.push(Some(Reference::Object(stack_element_object)))?;
         }
@@ -72,8 +65,8 @@ fn fill_in_stack_trace(
         let depth = i32::try_from(stack_elements.len()?)?;
         let stack_trace =
             Value::Object(Some(Reference::Array(stack_element_class, stack_elements)));
-        throwable.field("backtrace")?.set_value(stack_trace)?;
-        throwable.field("depth")?.set_value(Value::Int(depth))?;
+        throwable.set_value("backtrace", stack_trace)?;
+        throwable.set_value("depth", Value::Int(depth))?;
         Ok(Some(Value::Object(object)))
     })
 }
