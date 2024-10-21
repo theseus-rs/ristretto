@@ -14,13 +14,9 @@ bitflags! {
     /// Boolean Attribute Flags.
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct BooleanAttributeFlags: i32 {
-        /// If the path exists.
         const EXISTS = 0x01;
-        /// If the path is a regular file.
         const REGULAR = 0x02;
-        /// If the path is a directory.
         const DIRECTORY = 0x04;
-        /// If the path is hidden.
         const HIDDEN = 0x08;
     }
 }
