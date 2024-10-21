@@ -153,8 +153,7 @@ fn is_primitive(
         let Some(Reference::Object(object)) = arguments.pop_object()? else {
             return Err(InternalError("isPrimitive: no arguments".to_string()));
         };
-        let field = object.field("name")?;
-        let class_name = field.value()?.as_string()?;
+        let class_name = object.value("name")?.as_string()?;
         match class_name.as_str() {
             "java/lang/Boolean"
             | "java/lang/Byte"

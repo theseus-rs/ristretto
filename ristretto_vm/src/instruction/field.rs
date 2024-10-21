@@ -20,8 +20,7 @@ pub(crate) fn getfield(
             let (name_index, _descriptor_index) =
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
             let field_name = constant_pool.try_get_utf8(*name_index)?;
-            let field = object.field(field_name)?;
-            let value = field.value()?;
+            let value = object.value(field_name)?;
             stack.push(value)?;
             Ok(Continue)
         }
@@ -47,8 +46,7 @@ pub(crate) fn putfield(
             let (name_index, _descriptor_index) =
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
             let field_name = constant_pool.try_get_utf8(*name_index)?;
-            let field = object.field(field_name)?;
-            field.set_value(value)?;
+            object.set_value(field_name, value)?;
             Ok(Continue)
         }
         _ => Err(InvalidStackValue {

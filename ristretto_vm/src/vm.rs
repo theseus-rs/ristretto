@@ -373,8 +373,7 @@ impl VM {
         let class = self.load_class(call_stack, object_class_name).await?;
         let object = Object::new(class)?;
         let name = self.to_string_value(call_stack, class_name).await?;
-        let name_field = object.field("name")?;
-        name_field.set_value(name)?;
+        object.set_value("name", name)?;
         // TODO: a "null" class loader indicates a system class loader; this should be re-evaluated
         // to support custom class loaders
         let class_loader_field = object.field("classLoader")?;
@@ -418,8 +417,7 @@ impl VM {
             let chars = ConcurrentVec::from(ucs2_chars);
             CharArray(chars)
         } else {
-            let coder_field = object.field("coder")?;
-            coder_field.set_value(Value::Int(0))?; // LATIN1
+            object.set_value("coder", Value::Int(0))?; // LATIN1
 
             let bytes = mutf8::to_bytes(value)?;
             #[expect(clippy::cast_possible_wrap)]
@@ -428,11 +426,8 @@ impl VM {
             ByteArray(bytes)
         };
 
-        let value_field = object.field("value")?;
-        value_field.set_value(Value::Object(Some(array)))?;
-
-        let hash_field = object.field("hash")?;
-        hash_field.set_value(Value::Int(0))?;
+        object.set_value("value", Value::Object(Some(array)))?;
+        object.set_value("hash", Value::Int(0))?;
 
         let reference = Reference::Object(object);
         let value = Value::Object(Some(reference));

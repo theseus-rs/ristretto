@@ -73,6 +73,24 @@ impl Object {
         Ok(field)
     }
 
+    /// Get value for a field.
+    ///
+    /// # Errors
+    /// if the field cannot be found.
+    pub fn value<S: AsRef<str>>(&self, name: S) -> Result<Value> {
+        let field = self.field(name)?;
+        field.value()
+    }
+
+    /// Sets value for field.
+    ///
+    /// # Errors
+    /// if the field cannot be found.
+    pub fn set_value<S: AsRef<str>>(&self, name: S, value: Value) -> Result<()> {
+        let field = self.field(name)?;
+        field.set_value(value)
+    }
+
     /// Returns a string value for a java.lang.String object.
     ///
     /// # Errors
@@ -84,7 +102,7 @@ impl Object {
                 "Expected a java.lang.String value".to_string(),
             ));
         }
-        let Value::Object(Some(reference)) = self.field("value")?.value()? else {
+        let Value::Object(Some(reference)) = self.value("value")? else {
             return Err(InvalidValueType(
                 "Expected an object field value".to_string(),
             ));
@@ -120,27 +138,24 @@ mod tests {
     use super::*;
     use crate::{runtime, ConcurrentVec};
 
-    async fn load_class(version: &str, class: &str) -> Result<Arc<Class>> {
+    async fn java8_string_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) =
-            runtime::version_class_loader(version).await?;
+            runtime::version_class_loader("8.432.06.1").await?;
+        class_loader.load("java/lang/String").await
+    }
+
+    async fn load_class(class: &str) -> Result<Arc<Class>> {
+        let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
         class_loader.load(class).await
     }
 
-    async fn java8_string_class() -> Result<Arc<Class>> {
-        load_class("8.432.06.1", "java/lang/String").await
-    }
-
-    async fn java21_class(class: &str) -> Result<Arc<Class>> {
-        load_class("21.0.5.11.1", class).await
-    }
-
-    async fn java21_string_class() -> Result<Arc<Class>> {
-        load_class("21.0.5.11.1", "java/lang/String").await
+    async fn string_class() -> Result<Arc<Class>> {
+        load_class("java/lang/String").await
     }
 
     #[tokio::test]
-    async fn test_object_new() -> Result<()> {
-        let class = java21_string_class().await?;
+    async fn test_new() -> Result<()> {
+        let class = string_class().await?;
         let object = Object::new(class)?;
         let object_class = object.class();
         assert_eq!("java/lang/String", object_class.name());
@@ -148,17 +163,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_object_instanceof() -> Result<()> {
+    async fn test_instanceof() -> Result<()> {
         let class_name = "java/lang/Object";
-        let class = java21_class(class_name).await?;
+        let class = load_class(class_name).await?;
         let object = Object::new(class)?;
         assert!(object.instanceof(class_name)?);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_object_field() -> Result<()> {
-        let class = java21_string_class().await?;
+    async fn test_field() -> Result<()> {
+        let class = string_class().await?;
         let object = Object::new(class)?;
         let field = object.field("value");
         assert!(field.is_ok());
@@ -166,8 +181,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_object_field_not_found() -> Result<()> {
-        let class = java21_string_class().await?;
+    async fn test_field_not_found() -> Result<()> {
+        let class = string_class().await?;
         let object = Object::new(class)?;
         let field = object.field("foo");
         assert!(matches!(
@@ -179,8 +194,17 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_to_string() -> Result<()> {
+        let class_name = "java/lang/Object";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        assert_eq!("class java/lang/Object", object.to_string());
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_as_string_invalid_class() -> Result<()> {
-        let class = java21_class("java/lang/Object").await?;
+        let class = load_class("java/lang/Object").await?;
         let object = Object::new(class)?;
         let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));
@@ -189,7 +213,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_string_invalid_value() -> Result<()> {
-        let class = java21_string_class().await?;
+        let class = string_class().await?;
         let object = Object::new(class)?;
         let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));
@@ -207,17 +231,17 @@ mod tests {
             .map(|&b| u16::from(b))
             .collect();
         let string_value = Value::Object(Some(CharArray(ConcurrentVec::from(string_bytes))));
-        object.field("value")?.set_value(string_value)?;
+        object.set_value("value", string_value)?;
         assert_eq!("foo".to_string(), object.as_string()?);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_as_string_java8_invalid_value() -> Result<()> {
+    async fn test_as_string_java8_invalid_byte_array_value() -> Result<()> {
         let class = java8_string_class().await?;
         let object = Object::new(class)?;
         let string_value = Value::Object(Some(ByteArray(ConcurrentVec::from(vec![]))));
-        object.field("value")?.set_value(string_value)?;
+        object.set_value("value", string_value)?;
         let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));
         Ok(())
@@ -225,22 +249,22 @@ mod tests {
 
     #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
-    async fn test_as_string_java21() -> Result<()> {
-        let class = java21_string_class().await?;
+    async fn test_as_string() -> Result<()> {
+        let class = string_class().await?;
         let object = Object::new(class)?;
         let string_bytes = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::Object(Some(ByteArray(ConcurrentVec::from(string_bytes))));
-        object.field("value")?.set_value(string_value)?;
+        object.set_value("value", string_value)?;
         assert_eq!("foo".to_string(), object.as_string()?);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_as_string_java21_invalid_value() -> Result<()> {
-        let class = java21_string_class().await?;
+    async fn test_as_string_invalid_char_array_value() -> Result<()> {
+        let class = string_class().await?;
         let object = Object::new(class)?;
         let string_value = Value::Object(Some(CharArray(ConcurrentVec::from(vec![]))));
-        object.field("value")?.set_value(string_value)?;
+        object.set_value("value", string_value)?;
         let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));
         Ok(())

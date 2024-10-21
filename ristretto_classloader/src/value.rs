@@ -226,7 +226,7 @@ mod tests {
         let string_value = Value::Object(Some(Reference::ByteArray(ConcurrentVec::from(
             string_bytes,
         ))));
-        object.field("value")?.set_value(string_value)?;
+        object.set_value("value", string_value)?;
         let value = Value::Object(Some(Reference::Object(object)));
         assert_eq!("string(foo)", value.to_string());
         assert_eq!("foo".to_string(), value.as_string()?);

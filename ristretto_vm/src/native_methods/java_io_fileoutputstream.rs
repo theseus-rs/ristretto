@@ -46,13 +46,13 @@ fn write_bytes(
             ));
         };
         let Value::Object(Some(Reference::Object(file_descriptor))) =
-            file_output_stream.field("fd")?.value()?
+            file_output_stream.value("fd")?
         else {
             return Err(InternalError(
                 "Invalid argument type; expected object".to_string(),
             ));
         };
-        let Value::Long(handle) = file_descriptor.field("handle")?.value()? else {
+        let Value::Long(handle) = file_descriptor.value("handle")? else {
             return Err(InternalError(
                 "Invalid argument type; expected long".to_string(),
             ));
