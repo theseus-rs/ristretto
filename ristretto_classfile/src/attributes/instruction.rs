@@ -716,11 +716,7 @@ impl Instruction {
             }
             186 => {
                 let constant_index = bytes.read_u16::<BigEndian>()?;
-                let null = bytes.read_u8()?;
-                if null != 0 {
-                    return Err(InvalidInstruction(code));
-                }
-                let null = bytes.read_u8()?;
+                let null = bytes.read_u16::<BigEndian>()?;
                 if null != 0 {
                     return Err(InvalidInstruction(code));
                 }
@@ -883,8 +879,7 @@ impl Instruction {
             }
             Instruction::Invokedynamic(value) => {
                 bytes.write_u16::<BigEndian>(*value)?;
-                bytes.write_u8(0)?;
-                bytes.write_u8(0)?;
+                bytes.write_u16::<BigEndian>(0)?;
             }
             Instruction::New(value) => bytes.write_u16::<BigEndian>(*value)?,
             Instruction::Newarray(array_type) => array_type.to_bytes(bytes)?,
