@@ -3,19 +3,20 @@ use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
 use crate::Error::InvalidStackValue;
 use crate::Result;
-use ristretto_classfile::ConstantPool;
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::{Class, Reference, Value};
+use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.getfield>
 #[inline]
 pub(crate) fn getfield(
     stack: &OperandStack,
-    constant_pool: &ConstantPool,
+    class: &Arc<Class>,
     index: u16,
 ) -> Result<ExecutionResult> {
     let value = stack.pop()?;
     match value {
         Value::Object(Some(Reference::Object(object))) => {
+            let constant_pool = class.constant_pool();
             let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
             let (name_index, _descriptor_index) =
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
@@ -35,13 +36,14 @@ pub(crate) fn getfield(
 #[inline]
 pub(crate) fn putfield(
     stack: &OperandStack,
-    constant_pool: &ConstantPool,
+    class: &Arc<Class>,
     index: u16,
 ) -> Result<ExecutionResult> {
     let value = stack.pop()?;
     let mut object_value = stack.pop()?;
     match object_value {
         Value::Object(Some(Reference::Object(ref mut object))) => {
+            let constant_pool = class.constant_pool();
             let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
             let (name_index, _descriptor_index) =
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
@@ -99,7 +101,7 @@ mod test {
     async fn test_put_and_get_field() -> Result<()> {
         let (_vm, _thread, frame, class_index, field_index) =
             test_class_field("Child", "zero", "I").await?;
-        let constant_pool = frame.class().constant_pool().clone();
+        let class = frame.class();
         let result = new(&frame, class_index).await?;
         assert_eq!(Continue, result);
 
@@ -111,10 +113,10 @@ mod test {
         assert_eq!(Continue, result);
 
         stack.push_int(42)?;
-        let result = putfield(stack, &constant_pool, field_index)?;
+        let result = putfield(stack, class, field_index)?;
         assert_eq!(Continue, result);
 
-        let result = getfield(stack, &constant_pool, field_index)?;
+        let result = getfield(stack, class, field_index)?;
         assert_eq!(Continue, result);
         let value = stack.pop()?;
         assert_eq!(Value::Int(42), value);
@@ -132,9 +134,9 @@ mod test {
             test_class_field("Child", "foo", "I").await?;
         let result = new(&frame, class_index).await?;
         assert_eq!(Continue, result);
-        let constant_pool = frame.class().constant_pool().clone();
+        let class = frame.class();
         let stack = frame.stack();
-        let result = getfield(stack, &constant_pool, field_index);
+        let result = getfield(stack, class, field_index);
         assert!(result.is_err());
         Ok(())
     }
@@ -143,9 +145,9 @@ mod test {
     async fn test_getfield_invalid_value() -> Result<()> {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let constant_pool = frame.class().constant_pool();
+        let class = frame.class();
         stack.push_object(None)?;
-        let result = getfield(stack, constant_pool, 0);
+        let result = getfield(stack, class, 0);
         assert!(matches!(result, Err(InvalidStackValue {
             expected,
             actual
@@ -163,14 +165,14 @@ mod test {
     async fn test_putfield_field_not_found() -> Result<()> {
         let (_vm, _thread, frame, class_index, field_index) =
             test_class_field("Child", "foo", "I").await?;
-        let constant_pool = frame.class().constant_pool().clone();
+        let class = frame.class();
         let result = new(&frame, class_index).await?;
         let stack = frame.stack();
         assert_eq!(Continue, result);
         let result = dup(stack)?;
         assert_eq!(Continue, result);
         stack.push_int(42)?;
-        let result = putfield(stack, &constant_pool, field_index);
+        let result = putfield(stack, class, field_index);
         assert!(result.is_err());
         Ok(())
     }
@@ -179,10 +181,10 @@ mod test {
     async fn test_putfield_invalid_value() -> Result<()> {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let constant_pool = frame.class().constant_pool();
+        let class = frame.class();
         stack.push_object(None)?;
         stack.push_int(42)?;
-        let result = putfield(stack, constant_pool, 0);
+        let result = putfield(stack, class, 0);
         assert!(matches!(result, Err(InvalidStackValue {
             expected,
             actual
