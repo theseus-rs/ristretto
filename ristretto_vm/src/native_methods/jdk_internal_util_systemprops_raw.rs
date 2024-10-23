@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::properties;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use ristretto_classfile::Version;
@@ -32,13 +32,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 fn platform_properties(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
-        let vm = call_stack.vm()?;
-        let string_array_class = vm.load_class(&call_stack, "[Ljava/lang/String;").await?;
-        let system_properties = &mut properties::system(call_stack).await?;
+        let vm = thread.vm()?;
+        let string_array_class = vm.load_class(&thread, "[Ljava/lang/String;").await?;
+        let system_properties = &mut properties::system(thread).await?;
         let java_version = vm.java_class_file_version();
 
         // VM properties must be returned in a specific order as they are accessed by array index.
@@ -115,13 +115,13 @@ fn push_property(
 
 #[expect(clippy::needless_pass_by_value)]
 fn vm_properties(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
-        let vm = call_stack.vm()?;
+        let vm = thread.vm()?;
         let java_home = vm.java_home();
-        let string_array_class = vm.load_class(&call_stack, "[Ljava/lang/String;").await?;
+        let string_array_class = vm.load_class(&thread, "[Ljava/lang/String;").await?;
         let mut system_properties = vm.system_properties().clone();
         system_properties.insert(
             "java.home".to_string(),
@@ -130,14 +130,13 @@ fn vm_properties(
 
         let mut properties: Vec<Option<Reference>> = Vec::new();
         for (key, value) in system_properties {
-            let Value::Object(key) = vm.to_string_value(&call_stack, &key).await? else {
+            let Value::Object(key) = vm.to_string_value(&thread, &key).await? else {
                 return Err(InternalError(format!(
                     "Unable to convert key to string: {key}"
                 )));
             };
             properties.push(key);
-            let Value::Object(value) = vm.to_string_value(&call_stack, value.as_str()).await?
-            else {
+            let Value::Object(value) = vm.to_string_value(&thread, value.as_str()).await? else {
                 return Err(InternalError(format!(
                     "Unable to convert value to string: {value}"
                 )));

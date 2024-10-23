@@ -1,5 +1,5 @@
-use crate::call_stack::CallStack;
 use crate::native::{java_lang_class, java_lang_object, java_lang_shutdown, java_lang_system};
+use crate::thread::CallStack;
 use crate::Error::MethodNotFound;
 use crate::{Result, VM};
 use lazy_static::lazy_static;
@@ -13,7 +13,7 @@ lazy_static! {
 /// A native method is a method that is implemented in Rust and is called from Java code where the
 /// method is marked as `native`.
 pub type NativeMethod =
-    fn(vm: &VM, call_stack: &CallStack, arguments: Vec<Value>) -> Result<Option<Value>>;
+    fn(vm: &VM, thread: &CallStack, arguments: Vec<Value>) -> Result<Option<Value>>;
 
 #[expect(clippy::module_name_repetitions)]
 #[derive(Debug)]

@@ -1,32 +1,38 @@
 use crate::arguments::Arguments;
-use crate::Error::{InternalError, PoisonedLock};
+use crate::Error::InternalError;
 use crate::{native_methods, Frame, Result, VM};
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Value};
-use std::sync::{Arc, RwLock, Weak};
+use std::sync::{Arc, Weak};
+use tokio::sync::RwLock;
 use tracing::{debug, event_enabled, Level};
 
-/// A call stack is a stack of frames that are executed in order.
+/// A thread is a single sequential flow of control within a program. It has its own call stack
+/// and program counter.
+///
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-2.html#jvms-2.5.2>
 #[expect(clippy::struct_field_names)]
-#[derive(Debug, Default)]
-pub struct CallStack {
+#[derive(Debug)]
+pub struct Thread {
     vm: Weak<VM>,
-    call_stack: Weak<CallStack>,
-    frames: RwLock<Vec<Arc<Frame>>>,
+    thread: Weak<Thread>,
+    name: Arc<RwLock<String>>,
+    frames: Arc<RwLock<Vec<Arc<Frame>>>>,
 }
 
-impl CallStack {
-    /// Create a new call stack.
+impl Thread {
+    /// Create a new thread.
     #[must_use]
     pub fn new(vm: &Weak<VM>) -> Arc<Self> {
-        Arc::new_cyclic(|call_stack| CallStack {
+        Arc::new_cyclic(|thread| Thread {
             vm: vm.clone(),
-            call_stack: call_stack.clone(),
-            frames: RwLock::new(Vec::new()),
+            thread: thread.clone(),
+            name: Arc::new(RwLock::new(String::new())),
+            frames: Arc::new(RwLock::new(Vec::new())),
         })
     }
 
-    /// Get the virtual machine that owns the call stack.
+    /// Get the virtual machine that owns the thread.
     ///
     /// # Errors
     /// if the virtual machine cannot be accessed.
@@ -37,19 +43,29 @@ impl CallStack {
         }
     }
 
-    /// Get the frames in the call stack.
+    /// Get the name of the thread.
+    pub async fn name(&self) -> String {
+        let name = self.name.read().await;
+        name.clone()
+    }
+
+    /// Set the name of the thread.
+    pub async fn set_name<S: AsRef<str>>(&self, name: S) {
+        let new_name = name.as_ref();
+        let mut name = self.name.write().await;
+        *name = new_name.to_string();
+    }
+
+    /// Get the frames in the thread.
     ///
     /// # Errors
     /// if the frames cannot be accessed.
-    pub fn frames(&self) -> Result<Vec<Arc<Frame>>> {
-        let frames = self
-            .frames
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+    pub async fn frames(&self) -> Result<Vec<Arc<Frame>>> {
+        let frames = self.frames.read().await;
         Ok(frames.clone())
     }
 
-    /// Add a new frame to the call stack and invoke the method. To invoke a method on an object
+    /// Add a new frame to the thread and invoke the method. To invoke a method on an object
     /// reference, the object reference must be the first argument in the arguments vector.
     ///
     /// # Errors
@@ -74,10 +90,10 @@ impl CallStack {
 
         let (result, frame_added) = if let Some(rust_method) = rust_method {
             let arguments = Arguments::new(arguments);
-            let Some(call_stack) = self.call_stack.upgrade() else {
+            let Some(thread) = self.thread.upgrade() else {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
-            let result = Box::pin(rust_method(call_stack, arguments)).await;
+            let result = Box::pin(rust_method(thread, arguments)).await;
             (result, false)
         } else if method.is_native() {
             return Err(MethodNotFound {
@@ -87,16 +103,13 @@ impl CallStack {
             }
             .into());
         } else {
-            let arguments = CallStack::adjust_arguments(arguments);
-            let frame = Arc::new(Frame::new(&self.call_stack, class, method, arguments)?);
+            let arguments = Thread::adjust_arguments(arguments);
+            let frame = Arc::new(Frame::new(&self.thread, class, method, arguments)?);
 
-            // Limit the scope of the write lock to just adding the frame to the call stack. This
-            // is necessary because the call stack is re-entrant.
+            // Limit the scope of the write lock to just adding the frame to the thread. This
+            // is necessary because the thread is re-entrant.
             {
-                let mut frames = self
-                    .frames
-                    .write()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                let mut frames = self.frames.write().await;
                 frames.push(frame.clone());
             }
             let result = Box::pin(frame.execute()).await;
@@ -121,10 +134,7 @@ impl CallStack {
         }
 
         if frame_added {
-            let mut frames = self
-                .frames
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut frames = self.frames.write().await;
             frames.pop();
         }
 
@@ -163,7 +173,7 @@ mod tests {
             Value::Float(3.0),
             Value::Double(4.0),
         ];
-        let adjusted_arguments = CallStack::adjust_arguments(arguments);
+        let adjusted_arguments = Thread::adjust_arguments(arguments);
         assert_eq!(
             adjusted_arguments,
             vec![

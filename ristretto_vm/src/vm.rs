@@ -1,4 +1,4 @@
-use crate::call_stack::CallStack;
+use crate::thread::Thread;
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::{Configuration, ConfigurationBuilder, Result};
 use ristretto_classfile::{mutf8, Version};
@@ -216,8 +216,8 @@ impl VM {
     /// if the class cannot be loaded
     pub async fn class(&self, class_name: &str) -> Result<Arc<Class>> {
         let class_name = class_name.replace('.', "/");
-        let call_stack = &CallStack::new(&self.vm);
-        self.load_class(call_stack, &class_name).await
+        let thread = &Thread::new(&self.vm);
+        self.load_class(thread, &class_name).await
     }
 
     /// Get a class.
@@ -226,11 +226,7 @@ impl VM {
     ///
     /// # Errors
     /// if the class cannot be loaded
-    pub(crate) async fn load_class(
-        &self,
-        call_stack: &CallStack,
-        class_name: &str,
-    ) -> Result<Arc<Class>> {
+    pub(crate) async fn load_class(&self, thread: &Thread, class_name: &str) -> Result<Arc<Class>> {
         let class_load_result = {
             let class_loader = self.class_loader.read().await;
             class_loader.load_with_status(class_name).await
@@ -258,7 +254,8 @@ impl VM {
         let classes = self.prepare_class_initialization(&class).await?;
         for current_class in classes {
             if let Some(class_initializer) = current_class.class_initializer() {
-                call_stack
+                // Execute the class initializer on the current thread.
+                thread
                     .execute(&current_class, &class_initializer, vec![])
                     .await?;
             }
@@ -356,8 +353,8 @@ impl VM {
         method: &Arc<Method>,
         arguments: Vec<Value>,
     ) -> Result<Option<Value>> {
-        let call_stack = CallStack::new(&self.vm);
-        call_stack.execute(class, method, arguments).await
+        let thread = Thread::new(&self.vm);
+        thread.execute(class, method, arguments).await
     }
 
     /// Create a new java.lang.Class object as a VM Value.
@@ -366,13 +363,13 @@ impl VM {
     /// if the class object cannot be created
     pub(crate) async fn to_class_value(
         &self,
-        call_stack: &Arc<CallStack>,
+        thread: &Arc<Thread>,
         class_name: &str,
     ) -> Result<Value> {
         let object_class_name = "java/lang/Class";
-        let class = self.load_class(call_stack, object_class_name).await?;
+        let class = self.load_class(thread, object_class_name).await?;
         let object = Object::new(class)?;
-        let name = self.to_string_value(call_stack, class_name).await?;
+        let name = self.to_string_value(thread, class_name).await?;
         object.set_value("name", name)?;
         // TODO: a "null" class loader indicates a system class loader; this should be re-evaluated
         // to support custom class loaders
@@ -388,22 +385,18 @@ impl VM {
     /// # Errors
     /// if the string object cannot be created
     pub async fn string<S: AsRef<str>>(&self, value: S) -> Result<Value> {
-        let call_stack = CallStack::new(&self.vm);
+        let thread = &Thread::new(&self.vm);
         let value = value.as_ref();
-        self.to_string_value(&call_stack, value).await
+        self.to_string_value(thread, value).await
     }
 
     /// Create a new java.lang.String object as a VM Value.
     ///
     /// # Errors
     /// if the string object cannot be created
-    pub(crate) async fn to_string_value(
-        &self,
-        call_stack: &Arc<CallStack>,
-        value: &str,
-    ) -> Result<Value> {
+    pub(crate) async fn to_string_value(&self, thread: &Arc<Thread>, value: &str) -> Result<Value> {
         let class_name = "java/lang/String";
-        let class = self.load_class(call_stack, class_name).await?;
+        let class = self.load_class(thread, class_name).await?;
         let object = Object::new(class)?;
 
         // The String implementation changed in Java 9.
@@ -519,8 +512,8 @@ mod tests {
     #[tokio::test]
     async fn test_hello_world_class() -> Result<()> {
         let vm = test_vm().await?;
-        let call_stack = CallStack::new(&vm.vm);
-        let class = vm.load_class(&call_stack, "HelloWorld").await?;
+        let thread = Thread::new(&vm.vm);
+        let class = vm.load_class(&thread, "HelloWorld").await?;
         assert_eq!("HelloWorld", class.name());
         Ok(())
     }
@@ -528,8 +521,8 @@ mod tests {
     #[tokio::test]
     async fn test_constants_class() -> Result<()> {
         let vm = test_vm().await?;
-        let call_stack = CallStack::new(&vm.vm);
-        let class = vm.load_class(&call_stack, "Constants").await?;
+        let thread = Thread::new(&vm.vm);
+        let class = vm.load_class(&thread, "Constants").await?;
         assert_eq!("Constants", class.name());
         Ok(())
     }
@@ -537,8 +530,8 @@ mod tests {
     #[tokio::test]
     async fn test_class_inheritance() -> Result<()> {
         let vm = test_vm().await?;
-        let call_stack = CallStack::new(&vm.vm);
-        let hash_map = vm.load_class(&call_stack, "java/util/HashMap").await?;
+        let thread = Thread::new(&vm.vm);
+        let hash_map = vm.load_class(&thread, "java/util/HashMap").await?;
         assert_eq!("java/util/HashMap", hash_map.name());
 
         let abstract_map = hash_map.parent()?.expect("HashMap parent");

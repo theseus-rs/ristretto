@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Error::{InternalError, NullPointer};
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
@@ -42,14 +42,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 fn desired_assertion_status_0(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(Some(Value::Int(0))) })
 }
 
 fn get_primitive_class(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -75,14 +75,14 @@ fn get_primitive_class(
             }
         };
 
-        let vm = call_stack.vm()?;
-        let class = vm.to_class_value(&call_stack, class_name).await?;
+        let vm = thread.vm()?;
+        let class = vm.to_class_value(&thread, class_name).await?;
         Ok(Some(class))
     })
 }
 
 fn get_super_class(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -93,8 +93,8 @@ fn get_super_class(
         match class.parent()? {
             Some(parent) => {
                 let class_name = parent.name();
-                let vm = call_stack.vm()?;
-                let class = vm.to_class_value(&call_stack, class_name).await?;
+                let vm = thread.vm()?;
+                let class = vm.to_class_value(&thread, class_name).await?;
                 Ok(Some(class))
             }
             None => Ok(None),
@@ -104,7 +104,7 @@ fn get_super_class(
 
 #[expect(clippy::needless_pass_by_value)]
 fn is_array(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -122,13 +122,13 @@ fn is_array(
 
 #[expect(clippy::needless_pass_by_value)]
 fn is_assignable_from(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let object_argument = match arguments.pop_object()? {
             Some(Reference::Object(object)) => object,
-            None => return Err(NullPointer),
+            None => return Err(NullPointer("object cannot be null".to_string())),
             _ => return Err(InternalError("isAssignableFrom: no arguments".to_string())),
         };
         let class_argument = object_argument.class();
@@ -146,7 +146,7 @@ fn is_assignable_from(
 
 #[expect(clippy::needless_pass_by_value)]
 fn is_primitive(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -171,7 +171,7 @@ fn is_primitive(
 
 #[expect(clippy::needless_pass_by_value)]
 fn register_natives(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })

@@ -1,4 +1,4 @@
-use crate::call_stack::CallStack;
+use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::{Result, VM};
 use ristretto_classloader::Value;
@@ -9,12 +9,12 @@ use std::path::MAIN_SEPARATOR_STR;
 use std::sync::Arc;
 
 /// Get the system properties.
-pub(crate) async fn system(call_stack: Arc<CallStack>) -> Result<HashMap<&'static str, Value>> {
-    let vm = call_stack.vm()?;
+pub(crate) async fn system(thread: Arc<Thread>) -> Result<HashMap<&'static str, Value>> {
+    let vm = thread.vm()?;
     let system_properties = system_properties(&vm)?;
     let mut properties = HashMap::new();
     for (key, value) in system_properties {
-        let value = vm.to_string_value(&call_stack, &value).await?;
+        let value = vm.to_string_value(&thread, &value).await?;
         properties.insert(key, value);
     }
     Ok(properties)

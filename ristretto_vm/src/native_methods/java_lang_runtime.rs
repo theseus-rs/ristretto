@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Result;
 use ristretto_classloader::Value;
 use std::cmp::min;
@@ -26,7 +26,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 fn available_processors(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -39,7 +39,7 @@ fn available_processors(
 
 #[expect(clippy::needless_pass_by_value)]
 fn free_memory(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -56,7 +56,7 @@ fn free_memory(
 
 #[expect(clippy::needless_pass_by_value)]
 fn total_memory(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -74,7 +74,7 @@ fn total_memory(
 
 #[expect(clippy::needless_pass_by_value)]
 fn max_memory(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -87,7 +87,7 @@ fn max_memory(
 
 #[expect(clippy::needless_pass_by_value)]
 fn gc(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })

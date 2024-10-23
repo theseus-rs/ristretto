@@ -22,7 +22,7 @@ use crate::instruction::{
     sipush, swap, tableswitch,
 };
 use crate::Error::{InternalError, InvalidOperand, InvalidProgramCounter};
-use crate::{CallStack, LocalVariables, OperandStack, Result};
+use crate::{LocalVariables, OperandStack, Result, Thread};
 use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::{Class, Method, Value};
@@ -43,7 +43,7 @@ pub(crate) enum ExecutionResult {
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-2.html#jvms-2.6>
 #[derive(Debug)]
 pub(crate) struct Frame {
-    call_stack: Weak<CallStack>,
+    thread: Weak<Thread>,
     class: Arc<Class>,
     method: Arc<Method>,
     locals: Arc<LocalVariables>,
@@ -55,7 +55,7 @@ impl Frame {
     /// Create a new frame for the specified class. To invoke a method on an object reference, the
     /// object reference must be the first argument in the arguments vector.
     pub fn new(
-        call_stack: &Weak<CallStack>,
+        thread: &Weak<Thread>,
         class: &Arc<Class>,
         method: &Arc<Method>,
         arguments: Vec<Value>,
@@ -68,7 +68,7 @@ impl Frame {
         let max_stack = method.max_stack();
         let stack = OperandStack::with_max_size(max_stack);
         Ok(Frame {
-            call_stack: call_stack.clone(),
+            thread: thread.clone(),
             class: class.clone(),
             method: method.clone(),
             locals: Arc::new(locals),
@@ -77,13 +77,13 @@ impl Frame {
         })
     }
 
-    /// Get the call stack that owns this frame.
+    /// Get the thread that owns this frame.
     ///
     /// # Errors
-    /// if the call stack is not available.
-    pub fn call_stack(&self) -> Result<Arc<CallStack>> {
-        match self.call_stack.upgrade() {
-            Some(call_stack) => Ok(call_stack),
+    /// if the thread is not available.
+    pub fn thread(&self) -> Result<Arc<Thread>> {
+        match self.thread.upgrade() {
+            Some(thread) => Ok(thread),
             None => Err(InternalError("Call stack is not available".to_string())),
         }
     }
@@ -149,7 +149,7 @@ impl Frame {
                 }
                 Ok(Return(value)) => return Ok(value.clone()),
                 Err(error) => {
-                    let vm = self.call_stack()?.vm()?;
+                    let vm = self.thread()?.vm()?;
                     let throwable = convert_error_to_throwable(vm, error).await?;
                     let handler_program_counter = process_throwable(self, throwable)?;
                     self.program_counter
@@ -456,13 +456,13 @@ impl Frame {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::call_stack::CallStack;
     use crate::configuration::ConfigurationBuilder;
+    use crate::thread::Thread;
     use crate::VM;
     use ristretto_classloader::ClassPath;
     use std::path::PathBuf;
 
-    async fn get_class(class_name: &str) -> Result<(Arc<CallStack>, Arc<Class>)> {
+    async fn get_class(class_name: &str) -> Result<(Arc<Thread>, Arc<Class>)> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_path = cargo_manifest.join("../classes");
         let class_path = ClassPath::from(classes_path.to_string_lossy());
@@ -470,17 +470,17 @@ mod tests {
             .class_path(class_path.clone())
             .build()?;
         let vm = VM::new(configuration).await?;
-        let call_stack = CallStack::new(&Arc::downgrade(&vm));
-        let class = vm.load_class(&call_stack, class_name).await?;
-        Ok((call_stack, class))
+        let thread = Thread::new(&Arc::downgrade(&vm));
+        let class = vm.load_class(&thread, class_name).await?;
+        Ok((thread, class))
     }
 
     #[tokio::test]
     async fn test_execute() -> Result<()> {
-        let (call_stack, class) = get_class("Expressions").await?;
+        let (thread, class) = get_class("Expressions").await?;
         let method = class.method("add", "(II)I").expect("method not found");
         let arguments = vec![Value::Int(1), Value::Int(2)];
-        let frame = Frame::new(&Arc::downgrade(&call_stack), &class, &method, arguments)?;
+        let frame = Frame::new(&Arc::downgrade(&thread), &class, &method, arguments)?;
         let result = frame.execute().await?;
         assert!(matches!(result, Some(Value::Int(3))));
         Ok(())
@@ -488,7 +488,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_initial_frame() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         assert!(frame.locals.is_empty()?);
         assert!(frame.stack.is_empty()?);
         Ok(())
@@ -496,7 +496,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_nop() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let process_result = frame.process(&Instruction::Nop).await?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty()?);
@@ -506,7 +506,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_return() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let process_result = frame.process(&Instruction::Return).await?;
         assert!(matches!(process_result, Return(None)));
         Ok(())
@@ -514,7 +514,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_monitorenter() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         frame.stack.push_object(None)?;
         let process_result = frame.process(&Instruction::Monitorenter).await?;
         assert_eq!(Continue, process_result);
@@ -523,7 +523,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_monitorexit() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         frame.stack.push_object(None)?;
         let process_result = frame.process(&Instruction::Monitorexit).await?;
         assert_eq!(Continue, process_result);
@@ -532,7 +532,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_wide() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let result = frame.process(&Instruction::Wide).await;
         assert!(matches!(
             result,
@@ -546,7 +546,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_breakpoint() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let process_result = frame.process(&Instruction::Breakpoint).await?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty()?);
@@ -556,7 +556,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_impdep1() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let process_result = frame.process(&Instruction::Impdep1).await?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty()?);
@@ -566,7 +566,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_impdep2() -> Result<()> {
-        let (_vm, _call_stack, frame) = crate::test::frame().await?;
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let process_result = frame.process(&Instruction::Impdep2).await?;
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty()?);

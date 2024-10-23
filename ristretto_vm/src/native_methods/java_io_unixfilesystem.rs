@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use bitflags::bitflags;
@@ -35,7 +35,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 fn init_ids(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })
@@ -43,7 +43,7 @@ fn init_ids(
 
 #[expect(clippy::needless_pass_by_value)]
 fn get_boolean_attributes_0(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {

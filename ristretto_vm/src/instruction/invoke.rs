@@ -1,6 +1,6 @@
-use crate::call_stack::CallStack;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
+use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::{Error, Result, VM};
 use ristretto_classfile::Constant;
@@ -20,27 +20,19 @@ enum InvocationType {
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokevirtual>
 #[inline]
 pub(crate) async fn invokevirtual(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
-    let call_stack = frame.call_stack()?;
-    let vm = call_stack.vm()?;
+    let thread = frame.thread()?;
+    let vm = thread.vm()?;
     let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.load_class(&call_stack, class_name).await?;
+    let class = vm.load_class(&thread, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
     let method = try_get_virtual_method(&class, method_name, method_descriptor)?;
 
-    invoke_method(
-        &vm,
-        &call_stack,
-        frame,
-        class,
-        method,
-        &InvocationType::Virtual,
-    )
-    .await
+    invoke_method(&vm, &thread, frame, class, method, &InvocationType::Virtual).await
 }
 
 /// Get a virtual method by name and descriptor.
@@ -86,12 +78,12 @@ fn try_get_virtual_method<S: AsRef<str>>(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokespecial>
 #[inline]
 pub(crate) async fn invokespecial(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
-    let call_stack = frame.call_stack()?;
-    let vm = call_stack.vm()?;
+    let thread = frame.thread()?;
+    let vm = thread.vm()?;
     let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.load_class(&call_stack, class_name).await?;
+    let class = vm.load_class(&thread, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -100,7 +92,7 @@ pub(crate) async fn invokespecial(frame: &Frame, method_index: u16) -> Result<Ex
 
     invoke_method(
         &vm,
-        &call_stack,
+        &thread,
         frame,
         method_class,
         method,
@@ -146,8 +138,8 @@ fn try_get_special_method<S: AsRef<str>>(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokestatic>
 #[inline]
 pub(crate) async fn invokestatic(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
-    let call_stack = frame.call_stack()?;
-    let vm = call_stack.vm()?;
+    let thread = frame.thread()?;
+    let vm = thread.vm()?;
     let constant_pool = frame.class().constant_pool();
     let constant = constant_pool.try_get(method_index)?;
     let (Constant::MethodRef {
@@ -162,22 +154,14 @@ pub(crate) async fn invokestatic(frame: &Frame, method_index: u16) -> Result<Exe
         return Err(InvalidConstantPoolIndexType(method_index).into());
     };
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.load_class(&call_stack, class_name).await?;
+    let class = vm.load_class(&thread, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
     let method = class.try_get_method(method_name, method_descriptor)?;
 
-    invoke_method(
-        &vm,
-        &call_stack,
-        frame,
-        class,
-        method,
-        &InvocationType::Static,
-    )
-    .await
+    invoke_method(&vm, &thread, frame, class, method, &InvocationType::Static).await
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokeinterface>
@@ -187,13 +171,13 @@ pub(crate) async fn invokeinterface(
     method_index: u16,
     _count: u8,
 ) -> Result<ExecutionResult> {
-    let call_stack = frame.call_stack()?;
-    let vm = call_stack.vm()?;
+    let thread = frame.thread()?;
+    let vm = thread.vm()?;
     let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) =
         constant_pool.try_get_interface_method_ref(method_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = vm.load_class(&call_stack, class_name).await?;
+    let class = vm.load_class(&thread, class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -202,7 +186,7 @@ pub(crate) async fn invokeinterface(
 
     invoke_method(
         &vm,
-        &call_stack,
+        &thread,
         frame,
         class,
         method,
@@ -224,7 +208,7 @@ pub(crate) async fn invokedynamic(_frame: &Frame, _method_index: u16) -> Result<
 #[inline]
 async fn invoke_method(
     vm: &Arc<VM>,
-    call_stack: &CallStack,
+    thread: &Thread,
     frame: &Frame,
     mut class: Arc<Class>,
     mut method: Arc<Method>,
@@ -260,7 +244,7 @@ async fn invoke_method(
                     // Primitive types do not have a class associated with them so the class must be
                     // created from the class name.
                     let class_name = reference.class_name();
-                    vm.load_class(call_stack, &class_name).await?
+                    vm.load_class(thread, &class_name).await?
                 }
             };
             let method_name = method.name();
@@ -285,7 +269,8 @@ async fn invoke_method(
         _ => {}
     }
 
-    let result = call_stack.execute(&class, &method, arguments).await?;
+    // Execute the method on the current thread
+    let result = thread.execute(&class, &method, arguments).await?;
     if let Some(result) = result {
         stack.push(result)?;
     }

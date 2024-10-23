@@ -1,5 +1,5 @@
-use crate::call_stack::CallStack;
 use crate::native::registry::NativeRegistry;
+use crate::thread::CallStack;
 use crate::Error::RuntimeError;
 use crate::{Result, VM};
 use ristretto_classloader::Value;
@@ -11,7 +11,7 @@ pub(crate) fn register(registry: &mut NativeRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn halt0(_vm: &VM, _call_stack: &CallStack, arguments: Vec<Value>) -> Result<Option<Value>> {
+fn halt0(_vm: &VM, _thread: &CallStack, arguments: Vec<Value>) -> Result<Option<Value>> {
     let Some(Value::Int(code)) = arguments.first() else {
         return Err(RuntimeError("exit status must be an integer".to_string()));
     };
