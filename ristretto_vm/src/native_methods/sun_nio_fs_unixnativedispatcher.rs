@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use bitflags::bitflags;
@@ -37,7 +37,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::cast_possible_wrap)]
 #[expect(clippy::needless_pass_by_value)]
 fn get_cwd(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -58,7 +58,7 @@ fn get_cwd(
 
 #[expect(clippy::needless_pass_by_value)]
 fn init(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {

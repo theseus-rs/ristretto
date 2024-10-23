@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Error::{InternalError, InvalidOperand};
 use crate::Result;
 use ristretto_classloader::Value;
@@ -22,7 +22,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 fn handle_0(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -35,7 +35,7 @@ fn handle_0(
 
 #[expect(clippy::needless_pass_by_value)]
 fn find_signal_0(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {

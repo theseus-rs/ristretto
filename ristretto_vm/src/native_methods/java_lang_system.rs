@@ -1,8 +1,8 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::java_lang_object::object_hash_code;
 use crate::native_methods::properties;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use indexmap::IndexMap;
@@ -81,7 +81,7 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq>(
 
 #[expect(clippy::needless_pass_by_value)]
 fn arraycopy(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -184,7 +184,7 @@ fn arraycopy(
 
 #[expect(clippy::needless_pass_by_value)]
 fn allow_security_manager(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(Some(Value::Int(0))) })
@@ -192,7 +192,7 @@ fn allow_security_manager(
 
 #[expect(clippy::needless_pass_by_value)]
 fn current_time_millis(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -207,7 +207,7 @@ fn current_time_millis(
 
 #[expect(clippy::needless_pass_by_value)]
 fn gc(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })
@@ -215,7 +215,7 @@ fn gc(
 
 #[expect(clippy::needless_pass_by_value)]
 fn identity_hash_code(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -228,19 +228,19 @@ fn identity_hash_code(
 }
 /// Mechanism for initializing properties for Java versions <= 8
 fn init_properties(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let properties = arguments.pop_object()?;
-        let _system_properties = &mut properties::system(call_stack).await?;
+        let _system_properties = &mut properties::system(thread).await?;
         // TODO: add system properties to the properties object
         Ok(Some(Value::Object(properties)))
     })
 }
 
 fn map_library_name(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -253,7 +253,7 @@ fn map_library_name(
             "windows" => format!("{library_name}.dll"),
             _ => format!("lib{library_name}.so"),
         };
-        let vm = call_stack.vm()?;
+        let vm = thread.vm()?;
         let library_name = vm.string(library_file_name).await?;
         Ok(Some(library_name))
     })
@@ -261,7 +261,7 @@ fn map_library_name(
 
 #[expect(clippy::needless_pass_by_value)]
 fn nano_time(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -276,7 +276,7 @@ fn nano_time(
 
 #[expect(clippy::needless_pass_by_value)]
 fn register_natives(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     // Force the initialization of the system properties; this is required because no security
@@ -292,15 +292,15 @@ fn register_natives(
     //
     // will eventually call System::getProperty() which fails if this is not initialized.
     Box::pin(async move {
-        let vm = call_stack.vm()?;
-        let system = vm.load_class(&call_stack, "java/lang/System").await?;
+        let vm = thread.vm()?;
+        let system = vm.load_class(&thread, "java/lang/System").await?;
         let set_properties = system.try_get_method("setProperties", "(Ljava/util/Properties;)V")?;
         vm.invoke(&system, &set_properties, vec![Value::Object(None)])
             .await?;
 
         // TODO: remove this once threading is implemented
         let jdk_java_lang_ref_access = vm
-            .load_class(&call_stack, "jdk/internal/access/JavaLangRefAccess")
+            .load_class(&thread, "jdk/internal/access/JavaLangRefAccess")
             .await?;
         let interfaces = vec![jdk_java_lang_ref_access];
         let mut methods = HashMap::new();
@@ -331,7 +331,7 @@ fn register_natives(
         let java_lang_ref_access =
             Value::Object(Some(Reference::Object(Object::new(java_lang_ref_access)?)));
         let shared_secrets = vm
-            .load_class(&call_stack, "jdk/internal/access/SharedSecrets")
+            .load_class(&thread, "jdk/internal/access/SharedSecrets")
             .await?;
         let set_java_lang_ref_access = shared_secrets.try_get_method(
             "setJavaLangRefAccess",
@@ -349,13 +349,13 @@ fn register_natives(
 }
 
 fn set_in_0(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let input_stream = arguments.pop_object()?;
-        let vm = call_stack.vm()?;
-        let system = vm.load_class(&call_stack, "java/lang/System").await?;
+        let vm = thread.vm()?;
+        let system = vm.load_class(&thread, "java/lang/System").await?;
         let in_field = system.static_field("in")?;
         in_field.unsafe_set_value(Value::Object(input_stream))?;
         Ok(None)
@@ -363,13 +363,13 @@ fn set_in_0(
 }
 
 fn set_out_0(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let print_stream = arguments.pop_object()?;
-        let vm = call_stack.vm()?;
-        let system = vm.load_class(&call_stack, "java/lang/System").await?;
+        let vm = thread.vm()?;
+        let system = vm.load_class(&thread, "java/lang/System").await?;
         let out_field = system.static_field("out")?;
         out_field.unsafe_set_value(Value::Object(print_stream))?;
         Ok(None)
@@ -377,13 +377,13 @@ fn set_out_0(
 }
 
 fn set_err_0(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
         let print_stream = arguments.pop_object()?;
-        let vm = call_stack.vm()?;
-        let system = vm.load_class(&call_stack, "java/lang/System").await?;
+        let vm = thread.vm()?;
+        let system = vm.load_class(&thread, "java/lang/System").await?;
         let err_field = system.static_field("err")?;
         err_field.unsafe_set_value(Value::Object(print_stream))?;
         Ok(None)

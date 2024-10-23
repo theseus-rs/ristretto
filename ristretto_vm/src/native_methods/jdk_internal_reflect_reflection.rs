@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Result;
 use ristretto_classloader::Value;
 use std::future::Future;
@@ -20,11 +20,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 fn get_caller_class(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
-        let frames = call_stack.frames()?;
+        let frames = thread.frames().await?;
         for frame in frames.iter().rev() {
             let class = frame.class();
             let class_name = class.name();
@@ -33,8 +33,8 @@ fn get_caller_class(
                 continue;
             }
 
-            let vm = call_stack.vm()?;
-            let class = vm.to_class_value(&call_stack, class_name).await?;
+            let vm = thread.vm()?;
+            let class = vm.to_class_value(&thread, class_name).await?;
             return Ok(Some(class));
         }
         Ok(None)

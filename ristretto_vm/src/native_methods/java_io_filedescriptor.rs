@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Result;
 use ristretto_classloader::Value;
 use std::future::Future;
@@ -18,7 +18,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::match_same_arms)]
 #[expect(clippy::needless_pass_by_value)]
 fn get_append(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -45,7 +45,7 @@ fn get_append(
 
 #[expect(clippy::needless_pass_by_value)]
 fn get_handle(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -57,7 +57,7 @@ fn get_handle(
 
 #[expect(clippy::needless_pass_by_value)]
 fn init_ids(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })

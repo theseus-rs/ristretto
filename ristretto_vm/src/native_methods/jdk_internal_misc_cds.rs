@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Result;
 use ristretto_classloader::Value;
 use std::future::Future;
@@ -36,7 +36,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::cast_possible_wrap)]
 #[expect(clippy::needless_pass_by_value)]
 fn get_random_seed_for_dumping(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -50,7 +50,7 @@ fn get_random_seed_for_dumping(
 
 #[expect(clippy::needless_pass_by_value)]
 fn initialize_from_archive(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -61,7 +61,7 @@ fn initialize_from_archive(
 
 #[expect(clippy::needless_pass_by_value)]
 fn is_dumping_archive_0(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(Some(Value::Int(0))) })
@@ -69,7 +69,7 @@ fn is_dumping_archive_0(
 
 #[expect(clippy::needless_pass_by_value)]
 fn is_dumping_class_list_0(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(Some(Value::Int(0))) })
@@ -77,7 +77,7 @@ fn is_dumping_class_list_0(
 
 #[expect(clippy::needless_pass_by_value)]
 fn is_sharing_enabled_0(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(Some(Value::Int(0))) })

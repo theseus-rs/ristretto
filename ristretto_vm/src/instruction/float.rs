@@ -146,7 +146,7 @@ pub(crate) fn fstore_3(locals: &LocalVariables, stack: &OperandStack) -> Result<
 pub(crate) fn faload(stack: &OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer),
+        None => Err(NullPointer("array cannot be null".to_string())),
         Some(Reference::FloatArray(array)) => {
             let index = usize::try_from(index)?;
             let Some(value) = array.get(index)? else {
@@ -168,7 +168,7 @@ pub(crate) fn fastore(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer),
+        None => Err(NullPointer("array cannot be null".to_string())),
         Some(Reference::FloatArray(ref mut array)) => {
             let index = usize::try_from(index)?;
             if index >= array.capacity()? {
@@ -505,7 +505,7 @@ mod tests {
         stack.push_object(None)?;
         stack.push_int(0)?;
         let result = faload(stack);
-        assert!(matches!(result, Err(NullPointer)));
+        assert!(matches!(result, Err(NullPointer(_))));
         Ok(())
     }
 
@@ -558,7 +558,7 @@ mod tests {
         stack.push_int(0)?;
         stack.push_float(42f32)?;
         let result = fastore(stack);
-        assert!(matches!(result, Err(NullPointer)));
+        assert!(matches!(result, Err(NullPointer(_))));
         Ok(())
     }
 

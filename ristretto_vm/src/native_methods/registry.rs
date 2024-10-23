@@ -1,5 +1,4 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::{
     java_io_filedescriptor, java_io_fileinputstream, java_io_fileoutputstream,
     java_io_unixfilesystem, java_io_winntfilesystem, java_lang_class, java_lang_classloader,
@@ -11,6 +10,7 @@ use crate::native_methods::{
     jdk_internal_misc_vm, jdk_internal_reflect_reflection, jdk_internal_util_systemprops_raw,
     sun_io_win32errormode, sun_nio_fs_unixnativedispatcher,
 };
+use crate::thread::Thread;
 use crate::Result;
 use ristretto_classloader::Value;
 use std::collections::HashMap;
@@ -28,11 +28,11 @@ pub fn registry() -> &'static MethodRegistry {
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
 // pub type RustMethod = fn(
-//     call_stack: Arc<CallStack>,
+//     thread: Arc<CallStack>,
 //     arguments: Arguments,
 // ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>>;
 pub type RustMethod = fn(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>>;
 
@@ -122,7 +122,7 @@ mod tests {
 
     #[expect(clippy::needless_pass_by_value)]
     fn test_none(
-        _call_stack: Arc<CallStack>,
+        _thread: Arc<Thread>,
         _arguments: Arguments,
     ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
         Box::pin(async move { Ok(None) })

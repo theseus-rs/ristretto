@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use ristretto_classloader::{ConcurrentVec, Object, Reference, Value};
@@ -20,7 +20,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 fn fill_in_stack_trace(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -30,28 +30,28 @@ fn fill_in_stack_trace(
             return Err(InternalError("No throwable object found".to_string()));
         };
 
-        let vm = call_stack.vm()?;
+        let vm = thread.vm()?;
         let stack_element_class = vm
-            .load_class(&call_stack, "java/lang/StackTraceElement")
+            .load_class(&thread, "java/lang/StackTraceElement")
             .await?;
         let stack_elements = ConcurrentVec::new();
-        for frame in call_stack.frames()?.iter().rev() {
+        for frame in thread.frames().await?.iter().rev() {
             let class = frame.class();
             let class_name = class.name();
             if class_name == "java/lang/Throwable" {
                 continue;
             }
-            let class_name = vm.to_string_value(&call_stack, class_name).await?;
+            let class_name = vm.to_string_value(&thread, class_name).await?;
             let stack_element_object = Object::new(stack_element_class.clone())?;
             stack_element_object.set_value("declaringClass", class_name)?;
 
             if let Some(source_file) = class.source_file() {
-                let source_file = vm.to_string_value(&call_stack, source_file).await?;
+                let source_file = vm.to_string_value(&thread, source_file).await?;
                 stack_element_object.set_value("fileName", source_file)?;
             }
 
             let method = frame.method();
-            let method_name = vm.to_string_value(&call_stack, method.name()).await?;
+            let method_name = vm.to_string_value(&thread, method.name()).await?;
             stack_element_object.set_value("methodName", method_name)?;
 
             let program_counter = frame.program_counter();
@@ -64,7 +64,7 @@ fn fill_in_stack_trace(
 
         let depth = i32::try_from(stack_elements.len()?)?;
         let stack_element_array_class = vm
-            .load_class(&call_stack, format!("[L{stack_element_class};").as_str())
+            .load_class(&thread, format!("[L{stack_element_class};").as_str())
             .await?;
         let stack_trace = Value::Object(Some(Reference::Array(
             stack_element_array_class,

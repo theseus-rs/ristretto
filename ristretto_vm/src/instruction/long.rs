@@ -140,7 +140,7 @@ pub(crate) fn lstore_3(locals: &LocalVariables, stack: &OperandStack) -> Result<
 pub(crate) fn laload(stack: &OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer),
+        None => Err(NullPointer("array cannot be null".to_string())),
         Some(Reference::LongArray(array)) => {
             let index = usize::try_from(index)?;
             let Some(value) = array.get(index)? else {
@@ -162,7 +162,7 @@ pub(crate) fn lastore(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer),
+        None => Err(NullPointer("array cannot be null".to_string())),
         Some(Reference::LongArray(ref mut array)) => {
             let index = usize::try_from(index)?;
             if index >= array.capacity()? {
@@ -518,7 +518,7 @@ mod tests {
         stack.push_object(None)?;
         stack.push_int(0)?;
         let result = laload(stack);
-        assert!(matches!(result, Err(NullPointer)));
+        assert!(matches!(result, Err(NullPointer(_))));
         Ok(())
     }
 
@@ -571,7 +571,7 @@ mod tests {
         stack.push_int(0)?;
         stack.push_long(42)?;
         let result = lastore(stack);
-        assert!(matches!(result, Err(NullPointer)));
+        assert!(matches!(result, Err(NullPointer(_))));
         Ok(())
     }
 

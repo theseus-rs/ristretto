@@ -1,5 +1,5 @@
-use crate::call_stack::CallStack;
 use crate::native::registry::NativeRegistry;
+use crate::thread::CallStack;
 use crate::{Result, VM};
 use ristretto_classloader::Value;
 
@@ -13,7 +13,7 @@ pub(crate) fn register(registry: &mut NativeRegistry) {
 #[expect(clippy::unnecessary_wraps)]
 fn register_natives(
     _vm: &VM,
-    _call_stack: &CallStack,
+    _thread: &CallStack,
     _arguments: Vec<Value>,
 ) -> Result<Option<Value>> {
     Ok(None)

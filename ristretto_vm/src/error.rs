@@ -47,8 +47,8 @@ pub enum Error {
     #[error("Invalid stack value; expected {expected}, found {actual}")]
     InvalidStackValue { expected: String, actual: String },
     /// Null pointer
-    #[error("Null pointer")]
-    NullPointer,
+    #[error("{0}")]
+    NullPointer(String),
     /// The operand stack overflowed
     #[error("Operand stack overflow")]
     OperandStackOverflow,

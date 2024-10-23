@@ -1,5 +1,5 @@
-use crate::call_stack::CallStack;
 use crate::native::registry::NativeRegistry;
+use crate::thread::CallStack;
 use crate::Error::RuntimeError;
 use crate::{Result, VM};
 use ristretto_classloader::Value;
@@ -11,12 +11,12 @@ pub(crate) fn register(registry: &mut NativeRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn get_class(vm: &VM, call_stack: &CallStack, arguments: Vec<Value>) -> Result<Option<Value>> {
+fn get_class(vm: &VM, thread: &CallStack, arguments: Vec<Value>) -> Result<Option<Value>> {
     let Some(Value::Object(Some(reference))) = arguments.first() else {
         return Err(RuntimeError("no object reference defined".to_string()));
     };
 
     let class_name = reference.class_name();
-    let class = vm.to_class_value(call_stack, class_name.as_str())?;
+    let class = vm.to_class_value(thread, class_name.as_str())?;
     Ok(Some(class))
 }

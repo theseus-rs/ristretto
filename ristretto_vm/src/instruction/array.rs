@@ -30,11 +30,11 @@ pub(crate) fn newarray(stack: &OperandStack, array_type: &ArrayType) -> Result<E
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.anewarray>
 #[inline]
 pub(crate) async fn anewarray(frame: &Frame, index: u16) -> Result<ExecutionResult> {
-    let call_stack = frame.call_stack()?;
-    let vm = call_stack.vm()?;
+    let thread = frame.thread()?;
+    let vm = thread.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.load_class(&call_stack, class_name).await?;
+    let class = vm.load_class(&thread, class_name).await?;
     let stack = frame.stack();
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
@@ -47,7 +47,7 @@ pub(crate) async fn anewarray(frame: &Frame, index: u16) -> Result<ExecutionResu
 #[inline]
 pub(crate) fn arraylength(stack: &OperandStack) -> Result<ExecutionResult> {
     let length = match stack.pop_object()? {
-        None => return Err(NullPointer),
+        None => return Err(NullPointer("array cannot be null".to_string())),
         Some(Reference::ByteArray(ref array)) => array.len()?,
         Some(Reference::CharArray(ref array)) => array.len()?,
         Some(Reference::FloatArray(ref array)) => array.len()?,
@@ -74,8 +74,8 @@ pub(crate) async fn multianewarray(
     index: u16,
     dimensions: u8,
 ) -> Result<ExecutionResult> {
-    let call_stack = frame.call_stack()?;
-    let vm = call_stack.vm()?;
+    let thread = frame.thread()?;
+    let vm = thread.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
     let class = vm.class(class_name.as_str()).await?;
@@ -101,7 +101,7 @@ pub(crate) async fn multianewarray(
         array
     } else {
         type_class_name = format!("[L{type_class_name};");
-        let type_class = vm.load_class(&call_stack, type_class_name.as_str()).await?;
+        let type_class = vm.load_class(&thread, type_class_name.as_str()).await?;
         Reference::Array(type_class, ConcurrentVec::from(vec![None; count]))
     };
 
@@ -245,7 +245,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_anewarray() -> Result<()> {
-        let (_vm, call_stack, mut class) = crate::test::class().await?;
+        let (_vm, thread, mut class) = crate::test::class().await?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("java/lang/Object")?;
         let method = Method::new(
@@ -260,7 +260,7 @@ mod tests {
         )?;
         let arguments = Vec::new();
         let frame = Frame::new(
-            &Arc::downgrade(&call_stack),
+            &Arc::downgrade(&thread),
             &class,
             &Arc::new(method),
             arguments,
@@ -376,7 +376,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_arraylength_object() -> Result<()> {
-        let (_vm, call_stack, mut class) = crate::test::class().await?;
+        let (_vm, thread, mut class) = crate::test::class().await?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("java/lang/Object")?;
         let method = Method::new(
@@ -391,7 +391,7 @@ mod tests {
         )?;
         let arguments = Vec::new();
         let frame = Frame::new(
-            &Arc::downgrade(&call_stack),
+            &Arc::downgrade(&thread),
             &class,
             &Arc::new(method),
             arguments,
@@ -413,14 +413,14 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
         let result = arraylength(stack);
-        assert!(matches!(result, Err(NullPointer)));
+        assert!(matches!(result, Err(NullPointer(_))));
         Ok(())
     }
 
     #[tokio::test]
     async fn test_arraylength_invalid_type() -> Result<()> {
-        let (vm, call_stack, frame) = crate::test::frame().await?;
-        let invalid_value = vm.to_string_value(&call_stack, "foo").await?;
+        let (vm, thread, frame) = crate::test::frame().await?;
+        let invalid_value = vm.to_string_value(&thread, "foo").await?;
         let stack = frame.stack();
         stack.push(invalid_value)?;
         let result = arraylength(stack);
@@ -435,7 +435,7 @@ mod tests {
     }
 
     async fn test_multianewarray_single_dimension(class_name: &str) -> Result<()> {
-        let (_vm, call_stack, mut class) = crate::test::class().await?;
+        let (_vm, thread, mut class) = crate::test::class().await?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class(class_name)?;
         let method = Method::new(
@@ -450,7 +450,7 @@ mod tests {
         )?;
         let arguments = Vec::new();
         let frame = Frame::new(
-            &Arc::downgrade(&call_stack),
+            &Arc::downgrade(&thread),
             &class,
             &Arc::new(method),
             arguments,
@@ -510,7 +510,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_multianewarray_multiple_dimensions() -> Result<()> {
-        let (_vm, call_stack, mut class) = crate::test::class().await?;
+        let (_vm, thread, mut class) = crate::test::class().await?;
         let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
         let class_name = "[[[[[I";
         let class_index = constant_pool.add_class(class_name)?;
@@ -526,7 +526,7 @@ mod tests {
         )?;
         let arguments = Vec::new();
         let frame = Frame::new(
-            &Arc::downgrade(&call_stack),
+            &Arc::downgrade(&thread),
             &class,
             &Arc::new(method),
             arguments,

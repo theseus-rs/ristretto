@@ -10,7 +10,7 @@ use ristretto_classloader::Reference;
 pub(crate) fn caload(stack: &OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer),
+        None => Err(NullPointer("array cannot be null".to_string())),
         Some(Reference::CharArray(array)) => {
             let index = usize::try_from(index)?;
             let Some(value) = array.get(index)? else {
@@ -32,7 +32,7 @@ pub(crate) fn castore(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer),
+        None => Err(NullPointer("array cannot be null".to_string())),
         Some(Reference::CharArray(ref mut array)) => {
             let index = usize::try_from(index)?;
             if index >= array.capacity()? {
@@ -99,7 +99,7 @@ mod test {
         stack.push_object(None)?;
         stack.push_int(0)?;
         let result = caload(stack);
-        assert!(matches!(result, Err(NullPointer)));
+        assert!(matches!(result, Err(NullPointer(_))));
         Ok(())
     }
 
@@ -152,7 +152,7 @@ mod test {
         stack.push_int(0)?;
         stack.push_int(42)?;
         let result = castore(stack);
-        assert!(matches!(result, Err(NullPointer)));
+        assert!(matches!(result, Err(NullPointer(_))));
         Ok(())
     }
 }

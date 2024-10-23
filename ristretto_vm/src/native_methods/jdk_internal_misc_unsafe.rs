@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Error::{InternalError, InvalidOperand};
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
@@ -188,7 +188,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 fn init(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     // Unsafe <init> is a no-op and the class is deprecated; override the default behavior to avoid
@@ -198,7 +198,7 @@ fn init(
 
 #[expect(clippy::needless_pass_by_value)]
 fn array_base_offset_0(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(Some(Value::Int(0))) })
@@ -206,7 +206,7 @@ fn array_base_offset_0(
 
 #[expect(clippy::needless_pass_by_value)]
 fn array_index_scale_0(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(Some(Value::Int(1))) })
@@ -214,7 +214,7 @@ fn array_index_scale_0(
 
 #[expect(clippy::needless_pass_by_value)]
 fn compare_and_set_int(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -244,7 +244,7 @@ fn compare_and_set_int(
 
 #[expect(clippy::needless_pass_by_value)]
 fn compare_and_set_long(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -274,7 +274,7 @@ fn compare_and_set_long(
 
 #[expect(clippy::needless_pass_by_value)]
 fn compare_and_set_reference(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -312,7 +312,7 @@ fn compare_and_set_reference(
 
 #[expect(clippy::needless_pass_by_value)]
 fn ensure_class_initialized_0(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })
@@ -320,7 +320,7 @@ fn ensure_class_initialized_0(
 
 #[expect(clippy::needless_pass_by_value)]
 fn full_fence(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })
@@ -328,7 +328,7 @@ fn full_fence(
 
 #[expect(clippy::needless_pass_by_value)]
 fn get_reference(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -358,22 +358,22 @@ fn get_reference(
 
 #[inline]
 fn get_reference_volatile(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
-    Box::pin(async move { get_reference(call_stack, arguments).await })
+    Box::pin(async move { get_reference(thread, arguments).await })
 }
 
 #[expect(clippy::needless_pass_by_value)]
 fn load_fence(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })
 }
 
 fn object_field_offset_1(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -393,8 +393,8 @@ fn object_field_offset_1(
             ));
         };
         let class_name = class_object.value("name")?.as_string()?;
-        let vm = call_stack.vm()?;
-        let class = vm.load_class(&call_stack, &class_name).await?;
+        let vm = thread.vm()?;
+        let class = vm.load_class(&thread, &class_name).await?;
         let offset = class.field_offset(&field_name)?;
         let offset = i64::try_from(offset)?;
         Ok(Some(Value::Long(offset)))
@@ -403,7 +403,7 @@ fn object_field_offset_1(
 
 #[expect(clippy::needless_pass_by_value)]
 fn put_reference_volatile(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -429,7 +429,7 @@ fn put_reference_volatile(
 
 #[expect(clippy::needless_pass_by_value)]
 fn register_natives(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })
@@ -437,7 +437,7 @@ fn register_natives(
 
 #[expect(clippy::needless_pass_by_value)]
 fn store_fence(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })

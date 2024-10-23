@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
-use crate::call_stack::CallStack;
 use crate::native_methods::registry::MethodRegistry;
+use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use ristretto_classloader::{Reference, Value};
@@ -22,7 +22,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 fn init(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     // This is a no-op method to optimize Object initialization since it is called frequently.
@@ -33,7 +33,7 @@ fn init(
 
 #[expect(clippy::needless_pass_by_value)]
 fn clone(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -44,7 +44,7 @@ fn clone(
 }
 
 fn get_class(
-    call_stack: Arc<CallStack>,
+    thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -53,15 +53,15 @@ fn get_class(
         };
 
         let class_name = object.class_name();
-        let vm = call_stack.vm()?;
-        let class = vm.to_class_value(&call_stack, class_name.as_str()).await?;
+        let vm = thread.vm()?;
+        let class = vm.to_class_value(&thread, class_name.as_str()).await?;
         Ok(Some(class))
     })
 }
 
 #[expect(clippy::needless_pass_by_value)]
 fn hash_code(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move {
@@ -85,7 +85,7 @@ pub(crate) fn object_hash_code(object: &Reference) -> i32 {
 
 #[expect(clippy::needless_pass_by_value)]
 fn notify_all(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })
@@ -93,7 +93,7 @@ fn notify_all(
 
 #[expect(clippy::needless_pass_by_value)]
 fn register_natives(
-    _call_stack: Arc<CallStack>,
+    _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
     Box::pin(async move { Ok(None) })

@@ -25,7 +25,6 @@
 #![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
 mod arguments;
-mod call_stack;
 #[expect(clippy::module_name_repetitions)]
 mod configuration;
 mod error;
@@ -36,13 +35,14 @@ mod native_methods;
 mod operand_stack;
 #[cfg(test)]
 pub(crate) mod test;
+mod thread;
 mod vm;
 
-pub(crate) use call_stack::CallStack;
 pub use configuration::{Configuration, ConfigurationBuilder};
 pub use error::{Error, Result};
 pub(crate) use frame::Frame;
 pub(crate) use local_variables::LocalVariables;
 pub(crate) use operand_stack::OperandStack;
 pub use ristretto_classloader::{Class, ClassPath, Reference, Value};
+pub(crate) use thread::Thread;
 pub use vm::VM;
