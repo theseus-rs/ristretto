@@ -714,7 +714,14 @@ impl Instruction {
                 }
                 Instruction::Invokeinterface(constant_index, count)
             }
-            186 => Instruction::Invokedynamic(bytes.read_u16::<BigEndian>()?),
+            186 => {
+                let constant_index = bytes.read_u16::<BigEndian>()?;
+                let null = bytes.read_u16::<BigEndian>()?;
+                if null != 0 {
+                    return Err(InvalidInstruction(code));
+                }
+                Instruction::Invokedynamic(constant_index)
+            }
             187 => Instruction::New(bytes.read_u16::<BigEndian>()?),
             188 => {
                 let array_type = ArrayType::from_bytes(bytes)?;
@@ -870,7 +877,10 @@ impl Instruction {
                 bytes.write_u8(*value2)?;
                 bytes.write_u8(0)?;
             }
-            Instruction::Invokedynamic(value) => bytes.write_u16::<BigEndian>(*value)?,
+            Instruction::Invokedynamic(value) => {
+                bytes.write_u16::<BigEndian>(*value)?;
+                bytes.write_u16::<BigEndian>(0)?;
+            }
             Instruction::New(value) => bytes.write_u16::<BigEndian>(*value)?,
             Instruction::Newarray(array_type) => array_type.to_bytes(bytes)?,
             Instruction::Anewarray(value) => bytes.write_u16::<BigEndian>(*value)?,
@@ -3949,7 +3959,7 @@ mod test {
     fn test_invokedynamic() -> Result<()> {
         let instruction = Instruction::Invokedynamic(42);
         let code = 186;
-        let expected_bytes = [code, 0, 42];
+        let expected_bytes = [code, 0, 42, 0, 0];
 
         assert_eq!("invokedynamic #42", instruction.to_string());
         let mut constant_pool = ConstantPool::new();
@@ -3960,6 +3970,26 @@ mod test {
             Instruction::Invokedynamic(method_index).to_formatted_string(&constant_pool)?
         );
         test_instruction(&instruction, &expected_bytes, code)
+    }
+
+    #[test]
+    fn test_invokedynamic_error_byte_3() {
+        let bytes: [u8; 5] = [186, 0, 42, 1, 0];
+        let mut cursor = Cursor::new(bytes.to_vec());
+        assert_eq!(
+            Instruction::from_bytes(&mut cursor),
+            Err(InvalidInstruction(186))
+        );
+    }
+
+    #[test]
+    fn test_invokedynamic_error_byte_4() {
+        let bytes: [u8; 5] = [186, 0, 42, 0, 1];
+        let mut cursor = Cursor::new(bytes.to_vec());
+        assert_eq!(
+            Instruction::from_bytes(&mut cursor),
+            Err(InvalidInstruction(186))
+        );
     }
 
     #[test]
