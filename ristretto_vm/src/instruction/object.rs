@@ -6,7 +6,8 @@ use crate::Error::{
     ArrayIndexOutOfBounds, ClassCastError, InternalError, InvalidStackValue, NullPointer,
 };
 use crate::{Result, Value};
-use ristretto_classloader::{Object, Reference};
+use ristretto_classloader::{Class, Object, Reference};
+use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aconst_null>
 #[inline]
@@ -198,13 +199,19 @@ pub(crate) async fn new(frame: &Frame, index: u16) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.checkcast>
 #[inline]
-pub(crate) fn checkcast(stack: &OperandStack, class_name: &str) -> Result<ExecutionResult> {
+pub(crate) fn checkcast(
+    stack: &OperandStack,
+    class: &Arc<Class>,
+    class_index: u16,
+) -> Result<ExecutionResult> {
     let Value::Object(object) = stack.peek()? else {
         return Err(InternalError("Expected object".to_string()));
     };
     let Some(object) = object else {
         return Ok(Continue);
     };
+    let constant_pool = class.constant_pool();
+    let class_name = constant_pool.try_get_class(class_index)?;
     if !is_instanceof(&object, class_name)? {
         return Err(ClassCastError(class_name.to_string()));
     }
@@ -213,12 +220,18 @@ pub(crate) fn checkcast(stack: &OperandStack, class_name: &str) -> Result<Execut
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.instanceof>
 #[inline]
-pub(crate) fn instanceof(stack: &OperandStack, class_name: &str) -> Result<ExecutionResult> {
+pub(crate) fn instanceof(
+    stack: &OperandStack,
+    class: &Arc<Class>,
+    class_index: u16,
+) -> Result<ExecutionResult> {
     let object = stack.pop_object()?;
     let Some(object) = object else {
         stack.push_int(0)?;
         return Ok(Continue);
     };
+    let constant_pool = class.constant_pool();
+    let class_name = constant_pool.try_get_class(class_index)?;
     if is_instanceof(&object, class_name)? {
         stack.push_int(1)?;
     } else {
@@ -267,6 +280,7 @@ fn is_instanceof(object: &Reference, class_name: &str) -> Result<bool> {
 mod tests {
     use super::*;
     use crate::Error::InvalidOperand;
+    use crate::VM;
     use ristretto_classloader::ConcurrentVec;
     use std::sync::Arc;
 
@@ -575,11 +589,19 @@ mod tests {
         Ok(())
     }
 
+    async fn get_class_index(class_name: &str) -> Result<(Arc<Class>, u16)> {
+        let (_vm, _thread, mut class) = crate::test::class().await?;
+        let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
+        let class_index = constant_pool.add_class(class_name)?;
+        Ok((class.clone(), class_index))
+    }
+
     #[tokio::test]
     async fn test_checkcast_null() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
-        let result = checkcast(stack, "java/lang/Object")?;
+        let (class, class_index) = get_class_index("java/lang/Object").await?;
+        let result = checkcast(stack, &class, class_index)?;
         assert_eq!(Continue, result);
         Ok(())
     }
@@ -587,10 +609,11 @@ mod tests {
     #[tokio::test]
     async fn test_checkcast_string_to_object() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let (vm, _thread, object_class) = crate::test::load_class("java/lang/Object").await?;
+        let vm = VM::default().await?;
         let string = vm.string("foo").await?;
         stack.push(string)?;
-        let result = checkcast(stack, object_class.name())?;
+        let (class, class_index) = get_class_index("java/lang/Object").await?;
+        let result = checkcast(stack, &class, class_index)?;
         assert_eq!(Continue, result);
         Ok(())
     }
@@ -599,10 +622,10 @@ mod tests {
     async fn test_checkcast_object_to_string() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         let (_vm, _thread, object_class) = crate::test::load_class("java/lang/Object").await?;
-        let (_vm, _thread, string_class) = crate::test::load_class("java/lang/String").await?;
         let object = Object::new(object_class)?;
         stack.push_object(Some(Reference::Object(object)))?;
-        let result = checkcast(stack, string_class.name());
+        let (class, class_index) = get_class_index("java/lang/String").await?;
+        let result = checkcast(stack, &class, class_index);
         assert!(matches!(
             result,
             Err(ClassCastError(class)) if class == "java/lang/String"
@@ -613,9 +636,9 @@ mod tests {
     #[tokio::test]
     async fn test_instanceof_null() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let (_vm, _thread, object_class) = crate::test::load_class("java/lang/Object").await?;
         stack.push_object(None)?;
-        let result = instanceof(stack, object_class.name())?;
+        let (class, class_index) = get_class_index("java/lang/Object").await?;
+        let result = instanceof(stack, &class, class_index)?;
         assert_eq!(Continue, result);
         assert_eq!(0, stack.pop_int()?);
         Ok(())
@@ -624,10 +647,11 @@ mod tests {
     #[tokio::test]
     async fn test_instanceof_string_to_object() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let (vm, _thread, object_class) = crate::test::load_class("java/lang/Object").await?;
+        let vm = VM::default().await?;
         let string = vm.string("foo").await?;
         stack.push(string)?;
-        let result = instanceof(stack, object_class.name())?;
+        let (class, class_index) = get_class_index("java/lang/Object").await?;
+        let result = instanceof(stack, &class, class_index)?;
         assert_eq!(Continue, result);
         assert_eq!(1, stack.pop_int()?);
         Ok(())
@@ -637,10 +661,10 @@ mod tests {
     async fn test_instanceof_object_to_string() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         let (_vm, _thread, object_class) = crate::test::load_class("java/lang/Object").await?;
-        let (_vm, _thread, string_class) = crate::test::load_class("java/lang/String").await?;
         let object = Object::new(object_class)?;
         stack.push_object(Some(Reference::Object(object)))?;
-        let result = instanceof(stack, string_class.name())?;
+        let (class, class_index) = get_class_index("java/lang/String").await?;
+        let result = instanceof(stack, &class, class_index)?;
         assert_eq!(Continue, result);
         assert_eq!(0, stack.pop_int()?);
         Ok(())
@@ -649,11 +673,11 @@ mod tests {
     #[tokio::test]
     async fn test_instanceof_string_array_to_object() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let (_vm, _thread, object_class) = crate::test::load_class("java/lang/Object").await?;
         let (_vm, _thread, string_class) = crate::test::load_class("java/lang/String").await?;
         let string_array = Reference::Array(string_class, ConcurrentVec::default());
         stack.push_object(Some(string_array))?;
-        let result = instanceof(stack, object_class.name())?;
+        let (class, class_index) = get_class_index("java/lang/Object").await?;
+        let result = instanceof(stack, &class, class_index)?;
         assert_eq!(Continue, result);
         assert_eq!(1, stack.pop_int()?);
         Ok(())
@@ -663,35 +687,34 @@ mod tests {
     async fn test_instanceof_object_array_to_string() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         let (_vm, _thread, object_class) = crate::test::load_class("java/lang/Object").await?;
-        let (_vm, _thread, string_class) = crate::test::load_class("java/lang/String").await?;
         let object_array = Reference::Array(object_class, ConcurrentVec::default());
         stack.push_object(Some(object_array))?;
-        let result = instanceof(stack, string_class.name())?;
+        let (class, class_index) = get_class_index("java/lang/String").await?;
+        let result = instanceof(stack, &class, class_index)?;
         assert_eq!(Continue, result);
         assert_eq!(0, stack.pop_int()?);
         Ok(())
     }
 
-    #[test]
-    fn test_instanceof_int_array_to_int_array() -> Result<()> {
+    #[tokio::test]
+    async fn test_instanceof_int_array_to_int_array() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         let int_array = Reference::IntArray(ConcurrentVec::default());
-        let int_array_class = int_array.class()?;
         stack.push_object(Some(int_array))?;
-        let result = instanceof(stack, int_array_class.name())?;
+        let (class, class_index) = get_class_index("[I").await?;
+        let result = instanceof(stack, &class, class_index)?;
         assert_eq!(Continue, result);
         assert_eq!(1, stack.pop_int()?);
         Ok(())
     }
 
-    #[test]
-    fn test_instanceof_long_array_to_int_array() -> Result<()> {
+    #[tokio::test]
+    async fn test_instanceof_long_array_to_int_array() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         let long_array = Reference::LongArray(ConcurrentVec::default());
-        let int_array = Reference::IntArray(ConcurrentVec::default());
-        let int_array_class = int_array.class()?;
         stack.push_object(Some(long_array))?;
-        let result = instanceof(stack, int_array_class.name())?;
+        let (class, class_index) = get_class_index("[I").await?;
+        let result = instanceof(stack, &class, class_index)?;
         assert_eq!(Continue, result);
         assert_eq!(0, stack.pop_int()?);
         Ok(())

@@ -1,5 +1,5 @@
 use crate::frame::ExecutionResult;
-use crate::frame::ExecutionResult::{Continue, ContinueAtPosition};
+use crate::frame::ExecutionResult::{Continue, ContinueAtPosition, Return};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::Result;
@@ -227,6 +227,13 @@ pub(crate) fn lookupswitch(
         None => usize::try_from(default)?,
     };
     Ok(ContinueAtPosition(program_counter + address))
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.return>
+#[expect(clippy::unnecessary_wraps)]
+#[inline]
+pub(crate) fn r#return() -> Result<ExecutionResult> {
+    Ok(Return(None))
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ifnull>
@@ -703,6 +710,13 @@ mod test {
             &IndexMap::from([(1, 11), (2, 12), (3, 13)]),
         )?;
         assert!(matches!(result, ContinueAtPosition(24)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_return() -> Result<()> {
+        let result = r#return()?;
+        assert!(matches!(result, Return(None)));
         Ok(())
     }
 

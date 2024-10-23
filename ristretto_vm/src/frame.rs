@@ -18,8 +18,8 @@ use crate::instruction::{
     laload, land, lastore, lcmp, lconst_0, lconst_1, ldc, ldc2_w, ldc_w, ldiv, lload, lload_0,
     lload_1, lload_2, lload_3, lload_w, lmul, lneg, lookupswitch, lor, lrem, lreturn, lshl, lshr,
     lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr, lxor, multianewarray,
-    new, newarray, pop, pop2, process_throwable, putfield, putstatic, ret, ret_w, saload, sastore,
-    sipush, swap, tableswitch,
+    new, newarray, pop, pop2, process_throwable, putfield, putstatic, r#return, ret, ret_w, saload,
+    sastore, sipush, swap, tableswitch,
 };
 use crate::Error::{InternalError, InvalidOperand, InvalidProgramCounter};
 use crate::{LocalVariables, OperandStack, Result, Thread};
@@ -375,15 +375,11 @@ impl Frame {
             Instruction::Freturn => freturn(&self.stack),
             Instruction::Dreturn => dreturn(&self.stack),
             Instruction::Areturn => areturn(&self.stack),
-            Instruction::Return => Ok(Return(None)),
+            Instruction::Return => r#return(),
             Instruction::Getstatic(index) => getstatic(self, *index).await,
             Instruction::Putstatic(index) => putstatic(self, *index).await,
-            Instruction::Getfield(index) => {
-                getfield(&self.stack, self.class.constant_pool(), *index)
-            }
-            Instruction::Putfield(index) => {
-                putfield(&self.stack, self.class.constant_pool(), *index)
-            }
+            Instruction::Getfield(index) => getfield(&self.stack, &self.class, *index),
+            Instruction::Putfield(index) => putfield(&self.stack, &self.class, *index),
             Instruction::Invokevirtual(index) => invokevirtual(self, *index).await,
             Instruction::Invokespecial(index) => invokespecial(self, *index).await,
             Instruction::Invokestatic(index) => invokestatic(self, *index).await,
@@ -397,14 +393,10 @@ impl Frame {
             Instruction::Arraylength => arraylength(&self.stack),
             Instruction::Athrow => athrow(self).await,
             Instruction::Checkcast(class_index) => {
-                let constant_pool = self.class.constant_pool();
-                let class_name = constant_pool.try_get_class(*class_index)?;
-                checkcast(&self.stack, class_name)
+                checkcast(&self.stack, &self.class, *class_index)
             }
             Instruction::Instanceof(class_index) => {
-                let constant_pool = self.class.constant_pool();
-                let class_name = constant_pool.try_get_class(*class_index)?;
-                instanceof(&self.stack, class_name)
+                instanceof(&self.stack, &self.class, *class_index)
             }
             Instruction::Monitorenter | Instruction::Monitorexit => {
                 // The monitorenter and monitorexit instructions are not currently used by this
@@ -501,14 +493,6 @@ mod tests {
         assert_eq!(Continue, process_result);
         assert!(frame.locals.is_empty()?);
         assert!(frame.stack.is_empty()?);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_process_return() -> Result<()> {
-        let (_vm, _thread, frame) = crate::test::frame().await?;
-        let process_result = frame.process(&Instruction::Return).await?;
-        assert!(matches!(process_result, Return(None)));
         Ok(())
     }
 
