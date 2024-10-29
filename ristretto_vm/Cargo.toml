@@ -10,6 +10,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+async-recursion = { workspace = true }
 bitflags = { workspace = true }
 byte-unit = { workspace = true }
 dirs = { workspace = true }

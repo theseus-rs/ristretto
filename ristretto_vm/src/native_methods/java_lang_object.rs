@@ -3,10 +3,9 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
+use async_recursion::async_recursion;
 use ristretto_classloader::{Reference, Value};
-use std::future::Future;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::pin::Pin;
 use std::sync::Arc;
 
 /// Register all native methods for java.lang.Object.
@@ -21,56 +20,42 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn init(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+#[async_recursion(?Send)]
+async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     // This is a no-op method to optimize Object initialization since it is called frequently.
     // This prevents the need to create a new frame and allocate memory unnecessarily for the call
     // to the constructor for every object.
-    Box::pin(async move { Ok(None) })
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn clone(
-    _thread: Arc<Thread>,
-    mut arguments: Arguments,
-) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
-    Box::pin(async move {
-        let object = arguments.pop_object()?;
-        let cloned_object = object.clone();
-        Ok(Some(Value::Object(cloned_object)))
-    })
+#[async_recursion(?Send)]
+async fn clone(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let object = arguments.pop_object()?;
+    let cloned_object = object.clone();
+    Ok(Some(Value::Object(cloned_object)))
 }
 
-fn get_class(
-    thread: Arc<Thread>,
-    mut arguments: Arguments,
-) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
-    Box::pin(async move {
-        let Some(object) = arguments.pop_object()? else {
-            return Err(InternalError("no object reference defined".to_string()));
-        };
+#[async_recursion(?Send)]
+async fn get_class(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let Some(object) = arguments.pop_object()? else {
+        return Err(InternalError("no object reference defined".to_string()));
+    };
 
-        let class_name = object.class_name();
-        let vm = thread.vm()?;
-        let class = vm.to_class_value(&thread, class_name.as_str()).await?;
-        Ok(Some(class))
-    })
+    let class_name = object.class_name();
+    let vm = thread.vm()?;
+    let class = vm.to_class_value(&thread, class_name.as_str()).await?;
+    Ok(Some(class))
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn hash_code(
-    _thread: Arc<Thread>,
-    mut arguments: Arguments,
-) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
-    Box::pin(async move {
-        let Some(object) = arguments.pop_object()? else {
-            return Err(InternalError("no object reference defined".to_string()));
-        };
-        let hash_code = object_hash_code(&object);
-        Ok(Some(Value::Int(hash_code)))
-    })
+#[async_recursion(?Send)]
+async fn hash_code(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let Some(object) = arguments.pop_object()? else {
+        return Err(InternalError("no object reference defined".to_string()));
+    };
+    let hash_code = object_hash_code(&object);
+    Ok(Some(Value::Int(hash_code)))
 }
 
 pub(crate) fn object_hash_code(object: &Reference) -> i32 {
@@ -84,17 +69,13 @@ pub(crate) fn object_hash_code(object: &Reference) -> i32 {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn notify_all(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
-    Box::pin(async move { Ok(None) })
+#[async_recursion(?Send)]
+async fn notify_all(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn register_natives(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
-    Box::pin(async move { Ok(None) })
+#[async_recursion(?Send)]
+async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    Ok(None)
 }

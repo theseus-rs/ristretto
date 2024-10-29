@@ -3,11 +3,10 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
+use async_recursion::async_recursion;
 use bitflags::bitflags;
 use ristretto_classloader::{Reference, Value};
-use std::future::Future;
 use std::path::PathBuf;
-use std::pin::Pin;
 use std::sync::Arc;
 
 bitflags! {
@@ -34,44 +33,41 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn init_ids(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
-    Box::pin(async move { Ok(None) })
+#[async_recursion(?Send)]
+async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn get_boolean_attributes_0(
+#[async_recursion(?Send)]
+async fn get_boolean_attributes_0(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
-) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
-    Box::pin(async move {
-        let Some(Reference::Object(file)) = arguments.pop_object()? else {
-            return Err(InternalError(
-                "getBooleanAttributes0: expected file argument".to_string(),
-            ));
-        };
-        let path = file.value("path")?.as_string()?;
-        let path = PathBuf::from(path);
-        let mut attributes = if path.exists() {
-            BooleanAttributeFlags::EXISTS
-        } else {
-            BooleanAttributeFlags::empty()
-        };
-        if path.is_file() {
-            attributes |= BooleanAttributeFlags::REGULAR;
-        }
-        if path.is_dir() {
-            attributes |= BooleanAttributeFlags::DIRECTORY;
-        }
-        if path
-            .file_name()
-            .map(|name| name.to_string_lossy().starts_with('.'))
-            == Some(true)
-        {
-            attributes |= BooleanAttributeFlags::HIDDEN;
-        }
-        Ok(Some(Value::Int(attributes.bits())))
-    })
+) -> Result<Option<Value>> {
+    let Some(Reference::Object(file)) = arguments.pop_object()? else {
+        return Err(InternalError(
+            "getBooleanAttributes0: expected file argument".to_string(),
+        ));
+    };
+    let path = file.value("path")?.as_string()?;
+    let path = PathBuf::from(path);
+    let mut attributes = if path.exists() {
+        BooleanAttributeFlags::EXISTS
+    } else {
+        BooleanAttributeFlags::empty()
+    };
+    if path.is_file() {
+        attributes |= BooleanAttributeFlags::REGULAR;
+    }
+    if path.is_dir() {
+        attributes |= BooleanAttributeFlags::DIRECTORY;
+    }
+    if path
+        .file_name()
+        .map(|name| name.to_string_lossy().starts_with('.'))
+        == Some(true)
+    {
+        attributes |= BooleanAttributeFlags::HIDDEN;
+    }
+    Ok(Some(Value::Int(attributes.bits())))
 }

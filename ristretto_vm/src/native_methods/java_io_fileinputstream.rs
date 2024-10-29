@@ -2,9 +2,8 @@ use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
+use async_recursion::async_recursion;
 use ristretto_classloader::Value;
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
 
 /// Register all native methods for java.io.FileInputStream.
@@ -14,9 +13,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[expect(clippy::needless_pass_by_value)]
-fn init_ids(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
-    Box::pin(async move { Ok(None) })
+#[async_recursion(?Send)]
+async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    Ok(None)
 }
