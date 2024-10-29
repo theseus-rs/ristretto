@@ -27,10 +27,6 @@ pub fn registry() -> &'static MethodRegistry {
 
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
-// pub type RustMethod = fn(
-//     thread: Arc<CallStack>,
-//     arguments: Arguments,
-// ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>>;
 pub type RustMethod = fn(
     thread: Arc<Thread>,
     arguments: Arguments,
@@ -119,13 +115,12 @@ impl Default for MethodRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_recursion::async_recursion;
 
     #[expect(clippy::needless_pass_by_value)]
-    fn test_none(
-        _thread: Arc<Thread>,
-        _arguments: Arguments,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
-        Box::pin(async move { Ok(None) })
+    #[async_recursion(?Send)]
+    async fn test_none(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+        Ok(None)
     }
 
     #[test]
