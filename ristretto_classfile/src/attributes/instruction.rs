@@ -990,6 +990,9 @@ impl Instruction {
             | Instruction::Invokestatic(index)
             | Instruction::Invokeinterface(index, _)
             | Instruction::Invokedynamic(index)
+            | Instruction::New(index)
+            | Instruction::Anewarray(index)
+            | Instruction::Multianewarray(index, _)
             | Instruction::Checkcast(index)
             | Instruction::Instanceof(index) => {
                 let detail = constant_pool.try_get_formatted_string(*index)?;
@@ -3999,9 +4002,11 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("new #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("java/lang/Object")?;
         assert_eq!(
-            "new #42",
-            instruction.to_formatted_string(&ConstantPool::new())?
+            "new #2 // Class java/lang/Object",
+            Instruction::New(class_index).to_formatted_string(&constant_pool)?
         );
         test_instruction(&instruction, &expected_bytes, code)
     }
@@ -4027,9 +4032,11 @@ mod test {
         let expected_bytes = [code, 0, 42];
 
         assert_eq!("anewarray #42", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("java/lang/Integer")?;
         assert_eq!(
-            "anewarray #42",
-            instruction.to_formatted_string(&ConstantPool::new())?
+            "anewarray #2 // Class java/lang/Integer",
+            Instruction::Anewarray(class_index).to_formatted_string(&constant_pool)?
         );
         test_instruction(&instruction, &expected_bytes, code)
     }
@@ -4140,9 +4147,11 @@ mod test {
         let expected_bytes = [code, 0, 42, 3];
 
         assert_eq!("multianewarray #42, 3", instruction.to_string());
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("[[[Ljava/lang/String;")?;
         assert_eq!(
-            "multianewarray #42, 3",
-            instruction.to_formatted_string(&ConstantPool::new())?
+            "multianewarray #2, 3 // Class [[[Ljava/lang/String;",
+            Instruction::Multianewarray(class_index, 3).to_formatted_string(&constant_pool)?
         );
         test_instruction(&instruction, &expected_bytes, code)
     }

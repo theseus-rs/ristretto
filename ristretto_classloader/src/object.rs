@@ -3,13 +3,13 @@ use crate::Reference::{ByteArray, CharArray};
 use crate::{Class, Field, Result, Value};
 use ristretto_classfile::{mutf8, FieldAccessFlags, Version};
 use std::collections::HashMap;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Represents an object in the Ristretto VM.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Object {
     class: Arc<Class>,
     fields: HashMap<String, Field>,
@@ -127,9 +127,19 @@ impl Object {
     }
 }
 
+impl Debug for Object {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Object({})", self.class.name())?;
+        for (name, field) in &self.fields {
+            write!(f, " {name}: {:?}", field.value())?;
+        }
+        Ok(())
+    }
+}
+
 impl Display for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "class {}", self.class)
+        write!(f, "class {}", self.class.name())
     }
 }
 
@@ -190,6 +200,15 @@ mod tests {
             Err(FieldNotFound { class_name, field_name })
             if class_name == "java/lang/String" && field_name == "foo"
         ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_debug() -> Result<()> {
+        let class_name = "java/lang/Object";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        assert_eq!("Object(java/lang/Object)", format!("{object:?}"));
         Ok(())
     }
 
