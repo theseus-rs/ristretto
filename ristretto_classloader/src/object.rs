@@ -204,6 +204,15 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_debug() -> Result<()> {
+        let class_name = "java/lang/Object";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        assert_eq!("Object(java/lang/Object)", format!("{object:?}"));
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_to_string() -> Result<()> {
         let class_name = "java/lang/Object";
         let class = load_class(class_name).await?;
