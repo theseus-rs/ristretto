@@ -34,7 +34,8 @@ pub(crate) async fn anewarray(frame: &Frame, index: u16) -> Result<ExecutionResu
     let vm = thread.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.load_class(&thread, class_name).await?;
+    let array_class_name = format!("[L{class_name};");
+    let class = vm.load_class(&thread, array_class_name.as_str()).await?;
     let stack = frame.stack();
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
@@ -270,11 +271,13 @@ mod tests {
         let result = anewarray(&frame, class_index).await?;
         assert_eq!(Continue, result);
         let stack = frame.stack();
-        let object = stack.pop()?;
-        assert!(matches!(
-            object,
-            Value::Object(Some(Reference::Array(_, _)))
-        ));
+        let Value::Object(Some(reference)) = stack.pop()? else {
+            panic!("expected object");
+        };
+        let class = reference.class()?;
+        assert_eq!("[Ljava/lang/Object;", class.name());
+        assert_eq!("java/lang/Object", class.array_component_type());
+        assert!(class.is_array());
         Ok(())
     }
 
