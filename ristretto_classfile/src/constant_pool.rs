@@ -643,17 +643,21 @@ impl ConstantPool {
                 bootstrap_method_attr_index,
                 name_and_type_index,
             } => {
-                let method = self.try_get_formatted_string(*bootstrap_method_attr_index)?;
-                let name_and_type = self.try_get_formatted_string(*name_and_type_index)?;
-                format!("Dynamic bootstrap {method}, {name_and_type}")
+                let (name_index, descriptor_index) =
+                    self.try_get_name_and_type(*name_and_type_index)?;
+                let name = self.try_get_utf8(*name_index)?;
+                let descriptor = self.try_get_utf8(*descriptor_index)?;
+                format!("Dynamic #{bootstrap_method_attr_index}:{name}:{descriptor}")
             }
             Constant::InvokeDynamic {
                 bootstrap_method_attr_index,
                 name_and_type_index,
             } => {
-                let method = self.try_get_formatted_string(*bootstrap_method_attr_index)?;
-                let name_and_type = self.try_get_formatted_string(*name_and_type_index)?;
-                format!("Invoke dynamic {method}, {name_and_type}")
+                let (name_index, descriptor_index) =
+                    self.try_get_name_and_type(*name_and_type_index)?;
+                let name = self.try_get_utf8(*name_index)?;
+                let descriptor = self.try_get_utf8(*descriptor_index)?;
+                format!("InvokeDynamic #{bootstrap_method_attr_index}:{name}:{descriptor}")
             }
             Constant::Module(name_index) => {
                 format!("Module {}", self.try_get_utf8(*name_index)?)
@@ -1351,12 +1355,9 @@ mod test {
         let mut constant_pool = ConstantPool::default();
         let class_index = constant_pool.add_class("Foo")?;
         let method_index = constant_pool.add_method_ref(class_index, "x", "()V")?;
-        let index = constant_pool.add_dynamic(method_index, "x", "I")?;
+        let index = constant_pool.add_dynamic(method_index, "x", "()I")?;
         let value = constant_pool.try_get_formatted_string(index)?;
-        assert_eq!(
-            "Dynamic bootstrap Method Foo.x()V, Name x, Descriptor I",
-            value
-        );
+        assert_eq!("Dynamic #6:x:()I", value);
         Ok(())
     }
 
@@ -1391,12 +1392,9 @@ mod test {
         let mut constant_pool = ConstantPool::default();
         let class_index = constant_pool.add_class("Foo")?;
         let method_index = constant_pool.add_method_ref(class_index, "x", "()V")?;
-        let index = constant_pool.add_invoke_dynamic(method_index, "x", "I")?;
+        let index = constant_pool.add_invoke_dynamic(method_index, "x", "()I")?;
         let value = constant_pool.try_get_formatted_string(index)?;
-        assert_eq!(
-            "Invoke dynamic Method Foo.x()V, Name x, Descriptor I",
-            value
-        );
+        assert_eq!("InvokeDynamic #6:x:()I", value);
         Ok(())
     }
 
