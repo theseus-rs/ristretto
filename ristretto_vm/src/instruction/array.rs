@@ -272,7 +272,7 @@ mod tests {
         assert_eq!(Continue, result);
         let stack = frame.stack();
         let Value::Object(Some(reference)) = stack.pop()? else {
-            panic!("expected object");
+            panic!("expected reference");
         };
         let class = reference.class()?;
         assert_eq!("[Ljava/lang/Object;", class.name());
