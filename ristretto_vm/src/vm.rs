@@ -342,6 +342,45 @@ impl VM {
         Ok(())
     }
 
+    /// Invoke the main method of the main class associated with the VM. The main method must have
+    /// the signature `public static void main(String[] args)`.
+    ///
+    /// # Errors
+    /// * if the main class is not specified
+    /// * if the main class does not specify a main method
+    /// * if the main method cannot be invoked
+    pub async fn invoke_main<S: AsRef<str>>(&self, arguments: Vec<S>) -> Result<Option<Value>> {
+        let Some(main_class_name) = &self.main_class else {
+            return Err(InternalError("No main class specified".into()));
+        };
+        let main_class = self.class(main_class_name).await?;
+        let Some(main_method) = main_class.main_method() else {
+            return Err(InternalError(format!(
+                "No main method found for {main_class_name}"
+            )));
+        };
+
+        let mut string_arguments = Vec::new();
+        for argument in arguments {
+            let argument = argument.as_ref();
+            let Value::Object(value) = self.string(argument).await? else {
+                return Err(InternalError(format!(
+                    "Failed to create string for argument {argument}"
+                )));
+            };
+            string_arguments.push(value);
+        }
+
+        let string_array_class = self.class("[Ljava/lang/String;").await?;
+        let string_arguments = Value::Object(Some(Reference::Array(
+            string_array_class,
+            ConcurrentVec::from(string_arguments),
+        )));
+
+        self.invoke(&main_class, &main_method, vec![string_arguments])
+            .await
+    }
+
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
     /// the first argument in the arguments vector.
     ///

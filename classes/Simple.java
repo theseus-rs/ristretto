@@ -59,7 +59,7 @@ public class Simple implements SimpleInterface {
         return privateValue;
     }
 
-    public static void main(String[] args) {
+    public static void main(String ... args) {
         Simple simple = new Simple();
         System.out.println(simple.getPublicValue());
         System.out.println(simple.getProtectedValue());
