@@ -2,7 +2,7 @@ use crate::Error::{FieldNotFound, MethodNotFound, PoisonedLock};
 use crate::{Field, Method, Result};
 use indexmap::IndexMap;
 use ristretto_classfile::attributes::Attribute;
-use ristretto_classfile::{BaseType, ClassFile, ConstantPool, FieldAccessFlags};
+use ristretto_classfile::{BaseType, ClassFile, ConstantPool, FieldAccessFlags, MethodAccessFlags};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
@@ -355,7 +355,14 @@ impl Class {
     /// Get the main method.
     #[must_use]
     pub fn main_method(&self) -> Option<Arc<Method>> {
-        self.method("main", "([Ljava/lang/String;)V")
+        let method = self.method("main", "([Ljava/lang/String;)V")?;
+        if !method
+            .access_flags()
+            .contains(MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC)
+        {
+            return None;
+        }
+        Some(method)
     }
 
     /// Get a method by name and descriptor.

@@ -9,7 +9,6 @@ use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Reference, Result, Va
 use std::env;
 use std::env::consts::{ARCH, OS};
 use std::path::PathBuf;
-use std::process::exit;
 use tracing::debug;
 
 #[derive(Debug, Parser)]
@@ -58,7 +57,10 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 async fn main() -> Result<()> {
     logging::initialize();
     let cli = Cli::parse();
-    common_main(cli).await
+    if common_main(cli).await.is_err() {
+        std::process::exit(1);
+    }
+    Ok(())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -66,7 +68,10 @@ async fn main() -> Result<()> {
 async fn main() -> Result<()> {
     logging::initialize();
     let cli = Cli::parse();
-    common_main(cli).await
+    if common_main(cli).await.is_err() {
+        std::process::exit(1);
+    }
+    Ok(())
 }
 
 async fn common_main(cli: Cli) -> Result<()> {
@@ -110,37 +115,24 @@ async fn common_main(cli: Cli) -> Result<()> {
     let vm = match VM::new(configuration).await {
         Ok(vm) => vm,
         Err(error) => {
-            process_error(error)?;
-            exit(1);
+            return process_error(error);
         }
     };
-    let Some(main_class_name) = vm.main_class() else {
-        return Err(InternalError("No main class specified".into()));
-    };
-    let main_class = vm.class(main_class_name).await?;
-    let Some(main_method) = main_class.main_method() else {
-        return Err(InternalError("No main method found".into()));
-    };
+    let arguments = cli.arguments.unwrap_or_default();
 
-    let mut arguments = Vec::new();
-    for argument in cli.arguments.unwrap_or_default() {
-        arguments.push(vm.string(argument.as_str()).await?);
+    match vm.invoke_main(arguments).await {
+        Ok(_) => Ok(()),
+        Err(error) => process_error(error),
     }
-
-    if let Err(error) = vm.invoke(&main_class, &main_method, arguments).await {
-        process_error(error)?;
-        exit(1);
-    }
-    Ok(())
 }
 
 fn process_error(error: Error) -> Result<()> {
-    let Error::Throwable(throwable) = error else {
+    let Error::Throwable(ref throwable) = error else {
         eprintln!("{error}");
-        return Ok(());
+        return Err(error);
     };
 
-    let mut throwable = throwable;
+    let mut throwable = throwable.clone();
     let mut first_throwable = true;
 
     loop {
@@ -159,7 +151,7 @@ fn process_error(error: Error) -> Result<()> {
         let Value::Object(Some(Reference::Array(_class, stack_trace))) =
             throwable.value("backtrace")?
         else {
-            return Ok(());
+            return Err(error);
         };
         let stack_trace = stack_trace.to_vec()?;
         for stack_trace_element in stack_trace {
@@ -199,7 +191,7 @@ fn process_error(error: Error) -> Result<()> {
             throwable = cause;
         }
     }
-    Ok(())
+    Err(error)
 }
 
 #[cfg(test)]
