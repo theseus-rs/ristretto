@@ -51,12 +51,11 @@ pub(crate) fn sastore(stack: &OperandStack) -> Result<ExecutionResult> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ristretto_classloader::ConcurrentVec;
 
     #[test]
     fn test_saload() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::ShortArray(ConcurrentVec::from(vec![42]));
+        let array = Reference::from(vec![42i16]);
         stack.push_object(Some(array))?;
         stack.push_int(0)?;
         let result = saload(stack)?;
@@ -68,7 +67,7 @@ mod test {
     #[test]
     fn test_saload_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i32]);
         stack.push_object(Some(object))?;
         stack.push_int(2)?;
         let result = saload(stack);
@@ -85,7 +84,7 @@ mod test {
     #[test]
     fn test_saload_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::ShortArray(ConcurrentVec::from(vec![42]));
+        let array = Reference::from(vec![42i16]);
         stack.push_object(Some(array))?;
         stack.push_int(2)?;
         let result = saload(stack);
@@ -106,7 +105,7 @@ mod test {
     #[test]
     fn test_sastore() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::ShortArray(ConcurrentVec::from(vec![3]));
+        let array = Reference::from(vec![3i16]);
         stack.push_object(Some(array))?;
         stack.push_int(0)?;
         stack.push_int(42)?;
@@ -118,7 +117,7 @@ mod test {
     #[test]
     fn test_sastore_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i32]);
         stack.push_object(Some(object))?;
         stack.push_int(2)?;
         stack.push_int(42)?;
@@ -136,7 +135,7 @@ mod test {
     #[test]
     fn test_sastore_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::ShortArray(ConcurrentVec::from(vec![3]));
+        let array = Reference::from(vec![3i16]);
         stack.push_object(Some(array))?;
         stack.push_int(2)?;
         stack.push_int(42)?;

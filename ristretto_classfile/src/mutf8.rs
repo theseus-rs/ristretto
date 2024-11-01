@@ -10,7 +10,8 @@ use crate::Result;
 ///
 /// # Errors
 /// Should not occur; reserved for future use.
-pub fn to_bytes(data: &str) -> Result<Vec<u8>> {
+pub fn to_bytes<S: AsRef<str>>(data: S) -> Result<Vec<u8>> {
+    let data = data.as_ref();
     let mut encoded = Vec::with_capacity(data.len());
 
     for ch in data.chars() {
@@ -44,13 +45,13 @@ pub fn to_bytes(data: &str) -> Result<Vec<u8>> {
 /// # Errors
 /// Should not occur; reserved for future use.
 #[expect(clippy::similar_names)]
-pub fn from_bytes(bytes: &[u8]) -> Result<String> {
+pub fn from_bytes<V: AsRef<[u8]>>(bytes: V) -> Result<String> {
+    let bytes = bytes.as_ref();
     let mut decoded = String::with_capacity(bytes.len());
     let mut i = 0;
 
     while i < bytes.len() {
         let byte1 = bytes[i];
-
         if byte1 & 0x80 == 0 {
             decoded.push(byte1 as char);
             i += 1;
@@ -167,9 +168,9 @@ mod tests {
 
     #[test]
     fn test_from_bytes_invalid() {
-        assert!(from_bytes(&[0x59, 0xd9]).is_err());
-        assert!(from_bytes(&[0x56, 0xe7]).is_err());
-        assert!(from_bytes(&[0x56, 0xa8]).is_err());
-        assert!(from_bytes(&[0x7e, 0xff, 0xff, 0x2a]).is_err());
+        assert!(from_bytes([0x59, 0xd9]).is_err());
+        assert!(from_bytes([0x56, 0xe7]).is_err());
+        assert!(from_bytes([0x56, 0xa8]).is_err());
+        assert!(from_bytes([0x7e, 0xff, 0xff, 0x2a]).is_err());
     }
 }

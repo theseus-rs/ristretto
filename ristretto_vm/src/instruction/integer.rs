@@ -363,7 +363,6 @@ pub(crate) fn ireturn(stack: &OperandStack) -> Result<ExecutionResult> {
 mod tests {
     use super::*;
     use crate::Error::InvalidOperand;
-    use ristretto_classloader::ConcurrentVec;
 
     #[test]
     fn test_iconst_m1() -> Result<()> {
@@ -563,7 +562,7 @@ mod tests {
     #[test]
     fn test_iaload() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        let array = Reference::from(vec![42i32]);
         stack.push_object(Some(array))?;
         stack.push_int(0)?;
         let result = iaload(stack)?;
@@ -575,7 +574,7 @@ mod tests {
     #[test]
     fn test_iaload_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i8]);
         stack.push_object(Some(object))?;
         stack.push_int(2)?;
         let result = iaload(stack);
@@ -592,7 +591,7 @@ mod tests {
     #[test]
     fn test_iaload_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        let array = Reference::from(vec![42i32]);
         stack.push_object(Some(array))?;
         stack.push_int(2)?;
         let result = iaload(stack);
@@ -613,7 +612,7 @@ mod tests {
     #[test]
     fn test_iastore() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::IntArray(ConcurrentVec::from(vec![3]));
+        let array = Reference::from(vec![3i32]);
         stack.push_object(Some(array))?;
         stack.push_int(0)?;
         stack.push_int(42)?;
@@ -625,7 +624,7 @@ mod tests {
     #[test]
     fn test_iastore_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i8]);
         stack.push_object(Some(object))?;
         stack.push_int(2)?;
         stack.push_int(42)?;
@@ -643,7 +642,7 @@ mod tests {
     #[test]
     fn test_iastore_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::IntArray(ConcurrentVec::from(vec![3]));
+        let array = Reference::from(vec![3i32]);
         stack.push_object(Some(array))?;
         stack.push_int(2)?;
         stack.push_int(42)?;

@@ -2,10 +2,10 @@ use crate::arguments::Arguments;
 use crate::native_methods::{
     java_io_filedescriptor, java_io_fileinputstream, java_io_fileoutputstream,
     java_io_unixfilesystem, java_io_winntfilesystem, java_lang_class, java_lang_classloader,
-    java_lang_double, java_lang_float, java_lang_object, java_lang_ref_reference,
-    java_lang_runtime, java_lang_shutdown, java_lang_stacktraceelement, java_lang_system,
-    java_lang_thread, java_lang_throwable, jdk_internal_loader_bootloader,
-    jdk_internal_loader_nativelibraries, jdk_internal_misc_cds,
+    java_lang_double, java_lang_float, java_lang_object, java_lang_processenvironment,
+    java_lang_processimpl, java_lang_ref_reference, java_lang_runtime, java_lang_shutdown,
+    java_lang_stacktraceelement, java_lang_system, java_lang_thread, java_lang_throwable,
+    jdk_internal_loader_bootloader, jdk_internal_loader_nativelibraries, jdk_internal_misc_cds,
     jdk_internal_misc_scopedmemoryaccess, jdk_internal_misc_signal, jdk_internal_misc_unsafe,
     jdk_internal_misc_vm, jdk_internal_reflect_reflection, jdk_internal_util_systemprops_raw,
     sun_io_win32errormode, sun_nio_fs_unixnativedispatcher,
@@ -90,6 +90,8 @@ impl Default for MethodRegistry {
         java_lang_double::register(&mut registry);
         java_lang_float::register(&mut registry);
         java_lang_object::register(&mut registry);
+        java_lang_processenvironment::register(&mut registry);
+        java_lang_processimpl::register(&mut registry);
         java_lang_runtime::register(&mut registry);
         java_lang_system::register(&mut registry);
         java_lang_shutdown::register(&mut registry);

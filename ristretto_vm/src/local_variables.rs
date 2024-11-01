@@ -202,7 +202,7 @@ impl Display for LocalVariables {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ristretto_classloader::{ConcurrentVec, Reference};
+    use ristretto_classloader::Reference;
 
     #[test]
     fn test_get() -> Result<()> {
@@ -339,7 +339,7 @@ mod tests {
     #[test]
     fn test_get_object() -> Result<()> {
         let locals = LocalVariables::with_max_size(2);
-        let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i8]);
         locals.set_object(0, None)?;
         locals.set_object(1, Some(object.clone()))?;
         assert_eq!(locals.get_object(0)?, None);
@@ -458,7 +458,7 @@ mod tests {
     #[test]
     fn test_set_object() -> Result<()> {
         let locals = LocalVariables::with_max_size(2);
-        let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i8]);
         locals.set_object(0, None)?;
         locals.set_object(1, Some(object.clone()))?;
         assert_eq!(locals.get_object(0)?, None);
