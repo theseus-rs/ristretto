@@ -391,7 +391,7 @@ mod tests {
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
         object.set_value("value", string_value)?;
-        let value = Value::Object(Some(Reference::Object(object)));
+        let value = Value::Object(Some(Reference::from(object)));
         assert_eq!("string(foo)", value.to_string());
         assert_eq!("foo".to_string(), value.as_string()?);
         Ok(())

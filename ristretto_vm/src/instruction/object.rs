@@ -191,7 +191,7 @@ pub(crate) async fn new(frame: &Frame, index: u16) -> Result<ExecutionResult> {
     let class_name = constant_pool.try_get_class(index)?;
     let class = vm.load_class(&thread, class_name).await?;
     let object = Object::new(class)?;
-    let reference = Reference::Object(object);
+    let reference = Reference::from(object);
     let stack = frame.stack();
     stack.push_object(Some(reference))?;
     Ok(Continue)
@@ -623,7 +623,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let (_vm, _thread, object_class) = crate::test::load_class("java/lang/Object").await?;
         let object = Object::new(object_class)?;
-        stack.push_object(Some(Reference::Object(object)))?;
+        stack.push_object(Some(Reference::from(object)))?;
         let (class, class_index) = get_class_index("java/lang/String").await?;
         let result = checkcast(stack, &class, class_index);
         assert!(matches!(
@@ -662,7 +662,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let (_vm, _thread, object_class) = crate::test::load_class("java/lang/Object").await?;
         let object = Object::new(object_class)?;
-        stack.push_object(Some(Reference::Object(object)))?;
+        stack.push_object(Some(Reference::from(object)))?;
         let (class, class_index) = get_class_index("java/lang/String").await?;
         let result = instanceof(stack, &class, class_index)?;
         assert_eq!(Continue, result);

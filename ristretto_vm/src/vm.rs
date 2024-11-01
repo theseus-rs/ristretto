@@ -413,7 +413,7 @@ impl VM {
         // to support custom class loaders
         let class_loader_field = object.field("classLoader")?;
         class_loader_field.unsafe_set_value(Value::Object(None))?;
-        let reference = Reference::Object(object);
+        let reference = Reference::from(object);
         let value = Value::Object(Some(reference));
         Ok(value)
     }
@@ -456,7 +456,7 @@ impl VM {
         object.set_value("value", Value::Object(Some(array)))?;
         object.set_value("hash", Value::Int(0))?;
 
-        let reference = Reference::Object(object);
+        let reference = Reference::from(object);
         let value = Value::Object(Some(reference));
         Ok(value)
     }

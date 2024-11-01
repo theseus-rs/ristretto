@@ -48,7 +48,7 @@ pub(crate) fn process_throwable(frame: &Frame, throwable: Object) -> Result<usiz
         if matching_exception_handler {
             let stack = frame.stack();
             let handler_program_counter = usize::from(exception_table_entry.handler_pc);
-            stack.push_object(Some(Reference::Object(throwable)))?;
+            stack.push_object(Some(Reference::from(throwable)))?;
             return Ok(handler_program_counter);
         }
     }
