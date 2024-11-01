@@ -430,7 +430,7 @@ mod tests {
         let (vm, thread, frame) = crate::test::frame().await?;
         let stack = frame.stack();
         let class = vm.load_class(&thread, "java/lang/Object").await?;
-        let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
         stack.push_object(Some(array))?;
         stack.push_int(0)?;
@@ -443,7 +443,7 @@ mod tests {
     #[test]
     fn test_aaload_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i32]);
         stack.push_object(Some(object))?;
         stack.push_int(2)?;
         let result = aaload(stack);
@@ -462,7 +462,7 @@ mod tests {
         let (vm, thread, frame) = crate::test::frame().await?;
         let stack = frame.stack();
         let class = vm.load_class(&thread, "java/lang/Object").await?;
-        let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
         stack.push_object(Some(array))?;
         stack.push_int(2)?;
@@ -486,11 +486,11 @@ mod tests {
         let (vm, thread, frame) = crate::test::frame().await?;
         let stack = frame.stack();
         let class = vm.load_class(&thread, "java/lang/Object").await?;
-        let object = Reference::IntArray(ConcurrentVec::from(vec![3]));
+        let object = Reference::from(vec![3i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object)]));
         stack.push_object(Some(array))?;
         stack.push_int(0)?;
-        stack.push_object(Some(Reference::IntArray(ConcurrentVec::from(vec![3]))))?;
+        stack.push_object(Some(Reference::from(vec![3i32])))?;
         let result = aastore(stack)?;
         assert_eq!(Continue, result);
         Ok(())
@@ -499,7 +499,7 @@ mod tests {
     #[test]
     fn test_aastore_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Reference::IntArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i32]);
         stack.push_object(Some(object.clone()))?;
         stack.push_int(0)?;
         stack.push_object(Some(object))?;
@@ -519,7 +519,7 @@ mod tests {
         let (vm, thread, frame) = crate::test::frame().await?;
         let stack = frame.stack();
         let class = vm.load_class(&thread, "java/lang/Object").await?;
-        let object = Reference::IntArray(ConcurrentVec::from(vec![3]));
+        let object = Reference::from(vec![3i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
         stack.push_object(Some(array))?;
         stack.push_int(2)?;
@@ -532,7 +532,7 @@ mod tests {
     #[test]
     fn test_aastore_null_pointer() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Reference::IntArray(ConcurrentVec::from(vec![3]));
+        let object = Reference::from(vec![3i32]);
         stack.push_object(None)?;
         stack.push_int(0)?;
         stack.push_object(Some(object))?;
@@ -544,7 +544,7 @@ mod tests {
     #[test]
     fn test_areturn_object() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i8]);
         stack.push_object(Some(object))?;
         let result = areturn(stack)?;
         assert!(matches!(result, Return(Some(Value::Object(_)))));
@@ -699,7 +699,7 @@ mod tests {
     #[tokio::test]
     async fn test_instanceof_int_array_to_int_array() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let int_array = Reference::IntArray(ConcurrentVec::default());
+        let int_array = Reference::from(vec![0i32; 0]);
         stack.push_object(Some(int_array))?;
         let (class, class_index) = get_class_index("[I").await?;
         let result = instanceof(stack, &class, class_index)?;

@@ -13,15 +13,13 @@ pub(crate) fn newarray(stack: &OperandStack, array_type: &ArrayType) -> Result<E
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
     let array = match array_type {
-        ArrayType::Char => Reference::CharArray(ConcurrentVec::from(vec![0; count])),
-        ArrayType::Float => Reference::FloatArray(ConcurrentVec::from(vec![0.0; count])),
-        ArrayType::Double => Reference::DoubleArray(ConcurrentVec::from(vec![0.0; count])),
-        ArrayType::Boolean | ArrayType::Byte => {
-            Reference::ByteArray(ConcurrentVec::from(vec![0; count]))
-        }
-        ArrayType::Short => Reference::ShortArray(ConcurrentVec::from(vec![0; count])),
-        ArrayType::Int => Reference::IntArray(ConcurrentVec::from(vec![0; count])),
-        ArrayType::Long => Reference::LongArray(ConcurrentVec::from(vec![0; count])),
+        ArrayType::Char => Reference::from(vec![0 as char; count]),
+        ArrayType::Float => Reference::from(vec![0.0f32; count]),
+        ArrayType::Double => Reference::from(vec![0.0f64; count]),
+        ArrayType::Boolean | ArrayType::Byte => Reference::from(vec![0i8; count]),
+        ArrayType::Short => Reference::from(vec![0i16; count]),
+        ArrayType::Int => Reference::from(vec![0i32; count]),
+        ArrayType::Long => Reference::from(vec![0i64; count]),
     };
     stack.push_object(Some(array))?;
     Ok(Continue)
@@ -88,15 +86,13 @@ pub(crate) async fn multianewarray(
     let mut array = if type_class_name.len() == 1 {
         let base_type = BaseType::parse(type_class_name.chars().next().unwrap_or_default())?;
         let array = match base_type {
-            BaseType::Char => Reference::CharArray(ConcurrentVec::from(vec![0; count])),
-            BaseType::Float => Reference::FloatArray(ConcurrentVec::from(vec![0.0; count])),
-            BaseType::Double => Reference::DoubleArray(ConcurrentVec::from(vec![0.0; count])),
-            BaseType::Boolean | BaseType::Byte => {
-                Reference::ByteArray(ConcurrentVec::from(vec![0; count]))
-            }
-            BaseType::Short => Reference::ShortArray(ConcurrentVec::from(vec![0; count])),
-            BaseType::Int => Reference::IntArray(ConcurrentVec::from(vec![0; count])),
-            BaseType::Long => Reference::LongArray(ConcurrentVec::from(vec![0; count])),
+            BaseType::Char => Reference::from(vec![0 as char; count]),
+            BaseType::Float => Reference::from(vec![0.0f32; count]),
+            BaseType::Double => Reference::from(vec![0.0f64; count]),
+            BaseType::Boolean | BaseType::Byte => Reference::from(vec![0i8; count]),
+            BaseType::Short => Reference::from(vec![0i16; count]),
+            BaseType::Int => Reference::from(vec![0i32; count]),
+            BaseType::Long => Reference::from(vec![0i64; count]),
         };
         type_class_name = array.class_name();
         array

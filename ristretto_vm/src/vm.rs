@@ -4,7 +4,6 @@ use crate::{Configuration, ConfigurationBuilder, Result};
 use ristretto_classfile::{mutf8, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::Error::ParseError;
-use ristretto_classloader::Reference::{ByteArray, CharArray};
 use ristretto_classloader::{
     runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Object,
     Reference, Value,
@@ -445,17 +444,13 @@ impl VM {
             let bytes = mutf8::to_bytes(value)?;
             let utf8_string =
                 String::from_utf8(bytes).map_err(|error| ParseError(error.to_string()))?;
-            let ucs2_chars: Vec<u16> = utf8_string.encode_utf16().collect();
-            let chars = ConcurrentVec::from(ucs2_chars);
-            CharArray(chars)
+            let chars: Vec<char> = utf8_string.chars().collect();
+            Reference::from(chars)
         } else {
             object.set_value("coder", Value::Int(0))?; // LATIN1
 
             let bytes = mutf8::to_bytes(value)?;
-            #[expect(clippy::cast_possible_wrap)]
-            let bytes = bytes.iter().map(|&b| b as i8).collect();
-            let bytes = ConcurrentVec::from(bytes);
-            ByteArray(bytes)
+            Reference::from(bytes)
         };
 
         object.set_value("value", Value::Object(Some(array)))?;
