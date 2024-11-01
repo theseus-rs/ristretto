@@ -24,7 +24,7 @@ repository = "https://github.com/theseus-rs/ristretto"
 version = "0.10.1"
 
 [workspace.dependencies]
-anyhow = "1.0.91"
+anyhow = "1.0.92"
 async-recursion = "1.1.1"
 bitflags = "2.6.0"
 byteorder = "1.5.0"
