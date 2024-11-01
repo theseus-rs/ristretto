@@ -1,5 +1,6 @@
 use crate::arguments::Arguments;
 use crate::native_methods::{
+    java_awt_component, java_awt_container, java_awt_frame, java_awt_toolkit, java_awt_window,
     java_io_filedescriptor, java_io_fileinputstream, java_io_fileoutputstream,
     java_io_unixfilesystem, java_io_winntfilesystem, java_lang_class, java_lang_classloader,
     java_lang_double, java_lang_float, java_lang_object, java_lang_processenvironment,
@@ -78,8 +79,13 @@ impl MethodRegistry {
 
 impl Default for MethodRegistry {
     fn default() -> Self {
-        debug!("configuring default method registry");
+        debug!("configuring default native method registry");
         let mut registry = MethodRegistry::new();
+        java_awt_component::register(&mut registry);
+        java_awt_container::register(&mut registry);
+        java_awt_frame::register(&mut registry);
+        java_awt_toolkit::register(&mut registry);
+        java_awt_window::register(&mut registry);
         java_io_filedescriptor::register(&mut registry);
         java_io_fileinputstream::register(&mut registry);
         java_io_fileoutputstream::register(&mut registry);

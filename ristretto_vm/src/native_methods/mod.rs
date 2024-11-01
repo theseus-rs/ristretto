@@ -1,3 +1,8 @@
+mod java_awt_component;
+mod java_awt_container;
+mod java_awt_frame;
+mod java_awt_toolkit;
+mod java_awt_window;
 mod java_io_filedescriptor;
 mod java_io_fileinputstream;
 mod java_io_fileoutputstream;

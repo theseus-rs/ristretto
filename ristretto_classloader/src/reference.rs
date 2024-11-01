@@ -209,6 +209,12 @@ impl From<Vec<f64>> for Reference {
     }
 }
 
+impl From<Object> for Reference {
+    fn from(value: Object) -> Self {
+        Reference::Object(value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -310,7 +316,7 @@ mod tests {
     async fn test_display_reference() -> Result<()> {
         let class = minimum_class()?;
         let object = Object::new(class)?;
-        let reference = Reference::Object(object);
+        let reference = Reference::from(object);
         assert_eq!(reference.class_name(), "Minimum");
         assert_eq!(reference.class()?.name(), "Minimum");
         assert!(reference.to_string().starts_with("class Minimum"));
@@ -447,8 +453,8 @@ mod tests {
     #[test]
     fn test_object_eq() -> Result<()> {
         let minimum_class = minimum_class()?;
-        let ref1 = Reference::Object(Object::new(minimum_class.clone())?);
-        let ref2 = Reference::Object(Object::new(minimum_class)?);
+        let ref1 = Reference::from(Object::new(minimum_class.clone())?);
+        let ref2 = Reference::from(Object::new(minimum_class)?);
         assert_eq!(ref1, ref2);
         Ok(())
     }
@@ -456,9 +462,9 @@ mod tests {
     #[test]
     fn test_object_ne() -> Result<()> {
         let minimum_class = minimum_class()?;
-        let ref1 = Reference::Object(Object::new(minimum_class)?);
+        let ref1 = Reference::from(Object::new(minimum_class)?);
         let simple_class = simple_class()?;
-        let ref2 = Reference::Object(Object::new(simple_class)?);
+        let ref2 = Reference::from(Object::new(simple_class)?);
         assert_ne!(ref1, ref2);
         Ok(())
     }
@@ -552,5 +558,14 @@ mod tests {
     fn test_from_f64() {
         let reference = Reference::from(vec![0.0f64]);
         assert!(matches!(reference, Reference::DoubleArray(_)));
+    }
+
+    #[test]
+    fn test_from_object() -> Result<()> {
+        let class = minimum_class()?;
+        let object = Object::new(class)?;
+        let reference = Reference::from(object);
+        assert!(matches!(reference, Reference::Object(_)));
+        Ok(())
     }
 }

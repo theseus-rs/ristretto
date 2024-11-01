@@ -75,7 +75,7 @@ async fn current_thread(thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
     let vm = thread.vm()?;
     let thread_class = vm.load_class(&thread, "java/lang/Thread").await?;
     let object = Object::new(thread_class)?;
-    let reference = Reference::Object(object);
+    let reference = Reference::from(object);
     let thread = Value::Object(Some(reference));
     Ok(Some(thread))
 }
