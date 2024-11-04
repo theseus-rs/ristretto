@@ -93,7 +93,7 @@ impl Thread {
             let Some(thread) = self.thread.upgrade() else {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
-            let result = Box::pin(rust_method(thread, arguments)).await;
+            let result = rust_method(thread, arguments).await;
             (result, false)
         } else if method.is_native() {
             return Err(MethodNotFound {
@@ -112,7 +112,7 @@ impl Thread {
                 let mut frames = self.frames.write().await;
                 frames.push(frame.clone());
             }
-            let result = Box::pin(frame.execute()).await;
+            let result = frame.execute().await;
             (result, true)
         };
 
