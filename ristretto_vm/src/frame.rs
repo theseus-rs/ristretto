@@ -23,6 +23,7 @@ use crate::instruction::{
 };
 use crate::Error::{InternalError, InvalidOperand, InvalidProgramCounter};
 use crate::{LocalVariables, OperandStack, Result, Thread};
+use async_recursion::async_recursion;
 use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::{Class, Method, Value};
@@ -124,6 +125,7 @@ impl Frame {
     /// # Errors
     /// * if the program counter is invalid
     /// * if an invalid instruction is encountered
+    #[async_recursion(?Send)]
     pub async fn execute(&self) -> Result<Option<Value>> {
         let code = self.method.code();
 
