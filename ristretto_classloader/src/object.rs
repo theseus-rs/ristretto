@@ -54,8 +54,8 @@ impl Object {
     ///
     /// # Errors
     /// if the parent class cannot be read.
-    pub fn instanceof<S: AsRef<str>>(&self, class_name: S) -> Result<bool> {
-        self.class.is_assignable_from(class_name)
+    pub fn instance_of(&self, class: &Arc<Class>) -> Result<bool> {
+        class.is_assignable_from(&self.class)
     }
 
     /// Get field by name.
@@ -173,11 +173,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_instanceof() -> Result<()> {
+    async fn test_instance_of() -> Result<()> {
         let class_name = "java/lang/Object";
         let class = load_class(class_name).await?;
-        let object = Object::new(class)?;
-        assert!(object.instanceof(class_name)?);
+        let object = Object::new(class.clone())?;
+        assert!(object.instance_of(&class)?);
         Ok(())
     }
 

@@ -396,21 +396,42 @@ impl Class {
     ///
     /// # Errors
     /// if classes or interfaces cannot be accessed.
-    pub fn is_assignable_from<S: AsRef<str>>(&self, class_name: S) -> Result<bool> {
-        let class_name = class_name.as_ref();
-        if self.name() == class_name {
+    pub fn is_assignable_from(&self, class: &Arc<Class>) -> Result<bool> {
+        if self.name == class.name() || self.name == "java/lang/Object" {
             return Ok(true);
         }
-        if let Some(parent) = self.parent()? {
-            if parent.is_assignable_from(class_name)? {
+
+        if self.is_array() {
+            if !class.is_array() {
+                return Ok(false);
+            }
+            if self.is_primitive() || class.is_primitive() {
+                return Ok(false);
+            }
+            if self.array_dimensions() > class.array_dimensions() {
+                return Ok(false);
+            }
+            let component_name = self.component_type();
+            if component_name == Some("java/lang/Object")
+                || component_name == class.component_type()
+            {
+                return Ok(true);
+            }
+            return Ok(false);
+        }
+
+        if let Some(parent) = class.parent()? {
+            if self.is_assignable_from(&parent)? {
                 return Ok(true);
             }
         }
-        for interface in self.interfaces()? {
-            if interface.is_assignable_from(class_name)? {
+
+        for interface in class.interfaces()? {
+            if self.is_assignable_from(&interface)? {
                 return Ok(true);
             }
         }
+
         Ok(false)
     }
 }
@@ -796,34 +817,128 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_string_is_assignable_from_object() -> Result<()> {
-        let string_class = string_class().await?;
+    async fn test_object_is_assignable_from_object() -> Result<()> {
         let object_class = object_class().await?;
-        assert!(string_class.is_assignable_from(&object_class.name)?);
+        assert!(object_class.is_assignable_from(&object_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_object_is_assignable_from_string() -> Result<()> {
-        let object_class = object_class().await?;
         let string_class = string_class().await?;
-        assert!(!object_class.is_assignable_from(&string_class.name)?);
+        let object_class = object_class().await?;
+        assert!(object_class.is_assignable_from(&string_class)?);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_string_is_assignable_from_serializable() -> Result<()> {
+    async fn test_string_not_is_assignable_from_string() -> Result<()> {
         let string_class = string_class().await?;
-        let serializable_class = serializable_class().await?;
-        assert!(string_class.is_assignable_from(&serializable_class.name)?);
+        let object_class = object_class().await?;
+        assert!(!string_class.is_assignable_from(&object_class)?);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_object_instanceof_serializable_class() -> Result<()> {
+    async fn test_string_not_is_assignable_from_serializable() -> Result<()> {
+        let string_class = string_class().await?;
+        let serializable_class = serializable_class().await?;
+        assert!(!string_class.is_assignable_from(&serializable_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_is_assignable_from_serializable_class() -> Result<()> {
         let object_class = object_class().await?;
         let serializable_class = serializable_class().await?;
-        assert!(!object_class.is_assignable_from(&serializable_class.name)?);
+        assert!(object_class.is_assignable_from(&serializable_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_array_not_is_assignable_from_object() -> Result<()> {
+        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let object_class = object_class().await?;
+        assert!(!object_array_class.is_assignable_from(&object_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_is_assignable_from_int_array() -> Result<()> {
+        let object_class = object_class().await?;
+        let int_array_class = Arc::new(Class::new_array("[I")?);
+        assert!(object_class.is_assignable_from(&int_array_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_int_array_is_assignable_from_int_array() -> Result<()> {
+        let int_array_class = Arc::new(Class::new_array("[I")?);
+        assert!(int_array_class.is_assignable_from(&int_array_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_is_assignable_from_object_array() -> Result<()> {
+        let object_class = object_class().await?;
+        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        assert!(object_class.is_assignable_from(&object_array_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_array_is_assignable_from_object_array() -> Result<()> {
+        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        assert!(object_array_class.is_assignable_from(&object_array_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_array_not_is_assignable_from_int_array() -> Result<()> {
+        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let int_array_class = Arc::new(Class::new_array("[I")?);
+        assert!(!object_array_class.is_assignable_from(&int_array_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_int_array_not_is_assignable_from_object_array() -> Result<()> {
+        let int_array_class = Arc::new(Class::new_array("[I")?);
+        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        assert!(!int_array_class.is_assignable_from(&object_array_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_array_is_assignable_from_string_array() -> Result<()> {
+        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let string_array_class = Arc::new(Class::new_array("[Ljava/lang/String;")?);
+        assert!(object_array_class.is_assignable_from(&string_array_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_string_array_not_is_assignable_from_object_array() -> Result<()> {
+        let string_array_class = Arc::new(Class::new_array("[Ljava/lang/String;")?);
+        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        assert!(!string_array_class.is_assignable_from(&object_array_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_array_is_assignable_from_multiple_dimension_object_array() -> Result<()> {
+        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let two_dimension_object_array_class = Arc::new(Class::new_array("[[Ljava/lang/Object;")?);
+        assert!(object_array_class.is_assignable_from(&two_dimension_object_array_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_multiple_dimension_object_array_not_is_assignable_from_object_array() -> Result<()>
+    {
+        let two_dimension_object_array_class = Arc::new(Class::new_array("[[Ljava/lang/Object;")?);
+        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        assert!(!two_dimension_object_array_class.is_assignable_from(&object_array_class)?);
         Ok(())
     }
 

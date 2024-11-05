@@ -127,7 +127,7 @@ async fn is_assignable_from(
         return Err(InternalError("isAssignableFrom: no instance".to_string()));
     };
     let class = object.class();
-    if class.is_assignable_from(class_argument.name())? {
+    if class.is_assignable_from(class_argument)? {
         Ok(Some(Value::Int(1)))
     } else {
         Ok(Some(Value::Int(0)))
