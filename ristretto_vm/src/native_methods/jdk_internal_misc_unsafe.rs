@@ -12,6 +12,7 @@ use std::sync::Arc;
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/misc/Unsafe";
     registry.register(class_name, "<init>", "()V", init);
+    registry.register(class_name, "addressSize0", "()I", address_size_0);
     registry.register(
         class_name,
         "arrayBaseOffset0",
@@ -49,6 +50,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         ensure_class_initialized_0,
     );
     registry.register(class_name, "fullFence", "()V", full_fence);
+    registry.register(class_name, "isBigEndian0", "()Z", is_big_endian_0);
+    registry.register(class_name, "unalignedAccess0", "()Z", unaligned_access_0);
     registry.register(
         class_name,
         "getReference",
@@ -195,6 +198,12 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn address_size_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    Ok(Some(Value::Int(8))) // 64-bit pointers
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn array_base_offset_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
 }
@@ -313,6 +322,22 @@ async fn ensure_class_initialized_0(
 #[async_recursion(?Send)]
 async fn full_fence(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn is_big_endian_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    if cfg!(target_endian = "big") {
+        Ok(Some(Value::Int(1)))
+    } else {
+        Ok(Some(Value::Int(0)))
+    }
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn unaligned_access_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    Ok(Some(Value::Int(0)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
