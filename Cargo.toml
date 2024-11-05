@@ -45,7 +45,7 @@ sysinfo = "0.32.0"
 sys-locale = "0.3.1"
 tar = "0.4.43"
 tempfile = "3.13.0"
-thiserror = "1.0.67"
+thiserror = "1.0.68"
 tokio = { version = "1.41.0", default-features = false, features = ["macros", "rt", "sync"] }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
