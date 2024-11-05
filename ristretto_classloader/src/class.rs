@@ -352,6 +352,12 @@ impl Class {
         self.method("<init>", descriptor)
     }
 
+    /// Get all methods.
+    #[must_use]
+    pub fn methods(&self) -> Vec<Arc<Method>> {
+        self.methods.values().cloned().collect()
+    }
+
     /// Get the main method.
     #[must_use]
     pub fn main_method(&self) -> Option<Arc<Method>> {
