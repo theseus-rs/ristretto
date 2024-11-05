@@ -20,7 +20,9 @@ pub(crate) async fn athrow(frame: &Frame) -> Result<ExecutionResult> {
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.3>
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.athrow>
-pub(crate) fn process_throwable(frame: &Frame, throwable: Object) -> Result<usize> {
+pub(crate) async fn process_throwable(frame: &Frame, throwable: Object) -> Result<usize> {
+    let thread = frame.thread()?;
+    let vm = thread.vm()?;
     let throwable_class = throwable.class();
     let class = frame.class();
     let constant_pool = class.constant_pool();
@@ -42,7 +44,8 @@ pub(crate) fn process_throwable(frame: &Frame, throwable: Object) -> Result<usiz
         } else {
             let exception_class_name =
                 constant_pool.try_get_class(exception_table_entry.catch_type)?;
-            throwable_class.is_assignable_from(exception_class_name)?
+            let exception_class = vm.class(exception_class_name).await?;
+            throwable_class.is_assignable_from(&exception_class)?
         };
 
         if matching_exception_handler {

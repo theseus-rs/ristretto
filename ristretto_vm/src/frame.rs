@@ -153,7 +153,7 @@ impl Frame {
                 Err(error) => {
                     let vm = self.thread()?.vm()?;
                     let throwable = convert_error_to_throwable(vm, error).await?;
-                    let handler_program_counter = process_throwable(self, throwable)?;
+                    let handler_program_counter = process_throwable(self, throwable).await?;
                     self.program_counter
                         .store(handler_program_counter, Ordering::Relaxed);
                 }
@@ -162,7 +162,6 @@ impl Frame {
     }
 
     /// Debug the execution of an instruction in this frame
-    #[inline]
     fn debug_execute(&self, instruction: &Instruction) -> Result<()> {
         let program_counter = self.program_counter();
         let class_name = self.class.name();
@@ -394,12 +393,8 @@ impl Frame {
             Instruction::Anewarray(index) => anewarray(self, *index).await,
             Instruction::Arraylength => arraylength(&self.stack),
             Instruction::Athrow => athrow(self).await,
-            Instruction::Checkcast(class_index) => {
-                checkcast(&self.stack, &self.class, *class_index)
-            }
-            Instruction::Instanceof(class_index) => {
-                instanceof(&self.stack, &self.class, *class_index)
-            }
+            Instruction::Checkcast(class_index) => checkcast(self, *class_index).await,
+            Instruction::Instanceof(class_index) => instanceof(self, *class_index).await,
             Instruction::Monitorenter | Instruction::Monitorexit => {
                 // The monitorenter and monitorexit instructions are not currently used by this
                 // implementation.
