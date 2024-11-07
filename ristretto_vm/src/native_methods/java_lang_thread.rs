@@ -127,7 +127,7 @@ async fn set_native_name(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
     let Some(Reference::Object(name)) = arguments.pop_object()? else {
         return Err(NullPointer("name cannot be null".to_string()));
     };
-    let name = name.as_string()?;
+    let name: String = name.try_into()?;
     thread.set_name(name).await;
     Ok(None)
 }

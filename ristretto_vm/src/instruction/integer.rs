@@ -865,7 +865,7 @@ mod tests {
             Err(InvalidOperand {
                 expected,
                 actual
-            }) if expected == "int" && actual == "object(null)"
+            }) if expected == "int" && actual == "Object(null)"
         ));
         Ok(())
     }

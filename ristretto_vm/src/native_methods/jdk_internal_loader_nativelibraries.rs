@@ -30,7 +30,7 @@ async fn find_builtin_lib(thread: Arc<Thread>, mut arguments: Arguments) -> Resu
         return Err(InternalError("argument must be an object".to_string()));
     };
     let vm = thread.vm()?;
-    let library_file_name = object.as_string()?;
+    let library_file_name: String = object.try_into()?;
     let library_path = vm
         .java_home()
         .join("lib")

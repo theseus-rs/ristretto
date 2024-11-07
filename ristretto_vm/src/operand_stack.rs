@@ -203,7 +203,7 @@ mod tests {
             Err(InvalidOperand {
                 expected,
                 actual
-            }) if expected == "int" && actual == "object(null)"
+            }) if expected == "int" && actual == "Object(null)"
         ));
         Ok(())
     }
@@ -248,7 +248,7 @@ mod tests {
             Err(InvalidOperand {
                 expected,
                 actual
-            }) if expected == "float" && actual == "object(null)"
+            }) if expected == "float" && actual == "Object(null)"
         ));
         Ok(())
     }

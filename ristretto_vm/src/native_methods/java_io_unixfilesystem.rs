@@ -49,7 +49,7 @@ async fn get_boolean_attributes_0(
             "getBooleanAttributes0: expected file argument".to_string(),
         ));
     };
-    let path = file.value("path")?.as_string()?;
+    let path: String = file.value("path")?.try_into()?;
     let path = PathBuf::from(path);
     let mut attributes = if path.exists() {
         BooleanAttributeFlags::EXISTS

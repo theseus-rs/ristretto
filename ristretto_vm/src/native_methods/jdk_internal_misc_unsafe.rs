@@ -232,7 +232,7 @@ async fn compare_and_set_int(
     let offset = usize::try_from(offset)?;
     let field_name = class.field_name(offset)?;
     let field = object.field(&field_name)?;
-    let value = field.value()?.as_int()?;
+    let value = field.value()?.to_int()?;
     // TODO: the compare and set operation should be atomic
     let result = if value == expected {
         field.set_value(Value::Int(x))?;
@@ -261,7 +261,7 @@ async fn compare_and_set_long(
     let offset = usize::try_from(offset)?;
     let field_name = class.field_name(offset)?;
     let field = object.field(&field_name)?;
-    let value = field.value()?.as_long()?;
+    let value = field.value()?.to_long()?;
     // TODO: the compare and set operation should be atomic
     let result = if value == expected {
         field.set_value(Value::Long(x))?;
@@ -387,8 +387,8 @@ async fn object_field_offset_1(
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let value = arguments.pop()?;
-    let field_name = match value {
-        Value::Object(_) => value.as_string()?,
+    let field_name: String = match value {
+        Value::Object(_) => value.try_into()?,
         value => {
             return Err(InvalidOperand {
                 expected: "object".to_string(),
@@ -401,7 +401,7 @@ async fn object_field_offset_1(
             "objectFieldOffset1: Invalid class reference".to_string(),
         ));
     };
-    let class_name = class_object.value("name")?.as_string()?;
+    let class_name: String = class_object.value("name")?.try_into()?;
     let vm = thread.vm()?;
     let class = vm.load_class(&thread, &class_name).await?;
     let offset = class.field_offset(&field_name)?;

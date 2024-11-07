@@ -768,7 +768,7 @@ mod tests {
             Err(InvalidOperand {
                 expected,
                 actual
-            }) if expected == "double" && actual == "object(null)"
+            }) if expected == "double" && actual == "Object(null)"
         ));
         Ok(())
     }

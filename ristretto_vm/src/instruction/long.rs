@@ -801,7 +801,7 @@ mod tests {
             Err(InvalidOperand {
                 expected,
                 actual
-            }) if expected == "long" && actual == "object(null)"
+            }) if expected == "long" && actual == "Object(null)"
         ));
         Ok(())
     }
