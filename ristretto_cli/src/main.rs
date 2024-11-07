@@ -138,9 +138,9 @@ fn process_error(error: Error) -> Result<()> {
     loop {
         let class = throwable.class();
         let class_name = class.name();
-        let message = throwable
+        let message: String = throwable
             .value("detailMessage")
-            .and_then(|value| value.as_string())?;
+            .and_then(|value| value.try_into())?;
         let prelude = if first_throwable {
             first_throwable = false;
             "Exception"
@@ -158,15 +158,15 @@ fn process_error(error: Error) -> Result<()> {
             let Some(Reference::Object(stack_trace_element)) = stack_trace_element else {
                 continue;
             };
-            let class = stack_trace_element.value("declaringClass")?.as_string()?;
-            let method = stack_trace_element.value("methodName")?.as_string()?;
+            let class: String = stack_trace_element.value("declaringClass")?.try_into()?;
+            let method: String = stack_trace_element.value("methodName")?.try_into()?;
 
             let mut source = String::new();
             let file = stack_trace_element.value("fileName")?;
             if let Value::Object(Some(ref _file_object)) = file {
-                source = file.as_string()?;
+                source = file.try_into()?;
             };
-            let line = stack_trace_element.value("lineNumber")?.as_int()?;
+            let line = stack_trace_element.value("lineNumber")?.to_int()?;
             if line > 0 {
                 if source.is_empty() {
                     source = format!("{line}");

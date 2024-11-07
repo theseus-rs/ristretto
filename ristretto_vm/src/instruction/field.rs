@@ -151,7 +151,7 @@ mod test {
         assert!(matches!(result, Err(InvalidStackValue {
             expected,
             actual
-        }) if expected == "object" && actual == "object(null)"));
+        }) if expected == "object" && actual == "Object(null)"));
 
         Ok(())
     }
@@ -188,7 +188,7 @@ mod test {
         assert!(matches!(result, Err(InvalidStackValue {
             expected,
             actual
-        }) if expected == "object" && actual == "object(null)"));
+        }) if expected == "object" && actual == "Object(null)"));
 
         Ok(())
     }

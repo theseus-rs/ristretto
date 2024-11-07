@@ -428,7 +428,7 @@ mod tests {
             Err(InvalidStackValue {
                 expected,
                 actual
-            }) if expected == "array" && actual == "string(foo)"
+            }) if expected == "array" && actual == "String(\"foo\")"
         ));
         Ok(())
     }

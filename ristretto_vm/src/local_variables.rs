@@ -36,7 +36,7 @@ impl LocalVariables {
     /// if the local variable at the given index was not found or if the value is not an int.
     pub fn get_int(&self, index: usize) -> Result<i32> {
         let value = self.get(index)?;
-        match value.as_int() {
+        match value.to_int() {
             Ok(value) => Ok(value),
             Err(_error) => Err(InvalidLocalVariable {
                 expected: "int".to_string(),
@@ -51,7 +51,7 @@ impl LocalVariables {
     /// if the local variable at the given index was not found or if the value is not a long.
     pub fn get_long(&self, index: usize) -> Result<i64> {
         let value = self.get(index)?;
-        match value.as_long() {
+        match value.to_long() {
             Ok(value) => Ok(value),
             Err(_error) => Err(InvalidLocalVariable {
                 expected: "long".to_string(),
@@ -66,7 +66,7 @@ impl LocalVariables {
     /// if the local variable at the given index was not found or if the value is not a float.
     pub fn get_float(&self, index: usize) -> Result<f32> {
         let value = self.get(index)?;
-        match value.as_float() {
+        match value.to_float() {
             Ok(value) => Ok(value),
             Err(_error) => Err(InvalidLocalVariable {
                 expected: "float".to_string(),
@@ -81,7 +81,7 @@ impl LocalVariables {
     /// if the local variable at the given index was not found or if the value is not a double.
     pub fn get_double(&self, index: usize) -> Result<f64> {
         let value = self.get(index)?;
-        match value.as_double() {
+        match value.to_double() {
             Ok(value) => Ok(value),
             Err(_error) => Err(InvalidLocalVariable {
                 expected: "double".to_string(),
@@ -97,8 +97,8 @@ impl LocalVariables {
     /// object.
     pub fn get_object(&self, index: usize) -> Result<Option<Reference>> {
         let value = self.get(index)?;
-        match value.as_object() {
-            Ok(value) => Ok(value.cloned()),
+        match value.to_object() {
+            Ok(value) => Ok(value.clone()),
             Err(_error) => Err(InvalidLocalVariable {
                 expected: "object".to_string(),
                 actual: value.to_string(),
@@ -208,7 +208,7 @@ mod tests {
     fn test_get() -> Result<()> {
         let locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Int(42))?;
-        assert_eq!(locals.get(0)?.as_int()?, 42);
+        assert_eq!(locals.get(0)?.to_int()?, 42);
         Ok(())
     }
 
@@ -372,7 +372,7 @@ mod tests {
     fn test_set() -> Result<()> {
         let locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Int(42))?;
-        assert_eq!(locals.get(0)?.as_int()?, 42);
+        assert_eq!(locals.get(0)?.to_int()?, 42);
         Ok(())
     }
 

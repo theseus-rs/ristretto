@@ -140,7 +140,7 @@ mod test {
         let process_result = load_constant(&frame, index).await?;
         assert_eq!(process_result, Continue);
         let object = frame.stack().pop_object()?.expect("object");
-        assert_eq!("string(foo)", format!("{object}"));
+        assert_eq!("String(\"foo\")", format!("{object}"));
         Ok(())
     }
 
@@ -153,7 +153,7 @@ mod test {
         let process_result = load_constant(&frame, index).await?;
         assert_eq!(process_result, Continue);
         let object = frame.stack().pop_object()?.expect("object");
-        assert_eq!("class java/lang/Class", format!("{object}"));
+        assert_eq!("Object(class java/lang/Class)", format!("{object}"));
         Ok(())
     }
 

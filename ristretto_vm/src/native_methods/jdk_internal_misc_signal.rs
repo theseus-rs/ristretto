@@ -32,8 +32,8 @@ async fn handle_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 #[async_recursion(?Send)]
 async fn find_signal_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let value = arguments.pop()?;
-    let signal_name = match value {
-        Value::Object(_) => value.as_string()?,
+    let signal_name: String = match value {
+        Value::Object(_) => value.try_into()?,
         value => {
             return Err(InvalidOperand {
                 expected: "object".to_string(),

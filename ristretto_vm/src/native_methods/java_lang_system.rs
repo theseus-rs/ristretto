@@ -230,7 +230,7 @@ async fn map_library_name(thread: Arc<Thread>, mut arguments: Arguments) -> Resu
     let Some(Reference::Object(object)) = arguments.pop_object()? else {
         return Err(InternalError("argument must be an object".to_string()));
     };
-    let library_name = object.as_string()?;
+    let library_name: String = object.try_into()?;
     let library_file_name = match OS {
         "macos" => format!("lib{library_name}.dylib"),
         "windows" => format!("{library_name}.dll"),

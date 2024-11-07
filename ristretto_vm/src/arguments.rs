@@ -179,7 +179,7 @@ mod tests {
             Err(InvalidOperand {
                 expected,
                 actual
-            }) if expected == "int" && actual == "object(null)"
+            }) if expected == "int" && actual == "Object(null)"
         ));
     }
 
@@ -200,7 +200,7 @@ mod tests {
             Err(InvalidOperand {
                 expected,
                 actual
-            }) if expected == "long" && actual == "object(null)"
+            }) if expected == "long" && actual == "Object(null)"
         ));
     }
 
@@ -222,7 +222,7 @@ mod tests {
             Err(InvalidOperand {
                 expected,
                 actual
-            }) if expected == "float" && actual == "object(null)"
+            }) if expected == "float" && actual == "Object(null)"
         ));
     }
 
@@ -244,7 +244,7 @@ mod tests {
             Err(InvalidOperand {
                 expected,
                 actual
-            }) if expected == "double" && actual == "object(null)"
+            }) if expected == "double" && actual == "Object(null)"
         ));
     }
 

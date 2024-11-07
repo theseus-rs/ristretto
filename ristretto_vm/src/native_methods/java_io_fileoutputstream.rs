@@ -25,7 +25,7 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn write_bytes(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let _append = arguments.pop_int()? == 1;
+    let _append = arguments.pop_int()? != 0;
     let length = usize::try_from(arguments.pop_int()?)?;
     let offset = usize::try_from(arguments.pop_int()?)?;
     let Some(Reference::ByteArray(bytes)) = arguments.pop_object()? else {

@@ -57,7 +57,7 @@ async fn get_primitive_class(
         return Err(InternalError("getPrimitiveClass: no arguments".to_string()));
     };
 
-    let primitive = primitive.as_string()?;
+    let primitive: String = primitive.try_into()?;
     let class_name = match primitive.as_str() {
         "boolean" => "java/lang/Boolean",
         "byte" => "java/lang/Byte",
@@ -140,7 +140,7 @@ async fn is_primitive(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<
     let Some(Reference::Object(object)) = arguments.pop_object()? else {
         return Err(InternalError("isPrimitive: no arguments".to_string()));
     };
-    let class_name = object.value("name")?.as_string()?;
+    let class_name: String = object.value("name")?.try_into()?;
     match class_name.as_str() {
         "java/lang/Boolean"
         | "java/lang/Byte"
