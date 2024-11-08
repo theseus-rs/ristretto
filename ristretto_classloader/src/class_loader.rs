@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 pub struct ClassLoader {
     name: String,
     class_path: ClassPath,
-    parent: Option<Arc<ClassLoader>>,
+    parent: Arc<Option<ClassLoader>>,
     classes: Arc<RwLock<HashMap<String, Arc<Class>>>>,
 }
 
@@ -22,7 +22,7 @@ impl ClassLoader {
         Self {
             name: name.as_ref().to_string(),
             class_path,
-            parent: None,
+            parent: Arc::new(None),
             classes: Arc::new(RwLock::new(HashMap::new())),
         }
     }
@@ -50,11 +50,7 @@ impl ClassLoader {
 
     /// Set the parent class loader.
     pub fn set_parent(&mut self, parent: Option<ClassLoader>) {
-        if let Some(parent) = parent {
-            self.parent = Some(Arc::new(parent));
-        } else {
-            self.parent = None;
-        }
+        self.parent = Arc::new(parent);
     }
 
     /// Load a class by name.
@@ -122,7 +118,7 @@ impl Clone for ClassLoader {
         Self {
             name: self.name.clone(),
             class_path: self.class_path.clone(),
-            parent: self.parent.as_ref().map(Clone::clone),
+            parent: Arc::clone(&self.parent),
             classes: Arc::clone(&self.classes),
         }
     }
