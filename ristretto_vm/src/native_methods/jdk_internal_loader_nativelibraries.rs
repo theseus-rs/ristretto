@@ -1,4 +1,5 @@
 use crate::arguments::Arguments;
+use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Error::InternalError;
@@ -38,7 +39,7 @@ async fn find_builtin_lib(thread: Arc<Thread>, mut arguments: Arguments) -> Resu
         .to_string_lossy()
         .to_string();
     let vm = thread.vm()?;
-    let library_name = vm.string(library_path).await?;
+    let library_name = library_path.to_object(&vm).await?;
     Ok(Some(library_name))
 }
 

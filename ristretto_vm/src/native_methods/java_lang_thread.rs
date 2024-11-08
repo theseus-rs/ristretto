@@ -1,4 +1,5 @@
 use crate::arguments::Arguments;
+use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Error::NullPointer;
@@ -81,7 +82,7 @@ async fn current_thread(thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
     let thread_group_class = vm.load_class(&thread, "java/lang/ThreadGroup").await?;
     let thread_group = Object::new(thread_group_class)?;
     thread_group.set_value("maxPriority", Value::Int(10))?;
-    thread_group.set_value("name", vm.string("main").await?)?;
+    thread_group.set_value("name", "main".to_object(&vm).await?)?;
     thread_group.set_value("parent", Value::Object(None))?;
     let reference = Reference::from(thread_group);
     let thread_group = Value::Object(Some(reference));

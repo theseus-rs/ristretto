@@ -1,4 +1,5 @@
 use crate::arguments::Arguments;
+use crate::java_object::JavaObject;
 use crate::native_methods::java_lang_object::object_hash_code;
 use crate::native_methods::properties;
 use crate::native_methods::registry::MethodRegistry;
@@ -237,7 +238,7 @@ async fn map_library_name(thread: Arc<Thread>, mut arguments: Arguments) -> Resu
         _ => format!("lib{library_name}.so"),
     };
     let vm = thread.vm()?;
-    let library_name = vm.string(library_file_name).await?;
+    let library_name = library_file_name.to_object(&vm).await?;
     Ok(Some(library_name))
 }
 

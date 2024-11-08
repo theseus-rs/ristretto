@@ -30,6 +30,7 @@ mod configuration;
 mod error;
 mod frame;
 mod instruction;
+mod java_object;
 mod local_variables;
 mod native_methods;
 mod operand_stack;

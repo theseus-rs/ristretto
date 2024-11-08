@@ -123,6 +123,7 @@ mod tests {
     use super::*;
     use crate::frame::ExecutionResult::Continue;
     use crate::frame::Frame;
+    use crate::java_object::JavaObject;
     use ristretto_classfile::attributes::ArrayType;
     use ristretto_classfile::MethodAccessFlags;
     use ristretto_classloader::{Method, Value};
@@ -418,8 +419,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_arraylength_invalid_type() -> Result<()> {
-        let (vm, thread, frame) = crate::test::frame().await?;
-        let invalid_value = vm.to_string_value(&thread, "foo").await?;
+        let (vm, _thread, frame) = crate::test::frame().await?;
+        let invalid_value = "foo".to_object(&vm).await?;
         let stack = frame.stack();
         stack.push(invalid_value)?;
         let result = arraylength(stack);

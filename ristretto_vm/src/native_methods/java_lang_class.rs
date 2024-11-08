@@ -1,4 +1,5 @@
 use crate::arguments::Arguments;
+use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Error::{InternalError, NullPointer};
@@ -76,7 +77,8 @@ async fn get_primitive_class(
     };
 
     let vm = thread.vm()?;
-    let class = vm.to_class_value(&thread, class_name).await?;
+    let class = vm.load_class(&thread, class_name).await?;
+    let class = class.to_object(&vm).await?;
     Ok(Some(class))
 }
 
@@ -90,7 +92,8 @@ async fn get_super_class(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
         Some(parent) => {
             let class_name = parent.name();
             let vm = thread.vm()?;
-            let class = vm.to_class_value(&thread, class_name).await?;
+            let class = vm.load_class(&thread, class_name).await?;
+            let class = class.to_object(&vm).await?;
             Ok(Some(class))
         }
         None => Ok(None),

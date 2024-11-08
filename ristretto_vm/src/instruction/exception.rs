@@ -1,4 +1,5 @@
 use crate::frame::{ExecutionResult, Frame};
+use crate::java_object::JavaObject;
 use crate::Error::{InternalError, Throwable};
 use crate::{Error, Result, VM};
 use ristretto_classloader::{Object, Reference};
@@ -70,7 +71,7 @@ pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Res
         error => {
             let class = vm.class("java/lang/InternalError").await?;
             let message = format!("{error}");
-            let error_message = vm.string(&message).await?;
+            let error_message = message.to_object(&vm).await?;
             let throwable = Object::new(class)?;
             throwable.set_value("detailMessage", error_message)?;
             throwable
@@ -89,7 +90,7 @@ mod test {
         let vm = VM::default().await?;
         let class = vm.class("java.lang.Integer").await?;
         let method = class.try_get_method("parseInt", "(Ljava/lang/String;)I")?;
-        let value = vm.string("foo").await?;
+        let value = "foo".to_object(&vm).await?;
         let result = vm.invoke(&class, &method, vec![value]).await;
         assert!(result.is_err());
         Ok(())

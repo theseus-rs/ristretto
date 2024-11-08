@@ -1,4 +1,5 @@
 use crate::arguments::Arguments;
+use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Error::InternalError;
@@ -40,17 +41,17 @@ async fn fill_in_stack_trace(
         if class_name == "java/lang/Throwable" {
             continue;
         }
-        let class_name = vm.to_string_value(&thread, class_name).await?;
+        let class_name = class_name.to_object(&vm).await?;
         let stack_element_object = Object::new(stack_element_class.clone())?;
         stack_element_object.set_value("declaringClass", class_name)?;
 
         if let Some(source_file) = class.source_file() {
-            let source_file = vm.to_string_value(&thread, source_file).await?;
+            let source_file = source_file.to_object(&vm).await?;
             stack_element_object.set_value("fileName", source_file)?;
         }
 
         let method = frame.method();
-        let method_name = vm.to_string_value(&thread, method.name()).await?;
+        let method_name = method.name().to_object(&vm).await?;
         stack_element_object.set_value("methodName", method_name)?;
 
         let program_counter = frame.program_counter();

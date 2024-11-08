@@ -1,12 +1,11 @@
+use crate::java_object::JavaObject;
 use crate::thread::Thread;
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::{Configuration, ConfigurationBuilder, Result};
-use ristretto_classfile::{mutf8, Version};
+use ristretto_classfile::Version;
 use ristretto_classloader::manifest::MAIN_CLASS;
-use ristretto_classloader::Error::ParseError;
 use ristretto_classloader::{
-    runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Object,
-    Reference, Value,
+    runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Reference, Value,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -225,7 +224,12 @@ impl VM {
     ///
     /// # Errors
     /// if the class cannot be loaded
-    pub(crate) async fn load_class(&self, thread: &Thread, class_name: &str) -> Result<Arc<Class>> {
+    pub(crate) async fn load_class<S: AsRef<str>>(
+        &self,
+        thread: &Thread,
+        class_name: S,
+    ) -> Result<Arc<Class>> {
+        let class_name = class_name.as_ref();
         let class_load_result = {
             let class_loader = self.class_loader.read().await;
             class_loader.load_with_status(class_name).await
@@ -362,7 +366,7 @@ impl VM {
         let mut string_arguments = Vec::new();
         for argument in arguments {
             let argument = argument.as_ref();
-            let Value::Object(value) = self.string(argument).await? else {
+            let Value::Object(value) = argument.to_object(self).await? else {
                 return Err(InternalError(format!(
                     "Failed to create string for argument {argument}"
                 )));
@@ -395,69 +399,20 @@ impl VM {
         thread.execute(class, method, arguments).await
     }
 
-    /// Create a new java.lang.Class object as a VM Value.
+    /// Invoke a method.  To invoke a method on an object reference, the object reference must be
+    /// the first argument in the arguments vector.
     ///
     /// # Errors
-    /// if the class object cannot be created
-    pub(crate) async fn to_class_value(
+    /// if the method cannot be invoked
+    pub async fn try_invoke(
         &self,
-        thread: &Arc<Thread>,
-        class_name: &str,
+        class: &Arc<Class>,
+        method: &Arc<Method>,
+        arguments: Vec<Value>,
     ) -> Result<Value> {
-        let object_class_name = "java/lang/Class";
-        let class = self.load_class(thread, object_class_name).await?;
-        let object = Object::new(class)?;
-        let name = self.to_string_value(thread, class_name).await?;
-        object.set_value("name", name)?;
-        // TODO: a "null" class loader indicates a system class loader; this should be re-evaluated
-        // to support custom class loaders
-        let class_loader_field = object.field("classLoader")?;
-        class_loader_field.unsafe_set_value(Value::Object(None))?;
-        let reference = Reference::from(object);
-        let value = Value::Object(Some(reference));
-        Ok(value)
-    }
-
-    /// Create a new string object.
-    ///
-    /// # Errors
-    /// if the string object cannot be created
-    pub async fn string<S: AsRef<str>>(&self, value: S) -> Result<Value> {
-        let thread = &Thread::new(&self.vm);
-        let value = value.as_ref();
-        self.to_string_value(thread, value).await
-    }
-
-    /// Create a new java.lang.String object as a VM Value.
-    ///
-    /// # Errors
-    /// if the string object cannot be created
-    pub(crate) async fn to_string_value(&self, thread: &Arc<Thread>, value: &str) -> Result<Value> {
-        let class_name = "java/lang/String";
-        let class = self.load_class(thread, class_name).await?;
-        let object = Object::new(class)?;
-
-        // The String implementation changed in Java 9.
-        // In Java 8 and earlier, the value field is a char array.
-        // In Java 9 and later, the value field is a byte array.
-        let array = if self.java_class_file_version <= JAVA_8 {
-            let bytes = mutf8::to_bytes(value)?;
-            let utf8_string =
-                String::from_utf8(bytes).map_err(|error| ParseError(error.to_string()))?;
-            let chars: Vec<char> = utf8_string.chars().collect();
-            Reference::from(chars)
-        } else {
-            object.set_value("coder", Value::Int(0))?; // LATIN1
-
-            let bytes = mutf8::to_bytes(value)?;
-            Reference::from(bytes)
+        let Some(value) = self.invoke(class, method, arguments).await? else {
+            return Err(InternalError("No return value".into()));
         };
-
-        object.set_value("value", Value::Object(Some(array)))?;
-        object.set_value("hash", Value::Int(0))?;
-
-        let reference = Reference::from(object);
-        let value = Value::Object(Some(reference));
         Ok(value)
     }
 }
