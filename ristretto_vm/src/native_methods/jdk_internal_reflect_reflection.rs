@@ -1,4 +1,5 @@
 use crate::arguments::Arguments;
+use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
@@ -30,7 +31,8 @@ async fn get_caller_class(thread: Arc<Thread>, _arguments: Arguments) -> Result<
         }
 
         let vm = thread.vm()?;
-        let class = vm.to_class_value(&thread, class_name).await?;
+        let class = vm.load_class(&thread, class_name).await?;
+        let class = class.to_object(&vm).await?;
         return Ok(Some(class));
     }
     Ok(None)

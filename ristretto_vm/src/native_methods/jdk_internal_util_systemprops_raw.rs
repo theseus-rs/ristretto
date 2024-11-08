@@ -1,4 +1,5 @@
 use crate::arguments::Arguments;
+use crate::java_object::JavaObject;
 use crate::native_methods::properties;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
@@ -122,13 +123,13 @@ async fn vm_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 
     let mut properties: Vec<Option<Reference>> = Vec::new();
     for (key, value) in system_properties {
-        let Value::Object(key) = vm.to_string_value(&thread, &key).await? else {
+        let Value::Object(key) = key.to_object(&vm).await? else {
             return Err(InternalError(format!(
                 "Unable to convert key to string: {key}"
             )));
         };
         properties.push(key);
-        let Value::Object(value) = vm.to_string_value(&thread, value.as_str()).await? else {
+        let Value::Object(value) = value.to_object(&vm).await? else {
             return Err(InternalError(format!(
                 "Unable to convert value to string: {value}"
             )));

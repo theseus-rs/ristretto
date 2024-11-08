@@ -577,6 +577,14 @@ impl TryInto<String> for Reference {
     }
 }
 
+impl TryInto<Arc<Class>> for Reference {
+    type Error = crate::Error;
+
+    fn try_into(self) -> Result<Arc<Class>> {
+        self.class()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1384,6 +1392,18 @@ mod tests {
         object.set_value("value", string_value)?;
         let result: String = object.try_into()?;
         assert_eq!("foo".to_string(), result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_into_class() -> Result<()> {
+        let class_name = "java/lang/Integer";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        let reference = Reference::from(object);
+        let value: Arc<Class> = reference.try_into()?;
+        assert_eq!(class_name, value.name());
         Ok(())
     }
 }

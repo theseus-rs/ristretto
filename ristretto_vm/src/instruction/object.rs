@@ -265,6 +265,7 @@ fn is_instance_of(object: &Reference, class: &Arc<Class>) -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::java_object::JavaObject;
     use crate::Error::InvalidOperand;
     use ristretto_classloader::ConcurrentVec;
     use std::sync::Arc;
@@ -596,7 +597,7 @@ mod tests {
     async fn test_checkcast_string_to_object() -> Result<()> {
         let (vm, _thread, mut frame) = crate::test::frame().await?;
         let stack = &mut frame.stack();
-        let string = vm.string("foo").await?;
+        let string = "foo".to_object(&vm).await?;
         stack.push(string)?;
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;
         let result = checkcast(&frame, class_index).await?;
@@ -640,7 +641,7 @@ mod tests {
         let (vm, _thread, mut frame) = crate::test::frame().await?;
         {
             let stack = &mut frame.stack();
-            let string = vm.string("foo").await?;
+            let string = "foo".to_object(&vm).await?;
             stack.push(string)?;
         }
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;

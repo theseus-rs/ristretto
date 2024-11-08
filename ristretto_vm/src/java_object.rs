@@ -1,0 +1,370 @@
+use crate::{Result, VM};
+use ristretto_classfile::{mutf8, Version};
+use ristretto_classloader::Error::ParseError;
+use ristretto_classloader::{Class, Object, Reference, Value};
+use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
+
+/// Trait for converting a Rust value to a Java object.  Converts to objects of the primitive
+/// wrapper, classes, and strings.
+pub trait JavaObject {
+    async fn to_object(&self, vm: &VM) -> Result<Value>;
+}
+
+impl JavaObject for bool {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let class = vm.class("java/lang/Boolean").await?;
+        let method = class.try_get_method("valueOf", "(Z)Ljava/lang/Boolean;")?;
+        let value = Value::from(*self);
+        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        Ok(result)
+    }
+}
+
+impl JavaObject for char {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let class = vm.class("java/lang/Character").await?;
+        let method = class.try_get_method("valueOf", "(C)Ljava/lang/Character;")?;
+        let value = Value::from(*self);
+        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        Ok(result)
+    }
+}
+
+impl JavaObject for i8 {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let class = vm.class("java/lang/Byte").await?;
+        let method = class.try_get_method("valueOf", "(B)Ljava/lang/Byte;")?;
+        let value = Value::from(*self);
+        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        Ok(result)
+    }
+}
+
+impl JavaObject for u8 {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        #[expect(clippy::cast_possible_wrap)]
+        let value = *self as i8;
+        value.to_object(vm).await
+    }
+}
+
+impl JavaObject for i16 {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let class = vm.class("java/lang/Short").await?;
+        let method = class.try_get_method("valueOf", "(S)Ljava/lang/Short;")?;
+        let value = Value::from(*self);
+        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        Ok(result)
+    }
+}
+
+impl JavaObject for u16 {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        #[expect(clippy::cast_possible_wrap)]
+        let value = *self as i16;
+        value.to_object(vm).await
+    }
+}
+
+impl JavaObject for i32 {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let class = vm.class("java/lang/Integer").await?;
+        let method = class.try_get_method("valueOf", "(I)Ljava/lang/Integer;")?;
+        let value = Value::from(*self);
+        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        Ok(result)
+    }
+}
+
+impl JavaObject for u32 {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        #[expect(clippy::cast_possible_wrap)]
+        let value = *self as i32;
+        value.to_object(vm).await
+    }
+}
+
+impl JavaObject for i64 {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let class = vm.class("java/lang/Long").await?;
+        let method = class.try_get_method("valueOf", "(J)Ljava/lang/Long;")?;
+        let value = Value::from(*self);
+        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        Ok(result)
+    }
+}
+
+impl JavaObject for u64 {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        #[expect(clippy::cast_possible_wrap)]
+        let value = *self as i64;
+        value.to_object(vm).await
+    }
+}
+
+impl JavaObject for isize {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let value = *self as i64;
+        value.to_object(vm).await
+    }
+}
+
+impl JavaObject for usize {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let value = *self as u64;
+        value.to_object(vm).await
+    }
+}
+
+impl JavaObject for f32 {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let class = vm.class("java/lang/Float").await?;
+        let method = class.try_get_method("valueOf", "(F)Ljava/lang/Float;")?;
+        let value = Value::from(*self);
+        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        Ok(result)
+    }
+}
+
+impl JavaObject for f64 {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let class = vm.class("java/lang/Double").await?;
+        let method = class.try_get_method("valueOf", "(D)Ljava/lang/Double;")?;
+        let value = Value::from(*self);
+        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        Ok(result)
+    }
+}
+
+impl JavaObject for &str {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let class = vm.class("java/lang/String").await?;
+        let object = Object::new(class)?;
+
+        // The String implementation changed in Java 9.
+        // In Java 8 and earlier, the value field is a char array.
+        // In Java 9 and later, the value field is a byte array.
+        let array = if vm.java_class_file_version() <= &JAVA_8 {
+            let bytes = mutf8::to_bytes(self)?;
+            let utf8_string =
+                String::from_utf8(bytes).map_err(|error| ParseError(error.to_string()))?;
+            let chars: Vec<char> = utf8_string.chars().collect();
+            Reference::from(chars)
+        } else {
+            object.set_value("coder", Value::Int(0))?; // LATIN1
+
+            let bytes = mutf8::to_bytes(self)?;
+            Reference::from(bytes)
+        };
+
+        object.set_value("value", Value::Object(Some(array)))?;
+        object.set_value("hash", Value::Int(0))?;
+
+        let reference = Reference::from(object);
+        let value = Value::Object(Some(reference));
+        Ok(value)
+    }
+}
+
+impl JavaObject for String {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let value = self.as_str();
+        value.to_object(vm).await
+    }
+}
+
+impl JavaObject for Arc<Class> {
+    async fn to_object(&self, vm: &VM) -> Result<Value> {
+        let class = vm.class("java/lang/Class").await?;
+        let object = Object::new(class)?;
+        let class_name = self.name();
+        let name = class_name.to_object(vm).await?;
+        object.set_value("name", name)?;
+        // TODO: a "null" class loader indicates a system class loader; this should be re-evaluated
+        // to support custom class loaders
+        let class_loader_field = object.field("classLoader")?;
+        class_loader_field.unsafe_set_value(Value::Object(None))?;
+        let reference = Reference::from(object);
+        let value = Value::Object(Some(reference));
+        Ok(value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_bool_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = true;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: bool = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_char_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = '*';
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: char = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_i8_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42i8;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: i8 = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_u8_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42u8;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: u8 = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_i16_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42i16;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: i16 = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_u16_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42u16;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: u16 = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_i32_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42i32;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: i32 = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_u32_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42u32;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: u32 = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_i64_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42i64;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: i64 = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_u64_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42u64;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: u64 = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_isize_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42isize;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: isize = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_usize_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42usize;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: usize = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_f32_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42.1f32;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: f32 = value.try_into()?;
+        let value = value - original_value;
+        assert!(value.abs() < 0.1f32);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_f64_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = 42.1f64;
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: f64 = value.try_into()?;
+        let value = value - original_value;
+        assert!(value.abs() < 0.1f64);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_str_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = "foo";
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: String = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_string_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = "foo".to_string();
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: String = value.try_into()?;
+        assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_class_to_object() -> Result<()> {
+        let vm = VM::default().await?;
+        let original_value = Arc::new(Class::new_array("[I")?);
+        let value: Value = original_value.to_object(&vm).await?;
+        let value: Arc<Class> = value.try_into()?;
+        assert_eq!("java/lang/Class", value.name());
+        Ok(())
+    }
+}

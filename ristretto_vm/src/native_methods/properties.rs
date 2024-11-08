@@ -1,3 +1,4 @@
+use crate::java_object::JavaObject;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::{Result, VM};
@@ -14,7 +15,7 @@ pub(crate) async fn system(thread: Arc<Thread>) -> Result<HashMap<&'static str, 
     let system_properties = system_properties(&vm)?;
     let mut properties = HashMap::new();
     for (key, value) in system_properties {
-        let value = vm.to_string_value(&thread, &value).await?;
+        let value = value.to_object(&vm).await?;
         properties.insert(key, value);
     }
     Ok(properties)

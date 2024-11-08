@@ -1,5 +1,6 @@
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
+use crate::java_object::JavaObject;
 use crate::Error::{InvalidConstant, InvalidConstantIndex};
 use crate::Result;
 use ristretto_classfile::Constant;
@@ -57,13 +58,14 @@ async fn load_constant(frame: &Frame, index: u16) -> Result<ExecutionResult> {
             let utf8_value = constant_pool.try_get_utf8(*utf8_index)?;
             let thread = frame.thread()?;
             let vm = thread.vm()?;
-            vm.to_string_value(&thread, utf8_value).await?
+            utf8_value.to_object(&vm).await?
         }
         Constant::Class(class_index) => {
             let class_name = constant_pool.try_get_utf8(*class_index)?;
             let thread = frame.thread()?;
             let vm = thread.vm()?;
-            vm.to_class_value(&thread, class_name).await?
+            let class = vm.load_class(&thread, class_name).await?;
+            class.to_object(&vm).await?
         }
         constant => {
             return Err(InvalidConstant {

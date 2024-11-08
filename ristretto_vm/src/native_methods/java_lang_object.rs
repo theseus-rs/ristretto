@@ -1,4 +1,5 @@
 use crate::arguments::Arguments;
+use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Error::InternalError;
@@ -44,7 +45,8 @@ async fn get_class(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 
     let class_name = object.class_name();
     let vm = thread.vm()?;
-    let class = vm.to_class_value(&thread, class_name.as_str()).await?;
+    let class = vm.load_class(&thread, class_name).await?;
+    let class = class.to_object(&vm).await?;
     Ok(Some(class))
 }
 
