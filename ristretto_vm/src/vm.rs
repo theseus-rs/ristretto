@@ -20,7 +20,7 @@ const JAVA_8: Version = Version::Java8 { minor: 0 };
 pub struct VM {
     vm: Weak<VM>,
     configuration: Configuration,
-    class_loader: RwLock<ClassLoader>,
+    class_loader: Arc<RwLock<ClassLoader>>,
     main_class: Option<String>,
     java_home: PathBuf,
     java_version: String,
@@ -107,7 +107,7 @@ impl VM {
         let vm = Arc::new_cyclic(|vm| VM {
             vm: vm.clone(),
             configuration,
-            class_loader: RwLock::new(class_loader),
+            class_loader: Arc::new(RwLock::new(class_loader)),
             main_class,
             java_home,
             java_version,

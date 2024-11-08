@@ -109,8 +109,12 @@ impl Object {
 impl Debug for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Object({})", self.class.name())?;
+        if !self.fields.is_empty() {
+            writeln!(f)?;
+        }
         for (name, field) in &self.fields {
-            write!(f, " {name}: {:?}", field.value())?;
+            let value = field.value().map_err(|_| std::fmt::Error)?;
+            writeln!(f, "  {name}={value}")?;
         }
         Ok(())
     }
@@ -424,10 +428,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_debug() -> Result<()> {
-        let class_name = "java/lang/Object";
+        let class_name = "java/lang/Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
-        assert_eq!("Object(java/lang/Object)", format!("{object:?}"));
+        object.set_value("value", Value::Int(42))?;
+        assert_eq!(
+            "Object(java/lang/Integer)\n  value=int(42)\n",
+            format!("{object:?}")
+        );
         Ok(())
     }
 
