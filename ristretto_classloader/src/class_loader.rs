@@ -65,11 +65,14 @@ impl ClassLoader {
     ///
     /// # Errors
     /// if the class file cannot be read.
-    pub async fn load_with_status<S: AsRef<str>>(&self, name: S) -> Result<(Arc<Class>, bool)> {
-        let name = name.as_ref();
+    pub async fn load_with_status<S: AsRef<str>>(
+        &self,
+        class_name: S,
+    ) -> Result<(Arc<Class>, bool)> {
+        let class_name = class_name.as_ref();
         {
             let classes = self.classes.read().await;
-            if let Some(class) = classes.get(name) {
+            if let Some(class) = classes.get(class_name) {
                 return Ok((Arc::clone(class), true));
             }
         }
@@ -85,19 +88,19 @@ impl ClassLoader {
 
         for class_loader in class_loaders.into_iter().rev() {
             let class_path = class_loader.class_path();
-            if let Ok(class_file) = class_path.read_class(name).await {
+            if let Ok(class_file) = class_path.read_class(class_name).await {
                 let mut classes = self.classes.write().await;
                 // Check if the class was loaded while waiting for the lock.
-                if let Some(class) = classes.get(name) {
+                if let Some(class) = classes.get(class_name) {
                     return Ok((class.clone(), true));
                 }
                 let class = Arc::new(Class::from(class_file)?);
-                classes.insert(name.to_string(), class.clone());
+                classes.insert(class_name.to_string(), class.clone());
                 return Ok((class, false));
             }
         }
 
-        Err(ClassNotFound(name.to_string()))
+        Err(ClassNotFound(class_name.to_string()))
     }
 
     /// Register a class with the class loader.

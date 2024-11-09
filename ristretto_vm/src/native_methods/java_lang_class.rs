@@ -58,24 +58,7 @@ async fn get_primitive_class(
         return Err(InternalError("getPrimitiveClass: no arguments".to_string()));
     };
 
-    let primitive: String = primitive.try_into()?;
-    let class_name = match primitive.as_str() {
-        "boolean" => "java/lang/Boolean",
-        "byte" => "java/lang/Byte",
-        "char" => "java/lang/Character",
-        "double" => "java/lang/Double",
-        "float" => "java/lang/Float",
-        "int" => "java/lang/Integer",
-        "long" => "java/lang/Long",
-        "short" => "java/lang/Short",
-        "void" => "java/lang/Void",
-        _ => {
-            return Err(InternalError(format!(
-                "getPrimitiveClass: unrecognized primitive: {primitive}"
-            )));
-        }
-    };
-
+    let class_name: String = primitive.try_into()?;
     let vm = thread.vm()?;
     let class = vm.load_class(&thread, class_name).await?;
     let class = class.to_object(&vm).await?;
@@ -144,16 +127,11 @@ async fn is_primitive(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<
         return Err(InternalError("isPrimitive: no arguments".to_string()));
     };
     let class_name: String = object.value("name")?.try_into()?;
-    match class_name.as_str() {
-        "java/lang/Boolean"
-        | "java/lang/Byte"
-        | "java/lang/Character"
-        | "java/lang/Double"
-        | "java/lang/Float"
-        | "java/lang/Integer"
-        | "java/lang/Long"
-        | "java/lang/Short"
-        | "java/lang/Void" => Ok(Some(Value::Int(1))),
+    let class_name = class_name.as_str();
+    match class_name {
+        "boolean" | "byte" | "char" | "double" | "float" | "int" | "long" | "short" | "void" => {
+            Ok(Some(Value::Int(1)))
+        }
         _ => Ok(Some(Value::Int(0))),
     }
 }
