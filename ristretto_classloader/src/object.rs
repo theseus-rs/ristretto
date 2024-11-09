@@ -169,6 +169,12 @@ impl Display for Object {
                 let value: String = object.try_into().unwrap_or_default();
                 write!(f, "String(\"{value}\")")
             }
+            "java/lang/Class" => {
+                let object = self.clone();
+                let value = object.value("name").unwrap_or(Value::Unused);
+                let value: String = value.try_into().unwrap_or_default();
+                write!(f, "Class({value})")
+            }
             _ => write!(f, "Object(class {class_name})"),
         }
     }
@@ -369,7 +375,7 @@ impl TryInto<Arc<Class>> for Object {
 mod tests {
     use super::*;
     use crate::Reference::IntArray;
-    use crate::{runtime, ConcurrentVec, Reference};
+    use crate::{runtime, ConcurrentVec};
 
     async fn java8_string_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) =
@@ -517,9 +523,31 @@ mod tests {
         let object = Object::new(class)?;
         #[expect(clippy::cast_possible_wrap)]
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
-        let string_value = Value::Object(Some(Reference::from(string_bytes)));
+        let string_value = Value::from(string_bytes);
         object.set_value("value", string_value)?;
         assert_eq!("String(\"foo\")", object.to_string());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_to_string_class() -> Result<()> {
+        let string_class = load_class("java/lang/String").await?;
+        let string_object = Object::new(string_class)?;
+        #[expect(clippy::cast_possible_wrap)]
+        let string_bytes: Vec<i8> = "java/lang/Integer"
+            .as_bytes()
+            .to_vec()
+            .iter()
+            .map(|&b| b as i8)
+            .collect();
+        let string_value = Value::from(string_bytes);
+        string_object.set_value("value", string_value)?;
+
+        let class_name = "java/lang/Class";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        object.set_value("name", Value::from(string_object))?;
+        assert_eq!("Class(java/lang/Integer)", object.to_string());
         Ok(())
     }
 

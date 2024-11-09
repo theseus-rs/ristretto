@@ -790,7 +790,7 @@ mod tests {
 
     #[test]
     fn test_display_reference_array() -> Result<()> {
-        let class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         let reference = Reference::Array(class, ConcurrentVec::from(vec![None]));
         assert_eq!(reference.class_name(), "[Ljava/lang/Object;");
         assert_eq!(reference.class()?.name(), "[Ljava/lang/Object;");
@@ -800,7 +800,7 @@ mod tests {
 
     #[test]
     fn test_to_class_vec() -> Result<()> {
-        let original_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         let original_value = vec![None];
         let reference = Reference::from((original_class.clone(), original_value.clone()));
         let (class, value) = reference.to_class_vec()?;
@@ -1084,7 +1084,7 @@ mod tests {
 
     #[test]
     fn test_from_class_vec() -> Result<()> {
-        let original_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         let original_value = vec![None];
         let reference = Reference::from((original_class.clone(), original_value.clone()));
         assert!(matches!(reference, Reference::Array(_, _)));

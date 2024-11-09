@@ -43,11 +43,11 @@ impl Class {
         }
     }
 
-    /// Create a new array class.
+    /// Create a new named class.
     ///
     /// # Errors
     /// if the class name cannot be added to the constant pool
-    pub fn new_array<S: AsRef<str>>(name: S) -> Result<Self> {
+    pub fn new_named<S: AsRef<str>>(name: S) -> Result<Self> {
         let name = name.as_ref().to_string();
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class(name.clone())?;
@@ -507,7 +507,7 @@ mod tests {
 
     #[test]
     fn test_new_array_boolean() -> Result<()> {
-        let class = Class::new_array("[Z")?;
+        let class = Class::new_named("[Z")?;
         assert_eq!("[Z", class.name());
         assert_eq!(Some("boolean"), class.component_type());
         assert_eq!(1, class.array_dimensions());
@@ -518,7 +518,7 @@ mod tests {
 
     #[test]
     fn test_new_array_byte() -> Result<()> {
-        let class = Class::new_array("[B")?;
+        let class = Class::new_named("[B")?;
         assert_eq!("[B", class.name());
         assert_eq!(Some("byte"), class.component_type());
         assert_eq!(1, class.array_dimensions());
@@ -529,7 +529,7 @@ mod tests {
 
     #[test]
     fn test_new_array_char() -> Result<()> {
-        let class = Class::new_array("[C")?;
+        let class = Class::new_named("[C")?;
         assert_eq!("[C", class.name());
         assert_eq!(Some("char"), class.component_type());
         assert_eq!(1, class.array_dimensions());
@@ -540,7 +540,7 @@ mod tests {
 
     #[test]
     fn test_new_array_double() -> Result<()> {
-        let class = Class::new_array("[D")?;
+        let class = Class::new_named("[D")?;
         assert_eq!("[D", class.name());
         assert_eq!(Some("double"), class.component_type());
         assert_eq!(1, class.array_dimensions());
@@ -551,7 +551,7 @@ mod tests {
 
     #[test]
     fn test_new_array_float() -> Result<()> {
-        let class = Class::new_array("[F")?;
+        let class = Class::new_named("[F")?;
         assert_eq!("[F", class.name());
         assert_eq!(Some("float"), class.component_type());
         assert_eq!(1, class.array_dimensions());
@@ -562,7 +562,7 @@ mod tests {
 
     #[test]
     fn test_new_array_int() -> Result<()> {
-        let class = Class::new_array("[I")?;
+        let class = Class::new_named("[I")?;
         assert_eq!("[I", class.name());
         assert_eq!(Some("int"), class.component_type());
         assert_eq!(1, class.array_dimensions());
@@ -573,7 +573,7 @@ mod tests {
 
     #[test]
     fn test_new_array_long() -> Result<()> {
-        let class = Class::new_array("[J")?;
+        let class = Class::new_named("[J")?;
         assert_eq!("[J", class.name());
         assert_eq!(Some("long"), class.component_type());
         assert_eq!(1, class.array_dimensions());
@@ -584,7 +584,7 @@ mod tests {
 
     #[test]
     fn test_new_array_short() -> Result<()> {
-        let class = Class::new_array("[S")?;
+        let class = Class::new_named("[S")?;
         assert_eq!("[S", class.name());
         assert_eq!(Some("short"), class.component_type());
         assert_eq!(1, class.array_dimensions());
@@ -595,7 +595,7 @@ mod tests {
 
     #[test]
     fn test_new_array_string() -> Result<()> {
-        let class = Class::new_array("[Ljava/lang/String;")?;
+        let class = Class::new_named("[Ljava/lang/String;")?;
         assert_eq!("[Ljava/lang/String;", class.name());
         assert_eq!(Some("java/lang/String"), class.component_type());
         assert_eq!(1, class.array_dimensions());
@@ -606,7 +606,7 @@ mod tests {
 
     #[test]
     fn test_new_array_multiple_dimensions() -> Result<()> {
-        let class = Class::new_array("[[[[[B")?;
+        let class = Class::new_named("[[[[[B")?;
         assert_eq!("[[[[[B", class.name());
         assert_eq!(Some("byte"), class.component_type());
         assert_eq!(5, class.array_dimensions());
@@ -651,7 +651,7 @@ mod tests {
 
     #[test]
     fn test_constant_pool() -> Result<()> {
-        let class = Class::new_array("[Z")?;
+        let class = Class::new_named("[Z")?;
         let constant_pool = class.constant_pool();
         assert!(!constant_pool.is_empty());
         Ok(())
@@ -659,7 +659,7 @@ mod tests {
 
     #[test]
     fn test_constant_pool_mut() -> Result<()> {
-        let mut class = Class::new_array("[Z")?;
+        let mut class = Class::new_named("[Z")?;
         let constant_pool = class.constant_pool_mut();
         let index = constant_pool.add_string("foo")?;
         assert!(index > 0);
@@ -863,7 +863,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_object_array_not_is_assignable_from_object() -> Result<()> {
-        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         let object_class = object_class().await?;
         assert!(!object_array_class.is_assignable_from(&object_class)?);
         Ok(())
@@ -872,14 +872,14 @@ mod tests {
     #[tokio::test]
     async fn test_object_is_assignable_from_int_array() -> Result<()> {
         let object_class = object_class().await?;
-        let int_array_class = Arc::new(Class::new_array("[I")?);
+        let int_array_class = Arc::new(Class::new_named("[I")?);
         assert!(object_class.is_assignable_from(&int_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_int_array_is_assignable_from_int_array() -> Result<()> {
-        let int_array_class = Arc::new(Class::new_array("[I")?);
+        let int_array_class = Arc::new(Class::new_named("[I")?);
         assert!(int_array_class.is_assignable_from(&int_array_class)?);
         Ok(())
     }
@@ -887,54 +887,54 @@ mod tests {
     #[tokio::test]
     async fn test_object_is_assignable_from_object_array() -> Result<()> {
         let object_class = object_class().await?;
-        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         assert!(object_class.is_assignable_from(&object_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_object_array_is_assignable_from_object_array() -> Result<()> {
-        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         assert!(object_array_class.is_assignable_from(&object_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_object_array_not_is_assignable_from_int_array() -> Result<()> {
-        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
-        let int_array_class = Arc::new(Class::new_array("[I")?);
+        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let int_array_class = Arc::new(Class::new_named("[I")?);
         assert!(!object_array_class.is_assignable_from(&int_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_int_array_not_is_assignable_from_object_array() -> Result<()> {
-        let int_array_class = Arc::new(Class::new_array("[I")?);
-        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let int_array_class = Arc::new(Class::new_named("[I")?);
+        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         assert!(!int_array_class.is_assignable_from(&object_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_object_array_is_assignable_from_string_array() -> Result<()> {
-        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
-        let string_array_class = Arc::new(Class::new_array("[Ljava/lang/String;")?);
+        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let string_array_class = Arc::new(Class::new_named("[Ljava/lang/String;")?);
         assert!(object_array_class.is_assignable_from(&string_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_string_array_not_is_assignable_from_object_array() -> Result<()> {
-        let string_array_class = Arc::new(Class::new_array("[Ljava/lang/String;")?);
-        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let string_array_class = Arc::new(Class::new_named("[Ljava/lang/String;")?);
+        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         assert!(!string_array_class.is_assignable_from(&object_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_object_array_is_assignable_from_multiple_dimension_object_array() -> Result<()> {
-        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
-        let two_dimension_object_array_class = Arc::new(Class::new_array("[[Ljava/lang/Object;")?);
+        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let two_dimension_object_array_class = Arc::new(Class::new_named("[[Ljava/lang/Object;")?);
         assert!(object_array_class.is_assignable_from(&two_dimension_object_array_class)?);
         Ok(())
     }
@@ -942,8 +942,8 @@ mod tests {
     #[tokio::test]
     async fn test_multiple_dimension_object_array_not_is_assignable_from_object_array() -> Result<()>
     {
-        let two_dimension_object_array_class = Arc::new(Class::new_array("[[Ljava/lang/Object;")?);
-        let object_array_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let two_dimension_object_array_class = Arc::new(Class::new_named("[[Ljava/lang/Object;")?);
+        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         assert!(!two_dimension_object_array_class.is_assignable_from(&object_array_class)?);
         Ok(())
     }

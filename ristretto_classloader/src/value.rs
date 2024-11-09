@@ -925,7 +925,7 @@ mod tests {
 
     #[test]
     fn test_from_class_vec() -> Result<()> {
-        let original_class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         let original_value = vec![None];
         let value = Value::from((original_class.clone(), original_value.clone()));
         assert!(matches!(value, Value::Object(Some(Reference::Array(_, _)))));
@@ -934,7 +934,7 @@ mod tests {
 
     #[test]
     fn test_from_object() -> Result<()> {
-        let class = Arc::new(Class::new_array("[Ljava/lang/Object;")?);
+        let class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         let object = Object::new(class)?;
         let value = Value::from(object);
         assert!(matches!(value, Value::Object(Some(Reference::Object(_)))));

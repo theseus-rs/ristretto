@@ -237,14 +237,22 @@ impl VM {
 
         let class = match class_load_result {
             Ok((class, previously_loaded)) => {
+                // Determine if the class has already been loaded.  If the class has already been loaded,
+                // return the class. Otherwise, the class must be initialized.
                 if previously_loaded {
                     return Ok(class);
                 }
                 class
             }
             Err(error) => {
-                if class_name.starts_with('[') {
-                    let array_class = Arc::new(Class::new_array(class_name)?);
+                if class_name.starts_with('[')
+                    || [
+                        "boolean", "byte", "char", "double", "float", "int", "long", "short",
+                        "void",
+                    ]
+                    .contains(&class_name)
+                {
+                    let array_class = Arc::new(Class::new_named(class_name)?);
                     // Register the array class so that it will be available for future lookups.
                     self.register_class(array_class.clone()).await?;
                     array_class
@@ -496,6 +504,58 @@ mod tests {
         let class = vm.class("java.lang.Object").await?;
         assert_eq!("java/lang/Object", class.name());
         Ok(())
+    }
+
+    async fn test_load_primitive_class(class_name: &str) -> Result<()> {
+        let vm = VM::default().await?;
+        let class = vm.class(class_name).await?;
+        assert_eq!(class_name, class.name());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_boolean() -> Result<()> {
+        test_load_primitive_class("boolean").await
+    }
+
+    #[tokio::test]
+    async fn test_load_byte() -> Result<()> {
+        test_load_primitive_class("byte").await
+    }
+
+    #[tokio::test]
+    async fn test_load_char() -> Result<()> {
+        test_load_primitive_class("char").await
+    }
+
+    #[tokio::test]
+    async fn test_load_double() -> Result<()> {
+        test_load_primitive_class("double").await
+    }
+
+    #[tokio::test]
+    async fn test_load_float() -> Result<()> {
+        test_load_primitive_class("float").await
+    }
+
+    #[tokio::test]
+    async fn test_load_int() -> Result<()> {
+        test_load_primitive_class("int").await
+    }
+
+    #[tokio::test]
+    async fn test_load_long() -> Result<()> {
+        test_load_primitive_class("long").await
+    }
+
+    #[tokio::test]
+    async fn test_load_short() -> Result<()> {
+        test_load_primitive_class("short").await
+    }
+
+    #[tokio::test]
+    async fn test_load_void() -> Result<()> {
+        test_load_primitive_class("void").await
     }
 
     #[tokio::test]
