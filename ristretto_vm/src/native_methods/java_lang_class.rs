@@ -19,6 +19,24 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
+        "getClassAccessFlagsRaw0",
+        "()I",
+        get_class_access_flags_raw_0,
+    );
+    registry.register(
+        class_name,
+        "getClassFileVersion0",
+        "()I",
+        get_class_file_version_0,
+    );
+    registry.register(
+        class_name,
+        "getPermittedSubclasses0",
+        "()[Ljava/lang/Class;",
+        get_permitted_subclasses_0,
+    );
+    registry.register(
+        class_name,
         "getPrimitiveClass",
         "(Ljava/lang/String;)Ljava/lang/Class;",
         get_primitive_class,
@@ -58,6 +76,63 @@ async fn desired_assertion_status_0(
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
+}
+
+#[async_recursion(?Send)]
+async fn get_permitted_subclasses_0(
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = arguments.pop_object()? else {
+        return Err(InternalError(
+            "getPermittedSubclasses0: no arguments".to_string(),
+        ));
+    };
+    let vm = thread.vm()?;
+    let _class = get_class(&vm, &object).await?;
+    // TODO: add support for sealed classes
+    Ok(None)
+}
+
+#[async_recursion(?Send)]
+async fn get_class_access_flags_raw_0(
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = arguments.pop_object()? else {
+        return Err(InternalError(
+            "getClassAccessFlagsRaw0: no arguments".to_string(),
+        ));
+    };
+    let vm = thread.vm()?;
+    let class = get_class(&vm, &object).await?;
+    let class_file = class.class_file();
+    let access_flags = &class_file.access_flags;
+    #[expect(clippy::cast_lossless)]
+    let class_access_flags = access_flags.bits() as i32;
+    Ok(Some(Value::Int(class_access_flags)))
+}
+
+#[async_recursion(?Send)]
+async fn get_class_file_version_0(
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = arguments.pop_object()? else {
+        return Err(InternalError(
+            "getClassFileVersion0: no arguments".to_string(),
+        ));
+    };
+    let vm = thread.vm()?;
+    let class = get_class(&vm, &object).await?;
+    let class_file = class.class_file();
+    let version = &class_file.version;
+    #[expect(clippy::cast_lossless)]
+    let major = version.major() as i32;
+    #[expect(clippy::cast_lossless)]
+    let minor = version.minor() as i32;
+    let class_file_version = (minor << 16) | major;
+    Ok(Some(Value::Int(class_file_version)))
 }
 
 #[async_recursion(?Send)]
@@ -134,7 +209,7 @@ async fn is_assignable_from(
 #[async_recursion(?Send)]
 async fn is_interface(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let Some(Reference::Object(object)) = arguments.pop_object()? else {
-        return Err(InternalError("isPrimitive: no arguments".to_string()));
+        return Err(InternalError("isInterface: no arguments".to_string()));
     };
     let vm = thread.vm()?;
     let class = get_class(&vm, &object).await?;
