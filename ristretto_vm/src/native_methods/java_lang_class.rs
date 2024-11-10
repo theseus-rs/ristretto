@@ -31,6 +31,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
+        "getDeclaringClass0",
+        "()java/lang/Class",
+        get_declaring_class_0,
+    );
+    registry.register(
+        class_name,
         "getPermittedSubclasses0",
         "()[Ljava/lang/Class;",
         get_permitted_subclasses_0,
@@ -40,6 +46,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "getPrimitiveClass",
         "(Ljava/lang/String;)Ljava/lang/Class;",
         get_primitive_class,
+    );
+    registry.register(
+        class_name,
+        "getSigners",
+        "()Ljava/lang/Object;",
+        get_signers,
     );
     registry.register(
         class_name,
@@ -54,9 +66,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/Class;)Z",
         is_assignable_from,
     );
+    registry.register(class_name, "isHidden", "()Z", is_hidden);
     registry.register(class_name, "isInterface", "()Z", is_interface);
     registry.register(class_name, "isPrimitive", "()Z", is_primitive);
     registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(
+        class_name,
+        "setSigners",
+        "(Ljava/lang/Object;)V",
+        set_signers,
+    );
 }
 
 async fn get_class(vm: &VM, object: &Object) -> Result<Arc<Class>> {
@@ -135,6 +154,15 @@ async fn get_class_file_version_0(
     Ok(Some(Value::Int(class_file_version)))
 }
 
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_declaring_class_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
 #[async_recursion(?Send)]
 async fn get_primitive_class(
     thread: Arc<Thread>,
@@ -149,6 +177,13 @@ async fn get_primitive_class(
     let class = vm.load_class(&thread, class_name).await?;
     let class = class.to_object(&vm).await?;
     Ok(Some(class))
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    // TODO: Implement get_signers
+    Ok(None)
 }
 
 #[async_recursion(?Send)]
@@ -206,6 +241,12 @@ async fn is_assignable_from(
     }
 }
 
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn is_hidden(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    Ok(Some(Value::Int(0)))
+}
+
 #[async_recursion(?Send)]
 async fn is_interface(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let Some(Reference::Object(object)) = arguments.pop_object()? else {
@@ -237,5 +278,12 @@ async fn is_primitive(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn set_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    // TODO: Implement set_signers
     Ok(None)
 }
