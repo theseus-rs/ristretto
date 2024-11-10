@@ -278,8 +278,8 @@ async fn compare_and_set_reference(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop_object()?;
-    let expected = arguments.pop_object()?;
+    let x = arguments.pop()?;
+    let expected = arguments.pop()?;
     let offset = arguments.pop_long()?;
     let offset = usize::try_from(offset)?;
     let Some(object) = arguments.pop_object()? else {
@@ -287,6 +287,8 @@ async fn compare_and_set_reference(
             "compareAndSetReference: Invalid reference".to_string(),
         ));
     };
+
+    // TODO: the compare and set operation should be atomic
     let result = match object {
         Reference::Array(_class, array) => {
             let Some(reference) = array.get(offset)? else {
@@ -294,9 +296,32 @@ async fn compare_and_set_reference(
                     "getReference: Invalid reference index".to_string(),
                 ));
             };
-            // TODO: the compare and set operation should be atomic
-            if reference == expected {
-                array.set(offset, x)?;
+            let Value::Object(expected_reference) = expected else {
+                return Err(InvalidOperand {
+                    expected: "object".to_string(),
+                    actual: expected.to_string(),
+                });
+            };
+
+            if reference == expected_reference {
+                let Value::Object(x_reference) = x else {
+                    return Err(InvalidOperand {
+                        expected: "object".to_string(),
+                        actual: x.to_string(),
+                    });
+                };
+                array.set(offset, x_reference)?;
+                1
+            } else {
+                0
+            }
+        }
+        Reference::Object(object) => {
+            let field_name = object.class().field_name(offset)?;
+            let field = object.field(&field_name)?;
+            let value = field.value()?;
+            if value == expected {
+                field.set_value(x)?;
                 1
             } else {
                 0
