@@ -2,10 +2,11 @@ use crate::Error::{FieldNotFound, MethodNotFound, PoisonedLock};
 use crate::{Field, Method, Result};
 use indexmap::IndexMap;
 use ristretto_classfile::attributes::Attribute;
-use ristretto_classfile::{BaseType, ClassFile, ConstantPool, FieldAccessFlags, MethodAccessFlags};
+use ristretto_classfile::{
+    ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, MethodAccessFlags,
+};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
-use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
 /// A representation of a Java class.
@@ -172,17 +173,21 @@ impl Class {
         self.name.chars().filter(|&c| c == '[').count()
     }
 
+    /// Determine if this class is an array
+    #[must_use]
+    pub fn is_interface(&self) -> bool {
+        self.class_file
+            .access_flags
+            .contains(ClassAccessFlags::INTERFACE)
+    }
+
     /// Determine if this class is a primitive
     #[must_use]
     pub fn is_primitive(&self) -> bool {
-        if !self.is_array() {
-            return false;
-        }
-        let component_type = self.array_component_type();
-        let Ok(component_type) = char::from_str(component_type) else {
-            return false;
-        };
-        BaseType::parse(component_type).is_ok()
+        matches!(
+            self.name.as_str(),
+            "boolean" | "byte" | "char" | "double" | "float" | "int" | "long" | "short" | "void"
+        )
     }
 
     /// Get the class file.
@@ -411,7 +416,9 @@ impl Class {
             if !class.is_array() {
                 return Ok(false);
             }
-            if self.is_primitive() || class.is_primitive() {
+            // If the array is an array of primitives, then the two arrays are assignable if they
+            // have the same number of dimensions and the component types are the same.
+            if !self.name.ends_with(';') || !class.name().ends_with(';') {
                 return Ok(false);
             }
             if self.array_dimensions() > class.array_dimensions() {
@@ -501,7 +508,6 @@ mod tests {
         assert_eq!(None, class.component_type());
         assert_eq!(0, class.array_dimensions());
         assert!(!class.is_array());
-        assert!(!class.is_primitive());
         Ok(())
     }
 
@@ -512,7 +518,6 @@ mod tests {
         assert_eq!(Some("boolean"), class.component_type());
         assert_eq!(1, class.array_dimensions());
         assert!(class.is_array());
-        assert!(class.is_primitive());
         Ok(())
     }
 
@@ -523,7 +528,6 @@ mod tests {
         assert_eq!(Some("byte"), class.component_type());
         assert_eq!(1, class.array_dimensions());
         assert!(class.is_array());
-        assert!(class.is_primitive());
         Ok(())
     }
 
@@ -534,7 +538,6 @@ mod tests {
         assert_eq!(Some("char"), class.component_type());
         assert_eq!(1, class.array_dimensions());
         assert!(class.is_array());
-        assert!(class.is_primitive());
         Ok(())
     }
 
@@ -545,7 +548,6 @@ mod tests {
         assert_eq!(Some("double"), class.component_type());
         assert_eq!(1, class.array_dimensions());
         assert!(class.is_array());
-        assert!(class.is_primitive());
         Ok(())
     }
 
@@ -556,7 +558,6 @@ mod tests {
         assert_eq!(Some("float"), class.component_type());
         assert_eq!(1, class.array_dimensions());
         assert!(class.is_array());
-        assert!(class.is_primitive());
         Ok(())
     }
 
@@ -567,7 +568,6 @@ mod tests {
         assert_eq!(Some("int"), class.component_type());
         assert_eq!(1, class.array_dimensions());
         assert!(class.is_array());
-        assert!(class.is_primitive());
         Ok(())
     }
 
@@ -578,7 +578,6 @@ mod tests {
         assert_eq!(Some("long"), class.component_type());
         assert_eq!(1, class.array_dimensions());
         assert!(class.is_array());
-        assert!(class.is_primitive());
         Ok(())
     }
 
@@ -589,7 +588,6 @@ mod tests {
         assert_eq!(Some("short"), class.component_type());
         assert_eq!(1, class.array_dimensions());
         assert!(class.is_array());
-        assert!(class.is_primitive());
         Ok(())
     }
 
@@ -600,7 +598,6 @@ mod tests {
         assert_eq!(Some("java/lang/String"), class.component_type());
         assert_eq!(1, class.array_dimensions());
         assert!(class.is_array());
-        assert!(!class.is_primitive());
         Ok(())
     }
 
@@ -611,7 +608,6 @@ mod tests {
         assert_eq!(Some("byte"), class.component_type());
         assert_eq!(5, class.array_dimensions());
         assert!(class.is_array());
-        assert!(class.is_primitive());
         Ok(())
     }
 
@@ -619,6 +615,33 @@ mod tests {
     async fn test_source_file() -> Result<()> {
         let class = string_class().await?;
         assert_eq!(Some("String.java"), class.source_file());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_array() -> Result<()> {
+        let string_class = string_class().await?;
+        assert!(!string_class.is_array());
+        let int_array_class = Class::new_named("[I")?;
+        assert!(int_array_class.is_array());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_interface() -> Result<()> {
+        let string_class = string_class().await?;
+        assert!(!string_class.is_interface());
+        let serializable_class = serializable_class().await?;
+        assert!(serializable_class.is_interface());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_primitive() -> Result<()> {
+        let string_class = string_class().await?;
+        assert!(!string_class.is_primitive());
+        let int_class = Class::new_named("int")?;
+        assert!(int_class.is_primitive());
         Ok(())
     }
 
