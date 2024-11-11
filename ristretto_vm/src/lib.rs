@@ -34,6 +34,7 @@ mod java_object;
 mod local_variables;
 mod native_methods;
 mod operand_stack;
+mod rust_value;
 #[cfg(test)]
 pub(crate) mod test;
 mod thread;
