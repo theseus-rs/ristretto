@@ -1,5 +1,5 @@
 use crate::java_object::JavaObject;
-use crate::rust_value::RustValue;
+use crate::rust_value::{process_values, RustValue};
 use crate::thread::Thread;
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::{Configuration, ConfigurationBuilder, Result};
@@ -452,11 +452,12 @@ impl VM {
             let value = argument.to_value();
             constructor_arguments.push(value);
         }
+        let arguments = process_values(self, constructor_arguments).await?;
 
         let object = {
             let thread = Thread::new(&self.vm);
             thread
-                .execute(&class, &constructor, constructor_arguments, false)
+                .execute(&class, &constructor, arguments, false)
                 .await?;
             let frames = thread.frames().await?;
             let frame = frames
@@ -638,11 +639,34 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_new_object() -> Result<()> {
+    async fn test_new_object_integer() -> Result<()> {
         let vm = test_vm().await?;
         let object = vm.new_object("java.lang.Integer", "I", vec![42]).await?;
         let value: i32 = object.try_into()?;
         assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_new_object_integer_from_string() -> Result<()> {
+        let vm = test_vm().await?;
+        let object = vm
+            .new_object("java.lang.Integer", "Ljava/lang/String;", vec!["42"])
+            .await?;
+        let value: i32 = object.try_into()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_new_object_string() -> Result<()> {
+        let vm = test_vm().await?;
+        let characters = "foo".chars().collect::<Vec<char>>();
+        let object = vm
+            .new_object("java.lang.String", "[C", vec![characters])
+            .await?;
+        let value: String = object.try_into()?;
+        assert_eq!("foo", value);
         Ok(())
     }
 }

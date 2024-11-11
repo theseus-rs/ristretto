@@ -1,4 +1,9 @@
-use crate::Value;
+use crate::java_object::JavaObject;
+use crate::{Result, Value, VM};
+use ristretto_classloader::{Class, Object, Reference};
+use std::sync::Arc;
+
+const STRING_PREFIX: &str = "str:";
 
 /// Trait for converting Rust values to `Value`.
 pub trait RustValue {
@@ -86,6 +91,26 @@ impl RustValue for f32 {
 impl RustValue for f64 {
     fn to_value(&self) -> Value {
         Value::from(*self)
+    }
+}
+
+impl RustValue for &str {
+    fn to_value(&self) -> Value {
+        let class_name = format!("{STRING_PREFIX}{self}");
+        let Ok(class) = Class::new_named(&class_name) else {
+            return Value::Object(None);
+        };
+        let class = Arc::new(class);
+        let Ok(object) = Object::new(class) else {
+            return Value::Object(None);
+        };
+        Value::from(object)
+    }
+}
+
+impl RustValue for String {
+    fn to_value(&self) -> Value {
+        self.as_str().to_value()
     }
 }
 
@@ -179,6 +204,29 @@ impl RustValue for Vec<f64> {
     }
 }
 
+/// Convert a vector of Rust values to a vector of `Value`. Rust value
+pub async fn process_values(vm: &VM, values: Vec<impl RustValue>) -> Result<Vec<Value>> {
+    let mut results = Vec::new();
+    for value in values {
+        let value = value.to_value();
+        let Value::Object(Some(Reference::Object(ref object))) = value else {
+            results.push(value);
+            continue;
+        };
+
+        let class = object.class();
+        let class_name = class.name();
+        if class_name.starts_with(STRING_PREFIX) {
+            let string_value = class_name.strip_prefix(STRING_PREFIX).unwrap_or_default();
+            let value = string_value.to_object(vm).await?;
+            results.push(value);
+        } else {
+            results.push(value);
+        }
+    }
+    Ok(results)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -252,6 +300,24 @@ mod tests {
     #[test]
     fn test_f64() {
         assert_eq!(42.1f64.to_value(), Value::from(42.1f64));
+    }
+
+    #[tokio::test]
+    async fn test_str() -> Result<()> {
+        let value = "foo".to_value();
+        let object = value.try_to_object()?.to_object()?;
+        let class_name = object.class().name();
+        assert_eq!("str:foo", class_name);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_string() -> Result<()> {
+        let value = "foo".to_string().to_value();
+        let object = value.try_to_object()?.to_object()?;
+        let class_name = object.class().name();
+        assert_eq!("str:foo", class_name);
+        Ok(())
     }
 
     #[test]

@@ -727,8 +727,8 @@ mod tests {
 
     #[test]
     fn test_from_bool() {
-        let value: Value = true.into();
-        assert_eq!(Value::Int(1), value);
+        assert_eq!(Value::Int(1), true.into());
+        assert_eq!(Value::Int(0), false.into());
     }
 
     #[test]
