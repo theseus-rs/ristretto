@@ -30,17 +30,29 @@ impl Class {
         class_file: ClassFile,
         parent: Option<Arc<Class>>,
         interfaces: Vec<Arc<Class>>,
-        fields: IndexMap<String, Arc<Field>>,
-        methods: HashMap<String, Arc<Method>>,
+        fields: Vec<Field>,
+        methods: Vec<Method>,
     ) -> Self {
+        let mut fields_map = IndexMap::new();
+        for field in fields {
+            let field_name = field.name().to_string();
+            fields_map.insert(field_name, Arc::new(field));
+        }
+
+        let mut methods_map = HashMap::new();
+        for method in methods {
+            let method_identifier = method.identifier();
+            methods_map.insert(method_identifier, Arc::new(method));
+        }
+
         Self {
             name,
             source_file,
             class_file,
             parent: Arc::new(RwLock::new(parent)),
             interfaces: Arc::new(RwLock::new(interfaces)),
-            fields,
-            methods,
+            fields: fields_map,
+            methods: methods_map,
         }
     }
 

@@ -34,8 +34,7 @@ async fn get_append(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Op
         }
         _ => false,
     };
-    let append = i32::from(append);
-    Ok(Some(Value::Int(append)))
+    Ok(Some(Value::from(append)))
 }
 
 #[expect(clippy::needless_pass_by_value)]

@@ -19,6 +19,7 @@ mod java_lang_ref_reference;
 mod java_lang_runtime;
 mod java_lang_shutdown;
 mod java_lang_stacktraceelement;
+mod java_lang_stringutf16;
 mod java_lang_system;
 mod java_lang_thread;
 mod java_lang_throwable;

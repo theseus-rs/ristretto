@@ -7,12 +7,10 @@ use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
-use indexmap::IndexMap;
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classfile::{ClassFile, MethodAccessFlags};
 use ristretto_classloader::{Class, ConcurrentVec, Method, Object, Reference, Value};
 use std::cmp::min;
-use std::collections::HashMap;
 use std::env::consts::OS;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -184,7 +182,7 @@ async fn allow_security_manager(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+    Ok(Some(Value::from(false)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -279,7 +277,7 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
         .load_class(&thread, "jdk/internal/access/JavaLangRefAccess")
         .await?;
     let interfaces = vec![jdk_java_lang_ref_access];
-    let mut methods = HashMap::new();
+    let mut methods = Vec::new();
     let start_threads = Method::new(
         MethodAccessFlags::PUBLIC,
         "startThreads",
@@ -290,17 +288,14 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
         vec![],
         vec![],
     )?;
-    methods.insert(
-        format!("{}:{}", start_threads.name(), start_threads.descriptor()),
-        Arc::new(start_threads),
-    );
+    methods.push(start_threads);
     let java_lang_ref_access = Arc::new(Class::new(
         "ristretto/internal/access/JavaLangRefAccess".to_string(),
         None,
         ClassFile::default(),
         None,
         interfaces,
-        IndexMap::new(),
+        Vec::new(),
         methods,
     ));
     vm.register_class(java_lang_ref_access.clone()).await?;

@@ -212,9 +212,9 @@ async fn is_array(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Optio
     let vm = thread.vm()?;
     let class = get_class(&vm, &object).await?;
     if class.is_array() {
-        Ok(Some(Value::Int(1)))
+        Ok(Some(Value::from(true)))
     } else {
-        Ok(Some(Value::Int(0)))
+        Ok(Some(Value::from(false)))
     }
 }
 
@@ -235,16 +235,16 @@ async fn is_assignable_from(
     };
     let class = get_class(&vm, &object).await?;
     if class.is_assignable_from(&class_argument)? {
-        Ok(Some(Value::Int(1)))
+        Ok(Some(Value::from(true)))
     } else {
-        Ok(Some(Value::Int(0)))
+        Ok(Some(Value::from(false)))
     }
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_hidden(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+    Ok(Some(Value::from(false)))
 }
 
 #[async_recursion(?Send)]
@@ -255,9 +255,9 @@ async fn is_interface(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
     let vm = thread.vm()?;
     let class = get_class(&vm, &object).await?;
     if class.is_interface() {
-        Ok(Some(Value::Int(1)))
+        Ok(Some(Value::from(true)))
     } else {
-        Ok(Some(Value::Int(0)))
+        Ok(Some(Value::from(false)))
     }
 }
 
@@ -269,9 +269,9 @@ async fn is_primitive(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
     let vm = thread.vm()?;
     let class = get_class(&vm, &object).await?;
     if class.is_primitive() {
-        Ok(Some(Value::Int(1)))
+        Ok(Some(Value::from(true)))
     } else {
-        Ok(Some(Value::Int(0)))
+        Ok(Some(Value::from(false)))
     }
 }
 

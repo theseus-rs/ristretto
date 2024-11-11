@@ -62,7 +62,7 @@ async fn is_dumping_archive_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+    Ok(Some(Value::from(false)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -71,7 +71,7 @@ async fn is_dumping_class_list_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+    Ok(Some(Value::from(false)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -80,5 +80,5 @@ async fn is_sharing_enabled_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+    Ok(Some(Value::from(false)))
 }
