@@ -75,6 +75,7 @@ impl Thread {
         class: &Arc<Class>,
         method: &Arc<Method>,
         arguments: Vec<Value>,
+        remove_frame: bool,
     ) -> Result<Option<Value>> {
         let class_name = class.name();
         let method_name = method.name();
@@ -113,7 +114,7 @@ impl Thread {
                 frames.push(frame.clone());
             }
             let result = frame.execute().await;
-            (result, true)
+            (result, remove_frame)
         };
 
         if event_enabled!(Level::DEBUG) {

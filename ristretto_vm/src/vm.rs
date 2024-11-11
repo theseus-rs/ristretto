@@ -1,11 +1,13 @@
 use crate::java_object::JavaObject;
+use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::{Configuration, ConfigurationBuilder, Result};
 use ristretto_classfile::Version;
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
-    runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Reference, Value,
+    runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Object,
+    Reference, Value,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -267,7 +269,7 @@ impl VM {
             if let Some(class_initializer) = current_class.class_initializer() {
                 // Execute the class initializer on the current thread.
                 thread
-                    .execute(&current_class, &class_initializer, vec![])
+                    .execute(&current_class, &class_initializer, vec![], true)
                     .await?;
             }
         }
@@ -404,7 +406,7 @@ impl VM {
         arguments: Vec<Value>,
     ) -> Result<Option<Value>> {
         let thread = Thread::new(&self.vm);
-        thread.execute(class, method, arguments).await
+        thread.execute(class, method, arguments, true).await
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
@@ -422,6 +424,49 @@ impl VM {
             return Err(InternalError("No return value".into()));
         };
         Ok(value)
+    }
+
+    /// Create a new VM Object by invoking the constructor of the specified class.
+    ///
+    /// # Errors
+    /// if the object cannot be created
+    pub async fn new_object<S: AsRef<str>>(
+        &self,
+        class_name: S,
+        descriptor: S,
+        arguments: Vec<impl RustValue>,
+    ) -> Result<Value> {
+        let class_name = class_name.as_ref();
+        let descriptor = &format!("({})V", descriptor.as_ref());
+        let class = self.class(class_name).await?;
+        let Some(constructor) = class.method("<init>", descriptor) else {
+            return Err(InternalError(format!(
+                "No constructor found: {class_name}.<init>({descriptor})"
+            )));
+        };
+
+        let mut constructor_arguments = Vec::with_capacity(arguments.len() + 1);
+        let object = Object::new(class.clone())?;
+        constructor_arguments.insert(0, Value::from(object));
+        for argument in arguments {
+            let value = argument.to_value();
+            constructor_arguments.push(value);
+        }
+
+        let object = {
+            let thread = Thread::new(&self.vm);
+            thread
+                .execute(&class, &constructor, constructor_arguments, false)
+                .await?;
+            let frames = thread.frames().await?;
+            let frame = frames
+                .first()
+                .ok_or(InternalError("No frame".to_string()))?;
+            let locals = frame.locals();
+            locals.get(0)?
+        };
+        Arc::try_unwrap(object)
+            .map_err(|_| InternalError("Failed to create new object".to_string()))
     }
 }
 
@@ -589,6 +634,15 @@ mod tests {
         let object = abstract_map.parent()?.expect("AbstractMap parent");
         assert_eq!("java/lang/Object", object.name());
         assert!(object.parent()?.is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_new_object() -> Result<()> {
+        let vm = test_vm().await?;
+        let object = vm.new_object("java.lang.Integer", "I", vec![42]).await?;
+        let value: i32 = object.try_into()?;
+        assert_eq!(42, value);
         Ok(())
     }
 }
