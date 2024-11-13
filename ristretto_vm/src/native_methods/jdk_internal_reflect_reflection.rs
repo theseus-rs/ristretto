@@ -31,7 +31,7 @@ async fn get_caller_class(thread: Arc<Thread>, _arguments: Arguments) -> Result<
         }
 
         let vm = thread.vm()?;
-        let class = vm.load_class(&thread, class_name).await?;
+        let class = thread.class(class_name).await?;
         let class = class.to_object(&vm).await?;
         return Ok(Some(class));
     }

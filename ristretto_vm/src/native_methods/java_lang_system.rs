@@ -267,14 +267,14 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
     //
     // will eventually call System::getProperty() which fails if this is not initialized.
     let vm = thread.vm()?;
-    let system = vm.load_class(&thread, "java/lang/System").await?;
+    let system = thread.class("java/lang/System").await?;
     let set_properties = system.try_get_method("setProperties", "(Ljava/util/Properties;)V")?;
     vm.invoke(&system, &set_properties, vec![Value::Object(None)])
         .await?;
 
     // TODO: remove this once threading is implemented
-    let jdk_java_lang_ref_access = vm
-        .load_class(&thread, "jdk/internal/access/JavaLangRefAccess")
+    let jdk_java_lang_ref_access = thread
+        .class("jdk/internal/access/JavaLangRefAccess")
         .await?;
     let interfaces = vec![jdk_java_lang_ref_access];
     let mut methods = Vec::new();
@@ -298,12 +298,10 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
         Vec::new(),
         methods,
     ));
-    vm.register_class(java_lang_ref_access.clone()).await?;
+    thread.register_class(java_lang_ref_access.clone()).await?;
     let java_lang_ref_access =
         Value::Object(Some(Reference::Object(Object::new(java_lang_ref_access)?)));
-    let shared_secrets = vm
-        .load_class(&thread, "jdk/internal/access/SharedSecrets")
-        .await?;
+    let shared_secrets = thread.class("jdk/internal/access/SharedSecrets").await?;
     let set_java_lang_ref_access = shared_secrets.try_get_method(
         "setJavaLangRefAccess",
         "(Ljdk/internal/access/JavaLangRefAccess;)V",
@@ -321,8 +319,7 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[async_recursion(?Send)]
 async fn set_in_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let input_stream = arguments.pop_object()?;
-    let vm = thread.vm()?;
-    let system = vm.load_class(&thread, "java/lang/System").await?;
+    let system = thread.class("java/lang/System").await?;
     let in_field = system.static_field("in")?;
     in_field.unsafe_set_value(Value::Object(input_stream))?;
     Ok(None)
@@ -331,8 +328,7 @@ async fn set_in_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Optio
 #[async_recursion(?Send)]
 async fn set_out_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let print_stream = arguments.pop_object()?;
-    let vm = thread.vm()?;
-    let system = vm.load_class(&thread, "java/lang/System").await?;
+    let system = thread.class("java/lang/System").await?;
     let out_field = system.static_field("out")?;
     out_field.unsafe_set_value(Value::Object(print_stream))?;
     Ok(None)
@@ -341,8 +337,7 @@ async fn set_out_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 #[async_recursion(?Send)]
 async fn set_err_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let print_stream = arguments.pop_object()?;
-    let vm = thread.vm()?;
-    let system = vm.load_class(&thread, "java/lang/System").await?;
+    let system = thread.class("java/lang/System").await?;
     let err_field = system.static_field("err")?;
     err_field.unsafe_set_value(Value::Object(print_stream))?;
     Ok(None)

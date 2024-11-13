@@ -427,8 +427,7 @@ async fn object_field_offset_1(
         ));
     };
     let class_name: String = class_object.value("name")?.try_into()?;
-    let vm = thread.vm()?;
-    let class = vm.load_class(&thread, &class_name).await?;
+    let class = thread.class(&class_name).await?;
     let offset = class.field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
     Ok(Some(Value::Long(offset)))

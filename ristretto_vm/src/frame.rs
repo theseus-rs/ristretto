@@ -43,7 +43,7 @@ pub(crate) enum ExecutionResult {
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-2.html#jvms-2.6>
 #[derive(Debug)]
-pub(crate) struct Frame {
+pub struct Frame {
     thread: Weak<Thread>,
     class: Arc<Class>,
     method: Arc<Method>,
@@ -460,7 +460,7 @@ mod tests {
             .build()?;
         let vm = VM::new(configuration).await?;
         let thread = Thread::new(&Arc::downgrade(&vm));
-        let class = vm.load_class(&thread, class_name).await?;
+        let class = thread.class(class_name).await?;
         Ok((thread, class))
     }
 

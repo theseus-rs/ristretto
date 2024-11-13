@@ -174,7 +174,7 @@ async fn get_primitive_class(
 
     let class_name: String = primitive.try_into()?;
     let vm = thread.vm()?;
-    let class = vm.load_class(&thread, class_name).await?;
+    let class = thread.class(class_name).await?;
     let class = class.to_object(&vm).await?;
     Ok(Some(class))
 }
@@ -196,7 +196,7 @@ async fn get_super_class(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
         Some(parent) => {
             let class_name = parent.name();
             let vm = thread.vm()?;
-            let class = vm.load_class(&thread, class_name).await?;
+            let class = thread.class(class_name).await?;
             let class = class.to_object(&vm).await?;
             Ok(Some(class))
         }
