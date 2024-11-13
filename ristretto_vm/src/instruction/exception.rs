@@ -88,10 +88,15 @@ mod test {
     #[tokio::test]
     async fn test_process_throwable() -> Result<()> {
         let vm = VM::default().await?;
-        let class = vm.class("java.lang.Integer").await?;
-        let method = class.try_get_method("parseInt", "(Ljava/lang/String;)I")?;
         let value = "foo".to_object(&vm).await?;
-        let result = vm.invoke(&class, &method, vec![value]).await;
+        let result = vm
+            .invoke(
+                "java.lang.Integer",
+                "parseInt",
+                "(Ljava/lang/String;)I",
+                vec![value],
+            )
+            .await;
         assert!(result.is_err());
         Ok(())
     }

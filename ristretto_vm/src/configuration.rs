@@ -118,7 +118,11 @@ impl ConfigurationBuilder {
 
     /// Set the system properties
     #[must_use]
-    pub fn add_system_property<S: AsRef<str>>(mut self, key: S, value: S) -> Self {
+    pub fn add_system_property<K, V>(mut self, key: K, value: V) -> Self
+    where
+        K: AsRef<str>,
+        V: AsRef<str>,
+    {
         let key = key.as_ref().to_string();
         let value = value.as_ref().to_string();
         self.system_properties.insert(key, value);

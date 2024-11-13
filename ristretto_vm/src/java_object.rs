@@ -14,30 +14,45 @@ pub trait JavaObject {
 
 impl JavaObject for bool {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
-        let class = vm.class("java/lang/Boolean").await?;
-        let method = class.try_get_method("valueOf", "(Z)Ljava/lang/Boolean;")?;
         let value = Value::from(*self);
-        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        let result = vm
+            .try_invoke(
+                "java/lang/Boolean",
+                "valueOf",
+                "(Z)Ljava/lang/Boolean;",
+                vec![value],
+            )
+            .await?;
         Ok(result)
     }
 }
 
 impl JavaObject for char {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
-        let class = vm.class("java/lang/Character").await?;
-        let method = class.try_get_method("valueOf", "(C)Ljava/lang/Character;")?;
         let value = Value::from(*self);
-        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        let result = vm
+            .try_invoke(
+                "java/lang/Character",
+                "valueOf",
+                "(C)Ljava/lang/Character;",
+                vec![value],
+            )
+            .await?;
         Ok(result)
     }
 }
 
 impl JavaObject for i8 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
-        let class = vm.class("java/lang/Byte").await?;
-        let method = class.try_get_method("valueOf", "(B)Ljava/lang/Byte;")?;
         let value = Value::from(*self);
-        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        let result = vm
+            .try_invoke(
+                "java/lang/Byte",
+                "valueOf",
+                "(B)Ljava/lang/Byte;",
+                vec![value],
+            )
+            .await?;
         Ok(result)
     }
 }
@@ -52,10 +67,15 @@ impl JavaObject for u8 {
 
 impl JavaObject for i16 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
-        let class = vm.class("java/lang/Short").await?;
-        let method = class.try_get_method("valueOf", "(S)Ljava/lang/Short;")?;
         let value = Value::from(*self);
-        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        let result = vm
+            .try_invoke(
+                "java/lang/Short",
+                "valueOf",
+                "(S)Ljava/lang/Short;",
+                vec![value],
+            )
+            .await?;
         Ok(result)
     }
 }
@@ -70,10 +90,15 @@ impl JavaObject for u16 {
 
 impl JavaObject for i32 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
-        let class = vm.class("java/lang/Integer").await?;
-        let method = class.try_get_method("valueOf", "(I)Ljava/lang/Integer;")?;
         let value = Value::from(*self);
-        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        let result = vm
+            .try_invoke(
+                "java/lang/Integer",
+                "valueOf",
+                "(I)Ljava/lang/Integer;",
+                vec![value],
+            )
+            .await?;
         Ok(result)
     }
 }
@@ -88,10 +113,15 @@ impl JavaObject for u32 {
 
 impl JavaObject for i64 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
-        let class = vm.class("java/lang/Long").await?;
-        let method = class.try_get_method("valueOf", "(J)Ljava/lang/Long;")?;
         let value = Value::from(*self);
-        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        let result = vm
+            .try_invoke(
+                "java/lang/Long",
+                "valueOf",
+                "(J)Ljava/lang/Long;",
+                vec![value],
+            )
+            .await?;
         Ok(result)
     }
 }
@@ -120,20 +150,30 @@ impl JavaObject for usize {
 
 impl JavaObject for f32 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
-        let class = vm.class("java/lang/Float").await?;
-        let method = class.try_get_method("valueOf", "(F)Ljava/lang/Float;")?;
         let value = Value::from(*self);
-        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        let result = vm
+            .try_invoke(
+                "java/lang/Float",
+                "valueOf",
+                "(F)Ljava/lang/Float;",
+                vec![value],
+            )
+            .await?;
         Ok(result)
     }
 }
 
 impl JavaObject for f64 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
-        let class = vm.class("java/lang/Double").await?;
-        let method = class.try_get_method("valueOf", "(D)Ljava/lang/Double;")?;
         let value = Value::from(*self);
-        let result = vm.try_invoke(&class, &method, vec![value]).await?;
+        let result = vm
+            .try_invoke(
+                "java/lang/Double",
+                "valueOf",
+                "(D)Ljava/lang/Double;",
+                vec![value],
+            )
+            .await?;
         Ok(result)
     }
 }
@@ -162,8 +202,7 @@ impl JavaObject for &str {
         object.set_value("value", Value::Object(Some(array)))?;
         object.set_value("hash", Value::Int(0))?;
 
-        let reference = Reference::from(object);
-        let value = Value::Object(Some(reference));
+        let value = Value::from(object);
         Ok(value)
     }
 }
