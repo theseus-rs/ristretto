@@ -390,7 +390,11 @@ impl Class {
 
     /// Get a method by name and descriptor.
     #[must_use]
-    pub fn method<S: AsRef<str>>(&self, name: S, descriptor: S) -> Option<Arc<Method>> {
+    pub fn method<N, D>(&self, name: N, descriptor: D) -> Option<Arc<Method>>
+    where
+        N: AsRef<str>,
+        D: AsRef<str>,
+    {
         let name = name.as_ref();
         let descriptor = descriptor.as_ref();
         let method_identifier = format!("{name}:{descriptor}");
@@ -402,7 +406,11 @@ impl Class {
     ///
     /// # Errors
     /// if the method is not found.
-    pub fn try_get_method<S: AsRef<str>>(&self, name: S, descriptor: S) -> Result<Arc<Method>> {
+    pub fn try_get_method<N, D>(&self, name: N, descriptor: D) -> Result<Arc<Method>>
+    where
+        N: AsRef<str>,
+        D: AsRef<str>,
+    {
         let name = name.as_ref();
         let descriptor = descriptor.as_ref();
         let Some(method) = self.method(name, descriptor) else {

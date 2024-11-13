@@ -2,6 +2,7 @@ use crate::arguments::Arguments;
 use crate::rust_value::{process_values, RustValue};
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::{native_methods, Frame, Result, VM};
+use async_recursion::async_recursion;
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Value};
 use std::sync::{Arc, Weak};
@@ -71,6 +72,8 @@ impl Thread {
     ///
     /// # Errors
     /// if the class cannot be loaded
+    #[expect(clippy::multiple_bound_locations)]
+    #[async_recursion(?Send)]
     pub(crate) async fn class<S: AsRef<str>>(&self, class_name: S) -> Result<Arc<Class>> {
         let class_name = class_name.as_ref();
         let class_load_result = {
@@ -111,8 +114,13 @@ impl Thread {
         for current_class in classes {
             if let Some(class_initializer) = current_class.class_initializer() {
                 // Execute the class initializer on the current thread.
-                self.execute(&current_class, &class_initializer, vec![], true)
-                    .await?;
+                self.execute(
+                    &current_class,
+                    &class_initializer,
+                    Vec::<Value>::new(),
+                    true,
+                )
+                .await?;
             }
         }
         Ok(class)
@@ -209,12 +217,14 @@ impl Thread {
         &self,
         class: &Arc<Class>,
         method: &Arc<Method>,
-        arguments: Vec<Value>,
+        arguments: Vec<impl RustValue>,
         remove_frame: bool,
     ) -> Result<Option<Value>> {
         let class_name = class.name();
         let method_name = method.name();
         let method_descriptor = method.descriptor();
+        let vm = self.vm()?;
+        let arguments = process_values(&vm, arguments).await?;
 
         if event_enabled!(Level::DEBUG) {
             let access_flags = method.access_flags();
@@ -299,12 +309,16 @@ impl Thread {
     ///
     /// # Errors
     /// if the object cannot be created
-    pub async fn object<S: AsRef<str>>(
+    pub async fn object<C, M>(
         &self,
-        class_name: S,
-        descriptor: S,
+        class_name: C,
+        descriptor: M,
         arguments: Vec<impl RustValue>,
-    ) -> Result<Value> {
+    ) -> Result<Value>
+    where
+        C: AsRef<str>,
+        M: AsRef<str>,
+    {
         let class_name = class_name.as_ref();
         let descriptor = &format!("({})V", descriptor.as_ref());
         let class = self.class(class_name).await?;

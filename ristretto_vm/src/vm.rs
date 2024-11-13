@@ -6,7 +6,7 @@ use crate::{Configuration, ConfigurationBuilder, Result};
 use ristretto_classfile::Version;
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
-    runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Reference, Value,
+    runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Reference, Value,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -181,24 +181,24 @@ impl VM {
     /// # Errors
     /// if the VM cannot be initialized
     async fn initialize(&self) -> Result<()> {
-        let system_class = self.class("java.lang.System").await?;
-
         if self.java_class_file_version <= JAVA_8 {
-            let initialize_system_class_method =
-                system_class.try_get_method("initializeSystemClass", "()V")?;
-            self.invoke(&system_class, &initialize_system_class_method, vec![])
-                .await?;
+            self.invoke(
+                "java.lang.System",
+                "initializeSystemClass",
+                "()V",
+                Vec::<Value>::new(),
+            )
+            .await?;
         } else {
-            let init_phase1_method = system_class.try_get_method("initPhase1", "()V")?;
-            self.invoke(&system_class, &init_phase1_method, vec![])
+            self.invoke("java.lang.System", "initPhase1", "()V", Vec::<Value>::new())
                 .await?;
 
             // TODO: Implement System::initPhase2()
-            // let init_phase2_method = system_class.try_get_method("initPhase2", "(ZZ)I")?;
             // let phase2_result = self
             //     .invoke(
-            //         &system_class,
-            //         &init_phase2_method,
+            //         "java.lang.System",
+            //         "initPhase2",
+            //         "(ZZ)I",
             //         vec![Value::Int(1), Value::Int(1)],
             //     )
             //     .await?;
@@ -214,9 +214,12 @@ impl VM {
             // }
 
             // TODO: Implement System::initPhase3()
-            // let init_phase3_method = system_class.try_get_method("initPhase3", "()V")?;
-            // self.invoke(&system_class, &init_phase3_method, vec![])
-            //     .await?;
+            // self.invoke(
+            //     "java.lang.System",
+            //     "initPhase3",
+            //     "()V",
+            //     Vec::<Value>::new(),
+            // ).await?;
         }
 
         Ok(())
@@ -273,8 +276,13 @@ impl VM {
             ConcurrentVec::from(string_arguments),
         )));
 
-        self.invoke(&main_class, &main_method, vec![string_arguments])
-            .await
+        self.invoke(
+            main_class_name,
+            main_method.name(),
+            main_method.descriptor(),
+            vec![string_arguments],
+        )
+        .await
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
@@ -282,14 +290,22 @@ impl VM {
     ///
     /// # Errors
     /// if the method cannot be invoked
-    pub async fn invoke(
+    pub async fn invoke<C, M, D>(
         &self,
-        class: &Arc<Class>,
-        method: &Arc<Method>,
-        arguments: Vec<Value>,
-    ) -> Result<Option<Value>> {
+        class: C,
+        method: M,
+        descriptor: D,
+        arguments: Vec<impl RustValue>,
+    ) -> Result<Option<Value>>
+    where
+        C: AsRef<str>,
+        M: AsRef<str>,
+        D: AsRef<str>,
+    {
+        let class = self.class(class).await?;
+        let method = class.try_get_method(method, descriptor)?;
         let thread = self.new_thread();
-        thread.execute(class, method, arguments, true).await
+        thread.execute(&class, &method, arguments, true).await
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
@@ -297,13 +313,19 @@ impl VM {
     ///
     /// # Errors
     /// if the method cannot be invoked
-    pub async fn try_invoke(
+    pub async fn try_invoke<C, M, D>(
         &self,
-        class: &Arc<Class>,
-        method: &Arc<Method>,
-        arguments: Vec<Value>,
-    ) -> Result<Value> {
-        let Some(value) = self.invoke(class, method, arguments).await? else {
+        class: C,
+        method: M,
+        descriptor: D,
+        arguments: Vec<impl RustValue>,
+    ) -> Result<Value>
+    where
+        C: AsRef<str>,
+        M: AsRef<str>,
+        D: AsRef<str>,
+    {
+        let Some(value) = self.invoke(class, method, descriptor, arguments).await? else {
             return Err(InternalError("No return value".into()));
         };
         Ok(value)
@@ -313,14 +335,17 @@ impl VM {
     ///
     /// # Errors
     /// if the object cannot be created
-    pub async fn object<S: AsRef<str>>(
+    pub async fn object<C, M>(
         &self,
-        class_name: S,
-        descriptor: S,
+        class_name: C,
+        descriptor: M,
         arguments: Vec<impl RustValue>,
-    ) -> Result<Value> {
+    ) -> Result<Value>
+    where
+        C: AsRef<str>,
+        M: AsRef<str>,
+    {
         let class_name = Self::get_class_name(class_name);
-        let descriptor = descriptor.as_ref().to_string();
         let thread = self.new_thread();
         thread.object(class_name, descriptor, arguments).await
     }

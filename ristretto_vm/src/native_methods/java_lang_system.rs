@@ -267,10 +267,13 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
     //
     // will eventually call System::getProperty() which fails if this is not initialized.
     let vm = thread.vm()?;
-    let system = thread.class("java/lang/System").await?;
-    let set_properties = system.try_get_method("setProperties", "(Ljava/util/Properties;)V")?;
-    vm.invoke(&system, &set_properties, vec![Value::Object(None)])
-        .await?;
+    vm.invoke(
+        "java/lang/System",
+        "setProperties",
+        "(Ljava/util/Properties;)V",
+        vec![Value::Object(None)],
+    )
+    .await?;
 
     // TODO: remove this once threading is implemented
     let jdk_java_lang_ref_access = thread
@@ -301,14 +304,10 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
     thread.register_class(java_lang_ref_access.clone()).await?;
     let java_lang_ref_access =
         Value::Object(Some(Reference::Object(Object::new(java_lang_ref_access)?)));
-    let shared_secrets = thread.class("jdk/internal/access/SharedSecrets").await?;
-    let set_java_lang_ref_access = shared_secrets.try_get_method(
+    vm.invoke(
+        "jdk/internal/access/SharedSecrets",
         "setJavaLangRefAccess",
         "(Ljdk/internal/access/JavaLangRefAccess;)V",
-    )?;
-    vm.invoke(
-        &shared_secrets,
-        &set_java_lang_ref_access,
         vec![java_lang_ref_access],
     )
     .await?;
