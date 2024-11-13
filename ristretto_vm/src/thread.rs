@@ -1,8 +1,9 @@
 use crate::arguments::Arguments;
+use crate::rust_value::{process_values, RustValue};
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::{native_methods, Frame, Result, VM};
 use ristretto_classloader::Error::MethodNotFound;
-use ristretto_classloader::{Class, Method, Value};
+use ristretto_classloader::{Class, Method, Object, Value};
 use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
 use tracing::{debug, event_enabled, Level};
@@ -293,6 +294,51 @@ impl Thread {
         }
         arguments
     }
+
+    /// Create a new VM Object by invoking the constructor of the specified class.
+    ///
+    /// # Errors
+    /// if the object cannot be created
+    pub async fn object<S: AsRef<str>>(
+        &self,
+        class_name: S,
+        descriptor: S,
+        arguments: Vec<impl RustValue>,
+    ) -> Result<Value> {
+        let class_name = class_name.as_ref();
+        let descriptor = &format!("({})V", descriptor.as_ref());
+        let class = self.class(class_name).await?;
+        let Some(constructor) = class.method("<init>", descriptor) else {
+            return Err(InternalError(format!(
+                "No constructor found: {class_name}.<init>({descriptor})"
+            )));
+        };
+
+        let mut constructor_arguments = Vec::with_capacity(arguments.len() + 1);
+        let object = Object::new(class.clone())?;
+        constructor_arguments.insert(0, Value::from(object));
+        for argument in arguments {
+            let value = argument.to_value();
+            constructor_arguments.push(value);
+        }
+        let vm = self.vm()?;
+        let arguments = process_values(&vm, constructor_arguments).await?;
+
+        let object = {
+            let thread = Thread::new(&self.vm);
+            thread
+                .execute(&class, &constructor, arguments, false)
+                .await?;
+            let frames = thread.frames().await?;
+            let frame = frames
+                .first()
+                .ok_or(InternalError("No frame".to_string()))?;
+            let locals = frame.locals();
+            locals.get(0)?
+        };
+        Arc::try_unwrap(object)
+            .map_err(|_| InternalError("Failed to create new object".to_string()))
+    }
 }
 
 #[cfg(test)]
@@ -374,5 +420,15 @@ mod tests {
                 Value::Unused,
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn test_new_object_integer() -> Result<()> {
+        let vm = test_vm().await?;
+        let thread = vm.new_thread();
+        let object = thread.object("java/lang/Integer", "I", vec![42]).await?;
+        let value: i32 = object.try_into()?;
+        assert_eq!(42, value);
+        Ok(())
     }
 }

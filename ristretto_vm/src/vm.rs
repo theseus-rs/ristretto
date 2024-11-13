@@ -1,13 +1,12 @@
 use crate::java_object::JavaObject;
-use crate::rust_value::{process_values, RustValue};
+use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::{Configuration, ConfigurationBuilder, Result};
 use ristretto_classfile::Version;
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
-    runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Object,
-    Reference, Value,
+    runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Method, Reference, Value,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -320,38 +319,10 @@ impl VM {
         descriptor: S,
         arguments: Vec<impl RustValue>,
     ) -> Result<Value> {
-        let class_name = class_name.as_ref();
-        let descriptor = &format!("({})V", descriptor.as_ref());
-        let class = self.class(class_name).await?;
-        let Some(constructor) = class.method("<init>", descriptor) else {
-            return Err(InternalError(format!(
-                "No constructor found: {class_name}.<init>({descriptor})"
-            )));
-        };
-
-        let mut constructor_arguments = Vec::with_capacity(arguments.len() + 1);
-        let object = Object::new(class.clone())?;
-        constructor_arguments.insert(0, Value::from(object));
-        for argument in arguments {
-            let value = argument.to_value();
-            constructor_arguments.push(value);
-        }
-        let arguments = process_values(self, constructor_arguments).await?;
-
-        let object = {
-            let thread = Thread::new(&self.vm);
-            thread
-                .execute(&class, &constructor, arguments, false)
-                .await?;
-            let frames = thread.frames().await?;
-            let frame = frames
-                .first()
-                .ok_or(InternalError("No frame".to_string()))?;
-            let locals = frame.locals();
-            locals.get(0)?
-        };
-        Arc::try_unwrap(object)
-            .map_err(|_| InternalError("Failed to create new object".to_string()))
+        let class_name = Self::get_class_name(class_name);
+        let descriptor = descriptor.as_ref().to_string();
+        let thread = self.new_thread();
+        thread.object(class_name, descriptor, arguments).await
     }
 }
 
