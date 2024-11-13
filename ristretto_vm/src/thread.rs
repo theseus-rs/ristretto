@@ -339,14 +339,9 @@ impl Thread {
         let arguments = process_values(&vm, constructor_arguments).await?;
 
         let object = {
-            let thread = Thread::new(&self.vm);
-            thread
-                .execute(&class, &constructor, arguments, false)
-                .await?;
-            let frames = thread.frames().await?;
-            let frame = frames
-                .first()
-                .ok_or(InternalError("No frame".to_string()))?;
+            self.execute(&class, &constructor, arguments, false).await?;
+            let mut frames = self.frames.write().await;
+            let frame = frames.pop().ok_or(InternalError("No frame".to_string()))?;
             let locals = frame.locals();
             locals.get(0)?
         };

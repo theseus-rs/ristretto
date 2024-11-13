@@ -459,7 +459,7 @@ mod tests {
             .class_path(class_path.clone())
             .build()?;
         let vm = VM::new(configuration).await?;
-        let thread = Thread::new(&Arc::downgrade(&vm));
+        let thread = vm.new_thread();
         let class = thread.class(class_name).await?;
         Ok((thread, class))
     }
