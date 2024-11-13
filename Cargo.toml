@@ -29,7 +29,7 @@ async-recursion = "1.1.1"
 bitflags = "2.6.0"
 byteorder = "1.5.0"
 byte-unit = "5.1.6"
-clap = "4.5.20"
+clap = "4.5.21"
 criterion = { version = "0.5.1", default-features = false }
 dirs = "5.0.1"
 flate2 = "1.0.33"
