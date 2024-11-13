@@ -186,10 +186,9 @@ pub(crate) fn areturn(stack: &OperandStack) -> Result<ExecutionResult> {
 #[inline]
 pub(crate) async fn new(frame: &Frame, index: u16) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
-    let vm = thread.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.load_class(&thread, class_name).await?;
+    let class = thread.class(class_name).await?;
     let object = Object::new(class)?;
     let reference = Reference::from(object);
     let stack = frame.stack();
@@ -212,8 +211,7 @@ pub(crate) async fn checkcast(frame: &Frame, class_index: u16) -> Result<Executi
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(class_index)?;
     let thread = frame.thread()?;
-    let vm = thread.vm()?;
-    let class = vm.load_class(&thread, class_name).await?;
+    let class = thread.class(class_name).await?;
     if !is_instance_of(&object, &class)? {
         return Err(ClassCastError(class_name.to_string()));
     }
@@ -234,8 +232,7 @@ pub(crate) async fn instanceof(frame: &Frame, class_index: u16) -> Result<Execut
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(class_index)?;
     let thread = frame.thread()?;
-    let vm = thread.vm()?;
-    let class = vm.load_class(&thread, class_name).await?;
+    let class = thread.class(class_name).await?;
     if is_instance_of(&object, &class)? {
         stack.push_int(1)?;
     } else {
@@ -413,9 +410,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_aaload() -> Result<()> {
-        let (vm, thread, frame) = crate::test::frame().await?;
+        let (_vm, thread, frame) = crate::test::frame().await?;
         let stack = frame.stack();
-        let class = vm.load_class(&thread, "java/lang/Object").await?;
+        let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![42i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
         stack.push_object(Some(array))?;
@@ -445,9 +442,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_aaload_invalid_index() -> Result<()> {
-        let (vm, thread, frame) = crate::test::frame().await?;
+        let (_vm, thread, frame) = crate::test::frame().await?;
         let stack = frame.stack();
-        let class = vm.load_class(&thread, "java/lang/Object").await?;
+        let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![42i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
         stack.push_object(Some(array))?;
@@ -469,9 +466,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_aastore() -> Result<()> {
-        let (vm, thread, frame) = crate::test::frame().await?;
+        let (_vm, thread, frame) = crate::test::frame().await?;
         let stack = frame.stack();
-        let class = vm.load_class(&thread, "java/lang/Object").await?;
+        let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![3i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object)]));
         stack.push_object(Some(array))?;
@@ -502,9 +499,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_aastore_invalid_index() -> Result<()> {
-        let (vm, thread, frame) = crate::test::frame().await?;
+        let (_vm, thread, frame) = crate::test::frame().await?;
         let stack = frame.stack();
-        let class = vm.load_class(&thread, "java/lang/Object").await?;
+        let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![3i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
         stack.push_object(Some(array))?;
@@ -607,9 +604,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_checkcast_object_to_string() -> Result<()> {
-        let (vm, thread, mut frame) = crate::test::frame().await?;
+        let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut frame.stack();
-        let object_class = vm.load_class(&thread, "java/lang/Object").await?;
+        let object_class = thread.class("java/lang/Object").await?;
         let object = Object::new(object_class)?;
         stack.push_object(Some(Reference::from(object)))?;
         let class_index = get_class_index(&mut frame, "java/lang/String")?;
@@ -654,10 +651,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_instanceof_object_to_string() -> Result<()> {
-        let (vm, thread, mut frame) = crate::test::frame().await?;
+        let (_vm, thread, mut frame) = crate::test::frame().await?;
         {
             let stack = &mut frame.stack();
-            let object_class = vm.load_class(&thread, "java/lang/Object").await?;
+            let object_class = thread.class("java/lang/Object").await?;
             let object = Object::new(object_class)?;
             stack.push_object(Some(Reference::from(object)))?;
         }
@@ -671,10 +668,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_instanceof_string_array_to_object() -> Result<()> {
-        let (vm, thread, mut frame) = crate::test::frame().await?;
+        let (_vm, thread, mut frame) = crate::test::frame().await?;
         {
             let stack = &mut frame.stack();
-            let string_class = vm.load_class(&thread, "[Ljava/lang/String;").await?;
+            let string_class = thread.class("[Ljava/lang/String;").await?;
             let string_array = Reference::Array(string_class, ConcurrentVec::default());
             stack.push_object(Some(string_array))?;
         }
@@ -688,10 +685,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_instanceof_object_array_to_string() -> Result<()> {
-        let (vm, thread, mut frame) = crate::test::frame().await?;
+        let (_vm, thread, mut frame) = crate::test::frame().await?;
         {
             let stack = &mut frame.stack();
-            let object_class = vm.load_class(&thread, "[Ljava/lang/Object;").await?;
+            let object_class = thread.class("[Ljava/lang/Object;").await?;
             let object_array = Reference::Array(object_class, ConcurrentVec::default());
             stack.push_object(Some(object_array))?;
         }

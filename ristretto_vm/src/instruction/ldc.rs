@@ -64,7 +64,7 @@ async fn load_constant(frame: &Frame, index: u16) -> Result<ExecutionResult> {
             let class_name = constant_pool.try_get_utf8(*class_index)?;
             let thread = frame.thread()?;
             let vm = thread.vm()?;
-            let class = vm.load_class(&thread, class_name).await?;
+            let class = thread.class(class_name).await?;
             class.to_object(&vm).await?
         }
         constant => {

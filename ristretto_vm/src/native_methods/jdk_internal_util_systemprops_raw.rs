@@ -34,7 +34,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn platform_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let vm = thread.vm()?;
-    let string_array_class = vm.load_class(&thread, "[Ljava/lang/String;").await?;
+    let string_array_class = thread.class("[Ljava/lang/String;").await?;
     let system_properties = &mut properties::system(thread).await?;
     let java_version = vm.java_class_file_version();
 
@@ -114,7 +114,7 @@ fn push_property(
 async fn vm_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     let java_home = vm.java_home();
-    let string_array_class = vm.load_class(&thread, "[Ljava/lang/String;").await?;
+    let string_array_class = thread.class("[Ljava/lang/String;").await?;
     let mut system_properties = vm.system_properties().clone();
     system_properties.insert(
         "java.home".to_string(),

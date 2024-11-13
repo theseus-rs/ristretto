@@ -29,11 +29,10 @@ pub(crate) fn newarray(stack: &OperandStack, array_type: &ArrayType) -> Result<E
 #[inline]
 pub(crate) async fn anewarray(frame: &Frame, index: u16) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
-    let vm = thread.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
     let array_class_name = format!("[L{class_name};");
-    let class = vm.load_class(&thread, array_class_name.as_str()).await?;
+    let class = thread.class(array_class_name.as_str()).await?;
     let stack = frame.stack();
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
@@ -98,7 +97,7 @@ pub(crate) async fn multianewarray(
         array
     } else {
         type_class_name = format!("[L{type_class_name};");
-        let type_class = vm.load_class(&thread, type_class_name.as_str()).await?;
+        let type_class = thread.class(type_class_name.as_str()).await?;
         Reference::Array(type_class, ConcurrentVec::from(vec![None; count]))
     };
 

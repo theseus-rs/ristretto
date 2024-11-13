@@ -45,7 +45,7 @@ async fn get_class(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 
     let class_name = object.class_name();
     let vm = thread.vm()?;
-    let class = vm.load_class(&thread, class_name).await?;
+    let class = thread.class(class_name).await?;
     let class = class.to_object(&vm).await?;
     Ok(Some(class))
 }

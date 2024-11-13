@@ -15,7 +15,7 @@ pub(crate) async fn load_class(class_name: &str) -> Result<(Arc<VM>, Arc<Thread>
         .build()?;
     let vm = VM::new(configuration).await?;
     let thread = Thread::new(&Arc::downgrade(&vm));
-    let class = vm.load_class(&thread, class_name).await?;
+    let class = thread.class(class_name).await?;
     Ok((vm, thread, class))
 }
 

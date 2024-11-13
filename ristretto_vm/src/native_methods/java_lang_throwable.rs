@@ -31,9 +31,7 @@ async fn fill_in_stack_trace(
     };
 
     let vm = thread.vm()?;
-    let stack_element_class = vm
-        .load_class(&thread, "java/lang/StackTraceElement")
-        .await?;
+    let stack_element_class = thread.class("java/lang/StackTraceElement").await?;
     let stack_elements = ConcurrentVec::new();
     for frame in thread.frames().await?.iter().rev() {
         let class = frame.class();
@@ -62,8 +60,8 @@ async fn fill_in_stack_trace(
     }
 
     let depth = i32::try_from(stack_elements.len()?)?;
-    let stack_element_array_class = vm
-        .load_class(&thread, format!("[L{stack_element_class};").as_str())
+    let stack_element_array_class = thread
+        .class(format!("[L{stack_element_class};").as_str())
         .await?;
     let stack_trace = Value::Object(Some(Reference::Array(
         stack_element_array_class,

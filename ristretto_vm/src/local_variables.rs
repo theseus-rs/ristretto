@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 /// Represents the local variables in a frame.
 #[derive(Clone, Debug)]
-pub(crate) struct LocalVariables {
+pub struct LocalVariables {
     locals: ConcurrentVec<Arc<Value>>,
 }
 

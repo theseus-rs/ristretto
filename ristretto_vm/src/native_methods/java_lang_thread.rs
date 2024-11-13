@@ -79,7 +79,7 @@ async fn current_thread(thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
     let vm = thread.vm()?;
     let java_version = vm.java_class_file_version();
 
-    let thread_group_class = vm.load_class(&thread, "java/lang/ThreadGroup").await?;
+    let thread_group_class = thread.class("java/lang/ThreadGroup").await?;
     let thread_group = Object::new(thread_group_class)?;
     thread_group.set_value("maxPriority", Value::Int(10))?;
     thread_group.set_value("name", "main".to_object(&vm).await?)?;
@@ -89,16 +89,14 @@ async fn current_thread(thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 
     // The internal structure of Thread changed in Java 19
     let new_thread = if java_version < &JAVA_19 {
-        let thread_class = vm.load_class(&thread, "java/lang/Thread").await?;
+        let thread_class = thread.class("java/lang/Thread").await?;
         let new_thread = Object::new(thread_class)?;
         new_thread.set_value("group", thread_group)?;
         new_thread.set_value("priority", Value::Int(1))?;
         new_thread.set_value("threadStatus", Value::Int(4))?; // Runnable
         new_thread
     } else {
-        let field_holder_class = vm
-            .load_class(&thread, "java/lang/Thread$FieldHolder")
-            .await?;
+        let field_holder_class = thread.class("java/lang/Thread$FieldHolder").await?;
         let field_holder = Object::new(field_holder_class)?;
         field_holder.set_value("group", thread_group)?;
         field_holder.set_value("priority", Value::Int(1))?;
@@ -106,7 +104,7 @@ async fn current_thread(thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
         let reference = Reference::from(field_holder);
         let field_holder = Value::Object(Some(reference));
 
-        let thread_class = vm.load_class(&thread, "java/lang/Thread").await?;
+        let thread_class = thread.class("java/lang/Thread").await?;
         let new_thread = Object::new(thread_class)?;
         new_thread.set_value("holder", field_holder)?;
         new_thread

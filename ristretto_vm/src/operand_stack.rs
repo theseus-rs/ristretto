@@ -7,7 +7,7 @@ use std::fmt::Display;
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.2>
 #[derive(Debug)]
-pub(crate) struct OperandStack {
+pub struct OperandStack {
     stack: ConcurrentVec<Value>,
 }
 

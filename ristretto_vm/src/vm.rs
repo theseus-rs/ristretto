@@ -1,7 +1,7 @@
 use crate::java_object::JavaObject;
 use crate::rust_value::{process_values, RustValue};
 use crate::thread::Thread;
-use crate::Error::{InternalError, UnsupportedClassFileVersion};
+use crate::Error::InternalError;
 use crate::{Configuration, ConfigurationBuilder, Result};
 use ristretto_classfile::Version;
 use ristretto_classloader::manifest::MAIN_CLASS;
@@ -134,6 +134,11 @@ impl VM {
         &self.configuration
     }
 
+    /// Get the class loader
+    pub(crate) fn class_loader(&self) -> Arc<RwLock<ClassLoader>> {
+        self.class_loader.clone()
+    }
+
     /// Get the main class
     #[must_use]
     pub fn main_class(&self) -> Option<&String> {
@@ -162,6 +167,14 @@ impl VM {
     #[must_use]
     pub fn system_properties(&self) -> &HashMap<String, String> {
         self.configuration().system_properties()
+    }
+
+    /// Create a new thread
+    ///
+    /// # Errors
+    /// if the thread cannot be created
+    pub(crate) fn new_thread(&self) -> Arc<Thread> {
+        Thread::new(&self.vm)
     }
 
     /// Initialize the VM
@@ -210,149 +223,20 @@ impl VM {
         Ok(())
     }
 
+    /// Returns class names in the format "java.lang.Object" as "java/lang/Object".
+    fn get_class_name<S: AsRef<str>>(class_name: S) -> String {
+        let class_name = class_name.as_ref();
+        class_name.replace('.', "/")
+    }
+
     /// Load a class (e.g. "java.lang.Object").
     ///
     /// # Errors
     /// if the class cannot be loaded
-    pub async fn class(&self, class_name: &str) -> Result<Arc<Class>> {
-        let class_name = class_name.replace('.', "/");
-        let thread = &Thread::new(&self.vm);
-        self.load_class(thread, &class_name).await
-    }
-
-    /// Get a class.
-    ///
-    /// See: <https://docs.oracle.com/javase/specs/jls/se23/html/jls-12.html#jls-12.4.1>
-    ///
-    /// # Errors
-    /// if the class cannot be loaded
-    pub(crate) async fn load_class<S: AsRef<str>>(
-        &self,
-        thread: &Thread,
-        class_name: S,
-    ) -> Result<Arc<Class>> {
-        let class_name = class_name.as_ref();
-        let class_load_result = {
-            let class_loader = self.class_loader.read().await;
-            class_loader.load_with_status(class_name).await
-        };
-
-        let class = match class_load_result {
-            Ok((class, previously_loaded)) => {
-                // Determine if the class has already been loaded.  If the class has already been loaded,
-                // return the class. Otherwise, the class must be initialized.
-                if previously_loaded {
-                    return Ok(class);
-                }
-                class
-            }
-            Err(error) => {
-                if class_name.starts_with('[')
-                    || [
-                        "boolean", "byte", "char", "double", "float", "int", "long", "short",
-                        "void",
-                    ]
-                    .contains(&class_name)
-                {
-                    let array_class = Arc::new(Class::new_named(class_name)?);
-                    // Register the array class so that it will be available for future lookups.
-                    self.register_class(array_class.clone()).await?;
-                    array_class
-                } else {
-                    return Err(error.into());
-                }
-            }
-        };
-
-        let classes = self.prepare_class_initialization(&class).await?;
-        for current_class in classes {
-            if let Some(class_initializer) = current_class.class_initializer() {
-                // Execute the class initializer on the current thread.
-                thread
-                    .execute(&current_class, &class_initializer, vec![], true)
-                    .await?;
-            }
-        }
-        Ok(class)
-    }
-
-    /// Prepare class initialization.
-    ///
-    /// # Errors
-    /// if the class cannot be resolved
-    async fn prepare_class_initialization(&self, class: &Arc<Class>) -> Result<Vec<Arc<Class>>> {
-        let class_loader = self.class_loader.write().await;
-        let mut classes = Vec::new();
-        let mut index = 0;
-        classes.push(class.clone());
-
-        while index < classes.len() {
-            let Some(current_class) = classes.get(index) else {
-                break;
-            };
-            let current_class = current_class.clone();
-
-            if current_class.class_file().version > self.java_class_file_version {
-                return Err(UnsupportedClassFileVersion(
-                    current_class.class_file().version.major(),
-                ));
-            }
-
-            let mut interfaces = Vec::new();
-            for interface_index in &current_class.class_file().interfaces {
-                let interface_name = current_class
-                    .constant_pool()
-                    .try_get_class(*interface_index)?;
-                let (interface_class, previously_loaded) =
-                    class_loader.load_with_status(interface_name).await?;
-                interfaces.push(interface_class.clone());
-                if !previously_loaded && !classes.contains(&interface_class) {
-                    classes.push(interface_class);
-                }
-            }
-            current_class.set_interfaces(interfaces)?;
-
-            // If the current class is java.lang.Object, skip the parent class logic since Object is
-            // the root class.
-            if current_class.name() == "java/lang/Object" {
-                index += 1;
-                continue;
-            }
-
-            let super_class_index = current_class.class_file().super_class;
-            let super_class_name = if super_class_index == 0 {
-                "java/lang/Object"
-            } else {
-                let constant_pool = current_class.constant_pool();
-                constant_pool.try_get_class(super_class_index)?
-            };
-
-            let (super_class, previously_loaded) =
-                class_loader.load_with_status(super_class_name).await?;
-            current_class.set_parent(Some(super_class.clone()))?;
-            if !previously_loaded && !classes.contains(&super_class) {
-                classes.push(super_class);
-            }
-
-            index += 1;
-        }
-
-        // Classes are discovered from the top of the hierarchy to the bottom.  However, the class
-        // initialization order is from the bottom to the top.  Reverse the classes so that the
-        // classes are initialized from the bottom to the top.
-        classes.reverse();
-        Ok(classes)
-    }
-
-    /// Register a class.
-    ///
-    /// # Errors
-    /// if the class cannot be registered
-    pub(crate) async fn register_class(&self, class: Arc<Class>) -> Result<()> {
-        debug!("register class: {class}");
-        let class_loader = self.class_loader.write().await;
-        class_loader.register(class).await?;
-        Ok(())
+    pub async fn class<S: AsRef<str>>(&self, class_name: S) -> Result<Arc<Class>> {
+        let class_name = Self::get_class_name(class_name);
+        let thread = self.new_thread();
+        thread.class(class_name).await
     }
 
     /// Invoke the main method of the main class associated with the VM. The main method must have
@@ -405,7 +289,7 @@ impl VM {
         method: &Arc<Method>,
         arguments: Vec<Value>,
     ) -> Result<Option<Value>> {
-        let thread = Thread::new(&self.vm);
+        let thread = self.new_thread();
         thread.execute(class, method, arguments, true).await
     }
 
@@ -430,7 +314,7 @@ impl VM {
     ///
     /// # Errors
     /// if the object cannot be created
-    pub async fn new_object<S: AsRef<str>>(
+    pub async fn object<S: AsRef<str>>(
         &self,
         class_name: S,
         descriptor: S,
@@ -605,43 +489,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_hello_world_class() -> Result<()> {
-        let vm = test_vm().await?;
-        let thread = Thread::new(&vm.vm);
-        let class = vm.load_class(&thread, "HelloWorld").await?;
-        assert_eq!("HelloWorld", class.name());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_constants_class() -> Result<()> {
-        let vm = test_vm().await?;
-        let thread = Thread::new(&vm.vm);
-        let class = vm.load_class(&thread, "Constants").await?;
-        assert_eq!("Constants", class.name());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_class_inheritance() -> Result<()> {
-        let vm = test_vm().await?;
-        let thread = Thread::new(&vm.vm);
-        let hash_map = vm.load_class(&thread, "java/util/HashMap").await?;
-        assert_eq!("java/util/HashMap", hash_map.name());
-
-        let abstract_map = hash_map.parent()?.expect("HashMap parent");
-        assert_eq!("java/util/AbstractMap", abstract_map.name());
-
-        let object = abstract_map.parent()?.expect("AbstractMap parent");
-        assert_eq!("java/lang/Object", object.name());
-        assert!(object.parent()?.is_none());
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_new_object_integer() -> Result<()> {
         let vm = test_vm().await?;
-        let object = vm.new_object("java.lang.Integer", "I", vec![42]).await?;
+        let object = vm.object("java.lang.Integer", "I", vec![42]).await?;
         let value: i32 = object.try_into()?;
         assert_eq!(42, value);
         Ok(())
@@ -651,7 +501,7 @@ mod tests {
     async fn test_new_object_integer_from_string() -> Result<()> {
         let vm = test_vm().await?;
         let object = vm
-            .new_object("java.lang.Integer", "Ljava/lang/String;", vec!["42"])
+            .object("java.lang.Integer", "Ljava/lang/String;", vec!["42"])
             .await?;
         let value: i32 = object.try_into()?;
         assert_eq!(42, value);
@@ -663,7 +513,7 @@ mod tests {
         let vm = test_vm().await?;
         let characters = "foo".chars().collect::<Vec<char>>();
         let object = vm
-            .new_object("java.lang.String", "[C", vec![characters])
+            .object("java.lang.String", "[C", vec![characters])
             .await?;
         let value: String = object.try_into()?;
         assert_eq!("foo", value);
