@@ -31,6 +31,7 @@ mod jdk_internal_misc_scopedmemoryaccess;
 mod jdk_internal_misc_signal;
 mod jdk_internal_misc_unsafe;
 mod jdk_internal_misc_vm;
+mod jdk_internal_module_modulebootstrap;
 mod jdk_internal_reflect_reflection;
 mod jdk_internal_util_systemprops_raw;
 pub(crate) mod properties;

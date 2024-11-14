@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
-use crate::Error::NullPointer;
+use crate::Error::{InternalError, NullPointer};
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::Version;
@@ -9,7 +9,7 @@ use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;
 use std::time::Duration;
 
-const JAVA_19: Version = Version::Java19 { minor: 0 };
+const JAVA_18: Version = Version::Java18 { minor: 0 };
 
 /// Register all native methods for java.lang.Thread.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -39,6 +39,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "()J",
         get_next_thread_id_offset,
     );
+    // TODO: only register the isAlive()Z method if the version for Java 18
+    registry.register(class_name, "isAlive", "()Z", is_alive);
     registry.register(class_name, "registerNatives", "()V", register_natives);
     registry.register(
         class_name,
@@ -99,6 +101,18 @@ async fn get_next_thread_id_offset(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn is_alive(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    let java_object = thread.java_object().await;
+    let Some(Reference::Object(object)) = java_object.to_object()? else {
+        return Err(InternalError("thread is not a java object".to_string()));
+    };
+    let eetop = object.value("eetop")?.to_long()?;
+    let is_alive = eetop != 0;
+    Ok(Some(Value::from(is_alive)))
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -136,7 +150,13 @@ async fn sleep(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn start_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn start_0(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = thread.java_object().await.to_object()? else {
+        return Err(InternalError("thread is not a java object".to_string()));
+    };
+
+    let thread_id = i64::try_from(thread.id())?;
+    object.set_value("eetop", Value::from(thread_id))?;
     Ok(None)
 }
 
