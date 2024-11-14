@@ -1,3 +1,4 @@
+use crate::Error::InternalError;
 use crate::{Result, VM};
 use ristretto_classfile::{mutf8, Version};
 use ristretto_classloader::Error::ParseError;
@@ -214,20 +215,38 @@ impl JavaObject for String {
     }
 }
 
+async fn to_class_object(vm: &VM, class: &Arc<Class>) -> Result<Value> {
+    let java_lang_class = vm.class("java/lang/Class").await?;
+    let object = Object::new(java_lang_class)?;
+    let class_name = class.name();
+    let name = class_name.to_object(vm).await?;
+    object.set_value("name", name)?;
+    // TODO: a "null" class loader indicates a system class loader; this should be re-evaluated
+    // to support custom class loaders
+    let class_loader_field = object.field("classLoader")?;
+    class_loader_field.unsafe_set_value(Value::Object(None))?;
+    let value = Value::from(object);
+    Ok(value)
+}
+
 impl JavaObject for Arc<Class> {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
-        let class = vm.class("java/lang/Class").await?;
-        let object = Object::new(class)?;
-        let class_name = self.name();
-        let name = class_name.to_object(vm).await?;
-        object.set_value("name", name)?;
-        // TODO: a "null" class loader indicates a system class loader; this should be re-evaluated
-        // to support custom class loaders
-        let class_loader_field = object.field("classLoader")?;
-        class_loader_field.unsafe_set_value(Value::Object(None))?;
-        let reference = Reference::from(object);
-        let value = Value::Object(Some(reference));
-        Ok(value)
+        let class_object = to_class_object(vm, self).await?;
+        let Value::Object(Some(Reference::Object(ref object))) = class_object else {
+            return Err(InternalError("Expected class object".to_string()));
+        };
+        if self.is_array() {
+            let Some(component_type) = self.component_type() else {
+                return Err(InternalError(
+                    "array class missing component type".to_string(),
+                ));
+            };
+            let component_type_class = vm.class(component_type).await?;
+            let component_type_object = to_class_object(vm, &component_type_class).await?;
+            object.set_value("componentType", component_type_object)?;
+        }
+
+        Ok(class_object)
     }
 }
 
