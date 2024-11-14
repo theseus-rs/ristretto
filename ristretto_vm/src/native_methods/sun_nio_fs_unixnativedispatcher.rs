@@ -31,6 +31,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/nio/fs/UnixNativeDispatcher";
     registry.register(class_name, "getcwd", "()[B", get_cwd);
     registry.register(class_name, "init", "()I", init);
+    registry.register(
+        class_name,
+        "stat0",
+        "(JLsun/nio/fs/UnixFileAttributes;)I",
+        stat_0,
+    );
 }
 
 #[expect(clippy::cast_possible_wrap)]
@@ -55,7 +61,19 @@ async fn get_cwd(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let capabilities = SupportsFlags::empty();
-    // TODO: Implement the actual capabilities check
+    // TODO: Implement the capabilities check
     let capabilities = capabilities.bits();
     Ok(Some(Value::Int(capabilities)))
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn stat_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let Some(_attributes) = arguments.pop_object()? else {
+        return Err(InternalError("attributes is null".to_string()));
+    };
+    let _path = arguments.pop_long()?;
+    // TODO: Implement the stat0 method
+
+    Ok(Some(Value::Int(0)))
 }

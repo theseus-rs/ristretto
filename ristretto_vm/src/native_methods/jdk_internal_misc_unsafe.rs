@@ -141,6 +141,24 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "loadFence", "()V", load_fence);
     registry.register(
         class_name,
+        "putBoolean",
+        "(Ljava/lang/Object;JZ)V",
+        put_boolean,
+    );
+    registry.register(class_name, "putByte", "(Ljava/lang/Object;JB)V", put_byte);
+    registry.register(class_name, "putChar", "(Ljava/lang/Object;JC)V", put_char);
+    registry.register(
+        class_name,
+        "putDouble",
+        "(Ljava/lang/Object;JD)V",
+        put_double,
+    );
+    registry.register(class_name, "putFloat", "(Ljava/lang/Object;JF)V", put_float);
+    registry.register(class_name, "putInt", "(Ljava/lang/Object;JI)V", put_int);
+    registry.register(class_name, "putLong", "(Ljava/lang/Object;JJ)V", put_long);
+    registry.register(class_name, "putShort", "(Ljava/lang/Object;JS)V", put_short);
+    registry.register(
+        class_name,
         "putByteVolatile",
         "(Ljava/lang/Object;JB)V",
         put_reference_volatile,
@@ -534,6 +552,138 @@ async fn object_field_offset_1(
     let offset = class.field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
     Ok(Some(Value::Long(offset)))
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+pub(crate) async fn put_boolean(
+    _thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let x = arguments.pop_int()? != 0;
+    let offset = usize::try_from(arguments.pop_long()?)?;
+    let Value::Object(ref mut object) = arguments.pop()? else {
+        return Err(InternalError("putBoolean: Invalid reference".to_string()));
+    };
+    let bytes = Reference::from(vec![x; offset]);
+    *object = Some(bytes);
+    Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+pub(crate) async fn put_byte(
+    _thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let x = i8::try_from(arguments.pop_int()?)?;
+    let offset = usize::try_from(arguments.pop_long()?)?;
+    let Value::Object(ref mut object) = arguments.pop()? else {
+        return Err(InternalError("putByte: Invalid reference".to_string()));
+    };
+    let bytes = Reference::from(vec![x; offset]);
+    *object = Some(bytes);
+    Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+pub(crate) async fn put_char(
+    _thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    #[expect(clippy::cast_sign_loss)]
+    let x = arguments.pop_int()? as u32;
+    let Some(x) = char::from_u32(x) else {
+        return Err(InternalError("putChar: Invalid character".to_string()));
+    };
+    let offset = usize::try_from(arguments.pop_long()?)?;
+    let Value::Object(ref mut object) = arguments.pop()? else {
+        return Err(InternalError("putChar: Invalid reference".to_string()));
+    };
+    let bytes = Reference::from(vec![x; offset]);
+    *object = Some(bytes);
+    Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+pub(crate) async fn put_double(
+    _thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let x = arguments.pop_double()?;
+    let offset = usize::try_from(arguments.pop_long()?)?;
+    let Value::Object(ref mut object) = arguments.pop()? else {
+        return Err(InternalError("putDouble: Invalid reference".to_string()));
+    };
+    let bytes = Reference::from(vec![x; offset]);
+    *object = Some(bytes);
+    Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+pub(crate) async fn put_float(
+    _thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let x = arguments.pop_float()?;
+    let offset = usize::try_from(arguments.pop_long()?)?;
+    let Value::Object(ref mut object) = arguments.pop()? else {
+        return Err(InternalError("putFloat: Invalid reference".to_string()));
+    };
+    let bytes = Reference::from(vec![x; offset]);
+    *object = Some(bytes);
+    Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+pub(crate) async fn put_int(
+    _thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let x = arguments.pop_int()?;
+    let offset = usize::try_from(arguments.pop_long()?)?;
+    let Value::Object(ref mut object) = arguments.pop()? else {
+        return Err(InternalError("putInt: Invalid reference".to_string()));
+    };
+    let bytes = Reference::from(vec![x; offset]);
+    *object = Some(bytes);
+    Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+pub(crate) async fn put_long(
+    _thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let x = arguments.pop_long()?;
+    let offset = usize::try_from(arguments.pop_long()?)?;
+    let Value::Object(ref mut object) = arguments.pop()? else {
+        return Err(InternalError("putlong: Invalid reference".to_string()));
+    };
+    let bytes = Reference::from(vec![x; offset]);
+    *object = Some(bytes);
+    Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+pub(crate) async fn put_short(
+    _thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let x = i16::try_from(arguments.pop_int()?)?;
+    let offset = usize::try_from(arguments.pop_long()?)?;
+    let Value::Object(ref mut object) = arguments.pop()? else {
+        return Err(InternalError("putShort: Invalid reference".to_string()));
+    };
+    let bytes = Reference::from(vec![x; offset]);
+    *object = Some(bytes);
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
