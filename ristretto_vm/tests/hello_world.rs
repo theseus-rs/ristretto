@@ -57,7 +57,7 @@ async fn test_helloworld_v22() -> Result<()> {
     test_helloworld("22.0.2.9.1").await
 }
 
-// #[tokio::test]
-// async fn test_helloworld_v23() -> Result<()> {
-//     test_helloworld("23.0.1.8.1").await
-// }
+#[tokio::test]
+async fn test_helloworld_v23() -> Result<()> {
+    test_helloworld("23.0.1.8.1").await
+}
