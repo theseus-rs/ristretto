@@ -4,6 +4,7 @@ use crate::thread::Thread;
 use crate::Error::{InternalError, InvalidOperand};
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::BaseType;
 use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;
 
@@ -60,6 +61,54 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
+        "getBooleanVolatile",
+        "(Ljava/lang/Object;J)Z",
+        get_boolean_volatile,
+    );
+    registry.register(
+        class_name,
+        "getByteVolatile",
+        "(Ljava/lang/Object;J)B",
+        get_byte_volatile,
+    );
+    registry.register(
+        class_name,
+        "getCharVolatile",
+        "(Ljava/lang/Object;J)C",
+        get_char_volatile,
+    );
+    registry.register(
+        class_name,
+        "getDoubleVolatile",
+        "(Ljava/lang/Object;J)D",
+        get_double_volatile,
+    );
+    registry.register(
+        class_name,
+        "getFloatVolatile",
+        "(Ljava/lang/Object;J)F",
+        get_float_volatile,
+    );
+    registry.register(
+        class_name,
+        "getIntVolatile",
+        "(Ljava/lang/Object;J)I",
+        get_int_volatile,
+    );
+    registry.register(
+        class_name,
+        "getLongVolatile",
+        "(Ljava/lang/Object;J)J",
+        get_long_volatile,
+    );
+    registry.register(
+        class_name,
+        "getShortVolatile",
+        "(Ljava/lang/Object;J)S",
+        get_short_volatile,
+    );
+    registry.register(
+        class_name,
         "getReferenceVolatile",
         "(Ljava/lang/Object;J)Ljava/lang/Object;",
         get_reference_volatile,
@@ -77,27 +126,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         put_reference_volatile,
     );
     registry.register(class_name, "registerNatives", "()V", register_natives);
-
-    // Delegate get/put type volatile methods
-
-    registry.register(
-        class_name,
-        "getBooleanVolatile",
-        "(Ljava/lang/Object;J)Z",
-        get_reference_volatile,
-    );
     registry.register(
         class_name,
         "putBooleanVolatile",
         "(Ljava/lang/Object;JZ)V",
         put_reference_volatile,
-    );
-
-    registry.register(
-        class_name,
-        "getByteVolatile",
-        "(Ljava/lang/Object;J)B",
-        get_reference_volatile,
     );
     registry.register(class_name, "loadFence", "()V", load_fence);
     registry.register(
@@ -106,25 +139,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/Object;JB)V",
         put_reference_volatile,
     );
-
-    registry.register(
-        class_name,
-        "getCharVolatile",
-        "(Ljava/lang/Object;J)C",
-        get_reference_volatile,
-    );
     registry.register(
         class_name,
         "putCharVolatile",
         "(Ljava/lang/Object;JC)V",
         put_reference_volatile,
-    );
-
-    registry.register(
-        class_name,
-        "getDoubleVolatile",
-        "(Ljava/lang/Object;J)D",
-        get_reference_volatile,
     );
     registry.register(
         class_name,
@@ -132,25 +151,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/Object;JD)V",
         put_reference_volatile,
     );
-
-    registry.register(
-        class_name,
-        "getFloatVolatile",
-        "(Ljava/lang/Object;J)F",
-        get_reference_volatile,
-    );
     registry.register(
         class_name,
         "putFloatVolatile",
         "(Ljava/lang/Object;JF)V",
         put_reference_volatile,
-    );
-
-    registry.register(
-        class_name,
-        "getIntVolatile",
-        "(Ljava/lang/Object;J)I",
-        get_reference_volatile,
     );
     registry.register(
         class_name,
@@ -158,25 +163,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/Object;JI)V",
         put_reference_volatile,
     );
-
-    registry.register(
-        class_name,
-        "getLongVolatile",
-        "(Ljava/lang/Object;J)J",
-        get_reference_volatile,
-    );
     registry.register(
         class_name,
         "putLongVolatile",
         "(Ljava/lang/Object;JJ)V",
         put_reference_volatile,
-    );
-
-    registry.register(
-        class_name,
-        "getShortVolatile",
-        "(Ljava/lang/Object;J)S",
-        get_reference_volatile,
     );
     registry.register(
         class_name,
@@ -184,7 +175,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/Object;JS)V",
         put_reference_volatile,
     );
-
     registry.register(class_name, "storeFence", "()V", store_fence);
 }
 
@@ -231,20 +221,29 @@ async fn compare_and_set_int(
 ) -> Result<Option<Value>> {
     let x = arguments.pop_int()?;
     let expected = arguments.pop_int()?;
-    let offset = arguments.pop_long()?;
-    let Some(Reference::Object(object)) = arguments.pop_object()? else {
-        return Err(InternalError(
-            "compareAndSetInt: Invalid reference".to_string(),
-        ));
+    let mut offset = arguments.pop()?;
+    let Value::Long(ref mut offset) = offset else {
+        return Err(InvalidOperand {
+            expected: "long".to_string(),
+            actual: offset.to_string(),
+        });
     };
-    let class = object.class();
-    let offset = usize::try_from(offset)?;
-    let field_name = class.field_name(offset)?;
-    let field = object.field(&field_name)?;
-    let value = field.value()?.to_int()?;
+
     // TODO: the compare and set operation should be atomic
-    let result = if value == expected {
-        field.set_value(Value::Int(x))?;
+    let result = if let Some(Reference::Object(object)) = arguments.pop_object()? {
+        let class = object.class();
+        let offset = usize::try_from(*offset)?;
+        let field_name = class.field_name(offset)?;
+        let field = object.field(&field_name)?;
+        let value = field.value()?.to_int()?;
+        if value == expected {
+            field.set_value(Value::Int(x))?;
+            1
+        } else {
+            0
+        }
+    } else if i32::try_from(*offset)? == expected {
+        *offset = i64::from(x);
         1
     } else {
         0
@@ -260,20 +259,29 @@ async fn compare_and_set_long(
 ) -> Result<Option<Value>> {
     let x = arguments.pop_long()?;
     let expected = arguments.pop_long()?;
-    let offset = arguments.pop_long()?;
-    let Some(Reference::Object(object)) = arguments.pop_object()? else {
-        return Err(InternalError(
-            "compareAndSetLong: Invalid reference".to_string(),
-        ));
+    let mut offset = arguments.pop()?;
+    let Value::Long(ref mut offset) = offset else {
+        return Err(InvalidOperand {
+            expected: "long".to_string(),
+            actual: offset.to_string(),
+        });
     };
-    let class = object.class();
-    let offset = usize::try_from(offset)?;
-    let field_name = class.field_name(offset)?;
-    let field = object.field(&field_name)?;
-    let value = field.value()?.to_long()?;
+
     // TODO: the compare and set operation should be atomic
-    let result = if value == expected {
-        field.set_value(Value::Long(x))?;
+    let result = if let Some(Reference::Object(object)) = arguments.pop_object()? {
+        let class = object.class();
+        let offset = usize::try_from(*offset)?;
+        let field_name = class.field_name(offset)?;
+        let field = object.field(&field_name)?;
+        let value = field.value()?.to_long()?;
+        if value == expected {
+            field.set_value(Value::Long(x))?;
+            1
+        } else {
+            0
+        }
+    } else if *offset == expected {
+        *offset = x;
         1
     } else {
         0
@@ -375,13 +383,31 @@ async fn unaligned_access_0(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
 }
 
 #[expect(clippy::needless_pass_by_value)]
-#[async_recursion(?Send)]
-async fn get_reference(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+fn get_reference_type(
+    _thread: Arc<Thread>,
+    mut arguments: Arguments,
+    base_type: Option<BaseType>,
+) -> Result<Option<Value>> {
     let offset = arguments.pop_long()?;
-    let offset = usize::try_from(offset)?;
     let Some(reference) = arguments.pop_object()? else {
-        return Err(InternalError("getReference: Invalid reference".to_string()));
+        let Some(base_type) = base_type else {
+            return Err(InternalError("getReference: Invalid reference".to_string()));
+        };
+        let value = match base_type {
+            BaseType::Boolean
+            | BaseType::Byte
+            | BaseType::Char
+            | BaseType::Int
+            | BaseType::Short => Value::Int(i32::try_from(offset)?),
+            BaseType::Long => Value::Long(offset),
+            BaseType::Double | BaseType::Float => {
+                return Err(InternalError("getReference: Invalid reference".to_string()));
+            }
+        };
+        return Ok(Some(value));
     };
+
+    let offset = usize::try_from(offset)?;
     match reference {
         Reference::Array(_class, array) => {
             let Some(reference) = array.get(offset)? else {
@@ -400,13 +426,57 @@ async fn get_reference(_thread: Arc<Thread>, mut arguments: Arguments) -> Result
     }
 }
 
-#[inline]
+#[async_recursion(?Send)]
+async fn get_boolean_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference_type(thread, arguments, Some(BaseType::Boolean))
+}
+
+#[async_recursion(?Send)]
+async fn get_byte_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference_type(thread, arguments, Some(BaseType::Byte))
+}
+
+#[async_recursion(?Send)]
+async fn get_char_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference_type(thread, arguments, Some(BaseType::Char))
+}
+
+#[async_recursion(?Send)]
+async fn get_double_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference_type(thread, arguments, Some(BaseType::Double))
+}
+
+#[async_recursion(?Send)]
+async fn get_float_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference_type(thread, arguments, Some(BaseType::Float))
+}
+
+#[async_recursion(?Send)]
+async fn get_int_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference_type(thread, arguments, Some(BaseType::Int))
+}
+
+#[async_recursion(?Send)]
+async fn get_long_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference_type(thread, arguments, Some(BaseType::Long))
+}
+
+#[async_recursion(?Send)]
+async fn get_short_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference_type(thread, arguments, Some(BaseType::Short))
+}
+
+#[async_recursion(?Send)]
+async fn get_reference(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference_type(thread, arguments, None)
+}
+
 #[async_recursion(?Send)]
 async fn get_reference_volatile(
     thread: Arc<Thread>,
     arguments: Arguments,
 ) -> Result<Option<Value>> {
-    get_reference(thread, arguments).await
+    get_reference_type(thread, arguments, None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -448,20 +518,27 @@ async fn put_reference_volatile(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop_object()?;
+    let x = arguments.pop()?;
     let offset = arguments.pop_long()?;
     let offset = usize::try_from(offset)?;
     let Some(object) = arguments.pop_object()? else {
         return Err(InternalError(
-            "compareAndSetReference: Invalid reference".to_string(),
+            "putReferenceVolatile: Invalid reference".to_string(),
         ));
     };
     match object {
         Reference::Array(_class, array) => {
+            let x = x.to_object()?;
             array.set(offset, x)?;
         }
+        Reference::Object(object) => {
+            let field_name = object.class().field_name(offset)?;
+            object.set_value(&field_name, x)?;
+        }
         _ => {
-            return Err(InternalError("getReference: Invalid reference".to_string()));
+            return Err(InternalError(
+                "putReferenceVolatile: Invalid reference".to_string(),
+            ));
         }
     }
     Ok(None)
