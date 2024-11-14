@@ -23,6 +23,7 @@ mod java_lang_stringutf16;
 mod java_lang_system;
 mod java_lang_thread;
 mod java_lang_throwable;
+mod java_security_accesscontroller;
 mod jdk_internal_loader_bootloader;
 mod jdk_internal_loader_nativelibraries;
 mod jdk_internal_misc_cds;

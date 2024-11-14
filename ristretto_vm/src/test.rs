@@ -5,20 +5,6 @@ use ristretto_classloader::{ClassPath, Method};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-/// Get the specific class for testing.
-pub(crate) async fn load_class(class_name: &str) -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
-    let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let classes_path = cargo_manifest.join("../classes");
-    let class_path = ClassPath::from(classes_path.to_string_lossy());
-    let configuration = ConfigurationBuilder::new()
-        .class_path(class_path.clone())
-        .build()?;
-    let vm = VM::new(configuration).await?;
-    let thread = vm.new_thread()?;
-    let class = thread.class(class_name).await?;
-    Ok((vm, thread, class))
-}
-
 /// Get a test class for testing.
 pub(crate) async fn class() -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
