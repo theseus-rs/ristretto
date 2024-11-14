@@ -8,13 +8,16 @@ use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::attributes::Instruction;
-use ristretto_classfile::{ClassFile, MethodAccessFlags};
+use ristretto_classfile::{ClassFile, MethodAccessFlags, Version};
 use ristretto_classloader::{Class, ConcurrentVec, Method, Object, Reference, Value};
 use std::cmp::min;
 use std::env::consts::OS;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for java.lang.System
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -275,11 +278,18 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
     )
     .await?;
 
-    // TODO: remove this once threading is implemented
-    let jdk_java_lang_ref_access = thread
-        .class("jdk/internal/access/JavaLangRefAccess")
+    let java_class_file_version = vm.java_class_file_version();
+    let package_name = if java_class_file_version <= &JAVA_8 {
+        "sun/misc"
+    } else if java_class_file_version <= &JAVA_11 {
+        "jdk/internal/misc"
+    } else {
+        "jdk/internal/access"
+    };
+    let java_lang_ref_access = thread
+        .class(format!("{package_name}/JavaLangRefAccess"))
         .await?;
-    let interfaces = vec![jdk_java_lang_ref_access];
+    let interfaces = vec![java_lang_ref_access];
     let mut methods = Vec::new();
     let start_threads = Method::new(
         MethodAccessFlags::PUBLIC,
@@ -305,9 +315,9 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
     let java_lang_ref_access =
         Value::Object(Some(Reference::Object(Object::new(java_lang_ref_access)?)));
     vm.invoke(
-        "jdk/internal/access/SharedSecrets",
+        format!("{package_name}/SharedSecrets"),
         "setJavaLangRefAccess",
-        "(Ljdk/internal/access/JavaLangRefAccess;)V",
+        format!("(L{package_name}/JavaLangRefAccess;)V"),
         vec![java_lang_ref_access],
     )
     .await?;

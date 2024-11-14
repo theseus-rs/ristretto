@@ -16,21 +16,38 @@ use tracing::{debug, event_enabled, Level};
 #[expect(clippy::struct_field_names)]
 #[derive(Debug)]
 pub struct Thread {
+    id: u64,
     vm: Weak<VM>,
     thread: Weak<Thread>,
     name: Arc<RwLock<String>>,
+    java_object: Arc<RwLock<Value>>,
     frames: Arc<RwLock<Vec<Arc<Frame>>>>,
 }
 
 impl Thread {
     /// Create a new thread.
-    pub fn new(vm: &Weak<VM>) -> Arc<Self> {
-        Arc::new_cyclic(|thread| Thread {
-            vm: vm.clone(),
+    pub fn new(vm: &Weak<VM>) -> Result<Arc<Self>> {
+        let vm_ref = vm.clone();
+        let vm = vm
+            .upgrade()
+            .ok_or(InternalError("VM is not available".to_string()))?;
+        let id = vm.next_thread_id()?;
+        let name = format!("Thread-{id}");
+        let java_object = Value::Object(None);
+        let thread = Arc::new_cyclic(|thread| Thread {
+            id,
+            vm: vm_ref,
             thread: thread.clone(),
-            name: Arc::new(RwLock::new(String::new())),
+            name: Arc::new(RwLock::new(name)),
+            java_object: Arc::new(RwLock::new(java_object)),
             frames: Arc::new(RwLock::new(Vec::new())),
-        })
+        });
+        Ok(thread)
+    }
+
+    /// Get the identifier of the thread.
+    pub fn id(&self) -> u64 {
+        self.id
     }
 
     /// Get the virtual machine that owns the thread.
@@ -55,6 +72,18 @@ impl Thread {
         let new_name = name.as_ref();
         let mut name = self.name.write().await;
         *name = new_name.to_string();
+    }
+
+    /// Get the Java object for this thread.
+    pub async fn java_object(&self) -> Value {
+        let object = self.java_object.read().await;
+        object.clone()
+    }
+
+    /// Set the Java thread object for this thread.
+    pub async fn set_java_object(&self, new_java_object: Value) {
+        let mut java_object = self.java_object.write().await;
+        *java_object = new_java_object;
     }
 
     /// Get the frames in the thread.
@@ -378,7 +407,7 @@ mod tests {
     #[tokio::test]
     async fn test_hello_world_class() -> Result<()> {
         let vm = test_vm().await?;
-        let thread = vm.new_thread();
+        let thread = vm.new_thread()?;
         let class = thread.class("HelloWorld").await?;
         assert_eq!("HelloWorld", class.name());
         Ok(())
@@ -387,7 +416,7 @@ mod tests {
     #[tokio::test]
     async fn test_constants_class() -> Result<()> {
         let vm = test_vm().await?;
-        let thread = vm.new_thread();
+        let thread = vm.new_thread()?;
         let class = thread.class("Constants").await?;
         assert_eq!("Constants", class.name());
         Ok(())
@@ -396,7 +425,7 @@ mod tests {
     #[tokio::test]
     async fn test_class_inheritance() -> Result<()> {
         let vm = test_vm().await?;
-        let thread = vm.new_thread();
+        let thread = vm.new_thread()?;
         let hash_map = thread.class("java/util/HashMap").await?;
         assert_eq!("java/util/HashMap", hash_map.name());
 
@@ -434,7 +463,7 @@ mod tests {
     #[tokio::test]
     async fn test_new_object_integer() -> Result<()> {
         let vm = test_vm().await?;
-        let thread = vm.new_thread();
+        let thread = vm.new_thread()?;
         let object = thread.object("java/lang/Integer", "I", vec![42]).await?;
         let value: i32 = object.try_into()?;
         assert_eq!(42, value);

@@ -14,7 +14,7 @@ pub(crate) async fn load_class(class_name: &str) -> Result<(Arc<VM>, Arc<Thread>
         .class_path(class_path.clone())
         .build()?;
     let vm = VM::new(configuration).await?;
-    let thread = vm.new_thread();
+    let thread = vm.new_thread()?;
     let class = thread.class(class_name).await?;
     Ok((vm, thread, class))
 }
@@ -28,7 +28,7 @@ pub(crate) async fn class() -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
         .class_path(class_path.clone())
         .build()?;
     let vm = VM::new(configuration).await?;
-    let thread = vm.new_thread();
+    let thread = vm.new_thread()?;
     let mut constant_pool = ConstantPool::default();
     let this_class = constant_pool.add_class("Test")?;
     let class_file = ClassFile {
