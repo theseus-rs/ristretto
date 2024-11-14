@@ -35,6 +35,9 @@ mod jdk_internal_util_systemprops_raw;
 pub(crate) mod properties;
 mod registry;
 mod sun_io_win32errormode;
+mod sun_misc_unsafe;
+mod sun_misc_vm;
 mod sun_nio_fs_unixnativedispatcher;
+mod sun_reflect_reflection;
 
 pub use registry::registry;

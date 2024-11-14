@@ -20,7 +20,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn get_caller_class(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+pub(crate) async fn get_caller_class(
+    thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
     for frame in frames.iter().rev() {
         let class = frame.class();

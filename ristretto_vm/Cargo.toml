@@ -13,6 +13,7 @@ version.workspace = true
 async-recursion = { workspace = true }
 bitflags = { workspace = true }
 byte-unit = { workspace = true }
+dashmap = { workspace = true }
 dirs = { workspace = true }
 indexmap = { workspace = true }
 os_info = { workspace = true }

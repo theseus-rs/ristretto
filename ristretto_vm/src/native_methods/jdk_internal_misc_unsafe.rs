@@ -198,19 +198,28 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn address_size_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+pub(crate) async fn address_size_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     Ok(Some(Value::Int(8))) // 64-bit pointers
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn array_base_offset_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+pub(crate) async fn array_base_offset_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn array_index_scale_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+pub(crate) async fn array_index_scale_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     Ok(Some(Value::Int(1)))
 }
 
@@ -460,7 +469,10 @@ async fn put_reference_volatile(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 

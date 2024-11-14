@@ -3,18 +3,21 @@ use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::{Configuration, ConfigurationBuilder, Result};
+use dashmap::DashMap;
 use ristretto_classfile::Version;
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
-    runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Reference, Value,
+    runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Object, Reference, Value,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
 use tracing::debug;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_19: Version = Version::Java19 { minor: 0 };
 
 /// Java Virtual Machine
 #[derive(Debug)]
@@ -26,6 +29,8 @@ pub struct VM {
     java_home: PathBuf,
     java_version: String,
     java_class_file_version: Version,
+    next_thread_id: AtomicU64,
+    threads: DashMap<u64, Arc<Thread>>,
 }
 
 /// VM
@@ -113,6 +118,8 @@ impl VM {
             java_home,
             java_version,
             java_class_file_version,
+            next_thread_id: AtomicU64::new(1),
+            threads: DashMap::new(),
         });
         vm.initialize().await?;
         Ok(vm)
@@ -168,12 +175,35 @@ impl VM {
         self.configuration().system_properties()
     }
 
+    /// Get the next thread ID
+    ///
+    /// # Errors
+    /// if the thread identifier overflows
+    pub(crate) fn next_thread_id(&self) -> Result<u64> {
+        let id = self.next_thread_id.fetch_add(1, Ordering::SeqCst);
+        if id == 0 {
+            return Err(InternalError("Thread identifier overflow".to_string()));
+        };
+        Ok(id)
+    }
+
+    /// Get the VM threads
+    #[must_use]
+    pub fn threads(&self) -> Vec<Arc<Thread>> {
+        self.threads
+            .iter()
+            .map(|entry| entry.value().clone())
+            .collect()
+    }
+
     /// Create a new thread
     ///
     /// # Errors
     /// if the thread cannot be created
-    pub(crate) fn new_thread(&self) -> Arc<Thread> {
-        Thread::new(&self.vm)
+    pub(crate) fn new_thread(&self) -> Result<Arc<Thread>> {
+        let thread = Thread::new(&self.vm)?;
+        self.threads.insert(thread.id(), thread.clone());
+        Ok(thread)
     }
 
     /// Initialize the VM
@@ -181,6 +211,7 @@ impl VM {
     /// # Errors
     /// if the VM cannot be initialized
     async fn initialize(&self) -> Result<()> {
+        self.initialize_primordial_thread().await?;
         if self.java_class_file_version <= JAVA_8 {
             self.invoke(
                 "java.lang.System",
@@ -225,6 +256,67 @@ impl VM {
         Ok(())
     }
 
+    /// Initialize the primordial thread
+    ///
+    /// # Errors
+    /// if the primordial thread cannot be initialized
+    async fn initialize_primordial_thread(&self) -> Result<()> {
+        let thread = self.new_thread()?;
+        let thread_id = i64::try_from(thread.id())?;
+        let thread_group = thread
+            .object("java/lang/ThreadGroup", "", Vec::<Value>::new())
+            .await?;
+
+        let java_version = self.java_class_file_version();
+
+        // The internal structure of Thread changed in Java 19
+        let new_thread = if java_version < &JAVA_19 {
+            let thread_class = self.class("java.lang.Thread").await?;
+            let new_thread = Object::new(thread_class)?;
+            new_thread.set_value("daemon", Value::Int(0))?;
+            new_thread.set_value("eetop", Value::Long(thread_id))?;
+            new_thread.set_value("group", thread_group.clone())?;
+            new_thread.set_value("priority", Value::Int(5))?;
+            new_thread.set_value("stackSize", Value::Long(0))?;
+            new_thread.set_value("threadStatus", Value::Int(4))?; // Runnable
+            new_thread.set_value("tid", Value::Long(thread_id))?;
+            Value::from(new_thread)
+        } else {
+            let field_holder_class = self.class("java.lang.Thread$FieldHolder").await?;
+            let field_holder = Object::new(field_holder_class)?;
+            field_holder.set_value("daemon", Value::Int(0))?;
+            field_holder.set_value("group", thread_group.clone())?;
+            field_holder.set_value("priority", Value::Int(5))?;
+            field_holder.set_value("stackSize", Value::Long(0))?;
+            field_holder.set_value("threadStatus", Value::Int(4))?; // Runnable
+            let reference = Reference::from(field_holder);
+            let field_holder = Value::Object(Some(reference));
+
+            let thread_class = self.class("java.lang.Thread").await?;
+            let new_thread = Object::new(thread_class)?;
+            new_thread.set_value("eetop", Value::Long(thread_id))?;
+            new_thread.set_value("holder", field_holder)?;
+            new_thread.set_value("interrupted", Value::Int(0))?;
+            new_thread.set_value("tid", Value::Long(thread_id))?;
+            Value::from(new_thread)
+        };
+        thread.set_java_object(new_thread).await;
+
+        Ok(())
+    }
+
+    /// Get the primordial thread
+    ///
+    /// # Errors
+    /// if the primordial thread cannot be found
+    fn primordial_thread(&self) -> Result<Arc<Thread>> {
+        let thread = self.threads.get(&1).map(|entry| entry.value().clone());
+        let Some(thread) = thread else {
+            return Err(InternalError("Primordial thread not found".into()));
+        };
+        Ok(thread)
+    }
+
     /// Returns class names in the format "java.lang.Object" as "java/lang/Object".
     fn get_class_name<S: AsRef<str>>(class_name: S) -> String {
         let class_name = class_name.as_ref();
@@ -237,7 +329,7 @@ impl VM {
     /// if the class cannot be loaded
     pub async fn class<S: AsRef<str>>(&self, class_name: S) -> Result<Arc<Class>> {
         let class_name = Self::get_class_name(class_name);
-        let thread = self.new_thread();
+        let thread = self.primordial_thread()?;
         thread.class(class_name).await
     }
 
@@ -304,7 +396,7 @@ impl VM {
     {
         let class = self.class(class).await?;
         let method = class.try_get_method(method, descriptor)?;
-        let thread = self.new_thread();
+        let thread = self.primordial_thread()?;
         thread.execute(&class, &method, arguments, true).await
     }
 
@@ -346,7 +438,7 @@ impl VM {
         M: AsRef<str>,
     {
         let class_name = Self::get_class_name(class_name);
-        let thread = self.new_thread();
+        let thread = self.primordial_thread()?;
         thread.object(class_name, descriptor, arguments).await
     }
 }
