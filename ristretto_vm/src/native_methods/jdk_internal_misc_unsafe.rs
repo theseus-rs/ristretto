@@ -46,6 +46,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
+        "copyMemory0",
+        "(Ljava/lang/Object;JLjava/lang/Object;JJ)V",
+        copy_memory_0,
+    );
+    registry.register(
+        class_name,
         "ensureClassInitialized0",
         "(Ljava/lang/Class;)V",
         ensure_class_initialized_0,
@@ -349,6 +355,24 @@ async fn compare_and_set_reference(
         }
     };
     Ok(Some(Value::Int(result)))
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn copy_memory_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let _bytes = usize::try_from(arguments.pop_long()?)?;
+    let _destination_offset = usize::try_from(arguments.pop_long()?)?;
+    let Value::Object(ref mut destination) = arguments.pop()? else {
+        return Err(InternalError(
+            "copyMemory0: Invalid destination".to_string(),
+        ));
+    };
+    let _source_offset = usize::try_from(arguments.pop_long()?)?;
+    let Value::Object(ref mut source) = arguments.pop()? else {
+        return Err(InternalError("copyMemory0: Invalid source".to_string()));
+    };
+    destination.clone_from(source);
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
