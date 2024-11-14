@@ -19,6 +19,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
+        "forName0",
+        "(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;",
+        for_name_0,
+    );
+    registry.register(
+        class_name,
         "getClassAccessFlagsRaw0",
         "()I",
         get_class_access_flags_raw_0,
@@ -111,6 +117,25 @@ async fn get_permitted_subclasses_0(
     let _class = get_class(&vm, &object).await?;
     // TODO: add support for sealed classes
     Ok(None)
+}
+
+#[async_recursion(?Send)]
+async fn for_name_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    // TODO: Add support for unused arguments
+    let _caller = arguments.pop_object()?;
+    let _class_loader = arguments.pop_object()?;
+    let _initialize = arguments.pop_int()? != 0;
+    let Some(Reference::Object(class_name)) = arguments.pop_object()? else {
+        return Err(InternalError(
+            "forName0: no class_name argument".to_string(),
+        ));
+    };
+    let class_name: String = class_name.try_into()?;
+    let vm = thread.vm()?;
+    let class = thread.class(class_name).await?;
+    let class_object = class.to_object(&vm).await?;
+
+    Ok(Some(class_object))
 }
 
 #[async_recursion(?Send)]
