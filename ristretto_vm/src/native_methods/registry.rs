@@ -9,9 +9,9 @@ use crate::native_methods::{
     java_lang_throwable, java_security_accesscontroller, jdk_internal_loader_bootloader,
     jdk_internal_loader_nativelibraries, jdk_internal_misc_cds,
     jdk_internal_misc_scopedmemoryaccess, jdk_internal_misc_signal, jdk_internal_misc_unsafe,
-    jdk_internal_misc_vm, jdk_internal_reflect_reflection, jdk_internal_util_systemprops_raw,
-    sun_io_win32errormode, sun_misc_unsafe, sun_misc_vm, sun_nio_fs_unixnativedispatcher,
-    sun_reflect_reflection,
+    jdk_internal_misc_vm, jdk_internal_module_modulebootstrap, jdk_internal_reflect_reflection,
+    jdk_internal_util_systemprops_raw, sun_io_win32errormode, sun_misc_unsafe, sun_misc_vm,
+    sun_nio_fs_unixnativedispatcher, sun_reflect_reflection,
 };
 use crate::thread::Thread;
 use crate::Result;
@@ -116,6 +116,7 @@ impl Default for MethodRegistry {
         jdk_internal_misc_signal::register(&mut registry);
         jdk_internal_misc_unsafe::register(&mut registry);
         jdk_internal_misc_vm::register(&mut registry);
+        jdk_internal_module_modulebootstrap::register(&mut registry);
         jdk_internal_reflect_reflection::register(&mut registry);
         jdk_internal_util_systemprops_raw::register(&mut registry);
         sun_io_win32errormode::register(&mut registry);

@@ -224,33 +224,27 @@ impl VM {
             self.invoke("java.lang.System", "initPhase1", "()V", Vec::<Value>::new())
                 .await?;
 
-            // TODO: Implement System::initPhase2()
-            // let phase2_result = self
-            //     .invoke(
-            //         "java.lang.System",
-            //         "initPhase2",
-            //         "(ZZ)I",
-            //         vec![Value::Int(1), Value::Int(1)],
-            //     )
-            //     .await?;
-            // let Some(Value::Int(result)) = phase2_result else {
-            //     return Err(InternalError(format!(
-            //         "System::initPhase2() call failed: {phase2_result:?}"
-            //     )));
-            // };
-            // if result != 0 {
-            //     return Err(InternalError(format!(
-            //         "System::initPhase2() call failed: {result}"
-            //     )));
-            // }
+            let phase2_result = self
+                .invoke(
+                    "java.lang.System",
+                    "initPhase2",
+                    "(ZZ)I",
+                    vec![Value::Int(1), Value::Int(1)],
+                )
+                .await?;
+            let Some(Value::Int(result)) = phase2_result else {
+                return Err(InternalError(format!(
+                    "System::initPhase2() call failed: {phase2_result:?}"
+                )));
+            };
+            if result != 0 {
+                return Err(InternalError(format!(
+                    "System::initPhase2() call failed: {result}"
+                )));
+            }
 
-            // TODO: Implement System::initPhase3()
-            // self.invoke(
-            //     "java.lang.System",
-            //     "initPhase3",
-            //     "()V",
-            //     Vec::<Value>::new(),
-            // ).await?;
+            self.invoke("java.lang.System", "initPhase3", "()V", Vec::<Value>::new())
+                .await?;
         }
 
         Ok(())
@@ -274,7 +268,7 @@ impl VM {
             let thread_class = self.class("java.lang.Thread").await?;
             let new_thread = Object::new(thread_class)?;
             new_thread.set_value("daemon", Value::Int(0))?;
-            new_thread.set_value("eetop", Value::Long(thread_id))?;
+            new_thread.set_value("eetop", Value::Long(0))?;
             new_thread.set_value("group", thread_group.clone())?;
             new_thread.set_value("priority", Value::Int(5))?;
             new_thread.set_value("stackSize", Value::Long(0))?;
@@ -294,7 +288,7 @@ impl VM {
 
             let thread_class = self.class("java.lang.Thread").await?;
             let new_thread = Object::new(thread_class)?;
-            new_thread.set_value("eetop", Value::Long(thread_id))?;
+            new_thread.set_value("eetop", Value::Long(0))?;
             new_thread.set_value("holder", field_holder)?;
             new_thread.set_value("interrupted", Value::Int(0))?;
             new_thread.set_value("tid", Value::Long(thread_id))?;

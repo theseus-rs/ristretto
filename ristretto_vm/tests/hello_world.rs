@@ -34,7 +34,7 @@ async fn test_helloworld_v17() -> Result<()> {
 
 #[tokio::test]
 async fn test_helloworld_v18() -> Result<()> {
-    test_helloworld("18.0.2").await
+    test_helloworld("18.0.2.9.1").await
 }
 
 #[tokio::test]
