@@ -40,6 +40,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
+        "compareAndSetObject",
+        "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
+        compare_and_set_object,
+    );
+    registry.register(
+        class_name,
         "compareAndSetReference",
         "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
         compare_and_set_reference,
@@ -109,15 +115,21 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
-        "getShortVolatile",
-        "(Ljava/lang/Object;J)S",
-        get_short_volatile,
+        "getObjectVolatile",
+        "(Ljava/lang/Object;J)Ljava/lang/Object;",
+        get_object_volatile,
     );
     registry.register(
         class_name,
         "getReferenceVolatile",
         "(Ljava/lang/Object;J)Ljava/lang/Object;",
         get_reference_volatile,
+    );
+    registry.register(
+        class_name,
+        "getShortVolatile",
+        "(Ljava/lang/Object;J)S",
+        get_short_volatile,
     );
     registry.register(
         class_name,
@@ -191,6 +203,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         class_name,
         "putLongVolatile",
         "(Ljava/lang/Object;JJ)V",
+        put_reference_volatile,
+    );
+    registry.register(
+        class_name,
+        "putObjectVolatile",
+        "(Ljava/lang/Object;JLjava/lang/Object;)V",
         put_reference_volatile,
     );
     registry.register(
@@ -311,6 +329,14 @@ async fn compare_and_set_long(
         0
     };
     Ok(Some(Value::Int(result)))
+}
+
+#[async_recursion(?Send)]
+async fn compare_and_set_object(
+    thread: Arc<Thread>,
+    arguments: Arguments,
+) -> Result<Option<Value>> {
+    compare_and_set_reference(thread, arguments).await
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -504,13 +530,18 @@ async fn get_long_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<
 }
 
 #[async_recursion(?Send)]
-async fn get_short_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, Some(BaseType::Short))
+async fn get_object_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference_type(thread, arguments, None)
 }
 
 #[async_recursion(?Send)]
 async fn get_reference(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
     get_reference_type(thread, arguments, None)
+}
+
+#[async_recursion(?Send)]
+async fn get_short_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_reference_type(thread, arguments, Some(BaseType::Short))
 }
 
 #[async_recursion(?Send)]

@@ -218,13 +218,27 @@ async fn identity_hash_code(
     Ok(Some(Value::Int(hash_code)))
 }
 
-/// Mechanism for initializing properties for Java versions <= 8
+/// Mechanism for initializing properties for Java versions <= 11
 #[async_recursion(?Send)]
 async fn init_properties(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let properties = arguments.pop_object()?;
-    let _system_properties = &mut properties::system(thread).await?;
-    // TODO: add system properties to the properties object
-    Ok(Some(Value::Object(properties)))
+    let properties = arguments.pop()?;
+    let vm = thread.vm()?;
+    let properties_class = thread.class("java/util/Properties").await?;
+    let set_property_method = properties_class.try_get_method(
+        "setProperty",
+        "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
+    )?;
+    let system_properties = &mut properties::system(&thread).await?;
+
+    for (key, value) in system_properties.iter() {
+        let key = key.to_object(&vm).await?;
+        let value = value.clone();
+        let arguments = vec![properties.clone(), key, value];
+        thread
+            .execute(&properties_class, &set_property_method, arguments, true)
+            .await?;
+    }
+    Ok(Some(properties))
 }
 
 #[async_recursion(?Send)]

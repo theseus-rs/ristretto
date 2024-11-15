@@ -17,6 +17,7 @@ mod java_lang_processenvironment;
 mod java_lang_processimpl;
 mod java_lang_ref_reference;
 mod java_lang_runtime;
+mod java_lang_securitymanager;
 mod java_lang_shutdown;
 mod java_lang_stacktraceelement;
 mod java_lang_stringutf16;
