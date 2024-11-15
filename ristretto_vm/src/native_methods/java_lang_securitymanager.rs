@@ -12,13 +12,16 @@ const JAVA_11: Version = Version::Java11 { minor: 0 };
 /// Register all native methods for java.lang.SecurityManager.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/SecurityManager";
-    // TODO: this is only required for Java 11
-    registry.register(
-        class_name,
-        "addNonExportedPackages",
-        "(Ljava/lang/ModuleLayer;)V",
-        add_non_exported_packages,
-    );
+
+    let java_version = registry.java_version();
+    if *java_version == JAVA_11 {
+        registry.register(
+            class_name,
+            "addNonExportedPackages",
+            "(Ljava/lang/ModuleLayer;)V",
+            add_non_exported_packages,
+        );
+    }
 }
 
 #[expect(clippy::needless_pass_by_value)]

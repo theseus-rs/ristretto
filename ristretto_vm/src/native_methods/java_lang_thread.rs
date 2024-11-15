@@ -39,8 +39,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "()J",
         get_next_thread_id_offset,
     );
-    // TODO: only register the isAlive()Z method if the version for Java 18
-    registry.register(class_name, "isAlive", "()Z", is_alive);
+
+    // The Thread.isAlive() method was marked as native in Java 18
+    let java_version = registry.java_version();
+    if *java_version == JAVA_18 {
+        registry.register(class_name, "isAlive", "()Z", is_alive);
+    }
+
     registry.register(class_name, "registerNatives", "()V", register_natives);
     registry.register(
         class_name,

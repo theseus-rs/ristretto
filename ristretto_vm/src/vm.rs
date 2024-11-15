@@ -1,4 +1,5 @@
 use crate::java_object::JavaObject;
+use crate::native_methods::MethodRegistry;
 use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use crate::Error::InternalError;
@@ -29,6 +30,7 @@ pub struct VM {
     java_home: PathBuf,
     java_version: String,
     java_class_file_version: Version,
+    method_registry: MethodRegistry,
     next_thread_id: AtomicU64,
     threads: DashMap<u64, Arc<Thread>>,
 }
@@ -110,6 +112,8 @@ impl VM {
             None
         };
 
+        let method_registry = MethodRegistry::new(java_class_file_version.clone());
+
         let vm = Arc::new_cyclic(|vm| VM {
             vm: vm.clone(),
             configuration,
@@ -118,6 +122,7 @@ impl VM {
             java_home,
             java_version,
             java_class_file_version,
+            method_registry,
             next_thread_id: AtomicU64::new(1),
             threads: DashMap::new(),
         });
@@ -173,6 +178,11 @@ impl VM {
     #[must_use]
     pub fn system_properties(&self) -> &HashMap<String, String> {
         self.configuration().system_properties()
+    }
+
+    /// Get the method registry
+    pub fn method_registry(&self) -> &MethodRegistry {
+        &self.method_registry
     }
 
     /// Get the next thread ID

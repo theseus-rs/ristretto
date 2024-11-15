@@ -35,7 +35,7 @@ mod jdk_internal_misc_vm;
 mod jdk_internal_module_modulebootstrap;
 mod jdk_internal_reflect_reflection;
 mod jdk_internal_util_systemprops_raw;
-pub(crate) mod properties;
+pub mod properties;
 mod registry;
 mod sun_io_win32errormode;
 mod sun_misc_unsafe;
@@ -43,4 +43,4 @@ mod sun_misc_vm;
 mod sun_nio_fs_unixnativedispatcher;
 mod sun_reflect_reflection;
 
-pub use registry::registry;
+pub use registry::MethodRegistry;
