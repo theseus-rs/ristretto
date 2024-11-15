@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::rust_value::{process_values, RustValue};
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
-use crate::{native_methods, Frame, Result, VM};
+use crate::{Frame, Result, VM};
 use async_recursion::async_recursion;
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Value};
@@ -260,8 +260,8 @@ impl Thread {
             debug!("execute: {class_name}.{method_name}{method_descriptor} {access_flags}");
         }
 
-        let registry = native_methods::registry();
-        let rust_method = registry.get(class_name, method_name, method_descriptor);
+        let method_registry = vm.method_registry();
+        let rust_method = method_registry.method(class_name, method_name, method_descriptor);
 
         let (result, frame_added) = if let Some(rust_method) = rust_method {
             let arguments = Arguments::new(arguments);
