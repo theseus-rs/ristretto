@@ -40,9 +40,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         get_next_thread_id_offset,
     );
 
-    // The Thread.isAlive() method was marked as native in Java 18
-    let java_version = registry.java_version();
-    if *java_version == JAVA_18 {
+    if *registry.java_version() == JAVA_18 {
         registry.register(class_name, "isAlive", "()Z", is_alive);
     }
 

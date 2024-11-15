@@ -235,7 +235,8 @@ impl JavaObject for Arc<Class> {
         let Value::Object(Some(Reference::Object(ref object))) = class_object else {
             return Err(InternalError("Expected class object".to_string()));
         };
-        if self.is_array() {
+
+        if *vm.java_class_file_version() > JAVA_8 && self.is_array() {
             let Some(component_type) = self.component_type() else {
                 return Err(InternalError(
                     "array class missing component type".to_string(),
