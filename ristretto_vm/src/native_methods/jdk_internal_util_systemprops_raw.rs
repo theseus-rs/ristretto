@@ -35,7 +35,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn platform_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     let string_array_class = thread.class("[Ljava/lang/String;").await?;
-    let system_properties = &mut properties::system(thread).await?;
+    let system_properties = &mut properties::system(&thread).await?;
     let java_version = vm.java_class_file_version();
 
     // VM properties must be returned in a specific order as they are accessed by array index.

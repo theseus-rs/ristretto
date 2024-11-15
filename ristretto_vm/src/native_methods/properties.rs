@@ -10,7 +10,7 @@ use std::path::MAIN_SEPARATOR_STR;
 use std::sync::Arc;
 
 /// Get the system properties.
-pub(crate) async fn system(thread: Arc<Thread>) -> Result<HashMap<&'static str, Value>> {
+pub(crate) async fn system(thread: &Arc<Thread>) -> Result<HashMap<&'static str, Value>> {
     let vm = thread.vm()?;
     let system_properties = system_properties(&vm)?;
     let mut properties = HashMap::new();
