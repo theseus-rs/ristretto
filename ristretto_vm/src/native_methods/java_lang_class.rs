@@ -5,8 +5,11 @@ use crate::thread::Thread;
 use crate::Error::{InternalError, NullPointer};
 use crate::{Result, VM};
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::{Class, Object, Reference, Value};
 use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for java.lang.Class.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -35,10 +38,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "()I",
         get_class_file_version_0,
     );
+
+    if *registry.java_version() <= JAVA_8 {
+        registry.register(
+            class_name,
+            "getComponentType",
+            "()Ljava/lang/Class;",
+            get_component_type,
+        );
+    }
+
     registry.register(
         class_name,
         "getDeclaringClass0",
-        "()java/lang/Class",
+        "()Ljava/lang/Class;",
         get_declaring_class_0,
     );
     registry.register(
@@ -177,6 +190,30 @@ async fn get_class_file_version_0(
     let minor = version.minor() as i32;
     let class_file_version = (minor << 16) | major;
     Ok(Some(Value::Int(class_file_version)))
+}
+
+#[async_recursion(?Send)]
+async fn get_component_type(
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = arguments.pop_object()? else {
+        return Err(InternalError(
+            "getComponentType: no class reference".to_string(),
+        ));
+    };
+
+    let class = object.class();
+    if class.is_array() {
+        return Ok(Some(Value::Object(None)));
+    }
+
+    let class_name: String = object.value("name")?.try_into()?;
+    let class = thread.class(class_name).await?;
+    let vm = thread.vm()?;
+    let class_object = class.to_object(&vm).await?;
+
+    Ok(Some(class_object))
 }
 
 #[expect(clippy::needless_pass_by_value)]
