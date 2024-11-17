@@ -3,9 +3,9 @@ use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Error::{InternalError, NullPointer};
-use crate::{Result, VM};
+use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
+use ristretto_classfile::{ClassAccessFlags, Version};
 use ristretto_classloader::{Class, Object, Reference, Value};
 use std::sync::Arc;
 
@@ -54,6 +54,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "()Ljava/lang/Class;",
         get_declaring_class_0,
     );
+    registry.register(class_name, "getModifiers", "()I", get_modifiers);
     registry.register(
         class_name,
         "getPermittedSubclasses0",
@@ -97,11 +98,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-async fn get_class(vm: &VM, object: &Object) -> Result<Arc<Class>> {
+async fn get_class(thread: &Thread, object: &Object) -> Result<Arc<Class>> {
     let class = object.class();
     if class.name() == "java/lang/Class" {
         let class_name: String = object.value("name")?.try_into()?;
-        let class = vm.class(class_name.as_str()).await?;
+        let class = thread.class(class_name.as_str()).await?;
         return Ok(class);
     }
     Ok(Arc::clone(class))
@@ -126,8 +127,7 @@ async fn get_permitted_subclasses_0(
             "getPermittedSubclasses0: no arguments".to_string(),
         ));
     };
-    let vm = thread.vm()?;
-    let _class = get_class(&vm, &object).await?;
+    let _class = get_class(&thread, &object).await?;
     // TODO: add support for sealed classes
     Ok(None)
 }
@@ -161,8 +161,7 @@ async fn get_class_access_flags_raw_0(
             "getClassAccessFlagsRaw0: no arguments".to_string(),
         ));
     };
-    let vm = thread.vm()?;
-    let class = get_class(&vm, &object).await?;
+    let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags;
     #[expect(clippy::cast_lossless)]
@@ -180,8 +179,7 @@ async fn get_class_file_version_0(
             "getClassFileVersion0: no arguments".to_string(),
         ));
     };
-    let vm = thread.vm()?;
-    let class = get_class(&vm, &object).await?;
+    let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let version = &class_file.version;
     #[expect(clippy::cast_lossless)]
@@ -223,6 +221,27 @@ async fn get_declaring_class_0(
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(None)
+}
+
+#[async_recursion(?Send)]
+async fn get_modifiers(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = arguments.pop_object()? else {
+        return Err(InternalError("getModifiers: no class".to_string()));
+    };
+    let class = get_class(&thread, &object).await?;
+    let class_file = class.class_file();
+    let access_flags = &class_file.access_flags.bits();
+    let excluded_flags = (ClassAccessFlags::ANNOTATION
+        | ClassAccessFlags::ENUM
+        | ClassAccessFlags::MODULE
+        | ClassAccessFlags::SUPER
+        | ClassAccessFlags::SYNTHETIC)
+        .bits();
+    let excluded_flags_mask = !excluded_flags;
+    let modifiers = i32::from(access_flags & excluded_flags_mask);
+
+    // TODO: correct the modifier values
+    Ok(Some(Value::Int(modifiers)))
 }
 
 #[async_recursion(?Send)]
@@ -271,8 +290,7 @@ async fn is_array(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Optio
     let Some(Reference::Object(object)) = arguments.pop_object()? else {
         return Err(InternalError("isArray: no arguments".to_string()));
     };
-    let vm = thread.vm()?;
-    let class = get_class(&vm, &object).await?;
+    let class = get_class(&thread, &object).await?;
     if class.is_array() {
         Ok(Some(Value::from(true)))
     } else {
@@ -290,12 +308,11 @@ async fn is_assignable_from(
         None => return Err(NullPointer("object cannot be null".to_string())),
         _ => return Err(InternalError("isAssignableFrom: no arguments".to_string())),
     };
-    let vm = thread.vm()?;
-    let class_argument = get_class(&vm, &object_argument).await?;
+    let class_argument = get_class(&thread, &object_argument).await?;
     let Some(Reference::Object(object)) = arguments.pop_object()? else {
         return Err(InternalError("isAssignableFrom: no instance".to_string()));
     };
-    let class = get_class(&vm, &object).await?;
+    let class = get_class(&thread, &object).await?;
     if class.is_assignable_from(&class_argument)? {
         Ok(Some(Value::from(true)))
     } else {
@@ -314,8 +331,7 @@ async fn is_interface(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
     let Some(Reference::Object(object)) = arguments.pop_object()? else {
         return Err(InternalError("isInterface: no arguments".to_string()));
     };
-    let vm = thread.vm()?;
-    let class = get_class(&vm, &object).await?;
+    let class = get_class(&thread, &object).await?;
     if class.is_interface() {
         Ok(Some(Value::from(true)))
     } else {
@@ -328,8 +344,7 @@ async fn is_primitive(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
     let Some(Reference::Object(object)) = arguments.pop_object()? else {
         return Err(InternalError("isPrimitive: no arguments".to_string()));
     };
-    let vm = thread.vm()?;
-    let class = get_class(&vm, &object).await?;
+    let class = get_class(&thread, &object).await?;
     if class.is_primitive() {
         Ok(Some(Value::from(true)))
     } else {
