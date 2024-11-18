@@ -2,7 +2,7 @@ use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use crate::Error::{ArrayIndexOutOfBounds, InvalidStackValue, NullPointer};
+use crate::Error::{ArithmeticError, ArrayIndexOutOfBounds, InvalidStackValue, NullPointer};
 use crate::{Result, Value};
 use ristretto_classloader::Reference;
 
@@ -244,7 +244,11 @@ pub(crate) fn imul(stack: &OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn idiv(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
-    stack.push_int(i32::wrapping_div(value1, value2))?;
+    stack.push_int(
+        value1
+            .checked_div(value2)
+            .ok_or(ArithmeticError("/ by zero".to_string()))?,
+    )?;
     Ok(Continue)
 }
 
@@ -253,7 +257,11 @@ pub(crate) fn idiv(stack: &OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn irem(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
-    stack.push_int(i32::wrapping_rem(value1, value2))?;
+    stack.push_int(
+        value1
+            .checked_rem(value2)
+            .ok_or(ArithmeticError("/ by zero".to_string()))?,
+    )?;
     Ok(Continue)
 }
 
@@ -729,6 +737,16 @@ mod tests {
     }
 
     #[test]
+    fn test_idiv_divide_by_zero() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_int(1)?;
+        stack.push_int(0)?;
+        let result = idiv(stack);
+        assert!(matches!(result, Err(ArithmeticError(_))));
+        Ok(())
+    }
+
+    #[test]
     fn test_irem() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(1)?;
@@ -736,6 +754,16 @@ mod tests {
         let result = irem(stack)?;
         assert_eq!(Continue, result);
         assert_eq!(1, stack.pop_int()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_irem_divide_by_zero() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_int(1)?;
+        stack.push_int(0)?;
+        let result = irem(stack);
+        assert!(matches!(result, Err(ArithmeticError(_))));
         Ok(())
     }
 

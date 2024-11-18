@@ -1,6 +1,5 @@
 use crate::frame::{ExecutionResult, Frame};
-use crate::java_object::JavaObject;
-use crate::Error::{InternalError, Throwable};
+use crate::Error::{ArithmeticError, InternalError, Throwable};
 use crate::{Error, Result, VM};
 use ristretto_classloader::{Object, Reference};
 use std::sync::Arc;
@@ -66,23 +65,26 @@ pub(crate) async fn process_throwable(frame: &Frame, throwable: Object) -> Resul
 /// # Errors
 /// if the error cannot be converted to a throwable
 pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Result<Object> {
-    let throwable = match error {
-        Throwable(throwable) => throwable,
-        error => {
-            let class = vm.class("java/lang/InternalError").await?;
-            let message = format!("{error}");
-            let error_message = message.to_object(&vm).await?;
-            let throwable = Object::new(class)?;
-            throwable.set_value("detailMessage", error_message)?;
-            throwable
-        }
+    let (class_name, message) = match error {
+        Throwable(throwable) => return Ok(throwable),
+        ArithmeticError(message) => ("java/lang/ArithmeticException", message),
+        error => ("java/lang/InternalError", format!("{error}")),
     };
+
+    let throwable = vm
+        .object(class_name, "Ljava/lang/String;", vec![message])
+        .await?;
+    let throwable = throwable
+        .to_object()?
+        .ok_or(InternalError("Expected object".to_string()))?
+        .to_object()?;
     Ok(throwable)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::java_object::JavaObject;
     use crate::VM;
 
     #[tokio::test]
