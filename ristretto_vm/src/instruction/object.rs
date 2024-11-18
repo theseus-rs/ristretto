@@ -254,7 +254,7 @@ fn is_instance_of(object: &Reference, class: &Arc<Class>) -> Result<bool> {
             let reference_class_name = object.class_name();
             Ok(reference_class_name == class.name())
         }
-        Reference::Array(array_class, _) => Ok(array_class.is_assignable_from(class)?),
+        Reference::Array(array_class, _) => Ok(class.is_assignable_from(array_class)?),
         Reference::Object(object) => Ok(object.instance_of(class)?),
     }
 }
@@ -619,6 +619,19 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_checkcast_string_array_to_object_array() -> Result<()> {
+        let (_vm, thread, mut frame) = crate::test::frame().await?;
+        let stack = &mut frame.stack();
+        let string_class = thread.class("[Ljava/lang/String;").await?;
+        let string_array = Reference::Array(string_class, ConcurrentVec::default());
+        stack.push_object(Some(string_array))?;
+        let class_index = get_class_index(&mut frame, "[Ljava/lang/Object;")?;
+        let result = checkcast(&frame, class_index).await?;
+        assert_eq!(Continue, result);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_instanceof_null() -> Result<()> {
         let (_vm, _thread, mut frame) = crate::test::frame().await?;
         {
@@ -679,7 +692,7 @@ mod tests {
         let result = instanceof(&frame, class_index).await?;
         let stack = &mut frame.stack();
         assert_eq!(Continue, result);
-        assert_eq!(0, stack.pop_int()?);
+        assert_eq!(1, stack.pop_int()?);
         Ok(())
     }
 
