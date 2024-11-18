@@ -733,7 +733,7 @@ async fn put_reference_volatile(
     };
     match object {
         Reference::Array(_class, array) => {
-            let x = x.to_object()?;
+            let x = x.to_reference()?;
             array.set(offset, x)?;
         }
         Reference::Object(object) => {

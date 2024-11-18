@@ -97,7 +97,7 @@ impl LocalVariables {
     /// object.
     pub fn get_object(&self, index: usize) -> Result<Option<Reference>> {
         let value = self.get(index)?;
-        match value.to_object() {
+        match value.to_reference() {
             Ok(value) => Ok(value.clone()),
             Err(_error) => Err(InvalidLocalVariable {
                 expected: "object".to_string(),
