@@ -2,7 +2,7 @@ use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use crate::Error::{ArrayIndexOutOfBounds, InvalidStackValue, NullPointer};
+use crate::Error::{ArithmeticError, ArrayIndexOutOfBounds, InvalidStackValue, NullPointer};
 use crate::{Result, Value};
 use ristretto_classloader::Reference;
 use std::cmp::Ordering;
@@ -210,7 +210,11 @@ pub(crate) fn lmul(stack: &OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn ldiv(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
-    stack.push_long(i64::wrapping_div(value1, value2))?;
+    stack.push_long(
+        value1
+            .checked_div(value2)
+            .ok_or(ArithmeticError("/ by zero".to_string()))?,
+    )?;
     Ok(Continue)
 }
 
@@ -219,7 +223,11 @@ pub(crate) fn ldiv(stack: &OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn lrem(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
-    stack.push_long(i64::wrapping_rem(value1, value2))?;
+    stack.push_long(
+        value1
+            .checked_rem(value2)
+            .ok_or(ArithmeticError("/ by zero".to_string()))?,
+    )?;
     Ok(Continue)
 }
 
@@ -641,6 +649,16 @@ mod tests {
     }
 
     #[test]
+    fn test_ldiv_divide_by_zero() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_long(1)?;
+        stack.push_long(0)?;
+        let result = ldiv(stack);
+        assert!(matches!(result, Err(ArithmeticError(_))));
+        Ok(())
+    }
+
+    #[test]
     fn test_lrem() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(1)?;
@@ -648,6 +666,16 @@ mod tests {
         let result = lrem(stack)?;
         assert_eq!(Continue, result);
         assert_eq!(1, stack.pop_long()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_lrem_divide_by_zero() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_long(1)?;
+        stack.push_long(0)?;
+        let result = lrem(stack);
+        assert!(matches!(result, Err(ArithmeticError(_))));
         Ok(())
     }
 

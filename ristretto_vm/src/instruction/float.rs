@@ -2,7 +2,7 @@ use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use crate::Error::{ArrayIndexOutOfBounds, InvalidStackValue, NullPointer};
+use crate::Error::{ArithmeticError, ArrayIndexOutOfBounds, InvalidStackValue, NullPointer};
 use crate::{Result, Value};
 use ristretto_classloader::Reference;
 
@@ -216,6 +216,11 @@ pub(crate) fn fmul(stack: &OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn fdiv(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_float()?;
     let value1 = stack.pop_float()?;
+
+    if value2 == 0.0 {
+        return Err(ArithmeticError("/ by zero".to_string()));
+    };
+
     stack.push_float(value1 / value2)?;
     Ok(Continue)
 }
@@ -225,6 +230,11 @@ pub(crate) fn fdiv(stack: &OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn frem(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_float()?;
     let value1 = stack.pop_float()?;
+
+    if value2 == 0.0 {
+        return Err(ArithmeticError("/ by zero".to_string()));
+    };
+
     stack.push_float(value1 % value2)?;
     Ok(Continue)
 }
@@ -634,6 +644,16 @@ mod tests {
     }
 
     #[test]
+    fn test_fdiv_divide_by_zero() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_float(1.0)?;
+        stack.push_float(0.0)?;
+        let result = fdiv(stack);
+        assert!(matches!(result, Err(ArithmeticError(_))));
+        Ok(())
+    }
+
+    #[test]
     fn test_frem() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_float(1f32)?;
@@ -642,6 +662,16 @@ mod tests {
         assert_eq!(Continue, result);
         let value = stack.pop_float()? - 1f32;
         assert!(value.abs() < 0.1f32);
+        Ok(())
+    }
+
+    #[test]
+    fn test_frem_divide_by_zero() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_float(1.0)?;
+        stack.push_float(0.0)?;
+        let result = frem(stack);
+        assert!(matches!(result, Err(ArithmeticError(_))));
         Ok(())
     }
 

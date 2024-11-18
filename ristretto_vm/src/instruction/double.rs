@@ -2,7 +2,7 @@ use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use crate::Error::{ArrayIndexOutOfBounds, InvalidStackValue, NullPointer};
+use crate::Error::{ArithmeticError, ArrayIndexOutOfBounds, InvalidStackValue, NullPointer};
 use crate::{Result, Value};
 use ristretto_classloader::Reference;
 
@@ -209,6 +209,11 @@ pub(crate) fn dmul(stack: &OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn ddiv(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
+
+    if value2 == 0.0 {
+        return Err(ArithmeticError("/ by zero".to_string()));
+    };
+
     stack.push_double(value1 / value2)?;
     Ok(Continue)
 }
@@ -218,6 +223,11 @@ pub(crate) fn ddiv(stack: &OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn drem(stack: &OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
+
+    if value2 == 0.0 {
+        return Err(ArithmeticError("/ by zero".to_string()));
+    };
+
     stack.push_double(value1 % value2)?;
     Ok(Continue)
 }
@@ -617,6 +627,16 @@ mod tests {
     }
 
     #[test]
+    fn test_ddiv_divide_by_zero() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_double(1.0)?;
+        stack.push_double(0.0)?;
+        let result = ddiv(stack);
+        assert!(matches!(result, Err(ArithmeticError(_))));
+        Ok(())
+    }
+
+    #[test]
     fn test_drem() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1f64)?;
@@ -625,6 +645,16 @@ mod tests {
         assert_eq!(Continue, result);
         let value = stack.pop_double()? - 1f64;
         assert!(value.abs() < 0.1f64);
+        Ok(())
+    }
+
+    #[test]
+    fn test_drem_divide_by_zero() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_double(1.0)?;
+        stack.push_double(0.0)?;
+        let result = drem(stack);
+        assert!(matches!(result, Err(ArithmeticError(_))));
         Ok(())
     }
 

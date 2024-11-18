@@ -7,6 +7,9 @@ pub enum Error {
     /// The arguments stack underflow
     #[error("Arguments stack underflow")]
     ArgumentsUnderflow,
+    /// An arithmetic error occurred
+    #[error("{0}")]
+    ArithmeticError(String),
     /// An array index is out of bounds
     #[error("An array index is out of bounds: {0}")]
     ArrayIndexOutOfBounds(usize),
