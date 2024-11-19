@@ -74,10 +74,7 @@ pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Res
     let throwable = vm
         .object(class_name, "Ljava/lang/String;", vec![message])
         .await?;
-    let throwable = throwable
-        .to_object()?
-        .ok_or(InternalError("Expected object".to_string()))?
-        .to_object()?;
+    let throwable: Object = throwable.try_into()?;
     Ok(throwable)
 }
 

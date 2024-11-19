@@ -569,6 +569,14 @@ impl TryInto<f64> for Reference {
     }
 }
 
+impl TryInto<Object> for Reference {
+    type Error = crate::Error;
+
+    fn try_into(self) -> Result<Object> {
+        self.to_object()
+    }
+}
+
 impl TryInto<String> for Reference {
     type Error = crate::Error;
 
@@ -1379,6 +1387,16 @@ mod tests {
         let value: f64 = reference.try_into()?;
         let value = value - 42.1f64;
         assert!(value.abs() < 0.1f64);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_into_object() -> Result<()> {
+        let class_name = "java/lang/Object";
+        let class = load_class(class_name).await?;
+        let reference = Reference::from(Object::new(class)?);
+        let object: Object = reference.try_into()?;
+        assert_eq!(class_name, object.class().name());
         Ok(())
     }
 

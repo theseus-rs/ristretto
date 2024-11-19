@@ -1,11 +1,11 @@
 use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
-use crate::Error::{InternalError, NullPointer};
+use crate::Error::NullPointer;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::Version;
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::{Object, Reference, Value};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -105,10 +105,7 @@ async fn get_next_thread_id_offset(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_alive(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    let java_object = thread.java_object().await;
-    let Some(Reference::Object(object)) = java_object.to_object()? else {
-        return Err(InternalError("thread is not a java object".to_string()));
-    };
+    let object: Object = thread.java_object().await.try_into()?;
     let eetop = object.value("eetop")?.to_long()?;
     let is_alive = eetop != 0;
     Ok(Some(Value::from(is_alive)))
@@ -154,11 +151,8 @@ async fn sleep(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn start_0(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = thread.java_object().await.to_object()? else {
-        return Err(InternalError("thread is not a java object".to_string()));
-    };
-
     let thread_id = i64::try_from(thread.id())?;
+    let object: Object = thread.java_object().await.try_into()?;
     object.set_value("eetop", Value::from(thread_id))?;
     Ok(None)
 }

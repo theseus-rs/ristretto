@@ -305,7 +305,7 @@ mod tests {
     #[tokio::test]
     async fn test_str() -> Result<()> {
         let value = "foo".to_value();
-        let object = value.try_to_object()?.to_object()?;
+        let object: Object = value.try_into()?;
         let class_name = object.class().name();
         assert_eq!("str:foo", class_name);
         Ok(())
@@ -314,7 +314,7 @@ mod tests {
     #[tokio::test]
     async fn test_string() -> Result<()> {
         let value = "foo".to_string().to_value();
-        let object = value.try_to_object()?.to_object()?;
+        let object: Object = value.try_into()?;
         let class_name = object.class().name();
         assert_eq!("str:foo", class_name);
         Ok(())
