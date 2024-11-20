@@ -2,7 +2,8 @@ use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
-use crate::Error::{InternalError, NullPointer};
+use crate::Error::InternalError;
+use crate::JavaError::NullPointerException;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::{ClassAccessFlags, Version};
@@ -305,7 +306,7 @@ async fn is_assignable_from(
 ) -> Result<Option<Value>> {
     let object_argument = match arguments.pop_object()? {
         Some(Reference::Object(object)) => object,
-        None => return Err(NullPointer("object cannot be null".to_string())),
+        None => return Err(NullPointerException("object cannot be null".to_string()).into()),
         _ => return Err(InternalError("isAssignableFrom: no arguments".to_string())),
     };
     let class_argument = get_class(&thread, &object_argument).await?;

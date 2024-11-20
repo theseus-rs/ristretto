@@ -1,3 +1,5 @@
+use crate::java_error::JavaError;
+
 /// Ristretto VM result type
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
@@ -7,15 +9,6 @@ pub enum Error {
     /// The arguments stack underflow
     #[error("Arguments stack underflow")]
     ArgumentsUnderflow,
-    /// An arithmetic error occurred
-    #[error("{0}")]
-    ArithmeticError(String),
-    /// An array index is out of bounds
-    #[error("An array index is out of bounds: {0}")]
-    ArrayIndexOutOfBounds(usize),
-    /// An exception occurred casting a value
-    #[error("An exception occurred casting to: {0}")]
-    ClassCastError(String),
     /// An error occurred while loading a class file
     #[error(transparent)]
     ClassFileError(#[from] ristretto_classfile::Error),
@@ -49,9 +42,9 @@ pub enum Error {
     /// Invalid stack value
     #[error("Invalid stack value; expected {expected}, found {actual}")]
     InvalidStackValue { expected: String, actual: String },
-    /// Null pointer
-    #[error("{0}")]
-    NullPointer(String),
+    /// A Java error occurred
+    #[error(transparent)]
+    JavaError(#[from] JavaError),
     /// The operand stack overflowed
     #[error("Operand stack overflow")]
     OperandStackOverflow,

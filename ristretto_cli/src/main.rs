@@ -4,7 +4,7 @@ mod logging;
 mod version;
 
 use clap::{ArgGroup, Parser};
-use ristretto_vm::Error::InternalError;
+use ristretto_vm::Error::{InternalError, Throwable};
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Reference, Result, Value, VM};
 use std::env;
 use std::env::consts::{ARCH, OS};
@@ -127,7 +127,7 @@ async fn common_main(cli: Cli) -> Result<()> {
 }
 
 fn process_error(error: Error) -> Result<()> {
-    let Error::Throwable(ref throwable) = error else {
+    let Throwable(ref throwable) = error else {
         eprintln!("{error}");
         return Err(error);
     };

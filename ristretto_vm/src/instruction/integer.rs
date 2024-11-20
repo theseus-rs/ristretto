@@ -1,8 +1,10 @@
 use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue};
+use crate::java_error::JavaError::ArithmeticException;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use crate::Error::{ArithmeticError, ArrayIndexOutOfBounds, InvalidStackValue, NullPointer};
+use crate::Error::InvalidStackValue;
+use crate::JavaError::{ArrayIndexOutOfBoundsException, NullPointerException};
 use crate::{Result, Value};
 use ristretto_classloader::Reference;
 
@@ -174,11 +176,12 @@ pub(crate) fn istore_3(locals: &LocalVariables, stack: &OperandStack) -> Result<
 pub(crate) fn iaload(stack: &OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer("array cannot be null".to_string())),
+        None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::IntArray(array)) => {
             let index = usize::try_from(index)?;
             let Some(value) = array.get(index)? else {
-                return Err(ArrayIndexOutOfBounds(index));
+                let length = array.len()?;
+                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
             };
             stack.push_int(value)?;
             Ok(Continue)
@@ -196,11 +199,12 @@ pub(crate) fn iastore(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer("array cannot be null".to_string())),
+        None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::IntArray(ref mut array)) => {
             let index = usize::try_from(index)?;
-            if index >= array.capacity()? {
-                return Err(ArrayIndexOutOfBounds(index));
+            let length = array.capacity()?;
+            if index >= length {
+                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
             };
             array.set(index, value)?;
             Ok(Continue)
@@ -247,7 +251,7 @@ pub(crate) fn idiv(stack: &OperandStack) -> Result<ExecutionResult> {
     stack.push_int(
         value1
             .checked_div(value2)
-            .ok_or(ArithmeticError("/ by zero".to_string()))?,
+            .ok_or(ArithmeticException("/ by zero".to_string()))?,
     )?;
     Ok(Continue)
 }
@@ -260,7 +264,7 @@ pub(crate) fn irem(stack: &OperandStack) -> Result<ExecutionResult> {
     stack.push_int(
         value1
             .checked_rem(value2)
-            .ok_or(ArithmeticError("/ by zero".to_string()))?,
+            .ok_or(ArithmeticException("/ by zero".to_string()))?,
     )?;
     Ok(Continue)
 }
@@ -370,7 +374,8 @@ pub(crate) fn ireturn(stack: &OperandStack) -> Result<ExecutionResult> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Error::InvalidOperand;
+    use crate::java_error::JavaError::ArithmeticException;
+    use crate::Error::{InvalidOperand, JavaError};
 
     #[test]
     fn test_iconst_m1() -> Result<()> {
@@ -603,7 +608,11 @@ mod tests {
         stack.push_object(Some(array))?;
         stack.push_int(2)?;
         let result = iaload(stack);
-        assert!(matches!(result, Err(ArrayIndexOutOfBounds(2))));
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException { index, length }))
+            if index == 2 && length == 1
+        ));
         Ok(())
     }
 
@@ -613,7 +622,7 @@ mod tests {
         stack.push_object(None)?;
         stack.push_int(0)?;
         let result = iaload(stack);
-        assert!(matches!(result, Err(NullPointer(_))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
         Ok(())
     }
 
@@ -655,7 +664,11 @@ mod tests {
         stack.push_int(2)?;
         stack.push_int(42)?;
         let result = iastore(stack);
-        assert!(matches!(result, Err(ArrayIndexOutOfBounds(2))));
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException { index, length }))
+            if index == 2 && length == 1
+        ));
         Ok(())
     }
 
@@ -666,7 +679,7 @@ mod tests {
         stack.push_int(0)?;
         stack.push_int(42)?;
         let result = iastore(stack);
-        assert!(matches!(result, Err(NullPointer(_))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
         Ok(())
     }
 
@@ -742,7 +755,7 @@ mod tests {
         stack.push_int(1)?;
         stack.push_int(0)?;
         let result = idiv(stack);
-        assert!(matches!(result, Err(ArithmeticError(_))));
+        assert!(matches!(result, Err(JavaError(ArithmeticException(_)))));
         Ok(())
     }
 
@@ -763,7 +776,7 @@ mod tests {
         stack.push_int(1)?;
         stack.push_int(0)?;
         let result = irem(stack);
-        assert!(matches!(result, Err(ArithmeticError(_))));
+        assert!(matches!(result, Err(JavaError(ArithmeticException(_)))));
         Ok(())
     }
 
