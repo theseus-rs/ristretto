@@ -112,10 +112,16 @@ impl Debug for Object {
         if !self.fields.is_empty() {
             writeln!(f)?;
         }
-        for (name, field) in &self.fields {
+
+        // Print fields by name to ensure consistent output
+        let mut names = self.fields.keys().collect::<Vec<_>>();
+        names.sort();
+        for name in names {
+            let field = self.fields.get(name).ok_or(std::fmt::Error)?;
             let value = field.value().map_err(|_| std::fmt::Error)?;
             writeln!(f, "  {name}={value}")?;
         }
+
         Ok(())
     }
 }
