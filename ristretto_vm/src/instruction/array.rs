@@ -1,7 +1,8 @@
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
-use crate::Error::{InvalidStackValue, NullPointer};
+use crate::Error::InvalidStackValue;
+use crate::JavaError::NullPointerException;
 use crate::Result;
 use ristretto_classfile::attributes::ArrayType;
 use ristretto_classfile::BaseType;
@@ -45,7 +46,7 @@ pub(crate) async fn anewarray(frame: &Frame, index: u16) -> Result<ExecutionResu
 #[inline]
 pub(crate) fn arraylength(stack: &OperandStack) -> Result<ExecutionResult> {
     let length = match stack.pop_object()? {
-        None => return Err(NullPointer("array cannot be null".to_string())),
+        None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ByteArray(ref array)) => array.len()?,
         Some(Reference::CharArray(ref array)) => array.len()?,
         Some(Reference::FloatArray(ref array)) => array.len()?,
@@ -123,6 +124,7 @@ mod tests {
     use crate::frame::ExecutionResult::Continue;
     use crate::frame::Frame;
     use crate::java_object::JavaObject;
+    use crate::Error::JavaError;
     use ristretto_classfile::attributes::ArrayType;
     use ristretto_classfile::MethodAccessFlags;
     use ristretto_classloader::{Method, Value};
@@ -412,7 +414,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
         let result = arraylength(stack);
-        assert!(matches!(result, Err(NullPointer(_))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
         Ok(())
     }
 

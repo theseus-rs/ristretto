@@ -1,7 +1,8 @@
 use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
-use crate::Error::{ArrayIndexOutOfBounds, InvalidStackValue, NullPointer};
+use crate::Error::InvalidStackValue;
+use crate::JavaError::{ArrayIndexOutOfBoundsException, NullPointerException};
 use crate::Result;
 use ristretto_classloader::Reference;
 
@@ -10,11 +11,12 @@ use ristretto_classloader::Reference;
 pub(crate) fn caload(stack: &OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer("array cannot be null".to_string())),
+        None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::CharArray(array)) => {
             let index = usize::try_from(index)?;
             let Some(value) = array.get(index)? else {
-                return Err(ArrayIndexOutOfBounds(index));
+                let length = array.len()?;
+                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
             };
             stack.push_int(i32::from(value))?;
             Ok(Continue)
@@ -32,11 +34,12 @@ pub(crate) fn castore(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer("array cannot be null".to_string())),
+        None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::CharArray(ref mut array)) => {
             let index = usize::try_from(index)?;
-            if index >= array.capacity()? {
-                return Err(ArrayIndexOutOfBounds(index));
+            let length = array.capacity()?;
+            if index >= length {
+                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
             };
             array.set(index, u16::try_from(value)?)?;
             Ok(Continue)
@@ -51,6 +54,7 @@ pub(crate) fn castore(stack: &OperandStack) -> Result<ExecutionResult> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::Error::JavaError;
 
     #[test]
     fn test_caload() -> Result<()> {
@@ -88,7 +92,11 @@ mod test {
         stack.push_object(Some(array))?;
         stack.push_int(2)?;
         let result = caload(stack);
-        assert!(matches!(result, Err(ArrayIndexOutOfBounds(2))));
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException { index, length }))
+            if index == 2 && length == 1
+        ));
         Ok(())
     }
 
@@ -98,7 +106,7 @@ mod test {
         stack.push_object(None)?;
         stack.push_int(0)?;
         let result = caload(stack);
-        assert!(matches!(result, Err(NullPointer(_))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
         Ok(())
     }
 
@@ -140,7 +148,11 @@ mod test {
         stack.push_int(2)?;
         stack.push_int(42)?;
         let result = castore(stack);
-        assert!(matches!(result, Err(ArrayIndexOutOfBounds(2))));
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException{ index, length }))
+            if index == 2 && length == 1
+        ));
         Ok(())
     }
 
@@ -151,7 +163,7 @@ mod test {
         stack.push_int(0)?;
         stack.push_int(42)?;
         let result = castore(stack);
-        assert!(matches!(result, Err(NullPointer(_))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
         Ok(())
     }
 }

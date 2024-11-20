@@ -2,9 +2,8 @@ use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue, Frame};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use crate::Error::{
-    ArrayIndexOutOfBounds, ClassCastError, InternalError, InvalidStackValue, NullPointer,
-};
+use crate::Error::{InternalError, InvalidStackValue};
+use crate::JavaError::{ArrayIndexOutOfBoundsException, ClassCastException, NullPointerException};
 use crate::{Result, Value};
 use ristretto_classloader::{Class, Object, Reference};
 use std::sync::Arc;
@@ -135,11 +134,12 @@ pub(crate) fn astore_3(locals: &LocalVariables, stack: &OperandStack) -> Result<
 pub(crate) fn aaload(stack: &OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer("array cannot be null".to_string())),
+        None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::Array(_class, array)) => {
             let index = usize::try_from(index)?;
             let Some(value) = array.get(index)? else {
-                return Err(ArrayIndexOutOfBounds(index));
+                let length = array.len()?;
+                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
             };
             stack.push_object(value)?;
             Ok(Continue)
@@ -157,11 +157,12 @@ pub(crate) fn aastore(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {
-        None => Err(NullPointer("array cannot be null".to_string())),
+        None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::Array(_class, ref mut array)) => {
             let index = usize::try_from(index)?;
-            if index >= array.capacity()? {
-                return Err(ArrayIndexOutOfBounds(index));
+            let length = array.capacity()?;
+            if index >= length {
+                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
             };
             // TODO: validate object type is compatible with array type
             // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aastore
@@ -213,7 +214,13 @@ pub(crate) async fn checkcast(frame: &Frame, class_index: u16) -> Result<Executi
     let thread = frame.thread()?;
     let class = thread.class(class_name).await?;
     if !is_instance_of(&object, &class)? {
-        return Err(ClassCastError(class_name.to_string()));
+        let source_class_name = object.class_name().replace('/', ".");
+        let target_class_name = class_name.replace('/', ".");
+        return Err(ClassCastException {
+            source_class_name,
+            target_class_name,
+        }
+        .into());
     }
     Ok(Continue)
 }
@@ -263,7 +270,8 @@ fn is_instance_of(object: &Reference, class: &Arc<Class>) -> Result<bool> {
 mod tests {
     use super::*;
     use crate::java_object::JavaObject;
-    use crate::Error::InvalidOperand;
+    use crate::Error::{InvalidOperand, JavaError};
+    use crate::JavaError::NullPointerException;
     use ristretto_classloader::ConcurrentVec;
     use std::sync::Arc;
 
@@ -450,7 +458,11 @@ mod tests {
         stack.push_object(Some(array))?;
         stack.push_int(2)?;
         let result = aaload(stack);
-        assert!(matches!(result, Err(ArrayIndexOutOfBounds(2))));
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException { index, length }))
+            if index == 2 && length == 1
+        ));
         Ok(())
     }
 
@@ -460,7 +472,7 @@ mod tests {
         stack.push_object(None)?;
         stack.push_int(0)?;
         let result = aaload(stack);
-        assert!(matches!(result, Err(NullPointer(_))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
         Ok(())
     }
 
@@ -508,7 +520,11 @@ mod tests {
         stack.push_int(2)?;
         stack.push_object(Some(object))?;
         let result = aastore(stack);
-        assert!(matches!(result, Err(ArrayIndexOutOfBounds(2))));
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException { index, length }))
+            if index == 2 && length == 1
+        ));
         Ok(())
     }
 
@@ -520,7 +536,7 @@ mod tests {
         stack.push_int(0)?;
         stack.push_object(Some(object))?;
         let result = aastore(stack);
-        assert!(matches!(result, Err(NullPointer(_))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
         Ok(())
     }
 
@@ -613,7 +629,8 @@ mod tests {
         let result = checkcast(&frame, class_index).await;
         assert!(matches!(
             result,
-            Err(ClassCastError(class)) if class == "java/lang/String"
+            Err(JavaError(ClassCastException { source_class_name, target_class_name}))
+            if source_class_name == "java.lang.Object" && target_class_name == "java.lang.String"
         ));
         Ok(())
     }

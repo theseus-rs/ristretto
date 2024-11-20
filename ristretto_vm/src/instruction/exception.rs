@@ -1,5 +1,5 @@
 use crate::frame::{ExecutionResult, Frame};
-use crate::Error::{ArithmeticError, InternalError, Throwable};
+use crate::Error::{InternalError, JavaError, Throwable};
 use crate::{Error, Result, VM};
 use ristretto_classloader::{Object, Reference};
 use std::sync::Arc;
@@ -66,9 +66,13 @@ pub(crate) async fn process_throwable(frame: &Frame, throwable: Object) -> Resul
 /// if the error cannot be converted to a throwable
 pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Result<Object> {
     let (class_name, message) = match error {
+        JavaError(java_error) => {
+            let class_name = java_error.class_name().to_string();
+            let message = java_error.message();
+            (class_name, message)
+        }
         Throwable(throwable) => return Ok(throwable),
-        ArithmeticError(message) => ("java/lang/ArithmeticException", message),
-        error => ("java/lang/InternalError", format!("{error}")),
+        _ => ("java/lang/InternalError".to_string(), format!("{error}")),
     };
 
     let throwable = vm

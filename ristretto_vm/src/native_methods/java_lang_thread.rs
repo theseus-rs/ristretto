@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
-use crate::Error::NullPointer;
+use crate::JavaError::NullPointerException;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::Version;
@@ -120,7 +120,7 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 #[async_recursion(?Send)]
 async fn set_native_name(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let Some(Reference::Object(name)) = arguments.pop_object()? else {
-        return Err(NullPointer("name cannot be null".to_string()));
+        return Err(NullPointerException("name cannot be null".to_string()).into());
     };
     let name: String = name.try_into()?;
     thread.set_name(name).await;
