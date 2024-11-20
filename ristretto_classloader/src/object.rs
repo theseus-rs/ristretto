@@ -9,7 +9,7 @@ use std::sync::Arc;
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Represents an object in the Ristretto VM.
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub struct Object {
     class: Arc<Class>,
     fields: HashMap<String, Field>,
@@ -183,6 +183,17 @@ impl Display for Object {
             }
             _ => write!(f, "Object(class {class_name})"),
         }
+    }
+}
+
+impl PartialEq for Object {
+    fn eq(&self, other: &Self) -> bool {
+        // Compare the references by pointer to determine if they are the same object in
+        // order to avoid infinite recursion
+        if std::ptr::eq(self, other) {
+            return true;
+        }
+        self.class == other.class && self.fields == other.fields
     }
 }
 

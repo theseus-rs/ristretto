@@ -471,6 +471,11 @@ impl Class {
 
 impl PartialEq for Class {
     fn eq(&self, other: &Self) -> bool {
+        // Optimization for the case where the two classes are the same instance.
+        if std::ptr::eq(self, other) {
+            return true;
+        }
+
         self.name == other.name
             && self.class_file == other.class_file
             && *self.parent.read().expect("parent") == *other.parent.read().expect("parent")
