@@ -287,6 +287,12 @@ impl From<Object> for Value {
     }
 }
 
+impl From<Reference> for Value {
+    fn from(value: Reference) -> Self {
+        Value::Object(Some(value))
+    }
+}
+
 impl TryInto<Vec<bool>> for Value {
     type Error = crate::Error;
 
@@ -950,6 +956,16 @@ mod tests {
         let class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
         let object = Object::new(class)?;
         let value = Value::from(object);
+        assert!(matches!(value, Value::Object(Some(Reference::Object(_)))));
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_reference() -> Result<()> {
+        let class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let object = Object::new(class)?;
+        let reference = Reference::from(object);
+        let value = Value::from(reference);
         assert!(matches!(value, Value::Object(Some(Reference::Object(_)))));
         Ok(())
     }
