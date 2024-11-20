@@ -24,6 +24,20 @@ impl FieldType {
         }
     }
 
+    /// Return the class name for the `FieldType`.
+    #[must_use]
+    pub fn class_name(&self) -> String {
+        match self {
+            FieldType::Base(base_type) => base_type.class_name().to_string(),
+            FieldType::Object(class_name) => class_name.to_string(),
+            FieldType::Array(component_type) => match &**component_type {
+                FieldType::Base(base_type) => format!("[{}", base_type.code()),
+                FieldType::Object(class_name) => format!("L{class_name};"),
+                FieldType::Array(component_type) => format!("[{component_type}"),
+            },
+        }
+    }
+
     /// Return the descriptor for the `FieldType`.
     #[must_use]
     pub fn descriptor(&self) -> String {
@@ -45,14 +59,6 @@ impl FieldType {
         let mut chars = descriptor.chars();
         let code = chars.next().unwrap_or_default();
         let field_type = match code {
-            'B' => FieldType::Base(BaseType::Byte),
-            'C' => FieldType::Base(BaseType::Char),
-            'D' => FieldType::Base(BaseType::Double),
-            'F' => FieldType::Base(BaseType::Float),
-            'I' => FieldType::Base(BaseType::Int),
-            'J' => FieldType::Base(BaseType::Long),
-            'S' => FieldType::Base(BaseType::Short),
-            'Z' => FieldType::Base(BaseType::Boolean),
             'L' => {
                 let take_chars = descriptor.len().checked_sub(2).ok_or_else(|| {
                     io::Error::new(io::ErrorKind::InvalidData, "Invalid descriptor length")
@@ -68,7 +74,12 @@ impl FieldType {
                 let component_type = Self::parse(&chars.collect())?;
                 FieldType::Array(component_type.into())
             }
-            _ => return Err(InvalidFieldTypeCode(code)),
+            _ => {
+                let Ok(base_type) = BaseType::parse(code) else {
+                    return Err(InvalidFieldTypeCode(code));
+                };
+                FieldType::Base(base_type)
+            }
         };
 
         Ok(field_type)
@@ -78,14 +89,7 @@ impl FieldType {
 impl fmt::Display for FieldType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FieldType::Base(BaseType::Boolean) => write!(f, "boolean"),
-            FieldType::Base(BaseType::Byte) => write!(f, "byte"),
-            FieldType::Base(BaseType::Char) => write!(f, "char"),
-            FieldType::Base(BaseType::Double) => write!(f, "double"),
-            FieldType::Base(BaseType::Float) => write!(f, "float"),
-            FieldType::Base(BaseType::Int) => write!(f, "int"),
-            FieldType::Base(BaseType::Long) => write!(f, "long"),
-            FieldType::Base(BaseType::Short) => write!(f, "short"),
+            FieldType::Base(base_type) => write!(f, "{}", base_type.class_name()),
             FieldType::Object(class_name) => write!(f, "{class_name}"),
             FieldType::Array(component_type) => write!(f, "{component_type}[]"),
         }
@@ -105,8 +109,14 @@ mod test {
         );
     }
 
-    fn test_field_type(field_type: &FieldType, descriptor: &str, code: char) -> Result<()> {
+    fn test_field_type(
+        field_type: &FieldType,
+        descriptor: &str,
+        code: char,
+        class_name: &str,
+    ) -> Result<()> {
         assert_eq!(code, field_type.code());
+        assert_eq!(class_name, field_type.class_name());
         let field_type_descriptor = field_type.descriptor();
         assert_eq!(descriptor.to_string(), field_type_descriptor);
         let parsed_field_type = FieldType::parse(&field_type_descriptor)?;
@@ -115,11 +125,19 @@ mod test {
     }
 
     #[test]
+    fn test_base_boolean() -> Result<()> {
+        let field_type = FieldType::Base(BaseType::Boolean);
+
+        assert_eq!("boolean", field_type.to_string());
+        test_field_type(&field_type, "Z", 'Z', "boolean")
+    }
+
+    #[test]
     fn test_base_byte() -> Result<()> {
         let field_type = FieldType::Base(BaseType::Byte);
 
         assert_eq!("byte", field_type.to_string());
-        test_field_type(&field_type, "B", 'B')
+        test_field_type(&field_type, "B", 'B', "byte")
     }
 
     #[test]
@@ -127,7 +145,7 @@ mod test {
         let field_type = FieldType::Base(BaseType::Char);
 
         assert_eq!("char", field_type.to_string());
-        test_field_type(&field_type, "C", 'C')
+        test_field_type(&field_type, "C", 'C', "char")
     }
 
     #[test]
@@ -135,7 +153,7 @@ mod test {
         let field_type = FieldType::Base(BaseType::Double);
 
         assert_eq!("double", field_type.to_string());
-        test_field_type(&field_type, "D", 'D')
+        test_field_type(&field_type, "D", 'D', "double")
     }
 
     #[test]
@@ -143,7 +161,7 @@ mod test {
         let field_type = FieldType::Base(BaseType::Float);
 
         assert_eq!("float", field_type.to_string());
-        test_field_type(&field_type, "F", 'F')
+        test_field_type(&field_type, "F", 'F', "float")
     }
 
     #[test]
@@ -151,7 +169,7 @@ mod test {
         let field_type = FieldType::Base(BaseType::Int);
 
         assert_eq!("int", field_type.to_string());
-        test_field_type(&field_type, "I", 'I')
+        test_field_type(&field_type, "I", 'I', "int")
     }
 
     #[test]
@@ -159,7 +177,7 @@ mod test {
         let field_type = FieldType::Base(BaseType::Long);
 
         assert_eq!("long", field_type.to_string());
-        test_field_type(&field_type, "J", 'J')
+        test_field_type(&field_type, "J", 'J', "long")
     }
 
     #[test]
@@ -167,15 +185,7 @@ mod test {
         let field_type = FieldType::Base(BaseType::Short);
 
         assert_eq!("short", field_type.to_string());
-        test_field_type(&field_type, "S", 'S')
-    }
-
-    #[test]
-    fn test_base_boolean() -> Result<()> {
-        let field_type = FieldType::Base(BaseType::Boolean);
-
-        assert_eq!("boolean", field_type.to_string());
-        test_field_type(&field_type, "Z", 'Z')
+        test_field_type(&field_type, "S", 'S', "short")
     }
 
     #[test]
@@ -183,7 +193,7 @@ mod test {
         let field_type = FieldType::Object("Foo".to_string());
 
         assert_eq!("Foo", field_type.to_string());
-        test_field_type(&field_type, "LFoo;", 'L')
+        test_field_type(&field_type, "LFoo;", 'L', "Foo")
     }
 
     #[test]
@@ -210,7 +220,7 @@ mod test {
         let field_type = FieldType::Array(component_type.into());
 
         assert_eq!("int[]", field_type.to_string());
-        test_field_type(&field_type, "[I", '[')
+        test_field_type(&field_type, "[I", '[', "[I")
     }
 
     #[test]
