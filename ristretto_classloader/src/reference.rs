@@ -7,7 +7,7 @@ use std::fmt::Display;
 use std::sync::Arc;
 
 /// Represents a reference to an object in the Ristretto VM.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Reference {
     ByteArray(ConcurrentVec<i8>),
     CharArray(ConcurrentVec<u16>),
@@ -176,33 +176,6 @@ impl Display for Reference {
             Reference::Object(value) => {
                 write!(f, "{value}")
             }
-        }
-    }
-}
-
-impl PartialEq for Reference {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Reference::ByteArray(a), Reference::ByteArray(b)) => a == b,
-            (Reference::CharArray(a), Reference::CharArray(b)) => a == b,
-            (Reference::ShortArray(a), Reference::ShortArray(b)) => a == b,
-            (Reference::IntArray(a), Reference::IntArray(b)) => a == b,
-            (Reference::LongArray(a), Reference::LongArray(b)) => a == b,
-            (Reference::FloatArray(a), Reference::FloatArray(b)) => a == b,
-            (Reference::DoubleArray(a), Reference::DoubleArray(b)) => a == b,
-            (Reference::Array(a_class, a_array), Reference::Array(b_class, b_array)) => {
-                a_class.name() == b_class.name() && a_array == b_array
-            }
-            (Reference::Object(a), Reference::Object(b)) => {
-                // Compare the references by pointer to determine if they are the same object in
-                // order to avoid infinite recursion
-                if std::ptr::eq(a, b) {
-                    true
-                } else {
-                    a == b
-                }
-            }
-            _ => false,
         }
     }
 }
