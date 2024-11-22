@@ -6,6 +6,7 @@ use ristretto_classloader::{Class, Object, Reference, Value};
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Trait for converting a Rust value to a Java object.  Converts to objects of the primitive
 /// wrapper, classes, and strings.
@@ -187,13 +188,17 @@ impl JavaObject for &str {
         // The String implementation changed in Java 9.
         // In Java 8 and earlier, the value field is a char array.
         // In Java 9 and later, the value field is a byte array.
-        let array = if vm.java_class_file_version() <= &JAVA_8 {
+        let java_class_file_version = vm.java_class_file_version();
+        let array = if java_class_file_version <= &JAVA_8 {
             let bytes = mutf8::to_bytes(self)?;
             let utf8_string =
                 String::from_utf8(bytes).map_err(|error| ParseError(error.to_string()))?;
             let chars: Vec<char> = utf8_string.chars().collect();
             Reference::from(chars)
         } else {
+            if java_class_file_version >= &JAVA_17 {
+                object.set_value("hashIsZero", Value::Int(0))?;
+            }
             object.set_value("coder", Value::Int(0))?; // LATIN1
 
             let bytes = mutf8::to_bytes(self)?;
