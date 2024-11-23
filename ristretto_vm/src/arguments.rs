@@ -1,6 +1,6 @@
 use crate::Error::{ArgumentsUnderflow, InvalidOperand};
 use crate::Result;
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::{Object, Reference, Value};
 use std::fmt::Display;
 
 /// Arguments for Ristretto VM rust arguments
@@ -42,7 +42,7 @@ impl Arguments {
     }
 
     /// Push a reference onto the arguments.
-    pub fn push_object(&mut self, value: Option<Reference>) {
+    pub fn push_reference(&mut self, value: Option<Reference>) {
         self.push(Value::Object(value));
     }
 
@@ -99,14 +99,26 @@ impl Arguments {
         }
     }
 
-    /// Pop a null or object from the arguments.
-    pub fn pop_object(&mut self) -> Result<Option<Reference>> {
+    /// Pop a null or reference from the arguments.
+    pub fn pop_reference(&mut self) -> Result<Option<Reference>> {
         let value = self.pop()?;
         match value {
             Value::Object(reference) => Ok(reference),
             value => Err(InvalidOperand {
-                expected: "object".to_string(),
+                expected: "reference".to_string(),
                 actual: value.to_string(),
+            }),
+        }
+    }
+
+    /// Pop an object from the arguments.
+    pub fn pop_object(&mut self) -> Result<Object> {
+        let value = self.pop_reference()?;
+        match value {
+            Some(Reference::Object(object)) => Ok(object),
+            value => Err(InvalidOperand {
+                expected: "object".to_string(),
+                actual: format!("{value:?}"),
             }),
         }
     }
@@ -173,7 +185,7 @@ mod tests {
     #[test]
     fn test_pop_int_invalid_operand() {
         let mut arguments = Arguments::default();
-        arguments.push_object(None);
+        arguments.push_reference(None);
         assert!(matches!(
             arguments.pop_int(),
             Err(InvalidOperand {
@@ -194,7 +206,7 @@ mod tests {
     #[test]
     fn test_pop_long_invalid_operand() {
         let mut arguments = Arguments::default();
-        arguments.push_object(None);
+        arguments.push_reference(None);
         assert!(matches!(
             arguments.pop_long(),
             Err(InvalidOperand {
@@ -216,7 +228,7 @@ mod tests {
     #[test]
     fn test_pop_float_invalid_operand() {
         let mut arguments = Arguments::default();
-        arguments.push_object(None);
+        arguments.push_reference(None);
         assert!(matches!(
             arguments.pop_float(),
             Err(InvalidOperand {
@@ -238,7 +250,7 @@ mod tests {
     #[test]
     fn test_pop_double_invalid_operand() {
         let mut arguments = Arguments::default();
-        arguments.push_object(None);
+        arguments.push_reference(None);
         assert!(matches!(
             arguments.pop_double(),
             Err(InvalidOperand {
@@ -249,26 +261,51 @@ mod tests {
     }
 
     #[test]
+    fn test_pop_reference() -> Result<()> {
+        let mut arguments = Arguments::default();
+        let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        arguments.push_reference(None);
+        arguments.push_reference(Some(object.clone()));
+        assert_eq!(arguments.pop_reference()?, Some(object));
+        assert_eq!(arguments.pop_reference()?, None);
+        Ok(())
+    }
+
+    #[test]
+    fn test_pop_reference_invalid_operand() {
+        let mut arguments = Arguments::default();
+        arguments.push_int(42);
+        assert!(matches!(
+            arguments.pop_reference(),
+            Err(InvalidOperand {
+                expected,
+                actual
+            }) if expected == "reference" && actual == "int(42)"
+        ));
+    }
+
+    #[test]
     fn test_pop_object() -> Result<()> {
         let mut arguments = Arguments::default();
         let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
-        arguments.push_object(None);
-        arguments.push_object(Some(object.clone()));
-        assert_eq!(arguments.pop_object()?, Some(object));
-        assert_eq!(arguments.pop_object()?, None);
+        arguments.push_reference(None);
+        arguments.push_reference(Some(object.clone()));
+        assert_eq!(arguments.pop_reference()?, Some(object));
+        assert_eq!(arguments.pop_reference()?, None);
         Ok(())
     }
 
     #[test]
     fn test_pop_object_invalid_operand() {
         let mut arguments = Arguments::default();
-        arguments.push_int(42);
+        let value = Value::from(vec![42]);
+        arguments.push(value);
         assert!(matches!(
             arguments.pop_object(),
             Err(InvalidOperand {
                 expected,
                 actual
-            }) if expected == "object" && actual == "int(42)"
+            }) if expected == "object" && actual == "Some(IntArray([42]))"
         ));
     }
 

@@ -25,7 +25,7 @@ async fn fill_in_stack_trace(
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let _dummy = usize::try_from(arguments.pop_int()?)?;
-    let object = arguments.pop_object()?;
+    let object = arguments.pop_reference()?;
     let Some(Reference::Object(ref throwable)) = object else {
         return Err(InternalError("No throwable object found".to_string()));
     };

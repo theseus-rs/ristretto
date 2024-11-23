@@ -67,7 +67,7 @@ async fn initialize_from_archive(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let _class = arguments.pop_object()?;
+    let _class = arguments.pop_reference()?;
     Ok(None)
 }
 

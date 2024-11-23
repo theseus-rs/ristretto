@@ -20,8 +20,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn refers_to_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let object_argument = arguments.pop_object()?;
-    let object = arguments.pop_object()?;
+    let object_argument = arguments.pop_reference()?;
+    let object = arguments.pop_reference()?;
     // TODO: this is performing a pointer equality check which is likely not the correct implementation;
     // re-evaluate this logic
     if object == object_argument {

@@ -119,7 +119,7 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 
 #[async_recursion(?Send)]
 async fn set_native_name(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(name)) = arguments.pop_object()? else {
+    let Some(Reference::Object(name)) = arguments.pop_reference()? else {
         return Err(NullPointerException("name cannot be null".to_string()).into());
     };
     let name: String = name.try_into()?;

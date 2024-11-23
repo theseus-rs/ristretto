@@ -27,7 +27,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn find_builtin_lib(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_object()? else {
+    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
         return Err(InternalError("argument must be an object".to_string()));
     };
     let vm = thread.vm()?;

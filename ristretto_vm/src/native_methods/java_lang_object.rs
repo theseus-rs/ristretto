@@ -32,14 +32,14 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn clone(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+    let object = arguments.pop_reference()?;
     let cloned_object = object.clone();
     Ok(Some(Value::Object(cloned_object)))
 }
 
 #[async_recursion(?Send)]
 async fn get_class(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(object) = arguments.pop_object()? else {
+    let Some(object) = arguments.pop_reference()? else {
         return Err(InternalError("no object reference defined".to_string()));
     };
 
@@ -53,7 +53,7 @@ async fn get_class(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn hash_code(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(object) = arguments.pop_object()? else {
+    let Some(object) = arguments.pop_reference()? else {
         return Err(InternalError("no object reference defined".to_string()));
     };
     let hash_code = object_hash_code(&object);
