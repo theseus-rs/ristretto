@@ -1,8 +1,8 @@
 use crate::Error::{FieldNotFound, InvalidValueType, ParseError};
 use crate::Reference::{ByteArray, CharArray};
-use crate::{Class, Field, Result, Value};
+use crate::{Class, Field, Reference, Result, Value};
 use ristretto_classfile::{mutf8, FieldAccessFlags, Version};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ const JAVA_8: Version = Version::Java8 { minor: 0 };
 #[derive(Clone)]
 pub struct Object {
     class: Arc<Class>,
-    fields: HashMap<String, Field>,
+    fields: Arc<HashMap<String, Field>>,
 }
 
 impl Object {
@@ -41,7 +41,10 @@ impl Object {
 
             current_class = class.parent()?;
         }
-        Ok(Self { class, fields })
+        Ok(Self {
+            class,
+            fields: Arc::new(fields),
+        })
     }
 
     /// Get the class.
@@ -103,6 +106,100 @@ impl Object {
             )));
         }
         self.value("value")
+    }
+
+    /// Recursively compare two `Object` instances for equality and avoid cycles.
+    #[expect(clippy::type_complexity)]
+    fn equal_with_visited(
+        &self,
+        other: &Object,
+        visited: &mut HashSet<(
+            (*const Class, *const HashMap<String, Field>),
+            (*const Class, *const HashMap<String, Field>),
+        )>,
+    ) -> bool {
+        // Optimization for the case where the two objects are the same reference.
+        if std::ptr::eq(self, other) {
+            return true;
+        }
+
+        if self.class != other.class {
+            return false;
+        }
+
+        // Optimization for the case where the two objects are the same but have different references.
+        if Arc::ptr_eq(&self.fields, &other.fields) {
+            return true;
+        }
+
+        let self_ptr = (Arc::as_ptr(&self.class), Arc::as_ptr(&self.fields));
+        let other_ptr = (Arc::as_ptr(&other.class), Arc::as_ptr(&other.fields));
+        let object_ptr_pair = (self_ptr, other_ptr);
+        if visited.contains(&object_ptr_pair) {
+            return true;
+        }
+
+        visited.insert(object_ptr_pair);
+
+        if self.fields.len() != other.fields.len() {
+            return false;
+        }
+
+        for (name, field) in self.fields.iter() {
+            let Some(other_field) = other.fields.get(name) else {
+                return false;
+            };
+            let (Ok(value), Ok(other_value)) = (field.value(), other_field.value()) else {
+                return false;
+            };
+            match (value, other_value) {
+                (
+                    Value::Object(Some(Reference::Object(object))),
+                    Value::Object(Some(Reference::Object(other_object))),
+                ) => {
+                    if !object.equal_with_visited(&other_object, visited) {
+                        return false;
+                    }
+                }
+                (
+                    Value::Object(Some(Reference::Array(class, array))),
+                    Value::Object(Some(Reference::Array(other_class, other_array))),
+                ) => {
+                    if class != other_class {
+                        return false;
+                    }
+                    let array = array.to_vec().unwrap_or_default();
+                    let other_array = other_array.to_vec().unwrap_or_default();
+                    if array.len() != other_array.len() {
+                        return false;
+                    }
+                    for (element, other_element) in array.iter().zip(other_array.iter()) {
+                        match (element, other_element) {
+                            (
+                                Some(Reference::Object(object)),
+                                Some(Reference::Object(other_object)),
+                            ) => {
+                                if !object.equal_with_visited(other_object, visited) {
+                                    return false;
+                                }
+                            }
+                            _ => {
+                                if element != other_element {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                }
+                (value, other_value) => {
+                    if value != other_value {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        true
     }
 }
 
@@ -188,12 +285,8 @@ impl Display for Object {
 
 impl PartialEq for Object {
     fn eq(&self, other: &Self) -> bool {
-        // Compare the references by pointer to determine if they are the same object in
-        // order to avoid infinite recursion
-        if std::ptr::eq(self, other) {
-            return true;
-        }
-        self.class == other.class && self.fields == other.fields
+        let mut visited = HashSet::new();
+        self.equal_with_visited(other, &mut visited)
     }
 }
 
@@ -459,6 +552,40 @@ mod tests {
             "Object(java/lang/Integer)\n  value=int(42)\n",
             format!("{object:?}")
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eq_same_references() -> Result<()> {
+        let class_name = "java/lang/Integer";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        assert_eq!(object, object);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eq_different_references() -> Result<()> {
+        let class_name = "java/lang/Integer";
+        let class = load_class(class_name).await?;
+        let object1 = Object::new(class.clone())?;
+        object1.set_value("value", Value::Int(42))?;
+        let object2 = Object::new(class)?;
+        object2.set_value("value", Value::Int(42))?;
+        assert_eq!(object1, object2);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eq_not_equal() -> Result<()> {
+        let class_name = "java/lang/Integer";
+        let class = load_class(class_name).await?;
+        let object1 = Object::new(class.clone())?;
+        object1.set_value("value", Value::Int(3))?;
+        let object2 = Object::new(class)?;
+        object2.set_value("value", Value::Int(42))?;
+        assert_ne!(object1, object2);
         Ok(())
     }
 
