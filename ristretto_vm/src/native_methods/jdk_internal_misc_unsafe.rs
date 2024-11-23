@@ -272,7 +272,7 @@ async fn compare_and_set_int(
     };
 
     // TODO: the compare and set operation should be atomic
-    let result = if let Some(Reference::Object(object)) = arguments.pop_object()? {
+    let result = if let Some(Reference::Object(object)) = arguments.pop_reference()? {
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
@@ -310,7 +310,7 @@ async fn compare_and_set_long(
     };
 
     // TODO: the compare and set operation should be atomic
-    let result = if let Some(Reference::Object(object)) = arguments.pop_object()? {
+    let result = if let Some(Reference::Object(object)) = arguments.pop_reference()? {
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
@@ -349,7 +349,7 @@ async fn compare_and_set_reference(
     let expected = arguments.pop()?;
     let offset = arguments.pop_long()?;
     let offset = usize::try_from(offset)?;
-    let Some(object) = arguments.pop_object()? else {
+    let Some(object) = arguments.pop_reference()? else {
         return Err(InternalError(
             "compareAndSetReference: Invalid reference".to_string(),
         ));
@@ -457,7 +457,7 @@ fn get_reference_type(
     base_type: Option<BaseType>,
 ) -> Result<Option<Value>> {
     let offset = arguments.pop_long()?;
-    let Some(reference) = arguments.pop_object()? else {
+    let Some(reference) = arguments.pop_reference()? else {
         let Some(base_type) = base_type else {
             return Err(InternalError("getReference: Invalid reference".to_string()));
         };
@@ -573,7 +573,7 @@ async fn object_field_offset_1(
             });
         }
     };
-    let Some(Reference::Object(class_object)) = arguments.pop_object()? else {
+    let Some(Reference::Object(class_object)) = arguments.pop_reference()? else {
         return Err(InternalError(
             "objectFieldOffset1: Invalid class reference".to_string(),
         ));
@@ -726,7 +726,7 @@ async fn put_reference_volatile(
     let x = arguments.pop()?;
     let offset = arguments.pop_long()?;
     let offset = usize::try_from(offset)?;
-    let Some(object) = arguments.pop_object()? else {
+    let Some(object) = arguments.pop_reference()? else {
         return Err(InternalError(
             "putReferenceVolatile: Invalid reference".to_string(),
         ));

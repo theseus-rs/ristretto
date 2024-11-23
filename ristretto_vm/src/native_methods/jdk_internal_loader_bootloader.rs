@@ -23,6 +23,6 @@ async fn set_boot_loader_unnamed_module_0(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let _object = arguments.pop_object()?;
+    let _object = arguments.pop_reference()?;
     Ok(None)
 }

@@ -53,7 +53,7 @@ async fn get_class_access_flags(
     thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_object()? else {
+    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
         return Err(InternalError(
             "getClassAccessFlags: no arguments".to_string(),
         ));

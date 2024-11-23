@@ -28,13 +28,13 @@ async fn write_bytes(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
     let _append = arguments.pop_int()? != 0;
     let length = usize::try_from(arguments.pop_int()?)?;
     let offset = usize::try_from(arguments.pop_int()?)?;
-    let Some(Reference::ByteArray(bytes)) = arguments.pop_object()? else {
+    let Some(Reference::ByteArray(bytes)) = arguments.pop_reference()? else {
         return Err(InternalError(
             "Invalid argument type; expected byte[]".to_string(),
         ));
     };
     let bytes: Vec<u8> = bytes.to_vec()?.iter().map(|&x| x as u8).collect();
-    let Some(Reference::Object(file_output_stream)) = arguments.pop_object()? else {
+    let Some(Reference::Object(file_output_stream)) = arguments.pop_reference()? else {
         return Err(InternalError(
             "Invalid argument type; expected object".to_string(),
         ));

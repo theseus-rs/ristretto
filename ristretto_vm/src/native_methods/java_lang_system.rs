@@ -85,11 +85,11 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq>(
 async fn arraycopy(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let length = arguments.pop_int()?;
     let destination_position = arguments.pop_int()?;
-    let Some(destination) = arguments.pop_object()? else {
+    let Some(destination) = arguments.pop_reference()? else {
         return Err(InternalError("destination must be an object".to_string()));
     };
     let source_position = arguments.pop_int()?;
-    let Some(source) = arguments.pop_object()? else {
+    let Some(source) = arguments.pop_reference()? else {
         return Err(InternalError("source must be an object".to_string()));
     };
 
@@ -211,7 +211,7 @@ async fn identity_hash_code(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let hash_code = match arguments.pop_object()? {
+    let hash_code = match arguments.pop_reference()? {
         Some(object) => object_hash_code(&object),
         None => 0,
     };
@@ -243,7 +243,7 @@ async fn init_properties(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
 
 #[async_recursion(?Send)]
 async fn map_library_name(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_object()? else {
+    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
         return Err(InternalError("argument must be an object".to_string()));
     };
     let library_name: String = object.try_into()?;
@@ -341,7 +341,7 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
 
 #[async_recursion(?Send)]
 async fn set_in_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let input_stream = arguments.pop_object()?;
+    let input_stream = arguments.pop_reference()?;
     let system = thread.class("java/lang/System").await?;
     let in_field = system.static_field("in")?;
     in_field.unsafe_set_value(Value::Object(input_stream))?;
@@ -350,7 +350,7 @@ async fn set_in_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Optio
 
 #[async_recursion(?Send)]
 async fn set_out_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let print_stream = arguments.pop_object()?;
+    let print_stream = arguments.pop_reference()?;
     let system = thread.class("java/lang/System").await?;
     let out_field = system.static_field("out")?;
     out_field.unsafe_set_value(Value::Object(print_stream))?;
@@ -359,7 +359,7 @@ async fn set_out_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 
 #[async_recursion(?Send)]
 async fn set_err_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let print_stream = arguments.pop_object()?;
+    let print_stream = arguments.pop_reference()?;
     let system = thread.class("java/lang/System").await?;
     let err_field = system.static_field("err")?;
     err_field.unsafe_set_value(Value::Object(print_stream))?;

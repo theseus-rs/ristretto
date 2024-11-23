@@ -69,7 +69,7 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn stat_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(_attributes) = arguments.pop_object()? else {
+    let Some(_attributes) = arguments.pop_reference()? else {
         return Err(InternalError("attributes is null".to_string()));
     };
     let _path = arguments.pop_long()?;

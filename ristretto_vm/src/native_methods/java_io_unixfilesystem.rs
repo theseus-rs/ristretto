@@ -44,7 +44,7 @@ async fn get_boolean_attributes_0(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(file)) = arguments.pop_object()? else {
+    let Some(Reference::Object(file)) = arguments.pop_reference()? else {
         return Err(InternalError(
             "getBooleanAttributes0: expected file argument".to_string(),
         ));

@@ -25,10 +25,10 @@ async fn init_stack_trace_elements(
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let depth = usize::try_from(arguments.pop_int()?)?;
-    let Some(Reference::Array(_class, back_trace)) = arguments.pop_object()? else {
+    let Some(Reference::Array(_class, back_trace)) = arguments.pop_reference()? else {
         return Err(InternalError("No back trace object found".to_string()));
     };
-    let Some(Reference::Array(_class, stack_trace)) = arguments.pop_object()? else {
+    let Some(Reference::Array(_class, stack_trace)) = arguments.pop_reference()? else {
         return Err(InternalError("No stack trace object found".to_string()));
     };
     for index in 0..depth {
