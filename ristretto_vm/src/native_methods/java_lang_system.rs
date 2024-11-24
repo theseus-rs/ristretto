@@ -19,7 +19,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_11: Version = Version::Java11 { minor: 0 };
 
-/// Register all native methods for java.lang.System
+/// Register all native methods for `java.lang.System`
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/System";
     registry.register(
@@ -28,14 +28,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/Object;ILjava/lang/Object;II)V",
         arraycopy,
     );
-    registry.register(
-        class_name,
-        "allowSecurityManager",
-        "()Z",
-        allow_security_manager,
-    );
     registry.register(class_name, "currentTimeMillis", "()J", current_time_millis);
-    registry.register(class_name, "gc", "()V", gc);
     registry.register(
         class_name,
         "identityHashCode",
@@ -56,9 +49,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(class_name, "nanoTime", "()J", nano_time);
     registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(class_name, "setErr0", "(Ljava/io/PrintStream;)V", set_err_0);
     registry.register(class_name, "setIn0", "(Ljava/io/InputStream;)V", set_in_0);
     registry.register(class_name, "setOut0", "(Ljava/io/PrintStream;)V", set_out_0);
-    registry.register(class_name, "setErr0", "(Ljava/io/PrintStream;)V", set_err_0);
 }
 
 fn arraycopy_vec<T: Clone + Debug + PartialEq>(
@@ -181,15 +174,6 @@ async fn arraycopy(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opt
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn allow_security_manager(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    Ok(Some(Value::from(false)))
-}
-
-#[expect(clippy::needless_pass_by_value)]
-#[async_recursion(?Send)]
 async fn current_time_millis(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let now = SystemTime::now();
     let duration = now
@@ -197,12 +181,6 @@ async fn current_time_millis(_thread: Arc<Thread>, _arguments: Arguments) -> Res
         .map_err(|error| InternalError(error.to_string()))?;
     let time = i64::try_from(duration.as_millis())?;
     Ok(Some(Value::Long(time)))
-}
-
-#[expect(clippy::needless_pass_by_value)]
-#[async_recursion(?Send)]
-async fn gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -340,6 +318,15 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
 }
 
 #[async_recursion(?Send)]
+async fn set_err_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let print_stream = arguments.pop_reference()?;
+    let system = thread.class("java/lang/System").await?;
+    let err_field = system.static_field("err")?;
+    err_field.unsafe_set_value(Value::Object(print_stream))?;
+    Ok(None)
+}
+
+#[async_recursion(?Send)]
 async fn set_in_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let input_stream = arguments.pop_reference()?;
     let system = thread.class("java/lang/System").await?;
@@ -354,14 +341,5 @@ async fn set_out_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
     let system = thread.class("java/lang/System").await?;
     let out_field = system.static_field("out")?;
     out_field.unsafe_set_value(Value::Object(print_stream))?;
-    Ok(None)
-}
-
-#[async_recursion(?Send)]
-async fn set_err_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let print_stream = arguments.pop_reference()?;
-    let system = thread.class("java/lang/System").await?;
-    let err_field = system.static_field("err")?;
-    err_field.unsafe_set_value(Value::Object(print_stream))?;
     Ok(None)
 }

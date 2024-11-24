@@ -6,7 +6,7 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-/// Register all native methods for java.awt.Window.
+/// Register all native methods for `java.awt.Window`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/awt/Window";
     registry.register(class_name, "initIDs", "()V", init_ids);

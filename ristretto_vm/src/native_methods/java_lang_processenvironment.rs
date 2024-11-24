@@ -7,7 +7,7 @@ use ristretto_classfile::mutf8;
 use ristretto_classloader::{ConcurrentVec, Reference, Value};
 use std::sync::Arc;
 
-/// Register all native methods for java.lang.ProcessEnvironment.
+/// Register all native methods for `java.lang.ProcessEnvironment`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/ProcessEnvironment";
     registry.register(class_name, "environ", "()[[B", environ);

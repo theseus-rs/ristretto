@@ -6,47 +6,21 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-/// Register all native methods for java.io.FileDescriptor.
+/// Register all native methods for `java.io.FileDescriptor`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/io/FileDescriptor";
-    registry.register(class_name, "getAppend", "(I)Z", get_append);
-    registry.register(class_name, "getHandle", "(I)J", get_handle);
     registry.register(class_name, "initIDs", "()V", init_ids);
-}
-
-#[expect(clippy::match_same_arms)]
-#[expect(clippy::needless_pass_by_value)]
-#[async_recursion(?Send)]
-async fn get_append(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let handle = arguments.pop_int()?;
-    let append = match handle {
-        0 => {
-            // true if stdin is in append mode
-            false
-        }
-        1 => {
-            // true if stdout is in append mode
-            false
-        }
-        2 => {
-            // true if stderr is in append mode
-            false
-        }
-        _ => false,
-    };
-    Ok(Some(Value::from(append)))
-}
-
-#[expect(clippy::needless_pass_by_value)]
-#[async_recursion(?Send)]
-async fn get_handle(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let handle = arguments.pop_int()?;
-    let handle = i64::from(handle);
-    Ok(Some(Value::Long(handle)))
+    registry.register(class_name, "sync", "()V", sync);
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn sync(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }

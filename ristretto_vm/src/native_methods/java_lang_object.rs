@@ -9,15 +9,16 @@ use ristretto_classloader::{Reference, Value};
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 
-/// Register all native methods for java.lang.Object.
+/// Register all native methods for `java.lang.Object`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Object";
-    registry.register(class_name, "<init>", "()V", init);
     registry.register(class_name, "clone", "()Ljava/lang/Object;", clone);
     registry.register(class_name, "getClass", "()Ljava/lang/Class;", get_class);
     registry.register(class_name, "hashCode", "()I", hash_code);
+    registry.register(class_name, "notify", "()V", notify);
     registry.register(class_name, "notifyAll", "()V", notify_all);
     registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(class_name, "wait", "(J)V", wait);
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -72,6 +73,12 @@ pub(crate) fn object_hash_code(object: &Reference) -> i32 {
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn notify(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn notify_all(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -80,4 +87,10 @@ async fn notify_all(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Optio
 #[async_recursion(?Send)]
 async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn wait(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }
