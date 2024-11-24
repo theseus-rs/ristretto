@@ -110,13 +110,20 @@ impl Jar {
     /// if the class names cannot be read.
     pub async fn class_names(&self) -> Result<Vec<String>> {
         let mut archive = self.archive.write().await;
+        let is_module = archive.is_module().await?;
         let zip_archive = archive.zip_archive().await?;
         let mut classes = Vec::new();
         for i in 0..zip_archive.len() {
             let file = zip_archive.by_index(i)?;
             let file_name = file.name();
             if file_name.ends_with("class") {
-                let class_name = file_name.replace(".class", "");
+                let mut class_name = file_name.replace(".class", "");
+                if is_module {
+                    class_name = class_name
+                        .strip_prefix("classes/")
+                        .unwrap_or_default()
+                        .to_string();
+                }
                 classes.push(class_name);
             }
         }

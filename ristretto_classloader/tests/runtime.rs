@@ -4,6 +4,11 @@ async fn test_runtime(version: &str, class_name: &str) -> Result<()> {
     let (_java_home, java_version, class_loader) = runtime::version_class_loader(version).await?;
     let major_version = version.split('.').next().expect("major version");
     assert!(java_version.starts_with(major_version));
+
+    let class_path = class_loader.class_path();
+    let class_names = class_path.class_names().await?;
+    assert!(class_names.contains(&class_name.to_string()));
+
     let class = class_loader.load(class_name).await?;
     assert_eq!(class_name, class.name());
     Ok(())
