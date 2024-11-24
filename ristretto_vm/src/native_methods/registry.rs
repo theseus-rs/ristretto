@@ -3,12 +3,12 @@ use crate::native_methods::{
     java_awt_component, java_awt_container, java_awt_frame, java_awt_toolkit, java_awt_window,
     java_io_filedescriptor, java_io_fileinputstream, java_io_fileoutputstream,
     java_io_unixfilesystem, java_io_winntfilesystem, java_lang_class, java_lang_classloader,
-    java_lang_double, java_lang_float, java_lang_object, java_lang_processenvironment,
-    java_lang_processimpl, java_lang_ref_reference, java_lang_reflect_array, java_lang_runtime,
-    java_lang_securitymanager, java_lang_shutdown, java_lang_stacktraceelement,
-    java_lang_stringutf16, java_lang_system, java_lang_thread, java_lang_throwable,
-    java_security_accesscontroller, jdk_internal_loader_bootloader,
-    jdk_internal_loader_nativelibraries, jdk_internal_misc_cds,
+    java_lang_double, java_lang_float, java_lang_invoke_methodhandles, java_lang_object,
+    java_lang_processenvironment, java_lang_processimpl, java_lang_ref_reference,
+    java_lang_reflect_array, java_lang_runtime, java_lang_securitymanager, java_lang_shutdown,
+    java_lang_stacktraceelement, java_lang_stringutf16, java_lang_system, java_lang_thread,
+    java_lang_throwable, java_security_accesscontroller, jdk_internal_loader_bootloader,
+    jdk_internal_loader_nativelibraries, jdk_internal_misc_cds, jdk_internal_misc_previewfeatures,
     jdk_internal_misc_scopedmemoryaccess, jdk_internal_misc_signal, jdk_internal_misc_unsafe,
     jdk_internal_misc_vm, jdk_internal_module_modulebootstrap, jdk_internal_reflect_reflection,
     jdk_internal_util_systemprops_raw, sun_io_win32errormode, sun_misc_unsafe, sun_misc_vm,
@@ -59,6 +59,7 @@ impl MethodRegistry {
         java_lang_classloader::register(&mut method_registry);
         java_lang_double::register(&mut method_registry);
         java_lang_float::register(&mut method_registry);
+        java_lang_invoke_methodhandles::register(&mut method_registry);
         java_lang_object::register(&mut method_registry);
         java_lang_processenvironment::register(&mut method_registry);
         java_lang_processimpl::register(&mut method_registry);
@@ -76,6 +77,7 @@ impl MethodRegistry {
         jdk_internal_loader_bootloader::register(&mut method_registry);
         jdk_internal_loader_nativelibraries::register(&mut method_registry);
         jdk_internal_misc_cds::register(&mut method_registry);
+        jdk_internal_misc_previewfeatures::register(&mut method_registry);
         jdk_internal_misc_scopedmemoryaccess::register(&mut method_registry);
         jdk_internal_misc_signal::register(&mut method_registry);
         jdk_internal_misc_unsafe::register(&mut method_registry);
