@@ -50,6 +50,17 @@ impl ClassPathEntry {
             ClassPathEntry::Jar(jar) => jar.read_class(name).await,
         }
     }
+
+    /// Get the class names in the class path entry.
+    ///
+    /// # Errors
+    /// if the class names cannot be read.
+    pub async fn class_names(&self) -> Result<Vec<String>> {
+        match self {
+            ClassPathEntry::Directory(directory) => directory.class_names().await,
+            ClassPathEntry::Jar(jar) => jar.class_names().await,
+        }
+    }
 }
 
 /// Represents a Jar manifest.
@@ -97,6 +108,16 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_class_names_directory() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_directory = cargo_manifest.join("../classes");
+        let class_path_entry = ClassPathEntry::new(classes_directory.to_string_lossy());
+        let class_names = class_path_entry.class_names().await?;
+        assert!(class_names.contains(&"HelloWorld".to_string()));
+        Ok(())
+    }
+
     //
     // Jar Tests
     //
@@ -130,6 +151,16 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_class_names_jar() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let class_path_entry = ClassPathEntry::new(classes_jar.to_string_lossy());
+        let class_names = class_path_entry.class_names().await?;
+        assert!(class_names.contains(&"HelloWorld".to_string()));
+        Ok(())
+    }
+
     //
     // Url Tests
     //
@@ -159,6 +190,16 @@ mod tests {
             "org/springframework/boot/SpringApplication",
             class_file.class_name()?
         );
+        Ok(())
+    }
+
+    #[cfg(feature = "url")]
+    #[tokio::test]
+    async fn test_class_names_url() -> Result<()> {
+        let url = "https://repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar";
+        let class_path_entry = ClassPathEntry::new(url);
+        let class_names = class_path_entry.class_names().await?;
+        assert!(class_names.contains(&"org/springframework/boot/SpringApplication".to_string()));
         Ok(())
     }
 }

@@ -61,6 +61,20 @@ impl ClassPath {
 
         Err(ClassNotFound(name.to_string()))
     }
+
+    /// Get the class names in the class path.
+    ///
+    /// # Errors
+    /// if the class names cannot be read.
+    pub async fn class_names(&self) -> Result<Vec<String>> {
+        let mut classes = Vec::new();
+        for class_path_entry in self.iter() {
+            let class_names = class_path_entry.class_names().await?;
+            classes.extend(class_names);
+        }
+        classes.sort();
+        Ok(classes)
+    }
 }
 
 /// Into iterator for `ClassPath`.
@@ -147,6 +161,32 @@ mod tests {
                 "org/springframework/boot/SpringApplication",
                 class_file.class_name()?
             );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_class_names() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_directory = cargo_manifest.join("../classes");
+        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+
+        let class_path_entries = [
+            classes_directory.to_string_lossy().to_string(),
+            classes_jar.to_string_lossy().to_string(),
+            #[cfg(feature = "url")]
+            "https//repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar".to_string(),
+        ];
+
+        let class_path = class_path_entries.join(":");
+        let class_path_entry = ClassPath::from(&class_path);
+
+        let class_names = class_path_entry.class_names().await?;
+        assert!(class_names.contains(&"HelloWorld".to_string()));
+
+        #[cfg(feature = "url")]
+        {
+            assert!(class_names.contains(&"org/springframework/boot/SpringApplication".to_string()));
         }
         Ok(())
     }
