@@ -103,6 +103,25 @@ impl Jar {
         };
         Ok(class_file)
     }
+
+    /// Get the class names in the jar.
+    ///
+    /// # Errors
+    /// if the class names cannot be read.
+    pub async fn class_names(&self) -> Result<Vec<String>> {
+        let mut archive = self.archive.write().await;
+        let zip_archive = archive.zip_archive().await?;
+        let mut classes = Vec::new();
+        for i in 0..zip_archive.len() {
+            let file = zip_archive.by_index(i)?;
+            let file_name = file.name();
+            if file_name.ends_with("class") {
+                let class_name = file_name.replace(".class", "");
+                classes.push(class_name);
+            }
+        }
+        Ok(classes)
+    }
 }
 
 /// Implement the `PartialEq` trait for `Jar`.
@@ -335,6 +354,16 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_class_names() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let jar = Jar::new(classes_jar.to_string_lossy());
+        let class_names = jar.class_names().await?;
+        assert!(class_names.contains(&"HelloWorld".to_string()));
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_bad_class_file() -> Result<()> {
         let temp_dir = tempfile::tempdir()?;
 
@@ -410,6 +439,16 @@ mod tests {
         // Test class file initialization
         let result = url.read_class("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
+        Ok(())
+    }
+
+    #[cfg(feature = "url")]
+    #[tokio::test]
+    async fn test_from_url_read_names() -> Result<()> {
+        let url = "https://repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar";
+        let url = Jar::from_url(url);
+        let class_names = url.class_names().await?;
+        assert!(class_names.contains(&"org/springframework/boot/SpringApplication".to_string()));
         Ok(())
     }
 }

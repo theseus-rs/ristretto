@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use std::path::PathBuf;
 use std::{fs, io};
 use tracing::instrument;
+use walkdir::WalkDir;
 
 /// A directory in the class path.
 #[derive(Clone, Debug)]
@@ -49,6 +50,28 @@ impl Directory {
         let mut cursor = io::Cursor::new(bytes);
         let class_file = ClassFile::from_bytes(&mut cursor)?;
         Ok(class_file)
+    }
+
+    /// Get the class names in the directory.
+    ///
+    /// # Errors
+    /// if the class names cannot be read.
+    #[expect(clippy::unused_async)]
+    pub async fn class_names(&self) -> Result<Vec<String>> {
+        let path = self.path.clone();
+        let mut classes = Vec::new();
+        for entry in WalkDir::new(path)
+            .follow_links(true)
+            .into_iter()
+            .filter_map(Result::ok)
+        {
+            let file_name = entry.file_name().to_string_lossy();
+            if file_name.ends_with(".class") {
+                let class_name = file_name.replace(".class", "");
+                classes.push(class_name);
+            }
+        }
+        Ok(classes)
     }
 }
 
@@ -111,5 +134,15 @@ mod tests {
         let directory = Directory::new(classes_directory.to_string_lossy());
         let result = directory.read_class("Foo");
         assert!(matches!(result, Err(ClassNotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_class_names() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_directory = cargo_manifest.join("../classes");
+        let directory = Directory::new(classes_directory.to_string_lossy());
+        let class_names = directory.class_names().await?;
+        assert!(class_names.contains(&"HelloWorld".to_string()));
+        Ok(())
     }
 }
