@@ -269,11 +269,6 @@ mod test {
     use crate::Error::ClassLoaderError;
     use crate::VM;
 
-    // #[test]
-    // fn test_invokevirtual() -> Result<()> {
-    //     todo!()
-    // }
-
     #[tokio::test]
     async fn test_try_get_virtual_method_hierarchy() -> Result<()> {
         let vm = VM::default().await?;
@@ -308,11 +303,6 @@ mod test {
         Ok(())
     }
 
-    // #[test]
-    // fn test_invokespecial() -> Result<()> {
-    //     todo!()
-    // }
-
     #[tokio::test]
     async fn test_try_get_special_method() -> Result<()> {
         let vm = VM::default().await?;
@@ -340,19 +330,4 @@ mod test {
         ));
         Ok(())
     }
-
-    // #[test]
-    // fn test_invokestatic() -> Result<()> {
-    //     todo!()
-    // }
-
-    // #[test]
-    // fn test_invokeinterface() -> Result<()> {
-    //     todo!()
-    // }
-
-    // #[test]
-    // fn test_invokedynamic() -> Result<()> {
-    //     todo!()
-    // }
 }
