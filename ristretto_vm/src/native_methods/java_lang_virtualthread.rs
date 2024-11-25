@@ -8,6 +8,7 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_20: Version = Version::Java20 { minor: 0 };
+const JAVA_22: Version = Version::Java22 { minor: 0 };
 
 /// Register all native methods for `java.lang.VirtualThread`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -41,9 +42,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     } else {
         registry.register(class_name, "notifyJvmtiEnd", "()V", notify_jvmti_end);
-        // java/lang/VirtualThread.notifyJvmtiMount(Z)V
-        // java/lang/VirtualThread.notifyJvmtiStart()V
-        // java/lang/VirtualThread.notifyJvmtiUnmount(Z)V
         registry.register(class_name, "notifyJvmtiMount", "(Z)V", notify_jvmti_mount);
         registry.register(class_name, "notifyJvmtiStart", "()V", notify_jvmti_start);
         registry.register(
@@ -62,7 +60,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
+    if java_version >= JAVA_22 {
+        registry.register(
+            class_name,
+            "notifyJvmtiDisableSuspend",
+            "(Z)V",
+            notify_jvmti_disable_suspend,
+        );
+    }
+
     registry.register(class_name, "registerNatives", "()V", register_natives);
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn notify_jvmti_disable_suspend(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]

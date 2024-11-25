@@ -9,9 +9,11 @@ use ristretto_classloader::{Object, Reference, Value};
 use std::sync::Arc;
 use std::time::Duration;
 
-const JAVA_11: Version = Version::Java17 { minor: 0 };
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_19: Version = Version::Java19 { minor: 0 };
 const JAVA_20: Version = Version::Java20 { minor: 0 };
+const JAVA_21: Version = Version::Java21 { minor: 0 };
+const JAVA_22: Version = Version::Java22 { minor: 0 };
 
 /// Register all native methods for `java.lang.Thread`.
 #[expect(clippy::too_many_lines)]
@@ -79,7 +81,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "([Ljava/lang/Object;)V",
             set_extent_local_cache,
         );
-        registry.register(class_name, "sleep0", "(J)V", sleep_0);
+
+        if java_version <= JAVA_21 {
+            registry.register(class_name, "sleep0", "(J)V", sleep_0);
+        }
+
         registry.register(class_name, "yield0", "()V", yield_0);
     }
 
@@ -108,6 +114,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "([Ljava/lang/Object;)V",
             set_scoped_value_cache,
         );
+    }
+
+    if java_version >= JAVA_22 {
+        registry.register(class_name, "sleepNanos0", "(J)V", sleep_nanos_0);
     }
 
     registry.register(
@@ -338,6 +348,19 @@ async fn sleep(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<
 #[async_recursion(?Send)]
 async fn sleep_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
     sleep(thread, arguments).await
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn sleep_nanos_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let nanos = arguments.pop_long()?;
+    let nanos = u64::try_from(nanos)?;
+    let duration = Duration::from_nanos(nanos);
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::time::sleep(duration).await;
+    #[cfg(target_arch = "wasm32")]
+    std::thread::sleep(duration);
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]

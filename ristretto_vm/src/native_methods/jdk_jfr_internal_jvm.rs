@@ -12,6 +12,7 @@ const JAVA_17: Version = Version::Java17 { minor: 0 };
 const JAVA_18: Version = Version::Java18 { minor: 0 };
 const JAVA_20: Version = Version::Java20 { minor: 0 };
 const JAVA_21: Version = Version::Java21 { minor: 0 };
+const JAVA_22: Version = Version::Java22 { minor: 0 };
 
 /// Register all native methods for `jdk.jfr.internal.JVM`.
 #[expect(clippy::too_many_lines)]
@@ -214,6 +215,28 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
+    if java_version <= JAVA_21 {
+        registry.register(class_name, "getStackTraceId", "(I)J", get_stack_trace_id);
+    } else {
+        registry.register(class_name, "getStackTraceId", "(IJ)J", get_stack_trace_id);
+    }
+
+    if java_version >= JAVA_22 {
+        registry.register(
+            class_name,
+            "registerStackFilter",
+            "([Ljava/lang/String;[Ljava/lang/String;)J",
+            register_stack_filter,
+        );
+        registry.register(class_name, "setMiscellaneous", "(JJ)V", set_miscellaneous);
+        registry.register(
+            class_name,
+            "unregisterStackFilter",
+            "(J)V",
+            unregister_stack_filter,
+        );
+    }
+
     registry.register(class_name, "abort", "(Ljava/lang/String;)V", abort);
     registry.register(
         class_name,
@@ -246,7 +269,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         get_class_id,
     );
     registry.register(class_name, "getPid", "()Ljava/lang/String;", get_pid);
-    registry.register(class_name, "getStackTraceId", "(I)J", get_stack_trace_id);
     registry.register(
         class_name,
         "getThreadId",
@@ -627,6 +649,15 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn register_stack_filter(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn retransform_classes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -732,6 +763,12 @@ async fn set_method_sampling_period(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn set_miscellaneous(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn set_output(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -811,5 +848,14 @@ async fn subscribe_log_level(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn uncaught_exception(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn unregister_stack_filter(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     todo!()
 }

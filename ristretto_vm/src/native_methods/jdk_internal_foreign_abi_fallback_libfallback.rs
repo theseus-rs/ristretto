@@ -3,19 +3,38 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_21: Version = Version::Java21 { minor: 0 };
 
 /// Register all native methods for `jdk.internal.foreign.abi.fallback.LibFallback`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/foreign/abi/fallback/LibFallback";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_21 {
+        registry.register(class_name, "doDowncall", "(JJJJJI)V", do_downcall);
+    } else {
+        registry.register(
+            class_name,
+            "doDowncall",
+            "(JJJJJI[Ljava/lang/Object;I)V",
+            do_downcall,
+        );
+        registry.register(class_name, "ffi_sizeof_int", "()I", ffi_sizeof_int);
+        registry.register(class_name, "ffi_sizeof_long", "()I", ffi_sizeof_long);
+        registry.register(class_name, "ffi_sizeof_short", "()I", ffi_sizeof_short);
+        registry.register(class_name, "ffi_sizeof_wchar", "()I", ffi_sizeof_wchar);
+    }
+
     registry.register(
         class_name,
         "createClosure",
         "(JLjava/lang/Object;[J)I",
         create_closure,
     );
-    registry.register(class_name, "doDowncall", "(JJJJJI)V", do_downcall);
     registry.register(class_name, "ffi_default_abi", "()I", ffi_default_abi);
     registry.register(
         class_name,
@@ -84,6 +103,30 @@ async fn ffi_prep_cif(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn ffi_prep_cif_var(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn ffi_sizeof_int(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn ffi_sizeof_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn ffi_sizeof_short(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn ffi_sizeof_wchar(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

@@ -40,11 +40,11 @@ use crate::native_methods::{
     java_lang_processhandleimpl_info, java_lang_processimpl, java_lang_ref_finalizer,
     java_lang_ref_phantomreference, java_lang_ref_reference, java_lang_reflect_array,
     java_lang_reflect_executable, java_lang_reflect_field, java_lang_reflect_proxy,
-    java_lang_runtime, java_lang_securitymanager, java_lang_shutdown, java_lang_stackstreamfactory,
-    java_lang_stackstreamfactory_abstractstackwalker, java_lang_stacktraceelement,
-    java_lang_strictmath, java_lang_string, java_lang_stringcoding, java_lang_stringutf16,
-    java_lang_system, java_lang_thread, java_lang_throwable, java_lang_unixprocess,
-    java_lang_virtualthread, java_net_abstractplaindatagramsocketimpl,
+    java_lang_runtime, java_lang_securitymanager, java_lang_shutdown, java_lang_stackframeinfo,
+    java_lang_stackstreamfactory, java_lang_stackstreamfactory_abstractstackwalker,
+    java_lang_stacktraceelement, java_lang_strictmath, java_lang_string, java_lang_stringcoding,
+    java_lang_stringutf16, java_lang_system, java_lang_thread, java_lang_throwable,
+    java_lang_unixprocess, java_lang_virtualthread, java_net_abstractplaindatagramsocketimpl,
     java_net_abstractplainsocketimpl, java_net_datagrampacket, java_net_inet4address,
     java_net_inet4addressimpl, java_net_inet6address, java_net_inet6addressimpl,
     java_net_inetaddress, java_net_inetaddressimplfactory, java_net_networkinterface,
@@ -73,10 +73,10 @@ use crate::native_methods::{
     jdk_internal_util_systemprops_raw, jdk_internal_vm_continuation,
     jdk_internal_vm_continuationsupport, jdk_internal_vm_foreignlinkersupport,
     jdk_internal_vm_vector_vectorsupport, jdk_internal_vm_vmsupport, jdk_jfr_internal_jvm,
-    jdk_net_macosxsocketoptions, jdk_vm_ci_runtime_jvmci, sun_awt_cgraphicsconfig,
-    sun_awt_cgraphicsdevice, sun_awt_cgraphicsenvironment, sun_awt_debugsettings,
-    sun_awt_defaultmouseinfopeer, sun_awt_fcfontmanager, sun_awt_fontdescriptor,
-    sun_awt_image_bufimgsurfacedata, sun_awt_image_bytecomponentraster,
+    jdk_net_macosxsocketoptions, jdk_vm_ci_runtime_jvmci, jdk_vm_ci_services_services,
+    sun_awt_cgraphicsconfig, sun_awt_cgraphicsdevice, sun_awt_cgraphicsenvironment,
+    sun_awt_debugsettings, sun_awt_defaultmouseinfopeer, sun_awt_fcfontmanager,
+    sun_awt_fontdescriptor, sun_awt_image_bufimgsurfacedata, sun_awt_image_bytecomponentraster,
     sun_awt_image_bytepackedraster, sun_awt_image_databuffernative, sun_awt_image_gifimagedecoder,
     sun_awt_image_imagerepresentation, sun_awt_image_imaginglib,
     sun_awt_image_integercomponentraster, sun_awt_image_jpegimagedecoder,
@@ -169,7 +169,8 @@ const JAVA_17: Version = Version::Java17 { minor: 0 };
 const JAVA_18: Version = Version::Java18 { minor: 0 };
 const JAVA_19: Version = Version::Java19 { minor: 0 };
 const JAVA_20: Version = Version::Java20 { minor: 0 };
-const JAVA_21: Version = Version::Java20 { minor: 0 };
+const JAVA_21: Version = Version::Java21 { minor: 0 };
+const JAVA_22: Version = Version::Java22 { minor: 0 };
 
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
@@ -328,8 +329,12 @@ impl MethodRegistry {
             jdk_internal_misc_vm::register(&mut method_registry);
             jdk_internal_perf_perf::register(&mut method_registry);
             jdk_internal_reflect_constantpool::register(&mut method_registry);
-            jdk_internal_reflect_nativeconstructoraccessorimpl::register(&mut method_registry);
-            jdk_internal_reflect_nativemethodaccessorimpl::register(&mut method_registry);
+
+            if java_version <= JAVA_22 {
+                jdk_internal_reflect_nativeconstructoraccessorimpl::register(&mut method_registry);
+                jdk_internal_reflect_nativemethodaccessorimpl::register(&mut method_registry);
+            }
+
             jdk_internal_reflect_reflection::register(&mut method_registry);
             jdk_internal_vm_vmsupport::register(&mut method_registry);
             jdk_jfr_internal_jvm::register(&mut method_registry);
@@ -423,6 +428,16 @@ impl MethodRegistry {
             sun_nio_fs_unixfilesystem::register(&mut method_registry);
         }
 
+        if java_version <= JAVA_21 {
+            java_awt_button::register(&mut method_registry);
+            java_awt_color::register(&mut method_registry);
+            java_awt_filedialog::register(&mut method_registry);
+            java_awt_keyboardfocusmanager::register(&mut method_registry);
+            java_awt_menucomponent::register(&mut method_registry);
+            java_awt_rectangle::register(&mut method_registry);
+            java_awt_textfield::register(&mut method_registry);
+            java_util_concurrent_atomic_atomiclong::register(&mut method_registry);
+        }
         if java_version >= JAVA_21 {
             jdk_internal_foreign_abi_fallback_libfallback::register(&mut method_registry);
             jdk_internal_io_jdkconsoleimpl::register(&mut method_registry);
@@ -430,6 +445,11 @@ impl MethodRegistry {
                 &mut method_registry,
             );
             jdk_internal_vm_foreignlinkersupport::register(&mut method_registry);
+        }
+
+        if java_version >= JAVA_22 {
+            java_lang_stackframeinfo::register(&mut method_registry);
+            jdk_vm_ci_services_services::register(&mut method_registry);
         }
 
         apple_laf_jrsuiconstants::register(&mut method_registry);
@@ -458,34 +478,27 @@ impl MethodRegistry {
         com_sun_media_sound_portmixerprovider::register(&mut method_registry);
         com_sun_security_auth_module_unixsystem::register(&mut method_registry);
         java_awt_awtevent::register(&mut method_registry);
-        java_awt_button::register(&mut method_registry);
         java_awt_checkbox::register(&mut method_registry);
         java_awt_checkboxmenuitem::register(&mut method_registry);
         java_awt_choice::register(&mut method_registry);
-        java_awt_color::register(&mut method_registry);
         java_awt_component::register(&mut method_registry);
         java_awt_container::register(&mut method_registry);
         java_awt_cursor::register(&mut method_registry);
         java_awt_dialog::register(&mut method_registry);
         java_awt_dimension::register(&mut method_registry);
         java_awt_event::register(&mut method_registry);
-        java_awt_filedialog::register(&mut method_registry);
         java_awt_font::register(&mut method_registry);
         java_awt_fontmetrics::register(&mut method_registry);
         java_awt_frame::register(&mut method_registry);
         java_awt_insets::register(&mut method_registry);
-        java_awt_keyboardfocusmanager::register(&mut method_registry);
         java_awt_label::register(&mut method_registry);
         java_awt_menu::register(&mut method_registry);
         java_awt_menubar::register(&mut method_registry);
-        java_awt_menucomponent::register(&mut method_registry);
         java_awt_menuitem::register(&mut method_registry);
-        java_awt_rectangle::register(&mut method_registry);
         java_awt_scrollpane::register(&mut method_registry);
         java_awt_scrollpaneadjustable::register(&mut method_registry);
         java_awt_splashscreen::register(&mut method_registry);
         java_awt_textarea::register(&mut method_registry);
-        java_awt_textfield::register(&mut method_registry);
         java_awt_toolkit::register(&mut method_registry);
         java_awt_trayicon::register(&mut method_registry);
         java_awt_window::register(&mut method_registry);
@@ -516,7 +529,6 @@ impl MethodRegistry {
         java_net_inetaddress::register(&mut method_registry);
         java_net_networkinterface::register(&mut method_registry);
         java_security_accesscontroller::register(&mut method_registry);
-        java_util_concurrent_atomic_atomiclong::register(&mut method_registry);
         java_util_prefs_filesystempreferences::register(&mut method_registry);
         java_util_prefs_macosxpreferencesfile::register(&mut method_registry);
         java_util_zip_adler32::register(&mut method_registry);

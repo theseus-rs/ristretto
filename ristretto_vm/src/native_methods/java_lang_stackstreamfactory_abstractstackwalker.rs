@@ -8,13 +8,14 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_18: Version = Version::Java18 { minor: 0 };
+const JAVA_21: Version = Version::Java21 { minor: 0 };
 
 /// Register all native methods for `java.lang.StackStreamFactory$AbstractStackWalker`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/StackStreamFactory$AbstractStackWalker";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_18 {
+    if java_version <= JAVA_18 {
         registry.register(
             class_name,
             "callStackWalk",
@@ -22,7 +23,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             call_stack_walk,
         );
     } else {
-        registry.register(class_name, "callStackWalk", "(JILjdk/internal/vm/ContinuationScope;Ljdk/internal/vm/Continuation;II[Ljava/lang/Object;)Ljava/lang/Object;", call_stack_walk);
+        if java_version <= JAVA_21 {
+            registry.register(class_name, "callStackWalk", "(JILjdk/internal/vm/ContinuationScope;Ljdk/internal/vm/Continuation;II[Ljava/lang/Object;)Ljava/lang/Object;", call_stack_walk);
+        }
+
         registry.register(
             class_name,
             "setContinuation",
@@ -31,12 +35,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    registry.register(
-        class_name,
-        "fetchStackFrames",
-        "(JJII[Ljava/lang/Object;)I",
-        fetch_stack_frames,
-    );
+    if java_version <= JAVA_21 {
+        registry.register(
+            class_name,
+            "fetchStackFrames",
+            "(JJII[Ljava/lang/Object;)I",
+            fetch_stack_frames,
+        );
+    } else {
+        registry.register(class_name, "callStackWalk", "(IILjdk/internal/vm/ContinuationScope;Ljdk/internal/vm/Continuation;II[Ljava/lang/Object;)Ljava/lang/Object;", call_stack_walk);
+        registry.register(
+            class_name,
+            "fetchStackFrames",
+            "(IJIII[Ljava/lang/Object;)I",
+            fetch_stack_frames,
+        );
+    }
 }
 
 #[expect(clippy::needless_pass_by_value)]

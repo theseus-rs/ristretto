@@ -3,23 +3,31 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_21: Version = Version::Java21 { minor: 0 };
 
 /// Register all native methods for `sun.java2d.metal.MTLGraphicsConfig`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/java2d/metal/MTLGraphicsConfig";
+    let java_version = registry.java_version().clone();
+
+    if java_version <= &JAVA_21 {
+        registry.register(
+            class_name,
+            "isMetalFrameworkAvailable",
+            "()Z",
+            is_metal_framework_available,
+        );
+    }
+
     registry.register(
         class_name,
         "getMTLConfigInfo",
         "(ILjava/lang/String;)J",
         get_mtl_config_info,
-    );
-    registry.register(
-        class_name,
-        "isMetalFrameworkAvailable",
-        "()Z",
-        is_metal_framework_available,
     );
     registry.register(
         class_name,
