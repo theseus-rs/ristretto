@@ -8,13 +8,14 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `sun.awt.CGraphicsDevice`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/awt/CGraphicsDevice";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_8 {
+    if java_version <= JAVA_8 {
         registry.register(
             class_name,
             "nativeResetDisplayMode",
@@ -27,6 +28,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "nativeGetBounds",
             "(I)Ljava/awt/geom/Rectangle2D;",
             native_get_bounds,
+        );
+    }
+
+    if java_version >= JAVA_17 {
+        registry.register(
+            class_name,
+            "nativeResetDisplayMode",
+            "()V",
+            native_reset_display_mode,
         );
     }
 

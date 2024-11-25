@@ -11,14 +11,15 @@ use ristretto_classloader::{Class, Object, Reference, Value};
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `java.lang.Class`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Class";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_8 {
+    if java_version <= JAVA_8 {
         registry.register(
             class_name,
             "getComponentType",
@@ -63,6 +64,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "()Ljava/lang/String;",
             init_class_name,
         );
+    }
+
+    if java_version >= JAVA_17 {
+        registry.register(
+            class_name,
+            "getPermittedSubclasses0",
+            "()[Ljava/lang/Class;",
+            get_permitted_subclasses_0,
+        );
+        registry.register(
+            class_name,
+            "getRecordComponents0",
+            "()[Ljava/lang/reflect/RecordComponent;",
+            get_record_components_0,
+        );
+        registry.register(class_name, "isHidden", "()Z", is_hidden);
+        registry.register(class_name, "isRecord0", "()Z", is_record_0);
     }
 
     registry.register(
@@ -372,6 +390,15 @@ async fn get_nest_members_0(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
     todo!()
 }
 
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_permitted_subclasses_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
 #[async_recursion(?Send)]
 async fn get_primitive_class(
     thread: Arc<Thread>,
@@ -406,6 +433,15 @@ async fn get_raw_annotations(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_raw_type_annotations(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_record_components_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -489,6 +525,12 @@ async fn is_assignable_from(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn is_hidden(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn is_instance(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -517,6 +559,12 @@ async fn is_primitive(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
     } else {
         Ok(Some(Value::from(false)))
     }
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn is_record_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]

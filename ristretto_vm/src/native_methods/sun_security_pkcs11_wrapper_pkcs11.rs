@@ -3,13 +3,33 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `sun.security.pkcs11.wrapper.PKCS11`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/security/pkcs11/wrapper/PKCS11";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_11 {
+        registry.register(
+            class_name,
+            "C_GCMDecryptInitWithRetry",
+            "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
+            c_gcm_decrypt_init_with_retry,
+        );
+        registry.register(
+            class_name,
+            "C_GCMEncryptInitWithRetry",
+            "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
+            c_gcm_encrypt_init_with_retry,
+        );
+    }
+
     registry.register(class_name, "C_CloseSession", "(J)V", c_close_session);
     registry.register(
         class_name,
@@ -86,18 +106,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "C_FindObjectsInit",
         "(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V",
         c_find_objects_init,
-    );
-    registry.register(
-        class_name,
-        "C_GCMDecryptInitWithRetry",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
-        c_gcm_decrypt_init_with_retry,
-    );
-    registry.register(
-        class_name,
-        "C_GCMEncryptInitWithRetry",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
-        c_gcm_encrypt_init_with_retry,
     );
     registry.register(
         class_name,

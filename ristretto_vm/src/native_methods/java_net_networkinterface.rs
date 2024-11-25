@@ -3,12 +3,26 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `java.net.NetworkInterface`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/net/NetworkInterface";
+    let java_version = registry.java_version();
+
+    if java_version >= &JAVA_17 {
+        registry.register(
+            class_name,
+            "boundInetAddress0",
+            "(Ljava/net/InetAddress;)Z",
+            bound_inet_address_0,
+        );
+    }
+
     registry.register(
         class_name,
         "getAll",
@@ -59,6 +73,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn bound_inet_address_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn get_all(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -99,7 +122,7 @@ async fn get_mac_addr_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]

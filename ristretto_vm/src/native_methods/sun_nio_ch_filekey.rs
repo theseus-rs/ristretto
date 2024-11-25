@@ -16,7 +16,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]

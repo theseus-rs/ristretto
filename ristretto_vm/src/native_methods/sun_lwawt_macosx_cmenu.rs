@@ -3,18 +3,26 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `sun.lwawt.macosx.CMenu`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/lwawt/macosx/CMenu";
-    registry.register(
-        class_name,
-        "nativeAddSeparator",
-        "(J)V",
-        native_add_separator,
-    );
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_11 {
+        registry.register(
+            class_name,
+            "nativeAddSeparator",
+            "(J)V",
+            native_add_separator,
+        );
+    }
+
     registry.register(class_name, "nativeCreateMenu", "(JZI)J", native_create_menu);
     registry.register(
         class_name,

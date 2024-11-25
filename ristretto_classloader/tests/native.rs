@@ -30,7 +30,7 @@ async fn get_native_methods(version: &str) -> Result<HashMap<String, Vec<Arc<Met
     let mut native_methods = HashMap::new();
     for class_name in class_names {
         // Skip GraalVM and Hotspot classes
-        if class_name.starts_with("org/graalvm/") || class_name.starts_with("sun/jvm/hotspot") {
+        if class_name.starts_with("org/graalvm/") || class_name.contains("hotspot") {
             continue;
         }
 
@@ -59,11 +59,13 @@ fn method_function_name(method: &Method) -> String {
 
 fn method_body(method: &Method) -> String {
     match method.name() {
-        "init" | "initIDs" | "registerNatives" => "Ok(None)".to_string(),
+        "init" if method.descriptor().ends_with(")V") => "Ok(None)".to_string(),
+        "initIDs" | "registerNatives" => "Ok(None)".to_string(),
         _ => "todo!()".to_string(),
     }
 }
 
+#[expect(dead_code)]
 async fn write_classes(version: &str) -> Result<()> {
     let native_methods = get_native_methods(version).await?;
     let mut classes: Vec<String> = native_methods.keys().map(ToString::to_string).collect();
@@ -139,15 +141,15 @@ async fn write_native(version: &str) -> Result<()> {
 #[tokio::test]
 async fn test_native_classes() -> Result<()> {
     // Enable to generate native class lists
-    write_classes("8.432.06.1").await?;
-    write_classes("11.0.25.9.1").await?;
-    write_classes("17.0.12.7.1").await?;
-    write_classes("18.0.2.9.1").await?;
-    write_classes("19.0.2.7.1").await?;
-    write_classes("20.0.2.10.1").await?;
-    write_classes("21.0.5.11.1").await?;
-    write_classes("22.0.2.9.1").await?;
-    write_classes("23.0.1.8.1").await?;
+    // write_classes("8.432.06.1").await?;
+    // write_classes("11.0.25.9.1").await?;
+    // write_classes("17.0.12.7.1").await?;
+    // write_classes("18.0.2.9.1").await?;
+    // write_classes("19.0.2.7.1").await?;
+    // write_classes("20.0.2.10.1").await?;
+    // write_classes("21.0.5.11.1").await?;
+    // write_classes("22.0.2.9.1").await?;
+    // write_classes("23.0.1.8.1").await?;
     Ok(())
 }
 

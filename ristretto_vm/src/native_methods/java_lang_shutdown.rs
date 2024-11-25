@@ -21,7 +21,6 @@ async fn before_halt(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn halt_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let code = arguments.pop_int()?;
-    std::process::exit(code);
+async fn halt_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }

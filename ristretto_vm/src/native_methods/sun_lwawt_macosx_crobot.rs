@@ -12,9 +12,9 @@ const JAVA_8: Version = Version::Java8 { minor: 0 };
 /// Register all native methods for `sun.lwawt.macosx.CRobot`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/lwawt/macosx/CRobot";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_8 {
+    if java_version <= JAVA_8 {
         registry.register(class_name, "mouseEvent", "(IIIIZZ)V", mouse_event);
         registry.register(
             class_name,

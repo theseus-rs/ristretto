@@ -193,6 +193,12 @@ async fn get_length(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Optio
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn get_name_max_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn get_space(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -206,12 +212,6 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
-}
-
-#[expect(clippy::needless_pass_by_value)]
-#[async_recursion(?Send)]
-async fn get_name_max_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

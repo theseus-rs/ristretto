@@ -3,12 +3,95 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const JAVA_11: Version = Version::Java11 { minor: 0 };
+
 /// Register all native methods for `jdk.jfr.internal.JVM`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/jfr/internal/JVM";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_11 {
+        registry.register(
+            class_name,
+            "emitOldObjectSamples",
+            "(JZ)V",
+            emit_old_object_samples,
+        );
+        registry.register(
+            class_name,
+            "getClassIdNonIntrinsic",
+            "(Ljava/lang/Class;)J",
+            get_class_id_non_intrinsic,
+        );
+        registry.register(
+            class_name,
+            "setMethodSamplingInterval",
+            "(JJ)V",
+            set_method_sampling_interval,
+        );
+    } else {
+        registry.register(class_name, "emitDataLoss", "(J)V", emit_data_loss);
+        registry.register(
+            class_name,
+            "emitOldObjectSamples",
+            "(JZZ)V",
+            emit_old_object_samples,
+        );
+        registry.register(class_name, "exclude", "(Ljava/lang/Thread;)V", exclude);
+        registry.register(class_name, "flush", "()V", flush);
+        registry.register(
+            class_name,
+            "getChunkStartNanos",
+            "()J",
+            get_chunk_start_nanos,
+        );
+        registry.register(
+            class_name,
+            "getHandler",
+            "(Ljava/lang/Class;)Ljava/lang/Object;",
+            get_handler,
+        );
+        registry.register(
+            class_name,
+            "getTypeId",
+            "(Ljava/lang/String;)J",
+            get_type_id,
+        );
+        registry.register(class_name, "include", "(Ljava/lang/Thread;)V", include);
+        registry.register(
+            class_name,
+            "isExcluded",
+            "(Ljava/lang/Thread;)Z",
+            is_excluded,
+        );
+        registry.register(class_name, "isRecording", "()Z", is_recording);
+        registry.register(
+            class_name,
+            "logEvent",
+            "(I[Ljava/lang/String;Z)V",
+            log_event,
+        );
+        registry.register(class_name, "markChunkFinal", "()V", mark_chunk_final);
+        registry.register(
+            class_name,
+            "setHandler",
+            "(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z",
+            set_handler,
+        );
+        registry.register(
+            class_name,
+            "setMethodSamplingPeriod",
+            "(JJ)V",
+            set_method_sampling_period,
+        );
+        registry.register(class_name, "setThrottle", "(JJJ)Z", set_throttle);
+    }
+
     registry.register(class_name, "abort", "(Ljava/lang/String;)V", abort);
     registry.register(
         class_name,
@@ -21,12 +104,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "createJFR", "(Z)Z", create_jfr);
     registry.register(class_name, "destroyJFR", "()Z", destroy_jfr);
     registry.register(class_name, "emitEvent", "(JJJ)Z", emit_event);
-    registry.register(
-        class_name,
-        "emitOldObjectSamples",
-        "(JZ)V",
-        emit_old_object_samples,
-    );
     registry.register(class_name, "endRecording", "()V", end_recording);
     registry.register(
         class_name,
@@ -51,12 +128,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "getClassId",
         "(Ljava/lang/Class;)J",
         get_class_id,
-    );
-    registry.register(
-        class_name,
-        "getClassIdNonIntrinsic",
-        "(Ljava/lang/Class;)J",
-        get_class_id_non_intrinsic,
     );
     registry.register(
         class_name,
@@ -136,9 +207,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "setMemorySize", "(J)V", set_memory_size);
     registry.register(
         class_name,
-        "setMethodSamplingInterval",
+        "setMethodSamplingPeriod",
         "(JJ)V",
-        set_method_sampling_interval,
+        set_method_sampling_period,
     );
     registry.register(class_name, "setOutput", "(Ljava/lang/String;)V", set_output);
     registry.register(
@@ -221,6 +292,12 @@ async fn destroy_jfr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn emit_data_loss(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn emit_event(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -237,6 +314,12 @@ async fn emit_old_object_samples(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn end_recording(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn exclude(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -266,6 +349,15 @@ async fn get_allowed_to_do_event_retransforms(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn get_chunk_start_nanos(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn get_class_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -282,6 +374,12 @@ async fn get_class_id_non_intrinsic(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_event_writer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_handler(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -335,13 +433,43 @@ async fn get_unloaded_event_class_count(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn include(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn is_available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn is_excluded(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn is_recording(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn log(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn log_event(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn mark_chunk_final(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -422,6 +550,12 @@ async fn set_global_buffer_size(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn set_handler(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn set_memory_size(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -429,6 +563,15 @@ async fn set_memory_size(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_method_sampling_interval(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn set_method_sampling_period(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -483,6 +626,12 @@ async fn set_thread_buffer_size(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_threshold(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn set_throttle(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

@@ -12,15 +12,21 @@ const JAVA_11: Version = Version::Java11 { minor: 0 };
 /// Register all native methods for `sun.lwawt.macosx.CTrayIcon`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/lwawt/macosx/CTrayIcon";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version >= &JAVA_11 {
+    if java_version >= JAVA_11 {
         registry.register(
             class_name,
             "nativeShowNotification",
             "(JLjava/lang/String;Ljava/lang/String;J)V",
             native_show_notification,
         );
+    }
+
+    if java_version <= JAVA_11 {
+        registry.register(class_name, "setNativeImage", "(JJZ)V", set_native_image);
+    } else {
+        registry.register(class_name, "setNativeImage", "(JJZZ)V", set_native_image);
     }
 
     registry.register(class_name, "nativeCreate", "()J", native_create);
@@ -36,7 +42,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(JLjava/lang/String;)V",
         native_set_tool_tip,
     );
-    registry.register(class_name, "setNativeImage", "(JJZ)V", set_native_image);
 }
 
 #[expect(clippy::needless_pass_by_value)]

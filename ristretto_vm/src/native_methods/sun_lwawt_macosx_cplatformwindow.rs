@@ -7,28 +7,16 @@ use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `sun.lwawt.macosx.CPlatformWindow`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/lwawt/macosx/CPlatformWindow";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_8 {
-        registry.register(
-            class_name,
-            "nativeSynthesizeMouseEnteredExitedEvents",
-            "()V",
-            native_synthesize_mouse_entered_exited_events_1,
-        );
-        registry.register(
-            class_name,
-            "nativeSynthesizeMouseEnteredExitedEvents",
-            "(JI)V",
-            native_synthesize_mouse_entered_exited_events_2,
-        );
-    } else {
+    if java_version >= JAVA_11 {
         registry.register(
             class_name,
             "nativeSetNSWindowLocationByPlatform",
@@ -41,17 +29,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(JDDDD)V",
             native_set_ns_window_standard_frame,
         );
+    }
+
+    if java_version >= JAVA_17 {
         registry.register(
             class_name,
-            "nativeSynthesizeMouseEnteredExitedEvents",
-            "(JI)V",
-            native_synthesize_mouse_entered_exited_events_1,
+            "nativeSetAllowAutomaticTabbingProperty",
+            "(Z)V",
+            native_set_allow_automatic_tabbing_property,
         );
         registry.register(
             class_name,
-            "nativeSynthesizeMouseEnteredExitedEvents",
-            "()V",
-            native_synthesize_mouse_entered_exited_events_2,
+            "nativeSetNSWindowLocationByPlatform",
+            "(J)V",
+            native_set_ns_window_location_by_platform,
         );
     }
 
@@ -153,6 +144,18 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(JLjava/lang/String;)V",
         native_set_ns_window_title,
     );
+    registry.register(
+        class_name,
+        "nativeSynthesizeMouseEnteredExitedEvents",
+        "()V",
+        native_synthesize_mouse_entered_exited_events_1,
+    );
+    registry.register(
+        class_name,
+        "nativeSynthesizeMouseEnteredExitedEvents",
+        "(JI)V",
+        native_synthesize_mouse_entered_exited_events_2,
+    );
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -236,6 +239,15 @@ async fn native_push_ns_window_to_front(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_revalidate_ns_window_shadow(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn native_set_allow_automatic_tabbing_property(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {

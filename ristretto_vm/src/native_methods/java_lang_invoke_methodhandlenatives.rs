@@ -8,13 +8,14 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `java.lang.invoke.MethodHandleNatives`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/invoke/MethodHandleNatives";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_8 {
+    if java_version <= JAVA_8 {
         registry.register(class_name, "getConstant", "(I)I", get_constant);
         registry.register(
             class_name,
@@ -39,6 +40,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             class_name,
             "resolve",
             "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;Z)Ljava/lang/invoke/MemberName;",
+            resolve,
+        );
+    }
+
+    if java_version >= JAVA_17 {
+        registry.register(
+            class_name,
+            "resolve",
+            "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName;",
             resolve,
         );
     }
@@ -152,7 +162,7 @@ async fn get_named_con(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]

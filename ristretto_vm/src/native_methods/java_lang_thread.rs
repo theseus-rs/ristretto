@@ -4,14 +4,31 @@ use crate::thread::Thread;
 use crate::JavaError::NullPointerException;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::{Object, Reference, Value};
 use std::sync::Arc;
 use std::time::Duration;
 
+const JAVA_11: Version = Version::Java17 { minor: 0 };
+
 /// Register all native methods for `java.lang.Thread`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Thread";
-    registry.register(class_name, "countStackFrames", "()I", count_stack_frames);
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_11 {
+        registry.register(class_name, "countStackFrames", "()I", count_stack_frames);
+        registry.register(class_name, "isAlive", "()Z", is_alive);
+        registry.register(class_name, "isInterrupted", "(Z)Z", is_interrupted);
+    } else {
+        registry.register(
+            class_name,
+            "clearInterruptEvent",
+            "()V",
+            clear_interrupt_event,
+        );
+    }
+
     registry.register(
         class_name,
         "currentThread",
@@ -32,8 +49,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(class_name, "holdsLock", "(Ljava/lang/Object;)Z", holds_lock);
     registry.register(class_name, "interrupt0", "()V", interrupt_0);
-    registry.register(class_name, "isAlive", "()Z", is_alive);
-    registry.register(class_name, "isInterrupted", "(Z)Z", is_interrupted);
     registry.register(class_name, "registerNatives", "()V", register_natives);
     registry.register(class_name, "resume0", "()V", resume_0);
     registry.register(
@@ -48,6 +63,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "stop0", "(Ljava/lang/Object;)V", stop_0);
     registry.register(class_name, "suspend0", "()V", suspend_0);
     registry.register(class_name, "yield", "()V", r#yield);
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn clear_interrupt_event(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]

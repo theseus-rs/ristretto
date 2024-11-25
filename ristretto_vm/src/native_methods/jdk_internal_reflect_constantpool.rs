@@ -7,6 +7,7 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 /// Register all native methods for `jdk.internal.reflect.ConstantPool`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/reflect/ConstantPool";
     registry.register(

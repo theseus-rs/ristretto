@@ -8,26 +8,33 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `sun.lwawt.macosx.LWCToolkit`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/lwawt/macosx/LWCToolkit";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version >= &JAVA_11 {
+    if java_version >= JAVA_11 {
         registry.register(
             class_name,
             "initAppkit",
             "(Ljava/lang/ThreadGroup;Z)V",
             init_appkit,
         );
-        registry.register(class_name, "isInAquaSession", "()Z", is_in_aqua_session);
         registry.register(
             class_name,
             "performOnMainThreadAfterDelay",
             "(Ljava/lang/Runnable;J)V",
             perform_on_main_thread_after_delay,
         );
+    }
+
+    if java_version == JAVA_11 {
+        registry.register(class_name, "isInAquaSession", "()Z", is_in_aqua_session);
+    }
+    if java_version == JAVA_17 {
+        registry.register(class_name, "getMultiClickTime", "()I", get_multi_click_time);
     }
 
     registry.register(
@@ -110,6 +117,15 @@ async fn do_awt_run_loop_impl(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn flush_native_selectors(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_multi_click_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {

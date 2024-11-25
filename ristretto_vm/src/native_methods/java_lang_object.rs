@@ -5,19 +5,27 @@ use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::{Reference, Value};
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 
+const JAVA_11: Version = Version::Java11 { minor: 0 };
+
 /// Register all native methods for `java.lang.Object`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Object";
+    let java_version = registry.java_version();
+
+    if java_version >= &JAVA_11 {
+        registry.register(class_name, "registerNatives", "()V", register_natives);
+    }
+
     registry.register(class_name, "clone", "()Ljava/lang/Object;", clone);
     registry.register(class_name, "getClass", "()Ljava/lang/Class;", get_class);
     registry.register(class_name, "hashCode", "()I", hash_code);
     registry.register(class_name, "notify", "()V", notify);
     registry.register(class_name, "notifyAll", "()V", notify_all);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
     registry.register(class_name, "wait", "(J)V", wait);
 }
 

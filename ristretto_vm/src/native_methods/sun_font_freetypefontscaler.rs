@@ -10,6 +10,7 @@ use std::sync::Arc;
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for `sun.font.FreetypeFontScaler`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/font/FreetypeFontScaler";
     let java_version = registry.java_version();

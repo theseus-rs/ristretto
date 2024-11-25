@@ -3,13 +3,112 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const JAVA_11: Version = Version::Java11 { minor: 0 };
+
 /// Register all native methods for `jdk.internal.misc.Unsafe`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/misc/Unsafe";
-    registry.register(class_name, "addressSize0", "()I", address_size_0);
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_11 {
+        registry.register(class_name, "addressSize0", "()I", address_size_0);
+        registry.register(
+            class_name,
+            "compareAndExchangeObject",
+            "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            compare_and_exchange_object,
+        );
+        registry.register(
+            class_name,
+            "compareAndSetObject",
+            "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
+            compare_and_set_object,
+        );
+        registry.register(
+            class_name,
+            "defineAnonymousClass0",
+            "(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;",
+            define_anonymous_class_0,
+        );
+        registry.register(
+            class_name,
+            "getObject",
+            "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            get_object,
+        );
+        registry.register(
+            class_name,
+            "getObjectVolatile",
+            "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            get_object_volatile,
+        );
+        registry.register(class_name, "isBigEndian0", "()Z", is_big_endian_0);
+        registry.register(class_name, "pageSize", "()I", page_size);
+        registry.register(
+            class_name,
+            "putObject",
+            "(Ljava/lang/Object;JLjava/lang/Object;)V",
+            put_object,
+        );
+        registry.register(
+            class_name,
+            "putObjectVolatile",
+            "(Ljava/lang/Object;JLjava/lang/Object;)V",
+            put_object_volatile,
+        );
+        registry.register(class_name, "unalignedAccess0", "()Z", unaligned_access_0);
+    } else {
+        registry.register(
+            class_name,
+            "compareAndExchangeReference",
+            "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            compare_and_exchange_reference,
+        );
+        registry.register(
+            class_name,
+            "compareAndSetReference",
+            "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
+            compare_and_set_reference,
+        );
+        registry.register(
+            class_name,
+            "getReference",
+            "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            get_reference,
+        );
+        registry.register(
+            class_name,
+            "getReferenceVolatile",
+            "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            get_reference_volatile,
+        );
+        registry.register(
+            class_name,
+            "getReference",
+            "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            get_reference,
+        );
+        registry.register(
+            class_name,
+            "getReferenceVolatile",
+            "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            get_reference_volatile,
+        );
+        registry.register(class_name, "writeback0", "(J)V", writeback_0);
+        registry.register(
+            class_name,
+            "writebackPostSync0",
+            "()V",
+            writeback_post_sync_0,
+        );
+        registry.register(class_name, "writebackPreSync0", "()V", writeback_pre_sync_0);
+    }
+
     registry.register(
         class_name,
         "allocateInstance",
@@ -43,9 +142,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
-        "compareAndExchangeObject",
+        "compareAndExchangeReference",
         "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-        compare_and_exchange_object,
+        compare_and_exchange_reference,
     );
     registry.register(
         class_name,
@@ -61,9 +160,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
-        "compareAndSetObject",
+        "compareAndSetReference",
         "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
-        compare_and_set_object,
+        compare_and_set_reference,
     );
     registry.register(
         class_name,
@@ -76,12 +175,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "copySwapMemory0",
         "(Ljava/lang/Object;JLjava/lang/Object;JJJ)V",
         copy_swap_memory_0,
-    );
-    registry.register(
-        class_name,
-        "defineAnonymousClass0",
-        "(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;",
-        define_anonymous_class_0,
     );
     registry.register(class_name, "defineClass0", "(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;", define_class_0);
     registry.register(
@@ -154,15 +247,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
-        "getObject",
+        "getReference",
         "(Ljava/lang/Object;J)Ljava/lang/Object;",
-        get_object,
+        get_reference,
     );
     registry.register(
         class_name,
-        "getObjectVolatile",
+        "getReferenceVolatile",
         "(Ljava/lang/Object;J)Ljava/lang/Object;",
-        get_object_volatile,
+        get_reference_volatile,
     );
     registry.register(class_name, "getShort", "(Ljava/lang/Object;J)S", get_short);
     registry.register(
@@ -177,7 +270,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(J)Ljava/lang/Object;",
         get_uncompressed_object,
     );
-    registry.register(class_name, "isBigEndian0", "()Z", is_big_endian_0);
     registry.register(class_name, "loadFence", "()V", load_fence);
     registry.register(
         class_name,
@@ -191,7 +283,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/Class;Ljava/lang/String;)J",
         object_field_offset_1,
     );
-    registry.register(class_name, "pageSize", "()I", page_size);
     registry.register(class_name, "park", "(ZJ)V", park);
     registry.register(
         class_name,
@@ -254,15 +345,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
-        "putObject",
+        "putReference",
         "(Ljava/lang/Object;JLjava/lang/Object;)V",
-        put_object,
+        put_reference,
     );
     registry.register(
         class_name,
-        "putObjectVolatile",
+        "putReferenceVolatile",
         "(Ljava/lang/Object;JLjava/lang/Object;)V",
-        put_object_volatile,
+        put_reference_volatile,
     );
     registry.register(class_name, "putShort", "(Ljava/lang/Object;JS)V", put_short);
     registry.register(
@@ -309,8 +400,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/Throwable;)V",
         throw_exception,
     );
-    registry.register(class_name, "unalignedAccess0", "()Z", unaligned_access_0);
     registry.register(class_name, "unpark", "(Ljava/lang/Object;)V", unpark);
+    registry.register(class_name, "writeback0", "(J)V", writeback_0);
+    registry.register(
+        class_name,
+        "writebackPostSync0",
+        "()V",
+        writeback_post_sync_0,
+    );
+    registry.register(class_name, "writebackPreSync0", "()V", writeback_pre_sync_0);
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -372,6 +470,15 @@ async fn compare_and_exchange_object(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn compare_and_exchange_reference(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn compare_and_set_int(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -388,6 +495,15 @@ async fn compare_and_set_long(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn compare_and_set_object(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn compare_and_set_reference(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -543,7 +659,22 @@ async fn get_object(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Optio
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn get_reference(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn get_object_volatile(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_reference_volatile(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -711,6 +842,21 @@ async fn put_object_volatile(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn put_reference(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn put_reference_volatile(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn put_short(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -784,5 +930,29 @@ async fn unaligned_access_0(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn unpark(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn writeback_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn writeback_post_sync_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn writeback_pre_sync_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     todo!()
 }

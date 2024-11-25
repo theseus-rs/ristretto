@@ -10,6 +10,7 @@ use ristretto_classloader::{ConcurrentVec, Reference, Value};
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 bitflags! {
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -32,15 +33,29 @@ bitflags! {
 /// Register all native methods for `sun.nio.fs.UnixNativeDispatcher`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/nio/fs/UnixNativeDispatcher";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_8 {
+    if java_version <= JAVA_8 {
         registry.register(class_name, "close", "(I)V", close);
     } else {
         registry.register(class_name, "close0", "(I)V", close_0);
         registry.register(class_name, "exists0", "(J)Z", exists_0);
         registry.register(class_name, "getlinelen", "(J)I", getlinelen);
         registry.register(class_name, "stat1", "(J)I", stat_1);
+    }
+
+    if java_version <= JAVA_11 {
+        registry.register(class_name, "fclose", "(J)V", fclose);
+        registry.register(class_name, "fopen0", "(JJ)J", fopen_0);
+        registry.register(class_name, "fpathconf", "(II)J", fpathconf);
+        registry.register(class_name, "pathconf0", "(JI)J", pathconf_0);
+    } else {
+        registry.register(class_name, "fgetxattr0", "(IJJI)I", fgetxattr_0);
+        registry.register(class_name, "flistxattr", "(IJI)I", flistxattr);
+        registry.register(class_name, "fremovexattr0", "(IJ)V", fremovexattr_0);
+        registry.register(class_name, "fsetxattr0", "(IJJI)V", fsetxattr_0);
+        registry.register(class_name, "futimens", "(IJJ)V", futimens);
+        registry.register(class_name, "lutimes0", "(JJJ)V", lutimes_0);
     }
 
     registry.register(class_name, "access0", "(JI)V", access_0);
@@ -50,10 +65,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "dup", "(I)I", dup);
     registry.register(class_name, "fchmod", "(II)V", fchmod);
     registry.register(class_name, "fchown", "(III)V", fchown);
-    registry.register(class_name, "fclose", "(J)V", fclose);
     registry.register(class_name, "fdopendir", "(I)J", fdopendir);
-    registry.register(class_name, "fopen0", "(JJ)J", fopen_0);
-    registry.register(class_name, "fpathconf", "(II)J", fpathconf);
     registry.register(
         class_name,
         "fstat",
@@ -86,7 +98,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "open0", "(JII)I", open_0);
     registry.register(class_name, "openat0", "(IJII)I", openat_0);
     registry.register(class_name, "opendir0", "(J)J", opendir_0);
-    registry.register(class_name, "pathconf0", "(JI)J", pathconf_0);
     registry.register(class_name, "read", "(IJI)I", read);
     registry.register(class_name, "readdir", "(J)[B", readdir);
     registry.register(class_name, "readlink0", "(J)[B", readlink_0);
@@ -201,6 +212,30 @@ async fn fpathconf(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn fgetxattr_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn flistxattr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn fremovexattr_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn fsetxattr_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn fstat(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -208,6 +243,12 @@ async fn fstat(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Val
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn fstatat_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn futimens(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -289,6 +330,12 @@ async fn link_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn lstat_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn lutimes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

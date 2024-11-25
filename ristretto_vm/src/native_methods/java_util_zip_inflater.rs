@@ -3,58 +3,48 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
-
-const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for `java.util.zip.Inflater`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/util/zip/Inflater";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_8 {
-        registry.register(class_name, "inflateBytes", "(J[BII)I", inflate_bytes);
-    } else {
-        registry.register(
-            class_name,
-            "inflateBufferBuffer",
-            "(JJIJI)J",
-            inflate_buffer_buffer,
-        );
-        registry.register(
-            class_name,
-            "inflateBufferBytes",
-            "(JJI[BII)J",
-            inflate_buffer_bytes,
-        );
-        registry.register(
-            class_name,
-            "inflateBytesBuffer",
-            "(J[BIIJI)J",
-            inflate_bytes_buffer,
-        );
-        registry.register(
-            class_name,
-            "inflateBytesBytes",
-            "(J[BII[BII)J",
-            inflate_bytes_bytes,
-        );
-        registry.register(
-            class_name,
-            "setDictionaryBuffer",
-            "(JJI)V",
-            set_dictionary_buffer,
-        );
-    }
-
     registry.register(class_name, "end", "(J)V", end);
     registry.register(class_name, "getAdler", "(J)I", get_adler);
+    registry.register(
+        class_name,
+        "inflateBufferBuffer",
+        "(JJIJI)J",
+        inflate_buffer_buffer,
+    );
+    registry.register(
+        class_name,
+        "inflateBufferBytes",
+        "(JJI[BII)J",
+        inflate_buffer_bytes,
+    );
+    registry.register(
+        class_name,
+        "inflateBytesBuffer",
+        "(J[BIIJI)J",
+        inflate_bytes_buffer,
+    );
+    registry.register(
+        class_name,
+        "inflateBytesBytes",
+        "(J[BII[BII)J",
+        inflate_bytes_bytes,
+    );
     registry.register(class_name, "init", "(Z)J", init);
     registry.register(class_name, "initIDs", "()V", init_ids);
     registry.register(class_name, "reset", "(J)V", reset);
     registry.register(class_name, "setDictionary", "(J[BII)V", set_dictionary);
+    registry.register(
+        class_name,
+        "setDictionaryBuffer",
+        "(JJI)V",
+        set_dictionary_buffer,
+    );
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -89,12 +79,6 @@ async fn inflate_buffer_bytes(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn inflate_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
-}
-
-#[expect(clippy::needless_pass_by_value)]
-#[async_recursion(?Send)]
 async fn inflate_bytes_buffer(
     _thread: Arc<Thread>,
     _arguments: Arguments,
@@ -111,7 +95,7 @@ async fn inflate_bytes_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]

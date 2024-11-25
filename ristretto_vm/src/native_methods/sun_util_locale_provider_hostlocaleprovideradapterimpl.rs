@@ -3,13 +3,27 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `sun.util.locale.provider.HostLocaleProviderAdapterImpl`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/util/locale/provider/HostLocaleProviderAdapterImpl";
+    let java_version = registry.java_version();
+
+    if java_version >= &JAVA_17 {
+        registry.register(
+            class_name,
+            "getCalendarDisplayStrings",
+            "(Ljava/lang/String;II)[Ljava/lang/String;",
+            get_calendar_display_strings,
+        );
+    }
+
     registry.register(
         class_name,
         "getAmPmStrings",
@@ -165,6 +179,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_am_pm_strings(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_calendar_display_strings(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     todo!()
 }
 

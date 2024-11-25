@@ -212,7 +212,7 @@ async fn indicate_mechs(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]

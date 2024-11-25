@@ -8,13 +8,14 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `sun.font.CFont`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/font/CFont";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_8 {
+    if java_version <= JAVA_8 {
         registry.register(
             class_name,
             "getLayoutTableCacheNative",
@@ -30,13 +31,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
+    if java_version <= JAVA_11 {
+        registry.register(class_name, "disposeNativeFont", "(J)V", dispose_native_font);
+    }
+
     registry.register(
         class_name,
         "createNativeFont",
         "(Ljava/lang/String;I)J",
         create_native_font,
     );
-    registry.register(class_name, "disposeNativeFont", "(J)V", dispose_native_font);
     registry.register(
         class_name,
         "getCascadeList",

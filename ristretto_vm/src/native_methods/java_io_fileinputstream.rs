@@ -8,6 +8,7 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `java.io.FileInputStream`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -16,6 +17,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
     if java_version <= &JAVA_8 {
         registry.register(class_name, "close0", "()V", close_0);
+    } else if java_version >= &JAVA_17 {
+        registry.register(class_name, "length0", "()J", length_0);
+        registry.register(class_name, "position0", "()J", position_0);
     }
 
     registry.register(class_name, "available0", "()I", available_0);
@@ -46,7 +50,19 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn length_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn open_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn position_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

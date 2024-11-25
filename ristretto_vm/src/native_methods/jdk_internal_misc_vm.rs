@@ -3,12 +3,26 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `jdk.internal.misc.VM`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/misc/VM";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_11 {
+        registry.register(
+            class_name,
+            "initializeFromArchive",
+            "(Ljava/lang/Class;)V",
+            initialize_from_archive,
+        );
+    }
+
     registry.register(
         class_name,
         "getNanoTimeAdjustment",
@@ -26,12 +40,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "getgid", "()J", getgid);
     registry.register(class_name, "getuid", "()J", getuid);
     registry.register(class_name, "initialize", "()V", initialize);
-    registry.register(
-        class_name,
-        "initializeFromArchive",
-        "(Ljava/lang/Class;)V",
-        initialize_from_archive,
-    );
     registry.register(
         class_name,
         "latestUserDefinedLoader0",

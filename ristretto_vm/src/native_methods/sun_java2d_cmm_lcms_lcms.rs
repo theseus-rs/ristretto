@@ -8,17 +8,46 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `sun.java2d.cmm.lcms.LCMS`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/java2d/cmm/lcms/LCMS";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_8 {
+    if java_version <= JAVA_8 {
         registry.register(class_name, "freeTransform", "(J)V", free_transform);
     }
 
-    registry.register(class_name, "colorConvert", "(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V", color_convert);
+    if java_version <= JAVA_11 {
+        registry.register(class_name, "colorConvert", "(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V", color_convert);
+        registry.register(
+            class_name,
+            "getProfileDataNative",
+            "(J[B)V",
+            get_profile_data_native,
+        );
+        registry.register(
+            class_name,
+            "getProfileSizeNative",
+            "(J)I",
+            get_profile_size_native,
+        );
+    } else {
+        registry.register(
+            class_name,
+            "colorConvert",
+            "(JLsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V",
+            color_convert,
+        );
+        registry.register(
+            class_name,
+            "getProfileDataNative",
+            "(J)[B",
+            get_profile_data_native,
+        );
+    }
+
     registry.register(
         class_name,
         "createNativeTransform",
@@ -27,21 +56,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
-        "getProfileDataNative",
-        "(J[B)V",
-        get_profile_data_native,
-    );
-    registry.register(
-        class_name,
         "getProfileID",
         "(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;",
         get_profile_id,
-    );
-    registry.register(
-        class_name,
-        "getProfileSizeNative",
-        "(J)I",
-        get_profile_size_native,
     );
     registry.register(class_name, "getTagNative", "(JI)[B", get_tag_native);
     registry.register(

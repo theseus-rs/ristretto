@@ -3,23 +3,58 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const JAVA_11: Version = Version::Java11 { minor: 0 };
+
 /// Register all native methods for `com.sun.management.internal.OperatingSystemImpl`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "com/sun/management/internal/OperatingSystemImpl";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_11 {
+        registry.register(
+            class_name,
+            "getFreePhysicalMemorySize0",
+            "()J",
+            get_free_physical_memory_size_0,
+        );
+        registry.register(
+            class_name,
+            "getSystemCpuLoad0",
+            "()D",
+            get_system_cpu_load_0,
+        );
+        registry.register(
+            class_name,
+            "getTotalPhysicalMemorySize0",
+            "()J",
+            get_total_physical_memory_size_0,
+        );
+    } else {
+        registry.register(class_name, "getCpuLoad0", "()D", get_cpu_load_0);
+        registry.register(
+            class_name,
+            "getFreeMemorySize0",
+            "()J",
+            get_free_memory_size_0,
+        );
+        registry.register(
+            class_name,
+            "getTotalMemorySize0",
+            "()J",
+            get_total_memory_size_0,
+        );
+    }
+
     registry.register(
         class_name,
         "getCommittedVirtualMemorySize0",
         "()J",
         get_committed_virtual_memory_size_0,
-    );
-    registry.register(
-        class_name,
-        "getFreePhysicalMemorySize0",
-        "()J",
-        get_free_physical_memory_size_0,
     );
     registry.register(
         class_name,
@@ -77,18 +112,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
-        "getSystemCpuLoad0",
-        "()D",
-        get_system_cpu_load_0,
-    );
-    registry.register(
-        class_name,
-        "getTotalPhysicalMemorySize0",
-        "()J",
-        get_total_physical_memory_size_0,
-    );
-    registry.register(
-        class_name,
         "getTotalSwapSpaceSize0",
         "()J",
         get_total_swap_space_size_0,
@@ -107,7 +130,22 @@ async fn get_committed_virtual_memory_size_0(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn get_cpu_load_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn get_free_physical_memory_size_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_free_memory_size_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -198,6 +236,15 @@ async fn get_single_cpu_load_0(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_system_cpu_load_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_total_memory_size_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
