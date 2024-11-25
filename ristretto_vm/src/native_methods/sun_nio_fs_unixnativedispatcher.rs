@@ -13,6 +13,7 @@ const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
 const JAVA_18: Version = Version::Java18 { minor: 0 };
+const JAVA_19: Version = Version::Java19 { minor: 0 };
 
 bitflags! {
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -44,7 +45,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(class_name, "close0", "(I)V", close_0);
         registry.register(class_name, "exists0", "(J)Z", exists_0);
         registry.register(class_name, "getlinelen", "(J)I", getlinelen);
-        registry.register(class_name, "stat1", "(J)I", stat_1);
+
+        if java_version <= JAVA_19 {
+            registry.register(class_name, "stat1", "(J)I", stat_1);
+        }
     }
 
     if java_version <= JAVA_11 {
@@ -93,6 +97,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(class_name, "write0", "(IJI)I", write_0);
     }
 
+    if java_version <= JAVA_19 {
+        registry.register(
+            class_name,
+            "stat0",
+            "(JLsun/nio/fs/UnixFileAttributes;)V",
+            stat_0,
+        );
+    } else {
+        registry.register(
+            class_name,
+            "stat0",
+            "(JLsun/nio/fs/UnixFileAttributes;)I",
+            stat_0,
+        );
+    }
+
     registry.register(class_name, "access0", "(JI)V", access_0);
     registry.register(class_name, "chmod0", "(JI)V", chmod_0);
     registry.register(class_name, "chown0", "(JII)V", chown_0);
@@ -132,12 +152,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "renameat0", "(IJIJ)V", renameat_0);
     registry.register(class_name, "rewind", "(J)V", rewind);
     registry.register(class_name, "rmdir0", "(J)V", rmdir_0);
-    registry.register(
-        class_name,
-        "stat0",
-        "(JLsun/nio/fs/UnixFileAttributes;)V",
-        stat_0,
-    );
     registry.register(
         class_name,
         "statvfs0",

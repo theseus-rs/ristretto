@@ -10,6 +10,7 @@ use std::sync::Arc;
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
+const JAVA_19: Version = Version::Java19 { minor: 0 };
 
 /// Register all native methods for `sun.java2d.cmm.lcms.LCMS`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -65,11 +66,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V",
             init_lcms,
         );
-    } else {
+    } else if java_version <= JAVA_19 {
         registry.register(
             class_name,
             "colorConvert",
             "(JIIIIIIZZLjava/lang/Object;Ljava/lang/Object;II)V",
+            color_convert,
+        );
+    }
+
+    if java_version <= JAVA_19 {
+        registry.register(
+            class_name,
+            "getProfileID",
+            "(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;",
+            get_profile_id,
+        );
+    } else {
+        registry.register(
+            class_name,
+            "colorConvert",
+            "(JIIIIIILjava/lang/Object;Ljava/lang/Object;II)V",
             color_convert,
         );
     }
@@ -79,12 +96,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "createNativeTransform",
         "([JIIZIZLjava/lang/Object;)J",
         create_native_transform,
-    );
-    registry.register(
-        class_name,
-        "getProfileID",
-        "(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;",
-        get_profile_id,
     );
     registry.register(class_name, "getTagNative", "(JI)[B", get_tag_native);
     registry.register(

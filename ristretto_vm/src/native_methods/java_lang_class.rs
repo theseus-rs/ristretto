@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
+const JAVA_20: Version = Version::Java20 { minor: 0 };
 
 /// Register all native methods for `java.lang.Class`.
 #[expect(clippy::too_many_lines)]
@@ -81,6 +82,21 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
         registry.register(class_name, "isHidden", "()Z", is_hidden);
         registry.register(class_name, "isRecord0", "()Z", is_record_0);
+    }
+
+    if java_version >= JAVA_20 {
+        registry.register(
+            class_name,
+            "getClassAccessFlagsRaw0",
+            "()I",
+            get_class_access_flags_raw_0,
+        );
+        registry.register(
+            class_name,
+            "getClassFileVersion0",
+            "()I",
+            get_class_file_version_0,
+        );
     }
 
     registry.register(
@@ -265,6 +281,45 @@ async fn for_name_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opt
     let class_object = class.to_object(&vm).await?;
 
     Ok(Some(class_object))
+}
+
+#[async_recursion(?Send)]
+async fn get_class_access_flags_raw_0(
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
+        return Err(InternalError(
+            "getClassAccessFlagsRaw0: no arguments".to_string(),
+        ));
+    };
+    let class = get_class(&thread, &object).await?;
+    let class_file = class.class_file();
+    let access_flags = &class_file.access_flags;
+    #[expect(clippy::cast_lossless)]
+    let class_access_flags = access_flags.bits() as i32;
+    Ok(Some(Value::Int(class_access_flags)))
+}
+
+#[async_recursion(?Send)]
+async fn get_class_file_version_0(
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
+        return Err(InternalError(
+            "getClassFileVersion0: no arguments".to_string(),
+        ));
+    };
+    let class = get_class(&thread, &object).await?;
+    let class_file = class.class_file();
+    let version = &class_file.version;
+    #[expect(clippy::cast_lossless)]
+    let major = version.major() as i32;
+    #[expect(clippy::cast_lossless)]
+    let minor = version.minor() as i32;
+    let class_file_version = (minor << 16) | major;
+    Ok(Some(Value::Int(class_file_version)))
 }
 
 #[async_recursion(?Send)]

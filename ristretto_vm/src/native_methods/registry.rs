@@ -138,10 +138,11 @@ use crate::native_methods::{
     sun_nio_ch_pollarraywrapper, sun_nio_ch_pollselectorimpl, sun_nio_ch_sctp_sctpnet,
     sun_nio_ch_serversocketchannelimpl, sun_nio_ch_socketchannelimpl, sun_nio_ch_socketdispatcher,
     sun_nio_ch_unixasynchronousserversocketchannelimpl,
-    sun_nio_ch_unixasynchronoussocketchannelimpl, sun_nio_ch_unixdomainsockets,
+    sun_nio_ch_unixasynchronoussocketchannelimpl, sun_nio_ch_unixdispatcher,
+    sun_nio_ch_unixdomainsockets, sun_nio_ch_unixfiledispatcherimpl, sun_nio_fs_bsdfilesystem,
     sun_nio_fs_bsdnativedispatcher, sun_nio_fs_macosxnativedispatcher, sun_nio_fs_unixcopyfile,
-    sun_nio_fs_unixnativedispatcher, sun_nio_fs_utifiletypedetector, sun_print_cupsprinter,
-    sun_reflect_constantpool, sun_reflect_nativeconstructoraccessorimpl,
+    sun_nio_fs_unixfilesystem, sun_nio_fs_unixnativedispatcher, sun_nio_fs_utifiletypedetector,
+    sun_print_cupsprinter, sun_reflect_constantpool, sun_reflect_nativeconstructoraccessorimpl,
     sun_reflect_nativemethodaccessorimpl, sun_reflect_reflection, sun_rmi_transport_gc,
     sun_security_ec_ecdhkeyagreement, sun_security_ec_ecdsasignature,
     sun_security_ec_eckeypairgenerator, sun_security_jgss_wrapper_gsslibstub,
@@ -164,6 +165,8 @@ const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
 const JAVA_18: Version = Version::Java18 { minor: 0 };
+const JAVA_19: Version = Version::Java19 { minor: 0 };
+const JAVA_20: Version = Version::Java20 { minor: 0 };
 
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
@@ -260,12 +263,16 @@ impl MethodRegistry {
             sun_reflect_reflection::register(&mut method_registry);
             sun_tracing_dtrace_jvm::register(&mut method_registry);
         }
+
         if java_version == JAVA_11 {
             com_sun_java_util_jar_pack_nativeunpack::register(&mut method_registry);
             java_io_objectinputstream::register(&mut method_registry);
             java_io_objectoutputstream::register(&mut method_registry);
             java_lang_classloader_nativelibrary::register(&mut method_registry);
             java_lang_stringcoding::register(&mut method_registry);
+            java_net_abstractplaindatagramsocketimpl::register(&mut method_registry);
+            java_net_abstractplainsocketimpl::register(&mut method_registry);
+            java_net_socketcleanable::register(&mut method_registry);
             java_nio_mappedbytebuffer::register(&mut method_registry);
             sun_nio_ch_serversocketchannelimpl::register(&mut method_registry);
             sun_nio_ch_socketchannelimpl::register(&mut method_registry);
@@ -274,21 +281,140 @@ impl MethodRegistry {
             sun_security_ec_ecdsasignature::register(&mut method_registry);
             sun_security_ec_eckeypairgenerator::register(&mut method_registry);
         }
+        if java_version >= JAVA_11 {
+            com_apple_eawt_application::register(&mut method_registry);
+            com_sun_management_internal_diagnosticcommandimpl::register(&mut method_registry);
+            com_sun_management_internal_flag::register(&mut method_registry);
+            com_sun_management_internal_garbagecollectorextimpl::register(&mut method_registry);
+            com_sun_management_internal_gcinfobuilder::register(&mut method_registry);
+            com_sun_management_internal_operatingsystemimpl::register(&mut method_registry);
+            com_sun_security_auth_module_ntsystem::register(&mut method_registry);
+            java_awt_scrollbar::register(&mut method_registry);
+            java_awt_event_inputevent::register(&mut method_registry);
+            java_awt_event_keyevent::register(&mut method_registry);
+            java_awt_event_mouseevent::register(&mut method_registry);
+            java_awt_image_bufferedimage::register(&mut method_registry);
+            java_awt_image_colormodel::register(&mut method_registry);
+            java_awt_image_indexcolormodel::register(&mut method_registry);
+            java_awt_image_kernel::register(&mut method_registry);
+            java_awt_image_raster::register(&mut method_registry);
+            java_awt_image_samplemodel::register(&mut method_registry);
+            java_awt_image_singlepixelpackedsamplemodel::register(&mut method_registry);
+            java_io_filecleanable::register(&mut method_registry);
+            java_lang_module::register(&mut method_registry);
+            java_lang_processhandleimpl::register(&mut method_registry);
+            java_lang_processhandleimpl_info::register(&mut method_registry);
+            java_lang_processimpl::register(&mut method_registry);
+            java_lang_stackstreamfactory::register(&mut method_registry);
+            java_lang_stackstreamfactory_abstractstackwalker::register(&mut method_registry);
+            java_lang_stacktraceelement::register(&mut method_registry);
+            java_lang_stringutf16::register(&mut method_registry);
+            java_lang_invoke_methodhandle::register(&mut method_registry);
+            java_lang_invoke_methodhandlenatives::register(&mut method_registry);
+            java_lang_invoke_varhandle::register(&mut method_registry);
+            java_lang_ref_reference::register(&mut method_registry);
+            java_lang_reflect_array::register(&mut method_registry);
+            java_lang_reflect_executable::register(&mut method_registry);
+            java_lang_reflect_field::register(&mut method_registry);
+            java_util_timezone::register(&mut method_registry);
+            jdk_internal_agent_filesystemimpl::register(&mut method_registry);
+            jdk_internal_jimage_nativeimagebuffer::register(&mut method_registry);
+            jdk_internal_loader_bootloader::register(&mut method_registry);
+            jdk_internal_misc_signal::register(&mut method_registry);
+            jdk_internal_misc_unsafe::register(&mut method_registry);
+            jdk_internal_misc_vm::register(&mut method_registry);
+            jdk_internal_perf_perf::register(&mut method_registry);
+            jdk_internal_reflect_constantpool::register(&mut method_registry);
+            jdk_internal_reflect_nativeconstructoraccessorimpl::register(&mut method_registry);
+            jdk_internal_reflect_nativemethodaccessorimpl::register(&mut method_registry);
+            jdk_internal_reflect_reflection::register(&mut method_registry);
+            jdk_internal_vm_vmsupport::register(&mut method_registry);
+            jdk_jfr_internal_jvm::register(&mut method_registry);
+            jdk_net_macosxsocketoptions::register(&mut method_registry);
+            jdk_vm_ci_runtime_jvmci::register(&mut method_registry);
+            sun_awt_platformfont::register(&mut method_registry);
+            sun_awt_suntoolkit::register(&mut method_registry);
+            sun_java2d_osxoffscreensurfacedata::register(&mut method_registry);
+            sun_java2d_surfacedata::register(&mut method_registry);
+            sun_java2d_cmm_lcms_lcms::register(&mut method_registry);
+            sun_java2d_opengl_oglrenderer::register(&mut method_registry);
+            sun_nio_ch_pollselectorimpl::register(&mut method_registry);
+            sun_rmi_transport_gc::register(&mut method_registry);
+            sun_security_pkcs11_secmod::register(&mut method_registry);
+            sun_security_pkcs11_wrapper_pkcs11::register(&mut method_registry);
+            sun_tools_attach_virtualmachineimpl::register(&mut method_registry);
+        }
+
         if java_version <= JAVA_17 {
-            java_net_abstractplaindatagramsocketimpl::register(&mut method_registry);
-            java_net_abstractplainsocketimpl::register(&mut method_registry);
             java_net_datagrampacket::register(&mut method_registry);
             java_net_plaindatagramsocketimpl::register(&mut method_registry);
             java_net_plainsocketimpl::register(&mut method_registry);
-            java_net_socketcleanable::register(&mut method_registry);
             java_net_socketinputstream::register(&mut method_registry);
             java_net_socketoutputstream::register(&mut method_registry);
         }
-        if java_version <= JAVA_18 {
-            java_net_inetaddressimplfactory::register(&mut method_registry);
+        if java_version == JAVA_17 {
             jdk_internal_foreign_abi_programmableinvoker::register(&mut method_registry);
             jdk_internal_foreign_abi_programmableupcallhandler::register(&mut method_registry);
             jdk_internal_invoke_nativeentrypoint::register(&mut method_registry);
+        }
+        if java_version >= JAVA_17 {
+            java_lang_invoke_lambdaproxyclassarchive::register(&mut method_registry);
+            java_lang_nullpointerexception::register(&mut method_registry);
+            java_lang_ref_phantomreference::register(&mut method_registry);
+            java_nio_mappedmemoryutils::register(&mut method_registry);
+            jdk_internal_foreign_abi_upcallstubs::register(&mut method_registry);
+            jdk_internal_loader_nativelibraries::register(&mut method_registry);
+            jdk_internal_misc_cds::register(&mut method_registry);
+            jdk_internal_misc_scopedmemoryaccess::register(&mut method_registry);
+            jdk_internal_util_systemprops_raw::register(&mut method_registry);
+            jdk_internal_vm_vector_vectorsupport::register(&mut method_registry);
+            sun_awt_platformgraphicsinfo::register(&mut method_registry);
+            sun_font_colorglyphsurfacedata::register(&mut method_registry);
+            sun_java2d_metal_mtlgraphicsconfig::register(&mut method_registry);
+            sun_java2d_metal_mtllayer::register(&mut method_registry);
+            sun_java2d_metal_mtlmaskfill::register(&mut method_registry);
+            sun_java2d_metal_mtlrenderqueue::register(&mut method_registry);
+            sun_java2d_metal_mtlrenderer::register(&mut method_registry);
+            sun_java2d_metal_mtlsurfacedata::register(&mut method_registry);
+            sun_java2d_metal_mtltextrenderer::register(&mut method_registry);
+            sun_nio_ch_nativesocketaddress::register(&mut method_registry);
+            sun_nio_ch_socketdispatcher::register(&mut method_registry);
+            sun_nio_ch_unixdomainsockets::register(&mut method_registry);
+        }
+
+        if java_version <= JAVA_18 {
+            java_net_inetaddressimplfactory::register(&mut method_registry);
+        }
+        if java_version >= JAVA_18 {
+            java_lang_ref_finalizer::register(&mut method_registry);
+            jdk_internal_reflect_directconstructorhandleaccessor_nativeaccessor::register(
+                &mut method_registry,
+            );
+            jdk_internal_reflect_directmethodhandleaccessor_nativeaccessor::register(
+                &mut method_registry,
+            );
+        }
+
+        if java_version <= JAVA_19 {
+            sun_nio_ch_filechannelimpl::register(&mut method_registry);
+            sun_nio_fs_unixcopyfile::register(&mut method_registry);
+        }
+        if java_version >= JAVA_19 {
+            java_lang_virtualthread::register(&mut method_registry);
+            jdk_internal_foreign_abi_nativeentrypoint::register(&mut method_registry);
+            jdk_internal_foreign_abi_upcalllinker::register(&mut method_registry);
+            jdk_internal_loader_nativelibrary::register(&mut method_registry);
+            jdk_internal_loader_rawnativelibraries::register(&mut method_registry);
+            jdk_internal_misc_previewfeatures::register(&mut method_registry);
+            jdk_internal_vm_continuation::register(&mut method_registry);
+            jdk_internal_vm_continuationsupport::register(&mut method_registry);
+        }
+
+        if java_version >= JAVA_20 {
+            sun_nio_ch_unixdispatcher::register(&mut method_registry);
+            sun_nio_ch_unixfiledispatcherimpl::register(&mut method_registry);
+            sun_nio_fs_bsdfilesystem::register(&mut method_registry);
+            sun_nio_fs_unixfilesystem::register(&mut method_registry);
         }
 
         apple_laf_jrsuiconstants::register(&mut method_registry);
@@ -296,7 +422,6 @@ impl MethodRegistry {
         apple_laf_jrsuifocus::register(&mut method_registry);
         apple_laf_jrsuiutils_scrollbar::register(&mut method_registry);
         apple_security_keychainstore::register(&mut method_registry);
-        com_apple_eawt_application::register(&mut method_registry);
         com_apple_eawt_appdockiconhandler::register(&mut method_registry);
         com_apple_eawt_appeventhandler::register(&mut method_registry);
         com_apple_eawt_appmenubarhandler::register(&mut method_registry);
@@ -307,11 +432,6 @@ impl MethodRegistry {
         com_apple_laf_screenmenu::register(&mut method_registry);
         com_sun_imageio_plugins_jpeg_jpegimagereader::register(&mut method_registry);
         com_sun_imageio_plugins_jpeg_jpegimagewriter::register(&mut method_registry);
-        com_sun_management_internal_diagnosticcommandimpl::register(&mut method_registry);
-        com_sun_management_internal_flag::register(&mut method_registry);
-        com_sun_management_internal_garbagecollectorextimpl::register(&mut method_registry);
-        com_sun_management_internal_gcinfobuilder::register(&mut method_registry);
-        com_sun_management_internal_operatingsystemimpl::register(&mut method_registry);
         com_sun_media_sound_directaudiodevice::register(&mut method_registry);
         com_sun_media_sound_directaudiodeviceprovider::register(&mut method_registry);
         com_sun_media_sound_midiindevice::register(&mut method_registry);
@@ -321,7 +441,6 @@ impl MethodRegistry {
         com_sun_media_sound_platform::register(&mut method_registry);
         com_sun_media_sound_portmixer::register(&mut method_registry);
         com_sun_media_sound_portmixerprovider::register(&mut method_registry);
-        com_sun_security_auth_module_ntsystem::register(&mut method_registry);
         com_sun_security_auth_module_unixsystem::register(&mut method_registry);
         java_awt_awtevent::register(&mut method_registry);
         java_awt_button::register(&mut method_registry);
@@ -349,25 +468,13 @@ impl MethodRegistry {
         java_awt_rectangle::register(&mut method_registry);
         java_awt_scrollpane::register(&mut method_registry);
         java_awt_scrollpaneadjustable::register(&mut method_registry);
-        java_awt_scrollbar::register(&mut method_registry);
         java_awt_splashscreen::register(&mut method_registry);
         java_awt_textarea::register(&mut method_registry);
         java_awt_textfield::register(&mut method_registry);
         java_awt_toolkit::register(&mut method_registry);
         java_awt_trayicon::register(&mut method_registry);
         java_awt_window::register(&mut method_registry);
-        java_awt_event_inputevent::register(&mut method_registry);
-        java_awt_event_keyevent::register(&mut method_registry);
-        java_awt_event_mouseevent::register(&mut method_registry);
-        java_awt_image_bufferedimage::register(&mut method_registry);
-        java_awt_image_colormodel::register(&mut method_registry);
-        java_awt_image_indexcolormodel::register(&mut method_registry);
-        java_awt_image_kernel::register(&mut method_registry);
-        java_awt_image_raster::register(&mut method_registry);
-        java_awt_image_samplemodel::register(&mut method_registry);
-        java_awt_image_singlepixelpackedsamplemodel::register(&mut method_registry);
         java_io_console::register(&mut method_registry);
-        java_io_filecleanable::register(&mut method_registry);
         java_io_filedescriptor::register(&mut method_registry);
         java_io_fileinputstream::register(&mut method_registry);
         java_io_fileoutputstream::register(&mut method_registry);
@@ -378,45 +485,23 @@ impl MethodRegistry {
         java_lang_classloader::register(&mut method_registry);
         java_lang_double::register(&mut method_registry);
         java_lang_float::register(&mut method_registry);
-        java_lang_module::register(&mut method_registry);
-        java_lang_nullpointerexception::register(&mut method_registry);
         java_lang_object::register(&mut method_registry);
         java_lang_processenvironment::register(&mut method_registry);
-        java_lang_processhandleimpl::register(&mut method_registry);
-        java_lang_processhandleimpl_info::register(&mut method_registry);
-        java_lang_processimpl::register(&mut method_registry);
         java_lang_runtime::register(&mut method_registry);
         java_lang_securitymanager::register(&mut method_registry);
         java_lang_shutdown::register(&mut method_registry);
-        java_lang_stackstreamfactory::register(&mut method_registry);
-        java_lang_stackstreamfactory_abstractstackwalker::register(&mut method_registry);
-        java_lang_stacktraceelement::register(&mut method_registry);
         java_lang_strictmath::register(&mut method_registry);
         java_lang_string::register(&mut method_registry);
-        java_lang_stringutf16::register(&mut method_registry);
         java_lang_system::register(&mut method_registry);
         java_lang_thread::register(&mut method_registry);
         java_lang_throwable::register(&mut method_registry);
-        java_lang_invoke_lambdaproxyclassarchive::register(&mut method_registry);
-        java_lang_invoke_methodhandle::register(&mut method_registry);
-        java_lang_invoke_methodhandlenatives::register(&mut method_registry);
-        java_lang_invoke_varhandle::register(&mut method_registry);
-        java_lang_ref_finalizer::register(&mut method_registry);
-        java_lang_ref_phantomreference::register(&mut method_registry);
-        java_lang_ref_reference::register(&mut method_registry);
-        java_lang_reflect_array::register(&mut method_registry);
-        java_lang_reflect_executable::register(&mut method_registry);
-        java_lang_reflect_field::register(&mut method_registry);
-        java_lang_virtualthread::register(&mut method_registry);
         java_net_inet4address::register(&mut method_registry);
         java_net_inet4addressimpl::register(&mut method_registry);
         java_net_inet6address::register(&mut method_registry);
         java_net_inet6addressimpl::register(&mut method_registry);
         java_net_inetaddress::register(&mut method_registry);
         java_net_networkinterface::register(&mut method_registry);
-        java_nio_mappedmemoryutils::register(&mut method_registry);
         java_security_accesscontroller::register(&mut method_registry);
-        java_util_timezone::register(&mut method_registry);
         java_util_concurrent_atomic_atomiclong::register(&mut method_registry);
         java_util_prefs_filesystempreferences::register(&mut method_registry);
         java_util_prefs_macosxpreferencesfile::register(&mut method_registry);
@@ -424,47 +509,10 @@ impl MethodRegistry {
         java_util_zip_crc32::register(&mut method_registry);
         java_util_zip_deflater::register(&mut method_registry);
         java_util_zip_inflater::register(&mut method_registry);
-        jdk_internal_agent_filesystemimpl::register(&mut method_registry);
-        jdk_internal_foreign_abi_nativeentrypoint::register(&mut method_registry);
-        jdk_internal_foreign_abi_upcalllinker::register(&mut method_registry);
-        jdk_internal_foreign_abi_upcallstubs::register(&mut method_registry);
-        jdk_internal_jimage_nativeimagebuffer::register(&mut method_registry);
-        jdk_internal_loader_nativelibrary::register(&mut method_registry);
-        jdk_internal_loader_rawnativelibraries::register(&mut method_registry);
-        jdk_internal_loader_bootloader::register(&mut method_registry);
-        jdk_internal_loader_nativelibraries::register(&mut method_registry);
-        jdk_internal_misc_cds::register(&mut method_registry);
-        jdk_internal_misc_previewfeatures::register(&mut method_registry);
-        jdk_internal_misc_scopedmemoryaccess::register(&mut method_registry);
-        jdk_internal_misc_signal::register(&mut method_registry);
-        jdk_internal_misc_unsafe::register(&mut method_registry);
-        jdk_internal_misc_vm::register(&mut method_registry);
-        jdk_internal_perf_perf::register(&mut method_registry);
-        jdk_internal_reflect_constantpool::register(&mut method_registry);
-        jdk_internal_reflect_nativeconstructoraccessorimpl::register(&mut method_registry);
-        jdk_internal_reflect_nativemethodaccessorimpl::register(&mut method_registry);
-        jdk_internal_reflect_reflection::register(&mut method_registry);
-        jdk_internal_reflect_directconstructorhandleaccessor_nativeaccessor::register(
-            &mut method_registry,
-        );
-        jdk_internal_reflect_directmethodhandleaccessor_nativeaccessor::register(
-            &mut method_registry,
-        );
-        jdk_internal_util_systemprops_raw::register(&mut method_registry);
-        jdk_internal_vm_continuation::register(&mut method_registry);
-        jdk_internal_vm_continuationsupport::register(&mut method_registry);
-        jdk_internal_vm_vmsupport::register(&mut method_registry);
-        jdk_internal_vm_vector_vectorsupport::register(&mut method_registry);
-        jdk_jfr_internal_jvm::register(&mut method_registry);
-        jdk_net_macosxsocketoptions::register(&mut method_registry);
-        jdk_vm_ci_runtime_jvmci::register(&mut method_registry);
         sun_awt_cgraphicsdevice::register(&mut method_registry);
         sun_awt_cgraphicsenvironment::register(&mut method_registry);
         sun_awt_debugsettings::register(&mut method_registry);
         sun_awt_fontdescriptor::register(&mut method_registry);
-        sun_awt_platformfont::register(&mut method_registry);
-        sun_awt_platformgraphicsinfo::register(&mut method_registry);
-        sun_awt_suntoolkit::register(&mut method_registry);
         sun_awt_image_bufimgsurfacedata::register(&mut method_registry);
         sun_awt_image_bytecomponentraster::register(&mut method_registry);
         sun_awt_image_bytepackedraster::register(&mut method_registry);
@@ -480,7 +528,6 @@ impl MethodRegistry {
         sun_font_cfontmanager::register(&mut method_registry);
         sun_font_cstrike::register(&mut method_registry);
         sun_font_cstrikedisposer::register(&mut method_registry);
-        sun_font_colorglyphsurfacedata::register(&mut method_registry);
         sun_font_filefontstrike::register(&mut method_registry);
         sun_font_freetypefontscaler::register(&mut method_registry);
         sun_font_nullfontscaler::register(&mut method_registry);
@@ -491,9 +538,6 @@ impl MethodRegistry {
         sun_java2d_crenderer::register(&mut method_registry);
         sun_java2d_defaultdisposerrecord::register(&mut method_registry);
         sun_java2d_disposer::register(&mut method_registry);
-        sun_java2d_osxoffscreensurfacedata::register(&mut method_registry);
-        sun_java2d_surfacedata::register(&mut method_registry);
-        sun_java2d_cmm_lcms_lcms::register(&mut method_registry);
         sun_java2d_loops_blit::register(&mut method_registry);
         sun_java2d_loops_blitbg::register(&mut method_registry);
         sun_java2d_loops_drawglyphlist::register(&mut method_registry);
@@ -514,20 +558,12 @@ impl MethodRegistry {
         sun_java2d_loops_scaledblit::register(&mut method_registry);
         sun_java2d_loops_transformblit::register(&mut method_registry);
         sun_java2d_loops_transformhelper::register(&mut method_registry);
-        sun_java2d_metal_mtlgraphicsconfig::register(&mut method_registry);
-        sun_java2d_metal_mtllayer::register(&mut method_registry);
-        sun_java2d_metal_mtlmaskfill::register(&mut method_registry);
-        sun_java2d_metal_mtlrenderqueue::register(&mut method_registry);
-        sun_java2d_metal_mtlrenderer::register(&mut method_registry);
-        sun_java2d_metal_mtlsurfacedata::register(&mut method_registry);
-        sun_java2d_metal_mtltextrenderer::register(&mut method_registry);
         sun_java2d_opengl_cglgraphicsconfig::register(&mut method_registry);
         sun_java2d_opengl_cgllayer::register(&mut method_registry);
         sun_java2d_opengl_cglsurfacedata::register(&mut method_registry);
         sun_java2d_opengl_oglcontext::register(&mut method_registry);
         sun_java2d_opengl_oglmaskfill::register(&mut method_registry);
         sun_java2d_opengl_oglrenderqueue::register(&mut method_registry);
-        sun_java2d_opengl_oglrenderer::register(&mut method_registry);
         sun_java2d_opengl_oglsurfacedata::register(&mut method_registry);
         sun_java2d_opengl_ogltextrenderer::register(&mut method_registry);
         sun_java2d_pipe_bufferedmaskblit::register(&mut method_registry);
@@ -581,35 +617,25 @@ impl MethodRegistry {
         sun_net_spi_defaultproxyselector::register(&mut method_registry);
         sun_nio_ch_datagramchannelimpl::register(&mut method_registry);
         sun_nio_ch_datagramdispatcher::register(&mut method_registry);
-        sun_nio_ch_filechannelimpl::register(&mut method_registry);
         sun_nio_ch_filedispatcherimpl::register(&mut method_registry);
         sun_nio_ch_filekey::register(&mut method_registry);
         sun_nio_ch_ioutil::register(&mut method_registry);
         sun_nio_ch_inheritedchannel::register(&mut method_registry);
         sun_nio_ch_kqueue::register(&mut method_registry);
-        sun_nio_ch_nativesocketaddress::register(&mut method_registry);
         sun_nio_ch_nativethread::register(&mut method_registry);
         sun_nio_ch_net::register(&mut method_registry);
-        sun_nio_ch_pollselectorimpl::register(&mut method_registry);
-        sun_nio_ch_socketdispatcher::register(&mut method_registry);
         sun_nio_ch_unixasynchronoussocketchannelimpl::register(&mut method_registry);
-        sun_nio_ch_unixdomainsockets::register(&mut method_registry);
         sun_nio_fs_bsdnativedispatcher::register(&mut method_registry);
         sun_nio_fs_macosxnativedispatcher::register(&mut method_registry);
         sun_nio_fs_utifiletypedetector::register(&mut method_registry);
-        sun_nio_fs_unixcopyfile::register(&mut method_registry);
         sun_nio_fs_unixnativedispatcher::register(&mut method_registry);
         sun_print_cupsprinter::register(&mut method_registry);
-        sun_rmi_transport_gc::register(&mut method_registry);
         sun_security_jgss_wrapper_gsslibstub::register(&mut method_registry);
         sun_security_krb5_config::register(&mut method_registry);
         sun_security_krb5_credentials::register(&mut method_registry);
         sun_security_krb5_scdynamicstoreconfig::register(&mut method_registry);
-        sun_security_pkcs11_secmod::register(&mut method_registry);
-        sun_security_pkcs11_wrapper_pkcs11::register(&mut method_registry);
         sun_security_smartcardio_pcsc::register(&mut method_registry);
         sun_security_smartcardio_platformpcsc::register(&mut method_registry);
-        sun_tools_attach_virtualmachineimpl::register(&mut method_registry);
         sun_util_locale_provider_hostlocaleprovideradapterimpl::register(&mut method_registry);
 
         method_registry

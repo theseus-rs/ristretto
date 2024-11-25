@@ -3,12 +3,26 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_20: Version = Version::Java20 { minor: 0 };
 
 /// Register all native methods for `java.lang.VirtualThread`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/VirtualThread";
+    let java_version = registry.java_version();
+
+    if java_version >= &JAVA_20 {
+        registry.register(
+            class_name,
+            "notifyJvmtiHideFrames",
+            "(Z)V",
+            notify_jvmti_hide_frames,
+        );
+    }
+
     registry.register(
         class_name,
         "notifyJvmtiMountBegin",
@@ -34,6 +48,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         notify_jvmti_unmount_end,
     );
     registry.register(class_name, "registerNatives", "()V", register_natives);
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn notify_jvmti_hide_frames(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]

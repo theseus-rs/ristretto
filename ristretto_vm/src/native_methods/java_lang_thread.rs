@@ -11,8 +11,10 @@ use std::time::Duration;
 
 const JAVA_11: Version = Version::Java17 { minor: 0 };
 const JAVA_19: Version = Version::Java19 { minor: 0 };
+const JAVA_20: Version = Version::Java20 { minor: 0 };
 
 /// Register all native methods for `java.lang.Thread`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Thread";
     let java_version = registry.java_version().clone();
@@ -30,18 +32,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
+    if java_version <= JAVA_19 {
+        registry.register(class_name, "resume0", "()V", resume_0);
+    }
+    if java_version == JAVA_19 {
+        registry.register(
+            class_name,
+            "extentLocalCache",
+            "()[Ljava/lang/Object;",
+            extent_local_cache,
+        );
+    }
     if java_version >= JAVA_19 {
         registry.register(
             class_name,
             "currentCarrierThread",
             "()Ljava/lang/Thread;",
             current_carrier_thread,
-        );
-        registry.register(
-            class_name,
-            "extentLocalCache",
-            "()[Ljava/lang/Object;",
-            extent_local_cache,
         );
         registry.register(
             class_name,
@@ -72,6 +79,33 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(class_name, "yield0", "()V", yield_0);
     }
 
+    if java_version >= JAVA_20 {
+        registry.register(
+            class_name,
+            "ensureMaterializedForStackWalk",
+            "(Ljava/lang/Object;)V",
+            ensure_materialized_for_stack_walk,
+        );
+        registry.register(
+            class_name,
+            "findScopedValueBindings",
+            "()Ljava/lang/Object;",
+            find_scoped_value_bindings,
+        );
+        registry.register(
+            class_name,
+            "scopedValueCache",
+            "()[Ljava/lang/Object;",
+            scoped_value_cache,
+        );
+        registry.register(
+            class_name,
+            "setScopedValueCache",
+            "([Ljava/lang/Object;)V",
+            set_scoped_value_cache,
+        );
+    }
+
     registry.register(
         class_name,
         "currentThread",
@@ -93,7 +127,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "holdsLock", "(Ljava/lang/Object;)Z", holds_lock);
     registry.register(class_name, "interrupt0", "()V", interrupt_0);
     registry.register(class_name, "registerNatives", "()V", register_natives);
-    registry.register(class_name, "resume0", "()V", resume_0);
     registry.register(
         class_name,
         "setNativeName",
@@ -148,7 +181,25 @@ async fn dump_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn ensure_materialized_for_stack_walk(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn extent_local_cache(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn find_scoped_value_bindings(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -220,6 +271,12 @@ async fn resume_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn scoped_value_cache(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn set_current_thread(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -249,6 +306,15 @@ async fn set_priority_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Resul
     let _new_priority = arguments.pop_int()?;
     // TODO: implement priority if/when tokio supports it
     Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn set_scoped_value_cache(
+    _thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]

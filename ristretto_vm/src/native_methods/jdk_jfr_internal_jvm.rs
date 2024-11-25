@@ -10,6 +10,7 @@ use std::sync::Arc;
 const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
 const JAVA_18: Version = Version::Java18 { minor: 0 };
+const JAVA_20: Version = Version::Java20 { minor: 0 };
 
 /// Register all native methods for `jdk.jfr.internal.JVM`.
 #[expect(clippy::too_many_lines)]
@@ -191,6 +192,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z",
             set_configuration,
         );
+    }
+
+    if java_version >= JAVA_20 {
+        registry.register(class_name, "hostTotalMemory", "()J", host_total_memory);
     }
 
     registry.register(class_name, "abort", "(Ljava/lang/String;)V", abort);
@@ -523,6 +528,12 @@ async fn get_unloaded_event_class_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn host_total_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
