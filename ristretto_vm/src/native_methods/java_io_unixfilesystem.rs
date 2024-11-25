@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_18: Version = Version::Java18 { minor: 0 };
 
 bitflags! {
     /// Boolean Attribute Flags.
@@ -24,11 +25,12 @@ bitflags! {
 }
 
 /// Register all native methods for `java.io.UnixFileSystem`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/io/UnixFileSystem";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version >= &JAVA_11 {
+    if java_version >= JAVA_11 {
         registry.register(
             class_name,
             "getNameMax0",
@@ -37,29 +39,121 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
+    if java_version <= JAVA_18 {
+        registry.register(
+            class_name,
+            "checkAccess",
+            "(Ljava/io/File;I)Z",
+            check_access,
+        );
+        registry.register(
+            class_name,
+            "createDirectory",
+            "(Ljava/io/File;)Z",
+            create_directory,
+        );
+        registry.register(
+            class_name,
+            "createFileExclusively",
+            "(Ljava/lang/String;)Z",
+            create_file_exclusively,
+        );
+        registry.register(
+            class_name,
+            "getLastModifiedTime",
+            "(Ljava/io/File;)J",
+            get_last_modified_time,
+        );
+        registry.register(class_name, "getLength", "(Ljava/io/File;)J", get_length);
+        registry.register(class_name, "getSpace", "(Ljava/io/File;I)J", get_space);
+        registry.register(
+            class_name,
+            "list",
+            "(Ljava/io/File;)[Ljava/lang/String;",
+            list,
+        );
+        registry.register(
+            class_name,
+            "setLastModifiedTime",
+            "(Ljava/io/File;J)Z",
+            set_last_modified_time,
+        );
+        registry.register(
+            class_name,
+            "setPermission",
+            "(Ljava/io/File;IZZ)Z",
+            set_permission,
+        );
+        registry.register(
+            class_name,
+            "setReadOnly",
+            "(Ljava/io/File;)Z",
+            set_read_only,
+        );
+    } else {
+        registry.register(
+            class_name,
+            "checkAccess0",
+            "(Ljava/io/File;I)Z",
+            check_access_0,
+        );
+        registry.register(
+            class_name,
+            "createDirectory0",
+            "(Ljava/io/File;)Z",
+            create_directory_0,
+        );
+        registry.register(
+            class_name,
+            "createFileExclusively0",
+            "(Ljava/lang/String;)Z",
+            create_file_exclusively_0,
+        );
+        registry.register(
+            class_name,
+            "getLastModifiedTime0",
+            "(Ljava/io/File;)J",
+            get_last_modified_time_0,
+        );
+        registry.register(class_name, "getLength0", "(Ljava/io/File;)J", get_length_0);
+        registry.register(
+            class_name,
+            "getNameMax0",
+            "(Ljava/lang/String;)J",
+            get_name_max_0,
+        );
+        registry.register(class_name, "getSpace0", "(Ljava/io/File;I)J", get_space_0);
+        registry.register(
+            class_name,
+            "list0",
+            "(Ljava/io/File;)[Ljava/lang/String;",
+            list_0,
+        );
+        registry.register(
+            class_name,
+            "setLastModifiedTime0",
+            "(Ljava/io/File;J)Z",
+            set_last_modified_time_0,
+        );
+        registry.register(
+            class_name,
+            "setPermission0",
+            "(Ljava/io/File;IZZ)Z",
+            set_permission_0,
+        );
+        registry.register(
+            class_name,
+            "setReadOnly0",
+            "(Ljava/io/File;)Z",
+            set_read_only_0,
+        );
+    }
+
     registry.register(
         class_name,
         "canonicalize0",
         "(Ljava/lang/String;)Ljava/lang/String;",
         canonicalize_0,
-    );
-    registry.register(
-        class_name,
-        "checkAccess",
-        "(Ljava/io/File;I)Z",
-        check_access,
-    );
-    registry.register(
-        class_name,
-        "createDirectory",
-        "(Ljava/io/File;)Z",
-        create_directory,
-    );
-    registry.register(
-        class_name,
-        "createFileExclusively",
-        "(Ljava/lang/String;)Z",
-        create_file_exclusively,
     );
     registry.register(class_name, "delete0", "(Ljava/io/File;)Z", delete_0);
     registry.register(
@@ -70,42 +164,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
-        "getLastModifiedTime",
-        "(Ljava/io/File;)J",
-        get_last_modified_time,
+        "getNameMax0",
+        "(Ljava/lang/String;)J",
+        get_name_max_0,
     );
-    registry.register(class_name, "getLength", "(Ljava/io/File;)J", get_length);
-    registry.register(class_name, "getSpace", "(Ljava/io/File;I)J", get_space);
     registry.register(class_name, "initIDs", "()V", init_ids);
-    registry.register(
-        class_name,
-        "list",
-        "(Ljava/io/File;)[Ljava/lang/String;",
-        list,
-    );
     registry.register(
         class_name,
         "rename0",
         "(Ljava/io/File;Ljava/io/File;)Z",
         rename_0,
-    );
-    registry.register(
-        class_name,
-        "setLastModifiedTime",
-        "(Ljava/io/File;J)Z",
-        set_last_modified_time,
-    );
-    registry.register(
-        class_name,
-        "setPermission",
-        "(Ljava/io/File;IZZ)Z",
-        set_permission,
-    );
-    registry.register(
-        class_name,
-        "setReadOnly",
-        "(Ljava/io/File;)Z",
-        set_read_only,
     );
 }
 
@@ -123,13 +191,34 @@ async fn check_access(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn check_access_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn create_directory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn create_directory_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn create_file_exclusively(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn create_file_exclusively_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -187,7 +276,22 @@ async fn get_last_modified_time(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn get_last_modified_time_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn get_length(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_length_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -205,6 +309,12 @@ async fn get_space(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn get_space_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -212,6 +322,12 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn list_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -232,12 +348,33 @@ async fn set_last_modified_time(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn set_last_modified_time_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn set_permission(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn set_permission_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn set_read_only(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn set_read_only_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }

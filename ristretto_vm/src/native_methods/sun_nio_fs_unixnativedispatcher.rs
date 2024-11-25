@@ -11,6 +11,8 @@ use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
+const JAVA_18: Version = Version::Java18 { minor: 0 };
 
 bitflags! {
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -31,6 +33,7 @@ bitflags! {
 }
 
 /// Register all native methods for `sun.nio.fs.UnixNativeDispatcher`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/nio/fs/UnixNativeDispatcher";
     let java_version = registry.java_version().clone();
@@ -54,8 +57,40 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(class_name, "flistxattr", "(IJI)I", flistxattr);
         registry.register(class_name, "fremovexattr0", "(IJ)V", fremovexattr_0);
         registry.register(class_name, "fsetxattr0", "(IJJI)V", fsetxattr_0);
-        registry.register(class_name, "futimens", "(IJJ)V", futimens);
         registry.register(class_name, "lutimes0", "(JJJ)V", lutimes_0);
+    }
+
+    if java_version == JAVA_17 {
+        registry.register(class_name, "futimens", "(IJJ)V", futimens);
+    }
+
+    if java_version <= JAVA_18 {
+        registry.register(class_name, "fchmod", "(II)V", fchmod);
+        registry.register(class_name, "fchown", "(III)V", fchown);
+        registry.register(
+            class_name,
+            "fstat",
+            "(ILsun/nio/fs/UnixFileAttributes;)V",
+            fstat,
+        );
+        registry.register(class_name, "futimes", "(IJJ)V", futimes);
+        registry.register(class_name, "read", "(IJI)I", read);
+        registry.register(class_name, "readdir", "(J)[B", readdir);
+        registry.register(class_name, "write", "(IJI)I", write);
+    } else {
+        registry.register(class_name, "fchmod0", "(II)V", fchmod_0);
+        registry.register(class_name, "fchown0", "(III)V", fchown_0);
+        registry.register(
+            class_name,
+            "fstat0",
+            "(ILsun/nio/fs/UnixFileAttributes;)V",
+            fstat_0,
+        );
+        registry.register(class_name, "futimens0", "(IJJ)V", futimens_0);
+        registry.register(class_name, "futimes0", "(IJJ)V", futimes_0);
+        registry.register(class_name, "read0", "(IJI)I", read_0);
+        registry.register(class_name, "readdir0", "(J)[B", readdir_0);
+        registry.register(class_name, "write0", "(IJI)I", write_0);
     }
 
     registry.register(class_name, "access0", "(JI)V", access_0);
@@ -68,17 +103,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "fdopendir", "(I)J", fdopendir);
     registry.register(
         class_name,
-        "fstat",
-        "(ILsun/nio/fs/UnixFileAttributes;)V",
-        fstat,
-    );
-    registry.register(
-        class_name,
         "fstatat0",
         "(IJILsun/nio/fs/UnixFileAttributes;)V",
         fstatat_0,
     );
-    registry.register(class_name, "futimes", "(IJJ)V", futimes);
     registry.register(class_name, "getcwd", "()[B", getcwd);
     registry.register(class_name, "getgrgid", "(I)[B", getgrgid);
     registry.register(class_name, "getgrnam0", "(J)I", getgrnam_0);
@@ -98,8 +126,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "open0", "(JII)I", open_0);
     registry.register(class_name, "openat0", "(IJII)I", openat_0);
     registry.register(class_name, "opendir0", "(J)J", opendir_0);
-    registry.register(class_name, "read", "(IJI)I", read);
-    registry.register(class_name, "readdir", "(J)[B", readdir);
     registry.register(class_name, "readlink0", "(J)[B", readlink_0);
     registry.register(class_name, "realpath0", "(J)[B", realpath_0);
     registry.register(class_name, "rename0", "(JJ)V", rename_0);
@@ -123,7 +149,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "unlink0", "(J)V", unlink_0);
     registry.register(class_name, "unlinkat0", "(IJI)V", unlinkat_0);
     registry.register(class_name, "utimes0", "(JJJ)V", utimes_0);
-    registry.register(class_name, "write", "(IJI)I", write);
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -182,7 +207,19 @@ async fn fchmod(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn fchmod_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn fchown(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn fchown_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -242,6 +279,12 @@ async fn fstat(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Val
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn fstat_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn fstatat_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -254,7 +297,19 @@ async fn futimens(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn futimens_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn futimes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn futimes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -383,7 +438,19 @@ async fn read(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn read_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn readdir(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn readdir_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -480,5 +547,11 @@ async fn utimes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn write(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn write_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }

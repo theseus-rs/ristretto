@@ -11,14 +11,21 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_18: Version = Version::Java18 { minor: 0 };
 
 /// Register all native methods for `java.lang.Object`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Object";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version >= &JAVA_11 {
+    if java_version >= JAVA_11 {
         registry.register(class_name, "registerNatives", "()V", register_natives);
+    }
+
+    if java_version <= JAVA_18 {
+        registry.register(class_name, "wait", "(J)V", wait);
+    } else {
+        registry.register(class_name, "wait0", "(J)V", wait_0);
     }
 
     registry.register(class_name, "clone", "()Ljava/lang/Object;", clone);
@@ -26,7 +33,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "hashCode", "()I", hash_code);
     registry.register(class_name, "notify", "()V", notify);
     registry.register(class_name, "notifyAll", "()V", notify_all);
-    registry.register(class_name, "wait", "(J)V", wait);
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -100,5 +106,11 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn wait(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn wait_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }

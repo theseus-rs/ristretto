@@ -4,6 +4,7 @@ use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 
 /// Register all native methods for `jdk.internal.misc.CDS`.
@@ -79,22 +80,28 @@ async fn dump_dynamic_archive(
     todo!()
 }
 
+#[expect(clippy::cast_possible_wrap)]
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_random_seed_for_dumping(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    let version = env!("CARGO_PKG_VERSION");
+    let mut hasher = DefaultHasher::new();
+    version.hash(&mut hasher);
+    let hash = hasher.finish() as i64;
+    Ok(Some(Value::Long(hash)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn initialize_from_archive(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    let _class = arguments.pop_reference()?;
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -103,7 +110,7 @@ async fn is_dumping_archive_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    Ok(Some(Value::from(false)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -112,7 +119,7 @@ async fn is_dumping_class_list_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    Ok(Some(Value::from(false)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -121,7 +128,7 @@ async fn is_sharing_enabled_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    Ok(Some(Value::from(false)))
 }
 
 #[expect(clippy::needless_pass_by_value)]

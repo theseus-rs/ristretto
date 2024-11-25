@@ -17,28 +17,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
-        "findEntry0",
-        "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J",
-        find_entry_0,
-    );
-    registry.register(
-        class_name,
         "load",
-        "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZZ)Z",
+        "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z",
         load,
     );
-    registry.register(class_name, "unload", "(Ljava/lang/String;ZZJ)V", unload);
+    registry.register(class_name, "unload", "(Ljava/lang/String;ZJ)V", unload);
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn find_builtin_lib(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
-}
-
-#[expect(clippy::needless_pass_by_value)]
-#[async_recursion(?Send)]
-async fn find_entry_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

@@ -3,18 +3,28 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_18: Version = Version::Java18 { minor: 0 };
 
 /// Register all native methods for `jdk.internal.perf.Perf`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/perf/Perf";
-    registry.register(
-        class_name,
-        "attach",
-        "(Ljava/lang/String;II)Ljava/nio/ByteBuffer;",
-        attach,
-    );
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_18 {
+        registry.register(
+            class_name,
+            "attach",
+            "(Ljava/lang/String;II)Ljava/nio/ByteBuffer;",
+            attach,
+        );
+    } else {
+        registry.register(class_name, "attach0", "(I)Ljava/nio/ByteBuffer;", attach_0);
+    }
+
     registry.register(
         class_name,
         "createByteArray",
@@ -36,6 +46,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn attach(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn attach_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

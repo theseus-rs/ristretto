@@ -118,6 +118,81 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
+    if java_version >= JAVA_18 {
+        registry.register(
+            class_name,
+            "flush",
+            "(Ljdk/jfr/internal/EventWriter;II)Z",
+            flush,
+        );
+        registry.register(
+            class_name,
+            "getEventWriter",
+            "()Ljava/lang/Object;",
+            get_event_writer,
+        );
+        registry.register(
+            class_name,
+            "newEventWriter",
+            "()Ljdk/jfr/internal/EventWriter;",
+            new_event_writer,
+        );
+        registry.register(class_name, "setSampleThreads", "(Z)V", set_sample_threads);
+    } else {
+        registry.register(class_name, "exclude", "(Ljava/lang/Thread;)V", exclude);
+        registry.register(class_name, "flush", "()V", flush);
+        registry.register(
+            class_name,
+            "flush",
+            "(Ljdk/jfr/internal/event/EventWriter;II)Z",
+            flush,
+        );
+        registry.register(
+            class_name,
+            "getConfiguration",
+            "(Ljava/lang/Class;)Ljava/lang/Object;",
+            get_configuration,
+        );
+        registry.register(
+            class_name,
+            "getEventWriter",
+            "()Ljdk/jfr/internal/event/EventWriter;",
+            get_event_writer,
+        );
+        registry.register(class_name, "isContainerized", "()Z", is_containerized);
+        registry.register(
+            class_name,
+            "isExcluded",
+            "(Ljava/lang/Class;)Z",
+            is_excluded,
+        );
+        registry.register(
+            class_name,
+            "isExcluded",
+            "(Ljava/lang/Thread;)Z",
+            is_excluded,
+        );
+        registry.register(
+            class_name,
+            "isInstrumented",
+            "(Ljava/lang/Class;)Z",
+            is_instrumented,
+        );
+        registry.register(class_name, "isRecording", "()Z", is_recording);
+        registry.register(
+            class_name,
+            "newEventWriter",
+            "()Ljdk/jfr/internal/event/EventWriter;",
+            new_event_writer,
+        );
+        registry.register(
+            class_name,
+            "setConfiguration",
+            "(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z",
+            set_configuration,
+        );
+    }
+
     registry.register(class_name, "abort", "(Ljava/lang/String;)V", abort);
     registry.register(
         class_name,
@@ -131,12 +206,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "destroyJFR", "()Z", destroy_jfr);
     registry.register(class_name, "emitEvent", "(JJJ)Z", emit_event);
     registry.register(class_name, "endRecording", "()V", end_recording);
-    registry.register(
-        class_name,
-        "flush",
-        "(Ljdk/jfr/internal/EventWriter;II)Z",
-        flush,
-    );
     registry.register(
         class_name,
         "getAllEventClasses",
@@ -154,12 +223,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "getClassId",
         "(Ljava/lang/Class;)J",
         get_class_id,
-    );
-    registry.register(
-        class_name,
-        "getEventWriter",
-        "()Ljava/lang/Object;",
-        get_event_writer,
     );
     registry.register(class_name, "getPid", "()Ljava/lang/String;", get_pid);
     registry.register(class_name, "getStackTraceId", "(I)J", get_stack_trace_id);
@@ -185,12 +248,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(class_name, "isAvailable", "()Z", is_available);
     registry.register(class_name, "log", "(IILjava/lang/String;)V", log);
-    registry.register(
-        class_name,
-        "newEventWriter",
-        "()Ljdk/jfr/internal/EventWriter;",
-        new_event_writer,
-    );
     registry.register(class_name, "registerNatives", "()V", register_natives);
     registry.register(
         class_name,
@@ -244,7 +301,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/String;)V",
         set_repository_location,
     );
-    registry.register(class_name, "setSampleThreads", "(Z)V", set_sample_threads);
     registry.register(class_name, "setStackDepth", "(I)V", set_stack_depth);
     registry.register(
         class_name,
@@ -400,6 +456,12 @@ async fn get_class_id_non_intrinsic(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn get_configuration(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn get_dump_path(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -478,7 +540,19 @@ async fn is_available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn is_containerized(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn is_excluded(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn is_instrumented(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -530,6 +604,12 @@ async fn set_compressed_integers(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn set_configuration(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

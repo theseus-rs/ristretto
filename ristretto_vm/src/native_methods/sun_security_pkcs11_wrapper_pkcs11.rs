@@ -34,6 +34,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     if java_version >= JAVA_18 {
         registry.register(class_name, "C_SessionCancel", "(JJ)V", c_session_cancel);
     }
+    if java_version <= JAVA_18 {
+        registry.register(class_name, "disconnect", "()V", disconnect);
+    } else {
+        registry.register(class_name, "disconnect", "(J)V", disconnect);
+    }
 
     registry.register(class_name, "C_CloseSession", "(J)V", c_close_session);
     registry.register(
@@ -252,7 +257,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(J[BJLsun/security/pkcs11/wrapper/CK_MECHANISM;)J",
         create_native_key,
     );
-    registry.register(class_name, "disconnect", "()V", disconnect);
     registry.register(class_name, "finalizeLibrary", "()V", finalize_library);
     registry.register(class_name, "freeMechanism", "(J)J", free_mechanism);
     registry.register(

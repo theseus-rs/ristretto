@@ -44,28 +44,32 @@ use crate::native_methods::{
     java_lang_stackstreamfactory_abstractstackwalker, java_lang_stacktraceelement,
     java_lang_strictmath, java_lang_string, java_lang_stringcoding, java_lang_stringutf16,
     java_lang_system, java_lang_thread, java_lang_throwable, java_lang_unixprocess,
-    java_net_abstractplaindatagramsocketimpl, java_net_abstractplainsocketimpl,
-    java_net_datagrampacket, java_net_inet4address, java_net_inet4addressimpl,
-    java_net_inet6address, java_net_inet6addressimpl, java_net_inetaddress,
-    java_net_inetaddressimplfactory, java_net_networkinterface, java_net_plaindatagramsocketimpl,
-    java_net_plainsocketimpl, java_net_socketcleanable, java_net_socketinputstream,
-    java_net_socketoutputstream, java_nio_bits, java_nio_mappedbytebuffer,
-    java_nio_mappedmemoryutils, java_security_accesscontroller,
+    java_lang_virtualthread, java_net_abstractplaindatagramsocketimpl,
+    java_net_abstractplainsocketimpl, java_net_datagrampacket, java_net_inet4address,
+    java_net_inet4addressimpl, java_net_inet6address, java_net_inet6addressimpl,
+    java_net_inetaddress, java_net_inetaddressimplfactory, java_net_networkinterface,
+    java_net_plaindatagramsocketimpl, java_net_plainsocketimpl, java_net_socketcleanable,
+    java_net_socketinputstream, java_net_socketoutputstream, java_nio_bits,
+    java_nio_mappedbytebuffer, java_nio_mappedmemoryutils, java_security_accesscontroller,
     java_util_concurrent_atomic_atomiclong, java_util_jar_jarfile, java_util_logging_filehandler,
     java_util_prefs_filesystempreferences, java_util_prefs_macosxpreferencesfile,
     java_util_timezone, java_util_zip_adler32, java_util_zip_crc32, java_util_zip_deflater,
     java_util_zip_inflater, java_util_zip_zipfile, jdk_internal_agent_filesystemimpl,
-    jdk_internal_foreign_abi_programmableinvoker,
-    jdk_internal_foreign_abi_programmableupcallhandler, jdk_internal_foreign_abi_upcallstubs,
-    jdk_internal_invoke_nativeentrypoint, jdk_internal_jimage_nativeimagebuffer,
-    jdk_internal_loader_bootloader, jdk_internal_loader_nativelibraries, jdk_internal_misc_cds,
-    jdk_internal_misc_scopedmemoryaccess, jdk_internal_misc_signal, jdk_internal_misc_unsafe,
-    jdk_internal_misc_vm, jdk_internal_perf_perf, jdk_internal_reflect_constantpool,
+    jdk_internal_foreign_abi_nativeentrypoint, jdk_internal_foreign_abi_programmableinvoker,
+    jdk_internal_foreign_abi_programmableupcallhandler, jdk_internal_foreign_abi_upcalllinker,
+    jdk_internal_foreign_abi_upcallstubs, jdk_internal_invoke_nativeentrypoint,
+    jdk_internal_jimage_nativeimagebuffer, jdk_internal_loader_bootloader,
+    jdk_internal_loader_nativelibraries, jdk_internal_loader_nativelibrary,
+    jdk_internal_loader_rawnativelibraries, jdk_internal_misc_cds,
+    jdk_internal_misc_previewfeatures, jdk_internal_misc_scopedmemoryaccess,
+    jdk_internal_misc_signal, jdk_internal_misc_unsafe, jdk_internal_misc_vm,
+    jdk_internal_perf_perf, jdk_internal_reflect_constantpool,
     jdk_internal_reflect_directconstructorhandleaccessor_nativeaccessor,
     jdk_internal_reflect_directmethodhandleaccessor_nativeaccessor,
     jdk_internal_reflect_nativeconstructoraccessorimpl,
     jdk_internal_reflect_nativemethodaccessorimpl, jdk_internal_reflect_reflection,
-    jdk_internal_util_systemprops_raw, jdk_internal_vm_vector_vectorsupport,
+    jdk_internal_util_systemprops_raw, jdk_internal_vm_continuation,
+    jdk_internal_vm_continuationsupport, jdk_internal_vm_vector_vectorsupport,
     jdk_internal_vm_vmsupport, jdk_jfr_internal_jvm, jdk_net_macosxsocketoptions,
     jdk_vm_ci_runtime_jvmci, sun_awt_cgraphicsconfig, sun_awt_cgraphicsdevice,
     sun_awt_cgraphicsenvironment, sun_awt_debugsettings, sun_awt_defaultmouseinfopeer,
@@ -159,6 +163,7 @@ use std::sync::Arc;
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
+const JAVA_18: Version = Version::Java18 { minor: 0 };
 
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
@@ -279,6 +284,12 @@ impl MethodRegistry {
             java_net_socketinputstream::register(&mut method_registry);
             java_net_socketoutputstream::register(&mut method_registry);
         }
+        if java_version <= JAVA_18 {
+            java_net_inetaddressimplfactory::register(&mut method_registry);
+            jdk_internal_foreign_abi_programmableinvoker::register(&mut method_registry);
+            jdk_internal_foreign_abi_programmableupcallhandler::register(&mut method_registry);
+            jdk_internal_invoke_nativeentrypoint::register(&mut method_registry);
+        }
 
         apple_laf_jrsuiconstants::register(&mut method_registry);
         apple_laf_jrsuicontrol::register(&mut method_registry);
@@ -396,12 +407,12 @@ impl MethodRegistry {
         java_lang_reflect_array::register(&mut method_registry);
         java_lang_reflect_executable::register(&mut method_registry);
         java_lang_reflect_field::register(&mut method_registry);
+        java_lang_virtualthread::register(&mut method_registry);
         java_net_inet4address::register(&mut method_registry);
         java_net_inet4addressimpl::register(&mut method_registry);
         java_net_inet6address::register(&mut method_registry);
         java_net_inet6addressimpl::register(&mut method_registry);
         java_net_inetaddress::register(&mut method_registry);
-        java_net_inetaddressimplfactory::register(&mut method_registry);
         java_net_networkinterface::register(&mut method_registry);
         java_nio_mappedmemoryutils::register(&mut method_registry);
         java_security_accesscontroller::register(&mut method_registry);
@@ -414,14 +425,16 @@ impl MethodRegistry {
         java_util_zip_deflater::register(&mut method_registry);
         java_util_zip_inflater::register(&mut method_registry);
         jdk_internal_agent_filesystemimpl::register(&mut method_registry);
-        jdk_internal_foreign_abi_programmableinvoker::register(&mut method_registry);
-        jdk_internal_foreign_abi_programmableupcallhandler::register(&mut method_registry);
+        jdk_internal_foreign_abi_nativeentrypoint::register(&mut method_registry);
+        jdk_internal_foreign_abi_upcalllinker::register(&mut method_registry);
         jdk_internal_foreign_abi_upcallstubs::register(&mut method_registry);
-        jdk_internal_invoke_nativeentrypoint::register(&mut method_registry);
         jdk_internal_jimage_nativeimagebuffer::register(&mut method_registry);
+        jdk_internal_loader_nativelibrary::register(&mut method_registry);
+        jdk_internal_loader_rawnativelibraries::register(&mut method_registry);
         jdk_internal_loader_bootloader::register(&mut method_registry);
         jdk_internal_loader_nativelibraries::register(&mut method_registry);
         jdk_internal_misc_cds::register(&mut method_registry);
+        jdk_internal_misc_previewfeatures::register(&mut method_registry);
         jdk_internal_misc_scopedmemoryaccess::register(&mut method_registry);
         jdk_internal_misc_signal::register(&mut method_registry);
         jdk_internal_misc_unsafe::register(&mut method_registry);
@@ -438,6 +451,8 @@ impl MethodRegistry {
             &mut method_registry,
         );
         jdk_internal_util_systemprops_raw::register(&mut method_registry);
+        jdk_internal_vm_continuation::register(&mut method_registry);
+        jdk_internal_vm_continuationsupport::register(&mut method_registry);
         jdk_internal_vm_vmsupport::register(&mut method_registry);
         jdk_internal_vm_vector_vectorsupport::register(&mut method_registry);
         jdk_jfr_internal_jvm::register(&mut method_registry);

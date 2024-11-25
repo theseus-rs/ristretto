@@ -10,13 +10,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 const JAVA_11: Version = Version::Java17 { minor: 0 };
+const JAVA_19: Version = Version::Java19 { minor: 0 };
 
 /// Register all native methods for `java.lang.Thread`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Thread";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_11 {
+    if java_version <= JAVA_11 {
         registry.register(class_name, "countStackFrames", "()I", count_stack_frames);
         registry.register(class_name, "isAlive", "()Z", is_alive);
         registry.register(class_name, "isInterrupted", "(Z)Z", is_interrupted);
@@ -27,6 +28,48 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "()V",
             clear_interrupt_event,
         );
+    }
+
+    if java_version >= JAVA_19 {
+        registry.register(
+            class_name,
+            "currentCarrierThread",
+            "()Ljava/lang/Thread;",
+            current_carrier_thread,
+        );
+        registry.register(
+            class_name,
+            "extentLocalCache",
+            "()[Ljava/lang/Object;",
+            extent_local_cache,
+        );
+        registry.register(
+            class_name,
+            "getNextThreadIdOffset",
+            "()J",
+            get_next_thread_id_offset,
+        );
+        registry.register(
+            class_name,
+            "getStackTrace0",
+            "()Ljava/lang/Object;",
+            get_stack_trace_0,
+        );
+        registry.register(class_name, "isAlive0", "()Z", is_alive_0);
+        registry.register(
+            class_name,
+            "setCurrentThread",
+            "(Ljava/lang/Thread;)V",
+            set_current_thread,
+        );
+        registry.register(
+            class_name,
+            "setExtentLocalCache",
+            "([Ljava/lang/Object;)V",
+            set_extent_local_cache,
+        );
+        registry.register(class_name, "sleep0", "(J)V", sleep_0);
+        registry.register(class_name, "yield0", "()V", yield_0);
     }
 
     registry.register(
@@ -58,11 +101,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         set_native_name,
     );
     registry.register(class_name, "setPriority0", "(I)V", set_priority_0);
-    registry.register(class_name, "sleep", "(J)V", sleep);
     registry.register(class_name, "start0", "()V", start_0);
     registry.register(class_name, "stop0", "(Ljava/lang/Object;)V", stop_0);
     registry.register(class_name, "suspend0", "()V", suspend_0);
-    registry.register(class_name, "yield", "()V", r#yield);
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -84,6 +125,16 @@ async fn count_stack_frames(thread: Arc<Thread>, _arguments: Arguments) -> Resul
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn current_carrier_thread(
+    thread: Arc<Thread>,
+    arguments: Arguments,
+) -> Result<Option<Value>> {
+    // TODO: correct this once threading is implemented
+    current_thread(thread, arguments).await
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn current_thread(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let thread = thread.java_object().await;
     Ok(Some(thread))
@@ -92,6 +143,27 @@ async fn current_thread(thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn dump_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn extent_local_cache(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_next_thread_id_offset(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_stack_trace_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -124,6 +196,12 @@ async fn is_alive(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn is_alive_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    is_alive(thread, arguments).await
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn is_interrupted(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -137,6 +215,21 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn resume_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn set_current_thread(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn set_extent_local_cache(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -173,11 +266,14 @@ async fn sleep(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn start_0(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    let thread_id = i64::try_from(thread.id())?;
-    let object: Object = thread.java_object().await.try_into()?;
-    object.set_value("eetop", Value::from(thread_id))?;
-    Ok(None)
+async fn sleep_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    sleep(thread, arguments).await
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn start_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -200,4 +296,10 @@ async fn r#yield(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
     #[cfg(target_arch = "wasm32")]
     std::thread::yield_now();
     Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn yield_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    r#yield(thread, arguments).await
 }
