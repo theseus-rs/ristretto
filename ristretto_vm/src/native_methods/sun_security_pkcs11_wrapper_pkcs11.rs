@@ -8,14 +8,15 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_18: Version = Version::Java18 { minor: 0 };
 
 /// Register all native methods for `sun.security.pkcs11.wrapper.PKCS11`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/security/pkcs11/wrapper/PKCS11";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_11 {
+    if java_version <= JAVA_11 {
         registry.register(
             class_name,
             "C_GCMDecryptInitWithRetry",
@@ -28,6 +29,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
             c_gcm_encrypt_init_with_retry,
         );
+    }
+
+    if java_version >= JAVA_18 {
+        registry.register(class_name, "C_SessionCancel", "(JJ)V", c_session_cancel);
     }
 
     registry.register(class_name, "C_CloseSession", "(J)V", c_close_session);
@@ -238,7 +243,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(
         class_name,
         "connect",
-        "(Ljava/lang/String;Ljava/lang/String;)V",
+        "(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;",
         connect,
     );
     registry.register(
@@ -523,6 +528,12 @@ async fn c_open_session(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn c_seed_random(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn c_session_cancel(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

@@ -8,14 +8,16 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
+const JAVA_18: Version = Version::Java18 { minor: 0 };
 
 /// Register all native methods for `jdk.jfr.internal.JVM`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/jfr/internal/JVM";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_11 {
+    if java_version <= JAVA_11 {
         registry.register(
             class_name,
             "emitOldObjectSamples",
@@ -35,7 +37,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             set_method_sampling_interval,
         );
     } else {
-        registry.register(class_name, "emitDataLoss", "(J)V", emit_data_loss);
         registry.register(
             class_name,
             "emitOldObjectSamples",
@@ -83,13 +84,38 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z",
             set_handler,
         );
+        registry.register(class_name, "setThrottle", "(JJJ)Z", set_throttle);
+    }
+
+    if java_version == JAVA_17 {
+        registry.register(class_name, "emitDataLoss", "(J)V", emit_data_loss);
         registry.register(
             class_name,
             "setMethodSamplingPeriod",
             "(JJ)V",
             set_method_sampling_period,
         );
-        registry.register(class_name, "setThrottle", "(JJJ)Z", set_throttle);
+    }
+
+    if java_version >= JAVA_18 {
+        registry.register(
+            class_name,
+            "getDumpPath",
+            "()Ljava/lang/String;",
+            get_dump_path,
+        );
+        registry.register(
+            class_name,
+            "setDumpPath",
+            "(Ljava/lang/String;)V",
+            set_dump_path,
+        );
+        registry.register(
+            class_name,
+            "setMethodSamplingInterval",
+            "(JJ)V",
+            set_method_sampling_interval,
+        );
     }
 
     registry.register(class_name, "abort", "(Ljava/lang/String;)V", abort);
@@ -233,6 +259,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         set_thread_buffer_size,
     );
     registry.register(class_name, "setThreshold", "(JJ)Z", set_threshold);
+    registry.register(class_name, "setThrottle", "(JJJ)Z", set_throttle);
     registry.register(class_name, "shouldRotateDisk", "()Z", should_rotate_disk);
     registry.register(
         class_name,
@@ -373,6 +400,12 @@ async fn get_class_id_non_intrinsic(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn get_dump_path(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn get_event_writer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -503,6 +536,12 @@ async fn set_compressed_integers(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_cutoff(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn set_dump_path(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

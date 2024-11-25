@@ -8,19 +8,23 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `sun.print.CUPSPrinter`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/print/CUPSPrinter";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version >= &JAVA_11 {
-        registry.register(
-            class_name,
-            "getCupsDefaultPrinters",
-            "()[Ljava/lang/String;",
-            get_cups_default_printers,
-        );
+    if java_version >= JAVA_11 {
+        if java_version <= JAVA_17 {
+            registry.register(
+                class_name,
+                "getCupsDefaultPrinters",
+                "()[Ljava/lang/String;",
+                get_cups_default_printers,
+            );
+        }
+
         registry.register(
             class_name,
             "getResolutions",

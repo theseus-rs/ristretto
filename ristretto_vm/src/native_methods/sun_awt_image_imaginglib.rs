@@ -63,7 +63,7 @@ async fn convolve_raster(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(None)
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]

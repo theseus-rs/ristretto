@@ -6,21 +6,26 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-/// Register all native methods for `sun.management.GarbageCollectorImpl`.
+/// Register all native methods for `java.lang.ref.Finalizer`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/management/GarbageCollectorImpl";
+    let class_name = "java/lang/ref/Finalizer";
     registry.register(
         class_name,
-        "getCollectionCount",
-        "()J",
-        get_collection_count,
+        "isFinalizationEnabled",
+        "()Z",
+        is_finalization_enabled,
     );
-    registry.register(class_name, "getCollectionTime", "()J", get_collection_time);
+    registry.register(
+        class_name,
+        "reportComplete",
+        "(Ljava/lang/Object;)V",
+        report_complete,
+    );
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn get_collection_count(
+async fn is_finalization_enabled(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -29,6 +34,6 @@ async fn get_collection_count(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn get_collection_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn report_complete(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }

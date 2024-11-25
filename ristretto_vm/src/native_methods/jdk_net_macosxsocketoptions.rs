@@ -8,13 +8,14 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_18: Version = Version::Java18 { minor: 0 };
 
 /// Register all native methods for `jdk.net.MacOSXSocketOptions`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/net/MacOSXSocketOptions";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_11 {
+    if java_version <= JAVA_11 || java_version >= JAVA_18 {
         registry.register(
             class_name,
             "getTcpkeepAliveProbes0",

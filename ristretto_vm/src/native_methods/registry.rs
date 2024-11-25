@@ -37,10 +37,10 @@ use crate::native_methods::{
     java_lang_invoke_methodhandle, java_lang_invoke_methodhandlenatives,
     java_lang_invoke_varhandle, java_lang_module, java_lang_nullpointerexception, java_lang_object,
     java_lang_package, java_lang_processenvironment, java_lang_processhandleimpl,
-    java_lang_processhandleimpl_info, java_lang_processimpl, java_lang_ref_phantomreference,
-    java_lang_ref_reference, java_lang_reflect_array, java_lang_reflect_executable,
-    java_lang_reflect_field, java_lang_reflect_proxy, java_lang_runtime, java_lang_securitymanager,
-    java_lang_shutdown, java_lang_stackstreamfactory,
+    java_lang_processhandleimpl_info, java_lang_processimpl, java_lang_ref_finalizer,
+    java_lang_ref_phantomreference, java_lang_ref_reference, java_lang_reflect_array,
+    java_lang_reflect_executable, java_lang_reflect_field, java_lang_reflect_proxy,
+    java_lang_runtime, java_lang_securitymanager, java_lang_shutdown, java_lang_stackstreamfactory,
     java_lang_stackstreamfactory_abstractstackwalker, java_lang_stacktraceelement,
     java_lang_strictmath, java_lang_string, java_lang_stringcoding, java_lang_stringutf16,
     java_lang_system, java_lang_thread, java_lang_throwable, java_lang_unixprocess,
@@ -61,6 +61,8 @@ use crate::native_methods::{
     jdk_internal_loader_bootloader, jdk_internal_loader_nativelibraries, jdk_internal_misc_cds,
     jdk_internal_misc_scopedmemoryaccess, jdk_internal_misc_signal, jdk_internal_misc_unsafe,
     jdk_internal_misc_vm, jdk_internal_perf_perf, jdk_internal_reflect_constantpool,
+    jdk_internal_reflect_directconstructorhandleaccessor_nativeaccessor,
+    jdk_internal_reflect_directmethodhandleaccessor_nativeaccessor,
     jdk_internal_reflect_nativeconstructoraccessorimpl,
     jdk_internal_reflect_nativemethodaccessorimpl, jdk_internal_reflect_reflection,
     jdk_internal_util_systemprops_raw, jdk_internal_vm_vector_vectorsupport,
@@ -176,12 +178,13 @@ impl MethodRegistry {
     /// Create a new registry.
     #[expect(clippy::too_many_lines)]
     pub fn new(java_version: &Version) -> Self {
+        let java_version = java_version.clone();
         let mut method_registry = MethodRegistry {
             java_version: java_version.clone(),
             methods: HashMap::new(),
         };
 
-        if java_version <= &JAVA_8 {
+        if java_version <= JAVA_8 {
             apple_applescript_applescriptengine::register(&mut method_registry);
             apple_applescript_applescriptenginefactory::register(&mut method_registry);
             apple_launcher_javaapplauncher::register(&mut method_registry);
@@ -251,7 +254,8 @@ impl MethodRegistry {
             sun_reflect_nativemethodaccessorimpl::register(&mut method_registry);
             sun_reflect_reflection::register(&mut method_registry);
             sun_tracing_dtrace_jvm::register(&mut method_registry);
-        } else if java_version == &JAVA_11 {
+        }
+        if java_version == JAVA_11 {
             com_sun_java_util_jar_pack_nativeunpack::register(&mut method_registry);
             java_io_objectinputstream::register(&mut method_registry);
             java_io_objectoutputstream::register(&mut method_registry);
@@ -264,6 +268,16 @@ impl MethodRegistry {
             sun_security_ec_ecdhkeyagreement::register(&mut method_registry);
             sun_security_ec_ecdsasignature::register(&mut method_registry);
             sun_security_ec_eckeypairgenerator::register(&mut method_registry);
+        }
+        if java_version <= JAVA_17 {
+            java_net_abstractplaindatagramsocketimpl::register(&mut method_registry);
+            java_net_abstractplainsocketimpl::register(&mut method_registry);
+            java_net_datagrampacket::register(&mut method_registry);
+            java_net_plaindatagramsocketimpl::register(&mut method_registry);
+            java_net_plainsocketimpl::register(&mut method_registry);
+            java_net_socketcleanable::register(&mut method_registry);
+            java_net_socketinputstream::register(&mut method_registry);
+            java_net_socketoutputstream::register(&mut method_registry);
         }
 
         apple_laf_jrsuiconstants::register(&mut method_registry);
@@ -376,14 +390,12 @@ impl MethodRegistry {
         java_lang_invoke_methodhandle::register(&mut method_registry);
         java_lang_invoke_methodhandlenatives::register(&mut method_registry);
         java_lang_invoke_varhandle::register(&mut method_registry);
+        java_lang_ref_finalizer::register(&mut method_registry);
         java_lang_ref_phantomreference::register(&mut method_registry);
         java_lang_ref_reference::register(&mut method_registry);
         java_lang_reflect_array::register(&mut method_registry);
         java_lang_reflect_executable::register(&mut method_registry);
         java_lang_reflect_field::register(&mut method_registry);
-        java_net_abstractplaindatagramsocketimpl::register(&mut method_registry);
-        java_net_abstractplainsocketimpl::register(&mut method_registry);
-        java_net_datagrampacket::register(&mut method_registry);
         java_net_inet4address::register(&mut method_registry);
         java_net_inet4addressimpl::register(&mut method_registry);
         java_net_inet6address::register(&mut method_registry);
@@ -391,11 +403,6 @@ impl MethodRegistry {
         java_net_inetaddress::register(&mut method_registry);
         java_net_inetaddressimplfactory::register(&mut method_registry);
         java_net_networkinterface::register(&mut method_registry);
-        java_net_plaindatagramsocketimpl::register(&mut method_registry);
-        java_net_plainsocketimpl::register(&mut method_registry);
-        java_net_socketcleanable::register(&mut method_registry);
-        java_net_socketinputstream::register(&mut method_registry);
-        java_net_socketoutputstream::register(&mut method_registry);
         java_nio_mappedmemoryutils::register(&mut method_registry);
         java_security_accesscontroller::register(&mut method_registry);
         java_util_timezone::register(&mut method_registry);
@@ -424,6 +431,12 @@ impl MethodRegistry {
         jdk_internal_reflect_nativeconstructoraccessorimpl::register(&mut method_registry);
         jdk_internal_reflect_nativemethodaccessorimpl::register(&mut method_registry);
         jdk_internal_reflect_reflection::register(&mut method_registry);
+        jdk_internal_reflect_directconstructorhandleaccessor_nativeaccessor::register(
+            &mut method_registry,
+        );
+        jdk_internal_reflect_directmethodhandleaccessor_nativeaccessor::register(
+            &mut method_registry,
+        );
         jdk_internal_util_systemprops_raw::register(&mut method_registry);
         jdk_internal_vm_vmsupport::register(&mut method_registry);
         jdk_internal_vm_vector_vectorsupport::register(&mut method_registry);

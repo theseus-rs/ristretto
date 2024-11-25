@@ -11,6 +11,7 @@ const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `sun.nio.ch.FileDispatcherImpl`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/nio/ch/FileDispatcherImpl";
     let java_version = registry.java_version().clone();

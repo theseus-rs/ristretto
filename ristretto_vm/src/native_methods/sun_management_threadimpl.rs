@@ -3,13 +3,27 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `sun.management.ThreadImpl`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/management/ThreadImpl";
+    let java_version = registry.java_version();
+
+    if java_version >= &JAVA_17 {
+        registry.register(
+            class_name,
+            "getTotalThreadAllocatedMemory",
+            "()J",
+            get_total_thread_allocated_memory,
+        );
+    }
+
     registry.register(
         class_name,
         "dumpThreads0",
@@ -75,12 +89,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "getThreads",
         "()[Ljava/lang/Thread;",
         get_threads,
-    );
-    registry.register(
-        class_name,
-        "getTotalThreadAllocatedMemory",
-        "()J",
-        get_total_thread_allocated_memory,
     );
     registry.register(
         class_name,

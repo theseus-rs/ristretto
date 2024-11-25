@@ -8,15 +8,20 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_18: Version = Version::Java18 { minor: 0 };
 
 /// Register all native methods for `sun.nio.ch.IOUtil`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/nio/ch/IOUtil";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version >= &JAVA_11 {
+    if java_version >= JAVA_11 {
         registry.register(class_name, "drain1", "(I)I", drain_1);
         registry.register(class_name, "write1", "(IB)I", write_1);
+    }
+
+    if java_version >= JAVA_18 {
+        registry.register(class_name, "writevMax", "()J", writev_max);
     }
 
     registry.register(
@@ -103,5 +108,11 @@ async fn setfd_val(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn write_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn writev_max(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }

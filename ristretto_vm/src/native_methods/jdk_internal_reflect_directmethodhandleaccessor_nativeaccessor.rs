@@ -6,19 +6,19 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-/// Register all native methods for `sun.net.dns.ResolverConfigurationImpl`.
+/// Register all native methods for `jdk.internal.reflect.DirectMethodHandleAccessor$NativeAccessor`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/net/dns/ResolverConfigurationImpl";
+    let class_name = "jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor";
     registry.register(
         class_name,
-        "fallbackDomain0",
-        "()Ljava/lang/String;",
-        fallback_domain_0,
+        "invoke0",
+        "(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;",
+        invoke_0,
     );
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn fallback_domain_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn invoke_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }

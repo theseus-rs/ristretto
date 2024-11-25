@@ -41,7 +41,15 @@ async fn get_native_methods(version: &str) -> Result<HashMap<String, Vec<Arc<Met
                 methods.push(method.clone());
             }
         }
-        methods.sort_by(|a, b| a.name().cmp(b.name()));
+        methods.sort_by(|a, b| {
+            let a_name = a.name();
+            let b_name = b.name();
+            let a_descriptor = a.descriptor();
+            let b_descriptor = b.descriptor();
+            a_name
+                .cmp(b_name)
+                .then_with(|| a_descriptor.cmp(b_descriptor))
+        });
         if !methods.is_empty() {
             native_methods.insert(class.name().to_string(), methods);
         }
@@ -71,10 +79,18 @@ async fn write_classes(version: &str) -> Result<()> {
     let mut classes: Vec<String> = native_methods.keys().map(ToString::to_string).collect();
     classes.sort();
 
-    let class_file_name = format!("{version}.txt");
-    let mut class_file = File::create(class_file_name)?;
+    let classes_file_name = format!("classes-{version}.txt");
+    let mut classes_file = File::create(classes_file_name)?;
+    let methods_file_name = format!("methods-{version}.txt");
+    let mut methods_file = File::create(methods_file_name)?;
     for class_name in classes {
-        class_file.write_all(format!("{class_name}\n").as_bytes())?;
+        classes_file.write_all(format!("{class_name}\n").as_bytes())?;
+        for method in native_methods.get(&class_name).cloned().unwrap_or_default() {
+            let method_name = method.name();
+            let method_descriptor = method.descriptor();
+            methods_file
+                .write_all(format!("{class_name}.{method_name}{method_descriptor}\n").as_bytes())?;
+        }
     }
 
     Ok(())

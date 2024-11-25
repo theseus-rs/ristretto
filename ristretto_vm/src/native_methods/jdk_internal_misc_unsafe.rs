@@ -8,14 +8,15 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `jdk.internal.misc.Unsafe`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/misc/Unsafe";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_11 {
+    if java_version <= JAVA_11 {
         registry.register(class_name, "addressSize0", "()I", address_size_0);
         registry.register(
             class_name,
@@ -107,6 +108,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             writeback_post_sync_0,
         );
         registry.register(class_name, "writebackPreSync0", "()V", writeback_pre_sync_0);
+    }
+
+    if java_version <= JAVA_17 {
+        registry.register(class_name, "loadFence", "()V", load_fence);
+        registry.register(class_name, "storeFence", "()V", store_fence);
     }
 
     registry.register(
@@ -270,7 +276,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(J)Ljava/lang/Object;",
         get_uncompressed_object,
     );
-    registry.register(class_name, "loadFence", "()V", load_fence);
     registry.register(
         class_name,
         "objectFieldOffset0",
@@ -393,7 +398,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/reflect/Field;)J",
         static_field_offset_0,
     );
-    registry.register(class_name, "storeFence", "()V", store_fence);
     registry.register(
         class_name,
         "throwException",
