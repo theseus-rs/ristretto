@@ -3,19 +3,52 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for `java.lang.invoke.MethodHandleNatives`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/invoke/MethodHandleNatives";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(class_name, "getConstant", "(I)I", get_constant);
+        registry.register(
+            class_name,
+            "resolve",
+            "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;",
+            resolve,
+        );
+    } else {
+        registry.register(
+            class_name,
+            "clearCallSiteContext",
+            "(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V",
+            clear_call_site_context,
+        );
+        registry.register(
+            class_name,
+            "copyOutBootstrapArguments",
+            "(Ljava/lang/Class;[III[Ljava/lang/Object;IZLjava/lang/Object;)V",
+            copy_out_bootstrap_arguments,
+        );
+        registry.register(
+            class_name,
+            "resolve",
+            "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;Z)Ljava/lang/invoke/MemberName;",
+            resolve,
+        );
+    }
+
     registry.register(
         class_name,
         "expand",
         "(Ljava/lang/invoke/MemberName;)V",
         expand,
     );
-    registry.register(class_name, "getConstant", "(I)I", get_constant);
     registry.register(
         class_name,
         "getMemberVMInfo",
@@ -44,12 +77,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "registerNatives", "()V", register_natives);
     registry.register(
         class_name,
-        "resolve",
-        "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;",
-        resolve,
-    );
-    registry.register(
-        class_name,
         "setCallSiteTargetNormal",
         "(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
         set_call_site_target_normal,
@@ -72,6 +99,24 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/invoke/MemberName;)J",
         static_field_offset,
     );
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn clear_call_site_context(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn copy_out_bootstrap_arguments(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]

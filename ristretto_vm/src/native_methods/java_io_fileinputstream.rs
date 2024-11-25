@@ -3,14 +3,22 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for `java.io.FileInputStream`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/io/FileInputStream";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(class_name, "close0", "()V", close_0);
+    }
+
     registry.register(class_name, "available0", "()I", available_0);
-    registry.register(class_name, "close0", "()V", close_0);
     registry.register(class_name, "initIDs", "()V", init_ids);
     registry.register(class_name, "open0", "(Ljava/lang/String;)V", open_0);
     registry.register(class_name, "read0", "()I", read_0);

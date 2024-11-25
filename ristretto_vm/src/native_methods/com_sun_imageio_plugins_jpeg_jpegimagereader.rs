@@ -3,12 +3,26 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `com.sun.imageio.plugins.jpeg.JPEGImageReader`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "com/sun/imageio/plugins/jpeg/JPEGImageReader";
+    let java_version = registry.java_version();
+
+    if java_version >= &JAVA_11 {
+        registry.register(
+            class_name,
+            "clearNativeReadAbortFlag",
+            "(J)V",
+            clear_native_read_abort_flag,
+        );
+    }
+
     registry.register(class_name, "abortRead", "(J)V", abort_read);
     registry.register(class_name, "disposeReader", "(J)V", dispose_reader);
     registry.register(
@@ -34,6 +48,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn abort_read(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn clear_native_read_abort_flag(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     todo!()
 }
 

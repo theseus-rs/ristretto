@@ -5,8 +5,11 @@ use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
 use bitflags::bitflags;
+use ristretto_classfile::Version;
 use ristretto_classloader::{ConcurrentVec, Reference, Value};
 use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 bitflags! {
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -29,10 +32,20 @@ bitflags! {
 /// Register all native methods for `sun.nio.fs.UnixNativeDispatcher`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/nio/fs/UnixNativeDispatcher";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(class_name, "close", "(I)V", close);
+    } else {
+        registry.register(class_name, "close0", "(I)V", close_0);
+        registry.register(class_name, "exists0", "(J)Z", exists_0);
+        registry.register(class_name, "getlinelen", "(J)I", getlinelen);
+        registry.register(class_name, "stat1", "(J)I", stat_1);
+    }
+
     registry.register(class_name, "access0", "(JI)V", access_0);
     registry.register(class_name, "chmod0", "(JI)V", chmod_0);
     registry.register(class_name, "chown0", "(JII)V", chown_0);
-    registry.register(class_name, "close", "(I)V", close);
     registry.register(class_name, "closedir", "(J)V", closedir);
     registry.register(class_name, "dup", "(I)I", dup);
     registry.register(class_name, "fchmod", "(II)V", fchmod);
@@ -128,6 +141,12 @@ async fn close(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Val
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn closedir(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -135,6 +154,12 @@ async fn closedir(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn dup(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn exists_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -219,6 +244,12 @@ async fn getgrgid(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn getgrnam_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn getlinelen(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -355,6 +386,12 @@ async fn stat_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option
     // TODO: Implement the stat0 method
 
     Ok(Some(Value::Int(0)))
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn stat_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]

@@ -4,14 +4,22 @@ use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::{Reference, Value};
 use std::io::Write;
 use std::sync::Arc;
 
+const JAVA_8: Version = Version::Java8 { minor: 0 };
+
 /// Register all native methods for `java.io.FileOutputStream`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/io/FileOutputStream";
-    registry.register(class_name, "close0", "()V", close_0);
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(class_name, "close0", "()V", close_0);
+    }
+
     registry.register(class_name, "initIDs", "()V", init_ids);
     registry.register(class_name, "open0", "(Ljava/lang/String;Z)V", open_0);
     registry.register(class_name, "write", "(IZ)V", write);

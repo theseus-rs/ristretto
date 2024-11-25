@@ -3,12 +3,22 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `sun.nio.ch.IOUtil`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/nio/ch/IOUtil";
+    let java_version = registry.java_version();
+
+    if java_version >= &JAVA_11 {
+        registry.register(class_name, "drain1", "(I)I", drain_1);
+        registry.register(class_name, "write1", "(IB)I", write_1);
+    }
+
     registry.register(
         class_name,
         "configureBlocking",
@@ -39,6 +49,12 @@ async fn configure_blocking(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn drain(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn drain_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
@@ -81,5 +97,11 @@ async fn random_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn setfd_val(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn write_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }

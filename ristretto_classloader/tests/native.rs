@@ -29,6 +29,11 @@ async fn get_native_methods(version: &str) -> Result<HashMap<String, Vec<Arc<Met
     let class_names = class_path.class_names().await?;
     let mut native_methods = HashMap::new();
     for class_name in class_names {
+        // Skip GraalVM and Hotspot classes
+        if class_name.starts_with("org/graalvm/") || class_name.starts_with("sun/jvm/hotspot") {
+            continue;
+        }
+
         let class = class_loader.load(&class_name).await?;
         let mut methods = Vec::new();
         for method in class.methods() {
@@ -47,15 +52,30 @@ async fn get_native_methods(version: &str) -> Result<HashMap<String, Vec<Arc<Met
 fn method_function_name(method: &Method) -> String {
     match method.name() {
         "initIDs" => "init_ids".to_string(),
+        "yield" => "r#yield".to_string(),
         method_name => method_name.to_string().to_case(Case::Snake),
     }
 }
 
 fn method_body(method: &Method) -> String {
     match method.name() {
-        "initIDs" | "registerNatives" => "Ok(None)".to_string(),
+        "init" | "initIDs" | "registerNatives" => "Ok(None)".to_string(),
         _ => "todo!()".to_string(),
     }
+}
+
+async fn write_classes(version: &str) -> Result<()> {
+    let native_methods = get_native_methods(version).await?;
+    let mut classes: Vec<String> = native_methods.keys().map(ToString::to_string).collect();
+    classes.sort();
+
+    let class_file_name = format!("{version}.txt");
+    let mut class_file = File::create(class_file_name)?;
+    for class_name in classes {
+        class_file.write_all(format!("{class_name}\n").as_bytes())?;
+    }
+
+    Ok(())
 }
 
 #[expect(dead_code)]
@@ -108,10 +128,26 @@ async fn write_native(version: &str) -> Result<()> {
         let _ = handlebars.render_to_write("template", &data, &mut output_file);
     }
 
-    mod_file.write_all("\nmod properties;\n".as_bytes())?;
-    mod_file.write_all("\nmod registry;\n".as_bytes())?;
-    mod_file.write_all("\npub use registry::MethodRegistry;\n".as_bytes())?;
+    mod_file.write_all("\n".as_bytes())?;
+    mod_file.write_all("mod properties;\n".as_bytes())?;
+    mod_file.write_all("mod registry;\n".as_bytes())?;
+    mod_file.write_all("pub use registry::MethodRegistry;\n".as_bytes())?;
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_native_classes() -> Result<()> {
+    // Enable to generate native class lists
+    write_classes("8.432.06.1").await?;
+    write_classes("11.0.25.9.1").await?;
+    write_classes("17.0.12.7.1").await?;
+    write_classes("18.0.2.9.1").await?;
+    write_classes("19.0.2.7.1").await?;
+    write_classes("20.0.2.10.1").await?;
+    write_classes("21.0.5.11.1").await?;
+    write_classes("22.0.2.9.1").await?;
+    write_classes("23.0.1.8.1").await?;
     Ok(())
 }
 

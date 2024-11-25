@@ -3,20 +3,37 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for `java.lang.ClassLoader`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/ClassLoader";
-    registry.register(
-        class_name,
-        "defineClass0",
-        "(Ljava/lang/String;[BIILjava/security/ProtectionDomain;)Ljava/lang/Class;",
-        define_class_0,
-    );
-    registry.register(class_name, "defineClass1", "(Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_1);
-    registry.register(class_name, "defineClass2", "(Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_2);
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(
+            class_name,
+            "defineClass0",
+            "(Ljava/lang/String;[BIILjava/security/ProtectionDomain;)Ljava/lang/Class;",
+            define_class_0,
+        );
+        registry.register(class_name, "defineClass1", "(Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_1);
+        registry.register(class_name, "defineClass2", "(Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_2);
+        registry.register(
+            class_name,
+            "resolveClass0",
+            "(Ljava/lang/Class;)V",
+            resolve_class_0,
+        );
+    } else {
+        registry.register(class_name, "defineClass1", "(Ljava/lang/ClassLoader;Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_1);
+        registry.register(class_name, "defineClass2", "(Ljava/lang/ClassLoader;Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_2);
+    }
+
     registry.register(
         class_name,
         "findBootstrapClass",
@@ -36,12 +53,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         find_loaded_class_0,
     );
     registry.register(class_name, "registerNatives", "()V", register_natives);
-    registry.register(
-        class_name,
-        "resolveClass0",
-        "(Ljava/lang/Class;)V",
-        resolve_class_0,
-    );
     registry.register(
         class_name,
         "retrieveDirectives",

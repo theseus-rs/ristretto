@@ -3,12 +3,32 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `sun.instrument.InstrumentationImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/instrument/InstrumentationImpl";
+    let java_version = registry.java_version();
+
+    if java_version >= &JAVA_11 {
+        registry.register(
+            class_name,
+            "loadAgent0",
+            "(Ljava/lang/String;)V",
+            load_agent_0,
+        );
+        registry.register(
+            class_name,
+            "setHasTransformers",
+            "(JZ)V",
+            set_has_transformers,
+        );
+    }
+
     registry.register(
         class_name,
         "appendToClassLoaderSearch0",
@@ -124,6 +144,12 @@ async fn is_retransform_classes_supported_0(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn load_agent_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn redefine_classes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -140,6 +166,15 @@ async fn retransform_classes_0(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_has_retransformable_transformers(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn set_has_transformers(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {

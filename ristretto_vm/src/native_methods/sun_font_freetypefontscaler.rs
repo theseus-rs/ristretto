@@ -3,12 +3,26 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for `sun.font.FreetypeFontScaler`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/font/FreetypeFontScaler";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(
+            class_name,
+            "getLayoutTableCacheNative",
+            "(J)J",
+            get_layout_table_cache_native,
+        );
+    }
+
     registry.register(
         class_name,
         "createScalerContextNative",
@@ -74,12 +88,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "getGlyphVectorOutlineNative",
         "(Lsun/font/Font2D;JJ[IIFF)Ljava/awt/geom/GeneralPath;",
         get_glyph_vector_outline_native,
-    );
-    registry.register(
-        class_name,
-        "getLayoutTableCacheNative",
-        "(J)J",
-        get_layout_table_cache_native,
     );
     registry.register(
         class_name,

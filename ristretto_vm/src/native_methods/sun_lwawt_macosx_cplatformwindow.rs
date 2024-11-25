@@ -3,13 +3,58 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for `sun.lwawt.macosx.CPlatformWindow`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/lwawt/macosx/CPlatformWindow";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(
+            class_name,
+            "nativeSynthesizeMouseEnteredExitedEvents",
+            "()V",
+            native_synthesize_mouse_entered_exited_events_1,
+        );
+        registry.register(
+            class_name,
+            "nativeSynthesizeMouseEnteredExitedEvents",
+            "(JI)V",
+            native_synthesize_mouse_entered_exited_events_2,
+        );
+    } else {
+        registry.register(
+            class_name,
+            "nativeSetNSWindowLocationByPlatform",
+            "(J)V",
+            native_set_ns_window_location_by_platform,
+        );
+        registry.register(
+            class_name,
+            "nativeSetNSWindowStandardFrame",
+            "(JDDDD)V",
+            native_set_ns_window_standard_frame,
+        );
+        registry.register(
+            class_name,
+            "nativeSynthesizeMouseEnteredExitedEvents",
+            "(JI)V",
+            native_synthesize_mouse_entered_exited_events_1,
+        );
+        registry.register(
+            class_name,
+            "nativeSynthesizeMouseEnteredExitedEvents",
+            "()V",
+            native_synthesize_mouse_entered_exited_events_2,
+        );
+    }
+
     registry.register(
         class_name,
         "_toggleFullScreenMode",
@@ -107,18 +152,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "nativeSetNSWindowTitle",
         "(JLjava/lang/String;)V",
         native_set_ns_window_title,
-    );
-    registry.register(
-        class_name,
-        "nativeSynthesizeMouseEnteredExitedEvents",
-        "()V",
-        native_synthesize_mouse_entered_exited_events_1,
-    );
-    registry.register(
-        class_name,
-        "nativeSynthesizeMouseEnteredExitedEvents",
-        "(JI)V",
-        native_synthesize_mouse_entered_exited_events_2,
     );
 }
 
@@ -226,6 +259,15 @@ async fn native_set_ns_window_bounds(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn native_set_ns_window_location_by_platform(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn native_set_ns_window_menu_bar(
     _thread: Arc<Thread>,
     _arguments: Arguments,
@@ -254,6 +296,15 @@ async fn native_set_ns_window_minimized_icon(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_ns_window_represented_filename(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn native_set_ns_window_standard_frame(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {

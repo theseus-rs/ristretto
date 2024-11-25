@@ -3,12 +3,26 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `sun.nio.ch.FileDispatcherImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/nio/ch/FileDispatcherImpl";
+    let java_version = registry.java_version();
+
+    if java_version >= &JAVA_11 {
+        registry.register(
+            class_name,
+            "setDirect0",
+            "(Ljava/io/FileDescriptor;)I",
+            set_direct_0,
+        );
+    }
+
     registry.register(class_name, "close0", "(Ljava/io/FileDescriptor;)V", close_0);
     registry.register(class_name, "closeIntFD", "(I)V", close_int_fd);
     registry.register(
@@ -146,6 +160,12 @@ async fn release_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn seek_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn set_direct_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

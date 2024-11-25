@@ -3,12 +3,33 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `sun.lwawt.macosx.LWCToolkit`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/lwawt/macosx/LWCToolkit";
+    let java_version = registry.java_version();
+
+    if java_version >= &JAVA_11 {
+        registry.register(
+            class_name,
+            "initAppkit",
+            "(Ljava/lang/ThreadGroup;Z)V",
+            init_appkit,
+        );
+        registry.register(class_name, "isInAquaSession", "()Z", is_in_aqua_session);
+        registry.register(
+            class_name,
+            "performOnMainThreadAfterDelay",
+            "(Ljava/lang/Runnable;J)V",
+            perform_on_main_thread_after_delay,
+        );
+    }
+
     registry.register(
         class_name,
         "activateApplicationIgnoringOtherApps",
@@ -97,6 +118,12 @@ async fn flush_native_selectors(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn init_appkit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -124,6 +151,12 @@ async fn is_embedded(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn is_in_aqua_session(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn load_native_colors(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -131,6 +164,15 @@ async fn load_native_colors(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_sync_queue(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn perform_on_main_thread_after_delay(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
     todo!()
 }
 

@@ -5,29 +5,37 @@ use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::{ConcurrentVec, Object, Reference, Value};
 use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for `java.lang.Throwable`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Throwable";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(
+            class_name,
+            "getStackTraceDepth",
+            "()I",
+            get_stack_trace_depth,
+        );
+        registry.register(
+            class_name,
+            "getStackTraceElement",
+            "(I)Ljava/lang/StackTraceElement;",
+            get_stack_trace_element,
+        );
+    }
+
     registry.register(
         class_name,
         "fillInStackTrace",
         "(I)Ljava/lang/Throwable;",
         fill_in_stack_trace,
-    );
-    registry.register(
-        class_name,
-        "getStackTraceDepth",
-        "()I",
-        get_stack_trace_depth,
-    );
-    registry.register(
-        class_name,
-        "getStackTraceElement",
-        "(I)Ljava/lang/StackTraceElement;",
-        get_stack_trace_element,
     );
 }
 

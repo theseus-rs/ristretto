@@ -3,12 +3,21 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for `sun.java2d.cmm.lcms.LCMS`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/java2d/cmm/lcms/LCMS";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(class_name, "freeTransform", "(J)V", free_transform);
+    }
+
     registry.register(class_name, "colorConvert", "(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V", color_convert);
     registry.register(
         class_name,
@@ -16,7 +25,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "([JIIZIZLjava/lang/Object;)J",
         create_native_transform,
     );
-    registry.register(class_name, "freeTransform", "(J)V", free_transform);
     registry.register(
         class_name,
         "getProfileDataNative",

@@ -3,14 +3,25 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::cmp::min;
 use std::sync::Arc;
 use sysinfo::System;
 
+const JAVA_8: Version = Version::Java8 { minor: 0 };
+
 /// Register all native methods for `java.lang.Runtime`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Runtime";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(class_name, "runFinalization0", "()V", run_finalization_0);
+        registry.register(class_name, "traceInstructions", "(Z)V", trace_instructions);
+        registry.register(class_name, "traceMethodCalls", "(Z)V", trace_method_calls);
+    }
+
     registry.register(
         class_name,
         "availableProcessors",
@@ -20,10 +31,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "freeMemory", "()J", free_memory);
     registry.register(class_name, "gc", "()V", gc);
     registry.register(class_name, "maxMemory", "()J", max_memory);
-    registry.register(class_name, "runFinalization0", "()V", run_finalization_0);
     registry.register(class_name, "totalMemory", "()J", total_memory);
-    registry.register(class_name, "traceInstructions", "(Z)V", trace_instructions);
-    registry.register(class_name, "traceMethodCalls", "(Z)V", trace_method_calls);
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -69,7 +77,7 @@ async fn max_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Optio
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn run_finalization_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]

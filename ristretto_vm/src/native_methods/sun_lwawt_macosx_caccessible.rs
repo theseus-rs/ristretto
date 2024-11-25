@@ -3,12 +3,21 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `sun.lwawt.macosx.CAccessible`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/lwawt/macosx/CAccessible";
+    let java_version = registry.java_version();
+
+    if java_version >= &JAVA_11 {
+        registry.register(class_name, "titleChanged", "(J)V", title_changed);
+    }
+
     registry.register(class_name, "menuClosed", "(J)V", menu_closed);
     registry.register(class_name, "menuItemSelected", "(J)V", menu_item_selected);
     registry.register(class_name, "menuOpened", "(J)V", menu_opened);
@@ -58,6 +67,12 @@ async fn selected_text_changed(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn selection_changed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn title_changed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

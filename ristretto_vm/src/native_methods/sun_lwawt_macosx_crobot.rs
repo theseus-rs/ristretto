@@ -3,22 +3,38 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for `sun.lwawt.macosx.CRobot`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/lwawt/macosx/CRobot";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(class_name, "mouseEvent", "(IIIIZZ)V", mouse_event);
+        registry.register(
+            class_name,
+            "nativeGetScreenPixels",
+            "(IIII[I)V",
+            native_get_screen_pixels,
+        );
+    } else {
+        registry.register(class_name, "mouseEvent", "(IIIZZ)V", mouse_event);
+        registry.register(
+            class_name,
+            "nativeGetScreenPixels",
+            "(IIIID[I)V",
+            native_get_screen_pixels,
+        );
+    }
+
     registry.register(class_name, "initRobot", "()V", init_robot);
     registry.register(class_name, "keyEvent", "(IZ)V", key_event);
-    registry.register(class_name, "mouseEvent", "(IIIIZZ)V", mouse_event);
     registry.register(class_name, "mouseWheel", "(I)V", mouse_wheel);
-    registry.register(
-        class_name,
-        "nativeGetScreenPixels",
-        "(IIII[I)V",
-        native_get_screen_pixels,
-    );
 }
 
 #[expect(clippy::needless_pass_by_value)]

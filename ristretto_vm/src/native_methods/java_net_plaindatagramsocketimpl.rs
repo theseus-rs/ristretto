@@ -3,12 +3,23 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Register all native methods for `java.net.PlainDatagramSocketImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/net/PlainDatagramSocketImpl";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(class_name, "send", "(Ljava/net/DatagramPacket;)V", send);
+    } else {
+        registry.register(class_name, "send0", "(Ljava/net/DatagramPacket;)V", send_0);
+    }
+
     registry.register(class_name, "bind0", "(ILjava/net/InetAddress;)V", bind_0);
     registry.register(
         class_name,
@@ -58,7 +69,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/net/DatagramPacket;)V",
         receive_0,
     );
-    registry.register(class_name, "send", "(Ljava/net/DatagramPacket;)V", send);
+    registry.register(class_name, "send0", "(Ljava/net/DatagramPacket;)V", send_0);
     registry.register(class_name, "setTTL", "(B)V", set_ttl);
     registry.register(class_name, "setTimeToLive", "(I)V", set_time_to_live);
     registry.register(
@@ -168,6 +179,12 @@ async fn receive_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn send(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn send_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
