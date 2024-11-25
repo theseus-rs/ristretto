@@ -10,6 +10,7 @@ use std::sync::Arc;
 const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_18: Version = Version::Java18 { minor: 0 };
 const JAVA_21: Version = Version::Java21 { minor: 0 };
+const JAVA_22: Version = Version::Java22 { minor: 0 };
 
 /// Register all native methods for `sun.security.pkcs11.wrapper.PKCS11`.
 #[expect(clippy::too_many_lines)]
@@ -54,6 +55,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
             c_gcm_encrypt_init_with_retry,
         );
+    }
+
+    if java_version < JAVA_22 {
+        registry.register(class_name, "freeMechanism", "(J)J", free_mechanism);
     }
 
     registry.register(class_name, "C_CloseSession", "(J)V", c_close_session);
@@ -274,7 +279,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         create_native_key,
     );
     registry.register(class_name, "finalizeLibrary", "()V", finalize_library);
-    registry.register(class_name, "freeMechanism", "(J)J", free_mechanism);
     registry.register(
         class_name,
         "getNativeKeyInfo",

@@ -10,6 +10,7 @@ use std::sync::Arc;
 const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
 const JAVA_19: Version = Version::Java19 { minor: 0 };
+const JAVA_23: Version = Version::Java23 { minor: 0 };
 
 /// Register all native methods for `sun.print.CUPSPrinter`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -33,12 +34,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             get_resolutions,
         );
     }
+
     if java_version >= JAVA_19 {
         registry.register(
             class_name,
             "getCupsDefaultPrinters",
             "()[Ljava/lang/String;",
             get_cups_default_printers,
+        );
+    }
+
+    if java_version >= JAVA_23 {
+        registry.register(
+            class_name,
+            "getOutputBins",
+            "(Ljava/lang/String;)[Ljava/lang/String;",
+            get_output_bins,
         );
     }
 
@@ -115,6 +126,12 @@ async fn get_cups_server(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_media(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_output_bins(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

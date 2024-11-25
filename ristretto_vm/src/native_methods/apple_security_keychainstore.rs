@@ -3,12 +3,28 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
+
+const JAVA_22: Version = Version::Java22 { minor: 0 };
 
 /// Register all native methods for `apple.security.KeychainStore`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "apple/security/KeychainStore";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_22 {
+        registry.register(class_name, "_scanKeychain", "()V", scan_keychain);
+    } else {
+        registry.register(
+            class_name,
+            "_scanKeychain",
+            "(Ljava/lang/String;)V",
+            scan_keychain,
+        );
+    }
+
     registry.register(
         class_name,
         "_addItemToKeychain",
@@ -33,7 +49,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(J)I",
         remove_item_from_keychain,
     );
-    registry.register(class_name, "_scanKeychain", "()V", scan_keychain);
 }
 
 #[expect(clippy::needless_pass_by_value)]

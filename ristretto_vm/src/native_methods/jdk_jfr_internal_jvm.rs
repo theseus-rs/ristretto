@@ -13,6 +13,7 @@ const JAVA_18: Version = Version::Java18 { minor: 0 };
 const JAVA_20: Version = Version::Java20 { minor: 0 };
 const JAVA_21: Version = Version::Java21 { minor: 0 };
 const JAVA_22: Version = Version::Java22 { minor: 0 };
+const JAVA_23: Version = Version::Java23 { minor: 0 };
 
 /// Register all native methods for `jdk.jfr.internal.JVM`.
 #[expect(clippy::too_many_lines)]
@@ -235,6 +236,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(J)V",
             unregister_stack_filter,
         );
+    }
+
+    if java_version >= JAVA_23 {
+        registry.register(
+            class_name,
+            "hostTotalSwapMemory",
+            "()J",
+            host_total_swap_memory,
+        );
+        registry.register(class_name, "nanosNow", "()J", nanos_now);
     }
 
     registry.register(class_name, "abort", "(Ljava/lang/String;)V", abort);
@@ -583,6 +594,15 @@ async fn host_total_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Resul
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn host_total_swap_memory(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn include(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
@@ -632,6 +652,12 @@ async fn log_event(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn mark_chunk_final(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn nanos_now(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

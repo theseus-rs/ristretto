@@ -8,13 +8,14 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_21: Version = Version::Java21 { minor: 0 };
+const JAVA_23: Version = Version::Java23 { minor: 0 };
 
 /// Register all native methods for `jdk.internal.foreign.abi.fallback.LibFallback`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/foreign/abi/fallback/LibFallback";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version <= &JAVA_21 {
+    if java_version <= JAVA_21 {
         registry.register(class_name, "doDowncall", "(JJJJJI)V", do_downcall);
     } else {
         registry.register(
@@ -27,6 +28,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(class_name, "ffi_sizeof_long", "()I", ffi_sizeof_long);
         registry.register(class_name, "ffi_sizeof_short", "()I", ffi_sizeof_short);
         registry.register(class_name, "ffi_sizeof_wchar", "()I", ffi_sizeof_wchar);
+    }
+
+    if java_version >= JAVA_23 {
+        registry.register(class_name, "alignof_double", "()I", alignof_double);
+        registry.register(class_name, "alignof_long_long", "()I", alignof_long_long);
     }
 
     registry.register(
@@ -65,6 +71,18 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "freeClosure", "(JJ)V", free_closure);
     registry.register(class_name, "init", "()Z", init);
     registry.register(class_name, "sizeofCif", "()J", sizeof_cif);
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn alignof_double(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn alignof_long_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]

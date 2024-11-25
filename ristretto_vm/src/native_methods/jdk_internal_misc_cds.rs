@@ -3,13 +3,36 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 
+const JAVA_22: Version = Version::Java22 { minor: 0 };
+
 /// Register all native methods for `jdk.internal.misc.CDS`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/misc/CDS";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_22 {
+        registry.register(class_name, "isDumpingArchive0", "()Z", is_dumping_archive_0);
+        registry.register(
+            class_name,
+            "isDumpingClassList0",
+            "()Z",
+            is_dumping_class_list_0,
+        );
+        registry.register(class_name, "isSharingEnabled0", "()Z", is_sharing_enabled_0);
+    } else {
+        registry.register(
+            class_name,
+            "getCDSConfigStatus",
+            "()I",
+            get_cds_config_status,
+        );
+    }
+
     registry.register(
         class_name,
         "defineArchivedModules",
@@ -40,14 +63,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/Class;)V",
         initialize_from_archive,
     );
-    registry.register(class_name, "isDumpingArchive0", "()Z", is_dumping_archive_0);
-    registry.register(
-        class_name,
-        "isDumpingClassList0",
-        "()Z",
-        is_dumping_class_list_0,
-    );
-    registry.register(class_name, "isSharingEnabled0", "()Z", is_sharing_enabled_0);
     registry.register(
         class_name,
         "logLambdaFormInvoker",
@@ -74,6 +89,15 @@ async fn dump_class_list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn dump_dynamic_archive(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_cds_config_status(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
