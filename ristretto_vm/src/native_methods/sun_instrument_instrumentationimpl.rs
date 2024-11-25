@@ -8,13 +8,14 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_21: Version = Version::Java21 { minor: 0 };
 
 /// Register all native methods for `sun.instrument.InstrumentationImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/instrument/InstrumentationImpl";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version >= &JAVA_11 {
+    if java_version >= JAVA_11 {
         registry.register(
             class_name,
             "loadAgent0",
@@ -27,6 +28,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(JZ)V",
             set_has_transformers,
         );
+    }
+
+    if java_version >= JAVA_21 {
+        registry.register(class_name, "jarFile", "(J)Ljava/lang/String;", jar_file);
     }
 
     registry.register(
@@ -139,6 +144,12 @@ async fn is_retransform_classes_supported_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn jar_file(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

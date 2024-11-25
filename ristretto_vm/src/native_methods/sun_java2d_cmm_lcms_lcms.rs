@@ -11,6 +11,7 @@ const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
 const JAVA_19: Version = Version::Java19 { minor: 0 };
+const JAVA_20: Version = Version::Java20 { minor: 0 };
 
 /// Register all native methods for `sun.java2d.cmm.lcms.LCMS`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -91,12 +92,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    registry.register(
-        class_name,
-        "createNativeTransform",
-        "([JIIZIZLjava/lang/Object;)J",
-        create_native_transform,
-    );
+    if java_version <= JAVA_20 {
+        registry.register(
+            class_name,
+            "createNativeTransform",
+            "([JIIZIZLjava/lang/Object;)J",
+            create_native_transform,
+        );
+    } else {
+        registry.register(
+            class_name,
+            "createNativeTransform",
+            "([JIIILjava/lang/Object;)J",
+            create_native_transform,
+        );
+    }
+
     registry.register(class_name, "getTagNative", "(JI)[B", get_tag_native);
     registry.register(
         class_name,

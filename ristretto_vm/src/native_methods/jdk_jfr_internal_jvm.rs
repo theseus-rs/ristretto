@@ -11,6 +11,7 @@ const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
 const JAVA_18: Version = Version::Java18 { minor: 0 };
 const JAVA_20: Version = Version::Java20 { minor: 0 };
+const JAVA_21: Version = Version::Java21 { minor: 0 };
 
 /// Register all native methods for `jdk.jfr.internal.JVM`.
 #[expect(clippy::too_many_lines)]
@@ -142,12 +143,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     } else {
         registry.register(class_name, "exclude", "(Ljava/lang/Thread;)V", exclude);
         registry.register(class_name, "flush", "()V", flush);
-        registry.register(
-            class_name,
-            "flush",
-            "(Ljdk/jfr/internal/event/EventWriter;II)Z",
-            flush,
-        );
+
+        if java_version <= JAVA_20 {
+            registry.register(
+                class_name,
+                "flush",
+                "(Ljdk/jfr/internal/event/EventWriter;II)Z",
+                flush,
+            );
+        }
+
         registry.register(
             class_name,
             "getConfiguration",
@@ -196,6 +201,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
     if java_version >= JAVA_20 {
         registry.register(class_name, "hostTotalMemory", "()J", host_total_memory);
+    }
+
+    if java_version >= JAVA_21 {
+        registry.register(class_name, "commit", "(J)J", commit);
+        registry.register(class_name, "emitDataLoss", "(J)V", emit_data_loss);
+        registry.register(
+            class_name,
+            "flush",
+            "(Ljdk/jfr/internal/event/EventWriter;II)V",
+            flush,
+        );
     }
 
     registry.register(class_name, "abort", "(Ljava/lang/String;)V", abort);
@@ -357,6 +373,12 @@ async fn add_string_constant(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn begin_recording(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn commit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 

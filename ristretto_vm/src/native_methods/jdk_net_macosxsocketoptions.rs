@@ -8,42 +8,20 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 const JAVA_18: Version = Version::Java18 { minor: 0 };
 const JAVA_19: Version = Version::Java19 { minor: 0 };
 const JAVA_20: Version = Version::Java20 { minor: 0 };
+const JAVA_21: Version = Version::Java21 { minor: 0 };
 
 /// Register all native methods for `jdk.net.MacOSXSocketOptions`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/net/MacOSXSocketOptions";
     let java_version = registry.java_version().clone();
 
-    if java_version <= JAVA_11 || java_version >= JAVA_18 {
-        registry.register(
-            class_name,
-            "getTcpkeepAliveProbes0",
-            "(I)I",
-            get_tcpkeep_alive_probes_0,
-        );
-        registry.register(
-            class_name,
-            "setTcpkeepAliveProbes0",
-            "(II)V",
-            set_tcpkeep_alive_probes_0,
-        );
-    } else {
+    if java_version >= JAVA_17 {
         registry.register(class_name, "getSoPeerCred0", "(I)J", get_so_peer_cred_0);
-        registry.register(
-            class_name,
-            "getTcpKeepAliveProbes0",
-            "(I)I",
-            get_tcp_keep_alive_probes_0,
-        );
-        registry.register(
-            class_name,
-            "setTcpKeepAliveProbes0",
-            "(II)V",
-            set_tcp_keep_alive_probes_0,
-        );
     }
 
     if java_version == JAVA_19 {
@@ -81,6 +59,36 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "setIpDontFragment0",
             "(IZZ)V",
             set_ip_dont_fragment_0,
+        );
+    }
+
+    if java_version <= JAVA_11 || (java_version >= JAVA_18 && java_version <= JAVA_20) {
+        registry.register(
+            class_name,
+            "getTcpkeepAliveProbes0",
+            "(I)I",
+            get_tcpkeep_alive_probes_0,
+        );
+        registry.register(
+            class_name,
+            "setTcpkeepAliveProbes0",
+            "(II)V",
+            set_tcpkeep_alive_probes_0,
+        );
+    }
+
+    if java_version == JAVA_17 || java_version >= JAVA_21 {
+        registry.register(
+            class_name,
+            "getTcpKeepAliveProbes0",
+            "(I)I",
+            get_tcp_keep_alive_probes_0,
+        );
+        registry.register(
+            class_name,
+            "setTcpKeepAliveProbes0",
+            "(II)V",
+            set_tcp_keep_alive_probes_0,
         );
     }
 

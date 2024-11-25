@@ -8,16 +8,22 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_19: Version = Version::Java19 { minor: 0 };
+const JAVA_20: Version = Version::Java20 { minor: 0 };
+const JAVA_21: Version = Version::Java21 { minor: 0 };
 
 /// Register all native methods for `jdk.internal.foreign.abi.NativeEntryPoint`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/foreign/abi/NativeEntryPoint";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version >= &JAVA_19 {
+    if java_version == JAVA_19 {
         registry.register(class_name, "makeDowncallStub", "(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;Z)J", make_downcall_stub);
-    } else {
+    }
+    if java_version == JAVA_20 {
         registry.register(class_name, "makeDowncallStub", "(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;ZI)J", make_downcall_stub);
+    }
+    if java_version >= JAVA_21 {
+        registry.register(class_name, "makeDowncallStub", "(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;ZIZ)J", make_downcall_stub);
     }
 
     registry.register(

@@ -62,7 +62,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "()Ljava/lang/Object;",
             get_stack_trace_0,
         );
-        registry.register(class_name, "isAlive0", "()Z", is_alive_0);
+
+        if java_version <= JAVA_20 {
+            registry.register(class_name, "isAlive0", "()Z", is_alive_0);
+        }
+
         registry.register(
             class_name,
             "setCurrentThread",
@@ -312,7 +316,7 @@ async fn set_priority_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Resul
 #[async_recursion(?Send)]
 async fn set_scoped_value_cache(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    _arguments: Arguments,
 ) -> Result<Option<Value>> {
     todo!()
 }

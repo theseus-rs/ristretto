@@ -55,27 +55,29 @@ use crate::native_methods::{
     java_util_prefs_filesystempreferences, java_util_prefs_macosxpreferencesfile,
     java_util_timezone, java_util_zip_adler32, java_util_zip_crc32, java_util_zip_deflater,
     java_util_zip_inflater, java_util_zip_zipfile, jdk_internal_agent_filesystemimpl,
-    jdk_internal_foreign_abi_nativeentrypoint, jdk_internal_foreign_abi_programmableinvoker,
+    jdk_internal_foreign_abi_fallback_libfallback, jdk_internal_foreign_abi_nativeentrypoint,
+    jdk_internal_foreign_abi_programmableinvoker,
     jdk_internal_foreign_abi_programmableupcallhandler, jdk_internal_foreign_abi_upcalllinker,
     jdk_internal_foreign_abi_upcallstubs, jdk_internal_invoke_nativeentrypoint,
-    jdk_internal_jimage_nativeimagebuffer, jdk_internal_loader_bootloader,
-    jdk_internal_loader_nativelibraries, jdk_internal_loader_nativelibrary,
-    jdk_internal_loader_rawnativelibraries, jdk_internal_misc_cds,
-    jdk_internal_misc_previewfeatures, jdk_internal_misc_scopedmemoryaccess,
+    jdk_internal_io_jdkconsoleimpl, jdk_internal_jimage_nativeimagebuffer,
+    jdk_internal_loader_bootloader, jdk_internal_loader_nativelibraries,
+    jdk_internal_loader_nativelibrary, jdk_internal_loader_rawnativelibraries,
+    jdk_internal_misc_cds, jdk_internal_misc_previewfeatures, jdk_internal_misc_scopedmemoryaccess,
     jdk_internal_misc_signal, jdk_internal_misc_unsafe, jdk_internal_misc_vm,
-    jdk_internal_perf_perf, jdk_internal_reflect_constantpool,
+    jdk_internal_org_jline_terminal_impl_jna_osx_clibraryimpl, jdk_internal_perf_perf,
+    jdk_internal_reflect_constantpool,
     jdk_internal_reflect_directconstructorhandleaccessor_nativeaccessor,
     jdk_internal_reflect_directmethodhandleaccessor_nativeaccessor,
     jdk_internal_reflect_nativeconstructoraccessorimpl,
     jdk_internal_reflect_nativemethodaccessorimpl, jdk_internal_reflect_reflection,
     jdk_internal_util_systemprops_raw, jdk_internal_vm_continuation,
-    jdk_internal_vm_continuationsupport, jdk_internal_vm_vector_vectorsupport,
-    jdk_internal_vm_vmsupport, jdk_jfr_internal_jvm, jdk_net_macosxsocketoptions,
-    jdk_vm_ci_runtime_jvmci, sun_awt_cgraphicsconfig, sun_awt_cgraphicsdevice,
-    sun_awt_cgraphicsenvironment, sun_awt_debugsettings, sun_awt_defaultmouseinfopeer,
-    sun_awt_fcfontmanager, sun_awt_fontdescriptor, sun_awt_image_bufimgsurfacedata,
-    sun_awt_image_bytecomponentraster, sun_awt_image_bytepackedraster,
-    sun_awt_image_databuffernative, sun_awt_image_gifimagedecoder,
+    jdk_internal_vm_continuationsupport, jdk_internal_vm_foreignlinkersupport,
+    jdk_internal_vm_vector_vectorsupport, jdk_internal_vm_vmsupport, jdk_jfr_internal_jvm,
+    jdk_net_macosxsocketoptions, jdk_vm_ci_runtime_jvmci, sun_awt_cgraphicsconfig,
+    sun_awt_cgraphicsdevice, sun_awt_cgraphicsenvironment, sun_awt_debugsettings,
+    sun_awt_defaultmouseinfopeer, sun_awt_fcfontmanager, sun_awt_fontdescriptor,
+    sun_awt_image_bufimgsurfacedata, sun_awt_image_bytecomponentraster,
+    sun_awt_image_bytepackedraster, sun_awt_image_databuffernative, sun_awt_image_gifimagedecoder,
     sun_awt_image_imagerepresentation, sun_awt_image_imaginglib,
     sun_awt_image_integercomponentraster, sun_awt_image_jpegimagedecoder,
     sun_awt_image_shortcomponentraster, sun_awt_platformfont, sun_awt_platformgraphicsinfo,
@@ -167,6 +169,7 @@ const JAVA_17: Version = Version::Java17 { minor: 0 };
 const JAVA_18: Version = Version::Java18 { minor: 0 };
 const JAVA_19: Version = Version::Java19 { minor: 0 };
 const JAVA_20: Version = Version::Java20 { minor: 0 };
+const JAVA_21: Version = Version::Java20 { minor: 0 };
 
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
@@ -410,11 +413,23 @@ impl MethodRegistry {
             jdk_internal_vm_continuationsupport::register(&mut method_registry);
         }
 
+        if java_version <= JAVA_20 {
+            java_lang_strictmath::register(&mut method_registry);
+        }
         if java_version >= JAVA_20 {
             sun_nio_ch_unixdispatcher::register(&mut method_registry);
             sun_nio_ch_unixfiledispatcherimpl::register(&mut method_registry);
             sun_nio_fs_bsdfilesystem::register(&mut method_registry);
             sun_nio_fs_unixfilesystem::register(&mut method_registry);
+        }
+
+        if java_version >= JAVA_21 {
+            jdk_internal_foreign_abi_fallback_libfallback::register(&mut method_registry);
+            jdk_internal_io_jdkconsoleimpl::register(&mut method_registry);
+            jdk_internal_org_jline_terminal_impl_jna_osx_clibraryimpl::register(
+                &mut method_registry,
+            );
+            jdk_internal_vm_foreignlinkersupport::register(&mut method_registry);
         }
 
         apple_laf_jrsuiconstants::register(&mut method_registry);
@@ -490,7 +505,6 @@ impl MethodRegistry {
         java_lang_runtime::register(&mut method_registry);
         java_lang_securitymanager::register(&mut method_registry);
         java_lang_shutdown::register(&mut method_registry);
-        java_lang_strictmath::register(&mut method_registry);
         java_lang_string::register(&mut method_registry);
         java_lang_system::register(&mut method_registry);
         java_lang_thread::register(&mut method_registry);

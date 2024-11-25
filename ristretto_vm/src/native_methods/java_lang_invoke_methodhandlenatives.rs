@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
+const JAVA_20: Version = Version::Java20 { minor: 0 };
 
 /// Register all native methods for `java.lang.invoke.MethodHandleNatives`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -53,6 +54,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
+    if java_version <= JAVA_20 {
+        registry.register(class_name, "getMembers", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I", get_members);
+    }
+
     registry.register(
         class_name,
         "expand",
@@ -65,7 +70,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
         get_member_vm_info,
     );
-    registry.register(class_name, "getMembers", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I", get_members);
     registry.register(
         class_name,
         "getNamedCon",

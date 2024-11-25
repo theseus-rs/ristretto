@@ -8,13 +8,14 @@ use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const JAVA_17: Version = Version::Java17 { minor: 0 };
+const JAVA_21: Version = Version::Java21 { minor: 0 };
 
 /// Register all native methods for `java.lang.ref.Reference`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/ref/Reference";
-    let java_version = registry.java_version();
+    let java_version = registry.java_version().clone();
 
-    if java_version >= &JAVA_17 {
+    if java_version == JAVA_17 || java_version >= JAVA_21 {
         registry.register(class_name, "clear0", "()V", clear_0);
         registry.register(
             class_name,
