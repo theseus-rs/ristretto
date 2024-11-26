@@ -31,20 +31,21 @@ use crate::native_methods::{
     java_awt_textarea, java_awt_textfield, java_awt_toolkit, java_awt_trayicon, java_awt_window,
     java_io_console, java_io_filecleanable, java_io_filedescriptor, java_io_fileinputstream,
     java_io_fileoutputstream, java_io_objectinputstream, java_io_objectoutputstream,
-    java_io_objectstreamclass, java_io_randomaccessfile, java_io_unixfilesystem, java_lang_class,
-    java_lang_classloader, java_lang_classloader_nativelibrary, java_lang_compiler,
-    java_lang_double, java_lang_float, java_lang_invoke_lambdaproxyclassarchive,
-    java_lang_invoke_methodhandle, java_lang_invoke_methodhandlenatives,
-    java_lang_invoke_varhandle, java_lang_module, java_lang_nullpointerexception, java_lang_object,
-    java_lang_package, java_lang_processenvironment, java_lang_processhandleimpl,
-    java_lang_processhandleimpl_info, java_lang_processimpl, java_lang_ref_finalizer,
-    java_lang_ref_phantomreference, java_lang_ref_reference, java_lang_reflect_array,
-    java_lang_reflect_executable, java_lang_reflect_field, java_lang_reflect_proxy,
-    java_lang_runtime, java_lang_securitymanager, java_lang_shutdown, java_lang_stackframeinfo,
-    java_lang_stackstreamfactory, java_lang_stackstreamfactory_abstractstackwalker,
-    java_lang_stacktraceelement, java_lang_strictmath, java_lang_string, java_lang_stringcoding,
-    java_lang_stringutf16, java_lang_system, java_lang_thread, java_lang_throwable,
-    java_lang_unixprocess, java_lang_virtualthread, java_net_abstractplaindatagramsocketimpl,
+    java_io_objectstreamclass, java_io_randomaccessfile, java_io_unixfilesystem,
+    java_io_winntfilesystem, java_lang_class, java_lang_classloader,
+    java_lang_classloader_nativelibrary, java_lang_compiler, java_lang_double, java_lang_float,
+    java_lang_invoke_lambdaproxyclassarchive, java_lang_invoke_methodhandle,
+    java_lang_invoke_methodhandlenatives, java_lang_invoke_varhandle, java_lang_module,
+    java_lang_nullpointerexception, java_lang_object, java_lang_package,
+    java_lang_processenvironment, java_lang_processhandleimpl, java_lang_processhandleimpl_info,
+    java_lang_processimpl, java_lang_ref_finalizer, java_lang_ref_phantomreference,
+    java_lang_ref_reference, java_lang_reflect_array, java_lang_reflect_executable,
+    java_lang_reflect_field, java_lang_reflect_proxy, java_lang_runtime, java_lang_securitymanager,
+    java_lang_shutdown, java_lang_stackframeinfo, java_lang_stackstreamfactory,
+    java_lang_stackstreamfactory_abstractstackwalker, java_lang_stacktraceelement,
+    java_lang_strictmath, java_lang_string, java_lang_stringcoding, java_lang_stringutf16,
+    java_lang_system, java_lang_thread, java_lang_throwable, java_lang_unixprocess,
+    java_lang_virtualthread, java_net_abstractplaindatagramsocketimpl,
     java_net_abstractplainsocketimpl, java_net_datagrampacket, java_net_inet4address,
     java_net_inet4addressimpl, java_net_inet6address, java_net_inet6addressimpl,
     java_net_inetaddress, java_net_inetaddressimplfactory, java_net_networkinterface,
@@ -88,10 +89,10 @@ use crate::native_methods::{
     sun_font_freetypefontscaler, sun_font_nativefont, sun_font_nativestrike,
     sun_font_nativestrikedisposer, sun_font_nullfontscaler, sun_font_strikecache,
     sun_font_sunfontmanager, sun_font_sunlayoutengine, sun_font_x11textrenderer,
-    sun_instrument_instrumentationimpl, sun_java2d_cmm_lcms_lcms, sun_java2d_crenderer,
-    sun_java2d_defaultdisposerrecord, sun_java2d_disposer, sun_java2d_jules_julesaatilegenerator,
-    sun_java2d_jules_julespathbuf, sun_java2d_loops_blit, sun_java2d_loops_blitbg,
-    sun_java2d_loops_drawglyphlist, sun_java2d_loops_drawglyphlistaa,
+    sun_instrument_instrumentationimpl, sun_io_win32errormode, sun_java2d_cmm_lcms_lcms,
+    sun_java2d_crenderer, sun_java2d_defaultdisposerrecord, sun_java2d_disposer,
+    sun_java2d_jules_julesaatilegenerator, sun_java2d_jules_julespathbuf, sun_java2d_loops_blit,
+    sun_java2d_loops_blitbg, sun_java2d_loops_drawglyphlist, sun_java2d_loops_drawglyphlistaa,
     sun_java2d_loops_drawglyphlistlcd, sun_java2d_loops_drawline,
     sun_java2d_loops_drawparallelogram, sun_java2d_loops_drawpath, sun_java2d_loops_drawpolygons,
     sun_java2d_loops_drawrect, sun_java2d_loops_fillparallelogram, sun_java2d_loops_fillpath,
@@ -509,6 +510,7 @@ impl MethodRegistry {
         java_io_objectstreamclass::register(&mut method_registry);
         java_io_randomaccessfile::register(&mut method_registry);
         java_io_unixfilesystem::register(&mut method_registry);
+        java_io_winntfilesystem::register(&mut method_registry);
         java_lang_class::register(&mut method_registry);
         java_lang_classloader::register(&mut method_registry);
         java_lang_double::register(&mut method_registry);
@@ -562,6 +564,7 @@ impl MethodRegistry {
         sun_font_sunfontmanager::register(&mut method_registry);
         sun_font_sunlayoutengine::register(&mut method_registry);
         sun_instrument_instrumentationimpl::register(&mut method_registry);
+        sun_io_win32errormode::register(&mut method_registry);
         sun_java2d_crenderer::register(&mut method_registry);
         sun_java2d_defaultdisposerrecord::register(&mut method_registry);
         sun_java2d_disposer::register(&mut method_registry);

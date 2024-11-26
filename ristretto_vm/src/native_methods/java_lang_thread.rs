@@ -171,7 +171,6 @@ async fn count_stack_frames(thread: Arc<Thread>, _arguments: Arguments) -> Resul
     Ok(Some(Value::Int(frames)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn current_carrier_thread(
     thread: Arc<Thread>,
@@ -263,7 +262,6 @@ async fn is_alive(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
     Ok(Some(Value::from(is_alive)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_alive_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
     is_alive(thread, arguments).await
@@ -348,7 +346,6 @@ async fn sleep(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn sleep_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
     sleep(thread, arguments).await
@@ -398,7 +395,6 @@ async fn r#yield(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn yield_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
     r#yield(thread, arguments).await

@@ -80,7 +80,6 @@ async fn sync(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn sync_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
     sync_0(thread, arguments).await

@@ -31,7 +31,6 @@ async fn current(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn current_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
     current(thread, arguments).await
@@ -49,7 +48,6 @@ async fn signal(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn signal_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
     signal(thread, arguments).await

@@ -57,7 +57,6 @@ async fn get_caller_class_2(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_class_access_flags(
     thread: Arc<Thread>,

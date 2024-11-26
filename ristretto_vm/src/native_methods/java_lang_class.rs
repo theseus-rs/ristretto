@@ -421,7 +421,6 @@ async fn get_interfaces_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_modifiers(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let Some(Reference::Object(object)) = arguments.pop_reference()? else {
@@ -461,7 +460,6 @@ async fn get_nest_members_0(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_permitted_subclasses_0(
     thread: Arc<Thread>,

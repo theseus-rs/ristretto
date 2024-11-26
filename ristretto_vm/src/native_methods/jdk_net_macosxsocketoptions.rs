@@ -15,7 +15,6 @@ const JAVA_20: Version = Version::Java20 { minor: 0 };
 const JAVA_21: Version = Version::Java21 { minor: 0 };
 
 /// Register all native methods for `jdk.net.MacOSXSocketOptions`.
-#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/net/MacOSXSocketOptions";
     let java_version = registry.java_version().clone();
