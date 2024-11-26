@@ -1,9 +1,11 @@
 use crate::arguments::Arguments;
+use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
+use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;
 
 /// Register all native methods for `jdk.internal.loader.NativeLibraries`.
@@ -24,16 +26,28 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "unload", "(Ljava/lang/String;ZJ)V", unload);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn find_builtin_lib(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn find_builtin_lib(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
+        return Err(InternalError("argument must be an object".to_string()));
+    };
+    let vm = thread.vm()?;
+    let library_file_name: String = object.try_into()?;
+    let library_path = vm
+        .java_home()
+        .join("lib")
+        .join(library_file_name)
+        .to_string_lossy()
+        .to_string();
+    let vm = thread.vm()?;
+    let library_name = library_path.to_object(&vm).await?;
+    Ok(Some(library_name))
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn load(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(Some(Value::Int(1)))
 }
 
 #[expect(clippy::needless_pass_by_value)]

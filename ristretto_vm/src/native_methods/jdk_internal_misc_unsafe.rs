@@ -754,6 +754,7 @@ async fn get_byte_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<
     get_reference_type(thread, arguments, Some(BaseType::Byte))
 }
 
+#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_char(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

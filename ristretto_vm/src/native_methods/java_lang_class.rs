@@ -6,7 +6,7 @@ use crate::Error::InternalError;
 use crate::JavaError::NullPointerException;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
+use ristretto_classfile::{ClassAccessFlags, Version};
 use ristretto_classloader::{Class, Object, Reference, Value};
 use std::sync::Arc;
 
@@ -423,8 +423,24 @@ async fn get_interfaces_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn get_modifiers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn get_modifiers(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
+        return Err(InternalError("getModifiers: no class".to_string()));
+    };
+    let class = get_class(&thread, &object).await?;
+    let class_file = class.class_file();
+    let access_flags = &class_file.access_flags.bits();
+    let excluded_flags = (ClassAccessFlags::ANNOTATION
+        | ClassAccessFlags::ENUM
+        | ClassAccessFlags::MODULE
+        | ClassAccessFlags::SUPER
+        | ClassAccessFlags::SYNTHETIC)
+        .bits();
+    let excluded_flags_mask = !excluded_flags;
+    let modifiers = i32::from(access_flags & excluded_flags_mask);
+
+    // TODO: correct the modifier values
+    Ok(Some(Value::Int(modifiers)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -448,10 +464,17 @@ async fn get_nest_members_0(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_permitted_subclasses_0(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
+        return Err(InternalError(
+            "getPermittedSubclasses0: no arguments".to_string(),
+        ));
+    };
+    let _class = get_class(&thread, &object).await?;
+    // TODO: add support for sealed classes
+    Ok(None)
 }
 
 #[async_recursion(?Send)]
@@ -581,7 +604,7 @@ async fn is_assignable_from(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_hidden(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(Some(Value::from(false)))
 }
 
 #[expect(clippy::needless_pass_by_value)]

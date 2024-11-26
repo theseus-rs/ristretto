@@ -56,6 +56,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/String;)Ljava/lang/Class;",
         find_loaded_class_0,
     );
+    registry.register(
+        class_name,
+        "initSystemClassLoader",
+        "()Ljava/lang/ClassLoader;",
+        init_system_class_loader,
+    );
     registry.register(class_name, "registerNatives", "()V", register_natives);
     registry.register(
         class_name,
@@ -102,6 +108,16 @@ async fn find_builtin_lib(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 #[async_recursion(?Send)]
 async fn find_loaded_class_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn init_system_class_loader(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    // TODO: implement this method; temporarily return null to allow the VM to initialize
+    Ok(Some(Value::Object(None)))
 }
 
 #[expect(clippy::needless_pass_by_value)]

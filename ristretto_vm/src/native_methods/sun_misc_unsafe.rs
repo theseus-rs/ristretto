@@ -346,7 +346,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn address_size(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(Some(Value::Int(8))) // 64-bit pointers
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -364,13 +364,13 @@ async fn allocate_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn array_base_offset(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(Some(Value::Int(0)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn array_index_scale(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(Some(Value::Int(1)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -433,13 +433,13 @@ async fn ensure_class_initialized(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn free_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn full_fence(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -862,7 +862,7 @@ async fn static_field_offset(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn store_fence(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]

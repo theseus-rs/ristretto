@@ -184,6 +184,7 @@ mod jdk_internal_misc_scopedmemoryaccess;
 mod jdk_internal_misc_signal;
 mod jdk_internal_misc_unsafe;
 mod jdk_internal_misc_vm;
+mod jdk_internal_module_modulebootstrap;
 mod jdk_internal_org_jline_terminal_impl_jna_osx_clibraryimpl;
 mod jdk_internal_perf_perf;
 mod jdk_internal_reflect_constantpool;
@@ -420,4 +421,5 @@ mod sun_util_locale_provider_hostlocaleprovideradapterimpl;
 
 mod properties;
 mod registry;
+
 pub use registry::MethodRegistry;

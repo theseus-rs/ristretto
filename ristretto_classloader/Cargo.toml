@@ -32,10 +32,10 @@ home = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
+convert_case = { workspace = true }
 criterion = { workspace = true }
 handlebars = { workspace = true }
 indoc = { workspace = true }
-convert_case = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 tokio = { workspace = true }

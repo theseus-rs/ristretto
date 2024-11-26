@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_18: Version = Version::Java18 { minor: 0 };
 const JAVA_19: Version = Version::Java19 { minor: 0 };
 const JAVA_20: Version = Version::Java20 { minor: 0 };
 const JAVA_21: Version = Version::Java21 { minor: 0 };
@@ -21,7 +22,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Thread";
     let java_version = registry.java_version().clone();
 
-    if java_version <= JAVA_11 {
+    if java_version <= JAVA_11 || java_version == JAVA_18 {
         registry.register(class_name, "countStackFrames", "()I", count_stack_frames);
         registry.register(class_name, "isAlive", "()Z", is_alive);
         registry.register(class_name, "isInterrupted", "(Z)Z", is_interrupted);
@@ -159,7 +160,7 @@ async fn clear_interrupt_event(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -220,10 +221,13 @@ async fn find_scoped_value_bindings(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_next_thread_id_offset(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    let vm = thread.vm()?;
+    let thread_id = vm.next_thread_id()?;
+    let thread_id = i64::try_from(thread_id)?;
+    Ok(Some(Value::from(thread_id)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -365,8 +369,11 @@ async fn sleep_nanos_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn start_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn start_0(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    let thread_id = i64::try_from(thread.id())?;
+    let object: Object = thread.java_object().await.try_into()?;
+    object.set_value("eetop", Value::from(thread_id))?;
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]

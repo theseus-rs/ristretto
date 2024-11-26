@@ -101,7 +101,7 @@ async fn get_cds_config_status(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    Ok(Some(Value::Int(0)))
 }
 
 #[expect(clippy::cast_possible_wrap)]

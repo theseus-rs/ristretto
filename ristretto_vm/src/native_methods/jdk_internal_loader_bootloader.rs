@@ -51,7 +51,8 @@ async fn get_system_package_names(
 #[async_recursion(?Send)]
 async fn set_boot_loader_unnamed_module_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    let _object = arguments.pop_reference()?;
+    Ok(None)
 }

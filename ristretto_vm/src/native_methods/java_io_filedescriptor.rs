@@ -37,16 +37,35 @@ async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
     todo!()
 }
 
+#[expect(clippy::match_same_arms)]
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn get_append(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn get_append(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let handle = arguments.pop_int()?;
+    let append = match handle {
+        0 => {
+            // true if stdin is in append mode
+            false
+        }
+        1 => {
+            // true if stdout is in append mode
+            false
+        }
+        2 => {
+            // true if stderr is in append mode
+            false
+        }
+        _ => false,
+    };
+    Ok(Some(Value::from(append)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn get_handle(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn get_handle(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let handle = arguments.pop_int()?;
+    let handle = i64::from(handle);
+    Ok(Some(Value::Long(handle)))
 }
 
 #[expect(clippy::needless_pass_by_value)]

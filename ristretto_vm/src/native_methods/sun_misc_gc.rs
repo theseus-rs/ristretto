@@ -23,5 +23,5 @@ async fn max_object_inspection_age(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    Ok(Some(Value::Long(0)))
 }

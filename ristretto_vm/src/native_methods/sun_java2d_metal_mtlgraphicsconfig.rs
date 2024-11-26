@@ -12,7 +12,7 @@ const JAVA_21: Version = Version::Java21 { minor: 0 };
 /// Register all native methods for `sun.java2d.metal.MTLGraphicsConfig`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/java2d/metal/MTLGraphicsConfig";
-    let java_version = registry.java_version().clone();
+    let java_version = registry.java_version();
 
     if java_version <= &JAVA_21 {
         registry.register(

@@ -64,8 +64,8 @@ use crate::native_methods::{
     jdk_internal_loader_nativelibrary, jdk_internal_loader_rawnativelibraries,
     jdk_internal_misc_cds, jdk_internal_misc_previewfeatures, jdk_internal_misc_scopedmemoryaccess,
     jdk_internal_misc_signal, jdk_internal_misc_unsafe, jdk_internal_misc_vm,
-    jdk_internal_org_jline_terminal_impl_jna_osx_clibraryimpl, jdk_internal_perf_perf,
-    jdk_internal_reflect_constantpool,
+    jdk_internal_module_modulebootstrap, jdk_internal_org_jline_terminal_impl_jna_osx_clibraryimpl,
+    jdk_internal_perf_perf, jdk_internal_reflect_constantpool,
     jdk_internal_reflect_directconstructorhandleaccessor_nativeaccessor,
     jdk_internal_reflect_directmethodhandleaccessor_nativeaccessor,
     jdk_internal_reflect_nativeconstructoraccessorimpl,
@@ -535,6 +535,7 @@ impl MethodRegistry {
         java_util_zip_crc32::register(&mut method_registry);
         java_util_zip_deflater::register(&mut method_registry);
         java_util_zip_inflater::register(&mut method_registry);
+        jdk_internal_module_modulebootstrap::register(&mut method_registry);
         sun_awt_cgraphicsdevice::register(&mut method_registry);
         sun_awt_cgraphicsenvironment::register(&mut method_registry);
         sun_awt_debugsettings::register(&mut method_registry);
