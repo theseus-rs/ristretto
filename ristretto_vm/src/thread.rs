@@ -95,6 +95,16 @@ impl Thread {
         Ok(frames.clone())
     }
 
+    /// Get the current frame in the thread.
+    ///
+    /// # Errors
+    /// if the current frame cannot be accessed.
+    pub async fn current_frame(&self) -> Result<Arc<Frame>> {
+        let frames = self.frames.read().await;
+        let frame = frames.last().ok_or(InternalError("No frame".to_string()))?;
+        Ok(frame.clone())
+    }
+
     /// Get a class.
     ///
     /// See: <https://docs.oracle.com/javase/specs/jls/se23/html/jls-12.html#jls-12.4.1>
@@ -314,6 +324,25 @@ impl Thread {
         }
 
         result
+    }
+
+    /// Add a new frame to the thread and invoke the method. To invoke a method on an object
+    /// reference, the object reference must be the first argument in the arguments vector.
+    ///
+    /// # Errors
+    /// if the method cannot be invoked.
+    pub async fn try_execute(
+        &self,
+        class: &Arc<Class>,
+        method: &Arc<Method>,
+        arguments: Vec<impl RustValue>,
+        remove_frame: bool,
+    ) -> Result<Value> {
+        let result = self.execute(class, method, arguments, remove_frame).await?;
+        match result {
+            Some(value) => Ok(value),
+            None => Err(InternalError("No result".to_string())),
+        }
     }
 
     /// The JVM specification requires that Long and Double take two places in the arguments list

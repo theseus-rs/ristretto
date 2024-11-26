@@ -400,10 +400,26 @@ async fn get_declaring_class_0(
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_enclosing_method_0(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    let frames = thread.frames().await?;
+    if frames.len() < 2 {
+        return Ok(Some(Value::Object(None)));
+    }
+
+    let frame = &frames[frames.len() - 2];
+    let vm = thread.vm()?;
+    let class = frame.class().to_object(&vm).await?;
+    let method = frame.method();
+    let method_name = method.name().to_object(&vm).await?;
+    let method_descriptor = method.descriptor().to_object(&vm).await?;
+    let object_array_class = thread.class("[Ljava/lang/Object;").await?;
+    let enclosing_information = vec![class, method_name, method_descriptor];
+    let enclosing_information_array =
+        Reference::try_from((object_array_class, enclosing_information))?;
+
+    Ok(Some(Value::from(enclosing_information_array)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -534,10 +550,22 @@ async fn get_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_simple_binary_name_0(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    let frame = thread.current_frame().await?;
+    let class = frame.class();
+    let class_name = class.name();
+    let class_name_parts = class_name.split('$').collect::<Vec<&str>>();
+
+    if class_name_parts.len() <= 1 {
+        return Ok(Some(Value::Object(None)));
+    }
+
+    let vm = thread.vm()?;
+    let binary_name = class_name_parts[class_name_parts.len() - 1];
+    let value: Value = binary_name.to_string().to_object(&vm).await?;
+    Ok(Some(value))
 }
 
 #[async_recursion(?Send)]

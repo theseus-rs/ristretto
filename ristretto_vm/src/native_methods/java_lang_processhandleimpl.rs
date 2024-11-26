@@ -49,7 +49,7 @@ async fn get_process_pids_0(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[expect(clippy::needless_pass_by_value)]

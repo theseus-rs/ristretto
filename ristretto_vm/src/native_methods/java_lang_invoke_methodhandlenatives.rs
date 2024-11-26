@@ -4,7 +4,7 @@ use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::Version;
-use ristretto_classloader::Value;
+use ristretto_classloader::{Class, Value};
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
@@ -183,8 +183,12 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn resolve(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn resolve(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let _speculative_resolve = arguments.pop_int()? != 0;
+    let _lookup_mode = arguments.pop_int()?;
+    let _caller: Arc<Class> = arguments.pop_object()?.try_into()?;
+    let member_self = arguments.pop_object()?;
+    Ok(Some(Value::from(member_self)))
 }
 
 #[expect(clippy::needless_pass_by_value)]
