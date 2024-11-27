@@ -38,23 +38,18 @@ impl Field {
         let access_flags = definition.access_flags;
         let name = constant_pool.try_get_utf8(definition.name_index)?.clone();
         let field_type = definition.field_type.clone();
-        let mut value = if access_flags.contains(FieldAccessFlags::FINAL) {
-            // Final fields are initialized by the class or object initializer
-            Value::Unused
-        } else {
-            match field_type {
-                FieldType::Base(
-                    BaseType::Boolean
-                    | BaseType::Byte
-                    | BaseType::Char
-                    | BaseType::Int
-                    | BaseType::Short,
-                ) => Value::Int(0),
-                FieldType::Base(BaseType::Double) => Value::Double(0.0),
-                FieldType::Base(BaseType::Float) => Value::Float(0.0),
-                FieldType::Base(BaseType::Long) => Value::Long(0),
-                FieldType::Object(_) | FieldType::Array(_) => Value::Object(None),
-            }
+        let mut value = match field_type {
+            FieldType::Base(
+                BaseType::Boolean
+                | BaseType::Byte
+                | BaseType::Char
+                | BaseType::Int
+                | BaseType::Short,
+            ) => Value::Int(0),
+            FieldType::Base(BaseType::Double) => Value::Double(0.0),
+            FieldType::Base(BaseType::Float) => Value::Float(0.0),
+            FieldType::Base(BaseType::Long) => Value::Long(0),
+            FieldType::Object(_) | FieldType::Array(_) => Value::Object(None),
         };
 
         if access_flags.contains(FieldAccessFlags::STATIC) {
