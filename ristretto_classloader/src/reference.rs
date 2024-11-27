@@ -284,12 +284,6 @@ impl From<(Arc<Class>, Vec<Option<Reference>>)> for Reference {
     }
 }
 
-impl From<Object> for Reference {
-    fn from(value: Object) -> Self {
-        Reference::Object(value)
-    }
-}
-
 impl TryFrom<(Arc<Class>, Vec<Value>)> for Reference {
     type Error = crate::Error;
 
@@ -305,6 +299,12 @@ impl TryFrom<(Arc<Class>, Vec<Value>)> for Reference {
         }
 
         Ok(Reference::Array(class, ConcurrentVec::from(references)))
+    }
+}
+
+impl From<Object> for Reference {
+    fn from(value: Object) -> Self {
+        Reference::Object(value)
     }
 }
 
@@ -1090,15 +1090,6 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_from_vec_object() -> Result<()> {
-        let class = minimum_class()?;
-        let object = Object::new(class)?;
-        let reference = Reference::from(object);
-        assert!(matches!(reference, Reference::Object(_)));
-        Ok(())
-    }
-
     #[tokio::test]
     async fn test_try_from_class_vec() -> Result<()> {
         let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
@@ -1120,6 +1111,15 @@ mod tests {
         let original_value = vec![value];
         let reference = Reference::try_from((original_class.clone(), original_value.clone()));
         assert!(matches!(reference, Err(InvalidValueType(_))));
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_vec_object() -> Result<()> {
+        let class = minimum_class()?;
+        let object = Object::new(class)?;
+        let reference = Reference::from(object);
+        assert!(matches!(reference, Reference::Object(_)));
         Ok(())
     }
 
