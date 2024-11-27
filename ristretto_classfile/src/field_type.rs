@@ -32,8 +32,8 @@ impl FieldType {
             FieldType::Object(class_name) => class_name.to_string(),
             FieldType::Array(component_type) => match &**component_type {
                 FieldType::Base(base_type) => format!("[{}", base_type.code()),
-                FieldType::Object(class_name) => format!("L{class_name};"),
-                FieldType::Array(component_type) => format!("[{component_type}"),
+                FieldType::Object(class_name) => format!("[L{class_name};"),
+                FieldType::Array(_) => format!("[{}", component_type.class_name()),
             },
         }
     }
@@ -230,5 +230,25 @@ mod test {
             Err(IoError("Invalid descriptor length".to_string())),
             FieldType::parse(&descriptor)
         );
+    }
+
+    #[test]
+    fn test_class_name_base() {
+        let field_type = FieldType::Base(BaseType::Int);
+        assert_eq!("int", field_type.class_name());
+        let field_type_array = FieldType::Array(Box::new(field_type.clone()));
+        assert_eq!("[I", field_type_array.class_name());
+        let field_type_multi_array = FieldType::Array(Box::new(field_type_array));
+        assert_eq!("[[I", field_type_multi_array.class_name());
+    }
+
+    #[test]
+    fn test_class_name_object() {
+        let field_type = FieldType::Object("java/lang/Object".to_string());
+        assert_eq!("java/lang/Object", field_type.class_name());
+        let field_type_array = FieldType::Array(Box::new(field_type.clone()));
+        assert_eq!("[Ljava/lang/Object;", field_type_array.class_name());
+        let field_type_multi_array = FieldType::Array(Box::new(field_type_array));
+        assert_eq!("[[Ljava/lang/Object;", field_type_multi_array.class_name());
     }
 }
