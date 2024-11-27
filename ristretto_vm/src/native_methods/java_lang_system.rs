@@ -271,6 +271,19 @@ async fn nano_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    let vm = thread.vm()?;
+    let java_version = vm.java_class_file_version();
+    if java_version <= &JAVA_8 {
+        vm.invoke(
+            "java/lang/System",
+            "setJavaLangAccess",
+            "()V",
+            Vec::<Value>::new(),
+        )
+        .await?;
+        return Ok(None);
+    }
+
     // Force the initialization of the system properties; this is required because no security
     // manager is installed and when System::initPhase1() is called, the resulting call chain:
     //
@@ -283,7 +296,6 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
     //             System::getProperties()
     //
     // will eventually call System::getProperty() which fails if this is not initialized.
-    let vm = thread.vm()?;
     vm.invoke(
         "java/lang/System",
         "setProperties",

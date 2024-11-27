@@ -10,6 +10,7 @@ use ristretto_classloader::{ConcurrentVec, Object, Reference, Value};
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 
 /// Register all native methods for `java.lang.Throwable`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -88,7 +89,11 @@ async fn fill_in_stack_trace(
         stack_elements,
     )));
     throwable.set_value("backtrace", stack_trace)?;
-    throwable.set_value("depth", Value::Int(depth))?;
+
+    if vm.java_class_file_version() >= &JAVA_11 {
+        throwable.set_value("depth", Value::Int(depth))?;
+    }
+
     Ok(Some(Value::Object(object)))
 }
 
