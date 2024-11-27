@@ -1,12 +1,13 @@
 use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
+use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::JavaError::NullPointerException;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::{ClassAccessFlags, Version};
+use ristretto_classfile::{ClassAccessFlags, FieldAccessFlags, Version};
 use ristretto_classloader::{Class, Object, Reference, Value};
 use std::sync::Arc;
 
@@ -370,13 +371,56 @@ async fn get_declared_constructors_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_declared_fields_0(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    let public_only = arguments.pop_int()? != 0;
+    let object = arguments.pop_object()?;
+    let vm = thread.vm()?;
+    let class = object.class();
+    let class_object = class.to_object(&vm).await?;
+
+    let mut fields = Vec::new();
+    for field in object.fields() {
+        let access_flags = field.access_flags();
+        if public_only && !access_flags.contains(FieldAccessFlags::PUBLIC) {
+            continue;
+        }
+
+        let field_name = field.name();
+        let field_type_class_name = field.field_type().class_name();
+        let field_type_class = thread.class(field_type_class_name).await?;
+        let field_type = field_type_class.to_object(&vm).await?;
+        let modifiers = Value::Int(i32::from(access_flags.bits()));
+        let slot = &class.field_offset(field_name)?;
+        let slot = Value::Int(i32::try_from(*slot)?);
+        let field_name = field.name().to_value();
+        // TODO: Add support for generic signature
+        let signature = Value::Object(None);
+        // TODO: Add support for annotations
+        let annotations = Value::Object(None);
+        let field = thread
+            .object(
+                "java/lang/reflect/Field",
+                "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IILjava/lang/String;[B",
+                vec![
+                    class_object.clone(),
+                    field_name,
+                    field_type,
+                    modifiers,
+                    slot,
+                    signature,
+                    annotations,
+                ],
+            )
+            .await?;
+        fields.push(field);
+    }
+    let fields_array_class = thread.class("[Ljava/lang/reflect/Field;").await?;
+    let fields = Value::try_from((fields_array_class, fields))?;
+    Ok(Some(fields))
 }
 
 #[expect(clippy::needless_pass_by_value)]

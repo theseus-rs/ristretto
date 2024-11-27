@@ -281,6 +281,15 @@ impl From<(Arc<Class>, Vec<Option<Reference>>)> for Value {
     }
 }
 
+impl TryFrom<(Arc<Class>, Vec<Value>)> for Value {
+    type Error = crate::Error;
+
+    fn try_from(value: (Arc<Class>, Vec<Value>)) -> Result<Self> {
+        let reference = Reference::try_from(value)?;
+        Ok(Value::Object(Some(reference)))
+    }
+}
+
 impl From<Object> for Value {
     fn from(value: Object) -> Self {
         Value::Object(Some(Reference::from(value)))
@@ -948,6 +957,30 @@ mod tests {
         let original_value = vec![None];
         let value = Value::from((original_class.clone(), original_value.clone()));
         assert!(matches!(value, Value::Object(Some(Reference::Array(_, _)))));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_from_class_vec() -> Result<()> {
+        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let class_name = "java/lang/Integer";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        let value = Value::from(object);
+        let original_value = vec![value];
+        let value = Value::try_from((original_class.clone(), original_value.clone()))?;
+        assert!(matches!(value, Value::Object(Some(Reference::Array(_, _)))));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_from_class_vec_error() -> Result<()> {
+        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let value = Value::from(42);
+        let original_value = vec![value];
+        let value = Value::try_from((original_class.clone(), original_value.clone()));
+        assert!(matches!(value, Err(InvalidValueType(_))));
         Ok(())
     }
 
