@@ -1,6 +1,6 @@
 use crate::concurrent_vec::ConcurrentVec;
 use crate::Error::InvalidValueType;
-use crate::{Class, Object, Result};
+use crate::{Class, Object, Result, Value};
 use ristretto_classfile::{ClassFile, ConstantPool};
 use std::fmt;
 use std::fmt::Display;
@@ -287,6 +287,24 @@ impl From<(Arc<Class>, Vec<Option<Reference>>)> for Reference {
 impl From<Object> for Reference {
     fn from(value: Object) -> Self {
         Reference::Object(value)
+    }
+}
+
+impl TryFrom<(Arc<Class>, Vec<Value>)> for Reference {
+    type Error = crate::Error;
+
+    fn try_from(value: (Arc<Class>, Vec<Value>)) -> Result<Self> {
+        let (class, values) = value;
+        let mut references = Vec::new();
+
+        for value in values {
+            let Value::Object(reference) = value else {
+                return Err(InvalidValueType("Expected object".to_string()));
+            };
+            references.push(reference);
+        }
+
+        Ok(Reference::Array(class, ConcurrentVec::from(references)))
     }
 }
 
@@ -1078,6 +1096,30 @@ mod tests {
         let object = Object::new(class)?;
         let reference = Reference::from(object);
         assert!(matches!(reference, Reference::Object(_)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_from_class_vec() -> Result<()> {
+        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let class_name = "java/lang/Integer";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        let value = Value::from(object);
+        let original_value = vec![value];
+        let reference = Reference::try_from((original_class.clone(), original_value.clone()))?;
+        assert!(matches!(reference, Reference::Array(_, _)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_from_class_vec_error() -> Result<()> {
+        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let value = Value::from(42);
+        let original_value = vec![value];
+        let reference = Reference::try_from((original_class.clone(), original_value.clone()));
+        assert!(matches!(reference, Err(InvalidValueType(_))));
         Ok(())
     }
 

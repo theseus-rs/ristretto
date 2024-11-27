@@ -6,7 +6,7 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-/// Register all native methods for jdk.internal.misc.PreviewFeatures.
+/// Register all native methods for `jdk.internal.misc.PreviewFeatures`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/misc/PreviewFeatures";
     registry.register(class_name, "isPreviewEnabled", "()Z", is_preview_enabled);
@@ -14,9 +14,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-pub(crate) async fn is_preview_enabled(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
+async fn is_preview_enabled(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }

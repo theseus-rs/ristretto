@@ -21,6 +21,7 @@
 #![forbid(unsafe_code)]
 #![forbid(clippy::allow_attributes)]
 #![allow(dead_code)]
+#![allow(clippy::only_used_in_recursion)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]

@@ -6,7 +6,7 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-/// Register all native methods for sun.io.Win32ErrorMode.
+/// Register all native methods for `sun.io.Win32ErrorMode`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "sun/io/Win32ErrorMode";
     registry.register(class_name, "setErrorMode", "(J)J", set_error_mode);

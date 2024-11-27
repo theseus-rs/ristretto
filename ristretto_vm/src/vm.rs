@@ -112,7 +112,7 @@ impl VM {
             None
         };
 
-        let method_registry = MethodRegistry::new(java_class_file_version.clone());
+        let method_registry = MethodRegistry::new(&java_class_file_version);
 
         let vm = Arc::new_cyclic(|vm| VM {
             vm: vm.clone(),

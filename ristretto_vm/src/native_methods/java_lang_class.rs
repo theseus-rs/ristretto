@@ -11,10 +11,94 @@ use ristretto_classloader::{Class, Object, Reference, Value};
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
+const JAVA_20: Version = Version::Java20 { minor: 0 };
 
-/// Register all native methods for java.lang.Class.
+/// Register all native methods for `java.lang.Class`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Class";
+    let java_version = registry.java_version().clone();
+
+    if java_version <= JAVA_8 {
+        registry.register(
+            class_name,
+            "getComponentType",
+            "()Ljava/lang/Class;",
+            get_component_type,
+        );
+        registry.register(
+            class_name,
+            "getConstantPool",
+            "()Lsun/reflect/ConstantPool;",
+            get_constant_pool,
+        );
+        registry.register(class_name, "getName0", "()Ljava/lang/String;", get_name_0);
+    } else {
+        registry.register(
+            class_name,
+            "getConstantPool",
+            "()Ljdk/internal/reflect/ConstantPool;",
+            get_constant_pool,
+        );
+        registry.register(
+            class_name,
+            "getNestHost0",
+            "()Ljava/lang/Class;",
+            get_nest_host_0,
+        );
+        registry.register(
+            class_name,
+            "getNestMembers0",
+            "()[Ljava/lang/Class;",
+            get_nest_members_0,
+        );
+        registry.register(
+            class_name,
+            "getSimpleBinaryName0",
+            "()Ljava/lang/String;",
+            get_simple_binary_name_0,
+        );
+        registry.register(
+            class_name,
+            "initClassName",
+            "()Ljava/lang/String;",
+            init_class_name,
+        );
+    }
+
+    if java_version >= JAVA_17 {
+        registry.register(
+            class_name,
+            "getPermittedSubclasses0",
+            "()[Ljava/lang/Class;",
+            get_permitted_subclasses_0,
+        );
+        registry.register(
+            class_name,
+            "getRecordComponents0",
+            "()[Ljava/lang/reflect/RecordComponent;",
+            get_record_components_0,
+        );
+        registry.register(class_name, "isHidden", "()Z", is_hidden);
+        registry.register(class_name, "isRecord0", "()Z", is_record_0);
+    }
+
+    if java_version >= JAVA_20 {
+        registry.register(
+            class_name,
+            "getClassAccessFlagsRaw0",
+            "()I",
+            get_class_access_flags_raw_0,
+        );
+        registry.register(
+            class_name,
+            "getClassFileVersion0",
+            "()I",
+            get_class_file_version_0,
+        );
+    }
+
     registry.register(
         class_name,
         "desiredAssertionStatus0",
@@ -29,38 +113,70 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
-        "getClassAccessFlagsRaw0",
-        "()I",
-        get_class_access_flags_raw_0,
+        "getConstantPool",
+        "()Ljdk/internal/reflect/ConstantPool;",
+        get_constant_pool,
     );
     registry.register(
         class_name,
-        "getClassFileVersion0",
-        "()I",
-        get_class_file_version_0,
+        "getDeclaredClasses0",
+        "()[Ljava/lang/Class;",
+        get_declared_classes_0,
     );
-
-    if *registry.java_version() <= JAVA_8 {
-        registry.register(
-            class_name,
-            "getComponentType",
-            "()Ljava/lang/Class;",
-            get_component_type,
-        );
-    }
-
+    registry.register(
+        class_name,
+        "getDeclaredConstructors0",
+        "(Z)[Ljava/lang/reflect/Constructor;",
+        get_declared_constructors_0,
+    );
+    registry.register(
+        class_name,
+        "getDeclaredFields0",
+        "(Z)[Ljava/lang/reflect/Field;",
+        get_declared_fields_0,
+    );
+    registry.register(
+        class_name,
+        "getDeclaredMethods0",
+        "(Z)[Ljava/lang/reflect/Method;",
+        get_declared_methods_0,
+    );
     registry.register(
         class_name,
         "getDeclaringClass0",
         "()Ljava/lang/Class;",
         get_declaring_class_0,
     );
+    registry.register(
+        class_name,
+        "getEnclosingMethod0",
+        "()[Ljava/lang/Object;",
+        get_enclosing_method_0,
+    );
+    registry.register(
+        class_name,
+        "getGenericSignature0",
+        "()Ljava/lang/String;",
+        get_generic_signature_0,
+    );
+    registry.register(
+        class_name,
+        "getInterfaces0",
+        "()[Ljava/lang/Class;",
+        get_interfaces_0,
+    );
     registry.register(class_name, "getModifiers", "()I", get_modifiers);
     registry.register(
         class_name,
-        "getPermittedSubclasses0",
+        "getNestHost0",
+        "()Ljava/lang/Class;",
+        get_nest_host_0,
+    );
+    registry.register(
+        class_name,
+        "getNestMembers0",
         "()[Ljava/lang/Class;",
-        get_permitted_subclasses_0,
+        get_nest_members_0,
     );
     registry.register(
         class_name,
@@ -70,15 +186,40 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         class_name,
+        "getProtectionDomain0",
+        "()Ljava/security/ProtectionDomain;",
+        get_protection_domain_0,
+    );
+    registry.register(class_name, "getRawAnnotations", "()[B", get_raw_annotations);
+    registry.register(
+        class_name,
+        "getRawTypeAnnotations",
+        "()[B",
+        get_raw_type_annotations,
+    );
+    registry.register(
+        class_name,
         "getSigners",
-        "()Ljava/lang/Object;",
+        "()[Ljava/lang/Object;",
         get_signers,
+    );
+    registry.register(
+        class_name,
+        "getSimpleBinaryName0",
+        "()Ljava/lang/String;",
+        get_simple_binary_name_0,
     );
     registry.register(
         class_name,
         "getSuperclass",
         "()Ljava/lang/Class;",
-        get_super_class,
+        get_superclass,
+    );
+    registry.register(
+        class_name,
+        "initClassName",
+        "()Ljava/lang/String;",
+        init_class_name,
     );
     registry.register(class_name, "isArray", "()Z", is_array);
     registry.register(
@@ -87,14 +228,19 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/Class;)Z",
         is_assignable_from,
     );
-    registry.register(class_name, "isHidden", "()Z", is_hidden);
+    registry.register(
+        class_name,
+        "isInstance",
+        "(Ljava/lang/Object;)Z",
+        is_instance,
+    );
     registry.register(class_name, "isInterface", "()Z", is_interface);
     registry.register(class_name, "isPrimitive", "()Z", is_primitive);
     registry.register(class_name, "registerNatives", "()V", register_natives);
     registry.register(
         class_name,
         "setSigners",
-        "(Ljava/lang/Object;)V",
+        "([Ljava/lang/Object;)V",
         set_signers,
     );
 }
@@ -116,21 +262,6 @@ async fn desired_assertion_status_0(
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
-}
-
-#[async_recursion(?Send)]
-async fn get_permitted_subclasses_0(
-    thread: Arc<Thread>,
-    mut arguments: Arguments,
-) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError(
-            "getPermittedSubclasses0: no arguments".to_string(),
-        ));
-    };
-    let _class = get_class(&thread, &object).await?;
-    // TODO: add support for sealed classes
-    Ok(None)
 }
 
 #[async_recursion(?Send)]
@@ -217,11 +348,93 @@ async fn get_component_type(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn get_constant_pool(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_declared_classes_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_declared_constructors_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_declared_fields_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_declared_methods_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn get_declaring_class_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_enclosing_method_0(
+    thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    let frames = thread.frames().await?;
+    if frames.len() < 2 {
+        return Ok(Some(Value::Object(None)));
+    }
+
+    let frame = &frames[frames.len() - 2];
+    let vm = thread.vm()?;
+    let class = frame.class().to_object(&vm).await?;
+    let method = frame.method();
+    let method_name = method.name().to_object(&vm).await?;
+    let method_descriptor = method.descriptor().to_object(&vm).await?;
+    let object_array_class = thread.class("[Ljava/lang/Object;").await?;
+    let enclosing_information = vec![class, method_name, method_descriptor];
+    let enclosing_information_array =
+        Reference::try_from((object_array_class, enclosing_information))?;
+
+    Ok(Some(Value::from(enclosing_information_array)))
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_generic_signature_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_interfaces_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[async_recursion(?Send)]
@@ -245,6 +458,39 @@ async fn get_modifiers(thread: Arc<Thread>, mut arguments: Arguments) -> Result<
     Ok(Some(Value::Int(modifiers)))
 }
 
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_name_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_nest_host_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_nest_members_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[async_recursion(?Send)]
+async fn get_permitted_subclasses_0(
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
+        return Err(InternalError(
+            "getPermittedSubclasses0: no arguments".to_string(),
+        ));
+    };
+    let _class = get_class(&thread, &object).await?;
+    // TODO: add support for sealed classes
+    Ok(None)
+}
+
 #[async_recursion(?Send)]
 async fn get_primitive_class(
     thread: Arc<Thread>,
@@ -263,13 +509,67 @@ async fn get_primitive_class(
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn get_protection_domain_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_raw_annotations(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_raw_type_annotations(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_record_components_0(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn get_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: Implement get_signers
     Ok(None)
 }
 
+#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn get_super_class(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+async fn get_simple_binary_name_0(
+    thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    let frame = thread.current_frame().await?;
+    let class = frame.class();
+    let class_name = class.name();
+    let class_name_parts = class_name.split('$').collect::<Vec<&str>>();
+
+    if class_name_parts.len() <= 1 {
+        return Ok(Some(Value::Object(None)));
+    }
+
+    let vm = thread.vm()?;
+    let binary_name = class_name_parts[class_name_parts.len() - 1];
+    let value: Value = binary_name.to_string().to_object(&vm).await?;
+    Ok(Some(value))
+}
+
+#[async_recursion(?Send)]
+async fn get_superclass(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let Some(Reference::Object(object)) = arguments.pop_reference()? else {
         return Err(InternalError("getSuperclass: no arguments".to_string()));
     };
@@ -284,6 +584,12 @@ async fn get_super_class(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
         }
         None => Ok(None),
     }
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn init_class_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[async_recursion(?Send)]
@@ -327,6 +633,12 @@ async fn is_hidden(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
     Ok(Some(Value::from(false)))
 }
 
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn is_instance(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
 #[async_recursion(?Send)]
 async fn is_interface(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let Some(Reference::Object(object)) = arguments.pop_reference()? else {
@@ -351,6 +663,12 @@ async fn is_primitive(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
     } else {
         Ok(Some(Value::from(false)))
     }
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn is_record_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]

@@ -6,14 +6,14 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-/// Register all native methods for java.lang.invoke.MethodHandleNatives.
+/// Register all native methods for `java.net.Inet6Address`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/invoke/MethodHandleNatives";
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    let class_name = "java/net/Inet6Address";
+    registry.register(class_name, "init", "()V", init);
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }

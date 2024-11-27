@@ -6,15 +6,45 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-/// Register all native methods for jdk.internal.loader.BootLoader.
+/// Register all native methods for `jdk.internal.loader.BootLoader`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/loader/BootLoader";
+    registry.register(
+        class_name,
+        "getSystemPackageLocation",
+        "(Ljava/lang/String;)Ljava/lang/String;",
+        get_system_package_location,
+    );
+    registry.register(
+        class_name,
+        "getSystemPackageNames",
+        "()[Ljava/lang/String;",
+        get_system_package_names,
+    );
     registry.register(
         class_name,
         "setBootLoaderUnnamedModule0",
         "(Ljava/lang/Module;)V",
         set_boot_loader_unnamed_module_0,
     );
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_system_package_location(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn get_system_package_names(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]

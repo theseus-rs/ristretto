@@ -6,7 +6,7 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-/// Register all native methods for java.lang.Double.
+/// Register all native methods for `java.lang.Double`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/Double";
     registry.register(

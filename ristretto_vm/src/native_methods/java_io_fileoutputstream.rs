@@ -4,21 +4,50 @@ use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::Version;
 use ristretto_classloader::{Reference, Value};
 use std::io::Write;
 use std::sync::Arc;
 
-/// Register all native methods for java.io.FileOutputStream.
+const JAVA_8: Version = Version::Java8 { minor: 0 };
+
+/// Register all native methods for `java.io.FileOutputStream`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/io/FileOutputStream";
+    let java_version = registry.java_version();
+
+    if java_version <= &JAVA_8 {
+        registry.register(class_name, "close0", "()V", close_0);
+    }
+
     registry.register(class_name, "initIDs", "()V", init_ids);
+    registry.register(class_name, "open0", "(Ljava/lang/String;Z)V", open_0);
+    registry.register(class_name, "write", "(IZ)V", write);
     registry.register(class_name, "writeBytes", "([BIIZ)V", write_bytes);
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn open_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
+async fn write(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!()
 }
 
 #[expect(clippy::cast_sign_loss)]

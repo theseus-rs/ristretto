@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 const JAVA_19: Version = Version::Java19 { minor: 0 };
 
-/// Register all native methods for jdk.internal.util.SystemProps$Raw.
+/// Register all native methods for `jdk.internal.util.SystemProps$Raw`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "jdk/internal/util/SystemProps$Raw";
     registry.register(

@@ -19,7 +19,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_11: Version = Version::Java11 { minor: 0 };
 
-/// Register all native methods for java.lang.System
+/// Register all native methods for `java.lang.System`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/System";
     registry.register(
@@ -56,9 +56,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(class_name, "nanoTime", "()J", nano_time);
     registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(class_name, "setErr0", "(Ljava/io/PrintStream;)V", set_err_0);
     registry.register(class_name, "setIn0", "(Ljava/io/InputStream;)V", set_in_0);
     registry.register(class_name, "setOut0", "(Ljava/io/PrintStream;)V", set_out_0);
-    registry.register(class_name, "setErr0", "(Ljava/io/PrintStream;)V", set_err_0);
 }
 
 fn arraycopy_vec<T: Clone + Debug + PartialEq>(
