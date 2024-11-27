@@ -61,6 +61,12 @@ impl Object {
         class.is_assignable_from(&self.class)
     }
 
+    /// Get the fields.
+    #[must_use]
+    pub fn fields(&self) -> Vec<&Field> {
+        self.fields.values().collect()
+    }
+
     /// Get field by name.
     ///
     /// # Errors
@@ -517,6 +523,15 @@ mod tests {
         let class = load_class(class_name).await?;
         let object = Object::new(class.clone())?;
         assert!(object.instance_of(&class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_fields() -> Result<()> {
+        let class = string_class().await?;
+        let object = Object::new(class)?;
+        let fields = object.fields();
+        assert_eq!(4, fields.len());
         Ok(())
     }
 

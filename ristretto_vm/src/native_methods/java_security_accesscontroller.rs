@@ -4,7 +4,7 @@ use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::Version;
-use ristretto_classloader::Value;
+use ristretto_classloader::{Class, Value};
 use std::sync::Arc;
 
 const JAVA_11: Version = Version::Java11 { minor: 0 };
@@ -63,28 +63,46 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn do_privileged_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn do_privileged_1(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let object = arguments.pop_object()?;
+    let class: Arc<Class> = object.class().clone();
+    let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
+    thread
+        .execute(&class, &method, vec![Value::from(object)], true)
+        .await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn do_privileged_2(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn do_privileged_2(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let _context = arguments.pop_object()?;
+    let object = arguments.pop_object()?;
+    let class: Arc<Class> = object.class().clone();
+    let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
+    thread
+        .execute(&class, &method, vec![Value::from(object)], true)
+        .await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn do_privileged_3(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn do_privileged_3(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let object = arguments.pop_object()?;
+    let class: Arc<Class> = object.class().clone();
+    let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
+    thread
+        .execute(&class, &method, vec![Value::from(object)], true)
+        .await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
-async fn do_privileged_4(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn do_privileged_4(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let _context = arguments.pop_object()?;
+    let object = arguments.pop_object()?;
+    let class: Arc<Class> = object.class().clone();
+    let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
+    thread
+        .execute(&class, &method, vec![Value::from(object)], true)
+        .await
 }
 
 #[expect(clippy::needless_pass_by_value)]
