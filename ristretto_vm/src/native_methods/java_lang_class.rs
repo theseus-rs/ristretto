@@ -383,7 +383,7 @@ async fn get_declared_fields_0(
     let class_object = class.to_object(&vm).await?;
 
     let mut fields = Vec::new();
-    for field in object.fields() {
+    for field in class.fields() {
         let access_flags = field.access_flags();
         if public_only && !access_flags.contains(FieldAccessFlags::PUBLIC) {
             continue;
