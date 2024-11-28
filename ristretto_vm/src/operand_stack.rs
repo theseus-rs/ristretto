@@ -152,8 +152,10 @@ impl Display for OperandStack {
                 let mut values = Vec::new();
                 for stack_entry in &stack {
                     let value = stack_entry.to_string();
-                    if value.len() > 100 {
-                        values.push(format!("{}...", &value[..97]));
+                    let chars: Vec<char> = value.chars().collect();
+                    if chars.len() > 100 {
+                        let value = chars.iter().take(97).collect::<String>();
+                        values.push(format!("{value}..."));
                     } else {
                         values.push(value);
                     }

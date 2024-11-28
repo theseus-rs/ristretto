@@ -189,8 +189,10 @@ impl Display for LocalVariables {
                 continue;
             };
             let value = local.to_string();
-            if value.len() > 100 {
-                locals.push(format!("{}...", &value[..97]));
+            let chars: Vec<char> = value.chars().collect();
+            if chars.len() > 100 {
+                let value = chars.iter().take(97).collect::<String>();
+                locals.push(format!("{value}..."));
             } else {
                 locals.push(value);
             }

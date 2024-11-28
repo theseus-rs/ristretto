@@ -1,8 +1,7 @@
 use crate::Error::InternalError;
 use crate::{Result, VM};
 use ristretto_classfile::{mutf8, Version};
-use ristretto_classloader::Error::ParseError;
-use ristretto_classloader::{Class, Object, Reference, Value};
+use ristretto_classloader::{Class, ConcurrentVec, Object, Reference, Value};
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
@@ -190,11 +189,8 @@ impl JavaObject for &str {
         // In Java 9 and later, the value field is a byte array.
         let java_class_file_version = vm.java_class_file_version();
         let array = if java_class_file_version <= &JAVA_8 {
-            let bytes = mutf8::to_bytes(self)?;
-            let utf8_string =
-                String::from_utf8(bytes).map_err(|error| ParseError(error.to_string()))?;
-            let chars: Vec<char> = utf8_string.chars().collect();
-            Reference::from(chars)
+            let chars = self.encode_utf16().collect::<Vec<u16>>();
+            Reference::CharArray(ConcurrentVec::from(chars))
         } else {
             if java_class_file_version >= &JAVA_17 {
                 object.set_value("hashIsZero", Value::Int(0))?;
