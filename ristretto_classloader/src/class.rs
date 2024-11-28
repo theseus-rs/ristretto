@@ -269,6 +269,13 @@ impl Class {
         &mut self.class_file.constant_pool
     }
 
+    /// Get the fields for the class.
+    /// The fields are returned in the order they are defined in the class file.
+    #[must_use]
+    pub fn fields(&self) -> Vec<Arc<Field>> {
+        self.fields.values().cloned().collect()
+    }
+
     /// Get a static field by name.
     ///
     /// # Errors
@@ -711,6 +718,14 @@ mod tests {
         let constant_pool = class.constant_pool_mut();
         let index = constant_pool.add_string("foo")?;
         assert!(index > 0);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_fields() -> Result<()> {
+        let class = string_class().await?;
+        let fields = class.fields();
+        assert_eq!(11, fields.len());
         Ok(())
     }
 
