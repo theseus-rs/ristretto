@@ -23,7 +23,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn tesselate_fill_native(
     _thread: Arc<Thread>,
@@ -32,7 +31,6 @@ async fn tesselate_fill_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn tesselate_stroke_native(
     _thread: Arc<Thread>,

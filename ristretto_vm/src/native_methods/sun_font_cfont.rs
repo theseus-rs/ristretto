@@ -57,19 +57,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "getWidthNative", "(J)F", get_width_native);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn create_native_font(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn dispose_native_font(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_cg_font_ptr_native(
     _thread: Arc<Thread>,
@@ -78,13 +75,11 @@ async fn get_cg_font_ptr_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_cascade_list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_layout_table_cache_native(
     _thread: Arc<Thread>,
@@ -93,7 +88,6 @@ async fn get_layout_table_cache_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_table_bytes_native(
     _thread: Arc<Thread>,
@@ -102,13 +96,11 @@ async fn get_table_bytes_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_weight_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_width_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

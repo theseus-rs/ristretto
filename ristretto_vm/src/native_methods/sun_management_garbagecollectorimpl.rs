@@ -18,7 +18,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "getCollectionTime", "()J", get_collection_time);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_collection_count(
     _thread: Arc<Thread>,
@@ -27,7 +26,6 @@ async fn get_collection_count(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_collection_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

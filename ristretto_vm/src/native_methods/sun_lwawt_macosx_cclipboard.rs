@@ -31,7 +31,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "setData", "([BJ)V", set_data);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn check_pasteboard_without_notification(
     _thread: Arc<Thread>,
@@ -40,19 +39,16 @@ async fn check_pasteboard_without_notification(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn declare_types(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_clipboard_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_clipboard_formats(
     _thread: Arc<Thread>,
@@ -61,7 +57,6 @@ async fn get_clipboard_formats(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

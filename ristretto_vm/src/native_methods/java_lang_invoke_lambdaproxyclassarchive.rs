@@ -13,13 +13,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "findFromArchive", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MemberName;Ljava/lang/invoke/MethodType;)Ljava/lang/Class;", find_from_archive);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn add_to_archive(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn find_from_archive(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

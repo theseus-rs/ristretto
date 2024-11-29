@@ -53,7 +53,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn create_native_strike_ptr(
     _thread: Arc<Thread>,
@@ -62,7 +61,6 @@ async fn create_native_strike_ptr(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn dispose_native_strike_ptr(
     _thread: Arc<Thread>,
@@ -71,13 +69,11 @@ async fn dispose_native_strike_ptr(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_font_metrics(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_glyph_image_ptrs_native(
     _thread: Arc<Thread>,
@@ -86,7 +82,6 @@ async fn get_glyph_image_ptrs_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_native_glyph_advance(
     _thread: Arc<Thread>,
@@ -95,7 +90,6 @@ async fn get_native_glyph_advance(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_native_glyph_image_bounds(
     _thread: Arc<Thread>,
@@ -104,7 +98,6 @@ async fn get_native_glyph_image_bounds(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_native_glyph_outline(
     _thread: Arc<Thread>,

@@ -35,7 +35,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn execute_diagnostic_command(
     _thread: Arc<Thread>,
@@ -44,7 +43,6 @@ async fn execute_diagnostic_command(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_diagnostic_command_info(
     _thread: Arc<Thread>,
@@ -53,7 +51,6 @@ async fn get_diagnostic_command_info(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_diagnostic_commands(
     _thread: Arc<Thread>,
@@ -62,7 +59,6 @@ async fn get_diagnostic_commands(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_notification_enabled(
     _thread: Arc<Thread>,

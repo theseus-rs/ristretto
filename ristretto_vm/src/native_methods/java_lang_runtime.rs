@@ -23,7 +23,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "totalMemory", "()J", total_memory);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn available_processors(
     _thread: Arc<Thread>,
@@ -35,7 +34,6 @@ async fn available_processors(
     Ok(Some(Value::Int(cpus)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn free_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let sys = System::new_all();
@@ -48,7 +46,6 @@ async fn free_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
     Ok(Some(Value::Long(free_memory)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn total_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: This is not the correct implementation; should be the total memory of the JVM
@@ -62,7 +59,6 @@ async fn total_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
     Ok(Some(Value::Long(free_memory)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn max_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let sys = System::new_all();
@@ -71,7 +67,6 @@ async fn max_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Optio
     Ok(Some(Value::Long(total_memory)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)

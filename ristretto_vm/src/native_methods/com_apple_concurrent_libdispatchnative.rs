@@ -53,7 +53,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_concurrent_queue(
     _thread: Arc<Thread>,
@@ -62,7 +61,6 @@ async fn native_create_concurrent_queue(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_serial_queue(
     _thread: Arc<Thread>,
@@ -71,7 +69,6 @@ async fn native_create_serial_queue(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_execute_async(
     _thread: Arc<Thread>,
@@ -80,13 +77,11 @@ async fn native_execute_async(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_execute_sync(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_main_queue(
     _thread: Arc<Thread>,
@@ -95,7 +90,6 @@ async fn native_get_main_queue(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_is_dispatch_supported(
     _thread: Arc<Thread>,
@@ -104,7 +98,6 @@ async fn native_is_dispatch_supported(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_release_queue(
     _thread: Arc<Thread>,

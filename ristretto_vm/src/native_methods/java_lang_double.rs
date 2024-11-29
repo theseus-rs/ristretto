@@ -18,7 +18,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "longBitsToDouble", "(J)D", long_bits_to_double);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn double_to_raw_long_bits(
     _thread: Arc<Thread>,
@@ -30,7 +29,6 @@ async fn double_to_raw_long_bits(
     Ok(Some(Value::Long(bits)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn long_bits_to_double(
     _thread: Arc<Thread>,

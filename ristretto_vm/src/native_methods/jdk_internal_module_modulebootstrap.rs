@@ -12,7 +12,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "boot", "()Ljava/lang/ModuleLayer;", boot);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn boot(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: remove this method once the module system is implemented

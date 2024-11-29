@@ -23,7 +23,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn fill_point_with_coords(
     _thread: Arc<Thread>,
@@ -32,7 +31,6 @@ async fn fill_point_with_coords(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_window_under_mouse(
     _thread: Arc<Thread>,

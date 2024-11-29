@@ -20,7 +20,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "raise0", "(I)V", raise_0);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn find_signal_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let value = arguments.pop()?;
@@ -74,7 +73,6 @@ async fn find_signal_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result
     Ok(Some(Value::Int(signal)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn handle_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let _handler = arguments.pop_long()?;
@@ -83,7 +81,6 @@ async fn handle_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
     Ok(Some(Value::Long(0)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn raise_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

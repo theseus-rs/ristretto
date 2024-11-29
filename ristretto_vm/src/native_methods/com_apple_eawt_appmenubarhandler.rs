@@ -37,7 +37,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_activate_default_menu_bar(
     _thread: Arc<Thread>,
@@ -46,7 +45,6 @@ async fn native_activate_default_menu_bar(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_default_menu_bar(
     _thread: Arc<Thread>,
@@ -55,7 +53,6 @@ async fn native_set_default_menu_bar(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_menu_state(
     _thread: Arc<Thread>,

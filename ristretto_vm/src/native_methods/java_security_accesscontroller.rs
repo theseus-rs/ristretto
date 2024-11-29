@@ -105,7 +105,6 @@ async fn do_privileged_4(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
         .await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn ensure_materialized_for_stack_walk(
     _thread: Arc<Thread>,
@@ -114,7 +113,6 @@ async fn ensure_materialized_for_stack_walk(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_inherited_access_control_context(
     _thread: Arc<Thread>,
@@ -123,7 +121,6 @@ async fn get_inherited_access_control_context(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_protection_domain(
     _thread: Arc<Thread>,
@@ -132,7 +129,6 @@ async fn get_protection_domain(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_stack_access_control_context(
     _thread: Arc<Thread>,

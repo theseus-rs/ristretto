@@ -416,7 +416,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "writebackPreSync0", "()V", writeback_pre_sync_0);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn address_size_0(
     _thread: Arc<Thread>,
@@ -425,7 +424,6 @@ pub(crate) async fn address_size_0(
     Ok(Some(Value::Int(8))) // 64-bit pointers
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn allocate_instance(
     _thread: Arc<Thread>,
@@ -434,7 +432,6 @@ pub(crate) async fn allocate_instance(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn allocate_memory_0(
     _thread: Arc<Thread>,
@@ -443,7 +440,6 @@ pub(crate) async fn allocate_memory_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn array_base_offset_0(
     _thread: Arc<Thread>,
@@ -452,7 +448,6 @@ pub(crate) async fn array_base_offset_0(
     Ok(Some(Value::Int(0)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn array_index_scale_0(
     _thread: Arc<Thread>,
@@ -461,7 +456,6 @@ pub(crate) async fn array_index_scale_0(
     Ok(Some(Value::Int(1)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_int(
     _thread: Arc<Thread>,
@@ -470,7 +464,6 @@ pub(crate) async fn compare_and_exchange_int(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_long(
     _thread: Arc<Thread>,
@@ -479,7 +472,6 @@ pub(crate) async fn compare_and_exchange_long(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_object(
     _thread: Arc<Thread>,
@@ -488,7 +480,6 @@ pub(crate) async fn compare_and_exchange_object(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_reference(
     _thread: Arc<Thread>,
@@ -497,7 +488,6 @@ pub(crate) async fn compare_and_exchange_reference(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_set_int(
     _thread: Arc<Thread>,
@@ -535,7 +525,6 @@ pub(crate) async fn compare_and_set_int(
     Ok(Some(Value::Int(result)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_set_long(
     _thread: Arc<Thread>,
@@ -581,7 +570,6 @@ pub(crate) async fn compare_and_set_object(
     compare_and_set_reference(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_set_reference(
     _thread: Arc<Thread>,
@@ -643,7 +631,6 @@ pub(crate) async fn compare_and_set_reference(
     Ok(Some(Value::Int(result)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn copy_memory_0(
     _thread: Arc<Thread>,
@@ -664,7 +651,6 @@ pub(crate) async fn copy_memory_0(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn copy_swap_memory_0(
     _thread: Arc<Thread>,
@@ -673,7 +659,6 @@ pub(crate) async fn copy_swap_memory_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn define_anonymous_class_0(
     _thread: Arc<Thread>,
@@ -682,7 +667,6 @@ pub(crate) async fn define_anonymous_class_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn define_class_0(
     _thread: Arc<Thread>,
@@ -691,7 +675,6 @@ pub(crate) async fn define_class_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn ensure_class_initialized_0(
     _thread: Arc<Thread>,
@@ -700,7 +683,6 @@ pub(crate) async fn ensure_class_initialized_0(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn free_memory_0(
     _thread: Arc<Thread>,
@@ -709,7 +691,6 @@ pub(crate) async fn free_memory_0(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn full_fence(
     _thread: Arc<Thread>,
@@ -718,7 +699,6 @@ pub(crate) async fn full_fence(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 fn get_reference_type(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
@@ -762,7 +742,6 @@ fn get_reference_type(
     }
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_boolean(
     _thread: Arc<Thread>,
@@ -779,7 +758,6 @@ pub(crate) async fn get_boolean_volatile(
     get_reference_type(thread, arguments, Some(BaseType::Boolean))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_byte(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -793,7 +771,6 @@ pub(crate) async fn get_byte_volatile(
     get_reference_type(thread, arguments, Some(BaseType::Byte))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_char(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -807,7 +784,6 @@ pub(crate) async fn get_char_volatile(
     get_reference_type(thread, arguments, Some(BaseType::Char))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_double(
     _thread: Arc<Thread>,
@@ -824,7 +800,6 @@ pub(crate) async fn get_double_volatile(
     get_reference_type(thread, arguments, Some(BaseType::Double))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_float(
     _thread: Arc<Thread>,
@@ -841,7 +816,6 @@ pub(crate) async fn get_float_volatile(
     get_reference_type(thread, arguments, Some(BaseType::Float))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_int(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -855,7 +829,6 @@ pub(crate) async fn get_int_volatile(
     get_reference_type(thread, arguments, Some(BaseType::Int))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_load_average_0(
     _thread: Arc<Thread>,
@@ -864,7 +837,6 @@ pub(crate) async fn get_load_average_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -878,7 +850,6 @@ pub(crate) async fn get_long_volatile(
     get_reference_type(thread, arguments, Some(BaseType::Long))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_object(
     _thread: Arc<Thread>,
@@ -911,7 +882,6 @@ pub(crate) async fn get_reference_volatile(
     get_reference_type(thread, arguments, None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_short(
     _thread: Arc<Thread>,
@@ -928,7 +898,6 @@ pub(crate) async fn get_short_volatile(
     get_reference_type(thread, arguments, Some(BaseType::Short))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_uncompressed_object(
     _thread: Arc<Thread>,
@@ -937,7 +906,6 @@ pub(crate) async fn get_uncompressed_object(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn is_big_endian_0(
     _thread: Arc<Thread>,
@@ -950,7 +918,6 @@ pub(crate) async fn is_big_endian_0(
     }
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn load_fence(
     _thread: Arc<Thread>,
@@ -959,7 +926,6 @@ pub(crate) async fn load_fence(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn object_field_offset_0(
     _thread: Arc<Thread>,
@@ -995,7 +961,6 @@ pub(crate) async fn object_field_offset_1(
     Ok(Some(Value::Long(offset)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn page_size(
     _thread: Arc<Thread>,
@@ -1004,13 +969,11 @@ pub(crate) async fn page_size(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn park(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_boolean(
     _thread: Arc<Thread>,
@@ -1026,7 +989,6 @@ pub(crate) async fn put_boolean(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_boolean_volatile(
     _thread: Arc<Thread>,
@@ -1035,7 +997,6 @@ pub(crate) async fn put_boolean_volatile(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_byte(
     _thread: Arc<Thread>,
@@ -1051,7 +1012,6 @@ pub(crate) async fn put_byte(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_byte_volatile(
     _thread: Arc<Thread>,
@@ -1060,7 +1020,6 @@ pub(crate) async fn put_byte_volatile(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_char(
     _thread: Arc<Thread>,
@@ -1080,7 +1039,6 @@ pub(crate) async fn put_char(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_char_volatile(
     _thread: Arc<Thread>,
@@ -1089,7 +1047,6 @@ pub(crate) async fn put_char_volatile(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_double(
     _thread: Arc<Thread>,
@@ -1105,7 +1062,6 @@ pub(crate) async fn put_double(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_double_volatile(
     _thread: Arc<Thread>,
@@ -1114,7 +1070,6 @@ pub(crate) async fn put_double_volatile(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_float(
     _thread: Arc<Thread>,
@@ -1130,7 +1085,6 @@ pub(crate) async fn put_float(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_float_volatile(
     _thread: Arc<Thread>,
@@ -1139,7 +1093,6 @@ pub(crate) async fn put_float_volatile(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_int(
     _thread: Arc<Thread>,
@@ -1155,7 +1108,6 @@ pub(crate) async fn put_int(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_int_volatile(
     _thread: Arc<Thread>,
@@ -1164,7 +1116,6 @@ pub(crate) async fn put_int_volatile(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_long(
     _thread: Arc<Thread>,
@@ -1180,7 +1131,6 @@ pub(crate) async fn put_long(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_long_volatile(
     _thread: Arc<Thread>,
@@ -1189,7 +1139,6 @@ pub(crate) async fn put_long_volatile(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_object(
     _thread: Arc<Thread>,
@@ -1198,7 +1147,6 @@ pub(crate) async fn put_object(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_object_volatile(
     _thread: Arc<Thread>,
@@ -1207,7 +1155,6 @@ pub(crate) async fn put_object_volatile(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_reference(
     _thread: Arc<Thread>,
@@ -1216,7 +1163,6 @@ pub(crate) async fn put_reference(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_reference_volatile(
     _thread: Arc<Thread>,
@@ -1248,7 +1194,6 @@ pub(crate) async fn put_reference_volatile(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_short(
     _thread: Arc<Thread>,
@@ -1264,7 +1209,6 @@ pub(crate) async fn put_short(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_short_volatile(
     _thread: Arc<Thread>,
@@ -1273,7 +1217,6 @@ pub(crate) async fn put_short_volatile(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn reallocate_memory_0(
     _thread: Arc<Thread>,
@@ -1282,7 +1225,6 @@ pub(crate) async fn reallocate_memory_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
@@ -1291,7 +1233,6 @@ pub(crate) async fn register_natives(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn set_memory_0(
     _thread: Arc<Thread>,
@@ -1300,7 +1241,6 @@ pub(crate) async fn set_memory_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn should_be_initialized_0(
     _thread: Arc<Thread>,
@@ -1309,7 +1249,6 @@ pub(crate) async fn should_be_initialized_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn static_field_base_0(
     _thread: Arc<Thread>,
@@ -1318,7 +1257,6 @@ pub(crate) async fn static_field_base_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn static_field_offset_0(
     _thread: Arc<Thread>,
@@ -1327,7 +1265,6 @@ pub(crate) async fn static_field_offset_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn store_fence(
     _thread: Arc<Thread>,
@@ -1336,7 +1273,6 @@ pub(crate) async fn store_fence(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn throw_exception(
     _thread: Arc<Thread>,
@@ -1345,7 +1281,6 @@ pub(crate) async fn throw_exception(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn unaligned_access_0(
     _thread: Arc<Thread>,
@@ -1354,13 +1289,11 @@ pub(crate) async fn unaligned_access_0(
     Ok(Some(Value::Int(0)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn unpark(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn writeback_0(
     _thread: Arc<Thread>,
@@ -1369,7 +1302,6 @@ pub(crate) async fn writeback_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn writeback_post_sync_0(
     _thread: Arc<Thread>,
@@ -1378,7 +1310,6 @@ pub(crate) async fn writeback_post_sync_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 pub(crate) async fn writeback_pre_sync_0(
     _thread: Arc<Thread>,

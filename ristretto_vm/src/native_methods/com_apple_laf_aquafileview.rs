@@ -36,7 +36,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_native_display_name(
     _thread: Arc<Thread>,
@@ -45,13 +44,11 @@ async fn get_native_display_name(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_native_ls_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_native_machine_name(
     _thread: Arc<Thread>,
@@ -60,7 +57,6 @@ async fn get_native_machine_name(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_native_path_for_resolved_alias(
     _thread: Arc<Thread>,
@@ -69,7 +65,6 @@ async fn get_native_path_for_resolved_alias(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_native_path_to_shared_jdk_bundle(
     _thread: Arc<Thread>,

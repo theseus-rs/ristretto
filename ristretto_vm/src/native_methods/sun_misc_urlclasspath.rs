@@ -29,7 +29,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_lookup_cache_for_class_loader(
     _thread: Arc<Thread>,
@@ -38,7 +37,6 @@ async fn get_lookup_cache_for_class_loader(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_lookup_cache_ur_ls(
     _thread: Arc<Thread>,
@@ -47,7 +45,6 @@ async fn get_lookup_cache_ur_ls(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn known_to_not_exist_0(
     _thread: Arc<Thread>,

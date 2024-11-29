@@ -71,7 +71,7 @@ impl<'de> Deserialize<'de> for Manifest {
     {
         struct ManifestVisitor;
 
-        impl<'de> Visitor<'de> for ManifestVisitor {
+        impl Visitor<'_> for ManifestVisitor {
             type Value = Manifest;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

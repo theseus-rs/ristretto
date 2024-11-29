@@ -72,7 +72,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "registerNatives", "()V", register_natives);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify_jvmti_disable_suspend(
     _thread: Arc<Thread>,
@@ -81,13 +80,11 @@ async fn notify_jvmti_disable_suspend(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify_jvmti_end(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify_jvmti_hide_frames(
     _thread: Arc<Thread>,
@@ -96,13 +93,11 @@ async fn notify_jvmti_hide_frames(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify_jvmti_mount(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify_jvmti_mount_begin(
     _thread: Arc<Thread>,
@@ -111,7 +106,6 @@ async fn notify_jvmti_mount_begin(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify_jvmti_mount_end(
     _thread: Arc<Thread>,
@@ -120,13 +114,11 @@ async fn notify_jvmti_mount_end(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify_jvmti_start(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify_jvmti_unmount(
     _thread: Arc<Thread>,
@@ -135,7 +127,6 @@ async fn notify_jvmti_unmount(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify_jvmti_unmount_begin(
     _thread: Arc<Thread>,
@@ -144,7 +135,6 @@ async fn notify_jvmti_unmount_begin(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify_jvmti_unmount_end(
     _thread: Arc<Thread>,
@@ -153,7 +143,6 @@ async fn notify_jvmti_unmount_end(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)

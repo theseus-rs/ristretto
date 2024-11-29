@@ -157,7 +157,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_available_processors(
     _thread: Arc<Thread>,
@@ -166,7 +165,6 @@ async fn get_available_processors(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_class_initialization_time(
     _thread: Arc<Thread>,
@@ -175,7 +173,6 @@ async fn get_class_initialization_time(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_class_loading_time(
     _thread: Arc<Thread>,
@@ -184,7 +181,6 @@ async fn get_class_loading_time(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_class_verification_time(
     _thread: Arc<Thread>,
@@ -193,7 +189,6 @@ async fn get_class_verification_time(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_daemon_thread_count(
     _thread: Arc<Thread>,
@@ -202,7 +197,6 @@ async fn get_daemon_thread_count(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_initialized_class_count(
     _thread: Arc<Thread>,
@@ -211,7 +205,6 @@ async fn get_initialized_class_count(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_live_thread_count(
     _thread: Arc<Thread>,
@@ -220,7 +213,6 @@ async fn get_live_thread_count(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_loaded_class_size(
     _thread: Arc<Thread>,
@@ -229,7 +221,6 @@ async fn get_loaded_class_size(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_method_data_size(
     _thread: Arc<Thread>,
@@ -238,7 +229,6 @@ async fn get_method_data_size(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_peak_thread_count(
     _thread: Arc<Thread>,
@@ -247,19 +237,16 @@ async fn get_peak_thread_count(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_process_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_safepoint_count(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_safepoint_sync_time(
     _thread: Arc<Thread>,
@@ -268,13 +255,11 @@ async fn get_safepoint_sync_time(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_startup_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_total_application_non_stopped_time(
     _thread: Arc<Thread>,
@@ -283,7 +268,6 @@ async fn get_total_application_non_stopped_time(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_total_class_count(
     _thread: Arc<Thread>,
@@ -292,7 +276,6 @@ async fn get_total_class_count(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_total_compile_time(
     _thread: Arc<Thread>,
@@ -301,7 +284,6 @@ async fn get_total_compile_time(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_total_safepoint_time(
     _thread: Arc<Thread>,
@@ -310,7 +292,6 @@ async fn get_total_safepoint_time(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_total_thread_count(
     _thread: Arc<Thread>,
@@ -319,7 +300,6 @@ async fn get_total_thread_count(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_unloaded_class_count(
     _thread: Arc<Thread>,
@@ -328,7 +308,6 @@ async fn get_unloaded_class_count(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_unloaded_class_size(
     _thread: Arc<Thread>,
@@ -337,37 +316,31 @@ async fn get_unloaded_class_size(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_uptime_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_verbose_class(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_verbose_gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_version_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_vm_arguments_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_optional_support_fields(
     _thread: Arc<Thread>,
@@ -376,7 +349,6 @@ async fn init_optional_support_fields(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_thread_allocated_memory_enabled(
     _thread: Arc<Thread>,
@@ -385,7 +357,6 @@ async fn is_thread_allocated_memory_enabled(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_thread_contention_monitoring_enabled(
     _thread: Arc<Thread>,
@@ -394,7 +365,6 @@ async fn is_thread_contention_monitoring_enabled(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_thread_cpu_time_enabled(
     _thread: Arc<Thread>,

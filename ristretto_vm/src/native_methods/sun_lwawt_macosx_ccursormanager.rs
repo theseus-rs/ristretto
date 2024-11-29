@@ -35,7 +35,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_cursor_position(
     _thread: Arc<Thread>,
@@ -44,7 +43,6 @@ async fn native_get_cursor_position(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_allows_cursor_set_in_background(
     _thread: Arc<Thread>,
@@ -53,7 +51,6 @@ async fn native_set_allows_cursor_set_in_background(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_built_in_cursor(
     _thread: Arc<Thread>,
@@ -62,7 +59,6 @@ async fn native_set_built_in_cursor(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_custom_cursor(
     _thread: Arc<Thread>,

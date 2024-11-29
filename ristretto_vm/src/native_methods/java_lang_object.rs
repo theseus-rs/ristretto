@@ -33,7 +33,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "registerNatives", "()V", register_natives);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     // This is a no-op method to optimize Object initialization since it is called frequently.
@@ -42,7 +41,6 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn clone(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let object = arguments.pop_reference()?;
@@ -63,7 +61,6 @@ async fn get_class(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
     Ok(Some(class))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn hash_code(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let Some(object) = arguments.pop_reference()? else {
@@ -83,31 +80,26 @@ pub(crate) fn object_hash_code(object: &Reference) -> i32 {
     hash_code
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn notify_all(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn wait(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn wait_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

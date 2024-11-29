@@ -20,7 +20,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn allocate_optimized_upcall_stub(
     _thread: Arc<Thread>,
@@ -29,7 +28,6 @@ async fn allocate_optimized_upcall_stub(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn allocate_upcall_stub(
     _thread: Arc<Thread>,
@@ -38,13 +36,11 @@ async fn allocate_upcall_stub(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn supports_optimized_upcalls(
     _thread: Arc<Thread>,

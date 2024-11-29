@@ -43,13 +43,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_mtl_config_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_metal_framework_available(
     _thread: Arc<Thread>,
@@ -58,7 +56,6 @@ async fn is_metal_framework_available(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_max_texture_size(
     _thread: Arc<Thread>,
@@ -67,7 +64,6 @@ async fn native_get_max_texture_size(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn try_load_metal_library(
     _thread: Arc<Thread>,

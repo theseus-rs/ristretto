@@ -23,7 +23,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn create_native_drop_target(
     _thread: Arc<Thread>,
@@ -32,7 +31,6 @@ async fn create_native_drop_target(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn release_native_drop_target(
     _thread: Arc<Thread>,

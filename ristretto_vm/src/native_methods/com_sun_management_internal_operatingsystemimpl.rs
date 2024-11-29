@@ -119,7 +119,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "initialize0", "()V", initialize_0);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_committed_virtual_memory_size_0(
     _thread: Arc<Thread>,
@@ -128,13 +127,11 @@ async fn get_committed_virtual_memory_size_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_cpu_load_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_free_physical_memory_size_0(
     _thread: Arc<Thread>,
@@ -143,7 +140,6 @@ async fn get_free_physical_memory_size_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_free_memory_size_0(
     _thread: Arc<Thread>,
@@ -152,7 +148,6 @@ async fn get_free_memory_size_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_free_swap_space_size_0(
     _thread: Arc<Thread>,
@@ -161,7 +156,6 @@ async fn get_free_swap_space_size_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_host_configured_cpu_count_0(
     _thread: Arc<Thread>,
@@ -170,7 +164,6 @@ async fn get_host_configured_cpu_count_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_host_online_cpu_count_0(
     _thread: Arc<Thread>,
@@ -179,7 +172,6 @@ async fn get_host_online_cpu_count_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_host_total_cpu_ticks_0(
     _thread: Arc<Thread>,
@@ -188,7 +180,6 @@ async fn get_host_total_cpu_ticks_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_max_file_descriptor_count_0(
     _thread: Arc<Thread>,
@@ -197,7 +188,6 @@ async fn get_max_file_descriptor_count_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_open_file_descriptor_count_0(
     _thread: Arc<Thread>,
@@ -206,7 +196,6 @@ async fn get_open_file_descriptor_count_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_process_cpu_load_0(
     _thread: Arc<Thread>,
@@ -215,7 +204,6 @@ async fn get_process_cpu_load_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_process_cpu_time_0(
     _thread: Arc<Thread>,
@@ -224,7 +212,6 @@ async fn get_process_cpu_time_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_single_cpu_load_0(
     _thread: Arc<Thread>,
@@ -233,7 +220,6 @@ async fn get_single_cpu_load_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_system_cpu_load_0(
     _thread: Arc<Thread>,
@@ -242,7 +228,6 @@ async fn get_system_cpu_load_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_total_memory_size_0(
     _thread: Arc<Thread>,
@@ -251,7 +236,6 @@ async fn get_total_memory_size_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_total_physical_memory_size_0(
     _thread: Arc<Thread>,
@@ -260,7 +244,6 @@ async fn get_total_physical_memory_size_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_total_swap_space_size_0(
     _thread: Arc<Thread>,
@@ -269,7 +252,6 @@ async fn get_total_swap_space_size_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn initialize_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

@@ -123,13 +123,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn dump_threads_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn find_deadlocked_threads_0(
     _thread: Arc<Thread>,
@@ -138,7 +136,6 @@ async fn find_deadlocked_threads_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn find_monitor_deadlocked_threads_0(
     _thread: Arc<Thread>,
@@ -147,7 +144,6 @@ async fn find_monitor_deadlocked_threads_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_thread_allocated_memory_0(
     _thread: Arc<Thread>,
@@ -156,7 +152,6 @@ async fn get_thread_allocated_memory_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_thread_allocated_memory_1(
     _thread: Arc<Thread>,
@@ -165,13 +160,11 @@ async fn get_thread_allocated_memory_1(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_thread_info_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_thread_total_cpu_time_0(
     _thread: Arc<Thread>,
@@ -180,7 +173,6 @@ async fn get_thread_total_cpu_time_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_thread_total_cpu_time_1(
     _thread: Arc<Thread>,
@@ -189,7 +181,6 @@ async fn get_thread_total_cpu_time_1(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_thread_user_cpu_time_0(
     _thread: Arc<Thread>,
@@ -198,7 +189,6 @@ async fn get_thread_user_cpu_time_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_thread_user_cpu_time_1(
     _thread: Arc<Thread>,
@@ -207,13 +197,11 @@ async fn get_thread_user_cpu_time_1(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_total_thread_allocated_memory(
     _thread: Arc<Thread>,
@@ -222,7 +210,6 @@ async fn get_total_thread_allocated_memory(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn reset_contention_times_0(
     _thread: Arc<Thread>,
@@ -231,7 +218,6 @@ async fn reset_contention_times_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn reset_peak_thread_count_0(
     _thread: Arc<Thread>,
@@ -240,7 +226,6 @@ async fn reset_peak_thread_count_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_thread_allocated_memory_enabled_0(
     _thread: Arc<Thread>,
@@ -249,7 +234,6 @@ async fn set_thread_allocated_memory_enabled_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_thread_contention_monitoring_enabled_0(
     _thread: Arc<Thread>,
@@ -258,7 +242,6 @@ async fn set_thread_contention_monitoring_enabled_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_thread_cpu_time_enabled_0(
     _thread: Arc<Thread>,

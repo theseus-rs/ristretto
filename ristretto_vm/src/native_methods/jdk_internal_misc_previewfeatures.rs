@@ -12,7 +12,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "isPreviewEnabled", "()Z", is_preview_enabled);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_preview_enabled(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))

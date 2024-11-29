@@ -256,7 +256,6 @@ async fn get_class(thread: &Thread, object: &Object) -> Result<Arc<Class>> {
     Ok(Arc::clone(class))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn desired_assertion_status_0(
     _thread: Arc<Thread>,
@@ -347,13 +346,11 @@ async fn get_component_type(
     Ok(Some(class_object))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_constant_pool(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_declared_classes_0(
     _thread: Arc<Thread>,
@@ -362,7 +359,6 @@ async fn get_declared_classes_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_declared_constructors_0(
     _thread: Arc<Thread>,
@@ -423,7 +419,6 @@ async fn get_declared_fields_0(
     Ok(Some(fields))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_declared_methods_0(
     _thread: Arc<Thread>,
@@ -432,7 +427,6 @@ async fn get_declared_methods_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_declaring_class_0(
     _thread: Arc<Thread>,
@@ -441,7 +435,6 @@ async fn get_declaring_class_0(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_enclosing_method_0(
     thread: Arc<Thread>,
@@ -466,7 +459,6 @@ async fn get_enclosing_method_0(
     Ok(Some(Value::from(enclosing_information_array)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_generic_signature_0(
     _thread: Arc<Thread>,
@@ -475,7 +467,6 @@ async fn get_generic_signature_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_interfaces_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -502,19 +493,16 @@ async fn get_modifiers(thread: Arc<Thread>, mut arguments: Arguments) -> Result<
     Ok(Some(Value::Int(modifiers)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_name_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_nest_host_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_nest_members_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -551,7 +539,6 @@ async fn get_primitive_class(
     Ok(Some(class))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_protection_domain_0(
     _thread: Arc<Thread>,
@@ -560,13 +547,11 @@ async fn get_protection_domain_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_raw_annotations(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_raw_type_annotations(
     _thread: Arc<Thread>,
@@ -575,7 +560,6 @@ async fn get_raw_type_annotations(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_record_components_0(
     _thread: Arc<Thread>,
@@ -584,14 +568,12 @@ async fn get_record_components_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: Implement get_signers
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_simple_binary_name_0(
     thread: Arc<Thread>,
@@ -630,7 +612,6 @@ async fn get_superclass(thread: Arc<Thread>, mut arguments: Arguments) -> Result
     }
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_class_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -671,13 +652,11 @@ async fn is_assignable_from(
     }
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_hidden(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_instance(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -709,19 +688,16 @@ async fn is_primitive(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
     }
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_record_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: Implement set_signers

@@ -19,13 +19,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "initConfig", "(JJ)V", init_config);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_glx_config_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_ogl_capabilities(
     _thread: Arc<Thread>,
@@ -34,7 +32,6 @@ async fn get_ogl_capabilities(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_config(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

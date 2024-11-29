@@ -710,7 +710,6 @@ mod tests {
     use super::*;
     use async_recursion::async_recursion;
 
-    #[expect(clippy::needless_pass_by_value)]
     #[async_recursion(?Send)]
     async fn test_none(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
         Ok(None)

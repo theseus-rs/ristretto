@@ -23,7 +23,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn free_native_scaler_context(
     _thread: Arc<Thread>,
@@ -32,7 +31,6 @@ async fn free_native_scaler_context(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn remove_glyph_info_from_cache(
     _thread: Arc<Thread>,

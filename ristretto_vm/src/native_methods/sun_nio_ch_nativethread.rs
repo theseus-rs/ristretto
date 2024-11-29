@@ -25,7 +25,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "init", "()V", init);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn current(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -36,13 +35,11 @@ async fn current_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<V
     current(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn signal(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

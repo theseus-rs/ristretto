@@ -23,7 +23,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_system_gmt_offset_id(
     _thread: Arc<Thread>,
@@ -32,7 +31,6 @@ async fn get_system_gmt_offset_id(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_system_time_zone_id(
     _thread: Arc<Thread>,
