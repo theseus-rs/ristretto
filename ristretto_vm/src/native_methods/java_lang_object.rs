@@ -24,10 +24,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(class_name, "wait0", "(J)V", wait_0);
     }
 
+    registry.register(class_name, "<init>", "()V", init);
     registry.register(class_name, "clone", "()Ljava/lang/Object;", clone);
     registry.register(class_name, "getClass", "()Ljava/lang/Class;", get_class);
     registry.register(class_name, "hashCode", "()I", hash_code);
-    registry.register(class_name, "init", "()V", init);
     registry.register(class_name, "notify", "()V", notify);
     registry.register(class_name, "notifyAll", "()V", notify_all);
     registry.register(class_name, "registerNatives", "()V", register_natives);

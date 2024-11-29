@@ -18,10 +18,22 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_11: Version = Version::Java11 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Register all native methods for `java.lang.System`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/System";
+    let java_version = registry.java_version();
+
+    if java_version == &JAVA_11 {
+        registry.register(
+            class_name,
+            "getSecurityManager",
+            "()Ljava/lang/SecurityManager;",
+            get_security_manager,
+        );
+    }
+
     registry.register(
         class_name,
         "arraycopy",
@@ -207,6 +219,20 @@ async fn gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>
 
 #[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
+async fn get_security_manager(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    // NOTE: This is not a native method in any version of Java.  This is here to prevent the JVM
+    // from initializing the SecurityManager class in System.initPhase1() prior to the module layer
+    // being initialized in System.initPhase2(). This is necessary because the SecurityManager
+    // class is loaded when System.getProperty() is called, which in turn calls this method and
+    // attempts to initialize the field class.
+    Ok(Some(Value::Object(None)))
+}
+
+#[expect(clippy::needless_pass_by_value)]
+#[async_recursion(?Send)]
 async fn identity_hash_code(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
@@ -272,8 +298,7 @@ async fn nano_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 #[async_recursion(?Send)]
 async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let vm = thread.vm()?;
-    let java_version = vm.java_class_file_version();
-    if java_version <= &JAVA_8 {
+    if vm.java_class_file_version() <= &JAVA_8 {
         vm.invoke(
             "java/lang/System",
             "setJavaLangAccess",
@@ -284,25 +309,27 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
         return Ok(None);
     }
 
-    // Force the initialization of the system properties; this is required because no security
-    // manager is installed and when System::initPhase1() is called, the resulting call chain:
-    //
-    // System::initPhase1()
-    //   System::setJavaLangAccess()
-    //     SharedSecrets::<clinit>()
-    //       MethodHandles::<clinit>()
-    //         MethodHandleStatics::<clinit>()
-    //           GetPropertyAction.privilegedGetProperties()
-    //             System::getProperties()
-    //
-    // will eventually call System::getProperty() which fails if this is not initialized.
-    vm.invoke(
-        "java/lang/System",
-        "setProperties",
-        "(Ljava/util/Properties;)V",
-        vec![Value::Object(None)],
-    )
-    .await?;
+    if vm.java_class_file_version() == &JAVA_17 {
+        // Force the initialization of the system properties; this is required because no security
+        // manager is installed and when System::initPhase1() is called, the resulting call chain:
+        //
+        // System::initPhase1()
+        //   System::setJavaLangAccess()
+        //     SharedSecrets::<clinit>()
+        //       MethodHandles::<clinit>()
+        //         MethodHandleStatics::<clinit>()
+        //           GetPropertyAction.privilegedGetProperties()
+        //             System::getProperties()
+        //
+        // will eventually call System::getProperty() which fails if this is not initialized.
+        vm.invoke(
+            "java/lang/System",
+            "setProperties",
+            "(Ljava/util/Properties;)V",
+            vec![Value::Object(None)],
+        )
+        .await?;
+    }
 
     let java_class_file_version = vm.java_class_file_version();
     let package_name = if java_class_file_version <= &JAVA_8 {

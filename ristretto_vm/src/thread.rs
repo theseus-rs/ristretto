@@ -302,20 +302,21 @@ impl Thread {
         };
 
         if event_enabled!(Level::DEBUG) {
-            match &result {
+            let result = match &result {
                 Ok(Some(value)) => {
                     let value = value.to_string();
                     if value.len() > 100 {
-                        debug!("result: {}...", &value.as_str()[..97]);
+                        format!("{}...", &value.as_str()[..97])
                     } else {
-                        debug!("result: {value}");
+                        value
                     }
                 }
-                Ok(None) => {}
+                Ok(None) => "void".to_string(),
                 Err(error) => {
-                    debug!("error: {error}");
+                    format!("[ERROR] {error}")
                 }
-            }
+            };
+            debug!("result: {class_name}.{method_name}{method_descriptor}; {result}");
         }
 
         if frame_added {

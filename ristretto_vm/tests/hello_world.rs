@@ -22,10 +22,10 @@ async fn test_helloworld(java_verison: &str) -> Result<()> {
 //     test_helloworld("8.432.06.1").await
 // }
 
-// #[tokio::test]
-// async fn test_helloworld_v11() -> Result<()> {
-//     test_helloworld("11.0.25.9.1").await
-// }
+#[tokio::test]
+async fn test_helloworld_v11() -> Result<()> {
+    test_helloworld("11.0.25.9.1").await
+}
 
 #[tokio::test]
 async fn test_helloworld_v17() -> Result<()> {
