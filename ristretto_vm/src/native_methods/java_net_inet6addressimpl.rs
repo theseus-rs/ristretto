@@ -45,25 +45,21 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "isReachable0", "([BII[BII)Z", is_reachable_0);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_host_by_addr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_local_host_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_reachable_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn lookup_all_host_addr(
     _thread: Arc<Thread>,

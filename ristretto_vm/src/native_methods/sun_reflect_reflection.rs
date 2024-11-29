@@ -31,7 +31,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_caller_class_1(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
@@ -51,7 +50,6 @@ async fn get_caller_class_1(thread: Arc<Thread>, _arguments: Arguments) -> Resul
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_caller_class_2(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

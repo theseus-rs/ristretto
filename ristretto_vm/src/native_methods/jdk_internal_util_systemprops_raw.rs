@@ -30,7 +30,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn platform_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let vm = thread.vm()?;
@@ -109,7 +108,6 @@ fn push_property(
     Ok(())
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn vm_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let vm = thread.vm()?;

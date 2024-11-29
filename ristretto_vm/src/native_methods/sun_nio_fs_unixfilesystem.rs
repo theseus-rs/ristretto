@@ -12,7 +12,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "bufferedCopy0", "(IIJIJ)V", buffered_copy_0);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn buffered_copy_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

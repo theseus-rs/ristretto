@@ -83,7 +83,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn allocation_granularity_0(
     _thread: Arc<Thread>,
@@ -92,97 +91,81 @@ async fn allocation_granularity_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn close_int_fd(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn force_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn lock_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn map_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn pread_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn pwrite_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn read_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn readv_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn release_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn seek_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_direct_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn size_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn truncate_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn unmap_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn write_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn writev_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

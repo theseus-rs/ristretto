@@ -13,13 +13,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "endNativeFocus", "(J)I", end_native_focus);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn begin_native_focus(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn end_native_focus(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

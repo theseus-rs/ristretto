@@ -21,25 +21,21 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "initTexture", "(JZZZII)Z", init_texture);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_texture_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_texture_target(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_fb_object(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_flip_backbuffer(
     _thread: Arc<Thread>,
@@ -48,7 +44,6 @@ async fn init_flip_backbuffer(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_texture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

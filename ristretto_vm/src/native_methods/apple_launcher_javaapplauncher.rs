@@ -23,7 +23,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_convert_and_release(
     _thread: Arc<Thread>,
@@ -32,7 +31,6 @@ async fn native_convert_and_release(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_invoke_non_public(
     _thread: Arc<Thread>,

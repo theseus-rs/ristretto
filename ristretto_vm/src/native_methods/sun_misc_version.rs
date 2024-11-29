@@ -25,7 +25,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "getJvmVersionInfo", "()Z", get_jvm_version_info);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_jdk_special_version(
     _thread: Arc<Thread>,
@@ -34,7 +33,6 @@ async fn get_jdk_special_version(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_jdk_version_info(
     _thread: Arc<Thread>,
@@ -43,7 +41,6 @@ async fn get_jdk_version_info(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_jvm_special_version(
     _thread: Arc<Thread>,
@@ -52,7 +49,6 @@ async fn get_jvm_special_version(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_jvm_version_info(
     _thread: Arc<Thread>,

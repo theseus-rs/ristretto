@@ -29,13 +29,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn format_for_index(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_drag_query_file(
     _thread: Arc<Thread>,
@@ -44,7 +42,6 @@ async fn native_drag_query_file(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn register_format_with_pasteboard(
     _thread: Arc<Thread>,

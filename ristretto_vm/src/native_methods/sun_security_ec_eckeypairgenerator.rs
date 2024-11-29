@@ -18,7 +18,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "isCurveSupported", "([B)Z", is_curve_supported);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn generate_ec_key_pair(
     _thread: Arc<Thread>,
@@ -27,7 +26,6 @@ async fn generate_ec_key_pair(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_curve_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

@@ -51,7 +51,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn add_item_to_keychain(
     _thread: Arc<Thread>,
@@ -60,7 +59,6 @@ async fn add_item_to_keychain(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_encoded_key_data(
     _thread: Arc<Thread>,
@@ -69,7 +67,6 @@ async fn get_encoded_key_data(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn release_keychain_item_ref(
     _thread: Arc<Thread>,
@@ -78,7 +75,6 @@ async fn release_keychain_item_ref(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn remove_item_from_keychain(
     _thread: Arc<Thread>,
@@ -87,7 +83,6 @@ async fn remove_item_from_keychain(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn scan_keychain(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

@@ -63,7 +63,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "syncChanges", "(JJ)I", sync_changes);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn dispose_cf_dictionary(
     _thread: Arc<Thread>,
@@ -72,19 +71,16 @@ async fn dispose_cf_dictionary(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_cf_dictionary(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_native_hit_part(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_native_part_bounds(
     _thread: Arc<Thread>,
@@ -93,7 +89,6 @@ async fn get_native_part_bounds(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_native_scroll_bar_offset_change(
     _thread: Arc<Thread>,
@@ -102,25 +97,21 @@ async fn get_native_scroll_bar_offset_change(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_ptr_of_buffer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_native_jrsui(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn paint_changes_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn paint_changes_to_cg_context(
     _thread: Arc<Thread>,
@@ -129,19 +120,16 @@ async fn paint_changes_to_cg_context(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn paint_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn paint_to_cg_context(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn sync_changes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

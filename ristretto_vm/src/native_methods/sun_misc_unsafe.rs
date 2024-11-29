@@ -374,7 +374,6 @@ async fn compare_and_swap_int(thread: Arc<Thread>, arguments: Arguments) -> Resu
     jdk_internal_misc_unsafe::compare_and_set_int(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn compare_and_swap_long(
     _thread: Arc<Thread>,
@@ -427,7 +426,6 @@ async fn full_fence(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<
     jdk_internal_misc_unsafe::full_fence(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_address(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -443,7 +441,6 @@ async fn get_boolean_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resu
     jdk_internal_misc_unsafe::get_boolean_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_byte_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -459,7 +456,6 @@ async fn get_byte_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<
     jdk_internal_misc_unsafe::get_byte_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_char_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -475,7 +471,6 @@ async fn get_char_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<
     jdk_internal_misc_unsafe::get_char_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_double_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -491,7 +486,6 @@ async fn get_double_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resul
     jdk_internal_misc_unsafe::get_double_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_float_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -507,7 +501,6 @@ async fn get_float_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result
     jdk_internal_misc_unsafe::get_float_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_int_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -528,7 +521,6 @@ async fn get_load_average(thread: Arc<Thread>, arguments: Arguments) -> Result<O
     jdk_internal_misc_unsafe::get_load_average_0(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_long_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -554,7 +546,6 @@ async fn get_object_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resul
     jdk_internal_misc_unsafe::get_reference_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_short_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -575,13 +566,11 @@ async fn load_fence(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<
     jdk_internal_misc_unsafe::load_fence(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn monitor_enter(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn monitor_exit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -602,7 +591,6 @@ async fn park(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>
     jdk_internal_misc_unsafe::park(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_address(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -618,7 +606,6 @@ async fn put_boolean_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resu
     jdk_internal_misc_unsafe::put_boolean_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_byte_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -634,7 +621,6 @@ async fn put_byte_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<
     jdk_internal_misc_unsafe::put_byte_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_char_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -650,7 +636,6 @@ async fn put_char_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<
     jdk_internal_misc_unsafe::put_char_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_double_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -666,7 +651,6 @@ async fn put_double_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resul
     jdk_internal_misc_unsafe::put_double_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_float_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -682,7 +666,6 @@ async fn put_float_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result
     jdk_internal_misc_unsafe::put_float_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_int_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -698,7 +681,6 @@ async fn put_int_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<O
     jdk_internal_misc_unsafe::put_int_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_long_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -724,37 +706,31 @@ async fn put_object_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resul
     jdk_internal_misc_unsafe::put_reference_volatile(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_ordered_int(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_ordered_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_ordered_object(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_short_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_short_2(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn put_short_volatile(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
@@ -800,7 +776,6 @@ async fn throw_exception(thread: Arc<Thread>, arguments: Arguments) -> Result<Op
     jdk_internal_misc_unsafe::throw_exception(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn try_monitor_enter(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

@@ -51,13 +51,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "nOpen", "(I)J", n_open);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_close(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_control_get_float_value(
     _thread: Arc<Thread>,
@@ -66,7 +64,6 @@ async fn n_control_get_float_value(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_control_get_int_value(
     _thread: Arc<Thread>,
@@ -75,7 +72,6 @@ async fn n_control_get_int_value(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_control_set_float_value(
     _thread: Arc<Thread>,
@@ -84,7 +80,6 @@ async fn n_control_set_float_value(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_control_set_int_value(
     _thread: Arc<Thread>,
@@ -93,31 +88,26 @@ async fn n_control_set_int_value(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_get_controls(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_get_port_count(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_get_port_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_get_port_type(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_open(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

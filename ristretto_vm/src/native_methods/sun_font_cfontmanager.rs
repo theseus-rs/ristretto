@@ -18,7 +18,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "loadNativeFonts", "()V", load_native_fonts);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn load_native_dir_fonts(
     _thread: Arc<Thread>,
@@ -27,7 +26,6 @@ async fn load_native_dir_fonts(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn load_native_fonts(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

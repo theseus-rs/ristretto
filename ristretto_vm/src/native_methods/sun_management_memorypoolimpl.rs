@@ -60,7 +60,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_collection_usage_0(
     _thread: Arc<Thread>,
@@ -69,7 +68,6 @@ async fn get_collection_usage_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_memory_managers_0(
     _thread: Arc<Thread>,
@@ -78,25 +76,21 @@ async fn get_memory_managers_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_peak_usage_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_usage_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn reset_peak_usage_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_collection_threshold_0(
     _thread: Arc<Thread>,
@@ -105,7 +99,6 @@ async fn set_collection_threshold_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_pool_collection_sensor(
     _thread: Arc<Thread>,
@@ -114,7 +107,6 @@ async fn set_pool_collection_sensor(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_pool_usage_sensor(
     _thread: Arc<Thread>,
@@ -123,7 +115,6 @@ async fn set_pool_usage_sensor(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_usage_threshold_0(
     _thread: Arc<Thread>,

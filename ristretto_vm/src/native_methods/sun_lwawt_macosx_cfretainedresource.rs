@@ -12,7 +12,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "nativeCFRelease", "(JZ)V", native_cf_release);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_cf_release(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

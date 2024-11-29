@@ -96,7 +96,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn append_to_class_loader_search_0(
     _thread: Arc<Thread>,
@@ -105,7 +104,6 @@ async fn append_to_class_loader_search_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_all_loaded_classes_0(
     _thread: Arc<Thread>,
@@ -114,7 +112,6 @@ async fn get_all_loaded_classes_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_initiated_classes_0(
     _thread: Arc<Thread>,
@@ -123,13 +120,11 @@ async fn get_initiated_classes_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_object_size_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_modifiable_class_0(
     _thread: Arc<Thread>,
@@ -138,7 +133,6 @@ async fn is_modifiable_class_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_retransform_classes_supported_0(
     _thread: Arc<Thread>,
@@ -147,25 +141,21 @@ async fn is_retransform_classes_supported_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn jar_file(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn load_agent_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn redefine_classes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn retransform_classes_0(
     _thread: Arc<Thread>,
@@ -174,7 +164,6 @@ async fn retransform_classes_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_has_retransformable_transformers(
     _thread: Arc<Thread>,
@@ -183,7 +172,6 @@ async fn set_has_retransformable_transformers(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_has_transformers(
     _thread: Arc<Thread>,
@@ -192,7 +180,6 @@ async fn set_has_transformers(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_native_method_prefixes(
     _thread: Arc<Thread>,

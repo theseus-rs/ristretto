@@ -51,7 +51,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "SCardTransmit", "(JI[BII)[B", s_card_transmit);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn s_card_begin_transaction(
     _thread: Arc<Thread>,
@@ -60,25 +59,21 @@ async fn s_card_begin_transaction(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn s_card_connect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn s_card_control(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn s_card_disconnect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn s_card_end_transaction(
     _thread: Arc<Thread>,
@@ -87,7 +82,6 @@ async fn s_card_end_transaction(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn s_card_establish_context(
     _thread: Arc<Thread>,
@@ -96,7 +90,6 @@ async fn s_card_establish_context(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn s_card_get_status_change(
     _thread: Arc<Thread>,
@@ -105,19 +98,16 @@ async fn s_card_get_status_change(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn s_card_list_readers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn s_card_status(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn s_card_transmit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

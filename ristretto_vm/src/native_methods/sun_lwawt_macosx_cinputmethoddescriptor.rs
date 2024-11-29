@@ -18,7 +18,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "nativeInit", "()V", native_init);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_available_locales(
     _thread: Arc<Thread>,
@@ -27,7 +26,6 @@ async fn native_get_available_locales(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

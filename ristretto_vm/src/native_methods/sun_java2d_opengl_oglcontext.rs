@@ -17,7 +17,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_ogl_id_string(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

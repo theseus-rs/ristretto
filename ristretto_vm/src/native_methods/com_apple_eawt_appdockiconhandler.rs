@@ -49,7 +49,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_dock_icon_image(
     _thread: Arc<Thread>,
@@ -58,7 +57,6 @@ async fn native_get_dock_icon_image(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_dock_icon_badge(
     _thread: Arc<Thread>,
@@ -67,7 +65,6 @@ async fn native_set_dock_icon_badge(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_dock_icon_image(
     _thread: Arc<Thread>,
@@ -76,7 +73,6 @@ async fn native_set_dock_icon_image(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_dock_icon_progress(
     _thread: Arc<Thread>,
@@ -85,7 +81,6 @@ async fn native_set_dock_icon_progress(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_dock_menu(
     _thread: Arc<Thread>,

@@ -89,7 +89,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_copy_ns_image_into_array(
     _thread: Arc<Thread>,
@@ -98,7 +97,6 @@ async fn native_copy_ns_image_into_array(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_array(
     _thread: Arc<Thread>,
@@ -107,7 +105,6 @@ async fn native_create_ns_image_from_array(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_arrays(
     _thread: Arc<Thread>,
@@ -116,7 +113,6 @@ async fn native_create_ns_image_from_arrays(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_bytes(
     _thread: Arc<Thread>,
@@ -125,7 +121,6 @@ async fn native_create_ns_image_from_bytes(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_file_contents(
     _thread: Arc<Thread>,
@@ -134,7 +129,6 @@ async fn native_create_ns_image_from_file_contents(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_icon_selector(
     _thread: Arc<Thread>,
@@ -143,7 +137,6 @@ async fn native_create_ns_image_from_icon_selector(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_image_name(
     _thread: Arc<Thread>,
@@ -152,7 +145,6 @@ async fn native_create_ns_image_from_image_name(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_ns_image_of_file_from_launch_services(
     _thread: Arc<Thread>,
@@ -161,7 +153,6 @@ async fn native_create_ns_image_of_file_from_launch_services(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_ns_image_representation_sizes(
     _thread: Arc<Thread>,
@@ -170,7 +161,6 @@ async fn native_get_ns_image_representation_sizes(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_ns_image_size(
     _thread: Arc<Thread>,
@@ -179,7 +169,6 @@ async fn native_get_ns_image_size(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_platform_image_bytes(
     _thread: Arc<Thread>,
@@ -188,7 +177,6 @@ async fn native_get_platform_image_bytes(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_resize_ns_image_representations(
     _thread: Arc<Thread>,
@@ -197,7 +185,6 @@ async fn native_resize_ns_image_representations(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_ns_image_size(
     _thread: Arc<Thread>,

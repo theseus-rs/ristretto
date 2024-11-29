@@ -13,13 +13,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "toStdout", "(Ljava/lang/String;)V", to_stdout);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn to_stderr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn to_stdout(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

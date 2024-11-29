@@ -154,7 +154,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "suspend0", "()V", suspend_0);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn clear_interrupt_event(
     _thread: Arc<Thread>,
@@ -163,7 +162,6 @@ async fn clear_interrupt_event(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn count_stack_frames(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
@@ -180,20 +178,17 @@ async fn current_carrier_thread(
     current_thread(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn current_thread(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let thread = thread.java_object().await;
     Ok(Some(thread))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn dump_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn ensure_materialized_for_stack_walk(
     _thread: Arc<Thread>,
@@ -202,13 +197,11 @@ async fn ensure_materialized_for_stack_walk(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn extent_local_cache(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn find_scoped_value_bindings(
     _thread: Arc<Thread>,
@@ -217,7 +210,6 @@ async fn find_scoped_value_bindings(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_next_thread_id_offset(
     thread: Arc<Thread>,
@@ -229,31 +221,26 @@ async fn get_next_thread_id_offset(
     Ok(Some(Value::from(thread_id)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_stack_trace_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn holds_lock(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn interrupt_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_alive(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let object: Object = thread.java_object().await.try_into()?;
@@ -267,37 +254,31 @@ async fn is_alive_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<
     is_alive(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_interrupted(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn resume_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn scoped_value_cache(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_current_thread(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_extent_local_cache(
     _thread: Arc<Thread>,
@@ -316,7 +297,6 @@ async fn set_native_name(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_priority_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let _new_priority = arguments.pop_int()?;
@@ -324,7 +304,6 @@ async fn set_priority_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Resul
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_scoped_value_cache(
     _thread: Arc<Thread>,
@@ -333,7 +312,6 @@ async fn set_scoped_value_cache(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn sleep(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let millis = arguments.pop_long()?;
@@ -351,7 +329,6 @@ async fn sleep_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Val
     sleep(thread, arguments).await
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn sleep_nanos_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let nanos = arguments.pop_long()?;
@@ -364,7 +341,6 @@ async fn sleep_nanos_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn start_0(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let thread_id = i64::try_from(thread.id())?;
@@ -373,19 +349,16 @@ async fn start_0(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn stop_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn suspend_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn r#yield(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     #[cfg(not(target_arch = "wasm32"))]

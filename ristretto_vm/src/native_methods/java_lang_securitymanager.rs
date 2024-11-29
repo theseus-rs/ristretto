@@ -44,13 +44,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn class_depth(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn class_loader_depth_0(
     _thread: Arc<Thread>,
@@ -59,7 +57,6 @@ async fn class_loader_depth_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn current_class_loader_0(
     _thread: Arc<Thread>,
@@ -68,7 +65,6 @@ async fn current_class_loader_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn current_loaded_class_0(
     _thread: Arc<Thread>,
@@ -77,7 +73,6 @@ async fn current_loaded_class_0(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_class_context(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

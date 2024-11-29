@@ -24,7 +24,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn fill_gc_attribute_info(
     _thread: Arc<Thread>,
@@ -33,13 +32,11 @@ async fn fill_gc_attribute_info(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_last_gc_info_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_num_gc_ext_attributes(
     _thread: Arc<Thread>,

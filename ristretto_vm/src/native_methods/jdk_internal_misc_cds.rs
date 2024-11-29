@@ -71,7 +71,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn define_archived_modules(
     _thread: Arc<Thread>,
@@ -80,13 +79,11 @@ async fn define_archived_modules(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn dump_class_list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn dump_dynamic_archive(
     _thread: Arc<Thread>,
@@ -95,7 +92,6 @@ async fn dump_dynamic_archive(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_cds_config_status(
     _thread: Arc<Thread>,
@@ -105,7 +101,6 @@ async fn get_cds_config_status(
 }
 
 #[expect(clippy::cast_possible_wrap)]
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_random_seed_for_dumping(
     _thread: Arc<Thread>,
@@ -118,7 +113,6 @@ async fn get_random_seed_for_dumping(
     Ok(Some(Value::Long(hash)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn initialize_from_archive(
     _thread: Arc<Thread>,
@@ -128,7 +122,6 @@ async fn initialize_from_archive(
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_dumping_archive_0(
     _thread: Arc<Thread>,
@@ -137,7 +130,6 @@ async fn is_dumping_archive_0(
     Ok(Some(Value::from(false)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_dumping_class_list_0(
     _thread: Arc<Thread>,
@@ -146,7 +138,6 @@ async fn is_dumping_class_list_0(
     Ok(Some(Value::from(false)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_sharing_enabled_0(
     _thread: Arc<Thread>,
@@ -155,7 +146,6 @@ async fn is_sharing_enabled_0(
     Ok(Some(Value::from(false)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn log_lambda_form_invoker(
     _thread: Arc<Thread>,

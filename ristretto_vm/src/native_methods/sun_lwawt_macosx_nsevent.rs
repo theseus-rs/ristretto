@@ -59,7 +59,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn ns_key_modifiers_to_java_key_info(
     _thread: Arc<Thread>,
@@ -68,19 +67,16 @@ async fn ns_key_modifiers_to_java_key_info(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn ns_to_java_char(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn ns_to_java_key_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn ns_to_java_key_modifiers(
     _thread: Arc<Thread>,
@@ -89,7 +85,6 @@ async fn ns_to_java_key_modifiers(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn ns_to_java_modifiers(
     _thread: Arc<Thread>,
@@ -98,7 +93,6 @@ async fn ns_to_java_modifiers(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn ns_to_java_mouse_modifiers(
     _thread: Arc<Thread>,

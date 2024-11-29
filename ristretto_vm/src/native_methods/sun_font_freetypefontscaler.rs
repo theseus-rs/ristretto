@@ -117,7 +117,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn create_scaler_context_native(
     _thread: Arc<Thread>,
@@ -126,7 +125,6 @@ async fn create_scaler_context_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn dispose_native_scaler(
     _thread: Arc<Thread>,
@@ -135,7 +133,6 @@ async fn dispose_native_scaler(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_font_metrics_native(
     _thread: Arc<Thread>,
@@ -144,7 +141,6 @@ async fn get_font_metrics_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_glyph_advance_native(
     _thread: Arc<Thread>,
@@ -153,7 +149,6 @@ async fn get_glyph_advance_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_glyph_code_native(
     _thread: Arc<Thread>,
@@ -162,7 +157,6 @@ async fn get_glyph_code_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_glyph_image_native(
     _thread: Arc<Thread>,
@@ -171,7 +165,6 @@ async fn get_glyph_image_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_glyph_metrics_native(
     _thread: Arc<Thread>,
@@ -180,7 +173,6 @@ async fn get_glyph_metrics_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_glyph_outline_bounds_native(
     _thread: Arc<Thread>,
@@ -189,7 +181,6 @@ async fn get_glyph_outline_bounds_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_glyph_outline_native(
     _thread: Arc<Thread>,
@@ -198,7 +189,6 @@ async fn get_glyph_outline_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_glyph_point_native(
     _thread: Arc<Thread>,
@@ -207,7 +197,6 @@ async fn get_glyph_point_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_glyph_vector_outline_native(
     _thread: Arc<Thread>,
@@ -216,7 +205,6 @@ async fn get_glyph_vector_outline_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_layout_table_cache_native(
     _thread: Arc<Thread>,
@@ -225,7 +213,6 @@ async fn get_layout_table_cache_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_missing_glyph_code_native(
     _thread: Arc<Thread>,
@@ -234,7 +221,6 @@ async fn get_missing_glyph_code_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_num_glyphs_native(
     _thread: Arc<Thread>,
@@ -243,7 +229,6 @@ async fn get_num_glyphs_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_units_per_em_native(
     _thread: Arc<Thread>,
@@ -252,13 +237,11 @@ async fn get_units_per_em_native(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_native_scaler(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

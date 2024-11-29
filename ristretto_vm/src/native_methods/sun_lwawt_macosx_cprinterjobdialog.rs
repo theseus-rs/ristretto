@@ -12,7 +12,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "showDialog", "()Z", show_dialog);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn show_dialog(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

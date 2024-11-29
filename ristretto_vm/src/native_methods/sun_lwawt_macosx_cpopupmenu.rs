@@ -23,7 +23,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_popup_menu(
     _thread: Arc<Thread>,
@@ -32,7 +31,6 @@ async fn native_create_popup_menu(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_show_popup_menu(
     _thread: Arc<Thread>,

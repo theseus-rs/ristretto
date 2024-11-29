@@ -14,19 +14,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "startTransfer", "(JJ)J", start_transfer);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn add_transfer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn drop_done(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn start_transfer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

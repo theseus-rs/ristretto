@@ -44,13 +44,11 @@ async fn find_builtin_lib(thread: Arc<Thread>, mut arguments: Arguments) -> Resu
     Ok(Some(library_name))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn load(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(Some(Value::Int(1)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn unload(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

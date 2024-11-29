@@ -41,13 +41,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_view(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_location_on_screen(
     _thread: Arc<Thread>,
@@ -56,7 +54,6 @@ async fn native_get_location_on_screen(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_ns_view_display_id(
     _thread: Arc<Thread>,
@@ -65,7 +62,6 @@ async fn native_get_ns_view_display_id(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_is_view_under_mouse(
     _thread: Arc<Thread>,
@@ -74,7 +70,6 @@ async fn native_is_view_under_mouse(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_auto_resizable(
     _thread: Arc<Thread>,

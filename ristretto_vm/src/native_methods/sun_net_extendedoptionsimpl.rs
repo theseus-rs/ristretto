@@ -67,19 +67,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn flow_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_flow_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_tcp_keep_alive_intvl(
     _thread: Arc<Thread>,
@@ -88,7 +85,6 @@ async fn get_tcp_keep_alive_intvl(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_tcp_keep_alive_probes(
     _thread: Arc<Thread>,
@@ -97,7 +93,6 @@ async fn get_tcp_keep_alive_probes(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_tcp_keep_alive_time(
     _thread: Arc<Thread>,
@@ -106,13 +101,11 @@ async fn get_tcp_keep_alive_time(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn keep_alive_options_supported(
     _thread: Arc<Thread>,
@@ -121,13 +114,11 @@ async fn keep_alive_options_supported(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_flow_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_tcp_keep_alive_intvl(
     _thread: Arc<Thread>,
@@ -136,7 +127,6 @@ async fn set_tcp_keep_alive_intvl(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_tcp_keep_alive_probes(
     _thread: Arc<Thread>,
@@ -145,7 +135,6 @@ async fn set_tcp_keep_alive_probes(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_tcp_keep_alive_time(
     _thread: Arc<Thread>,

@@ -71,13 +71,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "resetNativeData", "(I)V", reset_native_data);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn config_display_mode(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn enter_full_screen_exclusive(
     _thread: Arc<Thread>,
@@ -86,13 +84,11 @@ async fn enter_full_screen_exclusive(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn enum_display_modes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn exit_full_screen_exclusive(
     _thread: Arc<Thread>,
@@ -101,19 +97,16 @@ async fn exit_full_screen_exclusive(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_config_colormap(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_config_depth(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_config_visual_id(
     _thread: Arc<Thread>,
@@ -122,7 +115,6 @@ async fn get_config_visual_id(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_current_display_mode(
     _thread: Arc<Thread>,
@@ -131,13 +123,11 @@ async fn get_current_display_mode(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_display(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_double_buffer_visuals(
     _thread: Arc<Thread>,
@@ -146,19 +136,16 @@ async fn get_double_buffer_visuals(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_num_configs(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_xrandr_extension(
     _thread: Arc<Thread>,
@@ -167,13 +154,11 @@ async fn init_xrandr_extension(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_dbe_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn reset_native_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

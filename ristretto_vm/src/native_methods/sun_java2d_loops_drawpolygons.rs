@@ -17,7 +17,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn draw_polygons(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

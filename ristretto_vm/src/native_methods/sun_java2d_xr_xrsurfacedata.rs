@@ -15,25 +15,21 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "initXRPicture", "(JI)V", init_xr_picture);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn xr_init_surface(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn free_xsdo_picture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_xr_picture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

@@ -29,7 +29,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_system_package_location(
     _thread: Arc<Thread>,
@@ -38,7 +37,6 @@ async fn get_system_package_location(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_system_package_names(
     _thread: Arc<Thread>,
@@ -47,7 +45,6 @@ async fn get_system_package_names(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn set_boot_loader_unnamed_module_0(
     _thread: Arc<Thread>,

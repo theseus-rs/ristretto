@@ -23,7 +23,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_finalization_enabled(
     _thread: Arc<Thread>,
@@ -32,7 +31,6 @@ async fn is_finalization_enabled(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn report_complete(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

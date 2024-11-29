@@ -17,7 +17,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn free_native_scaler_context(
     _thread: Arc<Thread>,

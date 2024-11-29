@@ -31,7 +31,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn draw_glyph_list_aa(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

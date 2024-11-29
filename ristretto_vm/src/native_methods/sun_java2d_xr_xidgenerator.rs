@@ -12,7 +12,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "bufferXIDs", "([II)V", buffer_xi_ds);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn buffer_xi_ds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

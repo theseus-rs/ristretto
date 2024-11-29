@@ -23,7 +23,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_vm_temporary_directory(
     _thread: Arc<Thread>,
@@ -32,7 +31,6 @@ async fn get_vm_temporary_directory(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_agent_properties(
     _thread: Arc<Thread>,

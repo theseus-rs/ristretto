@@ -31,14 +31,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "sync", "()V", sync);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
 #[expect(clippy::match_same_arms)]
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_append(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let handle = arguments.pop_int()?;
@@ -60,7 +58,6 @@ async fn get_append(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Op
     Ok(Some(Value::from(append)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_handle(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let handle = arguments.pop_int()?;
@@ -68,13 +65,11 @@ async fn get_handle(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Op
     Ok(Some(Value::Long(handle)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn sync(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

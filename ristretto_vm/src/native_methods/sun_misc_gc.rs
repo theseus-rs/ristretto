@@ -17,7 +17,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn max_object_inspection_age(
     _thread: Arc<Thread>,

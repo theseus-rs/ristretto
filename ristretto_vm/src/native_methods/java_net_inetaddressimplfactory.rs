@@ -12,7 +12,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "isIPv6Supported", "()Z", is_i_pv_6_supported);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn is_i_pv_6_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

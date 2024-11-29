@@ -41,7 +41,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_class_value(
     _thread: Arc<Thread>,
@@ -50,7 +49,6 @@ async fn native_get_class_value(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_color_for_state(
     _thread: Arc<Thread>,
@@ -59,7 +57,6 @@ async fn native_get_color_for_state(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_pango_font_name(
     _thread: Arc<Thread>,
@@ -68,7 +65,6 @@ async fn native_get_pango_font_name(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_x_thickness(
     _thread: Arc<Thread>,
@@ -77,7 +73,6 @@ async fn native_get_x_thickness(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_y_thickness(
     _thread: Arc<Thread>,

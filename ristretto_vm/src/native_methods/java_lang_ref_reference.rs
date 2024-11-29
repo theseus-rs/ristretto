@@ -45,13 +45,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn clear_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_and_clear_reference_pending_list(
     _thread: Arc<Thread>,
@@ -60,7 +58,6 @@ async fn get_and_clear_reference_pending_list(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn has_reference_pending_list(
     _thread: Arc<Thread>,
@@ -69,7 +66,6 @@ async fn has_reference_pending_list(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn refers_to_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let object_argument = arguments.pop_reference()?;
@@ -83,7 +79,6 @@ async fn refers_to_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
     }
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn wait_for_reference_pending_list(
     _thread: Arc<Thread>,

@@ -24,7 +24,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "getMaxGlyph", "(J)I", get_max_glyph);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn create_null_scaler_context(
     _thread: Arc<Thread>,
@@ -33,7 +32,6 @@ async fn create_null_scaler_context(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn create_scaler_context(
     _thread: Arc<Thread>,
@@ -42,7 +40,6 @@ async fn create_scaler_context(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_max_glyph(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

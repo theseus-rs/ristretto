@@ -158,7 +158,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn toggle_full_screen_mode(
     _thread: Arc<Thread>,
@@ -167,7 +166,6 @@ async fn toggle_full_screen_mode(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_create_ns_window(
     _thread: Arc<Thread>,
@@ -176,13 +174,11 @@ async fn native_create_ns_window(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_dispose(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_enter_full_screen_mode(
     _thread: Arc<Thread>,
@@ -191,7 +187,6 @@ async fn native_enter_full_screen_mode(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_exit_full_screen_mode(
     _thread: Arc<Thread>,
@@ -200,7 +195,6 @@ async fn native_exit_full_screen_mode(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_ns_window_insets(
     _thread: Arc<Thread>,
@@ -209,7 +203,6 @@ async fn native_get_ns_window_insets(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_get_topmost_platform_window_under_mouse(
     _thread: Arc<Thread>,
@@ -218,7 +211,6 @@ async fn native_get_topmost_platform_window_under_mouse(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_push_ns_window_to_back(
     _thread: Arc<Thread>,
@@ -227,7 +219,6 @@ async fn native_push_ns_window_to_back(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_push_ns_window_to_front(
     _thread: Arc<Thread>,
@@ -236,7 +227,6 @@ async fn native_push_ns_window_to_front(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_revalidate_ns_window_shadow(
     _thread: Arc<Thread>,
@@ -245,7 +235,6 @@ async fn native_revalidate_ns_window_shadow(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_allow_automatic_tabbing_property(
     _thread: Arc<Thread>,
@@ -254,13 +243,11 @@ async fn native_set_allow_automatic_tabbing_property(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_enabled(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_ns_window_bounds(
     _thread: Arc<Thread>,
@@ -269,7 +256,6 @@ async fn native_set_ns_window_bounds(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_ns_window_location_by_platform(
     _thread: Arc<Thread>,
@@ -278,7 +264,6 @@ async fn native_set_ns_window_location_by_platform(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_ns_window_menu_bar(
     _thread: Arc<Thread>,
@@ -287,7 +272,6 @@ async fn native_set_ns_window_menu_bar(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_ns_window_min_max(
     _thread: Arc<Thread>,
@@ -296,7 +280,6 @@ async fn native_set_ns_window_min_max(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_ns_window_minimized_icon(
     _thread: Arc<Thread>,
@@ -305,7 +288,6 @@ async fn native_set_ns_window_minimized_icon(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_ns_window_represented_filename(
     _thread: Arc<Thread>,
@@ -314,7 +296,6 @@ async fn native_set_ns_window_represented_filename(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_ns_window_standard_frame(
     _thread: Arc<Thread>,
@@ -323,7 +304,6 @@ async fn native_set_ns_window_standard_frame(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_ns_window_style_bits(
     _thread: Arc<Thread>,
@@ -332,7 +312,6 @@ async fn native_set_ns_window_style_bits(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_set_ns_window_title(
     _thread: Arc<Thread>,
@@ -341,7 +320,6 @@ async fn native_set_ns_window_title(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_synthesize_mouse_entered_exited_events_1(
     _thread: Arc<Thread>,
@@ -350,7 +328,6 @@ async fn native_synthesize_mouse_entered_exited_events_1(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_synthesize_mouse_entered_exited_events_2(
     _thread: Arc<Thread>,

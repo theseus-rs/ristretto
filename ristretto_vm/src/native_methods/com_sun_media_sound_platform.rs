@@ -33,7 +33,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "nIsBigEndian", "()Z", n_is_big_endian);
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_get_extra_libraries(
     _thread: Arc<Thread>,
@@ -42,7 +41,6 @@ async fn n_get_extra_libraries(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_get_library_for_feature(
     _thread: Arc<Thread>,
@@ -51,13 +49,11 @@ async fn n_get_library_for_feature(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_is_big_endian(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn n_is_signed_8(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!()

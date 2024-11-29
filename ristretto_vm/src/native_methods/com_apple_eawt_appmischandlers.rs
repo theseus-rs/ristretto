@@ -41,7 +41,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_disable_sudden_termination(
     _thread: Arc<Thread>,
@@ -50,7 +49,6 @@ async fn native_disable_sudden_termination(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_enable_sudden_termination(
     _thread: Arc<Thread>,
@@ -59,7 +57,6 @@ async fn native_enable_sudden_termination(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_open_help_viewer(
     _thread: Arc<Thread>,
@@ -68,7 +65,6 @@ async fn native_open_help_viewer(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_request_activation(
     _thread: Arc<Thread>,
@@ -77,7 +73,6 @@ async fn native_request_activation(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_request_user_attention(
     _thread: Arc<Thread>,

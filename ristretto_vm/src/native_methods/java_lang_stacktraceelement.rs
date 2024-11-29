@@ -39,7 +39,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_stack_trace_element(
     _thread: Arc<Thread>,
@@ -48,7 +47,6 @@ async fn init_stack_trace_element(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn init_stack_trace_elements(
     _thread: Arc<Thread>,

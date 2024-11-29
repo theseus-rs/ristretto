@@ -92,7 +92,6 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq>(
     Ok(())
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn arraycopy(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let length = arguments.pop_int()?;
@@ -191,7 +190,6 @@ async fn arraycopy(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opt
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn allow_security_manager(
     _thread: Arc<Thread>,
@@ -200,7 +198,6 @@ async fn allow_security_manager(
     Ok(Some(Value::from(false)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn current_time_millis(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let now = SystemTime::now();
@@ -211,13 +208,11 @@ async fn current_time_millis(_thread: Arc<Thread>, _arguments: Arguments) -> Res
     Ok(Some(Value::Long(time)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_security_manager(
     _thread: Arc<Thread>,
@@ -231,7 +226,6 @@ async fn get_security_manager(
     Ok(Some(Value::Object(None)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn identity_hash_code(
     _thread: Arc<Thread>,
@@ -283,7 +277,6 @@ async fn map_library_name(thread: Arc<Thread>, mut arguments: Arguments) -> Resu
     Ok(Some(library_name))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn nano_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let now = SystemTime::now();
@@ -294,7 +287,6 @@ async fn nano_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
     Ok(Some(Value::Long(time)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let vm = thread.vm()?;

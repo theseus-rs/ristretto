@@ -29,7 +29,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_open_cocoa_about_window(
     _thread: Arc<Thread>,
@@ -38,7 +37,6 @@ async fn native_open_cocoa_about_window(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_register_for_notification(
     _thread: Arc<Thread>,
@@ -47,7 +45,6 @@ async fn native_register_for_notification(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn native_reply_to_app_should_terminate(
     _thread: Arc<Thread>,

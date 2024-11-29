@@ -97,7 +97,6 @@ async fn fill_in_stack_trace(
     Ok(Some(Value::Object(object)))
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_stack_trace_depth(
     _thread: Arc<Thread>,
@@ -106,7 +105,6 @@ async fn get_stack_trace_depth(
     todo!()
 }
 
-#[expect(clippy::needless_pass_by_value)]
 #[async_recursion(?Send)]
 async fn get_stack_trace_element(
     _thread: Arc<Thread>,
