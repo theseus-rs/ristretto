@@ -7,6 +7,7 @@ keywords = ["java", "jvm", "classfile", "bytecode"]
 license.workspace = true
 name = "ristretto_classfile"
 repository.workspace = true
+rust-version.workspace = true
 version.workspace = true
 
 [dependencies]

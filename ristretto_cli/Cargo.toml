@@ -9,6 +9,7 @@ homepage = "https://theseus-rs.github.io/ristretto/ristretto_cli/"
 license.workspace = true
 name = "ristretto_cli"
 repository.workspace = true
+rust-version.workspace = true
 version.workspace = true
 
 [package.metadata.wix]

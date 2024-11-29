@@ -7,6 +7,7 @@ keywords = ["java", "jvm", "classloader", "class"]
 license.workspace = true
 name = "ristretto_classloader"
 repository.workspace = true
+rust-version.workspace = true
 version.workspace = true
 
 [dependencies]

@@ -7,6 +7,7 @@ keywords = ["java", "jvm"]
 license.workspace = true
 name = "ristretto_vm"
 repository.workspace = true
+rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
