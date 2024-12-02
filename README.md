@@ -45,14 +45,37 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 
 ### Limitations
 
-- The Invokedynamic instruction is not implemented
-- Threading is not implemented
-- Numerous JDK native methods are not implemented
-- Finalizers are not implemented; deferred until [AsyncDrop](https://github.com/rust-lang/rust/issues/126482) is
-  stabilized
-- JNI is not implemented
-- JIT is not implemented
-- No Security manager; see: [JEP 411](https://openjdk.org/jeps/411)
+#### Instructions
+
+The Invokedynamic instruction is not implemented.
+
+#### Threading
+
+Threading is not implemented. The JVM has been structured to allow for threading in the future by utilizing async with
+the `tokio` runtime.
+
+#### Runtime Native Methods
+
+The Java runtime requires hundreds of native methods. This project aims to provide Rust equivalents for these methods
+on an as needed basis. Currently, only a small subset of these are implemented. If a native method is called that is not
+implemented, the program will panic. Please submit a pull request, or open an issue if you need a specific native
+method implemented.
+
+#### Java Native Interface (JNI)
+
+JNI is not implemented.
+
+#### Security Manager
+
+Support for the Security Manager is not implemented and there are no plans to implement it. The security manager has
+been deprecated; see: [JEP 411](https://openjdk.org/jeps/411)
+
+`System.getSecurityManager()` will always return `null`, and `System.setSecurityManager()` will throw an exception.
+
+#### Finalizers
+
+Support for finalizers is not implemented and there are no plans to implement it. Finalizers have been deprecated; see:
+[JEP 421](https://openjdk.java.net/jeps/421)
 
 ## Safety
 
