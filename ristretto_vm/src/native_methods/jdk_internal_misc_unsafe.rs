@@ -590,7 +590,7 @@ pub(crate) async fn compare_and_set_reference(
         Reference::Array(_class, array) => {
             let Some(reference) = array.get(offset)? else {
                 return Err(InternalError(
-                    "getReference: Invalid reference index".to_string(),
+                    "compareAndSetReference: Invalid reference index".to_string(),
                 ));
             };
             let Value::Object(expected_reference) = expected else {
@@ -625,7 +625,9 @@ pub(crate) async fn compare_and_set_reference(
             }
         }
         _ => {
-            return Err(InternalError("getReference: Invalid reference".to_string()));
+            return Err(InternalError(
+                "compareAndSetReference: Invalid reference".to_string(),
+            ));
         }
     };
     Ok(Some(Value::Int(result)))
@@ -707,7 +709,9 @@ fn get_reference_type(
     let offset = arguments.pop_long()?;
     let Some(reference) = arguments.pop_reference()? else {
         let Some(base_type) = base_type else {
-            return Err(InternalError("getReference: Invalid reference".to_string()));
+            return Err(InternalError(
+                "getReferenceType: Invalid reference".to_string(),
+            ));
         };
         let value = match base_type {
             BaseType::Boolean
@@ -717,7 +721,9 @@ fn get_reference_type(
             | BaseType::Short => Value::Int(i32::try_from(offset)?),
             BaseType::Long => Value::Long(offset),
             BaseType::Double | BaseType::Float => {
-                return Err(InternalError("getReference: Invalid reference".to_string()));
+                return Err(InternalError(
+                    "getReferenceType: Invalid reference".to_string(),
+                ));
             }
         };
         return Ok(Some(value));
@@ -728,7 +734,7 @@ fn get_reference_type(
         Reference::Array(_class, array) => {
             let Some(reference) = array.get(offset)? else {
                 return Err(InternalError(
-                    "getReference: Invalid reference index".to_string(),
+                    "getReferenceType: Invalid reference index".to_string(),
                 ));
             };
             Ok(Some(Value::Object(reference)))
@@ -738,7 +744,9 @@ fn get_reference_type(
             let value = object.value(&field_name)?;
             Ok(Some(value))
         }
-        _ => Err(InternalError("getReference: Invalid reference".to_string())),
+        _ => Err(InternalError(
+            "getReferenceType: Invalid reference".to_string(),
+        )),
     }
 }
 
