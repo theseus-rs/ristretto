@@ -23,16 +23,6 @@ const JAVA_17: Version = Version::Java17 { minor: 0 };
 /// Register all native methods for `java.lang.System`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/lang/System";
-    let java_version = registry.java_version();
-
-    if java_version == &JAVA_11 {
-        registry.register(
-            class_name,
-            "getSecurityManager",
-            "()Ljava/lang/SecurityManager;",
-            get_security_manager,
-        );
-    }
 
     registry.register(
         class_name,
@@ -48,6 +38,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(class_name, "currentTimeMillis", "()J", current_time_millis);
     registry.register(class_name, "gc", "()V", gc);
+    registry.register(
+        class_name,
+        "getSecurityManager",
+        "()Ljava/lang/SecurityManager;",
+        get_security_manager,
+    );
     registry.register(
         class_name,
         "identityHashCode",
@@ -71,6 +67,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(class_name, "setErr0", "(Ljava/io/PrintStream;)V", set_err_0);
     registry.register(class_name, "setIn0", "(Ljava/io/InputStream;)V", set_in_0);
     registry.register(class_name, "setOut0", "(Ljava/io/PrintStream;)V", set_out_0);
+    registry.register(
+        class_name,
+        "setSecurityManager",
+        "(Ljava/lang/SecurityManager;)V",
+        set_security_manager,
+    );
 }
 
 fn arraycopy_vec<T: Clone + Debug + PartialEq>(
@@ -218,6 +220,8 @@ async fn get_security_manager(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
+    // The SecurityManager is not supported in Ristretto.
+    //
     // NOTE: This is not a native method in any version of Java.  This is here to prevent the JVM
     // from initializing the SecurityManager class in System.initPhase1() prior to the module layer
     // being initialized in System.initPhase2(). This is necessary because the SecurityManager
@@ -395,4 +399,15 @@ async fn set_err_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
     let err_field = system.static_field("err")?;
     err_field.unsafe_set_value(Value::Object(print_stream))?;
     Ok(None)
+}
+
+#[async_recursion(?Send)]
+async fn set_security_manager(
+    _thread: Arc<Thread>,
+    _arguments: Arguments,
+) -> Result<Option<Value>> {
+    // The SecurityManager is not supported in Ristretto.
+    Err(InternalError(
+        "SecurityManager is not supported".to_string(),
+    ))
 }
