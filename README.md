@@ -48,7 +48,8 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - The Invokedynamic instruction is not implemented
 - Threading is not implemented
 - Numerous JDK native methods are not implemented
-- Finalizers are not implemented
+- Finalizers are not implemented; deferred until [AsyncDrop](https://github.com/rust-lang/rust/issues/126482) is
+  stabilized
 - JNI is not implemented
 - JIT is not implemented
 - No Security manager; see: [JEP 411](https://openjdk.org/jeps/411)
