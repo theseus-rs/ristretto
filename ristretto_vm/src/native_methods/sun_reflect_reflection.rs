@@ -34,20 +34,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn get_caller_class_1(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
-    for frame in frames.iter().rev() {
-        let class = frame.class();
-        let class_name = class.name();
-
-        if class_name == "java/lang/MethodHandles" {
-            continue;
-        }
-
-        let vm = thread.vm()?;
-        let class = thread.class(class_name).await?;
-        let class = class.to_object(&vm).await?;
-        return Ok(Some(class));
-    }
-    Ok(None)
+    let Some(frame) = frames.last() else {
+        return Ok(Some(Value::Object(None)));
+    };
+    let class = frame.class();
+    let class_name = class.name();
+    let vm = thread.vm()?;
+    let class = thread.class(class_name).await?;
+    let class = class.to_object(&vm).await?;
+    Ok(Some(class))
 }
 
 #[async_recursion(?Send)]
