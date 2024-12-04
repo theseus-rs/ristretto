@@ -1,0 +1,10 @@
+pub(crate) mod bufimgsurfacedata;
+pub(crate) mod bytecomponentraster;
+pub(crate) mod bytepackedraster;
+pub(crate) mod databuffernative;
+pub(crate) mod gifimagedecoder;
+pub(crate) mod imagerepresentation;
+pub(crate) mod imaginglib;
+pub(crate) mod integercomponentraster;
+pub(crate) mod jpegimagedecoder;
+pub(crate) mod shortcomponentraster;
