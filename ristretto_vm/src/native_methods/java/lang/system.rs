@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
-use crate::native_methods::java_lang_object::object_hash_code;
+use crate::native_methods::java::lang::object::object_hash_code;
 use crate::native_methods::properties;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
