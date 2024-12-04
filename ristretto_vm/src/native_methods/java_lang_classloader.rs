@@ -1,10 +1,13 @@
 use crate::arguments::Arguments;
+use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
-use crate::Result;
+use crate::JavaError::{ClassFormatError, IndexOutOfBoundsException, NoClassDefFoundError};
+use crate::{Result, VM};
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
-use ristretto_classloader::Value;
+use ristretto_classfile::{ClassFile, Version};
+use ristretto_classloader::{Class, Object, Reference, Value};
+use std::io::Cursor;
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
@@ -71,37 +74,161 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
 }
 
-#[async_recursion(?Send)]
-async fn define_class_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+/// Create a `java.lang.Class` object from a byte array.
+/// This method is used by the `defineClass0`, `defineClass1`, and `defineClass2` native methods.
+/// The `defineClass0` method is used by Java 8 and earlier versions.
+async fn class_object_from_bytes(
+    vm: &Arc<VM>,
+    source_file: Option<Reference>,
+    bytes: &[u8],
+    offset: i32,
+    length: i32,
+) -> Result<Object> {
+    let bytes_length = i32::try_from(bytes.len())?;
+    if offset < 0 || length < 0 || offset + length > bytes_length {
+        return Err(IndexOutOfBoundsException {
+            index: offset,
+            size: bytes_length,
+        }
+        .into());
+    }
+    let offset = usize::try_from(offset)?;
+    let length = usize::try_from(length)?;
+    let bytes = bytes[offset..offset + length].to_vec();
+    let mut bytes = Cursor::new(bytes);
+    let class_file = match ClassFile::from_bytes(&mut bytes) {
+        Ok(class_file) => class_file,
+        Err(error) => {
+            return Err(ClassFormatError(error.to_string()).into());
+        }
+    };
+    if let Err(error) = class_file.verify() {
+        return Err(ClassFormatError(error.to_string()).into());
+    }
+
+    if let Some(source_file) = source_file {
+        let _source_file: String = source_file.try_into()?;
+        // TODO: implement setting the source file
+    }
+
+    let class = Arc::new(Class::from(class_file)?);
+    let class = class.to_object(vm).await?;
+    let class: Object = class.try_into()?;
+    Ok(class)
 }
 
 #[async_recursion(?Send)]
-async fn define_class_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn define_class_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let _protection_domain = arguments.pop_object()?;
+    let length = arguments.pop_int()?;
+    let offset = arguments.pop_int()?;
+    let bytes: Vec<u8> = arguments.pop()?.try_into()?;
+    let vm = thread.vm()?;
+    let class = class_object_from_bytes(&vm, None, &bytes, offset, length).await?;
+
+    if vm.java_class_file_version() <= &JAVA_8 {
+        if let Some(expected_class_name) = arguments.pop_reference()? {
+            let expected_class_name: String = expected_class_name.try_into()?;
+            let class_name = class.class().name();
+            if class_name != expected_class_name {
+                return Err(NoClassDefFoundError(class_name.to_string()).into());
+            }
+        }
+    } else {
+        let class_loader = arguments.pop()?;
+        class.set_value("classLoader", class_loader)?;
+    }
+
+    Ok(Some(Value::from(class)))
 }
 
 #[async_recursion(?Send)]
-async fn define_class_2(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn define_class_1(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let source_file = arguments.pop_reference()?;
+    let _protection_domain = arguments.pop_object()?;
+    let length = arguments.pop_int()?;
+    let offset = arguments.pop_int()?;
+    let bytes: Vec<u8> = arguments.pop()?.try_into()?;
+    let vm = thread.vm()?;
+    let class = class_object_from_bytes(&vm, source_file, &bytes, offset, length).await?;
+
+    if vm.java_class_file_version() <= &JAVA_8 {
+        if let Some(expected_class_name) = arguments.pop_reference()? {
+            let expected_class_name: String = expected_class_name.try_into()?;
+            let class_name = class.class().name();
+            if class_name != expected_class_name {
+                return Err(NoClassDefFoundError(class_name.to_string()).into());
+            }
+        }
+    } else {
+        let class_loader = arguments.pop()?;
+        class.set_value("classLoader", class_loader)?;
+    }
+
+    Ok(Some(Value::from(class)))
+}
+
+#[async_recursion(?Send)]
+async fn define_class_2(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let source_file = arguments.pop_reference()?;
+    let _protection_domain = arguments.pop_object()?;
+    let length = arguments.pop_int()?;
+    let offset = arguments.pop_int()?;
+    let byte_buffer = arguments.pop_object()?;
+    let buffer: Vec<u8> = byte_buffer.value("hb")?.try_into()?;
+    let buffer_offset = byte_buffer.value("offset")?.try_into()?;
+    let bytes: Vec<u8> = buffer.into_iter().skip(buffer_offset).collect();
+    let vm = thread.vm()?;
+    let class = class_object_from_bytes(&vm, source_file, &bytes, offset, length).await?;
+
+    if vm.java_class_file_version() <= &JAVA_8 {
+        if let Some(expected_class_name) = arguments.pop_reference()? {
+            let expected_class_name: String = expected_class_name.try_into()?;
+            let class_name = class.class().name();
+            if class_name != expected_class_name {
+                return Err(NoClassDefFoundError(class_name.to_string()).into());
+            }
+        }
+    } else {
+        let class_loader = arguments.pop()?;
+        class.set_value("classLoader", class_loader)?;
+    }
+
+    Ok(Some(Value::from(class)))
 }
 
 #[async_recursion(?Send)]
 async fn find_bootstrap_class(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    let class_name: String = arguments.pop()?.try_into()?;
+    let vm = thread.vm()?;
+    let Ok(class) = vm.class(class_name).await else {
+        return Ok(Some(Value::Object(None)));
+    };
+    let class = class.to_object(&vm).await?;
+    Ok(Some(class))
 }
 
 #[async_recursion(?Send)]
 async fn find_builtin_lib(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    // Ristretto has not built-in libraries; all native methods are implemented in Rust
+    Ok(Some(Value::Object(None)))
 }
 
 #[async_recursion(?Send)]
-async fn find_loaded_class_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn find_loaded_class_0(
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let class_name: String = arguments.pop()?.try_into()?;
+    let vm = thread.vm()?;
+    let Ok(class) = vm.class(class_name).await else {
+        return Ok(Some(Value::Object(None)));
+    };
+    let class = class.to_object(&vm).await?;
+    Ok(Some(class))
 }
 
 #[async_recursion(?Send)]
@@ -109,7 +236,7 @@ async fn init_system_class_loader(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    // TODO: implement this method; temporarily return null to allow the VM to initialize
+    // Ristretto initializes the system class loader in the VM
     Ok(Some(Value::Object(None)))
 }
 
@@ -120,10 +247,12 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 
 #[async_recursion(?Send)]
 async fn resolve_class_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    // Ristretto resolves classes when they are loaded
+    Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn retrieve_directives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    // TODO: implement the `retrieveDirectives` native method
+    Ok(Some(Value::Object(None)))
 }
