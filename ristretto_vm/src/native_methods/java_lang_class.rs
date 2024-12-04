@@ -288,11 +288,7 @@ async fn get_class_access_flags_raw_0(
     thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError(
-            "getClassAccessFlagsRaw0: no arguments".to_string(),
-        ));
-    };
+    let object = arguments.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags;
@@ -306,11 +302,7 @@ async fn get_class_file_version_0(
     thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError(
-            "getClassFileVersion0: no arguments".to_string(),
-        ));
-    };
+    let object = arguments.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let version = &class_file.version;
@@ -327,12 +319,7 @@ async fn get_component_type(
     thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError(
-            "getComponentType: no class reference".to_string(),
-        ));
-    };
-
+    let object = arguments.pop_object()?;
     let class = object.class();
     if class.is_array() {
         return Ok(Some(Value::Object(None)));
@@ -474,9 +461,7 @@ async fn get_interfaces_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 
 #[async_recursion(?Send)]
 async fn get_modifiers(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError("getModifiers: no class".to_string()));
-    };
+    let object = arguments.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags.bits();
@@ -494,8 +479,12 @@ async fn get_modifiers(thread: Arc<Thread>, mut arguments: Arguments) -> Result<
 }
 
 #[async_recursion(?Send)]
-async fn get_name_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn get_name_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let object = arguments.pop_object()?;
+    let class = get_class(&thread, &object).await?;
+    let class_name = class.name().replace('/', ".");
+    let value = class_name.to_value();
+    Ok(Some(value))
 }
 
 #[async_recursion(?Send)]
@@ -513,11 +502,7 @@ async fn get_permitted_subclasses_0(
     thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError(
-            "getPermittedSubclasses0: no arguments".to_string(),
-        ));
-    };
+    let object = arguments.pop_object()?;
     let _class = get_class(&thread, &object).await?;
     // TODO: add support for sealed classes
     Ok(None)
@@ -596,9 +581,7 @@ async fn get_simple_binary_name_0(
 
 #[async_recursion(?Send)]
 async fn get_superclass(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError("getSuperclass: no arguments".to_string()));
-    };
+    let object = arguments.pop_object()?;
     let class = object.class();
     match class.parent()? {
         Some(parent) => {
@@ -613,15 +596,18 @@ async fn get_superclass(thread: Arc<Thread>, mut arguments: Arguments) -> Result
 }
 
 #[async_recursion(?Send)]
-async fn init_class_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn init_class_name(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    // TODO: implement support for hidden classes
+    let object = arguments.pop_object()?;
+    let class = get_class(&thread, &object).await?;
+    let class_name = class.name().replace('/', ".");
+    let value = class_name.to_value();
+    Ok(Some(value))
 }
 
 #[async_recursion(?Send)]
 async fn is_array(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError("isArray: no arguments".to_string()));
-    };
+    let object = arguments.pop_object()?;
     let class = get_class(&thread, &object).await?;
     if class.is_array() {
         Ok(Some(Value::from(true)))
@@ -654,6 +640,7 @@ async fn is_assignable_from(
 
 #[async_recursion(?Send)]
 async fn is_hidden(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    // TODO: implement support for hidden classes
     Ok(Some(Value::from(false)))
 }
 
@@ -664,9 +651,7 @@ async fn is_instance(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 
 #[async_recursion(?Send)]
 async fn is_interface(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError("isInterface: no arguments".to_string()));
-    };
+    let object = arguments.pop_object()?;
     let class = get_class(&thread, &object).await?;
     if class.is_interface() {
         Ok(Some(Value::from(true)))
@@ -677,9 +662,7 @@ async fn is_interface(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
 
 #[async_recursion(?Send)]
 async fn is_primitive(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError("isPrimitive: no arguments".to_string()));
-    };
+    let object = arguments.pop_object()?;
     let class = get_class(&thread, &object).await?;
     if class.is_primitive() {
         Ok(Some(Value::from(true)))

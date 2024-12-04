@@ -16,6 +16,18 @@ pub enum JavaError {
         source_class_name: String,
         target_class_name: String,
     },
+    /// `ClassFormatError`
+    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/ClassFormatError.html>
+    #[error("{0}")]
+    ClassFormatError(String),
+    /// `IndexOutOfBoundsException`
+    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/IndexOutOfBoundsException.html>
+    #[error("Index: {index}, Size {size}")]
+    IndexOutOfBoundsException { index: i32, size: i32 },
+    /// `NoClassDefFoundError`
+    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/NoClassDefFoundError.html>
+    #[error("{0}")]
+    NoClassDefFoundError(String),
     /// `NullPointerException`
     /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/NullPointerException.html>
     #[error("{0}")]
@@ -32,6 +44,9 @@ impl JavaError {
             }
             JavaError::ArithmeticException(_) => "java/lang/ArithmeticException",
             JavaError::ClassCastException { .. } => "java/lang/ClassCastException",
+            JavaError::ClassFormatError(_) => "java/lang/ClassFormatError",
+            JavaError::IndexOutOfBoundsException { .. } => "java/lang/IndexOutOfBoundsException",
+            JavaError::NoClassDefFoundError(_) => "java/lang/NoClassDefFoundError",
             JavaError::NullPointerException(_) => "java/lang/NullPointerException",
         }
     }
@@ -78,6 +93,27 @@ mod tests {
             error.message(),
             "class java.lang.String cannot be cast to class java.lang.Integer"
         );
+    }
+
+    #[test]
+    fn test_class_format_error() {
+        let error = JavaError::ClassFormatError("invalid class format".to_string());
+        assert_eq!(error.class_name(), "java/lang/ClassFormatError");
+        assert_eq!(error.message(), "invalid class format");
+    }
+
+    #[test]
+    fn test_index_out_of_bounds_exception() {
+        let error = JavaError::IndexOutOfBoundsException { index: 5, size: 3 };
+        assert_eq!(error.class_name(), "java/lang/IndexOutOfBoundsException");
+        assert_eq!(error.message(), "Index: 5, Size 3");
+    }
+
+    #[test]
+    fn test_no_class_def_found_error() {
+        let error = JavaError::NoClassDefFoundError("java/lang/String".to_string());
+        assert_eq!(error.class_name(), "java/lang/NoClassDefFoundError");
+        assert_eq!(error.message(), "java/lang/String");
     }
 
     #[test]
