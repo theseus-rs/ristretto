@@ -282,6 +282,11 @@ impl Attribute {
                 }
             }
             "Code" => {
+                // Instruction pointers are converted from byte offsets to instruction offsets to
+                // facilitate faster / easier instruction manipulation at runtime.  During runtime,
+                // the instruction offset can be used directly and calculating the next instruction
+                // byte offset is unnecessary. This separates the physical storage of the
+                // instructions from the logical representation.
                 let max_stack = bytes.read_u16::<BigEndian>()?;
                 let max_locals = bytes.read_u16::<BigEndian>()?;
 
@@ -297,17 +302,37 @@ impl Attribute {
                     let mut exception = ExceptionTableEntry::from_bytes(bytes)?;
                     // Convert the byte offset to instruction offset
                     let byte_pc = exception.handler_pc;
-                    let instruction_pc = byte_to_instruction_map
+                    let instruction_pc = *byte_to_instruction_map
                         .get(&byte_pc)
                         .ok_or(InvalidInstructionOffset(u32::from(byte_pc)))?;
-                    exception.handler_pc = *instruction_pc;
+                    exception.handler_pc = instruction_pc;
                     exception_table.push(exception);
                 }
                 let attributes_count = bytes.read_u16::<BigEndian>()?;
                 let mut attributes = Vec::with_capacity(attributes_count as usize);
                 for _ in 0..attributes_count {
                     let attribute = Attribute::from_bytes(constant_pool, bytes)?;
-                    attributes.push(attribute);
+                    match attribute {
+                        Attribute::LineNumberTable {
+                            name_index,
+                            mut line_numbers,
+                        } => {
+                            for line_number in &mut line_numbers {
+                                // Convert the byte offset to instruction offset
+                                let byte_pc = line_number.start_pc;
+                                let instruction_pc = *byte_to_instruction_map
+                                    .get(&byte_pc)
+                                    .ok_or(InvalidInstructionOffset(u32::from(byte_pc)))?;
+                                line_number.start_pc = instruction_pc;
+                            }
+                            let attribute = Attribute::LineNumberTable {
+                                name_index,
+                                line_numbers,
+                            };
+                            attributes.push(attribute);
+                        }
+                        _ => attributes.push(attribute),
+                    }
                 }
                 Attribute::Code {
                     name_index,
@@ -701,7 +726,31 @@ impl Attribute {
                 let attributes_length = u16::try_from(attributes.len())?;
                 bytes.write_u16::<BigEndian>(attributes_length)?;
                 for attribute in attributes {
-                    attribute.to_bytes(&mut bytes)?;
+                    match attribute {
+                        Attribute::LineNumberTable {
+                            name_index,
+                            line_numbers,
+                        } => {
+                            let mut new_line_numbers = Vec::new();
+                            for line_number in line_numbers {
+                                // Convert the instruction offset to byte offset
+                                let instruction_pc = line_number.start_pc;
+                                let byte_pc = instruction_to_byte_map
+                                    .get(&instruction_pc)
+                                    .ok_or(InvalidInstructionOffset(u32::from(instruction_pc)))?;
+                                new_line_numbers.push(LineNumber {
+                                    start_pc: *byte_pc,
+                                    line_number: line_number.line_number,
+                                });
+                            }
+                            let attribute = Attribute::LineNumberTable {
+                                name_index: *name_index,
+                                line_numbers: new_line_numbers,
+                            };
+                            attribute.to_bytes(&mut bytes)?;
+                        }
+                        _ => attribute.to_bytes(&mut bytes)?,
+                    }
                 }
                 (name_index, bytes)
             }
@@ -1083,15 +1132,20 @@ impl fmt::Display for Attribute {
                 }
 
                 for attribute in attributes {
-                    writeln!(f, "{}", indent_lines(&attribute.to_string(), "  "))?;
-                }
-            }
-            Attribute::LineNumberTable { line_numbers, .. } => {
-                writeln!(f, "LineNumberTable:")?;
-                for line_number in line_numbers {
-                    let start_pc = line_number.start_pc;
-                    let line_number = line_number.line_number;
-                    writeln!(f, "  line {line_number}: {start_pc}")?;
+                    match attribute {
+                        Attribute::LineNumberTable { line_numbers, .. } => {
+                            writeln!(f, "  LineNumberTable:")?;
+                            for line_number in line_numbers {
+                                let instruction_pc = line_number.start_pc;
+                                let start_pc = instruction_to_byte_map
+                                    .get(&instruction_pc)
+                                    .ok_or(fmt::Error)?;
+                                let line_number = line_number.line_number;
+                                writeln!(f, "    line {line_number}: {start_pc}")?;
+                            }
+                        }
+                        _ => writeln!(f, "{}", indent_lines(&attribute.to_string(), "  "))?,
+                    }
                 }
             }
             Attribute::StackMapTable { frames, .. } => {
@@ -1188,6 +1242,13 @@ mod test {
             name_index: 2,
             constant_value_index: 42,
         };
+        let line_number_table = Attribute::LineNumberTable {
+            name_index: 3,
+            line_numbers: vec![LineNumber {
+                start_pc: 0,
+                line_number: 1,
+            }],
+        };
         let exception_table_entry = ExceptionTableEntry {
             range_pc: 1..2,
             handler_pc: 0,
@@ -1199,11 +1260,11 @@ mod test {
             max_locals: 3,
             code: vec![Instruction::Iconst_1],
             exception_table: vec![exception_table_entry],
-            attributes: vec![constant.clone()],
+            attributes: vec![constant.clone(), line_number_table.clone()],
         };
         let expected_bytes = [
-            0, 1, 0, 0, 0, 29, 0, 2, 0, 3, 0, 0, 0, 1, 4, 0, 1, 0, 1, 0, 2, 0, 0, 0, 4, 0, 1, 0, 2,
-            0, 0, 0, 2, 0, 42,
+            0, 1, 0, 0, 0, 41, 0, 2, 0, 3, 0, 0, 0, 1, 4, 0, 1, 0, 1, 0, 2, 0, 0, 0, 4, 0, 2, 0, 2,
+            0, 0, 0, 2, 0, 42, 0, 3, 0, 0, 0, 6, 0, 1, 0, 0, 0, 1,
         ];
         let expected = indoc! {"
             Code:
@@ -1211,6 +1272,8 @@ mod test {
                  0: iconst_1
               [ExceptionTableEntry { range_pc: 1..2, handler_pc: 0, catch_type: 4 }]
               ConstantValue { name_index: 2, constant_value_index: 42 }
+              LineNumberTable:
+                line 1: 0
         "};
 
         assert_eq!(expected, attribute.to_string());
@@ -1218,6 +1281,7 @@ mod test {
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8(attribute.name())?;
         constant_pool.add_utf8(constant.name())?;
+        constant_pool.add_utf8(line_number_table.name())?;
 
         assert!(attribute.valid_for_version(&VERSION_45_3));
         assert!(!attribute.valid_for_version(&VERSION_45_0));
@@ -1387,10 +1451,7 @@ mod test {
             }],
         };
         let expected_bytes = [0, 1, 0, 0, 0, 6, 0, 1, 0, 2, 0, 42];
-        let expected = indoc! {"
-            LineNumberTable:
-              line 42: 2
-        "};
+        let expected = "LineNumberTable { name_index: 1, line_numbers: [LineNumber { start_pc: 2, line_number: 42 }] }";
 
         assert_eq!(expected, attribute.to_string());
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
