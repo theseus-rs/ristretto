@@ -30,6 +30,12 @@ async fn float_to_raw_int_bits(
 }
 
 #[async_recursion(?Send)]
-async fn int_bits_to_float(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.lang.Float.intBitsToFloat(I)F")
+async fn int_bits_to_float(
+    _thread: Arc<Thread>,
+    mut arguments: Arguments,
+) -> Result<Option<Value>> {
+    let integer = arguments.pop_int()?;
+    #[expect(clippy::cast_sign_loss)]
+    let float = f32::from_bits(integer as u32);
+    Ok(Some(Value::Float(float)))
 }
