@@ -363,7 +363,7 @@ async fn get_declared_fields_0(
     let public_only = arguments.pop_int()? != 0;
     let object = arguments.pop_object()?;
     let vm = thread.vm()?;
-    let class = object.class();
+    let class = get_class(&thread, &object).await?;
     let class_object = class.to_object(&vm).await?;
 
     let mut fields = Vec::new();
@@ -399,7 +399,8 @@ async fn get_declared_fields_0(
                 ],
             )
         } else {
-            let trusted_final = Value::from(false);
+            let trusted_final =
+                access_flags.contains(FieldAccessFlags::FINAL | FieldAccessFlags::STATIC);
             (
                 "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IZILjava/lang/String;[B",
                 vec![
@@ -407,7 +408,7 @@ async fn get_declared_fields_0(
                     field_name,
                     field_type,
                     modifiers,
-                    trusted_final,
+                    Value::from(trusted_final),
                     slot,
                     signature,
                     annotations,
