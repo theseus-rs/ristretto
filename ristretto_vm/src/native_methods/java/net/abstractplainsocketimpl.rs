@@ -22,5 +22,5 @@ async fn is_reuse_port_available_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.AbstractPlainSocketImpl.isReusePortAvailable0()Z")
 }

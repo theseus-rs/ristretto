@@ -15,10 +15,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn to_stderr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.MessageUtils.toStderr(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn to_stdout(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.MessageUtils.toStdout(Ljava/lang/String;)V")
 }

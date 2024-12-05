@@ -393,47 +393,47 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn abort(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.abort(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn add_string_constant(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.addStringConstant(JLjava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn begin_recording(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.beginRecording()V")
 }
 
 #[async_recursion(?Send)]
 async fn commit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.commit(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn counter_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.counterTime()J")
 }
 
 #[async_recursion(?Send)]
 async fn create_jfr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.createJFR(Z)Z")
 }
 
 #[async_recursion(?Send)]
 async fn destroy_jfr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.destroyJFR()Z")
 }
 
 #[async_recursion(?Send)]
 async fn emit_data_loss(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.emitDataLoss(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn emit_event(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.emitEvent(JJJ)Z")
 }
 
 #[async_recursion(?Send)]
@@ -441,22 +441,22 @@ async fn emit_old_object_samples(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.emitOldObjectSamples(JZZ)V")
 }
 
 #[async_recursion(?Send)]
 async fn end_recording(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.endRecording()V")
 }
 
 #[async_recursion(?Send)]
 async fn exclude(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.exclude(Ljava/lang/Thread;)V")
 }
 
 #[async_recursion(?Send)]
 async fn flush(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.flush()")
 }
 
 #[async_recursion(?Send)]
@@ -464,7 +464,7 @@ async fn get_all_event_classes(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getAllEventClasses()Ljava/util/List;")
 }
 
 #[async_recursion(?Send)]
@@ -472,7 +472,7 @@ async fn get_allowed_to_do_event_retransforms(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getAllowedToDoEventRetransforms()Z")
 }
 
 #[async_recursion(?Send)]
@@ -480,12 +480,12 @@ async fn get_chunk_start_nanos(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getChunkStartNanos()J")
 }
 
 #[async_recursion(?Send)]
 async fn get_class_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getClassId(Ljava/lang/Class;)J")
 }
 
 #[async_recursion(?Send)]
@@ -493,47 +493,47 @@ async fn get_class_id_non_intrinsic(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getClassIdNonIntrinsic(Ljava/lang/Class;)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_configuration(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getConfiguration(Ljava/lang/Class;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_dump_path(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getDumpPath()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_event_writer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getEventWriter()Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_handler(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getHandler(Ljava/lang/Class;)Ljava/lang")
 }
 
 #[async_recursion(?Send)]
 async fn get_pid(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getPid()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_stack_trace_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getStackTraceId(IJ)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_thread_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getThreadId(Ljava/lang/Thread;)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_ticks_frequency(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getTicksFrequency()J")
 }
 
 #[async_recursion(?Send)]
@@ -541,12 +541,12 @@ async fn get_time_conversion_factor(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getTimeConversionFactor()D")
 }
 
 #[async_recursion(?Send)]
 async fn get_type_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getTypeId(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
@@ -554,12 +554,12 @@ async fn get_unloaded_event_class_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.getUnloadedEventClassCount()J")
 }
 
 #[async_recursion(?Send)]
 async fn host_total_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.hostTotalMemory()J")
 }
 
 #[async_recursion(?Send)]
@@ -567,62 +567,62 @@ async fn host_total_swap_memory(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.hostTotalSwapMemory()J")
 }
 
 #[async_recursion(?Send)]
 async fn include(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.include(Ljava/lang/Thread;)V")
 }
 
 #[async_recursion(?Send)]
 async fn is_available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.isAvailable()Z")
 }
 
 #[async_recursion(?Send)]
 async fn is_containerized(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.isContainerized()Z")
 }
 
 #[async_recursion(?Send)]
 async fn is_excluded(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.isExcluded(Ljava/lang/Thread;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn is_instrumented(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.isInstrumented(Ljava/lang/Class;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn is_recording(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.isRecording()Z")
 }
 
 #[async_recursion(?Send)]
 async fn log(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.log(IILjava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn log_event(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.logEvent(I[Ljava/lang/String;Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn mark_chunk_final(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.markChunkFinal()V")
 }
 
 #[async_recursion(?Send)]
 async fn nanos_now(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.nanosNow()J")
 }
 
 #[async_recursion(?Send)]
 async fn new_event_writer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.newEventWriter()Ljdk/jfr/internal/EventWriter;")
 }
 
 #[async_recursion(?Send)]
@@ -635,12 +635,12 @@ async fn register_stack_filter(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.registerStackFilter([Ljava/lang/String;[Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
 async fn retransform_classes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.retransformClasses([Ljava/lang/Class;)V")
 }
 
 #[async_recursion(?Send)]
@@ -648,27 +648,27 @@ async fn set_compressed_integers(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setCompressedIntegers(Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_configuration(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setConfiguration(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_cutoff(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setCutoff(JJ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_dump_path(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setDumpPath(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_enabled(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setEnabled(JZ)V")
 }
 
 #[async_recursion(?Send)]
@@ -676,7 +676,7 @@ async fn set_file_notification(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setFileNotification(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -684,7 +684,7 @@ async fn set_force_instrumentation(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setForceInstrumentation(Z)V")
 }
 
 #[async_recursion(?Send)]
@@ -692,7 +692,7 @@ async fn set_global_buffer_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setGlobalBufferCount(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -700,17 +700,17 @@ async fn set_global_buffer_size(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setGlobalBufferSize(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_handler(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setHandler(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_memory_size(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setMemorySize(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -718,7 +718,7 @@ async fn set_method_sampling_interval(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setMethodSamplingInterval(JJ)V")
 }
 
 #[async_recursion(?Send)]
@@ -726,17 +726,17 @@ async fn set_method_sampling_period(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setMethodSamplingPeriod(JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_miscellaneous(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setMiscellaneous(JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_output(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setOutput(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
@@ -744,17 +744,17 @@ async fn set_repository_location(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setRepositoryLocation(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_sample_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setSampleThreads(Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_stack_depth(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setStackDepth(I)V")
 }
 
 #[async_recursion(?Send)]
@@ -762,7 +762,7 @@ async fn set_stack_trace_enabled(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setStackTraceEnabled(JZ)V")
 }
 
 #[async_recursion(?Send)]
@@ -770,22 +770,22 @@ async fn set_thread_buffer_size(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setThreadBufferSize(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_threshold(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setThreshold(JJ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_throttle(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.setThrottle(JJJ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn should_rotate_disk(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.shouldRotateDisk()Z")
 }
 
 #[async_recursion(?Send)]
@@ -793,17 +793,17 @@ async fn store_metadata_descriptor(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.storeMetadataDescriptor([B)V")
 }
 
 #[async_recursion(?Send)]
 async fn subscribe_log_level(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.subscribeLogLevel(Ljdk/jfr/internal/LogTag;I)V")
 }
 
 #[async_recursion(?Send)]
 async fn uncaught_exception(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.uncaughtException(Ljava/lang/Thread;Ljava/lang/Throwable;)V")
 }
 
 #[async_recursion(?Send)]
@@ -811,5 +811,5 @@ async fn unregister_stack_filter(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.jfr.internal.JVM.unregisterStackFilter(J)V")
 }

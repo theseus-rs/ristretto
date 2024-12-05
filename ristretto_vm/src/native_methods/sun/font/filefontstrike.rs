@@ -23,10 +23,10 @@ async fn get_glyph_image_from_windows(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FileFontStrike._getGlyphImageFromWindows(Ljava/lang/String;IIIZI)J")
 }
 
 #[async_recursion(?Send)]
 async fn init_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FileFontStrike.initNative()Z")
 }

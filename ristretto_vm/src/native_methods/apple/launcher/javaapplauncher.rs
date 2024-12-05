@@ -28,7 +28,7 @@ async fn native_convert_and_release(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.launcher.JavaAppLauncher.nativeConvertAndRelease(J)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -36,5 +36,5 @@ async fn native_invoke_non_public(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.launcher.JavaAppLauncher.nativeInvokeNonPublic(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V")
 }

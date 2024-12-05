@@ -47,7 +47,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn abort_read(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.abortRead(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -55,12 +55,12 @@ async fn clear_native_read_abort_flag(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.clearNativeReadAbortFlag(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn dispose_reader(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.disposeReader(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -68,40 +68,40 @@ async fn init_jpeg_image_reader(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.initJPEGImageReader()J")
 }
 
 #[async_recursion(?Send)]
 async fn init_reader_i_ds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.initReaderIDs(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V")
 }
 
 #[async_recursion(?Send)]
 async fn read_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.readImage(IJ[BI[I[IIIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;IIZ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn read_image_header(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.readImageHeader(JZZ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn reset_library_state(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.resetLibraryState(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn reset_reader(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.resetReader(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_out_color_space(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.setOutColorSpace(JI)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_source(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.setSource(J)V")
 }

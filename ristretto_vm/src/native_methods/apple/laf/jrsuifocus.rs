@@ -15,10 +15,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn begin_native_focus(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIFocus.beginNativeFocus(JI)I")
 }
 
 #[async_recursion(?Send)]
 async fn end_native_focus(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIFocus.endNativeFocus(J)I")
 }

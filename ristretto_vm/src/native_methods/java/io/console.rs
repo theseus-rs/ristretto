@@ -24,15 +24,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn echo(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.Console.echo(Z)Z")
 }
 
 #[async_recursion(?Send)]
 async fn encoding(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.Console.encoding()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn istty(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.Console.istty()Z")
 }

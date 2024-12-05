@@ -28,7 +28,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.FileOutputStream.close0()V")
 }
 
 #[async_recursion(?Send)]
@@ -38,12 +38,12 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn open_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.FileOutputStream.open0(Ljava/lang/String;Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn write(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.FileOutputStream.write(IZ)V")
 }
 
 #[expect(clippy::cast_sign_loss)]

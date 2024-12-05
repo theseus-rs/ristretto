@@ -54,7 +54,7 @@ async fn native_get_dock_icon_image(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppDockIconHandler.nativeGetDockIconImage()J")
 }
 
 #[async_recursion(?Send)]
@@ -62,7 +62,7 @@ async fn native_set_dock_icon_badge(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppDockIconHandler.nativeSetDockIconBadge(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
@@ -70,7 +70,7 @@ async fn native_set_dock_icon_image(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppDockIconHandler.nativeSetDockIconImage(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -78,7 +78,7 @@ async fn native_set_dock_icon_progress(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppDockIconHandler.nativeSetDockIconProgress(I)V")
 }
 
 #[async_recursion(?Send)]
@@ -86,5 +86,5 @@ async fn native_set_dock_menu(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppDockIconHandler.nativeSetDockMenu(J)V")
 }

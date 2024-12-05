@@ -42,42 +42,42 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn add_segment(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.addSegment(I[F)V");
 }
 
 #[async_recursion(?Send)]
 async fn append_poly(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.appendPoly([I[IIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn close_path(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.closePath()V");
 }
 
 #[async_recursion(?Send)]
 async fn curve_to(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.curveTo(FFFFFF)V");
 }
 
 #[async_recursion(?Send)]
 async fn dispose(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.dispose()V");
 }
 
 #[async_recursion(?Send)]
 async fn get_native_consumer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.getNativeConsumer()J");
 }
 
 #[async_recursion(?Send)]
 async fn get_native_iterator(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.getNativeIterator()J");
 }
 
 #[async_recursion(?Send)]
 async fn get_path_box(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.getPathBox([I)V");
 }
 
 #[async_recursion(?Send)]
@@ -87,37 +87,37 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn intersect_clip_box(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.intersectClipBox(IIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn line_to(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.lineTo(FF)V");
 }
 
 #[async_recursion(?Send)]
 async fn move_to(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.moveTo(FF)V");
 }
 
 #[async_recursion(?Send)]
 async fn next_span(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.nextSpan([I)Z");
 }
 
 #[async_recursion(?Send)]
 async fn path_done(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.pathDone()V");
 }
 
 #[async_recursion(?Send)]
 async fn quad_to(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.quadTo(FFFF)V");
 }
 
 #[async_recursion(?Send)]
 async fn set_normalize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.setNormalize(Z)V");
 }
 
 #[async_recursion(?Send)]
@@ -125,15 +125,15 @@ async fn set_output_area_xyxy(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.setOutputAreaXYXY(IIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn set_rule(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.setRule(I)V");
 }
 
 #[async_recursion(?Send)]
 async fn skip_down_to(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.pipe.ShapeSpanIterator.skipDownTo(I)V");
 }

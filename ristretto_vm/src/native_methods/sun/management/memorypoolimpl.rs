@@ -65,7 +65,7 @@ async fn get_collection_usage_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryPoolImpl.getCollectionUsage0()Ljava/lang/management/MemoryUsage;")
 }
 
 #[async_recursion(?Send)]
@@ -73,22 +73,22 @@ async fn get_memory_managers_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryPoolImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;")
 }
 
 #[async_recursion(?Send)]
 async fn get_peak_usage_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryPoolImpl.getPeakUsage0()Ljava/lang/management/MemoryUsage;")
 }
 
 #[async_recursion(?Send)]
 async fn get_usage_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryPoolImpl.getUsage0()Ljava/lang/management/MemoryUsage;")
 }
 
 #[async_recursion(?Send)]
 async fn reset_peak_usage_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryPoolImpl.resetPeakUsage0()V")
 }
 
 #[async_recursion(?Send)]
@@ -96,7 +96,7 @@ async fn set_collection_threshold_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryPoolImpl.setCollectionThreshold0(JJ)V")
 }
 
 #[async_recursion(?Send)]
@@ -104,7 +104,7 @@ async fn set_pool_collection_sensor(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryPoolImpl.setPoolCollectionSensor(Lsun/management/Sensor;)V")
 }
 
 #[async_recursion(?Send)]
@@ -112,7 +112,7 @@ async fn set_pool_usage_sensor(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryPoolImpl.setPoolUsageSensor(Lsun/management/Sensor;)V")
 }
 
 #[async_recursion(?Send)]
@@ -120,5 +120,5 @@ async fn set_usage_threshold_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryPoolImpl.setUsageThreshold0(JJ)V")
 }

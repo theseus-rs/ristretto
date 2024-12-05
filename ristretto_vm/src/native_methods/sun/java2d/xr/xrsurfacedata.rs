@@ -17,12 +17,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn xr_init_surface(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRSurfaceData.XRInitSurface(IIIJI)V");
 }
 
 #[async_recursion(?Send)]
 async fn free_xsdo_picture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRSurfaceData.freeXSDOPicture(J)V");
 }
 
 #[async_recursion(?Send)]
@@ -32,5 +32,5 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn init_xr_picture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRSurfaceData.initXRPicture(JI)V");
 }

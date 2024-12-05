@@ -55,15 +55,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn call_stack_walk(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StackStreamFactory$AbstractStackWalker.callStackWalk()Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn fetch_stack_frames(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StackStreamFactory$AbstractStackWalker.fetchStackFrames()I")
 }
 
 #[async_recursion(?Send)]
 async fn set_continuation(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StackStreamFactory$AbstractStackWalker.setContinuation()V")
 }

@@ -34,12 +34,12 @@ async fn create_native_drag_source(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CDragSourceContextPeer.createNativeDragSource(Ljava/awt/Component;JLjava/awt/datatransfer/Transferable;Ljava/awt/event/InputEvent;IIIIJLsun/lwawt/macosx/CImage;III[JLjava/util/Map;)J")
 }
 
 #[async_recursion(?Send)]
 async fn do_dragging(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CDragSourceContextPeer.doDragging(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -47,5 +47,5 @@ async fn release_native_drag_source(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CDragSourceContextPeer.releaseNativeDragSource(J)V")
 }

@@ -34,7 +34,7 @@ async fn get_system_package_location(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.loader.BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -42,7 +42,7 @@ async fn get_system_package_names(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.loader.BootLoader.getSystemPackageNames()[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]

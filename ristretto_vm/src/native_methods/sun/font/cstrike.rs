@@ -58,7 +58,7 @@ async fn create_native_strike_ptr(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CStrike.createNativeStrikePtr(J[D[DII)J")
 }
 
 #[async_recursion(?Send)]
@@ -66,12 +66,12 @@ async fn dispose_native_strike_ptr(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CStrike.disposeNativeStrikePtr(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_font_metrics(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CStrike.getFontMetrics(J)Lsun/font/StrikeMetrics;")
 }
 
 #[async_recursion(?Send)]
@@ -79,7 +79,7 @@ async fn get_glyph_image_ptrs_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CStrike.getGlyphImagePtrsNative(J[J[II)V")
 }
 
 #[async_recursion(?Send)]
@@ -87,7 +87,7 @@ async fn get_native_glyph_advance(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CStrike.getNativeGlyphAdvance(JI)F")
 }
 
 #[async_recursion(?Send)]
@@ -95,7 +95,7 @@ async fn get_native_glyph_image_bounds(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CStrike.getNativeGlyphImageBounds(JILjava/awt/geom/Rectangle2D$Float;DD)V")
 }
 
 #[async_recursion(?Send)]
@@ -103,5 +103,5 @@ async fn get_native_glyph_outline(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CStrike.getNativeGlyphOutline(JIDD)Ljava/awt/geom/GeneralPath;")
 }

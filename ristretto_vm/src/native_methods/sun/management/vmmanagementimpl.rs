@@ -162,7 +162,7 @@ async fn get_available_processors(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getAvailableProcessors()I")
 }
 
 #[async_recursion(?Send)]
@@ -170,7 +170,7 @@ async fn get_class_initialization_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getClassInitializationTime()J")
 }
 
 #[async_recursion(?Send)]
@@ -178,7 +178,7 @@ async fn get_class_loading_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getClassLoadingTime()J")
 }
 
 #[async_recursion(?Send)]
@@ -186,7 +186,7 @@ async fn get_class_verification_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getClassVerificationTime()J")
 }
 
 #[async_recursion(?Send)]
@@ -194,7 +194,7 @@ async fn get_daemon_thread_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getDaemonThreadCount()I")
 }
 
 #[async_recursion(?Send)]
@@ -202,7 +202,7 @@ async fn get_initialized_class_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getInitializedClassCount()J")
 }
 
 #[async_recursion(?Send)]
@@ -210,7 +210,7 @@ async fn get_live_thread_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getLiveThreadCount()I")
 }
 
 #[async_recursion(?Send)]
@@ -218,7 +218,7 @@ async fn get_loaded_class_size(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getLoadedClassSize()J")
 }
 
 #[async_recursion(?Send)]
@@ -226,7 +226,7 @@ async fn get_method_data_size(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getMethodDataSize()J")
 }
 
 #[async_recursion(?Send)]
@@ -234,17 +234,17 @@ async fn get_peak_thread_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getPeakThreadCount()I")
 }
 
 #[async_recursion(?Send)]
 async fn get_process_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getProcessId()I")
 }
 
 #[async_recursion(?Send)]
 async fn get_safepoint_count(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getSafepointCount()J")
 }
 
 #[async_recursion(?Send)]
@@ -252,12 +252,12 @@ async fn get_safepoint_sync_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getSafepointSyncTime()J")
 }
 
 #[async_recursion(?Send)]
 async fn get_startup_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getStartupTime()J")
 }
 
 #[async_recursion(?Send)]
@@ -265,7 +265,7 @@ async fn get_total_application_non_stopped_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getTotalApplicationNonStoppedTime()J")
 }
 
 #[async_recursion(?Send)]
@@ -273,7 +273,7 @@ async fn get_total_class_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getTotalClassCount()J")
 }
 
 #[async_recursion(?Send)]
@@ -281,7 +281,7 @@ async fn get_total_compile_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getTotalCompileTime()J")
 }
 
 #[async_recursion(?Send)]
@@ -289,7 +289,7 @@ async fn get_total_safepoint_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getTotalSafepointTime()J")
 }
 
 #[async_recursion(?Send)]
@@ -297,7 +297,7 @@ async fn get_total_thread_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getTotalThreadCount()J")
 }
 
 #[async_recursion(?Send)]
@@ -305,7 +305,7 @@ async fn get_unloaded_class_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getUnloadedClassCount()J")
 }
 
 #[async_recursion(?Send)]
@@ -313,32 +313,32 @@ async fn get_unloaded_class_size(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getUnloadedClassSize()J")
 }
 
 #[async_recursion(?Send)]
 async fn get_uptime_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getUptime0()J")
 }
 
 #[async_recursion(?Send)]
 async fn get_verbose_class(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getVerboseClass()Z")
 }
 
 #[async_recursion(?Send)]
 async fn get_verbose_gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getVerboseGC()Z")
 }
 
 #[async_recursion(?Send)]
 async fn get_version_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getVersion0()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_vm_arguments_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.getVmArguments0()[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -346,7 +346,7 @@ async fn init_optional_support_fields(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.initOptionalSupportFields()V")
 }
 
 #[async_recursion(?Send)]
@@ -354,7 +354,7 @@ async fn is_thread_allocated_memory_enabled(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.isThreadAllocatedMemoryEnabled()Z")
 }
 
 #[async_recursion(?Send)]
@@ -362,7 +362,7 @@ async fn is_thread_contention_monitoring_enabled(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.isThreadContentionMonitoringEnabled()Z")
 }
 
 #[async_recursion(?Send)]
@@ -370,5 +370,5 @@ async fn is_thread_cpu_time_enabled(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.VMManagementImpl.isThreadCpuTimeEnabled()Z")
 }

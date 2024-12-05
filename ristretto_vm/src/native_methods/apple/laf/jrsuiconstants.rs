@@ -22,5 +22,5 @@ async fn get_ptr_for_constant(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIConstants.getPtrForConstant(I)J")
 }

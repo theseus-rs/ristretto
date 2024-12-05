@@ -42,7 +42,7 @@ async fn native_activate_default_menu_bar(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppMenuBarHandler.nativeActivateDefaultMenuBar(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -50,7 +50,7 @@ async fn native_set_default_menu_bar(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppMenuBarHandler.nativeSetDefaultMenuBar(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -58,5 +58,5 @@ async fn native_set_menu_state(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppMenuBarHandler.nativeSetMenuState(IZZ)V")
 }

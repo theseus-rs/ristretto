@@ -102,7 +102,7 @@ async fn get_stack_trace_depth(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Throwable.getStackTraceDepth()I")
 }
 
 #[async_recursion(?Send)]
@@ -110,5 +110,5 @@ async fn get_stack_trace_element(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Throwable.getStackTraceElement(I)Ljava/lang/StackTraceElement;")
 }

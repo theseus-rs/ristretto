@@ -37,22 +37,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn do_yield(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.vm.Continuation.doYield()I")
 }
 
 #[async_recursion(?Send)]
 async fn enter_special(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.vm.Continuation.enterSpecial(Ljdk/internal/vm/Continuation;ZZ)V")
 }
 
 #[async_recursion(?Send)]
 async fn is_pinned_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.vm.Continuation.isPinned0(Ljdk/internal/vm/ContinuationScope;)I")
 }
 
 #[async_recursion(?Send)]
 async fn pin(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.vm.Continuation.pin()V")
 }
 
 #[async_recursion(?Send)]
@@ -62,5 +62,5 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 
 #[async_recursion(?Send)]
 async fn unpin(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.vm.Continuation.unpin()V")
 }

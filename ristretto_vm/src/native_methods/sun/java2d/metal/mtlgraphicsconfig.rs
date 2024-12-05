@@ -45,7 +45,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn get_mtl_config_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
@@ -53,7 +53,7 @@ async fn is_metal_framework_available(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLGraphicsConfig.isMetalFrameworkAvailable()Z")
 }
 
 #[async_recursion(?Send)]
@@ -61,7 +61,7 @@ async fn native_get_max_texture_size(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLGraphicsConfig.nativeGetMaxTextureSize()I")
 }
 
 #[async_recursion(?Send)]
@@ -69,5 +69,5 @@ async fn try_load_metal_library(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z")
 }

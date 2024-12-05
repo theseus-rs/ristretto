@@ -23,10 +23,10 @@ async fn native_set_is_checkbox(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CCheckboxMenuItem.nativeSetIsCheckbox(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_set_state(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CCheckboxMenuItem.nativeSetState(JZ)V")
 }

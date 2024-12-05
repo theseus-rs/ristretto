@@ -30,7 +30,7 @@ async fn get_jdk_special_version(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Version.getJdkSpecialVersion()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -38,7 +38,7 @@ async fn get_jdk_version_info(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Version.getJdkVersionInfo()V")
 }
 
 #[async_recursion(?Send)]
@@ -46,7 +46,7 @@ async fn get_jvm_special_version(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Version.getJvmSpecialVersion()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -54,5 +54,5 @@ async fn get_jvm_version_info(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Version.getJvmVersionInfo()Z")
 }

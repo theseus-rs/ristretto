@@ -73,7 +73,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn config_display_mode(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.configDisplayMode(IIII)V")
 }
 
 #[async_recursion(?Send)]
@@ -81,12 +81,12 @@ async fn enter_full_screen_exclusive(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.enterFullScreenExclusive(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn enum_display_modes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.enumDisplayModes(ILjava/util/ArrayList;)V")
 }
 
 #[async_recursion(?Send)]
@@ -94,17 +94,17 @@ async fn exit_full_screen_exclusive(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.exitFullScreenExclusive(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_config_colormap(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.getConfigColormap(II)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_config_depth(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.getConfigDepth(II)I")
 }
 
 #[async_recursion(?Send)]
@@ -112,7 +112,7 @@ async fn get_config_visual_id(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.getConfigVisualId(II)I")
 }
 
 #[async_recursion(?Send)]
@@ -120,12 +120,12 @@ async fn get_current_display_mode(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.getCurrentDisplayMode(I)Ljava/awt/DisplayMode;")
 }
 
 #[async_recursion(?Send)]
 async fn get_display(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.getDisplay()J")
 }
 
 #[async_recursion(?Send)]
@@ -133,12 +133,12 @@ async fn get_double_buffer_visuals(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.getDoubleBufferVisuals(I)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_num_configs(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.getNumConfigs(I)I")
 }
 
 #[async_recursion(?Send)]
@@ -151,15 +151,15 @@ async fn init_xrandr_extension(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.initXrandrExtension()Z")
 }
 
 #[async_recursion(?Send)]
 async fn is_dbe_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.isDBESupported()Z")
 }
 
 #[async_recursion(?Send)]
 async fn reset_native_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsDevice.resetNativeData(I)V")
 }

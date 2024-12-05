@@ -28,25 +28,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn native_create(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenuItem.nativeCreate(JZ)J")
 }
 
 #[async_recursion(?Send)]
 async fn native_set_enabled(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenuItem.nativeSetEnabled(JZ)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_set_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenuItem.nativeSetImage(JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_set_label(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenuItem.nativeSetLabel(JLjava/lang/String;CII)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_set_tooltip(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenuItem.nativeSetTooltip(JLjava/lang/String;)V")
 }

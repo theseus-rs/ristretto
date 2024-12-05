@@ -22,5 +22,5 @@ async fn invoke_native_dispose(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.DefaultDisposerRecord.invokeNativeDispose(JJ)V");
 }

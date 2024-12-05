@@ -29,12 +29,12 @@ async fn native_create_menu_bar(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenuBar.nativeCreateMenuBar()J")
 }
 
 #[async_recursion(?Send)]
 async fn native_del_menu(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenuBar.nativeDelMenu(JI)V")
 }
 
 #[async_recursion(?Send)]
@@ -42,5 +42,5 @@ async fn native_set_help_menu(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenuBar.nativeSetHelpMenu(JJ)V")
 }

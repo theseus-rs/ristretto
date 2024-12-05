@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         class_name,
         "initWriterIDs",
         "(Ljava/lang/Class;Ljava/lang/Class;)V",
-        init_writer_i_ds,
+        init_writer_ids,
     );
     registry.register(class_name, "resetWriter", "(J)V", reset_writer);
     registry.register(class_name, "setDest", "(J)V", set_dest);
@@ -31,12 +31,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn abort_write(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageWriter.abortWrite(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn dispose_writer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageWriter.disposeWriter(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -44,30 +44,30 @@ async fn init_jpeg_image_writer(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageWriter.initJPEGImageWriter()J")
 }
 
 #[async_recursion(?Send)]
-async fn init_writer_i_ds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn init_writer_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageWriter.initWriterIDs(Ljava/lang/Class;Ljava/lang/Class;)V")
 }
 
 #[async_recursion(?Send)]
 async fn reset_writer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageWriter.resetWriter(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_dest(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageWriter.setDest(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn write_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageWriter.writeImage(J[BIII[IIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;Z[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;ZZZI[I[I[I[I[IZI)Z")
 }
 
 #[async_recursion(?Send)]
 async fn write_tables(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.imageio.plugins.jpeg.JPEGImageWriter.writeTables(J[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;)V")
 }

@@ -40,7 +40,7 @@ async fn execute_diagnostic_command(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.DiagnosticCommandImpl.executeDiagnosticCommand(Ljava/lang/String;)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -48,7 +48,7 @@ async fn get_diagnostic_command_info(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.DiagnosticCommandImpl.getDiagnosticCommandInfo([Ljava/lang/String;)[Lsun/management/DiagnosticCommandInfo;")
 }
 
 #[async_recursion(?Send)]
@@ -56,7 +56,7 @@ async fn get_diagnostic_commands(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.DiagnosticCommandImpl.getDiagnosticCommands()[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -64,5 +64,5 @@ async fn set_notification_enabled(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.DiagnosticCommandImpl.setNotificationEnabled(Z)V")
 }

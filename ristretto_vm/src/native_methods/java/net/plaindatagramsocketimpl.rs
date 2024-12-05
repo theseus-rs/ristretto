@@ -88,17 +88,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn bind_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.bind0(ILjava/net/InetAddress;)V")
 }
 
 #[async_recursion(?Send)]
 async fn connect_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.connect0(Ljava/net/InetAddress;I)V")
 }
 
 #[async_recursion(?Send)]
 async fn data_available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.dataAvailable()I")
 }
 
 #[async_recursion(?Send)]
@@ -106,7 +106,7 @@ async fn datagram_socket_close(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.datagramSocketClose()V")
 }
 
 #[async_recursion(?Send)]
@@ -114,22 +114,22 @@ async fn datagram_socket_create(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.datagramSocketCreate()V")
 }
 
 #[async_recursion(?Send)]
 async fn disconnect_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.disconnect0(I)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_ttl(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.getTTL()B")
 }
 
 #[async_recursion(?Send)]
 async fn get_time_to_live(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.getTimeToLive()I")
 }
 
 #[async_recursion(?Send)]
@@ -139,55 +139,57 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 
 #[async_recursion(?Send)]
 async fn join(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!(
+        "java.net.PlainDatagramSocketImpl.join(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn leave(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.leave(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V")
 }
 
 #[async_recursion(?Send)]
 async fn peek(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.peek(Ljava/net/InetAddress;)I")
 }
 
 #[async_recursion(?Send)]
 async fn peek_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.peekData(Ljava/net/DatagramPacket;)I")
 }
 
 #[async_recursion(?Send)]
 async fn receive_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.receive0(Ljava/net/DatagramPacket;)V")
 }
 
 #[async_recursion(?Send)]
 async fn send(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.send(Ljava/net/DatagramPacket;)V")
 }
 
 #[async_recursion(?Send)]
 async fn send_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.send0(Ljava/net/DatagramPacket;)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_ttl(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.setTTL(B)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_time_to_live(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.setTimeToLive(I)V")
 }
 
 #[async_recursion(?Send)]
 async fn socket_get_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.socketGetOption(I)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn socket_set_option_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainDatagramSocketImpl.socketSetOption0(ILjava/lang/Object;)V")
 }

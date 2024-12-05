@@ -89,7 +89,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn can_connect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.print.CUPSPrinter.canConnect(Ljava/lang/String;I)Z")
 }
 
 #[async_recursion(?Send)]
@@ -97,7 +97,7 @@ async fn get_cups_default_printer(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.print.CUPSPrinter.getCupsDefaultPrinter()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -105,37 +105,37 @@ async fn get_cups_default_printers(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.print.CUPSPrinter.getCupsDefaultPrinters()[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_cups_port(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.print.CUPSPrinter.getCupsPort()I")
 }
 
 #[async_recursion(?Send)]
 async fn get_cups_server(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.print.CUPSPrinter.getCupsServer()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_media(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.print.CUPSPrinter.getMedia(Ljava/lang/String;)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_output_bins(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.print.CUPSPrinter.getOutputBins(Ljava/lang/String;)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_page_sizes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.print.CUPSPrinter.getPageSizes(Ljava/lang/String;)[F")
 }
 
 #[async_recursion(?Send)]
 async fn get_resolutions(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.print.CUPSPrinter.getResolutions(Ljava/lang/String;Ljava/util/ArrayList;)V")
 }
 
 #[async_recursion(?Send)]

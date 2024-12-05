@@ -23,7 +23,7 @@ async fn has_static_initializer(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z")
 }
 
 #[async_recursion(?Send)]

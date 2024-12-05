@@ -32,50 +32,50 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn create(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueue.create()I");
 }
 
 #[async_recursion(?Send)]
 async fn filter_offset(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueue.filterOffset()I");
 }
 
 #[async_recursion(?Send)]
 async fn flags_offset(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueue.flagsOffset()I");
 }
 
 #[async_recursion(?Send)]
 async fn ident_offset(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueue.identOffset()I");
 }
 
 #[async_recursion(?Send)]
 async fn kevent_poll(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueue.keventPoll(IJI)I");
 }
 
 #[async_recursion(?Send)]
 async fn kevent_register(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueue.keventRegister(IIII)I");
 }
 
 #[async_recursion(?Send)]
 async fn kevent_size(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueue.keventSize()I");
 }
 
 #[async_recursion(?Send)]
 async fn kqueue(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueue.kqueue()I");
 }
 
 #[async_recursion(?Send)]
 async fn poll(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueue.poll(IJIJ)I");
 }
 
 #[async_recursion(?Send)]
 async fn register_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueue.register(IIII)I");
 }

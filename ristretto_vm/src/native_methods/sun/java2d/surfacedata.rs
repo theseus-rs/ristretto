@@ -25,5 +25,5 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn is_opaque_gray(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.SurfaceData.isOpaqueGray(Ljava/awt/image/IndexColorModel;)Z")
 }

@@ -34,15 +34,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn set_c_tracing_on_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.DebugSettings.setCTracingOn(Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_c_tracing_on_2(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.DebugSettings.setCTracingOn(ZLjava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_c_tracing_on_3(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.DebugSettings.setCTracingOn(ZLjava/lang/String;I)V")
 }

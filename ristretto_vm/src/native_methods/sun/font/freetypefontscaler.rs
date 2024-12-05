@@ -122,7 +122,7 @@ async fn create_scaler_context_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.createScalerContextNative(J[DIIFF)J")
 }
 
 #[async_recursion(?Send)]
@@ -130,7 +130,7 @@ async fn dispose_native_scaler(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.disposeNativeScaler(Lsun/font/Font2D;J)V")
 }
 
 #[async_recursion(?Send)]
@@ -138,7 +138,7 @@ async fn get_font_metrics_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getFontMetricsNative(Lsun/font/Font2D;JJ)Lsun/font/StrikeMetrics;")
 }
 
 #[async_recursion(?Send)]
@@ -146,7 +146,7 @@ async fn get_glyph_advance_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getGlyphAdvanceNative(Lsun/font/Font2D;JJI)F")
 }
 
 #[async_recursion(?Send)]
@@ -154,7 +154,7 @@ async fn get_glyph_code_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getGlyphCodeNative(Lsun/font/Font2D;JC)I")
 }
 
 #[async_recursion(?Send)]
@@ -162,7 +162,7 @@ async fn get_glyph_image_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getGlyphImageNative(Lsun/font/Font2D;JJI)J")
 }
 
 #[async_recursion(?Send)]
@@ -170,7 +170,7 @@ async fn get_glyph_metrics_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getGlyphMetricsNative(Lsun/font/Font2D;JJILjava/awt/geom/Point2D$Float;)V")
 }
 
 #[async_recursion(?Send)]
@@ -178,7 +178,7 @@ async fn get_glyph_outline_bounds_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getGlyphOutlineBoundsNative(Lsun/font/Font2D;JJI)Ljava/awt/geom/Rectangle2D$Float;")
 }
 
 #[async_recursion(?Send)]
@@ -186,7 +186,7 @@ async fn get_glyph_outline_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getGlyphOutlineNative(Lsun/font/Font2D;JJIFF)Ljava/awt/geom/GeneralPath;")
 }
 
 #[async_recursion(?Send)]
@@ -194,7 +194,7 @@ async fn get_glyph_point_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getGlyphPointNative(Lsun/font/Font2D;JJII)Ljava/awt/geom/Point2D$Float;")
 }
 
 #[async_recursion(?Send)]
@@ -202,7 +202,7 @@ async fn get_glyph_vector_outline_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getGlyphVectorOutlineNative(Lsun/font/Font2D;JJ[IIFF)Ljava/awt/geom/GeneralPath;")
 }
 
 #[async_recursion(?Send)]
@@ -210,7 +210,7 @@ async fn get_layout_table_cache_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getLayoutTableCacheNative(J)J")
 }
 
 #[async_recursion(?Send)]
@@ -218,7 +218,7 @@ async fn get_missing_glyph_code_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getMissingGlyphCodeNative(J)I")
 }
 
 #[async_recursion(?Send)]
@@ -226,7 +226,7 @@ async fn get_num_glyphs_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getNumGlyphsNative(J)I")
 }
 
 #[async_recursion(?Send)]
@@ -234,7 +234,7 @@ async fn get_units_per_em_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.getUnitsPerEMNative(J)J")
 }
 
 #[async_recursion(?Send)]
@@ -244,5 +244,5 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn init_native_scaler(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.FreetypeFontScaler.initNativeScaler(Lsun/font/Font2D;IIZI)J")
 }

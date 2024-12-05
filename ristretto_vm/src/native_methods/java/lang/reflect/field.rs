@@ -22,5 +22,5 @@ async fn get_type_annotation_bytes_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.reflect.Field.getTypeAnnotationBytes0()[B")
 }

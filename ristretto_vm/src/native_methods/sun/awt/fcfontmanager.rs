@@ -22,5 +22,5 @@ async fn get_font_path_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.FcFontManager.getFontPathNative(ZZ)Ljava/lang/String;")
 }

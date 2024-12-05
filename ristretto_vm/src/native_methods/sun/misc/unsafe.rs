@@ -379,7 +379,7 @@ async fn compare_and_swap_long(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.compareAndSwapLong(Ljava/lang/Object;JJJ)Z")
 }
 
 #[async_recursion(?Send)]
@@ -428,7 +428,7 @@ async fn full_fence(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn get_address(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.getAddress(J)J")
 }
 
 #[async_recursion(?Send)]
@@ -443,7 +443,7 @@ async fn get_boolean_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resu
 
 #[async_recursion(?Send)]
 async fn get_byte_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.getByte(J)B")
 }
 
 #[async_recursion(?Send)]
@@ -458,7 +458,7 @@ async fn get_byte_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<
 
 #[async_recursion(?Send)]
 async fn get_char_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.getChar(J)C")
 }
 
 #[async_recursion(?Send)]
@@ -473,7 +473,7 @@ async fn get_char_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<
 
 #[async_recursion(?Send)]
 async fn get_double_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.getDouble(J)D")
 }
 
 #[async_recursion(?Send)]
@@ -488,7 +488,7 @@ async fn get_double_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resul
 
 #[async_recursion(?Send)]
 async fn get_float_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.getFloat(J)F")
 }
 
 #[async_recursion(?Send)]
@@ -503,7 +503,7 @@ async fn get_float_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result
 
 #[async_recursion(?Send)]
 async fn get_int_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.getInt(J)I")
 }
 
 #[async_recursion(?Send)]
@@ -523,7 +523,7 @@ async fn get_load_average(thread: Arc<Thread>, arguments: Arguments) -> Result<O
 
 #[async_recursion(?Send)]
 async fn get_long_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.getLong(J)J")
 }
 
 #[async_recursion(?Send)]
@@ -548,7 +548,7 @@ async fn get_object_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resul
 
 #[async_recursion(?Send)]
 async fn get_short_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.getShort(J)S")
 }
 
 #[async_recursion(?Send)]
@@ -568,12 +568,12 @@ async fn load_fence(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn monitor_enter(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.monitorEnter(Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
 async fn monitor_exit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.monitorExit(Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
@@ -593,7 +593,7 @@ async fn park(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>
 
 #[async_recursion(?Send)]
 async fn put_address(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putAddress(JJ)V")
 }
 
 #[async_recursion(?Send)]
@@ -608,7 +608,7 @@ async fn put_boolean_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resu
 
 #[async_recursion(?Send)]
 async fn put_byte_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putByte(JB)V")
 }
 
 #[async_recursion(?Send)]
@@ -623,7 +623,7 @@ async fn put_byte_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<
 
 #[async_recursion(?Send)]
 async fn put_char_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putChar(JC)V")
 }
 
 #[async_recursion(?Send)]
@@ -638,7 +638,7 @@ async fn put_char_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<
 
 #[async_recursion(?Send)]
 async fn put_double_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putDouble(JD)V")
 }
 
 #[async_recursion(?Send)]
@@ -653,7 +653,7 @@ async fn put_double_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resul
 
 #[async_recursion(?Send)]
 async fn put_float_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putFloat(JF)V")
 }
 
 #[async_recursion(?Send)]
@@ -668,7 +668,7 @@ async fn put_float_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result
 
 #[async_recursion(?Send)]
 async fn put_int_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putInt(JI)V")
 }
 
 #[async_recursion(?Send)]
@@ -683,7 +683,7 @@ async fn put_int_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<O
 
 #[async_recursion(?Send)]
 async fn put_long_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putLong(JJ)V")
 }
 
 #[async_recursion(?Send)]
@@ -708,32 +708,32 @@ async fn put_object_volatile(thread: Arc<Thread>, arguments: Arguments) -> Resul
 
 #[async_recursion(?Send)]
 async fn put_ordered_int(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putOrderedInt(Ljava/lang/Object;JI)V")
 }
 
 #[async_recursion(?Send)]
 async fn put_ordered_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putOrderedLong(Ljava/lang/Object;JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn put_ordered_object(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putOrderedObject(Ljava/lang/Object;JLjava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
 async fn put_short_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putShort(JS)V")
 }
 
 #[async_recursion(?Send)]
 async fn put_short_2(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putShort(Ljava/lang/Object;JS)V")
 }
 
 #[async_recursion(?Send)]
 async fn put_short_volatile(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.putShortVolatile(Ljava/lang/Object;JS)V")
 }
 
 #[async_recursion(?Send)]
@@ -778,7 +778,7 @@ async fn throw_exception(thread: Arc<Thread>, arguments: Arguments) -> Result<Op
 
 #[async_recursion(?Send)]
 async fn try_monitor_enter(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Unsafe.tryMonitorEnter(Ljava/lang/Object;)Z")
 }
 
 #[async_recursion(?Send)]

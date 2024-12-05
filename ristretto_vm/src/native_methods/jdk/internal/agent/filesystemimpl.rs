@@ -22,5 +22,5 @@ async fn is_access_user_only_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.agent.FileSystemImpl.isAccessUserOnly0(Ljava/lang/String;)Z")
 }

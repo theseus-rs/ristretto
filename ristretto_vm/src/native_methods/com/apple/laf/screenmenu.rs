@@ -25,7 +25,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn add_menu_listeners(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.laf.ScreenMenu.addMenuListeners(Lcom/apple/laf/ScreenMenu;J)J")
 }
 
 #[async_recursion(?Send)]
@@ -33,5 +33,5 @@ async fn remove_menu_listeners(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.laf.ScreenMenu.removeMenuListeners(J)V")
 }

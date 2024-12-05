@@ -25,10 +25,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn ls_open_file(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CDesktopPeer._lsOpenFile(Ljava/lang/String;Z)I")
 }
 
 #[async_recursion(?Send)]
 async fn ls_open_uri(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CDesktopPeer._lsOpenURI(Ljava/lang/String;)I")
 }

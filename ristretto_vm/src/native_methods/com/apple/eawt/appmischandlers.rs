@@ -46,7 +46,7 @@ async fn native_disable_sudden_termination(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppMiscHandlers.nativeDisableSuddenTermination()V")
 }
 
 #[async_recursion(?Send)]
@@ -54,7 +54,7 @@ async fn native_enable_sudden_termination(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppMiscHandlers.nativeEnableSuddenTermination()V")
 }
 
 #[async_recursion(?Send)]
@@ -62,7 +62,7 @@ async fn native_open_help_viewer(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppMiscHandlers.nativeOpenHelpViewer()V")
 }
 
 #[async_recursion(?Send)]
@@ -70,7 +70,7 @@ async fn native_request_activation(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppMiscHandlers.nativeRequestActivation(Z)V")
 }
 
 #[async_recursion(?Send)]
@@ -78,5 +78,5 @@ async fn native_request_user_attention(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppMiscHandlers.nativeRequestUserAttention(Z)V")
 }

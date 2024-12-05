@@ -22,5 +22,5 @@ async fn get_extended_npe_message(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.NullPointerException.getExtendedNPEMessage()Ljava/lang/String;")
 }

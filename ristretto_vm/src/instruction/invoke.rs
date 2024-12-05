@@ -185,7 +185,7 @@ pub(crate) async fn invokeinterface(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokedynamic>
 #[inline]
 pub(crate) async fn invokedynamic(_frame: &Frame, _method_index: u16) -> Result<ExecutionResult> {
-    todo!()
+    todo!("invokedynamic")
 }
 
 /// Invoke the method at the specified index

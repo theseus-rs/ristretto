@@ -39,22 +39,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn init_robot(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CRobot.initRobot()V")
 }
 
 #[async_recursion(?Send)]
 async fn key_event(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CRobot.keyEvent(IZ)V")
 }
 
 #[async_recursion(?Send)]
 async fn mouse_event(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CRobot.mouseEvent(IIIIZZ)V")
 }
 
 #[async_recursion(?Send)]
 async fn mouse_wheel(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CRobot.mouseWheel(I)V")
 }
 
 #[async_recursion(?Send)]
@@ -62,5 +62,5 @@ async fn native_get_screen_pixels(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CRobot.nativeGetScreenPixels(IIII[I)V")
 }

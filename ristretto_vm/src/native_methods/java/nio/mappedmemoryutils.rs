@@ -22,20 +22,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn force_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.nio.MappedMemoryUtils.force0(Ljava/io/FileDescriptor;JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn is_loaded_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.nio.MappedMemoryUtils.isLoaded0(JJJ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn load_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.nio.MappedMemoryUtils.load0(JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn unload_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.nio.MappedMemoryUtils.unload0(JJ)V")
 }

@@ -32,30 +32,30 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn blit_texture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLLayer.blitTexture(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_create_layer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLLayer.nativeCreateLayer()J")
 }
 
 #[async_recursion(?Send)]
 async fn native_set_insets(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLLayer.nativeSetInsets(JII)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_set_opaque(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLLayer.nativeSetOpaque(JZ)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_set_scale(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLLayer.nativeSetScale(JD)V")
 }
 
 #[async_recursion(?Send)]
 async fn validate(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLLayer.validate(JLsun/java2d/metal/MTLSurfaceData;)V")
 }

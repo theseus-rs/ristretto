@@ -34,7 +34,7 @@ async fn native_open_cocoa_about_window(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppEventHandler.nativeOpenCocoaAboutWindow()V")
 }
 
 #[async_recursion(?Send)]
@@ -42,7 +42,7 @@ async fn native_register_for_notification(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppEventHandler.nativeRegisterForNotification(I)V")
 }
 
 #[async_recursion(?Send)]
@@ -50,5 +50,5 @@ async fn native_reply_to_app_should_terminate(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt._AppEventHandler.nativeReplyToAppShouldTerminate(Z)V")
 }

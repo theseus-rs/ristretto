@@ -82,7 +82,7 @@ pub(crate) fn object_hash_code(object: &Reference) -> i32 {
 
 #[async_recursion(?Send)]
 async fn notify(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Object.notify()V")
 }
 
 #[async_recursion(?Send)]
@@ -97,10 +97,10 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 
 #[async_recursion(?Send)]
 async fn wait(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Object.wait(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn wait_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Object.wait0(J)V")
 }

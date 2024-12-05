@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn get_glx_config_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.GLXGraphicsConfig.getGLXConfigInfo(II)J")
 }
 
 #[async_recursion(?Send)]
@@ -29,10 +29,10 @@ async fn get_ogl_capabilities(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.GLXGraphicsConfig.getOGLCapabilities(J)I")
 }
 
 #[async_recursion(?Send)]
 async fn init_config(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.GLXGraphicsConfig.initConfig(JJ)V")
 }

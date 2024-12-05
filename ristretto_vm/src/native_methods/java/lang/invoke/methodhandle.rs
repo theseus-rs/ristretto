@@ -69,40 +69,40 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn invoke(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn invoke_basic(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn invoke_exact(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn link_to_interface(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.MethodHandle.linkToInterface([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn link_to_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.MethodHandle.linkToNative([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn link_to_special(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.MethodHandle.linkToSpecial([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn link_to_static(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.MethodHandle.linkToStatic([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn link_to_virtual(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.MethodHandle.linkToVirtual([Ljava/lang/Object;)Ljava/lang/Object;")
 }

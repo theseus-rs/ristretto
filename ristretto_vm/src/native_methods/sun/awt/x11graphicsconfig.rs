@@ -40,37 +40,37 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn create_back_buffer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsConfig.createBackBuffer(JI)J")
 }
 
 #[async_recursion(?Send)]
 async fn destroy_back_buffer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsConfig.destroyBackBuffer(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn dispose(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsConfig.dispose(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_num_colors(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsConfig.getNumColors()I")
 }
 
 #[async_recursion(?Send)]
 async fn get_x_resolution(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsConfig.getXResolution(I)D")
 }
 
 #[async_recursion(?Send)]
 async fn get_y_resolution(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsConfig.getYResolution(I)D")
 }
 
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsConfig.init(II)V")
 }
 
 #[async_recursion(?Send)]
@@ -83,20 +83,20 @@ async fn is_translucency_capable(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsConfig.isTranslucencyCapable(J)Z")
 }
 
 #[async_recursion(?Send)]
 async fn make_color_model(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsConfig.makeColorModel()Ljava/awt/image/ColorModel;")
 }
 
 #[async_recursion(?Send)]
 async fn p_get_bounds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsConfig.pGetBounds(I)Ljava/awt/Rectangle;")
 }
 
 #[async_recursion(?Send)]
 async fn swap_buffers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsConfig.swapBuffers(JI)V")
 }

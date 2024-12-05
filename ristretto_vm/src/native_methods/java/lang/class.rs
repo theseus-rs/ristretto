@@ -335,7 +335,7 @@ async fn get_component_type(
 
 #[async_recursion(?Send)]
 async fn get_constant_pool(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getConstantPool()Lsun/reflect/ConstantPool;")
 }
 
 #[async_recursion(?Send)]
@@ -343,7 +343,7 @@ async fn get_declared_classes_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getDeclaredClasses0()[Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
@@ -351,7 +351,7 @@ async fn get_declared_constructors_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor;")
 }
 
 #[async_recursion(?Send)]
@@ -411,7 +411,7 @@ async fn get_declared_methods_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method;")
 }
 
 #[async_recursion(?Send)]
@@ -451,12 +451,12 @@ async fn get_generic_signature_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getGenericSignature0()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_interfaces_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getInterfaces0()[Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
@@ -489,12 +489,12 @@ async fn get_name_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opt
 
 #[async_recursion(?Send)]
 async fn get_nest_host_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getNestHost0()Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
 async fn get_nest_members_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getNestMembers0()[Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
@@ -529,12 +529,12 @@ async fn get_protection_domain_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getProtectionDomain0()Ljava/security/ProtectionDomain;")
 }
 
 #[async_recursion(?Send)]
 async fn get_raw_annotations(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getRawAnnotations()[B")
 }
 
 #[async_recursion(?Send)]
@@ -542,7 +542,7 @@ async fn get_raw_type_annotations(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getRawTypeAnnotations()[B")
 }
 
 #[async_recursion(?Send)]
@@ -550,7 +550,7 @@ async fn get_record_components_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;")
 }
 
 #[async_recursion(?Send)]
@@ -646,7 +646,7 @@ async fn is_hidden(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 
 #[async_recursion(?Send)]
 async fn is_instance(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.isInstance(Ljava/lang/Object;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -673,7 +673,7 @@ async fn is_primitive(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
 
 #[async_recursion(?Send)]
 async fn is_record_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Class.isRecord0()Z")
 }
 
 #[async_recursion(?Send)]

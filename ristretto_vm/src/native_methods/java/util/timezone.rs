@@ -28,7 +28,7 @@ async fn get_system_gmt_offset_id(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.TimeZone.getSystemGMTOffsetID()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -36,5 +36,5 @@ async fn get_system_time_zone_id(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.TimeZone.getSystemTimeZoneID(Ljava/lang/String;)Ljava/lang/String;")
 }

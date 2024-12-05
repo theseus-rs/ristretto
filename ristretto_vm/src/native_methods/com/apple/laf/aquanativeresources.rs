@@ -22,5 +22,5 @@ async fn get_window_background_color(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.laf.AquaNativeResources.getWindowBackgroundColor()J")
 }

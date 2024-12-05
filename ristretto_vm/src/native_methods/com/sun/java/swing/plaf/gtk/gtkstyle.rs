@@ -46,7 +46,7 @@ async fn native_get_class_value(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetClassValue(ILjava/lang/String;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -54,7 +54,7 @@ async fn native_get_color_for_state(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetColorForState(III)I")
 }
 
 #[async_recursion(?Send)]
@@ -62,7 +62,7 @@ async fn native_get_pango_font_name(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetPangoFontName(I)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -70,7 +70,7 @@ async fn native_get_x_thickness(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetXThickness(I)I")
 }
 
 #[async_recursion(?Send)]
@@ -78,5 +78,5 @@ async fn native_get_y_thickness(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetYThickness(I)I")
 }

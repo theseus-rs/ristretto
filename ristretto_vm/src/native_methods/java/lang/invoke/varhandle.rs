@@ -198,7 +198,7 @@ async fn compare_and_exchange(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.compareAndExchange([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -206,7 +206,7 @@ async fn compare_and_exchange_acquire(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.compareAndExchangeAcquire([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -214,42 +214,42 @@ async fn compare_and_exchange_release(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.compareAndExchangeRelease([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn compare_and_set(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.compareAndSet([Ljava/lang/Object;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn get(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.get([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_acquire(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getAcquire([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_and_add(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getAndAdd([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_and_add_acquire(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getAndAddAcquire([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_and_add_release(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getAndAddRelease([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_and_bitwise_and(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getAndBitwiseAnd([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -257,7 +257,9 @@ async fn get_and_bitwise_and_acquire(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!(
+        "java.lang.invoke.VarHandle.getAndBitwiseAndAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -265,12 +267,14 @@ async fn get_and_bitwise_and_release(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!(
+        "java.lang.invoke.VarHandle.getAndBitwiseAndRelease([Ljava/lang/Object;)Ljava/lang/Object;"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_and_bitwise_or(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getAndBitwiseOr([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -278,7 +282,9 @@ async fn get_and_bitwise_or_acquire(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!(
+        "java.lang.invoke.VarHandle.getAndBitwiseOrAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -286,12 +292,14 @@ async fn get_and_bitwise_or_release(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!(
+        "java.lang.invoke.VarHandle.getAndBitwiseOrRelease([Ljava/lang/Object;)Ljava/lang/Object;"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_and_bitwise_xor(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getAndBitwiseXor([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -299,7 +307,9 @@ async fn get_and_bitwise_xor_acquire(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!(
+        "java.lang.invoke.VarHandle.getAndBitwiseXorAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -307,52 +317,54 @@ async fn get_and_bitwise_xor_release(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!(
+        "java.lang.invoke.VarHandle.getAndBitwiseXorRelease([Ljava/lang/Object;)Ljava/lang/Object;"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_and_set(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getAndSet([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_and_set_acquire(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getAndSetAcquire([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_and_set_release(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getAndSetRelease([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_opaque(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getOpaque([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_volatile(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.getVolatile([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn set(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.set([Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_opaque(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.setOpaque([Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_release(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.setRelease([Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_volatile(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.setVolatile([Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
@@ -360,7 +372,7 @@ async fn weak_compare_and_set(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.weakCompareAndSet([Ljava/lang/Object;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -368,7 +380,7 @@ async fn weak_compare_and_set_acquire(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.weakCompareAndSetAcquire([Ljava/lang/Object;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -376,7 +388,7 @@ async fn weak_compare_and_set_plain(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.weakCompareAndSetPlain([Ljava/lang/Object;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -384,5 +396,5 @@ async fn weak_compare_and_set_release(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.VarHandle.weakCompareAndSetRelease([Ljava/lang/Object;)Z")
 }

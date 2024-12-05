@@ -44,7 +44,7 @@ async fn init_stack_trace_element(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V")
 }
 
 #[async_recursion(?Send)]

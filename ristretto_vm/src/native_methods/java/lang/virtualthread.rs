@@ -77,12 +77,12 @@ async fn notify_jvmti_disable_suspend(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.VirtualThread.notifyJvmtiDisableSuspend(Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn notify_jvmti_end(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.VirtualThread.notifyJvmtiEnd()V")
 }
 
 #[async_recursion(?Send)]
@@ -90,12 +90,12 @@ async fn notify_jvmti_hide_frames(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.VirtualThread.notifyJvmtiHideFrames(Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn notify_jvmti_mount(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.VirtualThread.notifyJvmtiMount(Z)V")
 }
 
 #[async_recursion(?Send)]
@@ -103,7 +103,7 @@ async fn notify_jvmti_mount_begin(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.VirtualThread.notifyJvmtiMountBegin(Z)V")
 }
 
 #[async_recursion(?Send)]
@@ -111,12 +111,12 @@ async fn notify_jvmti_mount_end(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.VirtualThread.notifyJvmtiMountEnd(Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn notify_jvmti_start(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.VirtualThread.notifyJvmtiStart()V")
 }
 
 #[async_recursion(?Send)]
@@ -124,7 +124,7 @@ async fn notify_jvmti_unmount(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.VirtualThread.notifyJvmtiUnmount(Z)V")
 }
 
 #[async_recursion(?Send)]
@@ -132,7 +132,7 @@ async fn notify_jvmti_unmount_begin(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.VirtualThread.notifyJvmtiUnmountBegin(Z)V")
 }
 
 #[async_recursion(?Send)]
@@ -140,7 +140,7 @@ async fn notify_jvmti_unmount_end(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.VirtualThread.notifyJvmtiUnmountEnd(Z)V")
 }
 
 #[async_recursion(?Send)]

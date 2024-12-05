@@ -53,7 +53,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn n_close(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.PortMixer.nClose(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -61,7 +61,7 @@ async fn n_control_get_float_value(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.PortMixer.nControlGetFloatValue(J)F")
 }
 
 #[async_recursion(?Send)]
@@ -69,7 +69,7 @@ async fn n_control_get_int_value(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.PortMixer.nControlGetIntValue(J)I")
 }
 
 #[async_recursion(?Send)]
@@ -77,7 +77,7 @@ async fn n_control_set_float_value(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.PortMixer.nControlSetFloatValue(JF)V")
 }
 
 #[async_recursion(?Send)]
@@ -85,30 +85,30 @@ async fn n_control_set_int_value(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.PortMixer.nControlSetIntValue(JI)V")
 }
 
 #[async_recursion(?Send)]
 async fn n_get_controls(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.PortMixer.nGetControls(JILjava/util/Vector;)V")
 }
 
 #[async_recursion(?Send)]
 async fn n_get_port_count(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.PortMixer.nGetPortCount(J)I")
 }
 
 #[async_recursion(?Send)]
 async fn n_get_port_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.PortMixer.nGetPortName(JI)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn n_get_port_type(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.PortMixer.nGetPortType(JI)I")
 }
 
 #[async_recursion(?Send)]
 async fn n_open(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.PortMixer.nOpen(I)J")
 }

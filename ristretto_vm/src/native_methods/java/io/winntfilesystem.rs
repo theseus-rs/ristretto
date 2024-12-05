@@ -110,7 +110,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn canonicalize_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -118,17 +118,17 @@ async fn canonicalize_with_prefix_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.canonicalizeWithPrefix0(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn check_access(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.checkAccess(Ljava/io/File;I)Z")
 }
 
 #[async_recursion(?Send)]
 async fn create_directory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.createDirectory(Ljava/io/File;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -136,12 +136,12 @@ async fn create_file_exclusively(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.createFileExclusively(Ljava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn delete_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.delete0(Ljava/io/File;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -149,12 +149,12 @@ async fn get_boolean_attributes(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.getBooleanAttributes(Ljava/io/File;)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_drive_directory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.getDriveDirectory(I)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -162,22 +162,22 @@ async fn get_last_modified_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.getLastModifiedTime(Ljava/io/File;)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_length(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.getLength(Ljava/io/File;)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_name_max_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.getNameMax0(Ljava/lang/String;)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_space_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.getSpace0(Ljava/io/File;I)J")
 }
 
 #[async_recursion(?Send)]
@@ -187,17 +187,17 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.list(Ljava/io/File;)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn list_roots_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.listRoots0()I")
 }
 
 #[async_recursion(?Send)]
 async fn rename_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -205,15 +205,15 @@ async fn set_last_modified_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.setLastModifiedTime(Ljava/io/File;J)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_permission(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.setPermission(Ljava/io/File;IZZ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_read_only(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.WinNTFileSystem.setReadOnly(Ljava/io/File;)Z")
 }

@@ -122,12 +122,12 @@ async fn get_ip_dont_fragment_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.getIpDontFragment0(I)Z")
 }
 
 #[async_recursion(?Send)]
 async fn get_so_peer_cred_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.getSoPeerCred0(I)J")
 }
 
 #[async_recursion(?Send)]
@@ -135,7 +135,7 @@ async fn get_tcp_keep_alive_intvl_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.getTcpKeepAliveIntvl0(I)I")
 }
 
 #[async_recursion(?Send)]
@@ -143,7 +143,7 @@ async fn get_tcp_keep_alive_probes_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.getTcpKeepAliveProbes0(I)I")
 }
 
 #[async_recursion(?Send)]
@@ -151,7 +151,7 @@ async fn get_tcp_keep_alive_time_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.getTcpKeepAliveTime0(I)I")
 }
 
 #[async_recursion(?Send)]
@@ -159,7 +159,7 @@ async fn get_tcpkeep_alive_probes_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.getTcpkeepAliveProbes0(I)I")
 }
 
 #[async_recursion(?Send)]
@@ -167,7 +167,7 @@ async fn ip_dont_fragment_supported_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.ipDontFragmentSupported0()Z")
 }
 
 #[async_recursion(?Send)]
@@ -175,7 +175,7 @@ async fn keep_alive_options_supported_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.keepAliveOptionsSupported0()Z")
 }
 
 #[async_recursion(?Send)]
@@ -183,7 +183,7 @@ async fn set_ip_dont_fragment_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.setIpDontFragment0(IZ)V")
 }
 
 #[async_recursion(?Send)]
@@ -191,7 +191,7 @@ async fn set_tcp_keep_alive_intvl_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.setTcpKeepAliveIntvl0(II)V")
 }
 
 #[async_recursion(?Send)]
@@ -199,7 +199,7 @@ async fn set_tcp_keep_alive_probes_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.setTcpKeepAliveProbes0(II)V")
 }
 
 #[async_recursion(?Send)]
@@ -207,7 +207,7 @@ async fn set_tcp_keep_alive_time_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.setTcpKeepAliveTime0(II)V")
 }
 
 #[async_recursion(?Send)]
@@ -215,5 +215,5 @@ async fn set_tcpkeep_alive_probes_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.net.MacOSXSocketOptions.setTcpkeepAliveProbes0(II)V")
 }

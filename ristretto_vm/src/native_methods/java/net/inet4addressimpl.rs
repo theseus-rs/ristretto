@@ -32,17 +32,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn get_host_by_addr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.Inet4AddressImpl.getHostByAddr([B)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_local_host_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.Inet4AddressImpl.getLocalHostName()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn is_reachable_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.Inet4AddressImpl.isReachable0([BI[BI)Z")
 }
 
 #[async_recursion(?Send)]
@@ -50,5 +50,5 @@ async fn lookup_all_host_addr(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.Inet4AddressImpl.lookupAllHostAddr(Ljava/lang/String;)[Ljava/net/InetAddress;")
 }

@@ -22,5 +22,5 @@ async fn max_object_inspection_age(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.rmi.transport.GC.maxObjectInspectionAge()J")
 }

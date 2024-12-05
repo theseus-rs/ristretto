@@ -20,7 +20,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn get_current(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.security.auth.module.NTSystem.getCurrent(Z)V")
 }
 
 #[async_recursion(?Send)]
@@ -28,5 +28,5 @@ async fn get_impersonation_token_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.security.auth.module.NTSystem.getImpersonationToken0()J")
 }

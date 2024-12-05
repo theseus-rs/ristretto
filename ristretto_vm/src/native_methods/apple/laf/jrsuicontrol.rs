@@ -68,17 +68,17 @@ async fn dispose_cf_dictionary(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.disposeCFDictionary(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_cf_dictionary(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.getCFDictionary(Z)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_native_hit_part(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.getNativeHitPart(JJJDDDDDD)I")
 }
 
 #[async_recursion(?Send)]
@@ -86,7 +86,7 @@ async fn get_native_part_bounds(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.getNativePartBounds([DJJJDDDDI)V")
 }
 
 #[async_recursion(?Send)]
@@ -94,22 +94,22 @@ async fn get_native_scroll_bar_offset_change(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.getNativeScrollBarOffsetChange(JJJDDDDIII)D")
 }
 
 #[async_recursion(?Send)]
 async fn get_ptr_of_buffer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.getPtrOfBuffer(Ljava/nio/ByteBuffer;)J")
 }
 
 #[async_recursion(?Send)]
 async fn init_native_jrsui(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.initNativeJRSUI()I")
 }
 
 #[async_recursion(?Send)]
 async fn paint_changes_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.paintChangesImage([IIIJJJDDDDJ)I")
 }
 
 #[async_recursion(?Send)]
@@ -117,20 +117,20 @@ async fn paint_changes_to_cg_context(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.paintChangesToCGContext(JJJJDDDDJ)I")
 }
 
 #[async_recursion(?Send)]
 async fn paint_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.paintImage([IIIJJJDDDD)I")
 }
 
 #[async_recursion(?Send)]
 async fn paint_to_cg_context(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.paintToCGContext(JJJJDDDD)I")
 }
 
 #[async_recursion(?Send)]
 async fn sync_changes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIControl.syncChanges(JJ)I")
 }

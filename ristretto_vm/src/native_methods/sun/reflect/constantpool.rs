@@ -92,7 +92,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn get_class_at_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getClassAt0(Ljava/lang/Object;I)Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
@@ -100,17 +100,17 @@ async fn get_class_at_if_loaded_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getClassAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
 async fn get_double_at_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getDoubleAt0(Ljava/lang/Object;I)D")
 }
 
 #[async_recursion(?Send)]
 async fn get_field_at_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getFieldAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;")
 }
 
 #[async_recursion(?Send)]
@@ -118,22 +118,22 @@ async fn get_field_at_if_loaded_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getFieldAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;")
 }
 
 #[async_recursion(?Send)]
 async fn get_float_at_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getFloatAt0(Ljava/lang/Object;I)F")
 }
 
 #[async_recursion(?Send)]
 async fn get_int_at_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getIntAt0(Ljava/lang/Object;I)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_long_at_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getLongAt0(Ljava/lang/Object;I)J")
 }
 
 #[async_recursion(?Send)]
@@ -141,12 +141,12 @@ async fn get_member_ref_info_at_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getMemberRefInfoAt0(Ljava/lang/Object;I)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_method_at_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getMethodAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;")
 }
 
 #[async_recursion(?Send)]
@@ -154,20 +154,20 @@ async fn get_method_at_if_loaded_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getMethodAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;")
 }
 
 #[async_recursion(?Send)]
 async fn get_size_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getSize0(Ljava/lang/Object;)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_string_at_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getStringAt0(Ljava/lang/Object;I)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_utf_8_at_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.ConstantPool.getUTF8At0(Ljava/lang/Object;I)Ljava/lang/String;")
 }

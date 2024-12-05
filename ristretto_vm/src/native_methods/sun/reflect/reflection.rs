@@ -47,7 +47,7 @@ async fn get_caller_class_1(thread: Arc<Thread>, _arguments: Arguments) -> Resul
 
 #[async_recursion(?Send)]
 async fn get_caller_class_2(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.reflect.Reflection.getCallerClass(I)Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]

@@ -23,10 +23,10 @@ async fn get_collection_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.GarbageCollectorImpl.getCollectionCount()J")
 }
 
 #[async_recursion(?Send)]
 async fn get_collection_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.GarbageCollectorImpl.getCollectionTime()J")
 }

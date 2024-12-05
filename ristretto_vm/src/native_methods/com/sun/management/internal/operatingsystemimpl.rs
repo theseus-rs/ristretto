@@ -124,12 +124,12 @@ async fn get_committed_virtual_memory_size_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getCommittedVirtualMemorySize0()J")
 }
 
 #[async_recursion(?Send)]
 async fn get_cpu_load_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getCpuLoad0()D")
 }
 
 #[async_recursion(?Send)]
@@ -137,7 +137,7 @@ async fn get_free_physical_memory_size_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getFreePhysicalMemorySize0()J")
 }
 
 #[async_recursion(?Send)]
@@ -145,7 +145,7 @@ async fn get_free_memory_size_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getFreeMemorySize0()J")
 }
 
 #[async_recursion(?Send)]
@@ -153,7 +153,7 @@ async fn get_free_swap_space_size_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getFreeSwapSpaceSize0()J")
 }
 
 #[async_recursion(?Send)]
@@ -161,7 +161,7 @@ async fn get_host_configured_cpu_count_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getHostConfiguredCpuCount0()I")
 }
 
 #[async_recursion(?Send)]
@@ -169,7 +169,7 @@ async fn get_host_online_cpu_count_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getHostOnlineCpuCount0()I")
 }
 
 #[async_recursion(?Send)]
@@ -177,7 +177,7 @@ async fn get_host_total_cpu_ticks_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getHostTotalCpuTicks0()J")
 }
 
 #[async_recursion(?Send)]
@@ -185,7 +185,7 @@ async fn get_max_file_descriptor_count_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getMaxFileDescriptorCount0()J")
 }
 
 #[async_recursion(?Send)]
@@ -193,7 +193,7 @@ async fn get_open_file_descriptor_count_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getOpenFileDescriptorCount0()J")
 }
 
 #[async_recursion(?Send)]
@@ -201,7 +201,7 @@ async fn get_process_cpu_load_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getProcessCpuLoad0()D")
 }
 
 #[async_recursion(?Send)]
@@ -209,7 +209,7 @@ async fn get_process_cpu_time_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getProcessCpuTime0()J")
 }
 
 #[async_recursion(?Send)]
@@ -217,7 +217,7 @@ async fn get_single_cpu_load_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getSingleCpuLoad0(I)D")
 }
 
 #[async_recursion(?Send)]
@@ -225,7 +225,7 @@ async fn get_system_cpu_load_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getSystemCpuLoad0()D")
 }
 
 #[async_recursion(?Send)]
@@ -233,7 +233,7 @@ async fn get_total_memory_size_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getTotalMemorySize0()J")
 }
 
 #[async_recursion(?Send)]
@@ -241,7 +241,7 @@ async fn get_total_physical_memory_size_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getTotalPhysicalMemorySize0()J")
 }
 
 #[async_recursion(?Send)]
@@ -249,10 +249,10 @@ async fn get_total_swap_space_size_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.management.internal.OperatingSystemImpl.getTotalSwapSpaceSize0()J")
 }
 
 #[async_recursion(?Send)]
 async fn initialize_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }

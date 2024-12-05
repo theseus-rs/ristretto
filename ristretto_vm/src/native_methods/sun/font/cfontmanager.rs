@@ -23,10 +23,10 @@ async fn load_native_dir_fonts(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CFontManager.loadNativeDirFonts(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn load_native_fonts(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CFontManager.loadNativeFonts()V")
 }

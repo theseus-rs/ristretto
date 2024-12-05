@@ -47,27 +47,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn configure_blocking(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.IOUtil.configureBlocking(Ljava/io/FileDescriptor;Z)V");
 }
 
 #[async_recursion(?Send)]
 async fn drain(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.IOUtil.drain(I)Z");
 }
 
 #[async_recursion(?Send)]
 async fn drain_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.IOUtil.drain1(I)I");
 }
 
 #[async_recursion(?Send)]
 async fn fd_limit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.IOUtil.fdLimit()I");
 }
 
 #[async_recursion(?Send)]
 async fn fd_val(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.IOUtil.fdVal(Ljava/io/FileDescriptor;)I");
 }
 
 #[async_recursion(?Send)]
@@ -77,30 +77,30 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn iov_max(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.IOUtil.iovMax()I");
 }
 
 #[async_recursion(?Send)]
 async fn make_pipe(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.IOUtil.makePipe(Z)J");
 }
 
 #[async_recursion(?Send)]
 async fn random_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.IOUtil.randomBytes([B)Z");
 }
 
 #[async_recursion(?Send)]
 async fn setfd_val(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.IOUtil.setfdVal(Ljava/io/FileDescriptor;I)V");
 }
 
 #[async_recursion(?Send)]
 async fn write_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.IOUtil.write1(IB)I");
 }
 
 #[async_recursion(?Send)]
 async fn writev_max(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.IOUtil.writevMax()J");
 }

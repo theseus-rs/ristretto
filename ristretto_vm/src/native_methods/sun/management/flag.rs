@@ -56,12 +56,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn get_all_flag_names(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.Flag.getAllFlagNames()[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_flags(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.Flag.getFlags([Ljava/lang/String;[Lsun/management/Flag;I)I")
 }
 
 #[async_recursion(?Send)]
@@ -69,30 +69,30 @@ async fn get_internal_flag_count(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.Flag.getInternalFlagCount()I")
 }
 
 #[async_recursion(?Send)]
 async fn initialize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.Flag.initialize()V")
 }
 
 #[async_recursion(?Send)]
 async fn set_boolean_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.Flag.setBooleanValue(Ljava/lang/String;Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_double_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.Flag.setDoubleValue(Ljava/lang/String;D)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_long_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.Flag.setLongValue(Ljava/lang/String;J)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_string_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V")
 }

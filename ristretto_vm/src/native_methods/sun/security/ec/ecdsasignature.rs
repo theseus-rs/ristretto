@@ -20,7 +20,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn sign_digest(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.ec.ECDSASignature.signDigest([B[B[B[BI)[B")
 }
 
 #[async_recursion(?Send)]
@@ -28,5 +28,5 @@ async fn verify_signed_digest(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.ec.ECDSASignature.verifySignedDigest([B[B[B[B)Z")
 }

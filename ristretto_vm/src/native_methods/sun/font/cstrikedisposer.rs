@@ -28,7 +28,7 @@ async fn free_native_scaler_context(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CStrikeDisposer.freeNativeScalerContext(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -36,5 +36,5 @@ async fn remove_glyph_info_from_cache(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CStrikeDisposer.removeGlyphInfoFromCache(J)V")
 }

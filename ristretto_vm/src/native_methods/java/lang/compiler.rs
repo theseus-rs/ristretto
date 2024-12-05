@@ -35,32 +35,32 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn command(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Compiler.command(Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn compile_class(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Compiler.compileClass(Ljava/lang/Class;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn compile_classes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Compiler.compileClasses(Ljava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn disable(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Compiler.disable()V")
 }
 
 #[async_recursion(?Send)]
 async fn enable(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Compiler.enable()V")
 }
 
 #[async_recursion(?Send)]
 async fn initialize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[async_recursion(?Send)]

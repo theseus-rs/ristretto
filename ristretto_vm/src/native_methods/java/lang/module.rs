@@ -58,7 +58,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn add_exports_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Module.addExports0(Ljava/lang/Module;Ljava/lang/String;Ljava/lang/Module;)V")
 }
 
 #[async_recursion(?Send)]
@@ -66,7 +66,7 @@ async fn add_exports_to_all_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Module.addExportsToAll0(Ljava/lang/Module;Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
@@ -74,15 +74,15 @@ async fn add_exports_to_all_unnamed_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Module.addExportsToAllUnnamed0(Ljava/lang/Module;Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn add_reads_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Module.addReads0(Ljava/lang/Module;Ljava/lang/Module;)V")
 }
 
 #[async_recursion(?Send)]
 async fn define_module_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Module.defineModule0(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/String;)V")
 }

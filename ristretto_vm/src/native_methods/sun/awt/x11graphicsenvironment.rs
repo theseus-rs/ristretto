@@ -37,7 +37,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn check_shm_ext(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsEnvironment.checkShmExt()I")
 }
 
 #[async_recursion(?Send)]
@@ -45,17 +45,17 @@ async fn get_default_screen_num(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsEnvironment.getDefaultScreenNum()I")
 }
 
 #[async_recursion(?Send)]
 async fn get_display_string(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsEnvironment.getDisplayString()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_num_screens(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsEnvironment.getNumScreens()I")
 }
 
 #[async_recursion(?Send)]
@@ -63,25 +63,25 @@ async fn get_xinerama_center_point(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsEnvironment.getXineramaCenterPoint()Ljava/awt/Point;")
 }
 
 #[async_recursion(?Send)]
 async fn init_display(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsEnvironment.initDisplay(Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn init_glx(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsEnvironment.initGLX()Z")
 }
 
 #[async_recursion(?Send)]
 async fn init_x_render(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsEnvironment.initXRender(ZZ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn p_running_xinerama(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.X11GraphicsEnvironment.pRunningXinerama()Z")
 }

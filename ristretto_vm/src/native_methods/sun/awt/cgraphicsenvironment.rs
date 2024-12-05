@@ -39,22 +39,22 @@ async fn deregister_display_reconfiguration(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsEnvironment.deregisterDisplayReconfiguration(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_display_i_ds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsEnvironment.getDisplayIDs()[I")
 }
 
 #[async_recursion(?Send)]
 async fn get_main_display_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsEnvironment.getMainDisplayID()I")
 }
 
 #[async_recursion(?Send)]
 async fn init_cocoa(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsEnvironment.initCocoa()V")
 }
 
 #[async_recursion(?Send)]
@@ -62,5 +62,5 @@ async fn register_display_reconfiguration(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsEnvironment.registerDisplayReconfiguration()J")
 }

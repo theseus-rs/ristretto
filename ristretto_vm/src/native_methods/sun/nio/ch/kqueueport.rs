@@ -17,20 +17,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueuePort.close0(I)V");
 }
 
 #[async_recursion(?Send)]
 async fn drain_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueuePort.drain1(I)V");
 }
 
 #[async_recursion(?Send)]
 async fn interrupt(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueuePort.interrupt(I)V");
 }
 
 #[async_recursion(?Send)]
 async fn socketpair(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueuePort.socketpair([I)V");
 }

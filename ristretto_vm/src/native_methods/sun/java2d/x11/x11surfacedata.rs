@@ -20,17 +20,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn x_set_copy_mode(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11SurfaceData.XSetCopyMode(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn x_set_foreground(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11SurfaceData.XSetForeground(JI)V")
 }
 
 #[async_recursion(?Send)]
 async fn x_set_xor_mode(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11SurfaceData.XSetXorMode(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -40,15 +40,15 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn init_surface(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11SurfaceData.initSurface(IIIJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn is_dga_available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11SurfaceData.isDgaAvailable()Z")
 }
 
 #[async_recursion(?Send)]
 async fn is_shm_pm_available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11SurfaceData.isShmPMAvailable()Z")
 }

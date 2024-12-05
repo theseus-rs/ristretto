@@ -76,12 +76,12 @@ async fn define_archived_modules(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V")
 }
 
 #[async_recursion(?Send)]
 async fn dump_class_list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.CDS.dumpClassList(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
@@ -89,7 +89,7 @@ async fn dump_dynamic_archive(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.CDS.dumpDynamicArchive(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
@@ -151,5 +151,5 @@ async fn log_lambda_form_invoker(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.CDS.logLambdaFormInvoker(Ljava/lang/String;)V")
 }

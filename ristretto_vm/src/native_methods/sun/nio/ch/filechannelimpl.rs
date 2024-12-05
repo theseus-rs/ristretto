@@ -66,12 +66,12 @@ async fn allocation_granularity_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.FileChannelImpl.allocationGranularity0()J");
 }
 
 #[async_recursion(?Send)]
 async fn map_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.FileChannelImpl.map0(IJJ)J");
 }
 
 #[async_recursion(?Send)]
@@ -79,20 +79,20 @@ async fn max_direct_transfer_size_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.FileChannelImpl.maxDirectTransferSize0()I");
 }
 
 #[async_recursion(?Send)]
 async fn transfer_from_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.FileChannelImpl.transferFrom0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;JJ)J");
 }
 
 #[async_recursion(?Send)]
 async fn transfer_to_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.FileChannelImpl.transferTo0(Ljava/io/FileDescriptor;JJLjava/io/FileDescriptor;)J");
 }
 
 #[async_recursion(?Send)]
 async fn unmap_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.FileChannelImpl.unmap0(JJ)I");
 }

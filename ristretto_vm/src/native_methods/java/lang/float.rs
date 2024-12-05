@@ -31,5 +31,5 @@ async fn float_to_raw_int_bits(
 
 #[async_recursion(?Send)]
 async fn int_bits_to_float(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Float.intBitsToFloat(I)F")
 }

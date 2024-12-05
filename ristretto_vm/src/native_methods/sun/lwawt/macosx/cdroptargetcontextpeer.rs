@@ -16,15 +16,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn add_transfer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CDropTargetContextPeer.addTransfer(JJJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn drop_done(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CDropTargetContextPeer.dropDone(JJZZI)V")
 }
 
 #[async_recursion(?Send)]
 async fn start_transfer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CDropTargetContextPeer.startTransfer(JJ)J")
 }

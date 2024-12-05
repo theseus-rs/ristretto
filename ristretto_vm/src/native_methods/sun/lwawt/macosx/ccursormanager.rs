@@ -40,7 +40,7 @@ async fn native_get_cursor_position(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CCursorManager.nativeGetCursorPosition()Ljava/awt/geom/Point2D;")
 }
 
 #[async_recursion(?Send)]
@@ -48,7 +48,7 @@ async fn native_set_allows_cursor_set_in_background(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CCursorManager.nativeSetAllowsCursorSetInBackground(Z)V")
 }
 
 #[async_recursion(?Send)]
@@ -56,7 +56,7 @@ async fn native_set_built_in_cursor(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CCursorManager.nativeSetBuiltInCursor(ILjava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
@@ -64,5 +64,5 @@ async fn native_set_custom_cursor(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CCursorManager.nativeSetCustomCursor(JDD)V")
 }

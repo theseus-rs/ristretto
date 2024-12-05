@@ -34,7 +34,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn clear_window(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLSurfaceData.clearWindow()V");
 }
 
 #[async_recursion(?Send)]
@@ -42,7 +42,7 @@ async fn get_mtl_texture_pointer(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLSurfaceData.getMTLTexturePointer(J)J");
 }
 
 #[async_recursion(?Send)]
@@ -50,20 +50,20 @@ async fn init_flip_backbuffer(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLSurfaceData.initFlipBackbuffer(J)Z");
 }
 
 #[async_recursion(?Send)]
 async fn init_ops(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLSurfaceData.initOps(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V");
 }
 
 #[async_recursion(?Send)]
 async fn init_r_texture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLSurfaceData.initRTexture(JZII)Z");
 }
 
 #[async_recursion(?Send)]
 async fn init_texture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.metal.MTLSurfaceData.initTexture(JZII)Z");
 }

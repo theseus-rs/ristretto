@@ -22,5 +22,5 @@ async fn free_native_scaler_context(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.NativeStrikeDisposer.freeNativeScalerContext(J)V")
 }

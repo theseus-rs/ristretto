@@ -75,27 +75,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn alignof_double(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.alignof_double()I")
 }
 
 #[async_recursion(?Send)]
 async fn alignof_long_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.alignof_long_long()I")
 }
 
 #[async_recursion(?Send)]
 async fn create_closure(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.createClosure(JLjava/lang/Object;[J)I")
 }
 
 #[async_recursion(?Send)]
 async fn do_downcall(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJJ[I)V")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_default_abi(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_default_abi()I")
 }
 
 #[async_recursion(?Send)]
@@ -103,115 +103,115 @@ async fn ffi_get_struct_offsets(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_get_struct_offsets(IJJ)I")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_prep_cif(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif(JIIJJ)I")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_prep_cif_var(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif_var(JIIIJJ)I")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_sizeof_int(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_int()I")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_sizeof_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_long()I")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_sizeof_short(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_short()I")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_sizeof_wchar(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_wchar()I")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_double(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_double()J")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_float(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_float()J")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_pointer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_pointer()J")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_sint_16(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint16()J")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_sint_32(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint32()J")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_sint_64(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint64()J")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_sint_8(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint8()J")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_struct(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_struct()S")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_uint_16(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint16()J")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_uint_32(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint32()J")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_uint_64(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint64()J")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_uint_8(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint8()J")
 }
 
 #[async_recursion(?Send)]
 async fn ffi_type_void(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_void()J")
 }
 
 #[async_recursion(?Send)]
 async fn free_closure(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.freeClosure(JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.init()Z")
 }
 
 #[async_recursion(?Send)]
 async fn sizeof_cif(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.sizeofCif()J")
 }

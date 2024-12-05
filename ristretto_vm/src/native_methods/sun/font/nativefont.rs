@@ -30,27 +30,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn count_glyphs(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.NativeFont.countGlyphs([BI)I")
 }
 
 #[async_recursion(?Send)]
 async fn font_exists(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.NativeFont.fontExists([B)Z")
 }
 
 #[async_recursion(?Send)]
 async fn get_font_metrics(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.NativeFont.getFontMetrics(J)Lsun/font/StrikeMetrics;")
 }
 
 #[async_recursion(?Send)]
 async fn get_glyph_advance(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.NativeFont.getGlyphAdvance(JI)F")
 }
 
 #[async_recursion(?Send)]
 async fn get_glyph_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.NativeFont.getGlyphImage(JI)J")
 }
 
 #[async_recursion(?Send)]
@@ -58,10 +58,10 @@ async fn get_glyph_image_no_default(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.NativeFont.getGlyphImageNoDefault(JI)J")
 }
 
 #[async_recursion(?Send)]
 async fn have_bitmap_fonts(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.NativeFont.haveBitmapFonts([B)Z")
 }

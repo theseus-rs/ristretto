@@ -28,7 +28,7 @@ async fn get_vm_temporary_directory(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.vm.VMSupport.getVMTemporaryDirectory()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -36,5 +36,5 @@ async fn init_agent_properties(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.vm.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;")
 }

@@ -15,7 +15,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     let java_version = registry.java_version();
 
     if java_version <= &JAVA_8 {
-        registry.register(class_name, "initGVIDs", "()V", init_gvi_ds);
+        registry.register(class_name, "initGVIDs", "()V", init_gv_ids);
         registry.register(class_name, "nativeLayout", "(Lsun/font/Font2D;Lsun/font/FontStrike;[FII[CIIIIIIILjava/awt/geom/Point2D$Float;Lsun/font/GlyphLayout$GVData;JJ)V", native_layout);
     } else {
         registry.register(
@@ -31,25 +31,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn create_face(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.SunLayoutEngine.createFace(Lsun/font/Font2D;J)J")
 }
 
 #[async_recursion(?Send)]
 async fn dispose_face(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.SunLayoutEngine.disposeFace(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn init_gvi_ds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn init_gv_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("sun.font.SunLayoutEngine.initGVIDs()V")
 }
 
 #[async_recursion(?Send)]
 async fn native_layout(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.SunLayoutEngine.nativeLayout(Lsun/font/Font2D;Lsun/font/FontStrike;[FII[CIIIIIIILjava/awt/geom/Point2D$Float;Lsun/font/GlyphLayout$GVData;JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn shape(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.SunLayoutEngine.shape(Lsun/font/Font2D;Lsun/font/FontStrike;F[FJ[CLsun/font/GlyphLayout$GVData;IIIILjava/awt/geom/Point2D$Float;II)Z")
 }

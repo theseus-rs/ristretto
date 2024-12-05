@@ -25,7 +25,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn get_parameters_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.reflect.Executable.getParameters0()[Ljava/lang/reflect/Parameter;")
 }
 
 #[async_recursion(?Send)]
@@ -33,5 +33,5 @@ async fn get_type_annotation_bytes_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.reflect.Executable.getTypeAnnotationBytes0()[B")
 }

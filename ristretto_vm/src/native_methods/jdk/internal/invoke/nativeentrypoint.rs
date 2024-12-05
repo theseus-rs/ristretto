@@ -28,5 +28,5 @@ async fn vm_storage_to_vm_reg(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.invoke.NativeEntryPoint.vmStorageToVMReg(II)J")
 }

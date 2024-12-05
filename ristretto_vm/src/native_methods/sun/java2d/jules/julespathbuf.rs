@@ -28,7 +28,7 @@ async fn tesselate_fill_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.jules.JulesPathBuf.tesselateFillNative([I[BII[IIIIIII)[I")
 }
 
 #[async_recursion(?Send)]
@@ -36,5 +36,5 @@ async fn tesselate_stroke_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.jules.JulesPathBuf.tesselateStrokeNative([I[BII[IIDIID[DIDDDDDDDIIII)[I")
 }

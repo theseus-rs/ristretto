@@ -66,47 +66,47 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn init_proto(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.initProto()V")
 }
 
 #[async_recursion(?Send)]
 async fn socket_accept(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.socketAccept(Ljava/net/SocketImpl;)V")
 }
 
 #[async_recursion(?Send)]
 async fn socket_available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.socketAvailable()I")
 }
 
 #[async_recursion(?Send)]
 async fn socket_bind(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.socketBind(Ljava/net/InetAddress;I)V")
 }
 
 #[async_recursion(?Send)]
 async fn socket_close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.socketClose0(Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn socket_connect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.socketConnect(Ljava/net/InetAddress;II)V")
 }
 
 #[async_recursion(?Send)]
 async fn socket_create(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.socketCreate(Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn socket_get_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.socketGetOption(ILjava/lang/Object;)I")
 }
 
 #[async_recursion(?Send)]
 async fn socket_listen(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.socketListen(I)V")
 }
 
 #[async_recursion(?Send)]
@@ -114,15 +114,15 @@ async fn socket_send_urgent_data(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.socketSendUrgentData(I)V")
 }
 
 #[async_recursion(?Send)]
 async fn socket_set_option_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.socketSetOption0(IZLjava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
 async fn socket_shutdown(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.net.PlainSocketImpl.socketShutdown(I)V")
 }
