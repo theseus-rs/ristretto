@@ -112,12 +112,24 @@ fn push_property(
 async fn vm_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     let java_home = vm.java_home();
-    let string_array_class = thread.class("[Ljava/lang/String;").await?;
+    let class_path = vm.configuration().class_path().to_string();
+    let vm_version = env!("CARGO_PKG_VERSION");
+    let java_version = vm.java_version();
+    let architecture_bits = usize::BITS;
+    let vm_name =
+        format!("ristretto {vm_version} (Java {java_version}) {architecture_bits}-bit VM");
     let mut system_properties = vm.system_properties().clone();
     system_properties.insert(
         "java.home".to_string(),
-        java_home.to_string_lossy().to_string(),
+        java_home.to_string_lossy().as_ref().to_string(),
     );
+    system_properties.insert("java.class.path".to_string(), class_path);
+    system_properties.insert(
+        "java.vm.specification.name".to_string(),
+        "Java Virtual Machine Specification".to_string(),
+    );
+    system_properties.insert("java.vm.version".to_string(), vm_version.to_string());
+    system_properties.insert("java.vm.name".to_string(), vm_name);
 
     let mut properties: Vec<Option<Reference>> = Vec::new();
     for (key, value) in system_properties {
@@ -135,6 +147,7 @@ async fn vm_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
         properties.push(value);
     }
 
+    let string_array_class = thread.class("[Ljava/lang/String;").await?;
     let properties = ConcurrentVec::from(properties);
     let result = Value::Object(Some(Reference::Array(string_array_class, properties)));
     Ok(Some(result))
