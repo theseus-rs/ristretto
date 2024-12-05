@@ -701,6 +701,7 @@ pub(crate) async fn full_fence(
     Ok(None)
 }
 
+#[expect(clippy::too_many_lines)]
 fn get_reference_type(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
@@ -730,32 +731,101 @@ fn get_reference_type(
     };
 
     let offset = usize::try_from(offset)?;
-    match reference {
+    let value = match reference {
+        Reference::ByteArray(array) => {
+            let Some(byte) = array.get(offset)? else {
+                return Err(InternalError(
+                    "getReferenceType: Invalid byte reference index".to_string(),
+                ));
+            };
+            if matches!(base_type, Some(BaseType::Long)) {
+                Value::Long(i64::from(byte))
+            } else {
+                Value::Int(i32::from(byte))
+            }
+        }
+        Reference::CharArray(array) => {
+            let Some(char) = array.get(offset)? else {
+                return Err(InternalError(
+                    "getReferenceType: Invalid char reference index".to_string(),
+                ));
+            };
+            if matches!(base_type, Some(BaseType::Long)) {
+                Value::Long(i64::from(char))
+            } else {
+                Value::Int(i32::from(char))
+            }
+        }
+        Reference::ShortArray(array) => {
+            let Some(short) = array.get(offset)? else {
+                return Err(InternalError(
+                    "getReferenceType: Invalid short reference index".to_string(),
+                ));
+            };
+            if matches!(base_type, Some(BaseType::Long)) {
+                Value::Long(i64::from(short))
+            } else {
+                Value::Int(i32::from(short))
+            }
+        }
+        Reference::IntArray(array) => {
+            let Some(int) = array.get(offset)? else {
+                return Err(InternalError(
+                    "getReferenceType: Invalid int reference index".to_string(),
+                ));
+            };
+            if matches!(base_type, Some(BaseType::Long)) {
+                Value::Long(i64::from(int))
+            } else {
+                Value::Int(int)
+            }
+        }
+        Reference::LongArray(array) => {
+            let Some(long) = array.get(offset)? else {
+                return Err(InternalError(
+                    "getReferenceType: Invalid long reference index".to_string(),
+                ));
+            };
+            Value::Long(long)
+        }
+        Reference::FloatArray(array) => {
+            let Some(float) = array.get(offset)? else {
+                return Err(InternalError(
+                    "getReferenceType: Invalid float reference index".to_string(),
+                ));
+            };
+            Value::Float(float)
+        }
+        Reference::DoubleArray(array) => {
+            let Some(double) = array.get(offset)? else {
+                return Err(InternalError(
+                    "getReferenceType: Invalid double reference index".to_string(),
+                ));
+            };
+            Value::Double(double)
+        }
         Reference::Array(_class, array) => {
             let Some(reference) = array.get(offset)? else {
                 return Err(InternalError(
-                    "getReferenceType: Invalid reference index".to_string(),
+                    "getReferenceType: Invalid array reference index".to_string(),
                 ));
             };
-            Ok(Some(Value::Object(reference)))
+            Value::Object(reference)
         }
         Reference::Object(object) => {
             let field_name = object.class().field_name(offset)?;
-            let value = object.value(&field_name)?;
-            Ok(Some(value))
+            object.value(&field_name)?
         }
-        _ => Err(InternalError(
-            "getReferenceType: Invalid reference".to_string(),
-        )),
-    }
+    };
+    Ok(Some(value))
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_boolean(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
+    thread: Arc<Thread>,
+    arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.getBoolean(Ljava/lang/Object;J)Z")
+    get_boolean_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -767,8 +837,8 @@ pub(crate) async fn get_boolean_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_byte(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.getByte(Ljava/lang/Object;J)B")
+pub(crate) async fn get_byte(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_byte_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -780,8 +850,8 @@ pub(crate) async fn get_byte_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_char(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.getChar(Ljava/lang/Object;J)C")
+pub(crate) async fn get_char(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_char_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -793,11 +863,8 @@ pub(crate) async fn get_char_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_double(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.getDouble(Ljava/lang/Object;J)D")
+pub(crate) async fn get_double(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_double_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -809,11 +876,8 @@ pub(crate) async fn get_double_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_float(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.getFloat(Ljava/lang/Object;J)F")
+pub(crate) async fn get_float(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_float_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -825,8 +889,8 @@ pub(crate) async fn get_float_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_int(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.getInt(Ljava/lang/Object;J)I")
+pub(crate) async fn get_int(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_int_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -846,8 +910,8 @@ pub(crate) async fn get_load_average_0(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.getLong(Ljava/lang/Object;J)J")
+pub(crate) async fn get_long(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_long_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -859,11 +923,8 @@ pub(crate) async fn get_long_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_object(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.getObject(Ljava/lang/Object;J)Ljava/lang/Object;")
+pub(crate) async fn get_object(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_object_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -879,7 +940,7 @@ pub(crate) async fn get_reference(
     thread: Arc<Thread>,
     arguments: Arguments,
 ) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, None)
+    get_reference_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -891,11 +952,8 @@ pub(crate) async fn get_reference_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_short(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.getShort(Ljava/lang/Object;J)S")
+pub(crate) async fn get_short(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_short_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -984,6 +1042,14 @@ pub(crate) async fn park(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_boolean(
+    thread: Arc<Thread>,
+    arguments: Arguments,
+) -> Result<Option<Value>> {
+    put_boolean_volatile(thread, arguments).await
+}
+
+#[async_recursion(?Send)]
+pub(crate) async fn put_boolean_volatile(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -998,15 +1064,12 @@ pub(crate) async fn put_boolean(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_boolean_volatile(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.putBooleanVolatile(Ljava/lang/Object;JZ)V")
+pub(crate) async fn put_byte(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    put_byte_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_byte(
+pub(crate) async fn put_byte_volatile(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -1021,15 +1084,12 @@ pub(crate) async fn put_byte(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_byte_volatile(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.putByteVolatile(Ljava/lang/Object;JB)V")
+pub(crate) async fn put_char(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    put_char_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_char(
+pub(crate) async fn put_char_volatile(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -1048,15 +1108,12 @@ pub(crate) async fn put_char(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_char_volatile(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.putCharVolatile(Ljava/lang/Object;JC)V")
+pub(crate) async fn put_double(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    put_double_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_double(
+pub(crate) async fn put_double_volatile(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -1071,15 +1128,12 @@ pub(crate) async fn put_double(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_double_volatile(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.putDoubleVolatile(Ljava/lang/Object;JD)V")
+pub(crate) async fn put_float(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    put_float_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_float(
+pub(crate) async fn put_float_volatile(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -1094,15 +1148,12 @@ pub(crate) async fn put_float(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_float_volatile(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.putFloatVolatile(Ljava/lang/Object;JF)V")
+pub(crate) async fn put_int(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    put_int_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_int(
+pub(crate) async fn put_int_volatile(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -1117,15 +1168,12 @@ pub(crate) async fn put_int(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_int_volatile(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.putIntVolatile(Ljava/lang/Object;JI)V")
+pub(crate) async fn put_long(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    put_long_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_long(
+pub(crate) async fn put_long_volatile(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -1140,35 +1188,24 @@ pub(crate) async fn put_long(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_long_volatile(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.putLongVolatile(Ljava/lang/Object;JJ)V")
-}
-
-#[async_recursion(?Send)]
-pub(crate) async fn put_object(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.putObject(Ljava/lang/Object;JLjava/lang/Object;)V")
+pub(crate) async fn put_object(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    put_object_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_object_volatile(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
+    thread: Arc<Thread>,
+    arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.putObjectVolatile(Ljava/lang/Object;JLjava/lang/Object;)V")
+    put_reference_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_reference(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
+    thread: Arc<Thread>,
+    arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.putReference(Ljava/lang/Object;JLjava/lang/Object;)V")
+    put_reference_volatile(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -1203,7 +1240,12 @@ pub(crate) async fn put_reference_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_short(
+pub(crate) async fn put_short(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    put_short_volatile(thread, arguments).await
+}
+
+#[async_recursion(?Send)]
+pub(crate) async fn put_short_volatile(
     _thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
@@ -1215,14 +1257,6 @@ pub(crate) async fn put_short(
     let bytes = Reference::from(vec![x; offset]);
     *object = Some(bytes);
     Ok(None)
-}
-
-#[async_recursion(?Send)]
-pub(crate) async fn put_short_volatile(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
-) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.putShortVolatile(Ljava/lang/Object;JS)V")
 }
 
 #[async_recursion(?Send)]
