@@ -12,6 +12,7 @@ use ristretto_classloader::{Class, Object, Reference, Value};
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
+const JAVA_11: Version = Version::Java11 { minor: 0 };
 const JAVA_17: Version = Version::Java17 { minor: 0 };
 const JAVA_20: Version = Version::Java20 { minor: 0 };
 
@@ -384,9 +385,8 @@ async fn get_declared_fields_0(
         let signature = Value::Object(None);
         // TODO: Add support for annotations
         let annotations = Value::Object(None);
-        let field = thread
-            .object(
-                "java/lang/reflect/Field",
+        let (descriptor, arguments) = if vm.java_class_file_version() <= &JAVA_11 {
+            (
                 "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IILjava/lang/String;[B",
                 vec![
                     class_object.clone(),
@@ -398,6 +398,24 @@ async fn get_declared_fields_0(
                     annotations,
                 ],
             )
+        } else {
+            let trusted_final = Value::from(false);
+            (
+                "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IZILjava/lang/String;[B",
+                vec![
+                    class_object.clone(),
+                    field_name,
+                    field_type,
+                    modifiers,
+                    trusted_final,
+                    slot,
+                    signature,
+                    annotations,
+                ],
+            )
+        };
+        let field = thread
+            .object("java/lang/reflect/Field", descriptor, arguments)
             .await?;
         fields.push(field);
     }
