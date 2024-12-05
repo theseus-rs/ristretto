@@ -56,7 +56,7 @@ async fn add_item_to_keychain(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.security.KeychainStore._addItemToKeychain(Ljava/lang/String;Z[B[C)J")
 }
 
 #[async_recursion(?Send)]
@@ -64,7 +64,7 @@ async fn get_encoded_key_data(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.security.KeychainStore._getEncodedKeyData(J[C)[B")
 }
 
 #[async_recursion(?Send)]
@@ -72,7 +72,7 @@ async fn release_keychain_item_ref(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.security.KeychainStore._releaseKeychainItemRef(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -80,10 +80,10 @@ async fn remove_item_from_keychain(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.security.KeychainStore._removeItemFromKeychain(J)I")
 }
 
 #[async_recursion(?Send)]
 async fn scan_keychain(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.security.KeychainStore._scanKeychain(Ljava/lang/String;)V")
 }

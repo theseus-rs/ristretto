@@ -14,5 +14,5 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn blit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.loops.Blit.Blit(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIII)V");
 }

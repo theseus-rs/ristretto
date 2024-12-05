@@ -19,5 +19,5 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn fill_parallelogram(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.loops.FillParallelogram.FillParallelogram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;DDDDDD)V");
 }

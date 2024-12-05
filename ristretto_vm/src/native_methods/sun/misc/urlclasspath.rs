@@ -19,7 +19,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         class_name,
         "getLookupCacheURLs",
         "(Ljava/lang/ClassLoader;)[Ljava/net/URL;",
-        get_lookup_cache_ur_ls,
+        get_lookup_cache_urls,
     );
     registry.register(
         class_name,
@@ -34,15 +34,15 @@ async fn get_lookup_cache_for_class_loader(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.URLClassPath.getLookupCacheForClassLoader(Ljava/lang/ClassLoader;Ljava/lang/String;)[I")
 }
 
 #[async_recursion(?Send)]
-async fn get_lookup_cache_ur_ls(
+async fn get_lookup_cache_urls(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.URLClassPath.getLookupCacheURLs(Ljava/lang/ClassLoader;)[Ljava/net/URL;")
 }
 
 #[async_recursion(?Send)]
@@ -50,5 +50,5 @@ async fn known_to_not_exist_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.URLClassPath.knownToNotExist0(Ljava/lang/ClassLoader;Ljava/lang/String;)Z")
 }

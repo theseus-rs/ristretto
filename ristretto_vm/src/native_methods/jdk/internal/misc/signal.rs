@@ -83,5 +83,5 @@ async fn handle_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 
 #[async_recursion(?Send)]
 async fn raise_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Signal.raise0(I)V")
 }

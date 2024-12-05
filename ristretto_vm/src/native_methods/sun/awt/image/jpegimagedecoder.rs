@@ -25,5 +25,5 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn read_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.image.JPEGImageDecoder.readImage(Ljava/io/InputStream;[B)V")
 }

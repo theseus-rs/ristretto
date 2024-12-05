@@ -28,10 +28,10 @@ async fn is_finalization_enabled(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ref.Finalizer.isFinalizationEnabled()Z")
 }
 
 #[async_recursion(?Send)]
 async fn report_complete(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ref.Finalizer.reportComplete(Ljava/lang/Object;)V")
 }

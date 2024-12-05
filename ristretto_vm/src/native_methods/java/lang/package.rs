@@ -28,7 +28,7 @@ async fn get_system_package_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Package.getSystemPackage0(Ljava/lang/String;)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -36,5 +36,5 @@ async fn get_system_packages_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Package.getSystemPackages0()[Ljava/lang/String;")
 }

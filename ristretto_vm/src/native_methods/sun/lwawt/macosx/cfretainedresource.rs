@@ -14,5 +14,5 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn native_cf_release(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CFRetainedResource.nativeCFRelease(JZ)V")
 }

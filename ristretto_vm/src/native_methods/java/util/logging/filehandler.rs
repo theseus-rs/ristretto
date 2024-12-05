@@ -14,5 +14,5 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn is_set_uid(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.logging.FileHandler.isSetUID()Z")
 }

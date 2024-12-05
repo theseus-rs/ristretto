@@ -28,5 +28,5 @@ async fn latest_user_defined_loader_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.VM.latestUserDefinedLoader0()Ljava/lang/ClassLoader;")
 }

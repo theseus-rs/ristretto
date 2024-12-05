@@ -125,7 +125,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn color_convert(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.cmm.lcms.LCMS.colorConvert(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V")
 }
 
 #[async_recursion(?Send)]
@@ -133,12 +133,12 @@ async fn create_native_transform(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.cmm.lcms.LCMS.createNativeTransform([JIIILjava/lang/Object;)J")
 }
 
 #[async_recursion(?Send)]
 async fn free_transform(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.cmm.lcms.LCMS.freeTransform(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -146,12 +146,12 @@ async fn get_profile_data_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.cmm.lcms.LCMS.getProfileDataNative(J[B)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_profile_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.cmm.lcms.LCMS.getProfileID(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;")
 }
 
 #[async_recursion(?Send)]
@@ -159,25 +159,25 @@ async fn get_profile_size_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.cmm.lcms.LCMS.getProfileSizeNative(J)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_tag_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.cmm.lcms.LCMS.getTagNative(JI)[B")
 }
 
 #[async_recursion(?Send)]
 async fn init_lcms(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.cmm.lcms.LCMS.initLCMS(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V")
 }
 
 #[async_recursion(?Send)]
 async fn load_profile_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.cmm.lcms.LCMS.loadProfileNative([BLjava/lang/Object;)J")
 }
 
 #[async_recursion(?Send)]
 async fn set_tag_data_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.cmm.lcms.LCMS.setTagDataNative(JI[B)V")
 }

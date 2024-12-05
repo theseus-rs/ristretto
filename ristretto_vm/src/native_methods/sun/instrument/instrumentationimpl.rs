@@ -101,7 +101,7 @@ async fn append_to_class_loader_search_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.appendToClassLoaderSearch0(JLjava/lang/String;Z)V")
 }
 
 #[async_recursion(?Send)]
@@ -109,7 +109,7 @@ async fn get_all_loaded_classes_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.getAllLoadedClasses0(J)[Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
@@ -117,12 +117,12 @@ async fn get_initiated_classes_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.getInitiatedClasses0(JLjava/lang/ClassLoader;)[Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
 async fn get_object_size_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.getObjectSize0(JLjava/lang/Object;)J")
 }
 
 #[async_recursion(?Send)]
@@ -130,7 +130,7 @@ async fn is_modifiable_class_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.isModifiableClass0(JLjava/lang/Class;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -138,22 +138,22 @@ async fn is_retransform_classes_supported_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.isRetransformClassesSupported0(J)Z")
 }
 
 #[async_recursion(?Send)]
 async fn jar_file(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.jarFile(J)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn load_agent_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.loadAgent0(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn redefine_classes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.redefineClasses0(J[Ljava/lang/instrument/ClassDefinition;)V")
 }
 
 #[async_recursion(?Send)]
@@ -161,7 +161,7 @@ async fn retransform_classes_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.retransformClasses0(J[Ljava/lang/Class;)V")
 }
 
 #[async_recursion(?Send)]
@@ -169,7 +169,7 @@ async fn set_has_retransformable_transformers(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.setHasRetransformableTransformers(JZ)V")
 }
 
 #[async_recursion(?Send)]
@@ -177,7 +177,7 @@ async fn set_has_transformers(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.setHasTransformers(JZ)V")
 }
 
 #[async_recursion(?Send)]
@@ -185,5 +185,5 @@ async fn set_native_method_prefixes(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.instrument.InstrumentationImpl.setNativeMethodPrefixes(J[Ljava/lang/String;Z)V")
 }

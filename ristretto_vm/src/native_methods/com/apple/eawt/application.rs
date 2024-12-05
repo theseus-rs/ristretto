@@ -22,5 +22,5 @@ async fn native_initialize_application_delegate(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eawt.Application.nativeInitializeApplicationDelegate()V")
 }

@@ -40,20 +40,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn read_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I")
 }
 
 #[async_recursion(?Send)]
 async fn readv_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J")
 }
 
 #[async_recursion(?Send)]
 async fn write_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I")
 }
 
 #[async_recursion(?Send)]
 async fn writev_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J")
 }

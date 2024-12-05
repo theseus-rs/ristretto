@@ -27,7 +27,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn current(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.NativeThread.current()J");
 }
 
 #[async_recursion(?Send)]
@@ -42,7 +42,7 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 
 #[async_recursion(?Send)]
 async fn signal(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.NativeThread.signal(J)V");
 }
 
 #[async_recursion(?Send)]

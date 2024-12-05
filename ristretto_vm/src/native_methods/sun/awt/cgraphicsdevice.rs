@@ -86,7 +86,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn native_get_bounds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsDevice.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;")
 }
 
 #[async_recursion(?Send)]
@@ -94,7 +94,7 @@ async fn native_get_display_mode(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsDevice.nativeGetDisplayMode(I)Ljava/awt/DisplayMode;")
 }
 
 #[async_recursion(?Send)]
@@ -102,7 +102,7 @@ async fn native_get_display_modes(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsDevice.nativeGetDisplayModes(I)[Ljava/awt/DisplayMode;")
 }
 
 #[async_recursion(?Send)]
@@ -110,7 +110,7 @@ async fn native_get_scale_factor(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsDevice.nativeGetScaleFactor(I)D")
 }
 
 #[async_recursion(?Send)]
@@ -118,7 +118,7 @@ async fn native_get_screen_insets(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsDevice.nativeGetScreenInsets(I)Ljava/awt/Insets;")
 }
 
 #[async_recursion(?Send)]
@@ -126,7 +126,7 @@ async fn native_get_x_resolution(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsDevice.nativeGetXResolution(I)D")
 }
 
 #[async_recursion(?Send)]
@@ -134,7 +134,7 @@ async fn native_get_y_resolution(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsDevice.nativeGetYResolution(I)D")
 }
 
 #[async_recursion(?Send)]
@@ -142,7 +142,7 @@ async fn native_reset_display_mode(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsDevice.nativeResetDisplayMode()V")
 }
 
 #[async_recursion(?Send)]
@@ -150,5 +150,5 @@ async fn native_set_display_mode(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.CGraphicsDevice.nativeSetDisplayMode(IIIII)V")
 }

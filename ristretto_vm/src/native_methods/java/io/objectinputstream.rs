@@ -15,10 +15,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn bytes_to_doubles(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.ObjectInputStream.bytesToDoubles([BI[DII)V")
 }
 
 #[async_recursion(?Send)]
 async fn bytes_to_floats(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.ObjectInputStream.bytesToFloats([BI[FII)V")
 }

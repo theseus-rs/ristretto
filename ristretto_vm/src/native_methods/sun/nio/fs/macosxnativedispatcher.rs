@@ -14,5 +14,5 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn normalizepath(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.MacOSXNativeDispatcher.normalizepath([CI)[C");
 }

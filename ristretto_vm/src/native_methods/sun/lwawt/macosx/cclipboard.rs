@@ -36,17 +36,17 @@ async fn check_pasteboard_without_notification(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CClipboard.checkPasteboardWithoutNotification()Z")
 }
 
 #[async_recursion(?Send)]
 async fn declare_types(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CClipboard.declareTypes([JLsun/awt/datatransfer/SunClipboard;)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_clipboard_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CClipboard.getClipboardData(J)[B")
 }
 
 #[async_recursion(?Send)]
@@ -54,10 +54,10 @@ async fn get_clipboard_formats(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CClipboard.getClipboardFormats()[J")
 }
 
 #[async_recursion(?Send)]
 async fn set_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CClipboard.setData([BJ)V")
 }

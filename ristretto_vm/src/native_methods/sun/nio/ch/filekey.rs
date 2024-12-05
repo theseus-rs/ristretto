@@ -15,7 +15,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(None)
+    todo!("sun.nio.ch.FileKey.init(Ljava/io/FileDescriptor;)V");
 }
 
 #[async_recursion(?Send)]

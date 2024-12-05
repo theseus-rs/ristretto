@@ -35,20 +35,22 @@ async fn get_memory_managers_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!(
+        "sun.management.MemoryImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_memory_pools_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;")
 }
 
 #[async_recursion(?Send)]
 async fn get_memory_usage_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryImpl.getMemoryUsage0(Z)Ljava/lang/management/MemoryUsage;")
 }
 
 #[async_recursion(?Send)]
 async fn set_verbose_gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.management.MemoryImpl.setVerboseGC(Z)V")
 }

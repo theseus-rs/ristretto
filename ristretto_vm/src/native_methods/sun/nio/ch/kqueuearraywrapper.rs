@@ -18,25 +18,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueueArrayWrapper.init()I");
 }
 
 #[async_recursion(?Send)]
 async fn init_struct_sizes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueueArrayWrapper.initStructSizes()V");
 }
 
 #[async_recursion(?Send)]
 async fn interrupt(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueueArrayWrapper.interrupt(I)V");
 }
 
 #[async_recursion(?Send)]
 async fn kevent_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueueArrayWrapper.kevent0(IJIJ)I");
 }
 
 #[async_recursion(?Send)]
 async fn register_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.KQueueArrayWrapper.register0(IIII)V");
 }

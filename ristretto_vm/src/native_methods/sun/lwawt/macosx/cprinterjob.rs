@@ -30,12 +30,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn safe_print_loop(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPrinterJob._safePrintLoop(JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn abort_doc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPrinterJob.abortDoc()V")
 }
 
 #[async_recursion(?Send)]
@@ -43,25 +43,27 @@ async fn create_ns_print_info(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPrinterJob.createNSPrintInfo()J")
 }
 
 #[async_recursion(?Send)]
 async fn dispose(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPrinterJob.dispose(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_default_page(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPrinterJob.getDefaultPage(Ljava/awt/print/PageFormat;)V")
 }
 
 #[async_recursion(?Send)]
 async fn print_loop(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPrinterJob.printLoop(ZII)Z")
 }
 
 #[async_recursion(?Send)]
 async fn validate_paper(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!(
+        "sun.lwawt.macosx.CPrinterJob.validatePaper(Ljava/awt/print/Paper;Ljava/awt/print/Paper;)V"
+    )
 }

@@ -41,100 +41,100 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn iee_eremainder(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.IEEERemainder(DD)D")
 }
 
 #[async_recursion(?Send)]
 async fn acos(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.acos(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn asin(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.asin(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn atan(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.atan(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn atan_2(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.atan2(DD)D")
 }
 
 #[async_recursion(?Send)]
 async fn cbrt(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.cbrt(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn cos(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.cos(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn cosh(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.cosh(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn exp(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.exp(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn expm_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.expm1(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn hypot(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.hypot(DD)D")
 }
 
 #[async_recursion(?Send)]
 async fn log(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.log(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn log_10(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.log10(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn log_1_p(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.log1p(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn pow(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.pow(DD)D")
 }
 
 #[async_recursion(?Send)]
 async fn sin(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.sin(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn sinh(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.sinh(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn sqrt(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.sqrt(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn tan(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.tan(D)D")
 }
 
 #[async_recursion(?Send)]
 async fn tanh(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StrictMath.tanh(D)D")
 }

@@ -23,17 +23,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn get_texture_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.OGLSurfaceData.getTextureID(J)I");
 }
 
 #[async_recursion(?Send)]
 async fn get_texture_target(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.OGLSurfaceData.getTextureTarget(J)I");
 }
 
 #[async_recursion(?Send)]
 async fn init_fb_object(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.OGLSurfaceData.initFBObject(JZZZII)Z");
 }
 
 #[async_recursion(?Send)]
@@ -41,10 +41,10 @@ async fn init_flip_backbuffer(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.OGLSurfaceData.initFlipBackbuffer(J)Z");
 }
 
 #[async_recursion(?Send)]
 async fn init_texture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.OGLSurfaceData.initTexture(JZZZII)Z");
 }

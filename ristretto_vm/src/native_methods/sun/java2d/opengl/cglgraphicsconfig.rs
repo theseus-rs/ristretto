@@ -42,7 +42,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn get_cgl_config_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo(III)J")
 }
 
 #[async_recursion(?Send)]
@@ -50,12 +50,12 @@ async fn get_ogl_capabilities(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.CGLGraphicsConfig.getOGLCapabilities(J)I")
 }
 
 #[async_recursion(?Send)]
 async fn init_cgl(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.CGLGraphicsConfig.initCGL()Z")
 }
 
 #[async_recursion(?Send)]
@@ -63,5 +63,5 @@ async fn native_get_max_texture_size(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.opengl.CGLGraphicsConfig.nativeGetMaxTextureSize()I")
 }

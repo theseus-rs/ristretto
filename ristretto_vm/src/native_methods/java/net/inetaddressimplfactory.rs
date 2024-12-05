@@ -9,10 +9,10 @@ use std::sync::Arc;
 /// Register all native methods for `java.net.InetAddressImplFactory`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
     let class_name = "java/net/InetAddressImplFactory";
-    registry.register(class_name, "isIPv6Supported", "()Z", is_i_pv_6_supported);
+    registry.register(class_name, "isIPv6Supported", "()Z", is_ipv_6_supported);
 }
 
 #[async_recursion(?Send)]
-async fn is_i_pv_6_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn is_ipv_6_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("java.net.InetAddressImplFactory.isIPv6Supported()Z")
 }

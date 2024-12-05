@@ -47,7 +47,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn clear_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ref.Reference.clear0()V")
 }
 
 #[async_recursion(?Send)]
@@ -55,7 +55,7 @@ async fn get_and_clear_reference_pending_list(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ref.Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;")
 }
 
 #[async_recursion(?Send)]
@@ -63,7 +63,7 @@ async fn has_reference_pending_list(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ref.Reference.hasReferencePendingList()Z")
 }
 
 #[async_recursion(?Send)]
@@ -84,5 +84,5 @@ async fn wait_for_reference_pending_list(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ref.Reference.waitForReferencePendingList()V")
 }

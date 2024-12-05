@@ -16,10 +16,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     let java_version = registry.java_version().clone();
 
     if java_version >= JAVA_18 {
-        registry.register(class_name, "isIPv4Available", "()Z", is_i_pv_4_available);
+        registry.register(class_name, "isIPv4Available", "()Z", is_ipv_4_available);
     }
     if java_version >= JAVA_19 {
-        registry.register(class_name, "isIPv6Supported", "()Z", is_i_pv_6_supported);
+        registry.register(class_name, "isIPv6Supported", "()Z", is_ipv_6_supported);
     }
 
     registry.register(class_name, "init", "()V", init);
@@ -31,11 +31,11 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 }
 
 #[async_recursion(?Send)]
-async fn is_i_pv_4_available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn is_ipv_4_available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("java.net.InetAddress.isIPv4Available()Z")
 }
 
 #[async_recursion(?Send)]
-async fn is_i_pv_6_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn is_ipv_6_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("java.net.InetAddress.isIPv6Supported()Z")
 }

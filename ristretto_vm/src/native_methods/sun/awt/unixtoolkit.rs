@@ -36,12 +36,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn check_gtk(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.UNIXToolkit.check_gtk(I)Z")
 }
 
 #[async_recursion(?Send)]
 async fn get_gtk_version(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.UNIXToolkit.get_gtk_version()I")
 }
 
 #[async_recursion(?Send)]
@@ -49,30 +49,30 @@ async fn gtk_check_version_impl(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.UNIXToolkit.gtkCheckVersionImpl(III)Z")
 }
 
 #[async_recursion(?Send)]
 async fn load_gtk(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.UNIXToolkit.load_gtk(IZ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn load_gtk_icon(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.UNIXToolkit.load_gtk_icon(Ljava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn load_stock_icon(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.UNIXToolkit.load_stock_icon(ILjava/lang/String;IILjava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn native_sync(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.UNIXToolkit.nativeSync()V")
 }
 
 #[async_recursion(?Send)]
 async fn unload_gtk(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.UNIXToolkit.unload_gtk()Z")
 }

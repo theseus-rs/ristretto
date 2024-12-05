@@ -59,7 +59,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn deflate_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Deflater.deflateBytes(J[BIII)I")
 }
 
 #[async_recursion(?Send)]
@@ -67,7 +67,7 @@ async fn deflate_buffer_buffer(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Deflater.deflateBufferBuffer(JJIJIII)J")
 }
 
 #[async_recursion(?Send)]
@@ -75,7 +75,7 @@ async fn deflate_buffer_bytes(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Deflater.deflateBufferBytes(JJI[BIIII)J")
 }
 
 #[async_recursion(?Send)]
@@ -83,27 +83,27 @@ async fn deflate_bytes_buffer(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Deflater.deflateBytesBuffer(J[BIIJIII)J")
 }
 
 #[async_recursion(?Send)]
 async fn deflate_bytes_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Deflater.deflateBytesBytes(J[BII[BIIII)J")
 }
 
 #[async_recursion(?Send)]
 async fn end(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Deflater.end(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_adler(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Deflater.getAdler(J)I")
 }
 
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Deflater.init(IIZ)J")
 }
 
 #[async_recursion(?Send)]
@@ -113,12 +113,12 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn reset(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Deflater.reset(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_dictionary(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Deflater.setDictionary(J[BII)V")
 }
 
 #[async_recursion(?Send)]
@@ -126,5 +126,5 @@ async fn set_dictionary_buffer(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Deflater.setDictionaryBuffer(JJI)V")
 }

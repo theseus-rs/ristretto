@@ -28,7 +28,7 @@ async fn native_create_popup_menu(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPopupMenu.nativeCreatePopupMenu()J")
 }
 
 #[async_recursion(?Send)]
@@ -36,5 +36,5 @@ async fn native_show_popup_menu(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPopupMenu.nativeShowPopupMenu(JII)J")
 }

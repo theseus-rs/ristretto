@@ -15,10 +15,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn convert_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.net.sdp.SdpSupport.convert0(I)V")
 }
 
 #[async_recursion(?Send)]
 async fn create_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.net.sdp.SdpSupport.create0()I")
 }

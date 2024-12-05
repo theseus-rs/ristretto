@@ -37,45 +37,45 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn close(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.awt.SplashScreen::_close(J)V");
 }
 
 #[async_recursion(?Send)]
 async fn get_bounds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.awt.SplashScreen::_getBounds(J)Ljava/awt/Rectangle;");
 }
 
 #[async_recursion(?Send)]
 async fn get_image_file_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.awt.SplashScreen::_getImageFileName(J)Ljava/lang/String;");
 }
 
 #[async_recursion(?Send)]
 async fn get_image_jar_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.awt.SplashScreen::_getImageJarName(J)Ljava/lang/String;");
 }
 
 #[async_recursion(?Send)]
 async fn get_instance(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.awt.SplashScreen::_getInstance()J");
 }
 
 #[async_recursion(?Send)]
 async fn get_scale_factor(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.awt.SplashScreen::_getScaleFactor(J)F");
 }
 
 #[async_recursion(?Send)]
 async fn is_visible(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.awt.SplashScreen::_isVisible(J)Z");
 }
 
 #[async_recursion(?Send)]
 async fn set_image_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.awt.SplashScreen::_setImageData(J[B)Z");
 }
 
 #[async_recursion(?Send)]
 async fn update(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.awt.SplashScreen::_update(J[IIIIII)V");
 }

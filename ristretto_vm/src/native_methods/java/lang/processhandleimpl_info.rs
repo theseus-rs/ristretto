@@ -15,7 +15,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn info_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ProcessHandleImpl$Info.info0(J)V")
 }
 
 #[async_recursion(?Send)]

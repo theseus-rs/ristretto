@@ -15,10 +15,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn init_ops(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.ColorGlyphSurfaceData.initOps()V")
 }
 
 #[async_recursion(?Send)]
 async fn set_current_glyph(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.ColorGlyphSurfaceData.setCurrentGlyph(J)V")
 }

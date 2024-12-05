@@ -125,7 +125,7 @@ async fn gc_rectangles_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.GCRectanglesNative(IJ[II)V");
 }
 
 #[async_recursion(?Send)]
@@ -133,7 +133,7 @@ async fn xr_add_glyphs_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.XRAddGlyphsNative(I[JI[BI)V");
 }
 
 #[async_recursion(?Send)]
@@ -141,7 +141,7 @@ async fn xr_create_linear_gradient_paint_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.XRCreateLinearGradientPaintNative([F[SIIIIII)I");
 }
 
 #[async_recursion(?Send)]
@@ -149,7 +149,7 @@ async fn xr_create_radial_gradient_paint_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.XRCreateRadialGradientPaintNative([F[SIIIIII)I");
 }
 
 #[async_recursion(?Send)]
@@ -157,12 +157,12 @@ async fn xr_free_glyphs_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.XRFreeGlyphsNative(I[II)V");
 }
 
 #[async_recursion(?Send)]
 async fn xr_set_clip_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.XRSetClipNative(JIIIILsun/java2d/pipe/Region;Z)V");
 }
 
 #[async_recursion(?Send)]
@@ -170,7 +170,7 @@ async fn xr_set_transform_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.XRSetTransformNative(IIIIIII)V");
 }
 
 #[async_recursion(?Send)]
@@ -178,7 +178,7 @@ async fn x_render_composite_text_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.XRenderCompositeTextNative(IIIIIJ[I[III)V");
 }
 
 #[async_recursion(?Send)]
@@ -186,7 +186,7 @@ async fn x_render_create_glyph_set_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.XRenderCreateGlyphSetNative(J)I");
 }
 
 #[async_recursion(?Send)]
@@ -194,17 +194,17 @@ async fn x_render_rectangles_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.XRenderRectanglesNative(IBSSSS[II)V");
 }
 
 #[async_recursion(?Send)]
 async fn copy_area(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.copyArea(IIJIIIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn create_gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.createGC(I)J");
 }
 
 #[async_recursion(?Send)]
@@ -212,27 +212,27 @@ async fn create_picture_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.createPictureNative(IJ)I");
 }
 
 #[async_recursion(?Send)]
 async fn create_pixmap(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.createPixmap(IIII)I");
 }
 
 #[async_recursion(?Send)]
 async fn free_gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.freeGC(J)V");
 }
 
 #[async_recursion(?Send)]
 async fn free_picture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.freePicture(I)V");
 }
 
 #[async_recursion(?Send)]
 async fn free_pixmap(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.freePixmap(I)V");
 }
 
 #[async_recursion(?Send)]
@@ -242,17 +242,17 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn pad_blit_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.padBlitNative(BIIIIIIIIIIIIIIIIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn put_mask_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.putMaskNative(IJ[BIIIIIIIIFJ)V");
 }
 
 #[async_recursion(?Send)]
 async fn render_composite(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.renderComposite(BIIIIIIIIIII)V");
 }
 
 #[async_recursion(?Send)]
@@ -260,35 +260,35 @@ async fn render_composite_trapezoids_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.renderCompositeTrapezoidsNative(BIJIII[I)V");
 }
 
 #[async_recursion(?Send)]
 async fn render_rectangle(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.renderRectangle(IBSSSSIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn set_filter(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.setFilter(II)V");
 }
 
 #[async_recursion(?Send)]
 async fn set_gc_exposures(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.setGCExposures(JZ)V");
 }
 
 #[async_recursion(?Send)]
 async fn set_gc_foreground(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.setGCForeground(JI)V");
 }
 
 #[async_recursion(?Send)]
 async fn set_gc_mode(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.setGCMode(JZ)V");
 }
 
 #[async_recursion(?Send)]
 async fn set_picture_repeat(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.xr.XRBackendNative.setPictureRepeat(II)V");
 }

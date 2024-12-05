@@ -74,42 +74,42 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn find_folder(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eio.FileManager._findFolder(SIZ)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_file_creator(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eio.FileManager._getFileCreator(Ljava/lang/String;)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_file_type(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eio.FileManager._getFileType(Ljava/lang/String;)I")
 }
 
 #[async_recursion(?Send)]
 async fn move_to_trash(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eio.FileManager._moveToTrash(Ljava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn open_url(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eio.FileManager._openURL(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn reveal_in_finder(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eio.FileManager._revealInFinder(Ljava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_file_creator(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eio.FileManager._setFileCreator(Ljava/lang/String;I)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_file_type(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eio.FileManager._setFileType(Ljava/lang/String;I)V")
 }
 
 #[async_recursion(?Send)]
@@ -117,7 +117,7 @@ async fn set_file_type_and_creator(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eio.FileManager._setFileTypeAndCreator(Ljava/lang/String;II)V")
 }
 
 #[async_recursion(?Send)]
@@ -125,7 +125,7 @@ async fn get_native_path_to_application_bundle(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eio.FileManager.getNativePathToApplicationBundle()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -133,5 +133,5 @@ async fn get_native_resource_from_bundle(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.eio.FileManager.getNativeResourceFromBundle(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;")
 }

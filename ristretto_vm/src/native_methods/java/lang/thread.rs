@@ -186,7 +186,7 @@ async fn current_thread(thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 
 #[async_recursion(?Send)]
 async fn dump_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;")
 }
 
 #[async_recursion(?Send)]
@@ -194,12 +194,12 @@ async fn ensure_materialized_for_stack_walk(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
 async fn extent_local_cache(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.extentLocalCache()[Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -207,7 +207,7 @@ async fn find_scoped_value_bindings(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.findScopedValueBindings()Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -223,22 +223,22 @@ async fn get_next_thread_id_offset(
 
 #[async_recursion(?Send)]
 async fn get_stack_trace_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.getStackTrace0()Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn get_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.getThreads()[Ljava/lang/Thread;")
 }
 
 #[async_recursion(?Send)]
 async fn holds_lock(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.holdsLock(Ljava/lang/Object;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn interrupt_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.interrupt0()V")
 }
 
 #[async_recursion(?Send)]
@@ -256,7 +256,7 @@ async fn is_alive_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn is_interrupted(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.isInterrupted(Z)Z")
 }
 
 #[async_recursion(?Send)]
@@ -266,17 +266,17 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 
 #[async_recursion(?Send)]
 async fn resume_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.resume0()V")
 }
 
 #[async_recursion(?Send)]
 async fn scoped_value_cache(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.scopedValueCache()[Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn set_current_thread(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.setCurrentThread(Ljava/lang/Thread;)V")
 }
 
 #[async_recursion(?Send)]
@@ -309,7 +309,7 @@ async fn set_scoped_value_cache(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.setScopedValueCache([Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
@@ -351,12 +351,12 @@ async fn start_0(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 
 #[async_recursion(?Send)]
 async fn stop_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.stop0(Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
 async fn suspend_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.suspend0()V")
 }
 
 #[async_recursion(?Send)]

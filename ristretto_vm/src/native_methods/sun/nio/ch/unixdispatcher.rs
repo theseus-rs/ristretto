@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.UnixDispatcher.close0(Ljava/io/FileDescriptor;)V")
 }
 
 #[async_recursion(?Send)]
@@ -31,5 +31,5 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 
 #[async_recursion(?Send)]
 async fn pre_close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.UnixDispatcher.preClose0(Ljava/io/FileDescriptor;)V")
 }

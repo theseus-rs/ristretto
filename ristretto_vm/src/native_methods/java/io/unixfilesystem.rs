@@ -179,27 +179,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn canonicalize_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn check_access(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.checkAccess(Ljava/io/File;I)Z")
 }
 
 #[async_recursion(?Send)]
 async fn check_access_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.checkAccess0(Ljava/io/File;I)Z")
 }
 
 #[async_recursion(?Send)]
 async fn create_directory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.createDirectory(Ljava/io/File;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn create_directory_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.createDirectory0(Ljava/io/File;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -207,7 +207,7 @@ async fn create_file_exclusively(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.createFileExclusively(Ljava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -215,12 +215,12 @@ async fn create_file_exclusively_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.createFileExclusively0(Ljava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn delete_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.delete0(Ljava/io/File;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -261,7 +261,7 @@ async fn get_last_modified_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.getLastModifiedTime(Ljava/io/File;)J")
 }
 
 #[async_recursion(?Send)]
@@ -269,32 +269,32 @@ async fn get_last_modified_time_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.getLastModifiedTime0(Ljava/io/File;)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_length(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.getLength(Ljava/io/File;)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_length_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.getLength0(Ljava/io/File;)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_name_max_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.getNameMax0(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_space(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.getSpace(Ljava/io/File;I)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_space_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.getSpace0(Ljava/io/File;I)J")
 }
 
 #[async_recursion(?Send)]
@@ -304,17 +304,17 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.list(Ljava/io/File;)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn list_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn rename_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -322,7 +322,7 @@ async fn set_last_modified_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.setLastModifiedTime(Ljava/io/File;J)Z")
 }
 
 #[async_recursion(?Send)]
@@ -330,25 +330,25 @@ async fn set_last_modified_time_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.setLastModifiedTime0(Ljava/io/File;J)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_permission(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.setPermission(Ljava/io/File;IZZ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_permission_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.setPermission0(Ljava/io/File;IZZ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_read_only(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.setReadOnly(Ljava/io/File;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_read_only_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.io.UnixFileSystem.setReadOnly0(Ljava/io/File;)Z")
 }

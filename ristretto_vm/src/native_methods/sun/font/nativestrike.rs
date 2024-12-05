@@ -29,7 +29,7 @@ async fn create_null_scaler_context(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.NativeStrike.createNullScalerContext()J")
 }
 
 #[async_recursion(?Send)]
@@ -37,10 +37,10 @@ async fn create_scaler_context(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.NativeStrike.createScalerContext([BID)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_max_glyph(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.NativeStrike.getMaxGlyph(J)I")
 }

@@ -47,70 +47,70 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn x_do_path(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XDoPath(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_draw_arc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XDrawArc(JJIIIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_draw_line(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XDrawLine(JJIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_draw_oval(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XDrawOval(JJIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_draw_poly(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XDrawPoly(JJII[I[IIZ)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_draw_rect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XDrawRect(JJIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_draw_round_rect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XDrawRoundRect(JJIIIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_fill_arc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XFillArc(JJIIIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_fill_oval(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XFillOval(JJIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_fill_poly(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XFillPoly(JJII[I[II)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_fill_rect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XFillRect(JJIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_fill_round_rect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XFillRoundRect(JJIIIIII)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_fill_spans(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.XFillSpans(JJLsun/java2d/pipe/SpanIterator;JII)V");
 }
 
 #[async_recursion(?Send)]
 async fn dev_copy_area(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.java2d.x11.X11Renderer.devCopyArea(JJIIIIII)V");
 }

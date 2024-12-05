@@ -429,7 +429,7 @@ pub(crate) async fn allocate_instance(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.allocateInstance(Ljava/lang/Class;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -437,7 +437,7 @@ pub(crate) async fn allocate_memory_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.allocateMemory0(J)J")
 }
 
 #[async_recursion(?Send)]
@@ -461,7 +461,7 @@ pub(crate) async fn compare_and_exchange_int(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.compareAndExchangeInt(Ljava/lang/Object;JII)I")
 }
 
 #[async_recursion(?Send)]
@@ -469,7 +469,7 @@ pub(crate) async fn compare_and_exchange_long(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.compareAndExchangeLong(Ljava/lang/Object;JJJ)J")
 }
 
 #[async_recursion(?Send)]
@@ -477,7 +477,7 @@ pub(crate) async fn compare_and_exchange_object(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.compareAndExchangeObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -485,7 +485,7 @@ pub(crate) async fn compare_and_exchange_reference(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.compareAndExchangeReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -658,7 +658,7 @@ pub(crate) async fn copy_swap_memory_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.copySwapMemory0(Ljava/lang/Object;JLjava/lang/Object;JJJ)V")
 }
 
 #[async_recursion(?Send)]
@@ -666,7 +666,7 @@ pub(crate) async fn define_anonymous_class_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.defineAnonymousClass0(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
@@ -674,7 +674,7 @@ pub(crate) async fn define_class_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.defineClass0(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
@@ -755,7 +755,7 @@ pub(crate) async fn get_boolean(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.getBoolean(Ljava/lang/Object;J)Z")
 }
 
 #[async_recursion(?Send)]
@@ -768,7 +768,7 @@ pub(crate) async fn get_boolean_volatile(
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_byte(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.getByte(Ljava/lang/Object;J)B")
 }
 
 #[async_recursion(?Send)]
@@ -781,7 +781,7 @@ pub(crate) async fn get_byte_volatile(
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_char(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.getChar(Ljava/lang/Object;J)C")
 }
 
 #[async_recursion(?Send)]
@@ -797,7 +797,7 @@ pub(crate) async fn get_double(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.getDouble(Ljava/lang/Object;J)D")
 }
 
 #[async_recursion(?Send)]
@@ -813,7 +813,7 @@ pub(crate) async fn get_float(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.getFloat(Ljava/lang/Object;J)F")
 }
 
 #[async_recursion(?Send)]
@@ -826,7 +826,7 @@ pub(crate) async fn get_float_volatile(
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_int(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.getInt(Ljava/lang/Object;J)I")
 }
 
 #[async_recursion(?Send)]
@@ -842,12 +842,12 @@ pub(crate) async fn get_load_average_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.getLoadAverage0([DI)I")
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.getLong(Ljava/lang/Object;J)J")
 }
 
 #[async_recursion(?Send)]
@@ -863,7 +863,7 @@ pub(crate) async fn get_object(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.getObject(Ljava/lang/Object;J)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -895,7 +895,7 @@ pub(crate) async fn get_short(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.getShort(Ljava/lang/Object;J)S")
 }
 
 #[async_recursion(?Send)]
@@ -911,7 +911,7 @@ pub(crate) async fn get_uncompressed_object(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.getUncompressedObject(J)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -939,7 +939,7 @@ pub(crate) async fn object_field_offset_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.objectFieldOffset0(Ljava/lang/reflect/Field;)J")
 }
 
 #[async_recursion(?Send)]
@@ -974,12 +974,12 @@ pub(crate) async fn page_size(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.pageSize()I")
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn park(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.park(ZJ)V")
 }
 
 #[async_recursion(?Send)]
@@ -1002,7 +1002,7 @@ pub(crate) async fn put_boolean_volatile(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.putBooleanVolatile(Ljava/lang/Object;JZ)V")
 }
 
 #[async_recursion(?Send)]
@@ -1025,7 +1025,7 @@ pub(crate) async fn put_byte_volatile(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.putByteVolatile(Ljava/lang/Object;JB)V")
 }
 
 #[async_recursion(?Send)]
@@ -1052,7 +1052,7 @@ pub(crate) async fn put_char_volatile(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.putCharVolatile(Ljava/lang/Object;JC)V")
 }
 
 #[async_recursion(?Send)]
@@ -1075,7 +1075,7 @@ pub(crate) async fn put_double_volatile(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.putDoubleVolatile(Ljava/lang/Object;JD)V")
 }
 
 #[async_recursion(?Send)]
@@ -1098,7 +1098,7 @@ pub(crate) async fn put_float_volatile(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.putFloatVolatile(Ljava/lang/Object;JF)V")
 }
 
 #[async_recursion(?Send)]
@@ -1121,7 +1121,7 @@ pub(crate) async fn put_int_volatile(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.putIntVolatile(Ljava/lang/Object;JI)V")
 }
 
 #[async_recursion(?Send)]
@@ -1144,7 +1144,7 @@ pub(crate) async fn put_long_volatile(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.putLongVolatile(Ljava/lang/Object;JJ)V")
 }
 
 #[async_recursion(?Send)]
@@ -1152,7 +1152,7 @@ pub(crate) async fn put_object(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.putObject(Ljava/lang/Object;JLjava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
@@ -1160,7 +1160,7 @@ pub(crate) async fn put_object_volatile(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.putObjectVolatile(Ljava/lang/Object;JLjava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
@@ -1168,7 +1168,7 @@ pub(crate) async fn put_reference(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.putReference(Ljava/lang/Object;JLjava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
@@ -1222,7 +1222,7 @@ pub(crate) async fn put_short_volatile(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.putShortVolatile(Ljava/lang/Object;JS)V")
 }
 
 #[async_recursion(?Send)]
@@ -1230,7 +1230,7 @@ pub(crate) async fn reallocate_memory_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.reallocateMemory0(JJ)J")
 }
 
 #[async_recursion(?Send)]
@@ -1246,7 +1246,7 @@ pub(crate) async fn set_memory_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.setMemory0(Ljava/lang/Object;JJB)V")
 }
 
 #[async_recursion(?Send)]
@@ -1254,7 +1254,7 @@ pub(crate) async fn should_be_initialized_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.shouldBeInitialized0(Ljava/lang/Class;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -1262,7 +1262,7 @@ pub(crate) async fn static_field_base_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
@@ -1270,7 +1270,7 @@ pub(crate) async fn static_field_offset_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J")
 }
 
 #[async_recursion(?Send)]
@@ -1286,7 +1286,7 @@ pub(crate) async fn throw_exception(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.throwException(Ljava/lang/Throwable;)V")
 }
 
 #[async_recursion(?Send)]
@@ -1299,7 +1299,7 @@ pub(crate) async fn unaligned_access_0(
 
 #[async_recursion(?Send)]
 pub(crate) async fn unpark(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.unpark(Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
@@ -1307,7 +1307,7 @@ pub(crate) async fn writeback_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.writeback0(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -1315,7 +1315,7 @@ pub(crate) async fn writeback_post_sync_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.writebackPostSync0()V")
 }
 
 #[async_recursion(?Send)]
@@ -1323,5 +1323,5 @@ pub(crate) async fn writeback_pre_sync_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.misc.Unsafe.writebackPreSync0()V")
 }

@@ -22,5 +22,5 @@ async fn read_system_properties_info(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.vm.ci.services.Services.readSystemPropertiesInfo([I)J")
 }

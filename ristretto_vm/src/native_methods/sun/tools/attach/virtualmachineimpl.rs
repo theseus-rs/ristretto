@@ -37,17 +37,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn check_permissions(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.tools.attach.VirtualMachineImpl.checkPermissions(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn close(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.tools.attach.VirtualMachineImpl.close(I)V")
 }
 
 #[async_recursion(?Send)]
 async fn connect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.tools.attach.VirtualMachineImpl.connect(ILjava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
@@ -55,30 +55,30 @@ async fn create_attach_file_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.tools.attach.VirtualMachineImpl.createAttachFile0(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_temp_dir(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.tools.attach.VirtualMachineImpl.getTempDir()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn read(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.tools.attach.VirtualMachineImpl.read(I[BII)I")
 }
 
 #[async_recursion(?Send)]
 async fn send_quit_to(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.tools.attach.VirtualMachineImpl.sendQuitTo(I)V")
 }
 
 #[async_recursion(?Send)]
 async fn socket(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.tools.attach.VirtualMachineImpl.socket()I")
 }
 
 #[async_recursion(?Send)]
 async fn write(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.tools.attach.VirtualMachineImpl.write(I[BII)V")
 }

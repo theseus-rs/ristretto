@@ -21,15 +21,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn force_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.nio.MappedByteBuffer.force0(Ljava/io/FileDescriptor;JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn is_loaded_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.nio.MappedByteBuffer.isLoaded0(JJI)Z")
 }
 
 #[async_recursion(?Send)]
 async fn load_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.nio.MappedByteBuffer.load0(JJ)V")
 }

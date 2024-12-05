@@ -64,17 +64,17 @@ async fn ns_key_modifiers_to_java_key_info(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.NSEvent.nsKeyModifiersToJavaKeyInfo([I[I)V")
 }
 
 #[async_recursion(?Send)]
 async fn ns_to_java_char(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.NSEvent.nsToJavaChar(CIZ)C")
 }
 
 #[async_recursion(?Send)]
 async fn ns_to_java_key_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.NSEvent.nsToJavaKeyInfo([I[I)Z")
 }
 
 #[async_recursion(?Send)]
@@ -82,7 +82,7 @@ async fn ns_to_java_key_modifiers(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.NSEvent.nsToJavaKeyModifiers(I)I")
 }
 
 #[async_recursion(?Send)]
@@ -90,7 +90,7 @@ async fn ns_to_java_modifiers(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.NSEvent.nsToJavaModifiers(I)I")
 }
 
 #[async_recursion(?Send)]
@@ -98,5 +98,5 @@ async fn ns_to_java_mouse_modifiers(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.NSEvent.nsToJavaMouseModifiers(II)I")
 }

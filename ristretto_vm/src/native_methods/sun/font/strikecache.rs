@@ -23,22 +23,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn free_int_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.StrikeCache.freeIntMemory([IJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn free_int_pointer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.StrikeCache.freeIntPointer(I)V")
 }
 
 #[async_recursion(?Send)]
 async fn free_long_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.StrikeCache.freeLongMemory([JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn free_long_pointer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.StrikeCache.freeLongPointer(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -46,5 +46,5 @@ async fn get_glyph_cache_description(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.StrikeCache.getGlyphCacheDescription([J)V")
 }

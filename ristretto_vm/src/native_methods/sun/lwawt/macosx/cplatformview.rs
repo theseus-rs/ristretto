@@ -43,7 +43,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn native_create_view(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPlatformView.nativeCreateView(IIIIJ)J")
 }
 
 #[async_recursion(?Send)]
@@ -51,7 +51,7 @@ async fn native_get_location_on_screen(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPlatformView.nativeGetLocationOnScreen(J)Ljava/awt/geom/Rectangle2D;")
 }
 
 #[async_recursion(?Send)]
@@ -59,7 +59,7 @@ async fn native_get_ns_view_display_id(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPlatformView.nativeGetNSViewDisplayID(J)I")
 }
 
 #[async_recursion(?Send)]
@@ -67,7 +67,7 @@ async fn native_is_view_under_mouse(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPlatformView.nativeIsViewUnderMouse(J)Z")
 }
 
 #[async_recursion(?Send)]
@@ -75,5 +75,5 @@ async fn native_set_auto_resizable(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPlatformView.nativeSetAutoResizable(JZ)V")
 }

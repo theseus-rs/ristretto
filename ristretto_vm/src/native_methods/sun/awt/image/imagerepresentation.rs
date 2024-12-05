@@ -20,7 +20,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         class_name,
         "setICMpixels",
         "(IIII[I[BIILsun/awt/image/IntegerComponentRaster;)Z",
-        set_ic_mpixels,
+        set_icm_pixels,
     );
 }
 
@@ -31,10 +31,10 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn set_diff_icm(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.awt.image.ImageRepresentation.setDiffICM(IIII[IIILjava/awt/image/IndexColorModel;[BIILsun/awt/image/ByteComponentRaster;I)Z")
 }
 
 #[async_recursion(?Send)]
-async fn set_ic_mpixels(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+async fn set_icm_pixels(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("sun.awt.image.ImageRepresentation.setICMpixels(IIII[I[BIILsun/awt/image/IntegerComponentRaster;)Z")
 }

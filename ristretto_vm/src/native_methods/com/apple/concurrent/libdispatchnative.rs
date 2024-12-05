@@ -58,7 +58,7 @@ async fn native_create_concurrent_queue(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.concurrent.LibDispatchNative.nativeCreateConcurrentQueue(I)J")
 }
 
 #[async_recursion(?Send)]
@@ -66,7 +66,7 @@ async fn native_create_serial_queue(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.concurrent.LibDispatchNative.nativeCreateSerialQueue(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
@@ -74,12 +74,12 @@ async fn native_execute_async(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.concurrent.LibDispatchNative.nativeExecuteAsync(JLjava/lang/Runnable;)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_execute_sync(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.concurrent.LibDispatchNative.nativeExecuteSync(JLjava/lang/Runnable;)V")
 }
 
 #[async_recursion(?Send)]
@@ -87,7 +87,7 @@ async fn native_get_main_queue(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.concurrent.LibDispatchNative.nativeGetMainQueue()J")
 }
 
 #[async_recursion(?Send)]
@@ -95,7 +95,7 @@ async fn native_is_dispatch_supported(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.concurrent.LibDispatchNative.nativeIsDispatchSupported()Z")
 }
 
 #[async_recursion(?Send)]
@@ -103,5 +103,5 @@ async fn native_release_queue(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.apple.concurrent.LibDispatchNative.nativeReleaseQueue(J)V")
 }

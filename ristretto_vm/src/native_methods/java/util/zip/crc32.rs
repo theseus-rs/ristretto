@@ -37,12 +37,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn update(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.CRC32.update(II)I")
 }
 
 #[async_recursion(?Send)]
 async fn update_byte_buffer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.CRC32.updateByteBuffer(IJII)I")
 }
 
 #[async_recursion(?Send)]
@@ -50,15 +50,15 @@ async fn update_byte_buffer_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.CRC32.updateByteBuffer0(IJII)I")
 }
 
 #[async_recursion(?Send)]
 async fn update_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.CRC32.updateBytes(I[BII)I")
 }
 
 #[async_recursion(?Send)]
 async fn update_bytes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.CRC32.updateBytes0(I[BII)I")
 }

@@ -15,7 +15,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn finalize_impl(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.awt.Cursor.finalizeImpl(J)V")
 }
 
 #[async_recursion(?Send)]

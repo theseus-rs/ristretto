@@ -23,10 +23,10 @@ async fn native_get_available_locales(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CInputMethodDescriptor.nativeGetAvailableLocales()Ljava/util/List;")
 }
 
 #[async_recursion(?Send)]
 async fn native_init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CInputMethodDescriptor.nativeInit()V")
 }

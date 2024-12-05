@@ -46,7 +46,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn class_depth(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.SecurityManager.classDepth(Ljava/lang/String;)I")
 }
 
 #[async_recursion(?Send)]
@@ -54,7 +54,7 @@ async fn class_loader_depth_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.SecurityManager.classLoaderDepth0()I")
 }
 
 #[async_recursion(?Send)]
@@ -62,7 +62,7 @@ async fn current_class_loader_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.SecurityManager.currentClassLoader0()Ljava/lang/ClassLoader;")
 }
 
 #[async_recursion(?Send)]
@@ -70,10 +70,10 @@ async fn current_loaded_class_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.SecurityManager.currentLoadedClass0()Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
 async fn get_class_context(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.SecurityManager.getClassContext()[Ljava/lang/Class;")
 }

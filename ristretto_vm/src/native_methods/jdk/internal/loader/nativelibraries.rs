@@ -51,5 +51,5 @@ async fn load(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 
 #[async_recursion(?Send)]
 async fn unload(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("jdk.internal.loader.NativeLibraries.unload(Ljava/lang/String;ZJ)V")
 }

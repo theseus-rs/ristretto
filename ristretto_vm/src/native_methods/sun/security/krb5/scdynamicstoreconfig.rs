@@ -40,7 +40,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn get_kerberos_config(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.krb5.SCDynamicStoreConfig.getKerberosConfig()Ljava/util/Hashtable;")
 }
 
 #[async_recursion(?Send)]
@@ -48,5 +48,5 @@ async fn install_notification_callback(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.krb5.SCDynamicStoreConfig.installNotificationCallback()V")
 }

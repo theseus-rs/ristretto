@@ -22,5 +22,5 @@ async fn get_meta_inf_entry_names(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.jar.JarFile.getMetaInfEntryNames()[Ljava/lang/String;")
 }

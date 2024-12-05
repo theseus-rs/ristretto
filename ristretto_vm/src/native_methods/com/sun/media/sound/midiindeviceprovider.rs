@@ -33,25 +33,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn n_get_description(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiInDeviceProvider.nGetDescription(I)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn n_get_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiInDeviceProvider.nGetName(I)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn n_get_num_devices(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiInDeviceProvider.nGetNumDevices()I")
 }
 
 #[async_recursion(?Send)]
 async fn n_get_vendor(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiInDeviceProvider.nGetVendor(I)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn n_get_version(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiInDeviceProvider.nGetVersion(I)Ljava/lang/String;")
 }

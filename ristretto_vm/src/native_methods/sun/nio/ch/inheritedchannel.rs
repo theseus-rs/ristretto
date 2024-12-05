@@ -48,27 +48,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn address_family(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.InheritedChannel.addressFamily(I)I");
 }
 
 #[async_recursion(?Send)]
 async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.InheritedChannel.close0(I)V");
 }
 
 #[async_recursion(?Send)]
 async fn dup(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.InheritedChannel.dup(I)I");
 }
 
 #[async_recursion(?Send)]
 async fn dup_2(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.InheritedChannel.dup2(II)V");
 }
 
 #[async_recursion(?Send)]
 async fn inet_peer_address_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.InheritedChannel.inetPeerAddress0(I)Ljava/net/InetAddress;");
 }
 
 #[async_recursion(?Send)]
@@ -78,30 +78,30 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn is_connected(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.InheritedChannel.isConnected(I)Z");
 }
 
 #[async_recursion(?Send)]
 async fn open_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.InheritedChannel.open0(Ljava/lang/String;I)I");
 }
 
 #[async_recursion(?Send)]
 async fn peer_address_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.InheritedChannel.peerAddress0(I)Ljava/net/InetAddress;");
 }
 
 #[async_recursion(?Send)]
 async fn peer_port_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.InheritedChannel.peerPort0(I)I");
 }
 
 #[async_recursion(?Send)]
 async fn so_type_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.InheritedChannel.soType0(I)I");
 }
 
 #[async_recursion(?Send)]
 async fn unix_peer_address_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.InheritedChannel.unixPeerAddress0(I)[B");
 }

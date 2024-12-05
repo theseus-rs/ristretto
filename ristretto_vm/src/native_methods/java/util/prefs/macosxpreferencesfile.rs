@@ -77,37 +77,37 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn add_child_to_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.addChildToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn add_key_to_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.addKeyToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn add_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.addNode(Ljava/lang/String;Ljava/lang/String;JJ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn any_host(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.anyHost()J")
 }
 
 #[async_recursion(?Send)]
 async fn any_user(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.anyUser()J")
 }
 
 #[async_recursion(?Send)]
 async fn current_host(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.currentHost()J")
 }
 
 #[async_recursion(?Send)]
 async fn current_user(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.currentUser()J")
 }
 
 #[async_recursion(?Send)]
@@ -115,17 +115,17 @@ async fn get_children_for_node(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.getChildrenForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_key_from_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.getKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_keys_for_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.getKeysForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -133,7 +133,7 @@ async fn remove_child_from_node(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.removeChildFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V")
 }
 
 #[async_recursion(?Send)]
@@ -141,15 +141,17 @@ async fn remove_key_from_node(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.removeKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn remove_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!(
+        "java.util.prefs.MacOSXPreferencesFile.removeNode(Ljava/lang/String;Ljava/lang/String;JJ)V"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn synchronize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.MacOSXPreferencesFile.synchronize(Ljava/lang/String;JJ)Z")
 }

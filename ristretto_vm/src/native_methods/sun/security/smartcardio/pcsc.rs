@@ -56,22 +56,22 @@ async fn s_card_begin_transaction(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.smartcardio.PCSC.SCardBeginTransaction(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn s_card_connect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.smartcardio.PCSC.SCardConnect(JLjava/lang/String;II)J")
 }
 
 #[async_recursion(?Send)]
 async fn s_card_control(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.smartcardio.PCSC.SCardControl(JI[B)[B")
 }
 
 #[async_recursion(?Send)]
 async fn s_card_disconnect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.smartcardio.PCSC.SCardDisconnect(JI)V")
 }
 
 #[async_recursion(?Send)]
@@ -79,7 +79,7 @@ async fn s_card_end_transaction(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.smartcardio.PCSC.SCardEndTransaction(JI)V")
 }
 
 #[async_recursion(?Send)]
@@ -87,7 +87,7 @@ async fn s_card_establish_context(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.smartcardio.PCSC.SCardEstablishContext(I)J")
 }
 
 #[async_recursion(?Send)]
@@ -95,20 +95,20 @@ async fn s_card_get_status_change(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.smartcardio.PCSC.SCardGetStatusChange(JJ[I[Ljava/lang/String;)[I")
 }
 
 #[async_recursion(?Send)]
 async fn s_card_list_readers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.smartcardio.PCSC.SCardListReaders(J)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn s_card_status(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.smartcardio.PCSC.SCardStatus(J[B)[B")
 }
 
 #[async_recursion(?Send)]
 async fn s_card_transmit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.smartcardio.PCSC.SCardTransmit(JI[BII)[B")
 }

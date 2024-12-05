@@ -59,12 +59,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn create_native_font(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CFont.createNativeFont(Ljava/lang/String;I)J")
 }
 
 #[async_recursion(?Send)]
 async fn dispose_native_font(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CFont.disposeNativeFont(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -72,12 +72,12 @@ async fn get_cg_font_ptr_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CFont.getCGFontPtrNative(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_cascade_list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CFont.getCascadeList(JLjava/util/ArrayList;)V")
 }
 
 #[async_recursion(?Send)]
@@ -85,7 +85,7 @@ async fn get_layout_table_cache_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CFont.getLayoutTableCacheNative(J)J")
 }
 
 #[async_recursion(?Send)]
@@ -93,15 +93,15 @@ async fn get_table_bytes_native(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CFont.getTableBytesNative(JI)[B")
 }
 
 #[async_recursion(?Send)]
 async fn get_weight_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CFont.getWeightNative(J)F")
 }
 
 #[async_recursion(?Send)]
 async fn get_width_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.font.CFont.getWidthNative(J)F")
 }

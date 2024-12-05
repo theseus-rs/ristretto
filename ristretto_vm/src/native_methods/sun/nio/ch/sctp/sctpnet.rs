@@ -76,22 +76,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn bindx(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.bindx(I[Ljava/net/InetAddress;IIZZ)V")
 }
 
 #[async_recursion(?Send)]
 async fn branch_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.branch0(II)I")
 }
 
 #[async_recursion(?Send)]
 async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.close0(I)V")
 }
 
 #[async_recursion(?Send)]
 async fn connect_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.connect0(ILjava/net/InetAddress;I)I")
 }
 
 #[async_recursion(?Send)]
@@ -99,12 +99,12 @@ async fn get_init_msg_option_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.getInitMsgOption0(I[I)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_int_option_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.getIntOption0(II)I")
 }
 
 #[async_recursion(?Send)]
@@ -112,7 +112,7 @@ async fn get_local_addresses_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.getLocalAddresses0(I)[Ljava/net/SocketAddress;")
 }
 
 #[async_recursion(?Send)]
@@ -120,7 +120,7 @@ async fn get_prim_addr_option_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.getPrimAddrOption0(II)Ljava/net/SocketAddress;")
 }
 
 #[async_recursion(?Send)]
@@ -128,22 +128,22 @@ async fn get_remote_addresses_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.getRemoteAddresses0(II)[Ljava/net/SocketAddress;")
 }
 
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn listen_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.listen0(II)V")
 }
 
 #[async_recursion(?Send)]
 async fn pre_close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.preClose0(I)V")
 }
 
 #[async_recursion(?Send)]
@@ -151,12 +151,12 @@ async fn set_init_msg_option_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.setInitMsgOption0(III)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_int_option_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.setIntOption0(III)V")
 }
 
 #[async_recursion(?Send)]
@@ -164,7 +164,7 @@ async fn set_peer_prim_addr_option_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.setPeerPrimAddrOption0(IILjava/net/InetAddress;IZ)V")
 }
 
 #[async_recursion(?Send)]
@@ -172,15 +172,15 @@ async fn set_prim_addr_option_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.setPrimAddrOption0(IILjava/net/InetAddress;I)V")
 }
 
 #[async_recursion(?Send)]
 async fn shutdown_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.shutdown0(II)V")
 }
 
 #[async_recursion(?Send)]
 async fn socket_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.ch.sctp.SctpNet.socket0(Z)I")
 }

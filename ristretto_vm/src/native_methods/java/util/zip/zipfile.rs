@@ -37,77 +37,77 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn close(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.close(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn free_entry(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.freeEntry(JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_comment_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getCommentBytes(J)[B")
 }
 
 #[async_recursion(?Send)]
 async fn get_entry(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getEntry(J[BZ)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_entry_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getEntryBytes(JI)[B")
 }
 
 #[async_recursion(?Send)]
 async fn get_entry_c_size(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getEntryCSize(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_entry_crc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getEntryCrc(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_entry_flag(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getEntryFlag(J)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_entry_method(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getEntryMethod(J)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_entry_size(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getEntrySize(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_entry_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getEntryTime(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_manifest_num(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getManifestNum(J)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_next_entry(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getNextEntry(JI)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_total(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getTotal(J)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_zip_message(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.getZipMessage(J)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
@@ -117,15 +117,15 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn open(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.open(Ljava/lang/String;IJZ)J")
 }
 
 #[async_recursion(?Send)]
 async fn read(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.read(JJJ[BII)I")
 }
 
 #[async_recursion(?Send)]
 async fn starts_with_loc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.ZipFile.startsWithLOC(J)Z")
 }

@@ -39,22 +39,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn create_context_from(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.applescript.AppleScriptEngine.createContextFrom(Ljava/lang/Object;)J")
 }
 
 #[async_recursion(?Send)]
 async fn create_object_from(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.applescript.AppleScriptEngine.createObjectFrom(J)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn dispose_context(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.applescript.AppleScriptEngine.disposeContext(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn eval_script(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.applescript.AppleScriptEngine.evalScript(Ljava/lang/String;J)J")
 }
 
 #[async_recursion(?Send)]
@@ -62,7 +62,7 @@ async fn eval_script_from_url(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.applescript.AppleScriptEngine.evalScriptFromURL(Ljava/lang/String;J)J")
 }
 
 #[async_recursion(?Send)]

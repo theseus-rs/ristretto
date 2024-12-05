@@ -23,10 +23,10 @@ async fn native_create_component(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPlatformComponent.nativeCreateComponent(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn native_set_bounds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CPlatformComponent.nativeSetBounds(JIIII)V")
 }

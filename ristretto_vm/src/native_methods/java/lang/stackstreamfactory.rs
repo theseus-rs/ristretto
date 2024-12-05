@@ -22,5 +22,5 @@ async fn check_stack_walk_modes(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StackStreamFactory.checkStackWalkModes()Z")
 }

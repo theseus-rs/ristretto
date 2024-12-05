@@ -28,22 +28,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn n_close(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiOutDevice.nClose(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn n_get_time_stamp(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiOutDevice.nGetTimeStamp(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn n_open(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiOutDevice.nOpen(I)J")
 }
 
 #[async_recursion(?Send)]
 async fn n_send_long_message(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiOutDevice.nSendLongMessage(J[BIJ)V")
 }
 
 #[async_recursion(?Send)]
@@ -51,5 +51,5 @@ async fn n_send_short_message(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiOutDevice.nSendShortMessage(JIJ)V")
 }

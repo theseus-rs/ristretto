@@ -119,92 +119,92 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn access_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.access0(JI)I");
 }
 
 #[async_recursion(?Send)]
 async fn chmod_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.chmod0(JI)V");
 }
 
 #[async_recursion(?Send)]
 async fn chown_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.chown0(JII)V");
 }
 
 #[async_recursion(?Send)]
 async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.close0(I)V");
 }
 
 #[async_recursion(?Send)]
 async fn closedir(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.closedir(J)V");
 }
 
 #[async_recursion(?Send)]
 async fn dup(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.dup(I)I");
 }
 
 #[async_recursion(?Send)]
 async fn exists_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.exists0(J)Z");
 }
 
 #[async_recursion(?Send)]
 async fn fchmod_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.fchmod0(II)V");
 }
 
 #[async_recursion(?Send)]
 async fn fchown_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.fchown0(III)V");
 }
 
 #[async_recursion(?Send)]
 async fn fdopendir(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.fdopendir(I)J");
 }
 
 #[async_recursion(?Send)]
 async fn fgetxattr_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.fgetxattr0(IJJI)I");
 }
 
 #[async_recursion(?Send)]
 async fn flistxattr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.flistxattr(IJI)I");
 }
 
 #[async_recursion(?Send)]
 async fn fremovexattr_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.fremovexattr0(IJ)V");
 }
 
 #[async_recursion(?Send)]
 async fn fsetxattr_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.fsetxattr0(IJJI)V");
 }
 
 #[async_recursion(?Send)]
 async fn fstat_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.fstat0(ILsun/nio/fs/UnixFileAttributes;)V");
 }
 
 #[async_recursion(?Send)]
 async fn fstatat_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.fstatat0(IJILsun/nio/fs/UnixFileAttributes;)V");
 }
 
 #[async_recursion(?Send)]
 async fn futimens_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.futimens0(IJJ)V");
 }
 
 #[async_recursion(?Send)]
 async fn futimes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.futimes0(IJJ)V");
 }
 
 #[expect(clippy::cast_possible_wrap)]
@@ -226,27 +226,27 @@ async fn getcwd(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 
 #[async_recursion(?Send)]
 async fn getgrgid(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.getgrgid(I)[B");
 }
 
 #[async_recursion(?Send)]
 async fn getgrnam_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.getgrnam0(J)I");
 }
 
 #[async_recursion(?Send)]
 async fn getlinelen(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.getlinelen(J)I");
 }
 
 #[async_recursion(?Send)]
 async fn getpwnam_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.getpwnam0(J)I");
 }
 
 #[async_recursion(?Send)]
 async fn getpwuid(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.getpwuid(I)[B");
 }
 
 #[async_recursion(?Send)]
@@ -259,87 +259,87 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 
 #[async_recursion(?Send)]
 async fn lchown_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.lchown0(JII)V");
 }
 
 #[async_recursion(?Send)]
 async fn link_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.link0(JJ)V");
 }
 
 #[async_recursion(?Send)]
 async fn lstat_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.lstat0(JLsun/nio/fs/UnixFileAttributes;)V");
 }
 
 #[async_recursion(?Send)]
 async fn lutimes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.lutimes0(JJJ)V");
 }
 
 #[async_recursion(?Send)]
 async fn mkdir_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.mkdir0(JI)V");
 }
 
 #[async_recursion(?Send)]
 async fn mknod_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.mknod0(JIJ)V");
 }
 
 #[async_recursion(?Send)]
 async fn open_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.open0(JII)I");
 }
 
 #[async_recursion(?Send)]
 async fn openat_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.openat0(IJII)I");
 }
 
 #[async_recursion(?Send)]
 async fn opendir_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.opendir0(J)J");
 }
 
 #[async_recursion(?Send)]
 async fn read_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.read0(IJI)I");
 }
 
 #[async_recursion(?Send)]
 async fn readdir_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.readdir0(J)[B");
 }
 
 #[async_recursion(?Send)]
 async fn readlink_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.readlink0(J)[B");
 }
 
 #[async_recursion(?Send)]
 async fn realpath_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.realpath0(J)[B");
 }
 
 #[async_recursion(?Send)]
 async fn rename_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.rename0(JJ)V");
 }
 
 #[async_recursion(?Send)]
 async fn renameat_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.renameat0(IJIJ)V");
 }
 
 #[async_recursion(?Send)]
 async fn rewind(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.rewind(J)V");
 }
 
 #[async_recursion(?Send)]
 async fn rmdir_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.rmdir0(J)V");
 }
 
 #[async_recursion(?Send)]
@@ -355,35 +355,35 @@ async fn stat_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option
 
 #[async_recursion(?Send)]
 async fn statvfs_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.statvfs0(JLsun/nio/fs/UnixFileStoreAttributes;)V");
 }
 
 #[async_recursion(?Send)]
 async fn strerror(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.strerror(I)[B");
 }
 
 #[async_recursion(?Send)]
 async fn symlink_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.symlink0(JJ)V");
 }
 
 #[async_recursion(?Send)]
 async fn unlink_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.unlink0(J)V");
 }
 
 #[async_recursion(?Send)]
 async fn unlinkat_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.unlinkat0(IJI)V");
 }
 
 #[async_recursion(?Send)]
 async fn utimes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.utimes0(JJJ)V");
 }
 
 #[async_recursion(?Send)]
 async fn write_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.UnixNativeDispatcher.write0(IJI)I");
 }

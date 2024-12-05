@@ -57,17 +57,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn menu_closed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.menuClosed(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn menu_item_selected(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.menuItemSelected(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn menu_opened(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.menuOpened(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -75,7 +75,7 @@ async fn selected_cells_changed(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.selectedCellsChanged(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -83,12 +83,12 @@ async fn selected_text_changed(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.selectedTextChanged(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn selection_changed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.selectionChanged(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -96,22 +96,22 @@ async fn table_content_cache_clear(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.tableContentCacheClear(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn title_changed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.titleChanged(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn tree_node_collapsed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.treeNodeCollapsed(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn tree_node_expanded(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.treeNodeExpanded(J)V")
 }
 
 #[async_recursion(?Send)]
@@ -119,10 +119,10 @@ async fn unregister_from_cocoa_ax_system(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.unregisterFromCocoaAXSystem(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn value_changed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CAccessible.valueChanged(J)V")
 }

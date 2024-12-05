@@ -27,25 +27,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn find(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ClassLoader$NativeLibrary.find(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
 async fn find_entry(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ClassLoader$NativeLibrary.findEntry(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
 async fn load(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ClassLoader$NativeLibrary.load(Ljava/lang/String;Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn load_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ClassLoader$NativeLibrary.load0(Ljava/lang/String;ZZ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn unload(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ClassLoader$NativeLibrary.unload(Ljava/lang/String;ZJ)V")
 }

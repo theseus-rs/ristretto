@@ -22,5 +22,5 @@ async fn expand_stack_frame_info(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.StackFrameInfo.expandStackFrameInfo()V")
 }

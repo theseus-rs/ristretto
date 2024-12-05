@@ -28,7 +28,7 @@ async fn create_native_drop_target(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J")
 }
 
 #[async_recursion(?Send)]
@@ -36,5 +36,5 @@ async fn release_native_drop_target(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CDropTarget.releaseNativeDropTarget(J)V")
 }

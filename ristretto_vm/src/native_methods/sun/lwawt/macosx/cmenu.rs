@@ -45,12 +45,12 @@ async fn native_add_separator(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenu.nativeAddSeparator(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_create_menu(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenu.nativeCreateMenu(JZI)J")
 }
 
 #[async_recursion(?Send)]
@@ -58,17 +58,17 @@ async fn native_create_sub_menu(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenu.nativeCreateSubMenu(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn native_delete_item(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenu.nativeDeleteItem(JI)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_get_ns_menu(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenu.nativeGetNSMenu(J)J")
 }
 
 #[async_recursion(?Send)]
@@ -76,5 +76,5 @@ async fn native_set_menu_title(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CMenu.nativeSetMenuTitle(JLjava/lang/String;)V")
 }

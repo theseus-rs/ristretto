@@ -30,17 +30,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn destroy_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ProcessHandleImpl.destroy0(JJZ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn get_current_pid_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ProcessHandleImpl.getCurrentPid0()J")
 }
 
 #[async_recursion(?Send)]
 async fn get_process_pids_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ProcessHandleImpl.getProcessPids0(J[J[J[J)I")
 }
 
 #[async_recursion(?Send)]
@@ -50,12 +50,12 @@ async fn init_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 
 #[async_recursion(?Send)]
 async fn is_alive_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ProcessHandleImpl.isAlive0(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn parent_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ProcessHandleImpl.parent0(JJ)J")
 }
 
 #[async_recursion(?Send)]
@@ -63,5 +63,5 @@ async fn wait_for_process_exit_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.ProcessHandleImpl.waitForProcessExit0(JZ)I")
 }

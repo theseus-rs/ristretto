@@ -21,15 +21,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn update(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Adler32.update(II)I")
 }
 
 #[async_recursion(?Send)]
 async fn update_byte_buffer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Adler32.updateByteBuffer(IJII)I")
 }
 
 #[async_recursion(?Send)]
 async fn update_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.zip.Adler32.updateBytes(I[BII)I")
 }

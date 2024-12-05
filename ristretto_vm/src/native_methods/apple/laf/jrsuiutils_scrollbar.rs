@@ -22,5 +22,5 @@ async fn should_use_scroll_to_click(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("apple.laf.JRSUIUtils$ScrollBar.shouldUseScrollToClick()Z")
 }

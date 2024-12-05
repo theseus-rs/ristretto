@@ -22,5 +22,5 @@ async fn get_windows_directory(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.krb5.Config.getWindowsDirectory(Z)Ljava/lang/String;")
 }

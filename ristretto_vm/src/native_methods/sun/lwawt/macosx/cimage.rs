@@ -94,7 +94,7 @@ async fn native_copy_ns_image_into_array(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeCopyNSImageIntoArray(J[IIIII)V")
 }
 
 #[async_recursion(?Send)]
@@ -102,7 +102,7 @@ async fn native_create_ns_image_from_array(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromArray([III)J")
 }
 
 #[async_recursion(?Send)]
@@ -110,7 +110,7 @@ async fn native_create_ns_image_from_arrays(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromArrays([[I[I[I)J")
 }
 
 #[async_recursion(?Send)]
@@ -118,7 +118,7 @@ async fn native_create_ns_image_from_bytes(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromBytes([B)J")
 }
 
 #[async_recursion(?Send)]
@@ -126,7 +126,7 @@ async fn native_create_ns_image_from_file_contents(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromFileContents(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
@@ -134,7 +134,7 @@ async fn native_create_ns_image_from_icon_selector(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromIconSelector(I)J")
 }
 
 #[async_recursion(?Send)]
@@ -142,7 +142,7 @@ async fn native_create_ns_image_from_image_name(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromImageName(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
@@ -150,7 +150,9 @@ async fn native_create_ns_image_of_file_from_launch_services(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!(
+        "sun.lwawt.macosx.CImage.nativeCreateNSImageOfFileFromLaunchServices(Ljava/lang/String;)J"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -158,7 +160,7 @@ async fn native_get_ns_image_representation_sizes(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeGetNSImageRepresentationSizes(JDD)[Ljava/awt/geom/Dimension2D;")
 }
 
 #[async_recursion(?Send)]
@@ -166,7 +168,7 @@ async fn native_get_ns_image_size(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeGetNSImageSize(J)Ljava/awt/geom/Dimension2D;")
 }
 
 #[async_recursion(?Send)]
@@ -174,7 +176,7 @@ async fn native_get_platform_image_bytes(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeGetPlatformImageBytes([III)[B")
 }
 
 #[async_recursion(?Send)]
@@ -182,7 +184,7 @@ async fn native_resize_ns_image_representations(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeResizeNSImageRepresentations(JDD)V")
 }
 
 #[async_recursion(?Send)]
@@ -190,5 +192,5 @@ async fn native_set_ns_image_size(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.CImage.nativeSetNSImageSize(JDD)V")
 }

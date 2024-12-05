@@ -23,10 +23,10 @@ async fn generate_ec_key_pair(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.ec.ECKeyPairGenerator.generateECKeyPair(I[B[B)[Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn is_curve_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.security.ec.ECKeyPairGenerator.isCurveSupported([B)Z")
 }

@@ -21,15 +21,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn find_signal(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Signal.findSignal(Ljava/lang/String;)I")
 }
 
 #[async_recursion(?Send)]
 async fn handle_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Signal.handle0(IJ)J")
 }
 
 #[async_recursion(?Send)]
 async fn raise_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.misc.Signal.raise0(I)V")
 }

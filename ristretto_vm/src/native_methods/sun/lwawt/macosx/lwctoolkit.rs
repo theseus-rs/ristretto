@@ -86,12 +86,12 @@ async fn activate_application_ignoring_other_apps(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.activateApplicationIgnoringOtherApps()V")
 }
 
 #[async_recursion(?Send)]
 async fn beep(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.beep()V")
 }
 
 #[async_recursion(?Send)]
@@ -99,7 +99,7 @@ async fn create_awt_run_loop_mediator(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.createAWTRunLoopMediator()J")
 }
 
 #[async_recursion(?Send)]
@@ -107,7 +107,7 @@ async fn do_awt_run_loop_impl(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.doAWTRunLoopImpl(JZZ)V")
 }
 
 #[async_recursion(?Send)]
@@ -115,7 +115,7 @@ async fn flush_native_selectors(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.flushNativeSelectors()V")
 }
 
 #[async_recursion(?Send)]
@@ -123,12 +123,12 @@ async fn get_multi_click_time(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.getMultiClickTime()I")
 }
 
 #[async_recursion(?Send)]
 async fn init_appkit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.initAppkit(Ljava/lang/ThreadGroup;Z)V")
 }
 
 #[async_recursion(?Send)]
@@ -141,32 +141,32 @@ async fn is_application_active(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.isApplicationActive()Z")
 }
 
 #[async_recursion(?Send)]
 async fn is_caps_lock_on(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.isCapsLockOn()Z")
 }
 
 #[async_recursion(?Send)]
 async fn is_embedded(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.isEmbedded()Z")
 }
 
 #[async_recursion(?Send)]
 async fn is_in_aqua_session(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.isInAquaSession()Z")
 }
 
 #[async_recursion(?Send)]
 async fn load_native_colors(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.loadNativeColors([I[I)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_sync_queue(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.nativeSyncQueue(J)Z")
 }
 
 #[async_recursion(?Send)]
@@ -174,10 +174,10 @@ async fn perform_on_main_thread_after_delay(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.performOnMainThreadAfterDelay(Ljava/lang/Runnable;J)V")
 }
 
 #[async_recursion(?Send)]
 async fn stop_awt_run_loop(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.lwawt.macosx.LWCToolkit.stopAWTRunLoop(J)V")
 }

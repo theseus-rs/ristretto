@@ -38,32 +38,32 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn clonefile_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.BsdNativeDispatcher.clonefile0(JJI)I");
 }
 
 #[async_recursion(?Send)]
 async fn endfsstat(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.BsdNativeDispatcher.endfsstat(J)V");
 }
 
 #[async_recursion(?Send)]
 async fn fsetattrlist_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.BsdNativeDispatcher.fsetattrlist0(IIJJJJ)V");
 }
 
 #[async_recursion(?Send)]
 async fn fsstat_entry(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.BsdNativeDispatcher.fsstatEntry(JLsun/nio/fs/UnixMountEntry;)I");
 }
 
 #[async_recursion(?Send)]
 async fn getfsstat(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.BsdNativeDispatcher.getfsstat()J");
 }
 
 #[async_recursion(?Send)]
 async fn getmntonname_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.BsdNativeDispatcher.getmntonname0(J)[B");
 }
 
 #[async_recursion(?Send)]
@@ -73,5 +73,5 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn setattrlist_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("sun.nio.fs.BsdNativeDispatcher.setattrlist0(JIJJJJ)V");
 }

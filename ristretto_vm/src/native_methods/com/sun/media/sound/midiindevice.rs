@@ -19,30 +19,30 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn n_close(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiInDevice.nClose(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn n_get_messages(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiInDevice.nGetMessages(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn n_get_time_stamp(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiInDevice.nGetTimeStamp(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn n_open(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiInDevice.nOpen(I)J")
 }
 
 #[async_recursion(?Send)]
 async fn n_start(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiInDevice.nStart(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn n_stop(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("com.sun.media.sound.MidiInDevice.nStop(J)V")
 }

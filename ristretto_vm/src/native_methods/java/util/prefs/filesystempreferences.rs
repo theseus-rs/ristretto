@@ -21,15 +21,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn chmod(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.FileSystemPreferences.chmod(Ljava/lang/String;I)I")
 }
 
 #[async_recursion(?Send)]
 async fn lock_file_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.FileSystemPreferences.lockFile0(Ljava/lang/String;IZ)[I")
 }
 
 #[async_recursion(?Send)]
 async fn unlock_file_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.util.prefs.FileSystemPreferences.unlockFile0(I)I")
 }

@@ -118,7 +118,7 @@ async fn get_inherited_access_control_context(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.security.AccessController.getInheritedAccessControlContext()Ljava/security/AccessControlContext;")
 }
 
 #[async_recursion(?Send)]
@@ -126,7 +126,7 @@ async fn get_protection_domain(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.security.AccessController.getProtectionDomain(Ljava/lang/Class;)Ljava/security/ProtectionDomain;")
 }
 
 #[async_recursion(?Send)]
