@@ -13,6 +13,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn intern(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.lang.String.intern()Ljava/lang/String;")
+async fn intern(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let value = arguments.pop()?;
+    // TODO: implement proper string interning
+    Ok(Some(value))
 }
