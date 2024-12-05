@@ -939,7 +939,7 @@ pub(crate) async fn object_field_offset_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.objectFieldOffset0(Ljava/lang/reflect/Field;)J")
+    Ok(Some(Value::Long(0)))
 }
 
 #[async_recursion(?Send)]
