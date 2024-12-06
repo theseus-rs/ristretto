@@ -13,6 +13,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn is_preview_enabled(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(Some(Value::from(false)))
+async fn is_preview_enabled(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    let vm = thread.vm()?;
+    let configuration = vm.configuration();
+    let preview_features = configuration.preview_features();
+    Ok(Some(Value::from(preview_features)))
 }
