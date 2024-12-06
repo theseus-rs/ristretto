@@ -300,12 +300,26 @@ impl Attribute {
                 let mut exception_table = Vec::with_capacity(exception_length as usize);
                 for _ in 0..exception_length {
                     let mut exception = ExceptionTableEntry::from_bytes(bytes)?;
-                    // Convert the byte offset to instruction offset
-                    let byte_pc = exception.handler_pc;
-                    let instruction_pc = *byte_to_instruction_map
-                        .get(&byte_pc)
-                        .ok_or(InvalidInstructionOffset(u32::from(byte_pc)))?;
-                    exception.handler_pc = instruction_pc;
+
+                    // Convert the byte offsets to instruction offsets
+                    let start_pc = exception.range_pc.start;
+                    let start_pc = *byte_to_instruction_map
+                        .get(&start_pc)
+                        .ok_or(InvalidInstructionOffset(u32::from(start_pc)))?;
+
+                    let end_pc = exception.range_pc.end;
+                    let end_pc = *byte_to_instruction_map
+                        .get(&end_pc)
+                        .ok_or(InvalidInstructionOffset(u32::from(end_pc)))?;
+
+                    let handler_pc = exception.handler_pc;
+                    let handler_pc = *byte_to_instruction_map
+                        .get(&handler_pc)
+                        .ok_or(InvalidInstructionOffset(u32::from(handler_pc)))?;
+
+                    // Set the instruction offsets
+                    exception.range_pc = start_pc..end_pc;
+                    exception.handler_pc = handler_pc;
                     exception_table.push(exception);
                 }
                 let attributes_count = bytes.read_u16::<BigEndian>()?;
@@ -713,13 +727,26 @@ impl Attribute {
 
                 let exceptions_length = u16::try_from(exception_table.len())?;
                 bytes.write_u16::<BigEndian>(exceptions_length)?;
-                for exception in &mut exception_table.clone() {
+                for mut exception in exception_table.clone() {
                     // Convert the instruction offset to byte offset
-                    let instruction_pc = exception.handler_pc;
-                    let byte_pc = instruction_to_byte_map
-                        .get(&instruction_pc)
-                        .ok_or(InvalidInstructionOffset(u32::from(instruction_pc)))?;
-                    exception.handler_pc = *byte_pc;
+                    let start_pc = exception.range_pc.start;
+                    let start_pc = *instruction_to_byte_map
+                        .get(&start_pc)
+                        .ok_or(InvalidInstructionOffset(u32::from(start_pc)))?;
+
+                    let end_pc = exception.range_pc.end;
+                    let end_pc = *instruction_to_byte_map
+                        .get(&end_pc)
+                        .ok_or(InvalidInstructionOffset(u32::from(end_pc)))?;
+
+                    let handler_pc = exception.handler_pc;
+                    let handler_pc = *instruction_to_byte_map
+                        .get(&handler_pc)
+                        .ok_or(InvalidInstructionOffset(u32::from(handler_pc)))?;
+
+                    // Set the byte offsets
+                    exception.range_pc = start_pc..end_pc;
+                    exception.handler_pc = handler_pc;
                     exception.to_bytes(&mut bytes)?;
                 }
 
@@ -1250,7 +1277,7 @@ mod test {
             }],
         };
         let exception_table_entry = ExceptionTableEntry {
-            range_pc: 1..2,
+            range_pc: 0..1,
             handler_pc: 0,
             catch_type: 4,
         };
@@ -1258,19 +1285,20 @@ mod test {
             name_index: 1,
             max_stack: 2,
             max_locals: 3,
-            code: vec![Instruction::Iconst_1],
+            code: vec![Instruction::Iconst_1, Instruction::Ireturn],
             exception_table: vec![exception_table_entry],
             attributes: vec![constant.clone(), line_number_table.clone()],
         };
         let expected_bytes = [
-            0, 1, 0, 0, 0, 41, 0, 2, 0, 3, 0, 0, 0, 1, 4, 0, 1, 0, 1, 0, 2, 0, 0, 0, 4, 0, 2, 0, 2,
-            0, 0, 0, 2, 0, 42, 0, 3, 0, 0, 0, 6, 0, 1, 0, 0, 0, 1,
+            0, 1, 0, 0, 0, 42, 0, 2, 0, 3, 0, 0, 0, 2, 4, 172, 0, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 2,
+            0, 2, 0, 0, 0, 2, 0, 42, 0, 3, 0, 0, 0, 6, 0, 1, 0, 0, 0, 1,
         ];
         let expected = indoc! {"
             Code:
               stack=2, locals=3
                  0: iconst_1
-              [ExceptionTableEntry { range_pc: 1..2, handler_pc: 0, catch_type: 4 }]
+                 1: ireturn
+              [ExceptionTableEntry { range_pc: 0..1, handler_pc: 0, catch_type: 4 }]
               ConstantValue { name_index: 2, constant_value_index: 42 }
               LineNumberTable:
                 line 1: 0
