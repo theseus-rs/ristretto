@@ -14,6 +14,7 @@ pub struct Configuration {
     java_home: Option<PathBuf>,
     java_version: Option<String>,
     system_properties: HashMap<String, String>,
+    preview_features: bool,
 }
 
 /// Configuration
@@ -53,6 +54,12 @@ impl Configuration {
     pub fn system_properties(&self) -> &HashMap<String, String> {
         &self.system_properties
     }
+
+    /// Get the preview features flag
+    #[must_use]
+    pub fn preview_features(&self) -> bool {
+        self.preview_features
+    }
 }
 
 /// Configuration builder
@@ -64,6 +71,7 @@ pub struct ConfigurationBuilder {
     java_home: Option<PathBuf>,
     java_version: Option<String>,
     system_properties: HashMap<String, String>,
+    preview_features: bool,
 }
 
 /// Configuration builder
@@ -78,6 +86,7 @@ impl ConfigurationBuilder {
             java_home: None,
             java_version: None,
             system_properties: HashMap::new(),
+            preview_features: false,
         }
     }
 
@@ -136,6 +145,13 @@ impl ConfigurationBuilder {
         self
     }
 
+    /// Enable preview features
+    #[must_use]
+    pub fn preview_features(mut self) -> Self {
+        self.preview_features = true;
+        self
+    }
+
     /// Build the configuration
     ///
     /// # Errors
@@ -168,6 +184,7 @@ impl ConfigurationBuilder {
             java_home,
             java_version,
             system_properties: self.system_properties,
+            preview_features: self.preview_features,
         })
     }
 }
@@ -191,11 +208,13 @@ mod tests {
             .main_class("Foo")
             .jar(PathBuf::from("test.jar"))
             .java_version("21")
+            .preview_features()
             .build()?;
         assert_eq!(&ClassPath::from(".."), configuration.class_path());
         assert_eq!(Some(&"Foo".to_string()), configuration.main_class());
         assert_eq!(Some(&PathBuf::from("test.jar")), configuration.jar());
         assert_eq!(Some(&"21".to_string()), configuration.java_version());
+        assert!(configuration.preview_features());
         Ok(())
     }
 
@@ -203,10 +222,14 @@ mod tests {
     fn test_configuration_builder_new() -> Result<()> {
         let configuration = ConfigurationBuilder::new().build()?;
         assert_eq!(&ClassPath::from("."), configuration.class_path());
+        assert!(configuration.main_class().is_none());
+        assert!(configuration.jar().is_none());
         assert_eq!(
             Some(&DEFAULT_JAVA_VERSION.to_string()),
             configuration.java_version()
         );
+        assert!(configuration.system_properties().is_empty());
+        assert!(!configuration.preview_features());
         Ok(())
     }
 

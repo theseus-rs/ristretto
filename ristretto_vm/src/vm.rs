@@ -5,7 +5,7 @@ use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::{Configuration, ConfigurationBuilder, Result};
 use dashmap::DashMap;
-use ristretto_classfile::Version;
+use ristretto_classfile::{Version, JAVA_PREVIEW_MINOR_VERSION};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
     runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Object, Reference, Value,
@@ -67,9 +67,16 @@ impl VM {
             java_home.to_string_lossy()
         );
         let major_version: u16 = java_version.split('.').next().unwrap_or("0").parse()?;
-        let java_class_file_version =
-            Version::from(major_version + Self::CLASS_FILE_MAJOR_VERSION_OFFSET, 0)?;
-        debug!("Java class file version {java_class_file_version}");
+        let class_file_minor_version = if configuration.preview_features() {
+            JAVA_PREVIEW_MINOR_VERSION
+        } else {
+            0
+        };
+        let java_class_file_version = Version::from(
+            major_version + Self::CLASS_FILE_MAJOR_VERSION_OFFSET,
+            class_file_minor_version,
+        )?;
+        debug!("Class file version {java_class_file_version}");
 
         // TODO: implement extension class loader
         // <JAVA_HOME>/jre/lib/ext directory or any other directory specified by the java.ext.dirs

@@ -4,7 +4,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
 
-const JAVA_PREVIEW_MINOR_VERSION: u16 = 65535;
+pub const JAVA_PREVIEW_MINOR_VERSION: u16 = 65535;
 
 /// Implementation of Version based on `ClassFile` format for major/minor versions.
 ///

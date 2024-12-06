@@ -45,6 +45,12 @@ struct Cli {
     #[arg(help = "Additional arguments to pass to the main class")]
     arguments: Option<Vec<String>>,
 
+    #[arg(
+        long = "enable-preview",
+        help = "Allow classes to depend on preview features of this release"
+    )]
+    enable_preview: bool,
+
     /// Display the version of this tool
     #[arg(long)]
     version: bool,
@@ -109,6 +115,10 @@ async fn common_main(cli: Cli) -> Result<()> {
             )))?;
             configuration_builder = configuration_builder.add_system_property(key, value);
         }
+    }
+
+    if cli.enable_preview {
+        configuration_builder = configuration_builder.preview_features();
     }
 
     let configuration = configuration_builder.build()?;
