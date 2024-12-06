@@ -300,12 +300,20 @@ impl Attribute {
                 let mut exception_table = Vec::with_capacity(exception_length as usize);
                 for _ in 0..exception_length {
                     let mut exception = ExceptionTableEntry::from_bytes(bytes)?;
-                    // Convert the byte offset to instruction offset
-                    let byte_pc = exception.handler_pc;
-                    let instruction_pc = *byte_to_instruction_map
-                        .get(&byte_pc)
-                        .ok_or(InvalidInstructionOffset(u32::from(byte_pc)))?;
-                    exception.handler_pc = instruction_pc;
+                    exception.range_pc.start = *byte_to_instruction_map
+                        .get(&exception.range_pc.start)
+                        .ok_or(InvalidInstructionOffset(u32::from(
+                            exception.range_pc.start,
+                        )))?;
+                    exception.range_pc.end = byte_to_instruction_map
+                        .iter()
+                        .filter(|(&k, _)| k <= exception.range_pc.end)
+                        .max_by_key(|(&k, _)| k)
+                        .map(|(_, &v)| v + 1)
+                        .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
+                    exception.handler_pc = *byte_to_instruction_map
+                        .get(&exception.handler_pc)
+                        .ok_or(InvalidInstructionOffset(u32::from(exception.handler_pc)))?;
                     exception_table.push(exception);
                 }
                 let attributes_count = bytes.read_u16::<BigEndian>()?;
@@ -318,12 +326,10 @@ impl Attribute {
                             mut line_numbers,
                         } => {
                             for line_number in &mut line_numbers {
-                                // Convert the byte offset to instruction offset
-                                let byte_pc = line_number.start_pc;
-                                let instruction_pc = *byte_to_instruction_map
-                                    .get(&byte_pc)
-                                    .ok_or(InvalidInstructionOffset(u32::from(byte_pc)))?;
-                                line_number.start_pc = instruction_pc;
+                                line_number.start_pc =
+                                    *byte_to_instruction_map.get(&line_number.start_pc).ok_or(
+                                        InvalidInstructionOffset(u32::from(line_number.start_pc)),
+                                    )?;
                             }
                             let attribute = Attribute::LineNumberTable {
                                 name_index,
@@ -715,11 +721,20 @@ impl Attribute {
                 bytes.write_u16::<BigEndian>(exceptions_length)?;
                 for exception in &mut exception_table.clone() {
                     // Convert the instruction offset to byte offset
-                    let instruction_pc = exception.handler_pc;
-                    let byte_pc = instruction_to_byte_map
-                        .get(&instruction_pc)
-                        .ok_or(InvalidInstructionOffset(u32::from(instruction_pc)))?;
-                    exception.handler_pc = *byte_pc;
+                    exception.range_pc.start = *instruction_to_byte_map
+                        .get(&exception.range_pc.start)
+                        .ok_or(InvalidInstructionOffset(u32::from(
+                            exception.range_pc.start,
+                        )))?;
+                    exception.range_pc.end = instruction_to_byte_map
+                        .iter()
+                        .filter(|(&k, _)| k <= exception.range_pc.end)
+                        .max_by_key(|(&k, _)| k)
+                        .map(|(_, &v)| v + 1)
+                        .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
+                    exception.handler_pc = *instruction_to_byte_map
+                        .get(&exception.handler_pc)
+                        .ok_or(InvalidInstructionOffset(u32::from(exception.handler_pc)))?;
                     exception.to_bytes(&mut bytes)?;
                 }
 
@@ -733,13 +748,12 @@ impl Attribute {
                         } => {
                             let mut new_line_numbers = Vec::new();
                             for line_number in line_numbers {
-                                // Convert the instruction offset to byte offset
-                                let instruction_pc = line_number.start_pc;
-                                let byte_pc = instruction_to_byte_map
-                                    .get(&instruction_pc)
-                                    .ok_or(InvalidInstructionOffset(u32::from(instruction_pc)))?;
+                                let start_pc =
+                                    *instruction_to_byte_map.get(&line_number.start_pc).ok_or(
+                                        InvalidInstructionOffset(u32::from(line_number.start_pc)),
+                                    )?;
                                 new_line_numbers.push(LineNumber {
-                                    start_pc: *byte_pc,
+                                    start_pc,
                                     line_number: line_number.line_number,
                                 });
                             }
@@ -1121,11 +1135,18 @@ impl fmt::Display for Attribute {
 
                 let mut exception_table = exception_table.clone();
                 for exception in &mut exception_table {
-                    let instruction_pc = exception.handler_pc;
-                    let byte_pc = instruction_to_byte_map
-                        .get(&instruction_pc)
+                    exception.range_pc.start = *instruction_to_byte_map
+                        .get(&exception.range_pc.start)
                         .ok_or(fmt::Error)?;
-                    exception.handler_pc = *byte_pc;
+                    exception.range_pc.end = instruction_to_byte_map
+                        .iter()
+                        .filter(|(&k, _)| k <= exception.range_pc.end)
+                        .max_by_key(|(&k, _)| k)
+                        .map(|(_, &v)| v + 1)
+                        .ok_or(fmt::Error)?;
+                    exception.handler_pc = *instruction_to_byte_map
+                        .get(&exception.handler_pc)
+                        .ok_or(fmt::Error)?;
                 }
                 if !exception_table.is_empty() {
                     writeln!(f, "  {exception_table:?}")?;
@@ -1136,9 +1157,8 @@ impl fmt::Display for Attribute {
                         Attribute::LineNumberTable { line_numbers, .. } => {
                             writeln!(f, "  LineNumberTable:")?;
                             for line_number in line_numbers {
-                                let instruction_pc = line_number.start_pc;
                                 let start_pc = instruction_to_byte_map
-                                    .get(&instruction_pc)
+                                    .get(&line_number.start_pc)
                                     .ok_or(fmt::Error)?;
                                 let line_number = line_number.line_number;
                                 writeln!(f, "    line {line_number}: {start_pc}")?;
@@ -1250,7 +1270,7 @@ mod test {
             }],
         };
         let exception_table_entry = ExceptionTableEntry {
-            range_pc: 1..2,
+            range_pc: 0..1,
             handler_pc: 0,
             catch_type: 4,
         };
@@ -1263,14 +1283,14 @@ mod test {
             attributes: vec![constant.clone(), line_number_table.clone()],
         };
         let expected_bytes = [
-            0, 1, 0, 0, 0, 41, 0, 2, 0, 3, 0, 0, 0, 1, 4, 0, 1, 0, 1, 0, 2, 0, 0, 0, 4, 0, 2, 0, 2,
+            0, 1, 0, 0, 0, 41, 0, 2, 0, 3, 0, 0, 0, 1, 4, 0, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 2, 0, 2,
             0, 0, 0, 2, 0, 42, 0, 3, 0, 0, 0, 6, 0, 1, 0, 0, 0, 1,
         ];
         let expected = indoc! {"
             Code:
               stack=2, locals=3
                  0: iconst_1
-              [ExceptionTableEntry { range_pc: 1..2, handler_pc: 0, catch_type: 4 }]
+              [ExceptionTableEntry { range_pc: 0..1, handler_pc: 0, catch_type: 4 }]
               ConstantValue { name_index: 2, constant_value_index: 42 }
               LineNumberTable:
                 line 1: 0
