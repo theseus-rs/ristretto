@@ -4,6 +4,7 @@ use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
+use std::process;
 use std::sync::Arc;
 
 /// Register all native methods for `java.lang.ProcessHandleImpl`.
@@ -35,7 +36,8 @@ async fn destroy_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 
 #[async_recursion(?Send)]
 async fn get_current_pid_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.lang.ProcessHandleImpl.getCurrentPid0()J")
+    let pid = i64::from(process::id());
+    Ok(Some(Value::Long(pid)))
 }
 
 #[async_recursion(?Send)]
