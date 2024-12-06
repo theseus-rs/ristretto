@@ -22,7 +22,7 @@ keywords = ["java", "jvm"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/theseus-rs/ristretto"
 rust-version = "1.83.0"
-version = "0.12.0"
+version = "0.12.1"
 
 [workspace.dependencies]
 anyhow = "1.0.94"

@@ -348,7 +348,7 @@ checksum = "afb84c814227b90d6895e01398aee0d8033c00e7466aca416fb6a8e0eb19d8a7"
 
 [[package]]
 name = "class_loader"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "ristretto_classloader",
  "tokio",
@@ -1588,7 +1588,7 @@ dependencies = [
 
 [[package]]
 name = "read_class"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "anyhow",
  "ristretto_classfile",
@@ -1729,7 +1729,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classfile"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1747,7 +1747,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classloader"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "convert_case",
  "criterion",
@@ -1771,7 +1771,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_cli"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "clap",
  "os_info",
@@ -1783,7 +1783,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_vm"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "async-recursion",
  "bitflags",
@@ -1836,7 +1836,7 @@ dependencies = [
 
 [[package]]
 name = "runtime_class_loader"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "ristretto_classloader",
  "tokio",
@@ -2979,7 +2979,7 @@ checksum = "d1890f4022759daae28ed4fe62859b1236caebfc61ede2f63ed4e695f3f6d936"
 
 [[package]]
 name = "write_class"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "ristretto_classfile",
 ]
