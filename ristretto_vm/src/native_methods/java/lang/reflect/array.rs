@@ -149,7 +149,7 @@ async fn new_array(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
         _ => {
             let class_name = format!("[L{class_name};");
             let class = thread.class(&class_name).await?;
-            Reference::Array(class, ConcurrentVec::with_capacity(length))
+            Reference::Array(class, ConcurrentVec::from(vec![None; length]))
         }
     };
 
