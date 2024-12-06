@@ -239,7 +239,7 @@ pub(crate) fn lrem(stack: &OperandStack) -> Result<ExecutionResult> {
 #[inline]
 pub(crate) fn lneg(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
-    stack.push_long(-value)?;
+    stack.push_long(value.wrapping_neg())?;
     Ok(Continue)
 }
 
@@ -699,6 +699,16 @@ mod tests {
         let result = lneg(stack)?;
         assert_eq!(Continue, result);
         assert_eq!(-1, stack.pop_long()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_lneg_minimum() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(1);
+        stack.push_long(i64::MIN)?;
+        let result = lneg(stack)?;
+        assert_eq!(Continue, result);
+        assert_eq!(i64::MIN, stack.pop_long()?);
         Ok(())
     }
 

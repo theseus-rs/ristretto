@@ -273,7 +273,7 @@ pub(crate) fn irem(stack: &OperandStack) -> Result<ExecutionResult> {
 #[inline]
 pub(crate) fn ineg(stack: &OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
-    stack.push_int(-value)?;
+    stack.push_int(value.wrapping_neg())?;
     Ok(Continue)
 }
 
@@ -787,6 +787,15 @@ mod tests {
         let result = ineg(stack)?;
         assert_eq!(Continue, result);
         assert_eq!(-1, stack.pop_int()?);
+        Ok(())
+    }
+    #[test]
+    fn test_ineg_minimum() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(1);
+        stack.push_int(i32::MIN)?;
+        let result = ineg(stack)?;
+        assert_eq!(Continue, result);
+        assert_eq!(i32::MIN, stack.pop_int()?);
         Ok(())
     }
 
