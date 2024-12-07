@@ -20,6 +20,10 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/ClassFormatError.html>
     #[error("{0}")]
     ClassFormatError(String),
+    /// `IllegalArgumentException`
+    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/IllegalArgumentException.html>
+    #[error("{0}")]
+    IllegalArgumentException(String),
     /// `IndexOutOfBoundsException`
     /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/IndexOutOfBoundsException.html>
     #[error("Index: {index}, Size {size}")]
@@ -45,6 +49,7 @@ impl JavaError {
             JavaError::ArithmeticException(_) => "java/lang/ArithmeticException",
             JavaError::ClassCastException { .. } => "java/lang/ClassCastException",
             JavaError::ClassFormatError(_) => "java/lang/ClassFormatError",
+            JavaError::IllegalArgumentException(_) => "java/lang/IllegalArgumentException",
             JavaError::IndexOutOfBoundsException { .. } => "java/lang/IndexOutOfBoundsException",
             JavaError::NoClassDefFoundError(_) => "java/lang/NoClassDefFoundError",
             JavaError::NullPointerException(_) => "java/lang/NullPointerException",
@@ -100,6 +105,13 @@ mod tests {
         let error = JavaError::ClassFormatError("invalid class format".to_string());
         assert_eq!(error.class_name(), "java/lang/ClassFormatError");
         assert_eq!(error.message(), "invalid class format");
+    }
+
+    #[test]
+    fn test_illegal_argument_exception() {
+        let error = JavaError::IllegalArgumentException("invalid argument".to_string());
+        assert_eq!(error.class_name(), "java/lang/IllegalArgumentException");
+        assert_eq!(error.message(), "invalid argument");
     }
 
     #[test]
