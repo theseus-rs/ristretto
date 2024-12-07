@@ -36,6 +36,7 @@ criterion = { version = "0.5.1", default-features = false }
 dashmap = "6.1.0"
 dirs = "5.0.1"
 flate2 = "1.0.35"
+getrandom = "0.2.15"
 handlebars = "6.2.0"
 home = "0.5.9"
 indoc = "2.0.5"

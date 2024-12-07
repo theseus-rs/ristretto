@@ -18,7 +18,6 @@ dashmap = { workspace = true }
 dirs = { workspace = true }
 indexmap = { workspace = true }
 os_info = { workspace = true }
-rand = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.12.1" }
 ristretto_classloader = { path = "../ristretto_classloader", version = "0.12.1" }
 stacker = { workspace = true }
@@ -29,10 +28,12 @@ tracing = { workspace = true }
 whoami = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { workspace = true, features = ["js"] }
 tokio = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 home = { workspace = true }
+rand = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]

@@ -1,9 +1,12 @@
 use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
+#[cfg(target_arch = "wasm32")]
+use crate::Error::InternalError;
 use crate::JavaError::{ArithmeticException, IllegalArgumentException};
 use crate::Result;
 use async_recursion::async_recursion;
+#[cfg(not(target_arch = "wasm32"))]
 use rand::Rng;
 use ristretto_classfile::Version;
 use ristretto_classloader::Value;
@@ -1149,8 +1152,18 @@ pub(crate) async fn pow(_thread: Arc<Thread>, mut arguments: Arguments) -> Resul
 
 #[async_recursion(?Send)]
 pub(crate) async fn random(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    let mut rng = rand::thread_rng();
-    let result = rng.gen_range(0.0f64..1.0f64);
+    #[cfg(target_arch = "wasm32")]
+    let result = {
+        let mut buf = [0u8; 8];
+        getrandom::getrandom(&mut buf).map_err(|error| InternalError(error.to_string()))?;
+        let random_u64 = u64::from_ne_bytes(buf);
+        (random_u64 as f64) / (u64::MAX as f64)
+    };
+    #[cfg(not(target_arch = "wasm32"))]
+    let result = {
+        let mut rng = rand::thread_rng();
+        rng.gen_range(0.0f64..1.0f64)
+    };
     Ok(Some(Value::Double(result)))
 }
 
