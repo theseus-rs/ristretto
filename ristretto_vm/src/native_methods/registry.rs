@@ -28,6 +28,7 @@ pub type RustMethod = fn(
 #[expect(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct MethodRegistry {
+    use_optimizations: bool,
     java_version: Version,
     methods: HashMap<String, RustMethod>,
 }
@@ -36,8 +37,12 @@ impl MethodRegistry {
     /// Create a new registry.
     #[expect(clippy::too_many_lines)]
     pub fn new(java_version: &Version) -> Self {
+        // TODO: set use_optimizations based on the environment (e.g. -Xdebug / -Xint).
+        // The bespoke method optimizations should likely be removed if/when a JIT is implemented.
+        let use_optimizations = true;
         let java_version = java_version.clone();
         let mut method_registry = MethodRegistry {
+            use_optimizations,
             java_version: java_version.clone(),
             methods: HashMap::new(),
         };
@@ -515,7 +520,16 @@ impl MethodRegistry {
         sun::security::smartcardio::platformpcsc::register(&mut method_registry);
         sun::util::locale::provider::hostlocaleprovideradapterimpl::register(&mut method_registry);
 
+        if use_optimizations {
+            java::lang::math::register(&mut method_registry);
+        }
+
         method_registry
+    }
+
+    /// Determine if optimizations should be used.
+    pub fn use_optimizations(&self) -> bool {
+        self.use_optimizations
     }
 
     /// Get the java version.
