@@ -45,7 +45,7 @@ pub(crate) async fn process_throwable(frame: &Frame, throwable: Object) -> Resul
             let exception_class_name =
                 constant_pool.try_get_class(exception_table_entry.catch_type)?;
             let exception_class = vm.class(exception_class_name).await?;
-            throwable_class.is_assignable_from(&exception_class)?
+            exception_class.is_assignable_from(throwable_class)?
         };
 
         if matching_exception_handler {
