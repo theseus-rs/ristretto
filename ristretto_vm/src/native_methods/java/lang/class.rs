@@ -7,6 +7,7 @@ use crate::Error::InternalError;
 use crate::JavaError::NullPointerException;
 use crate::Result;
 use async_recursion::async_recursion;
+use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{ClassAccessFlags, FieldAccessFlags, Version};
 use ristretto_classloader::{Class, Object, Reference, Value};
 use std::sync::Arc;
@@ -444,25 +445,43 @@ async fn get_declaring_class_0(
 #[async_recursion(?Send)]
 async fn get_enclosing_method_0(
     thread: Arc<Thread>,
-    _arguments: Arguments,
+    mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let frames = thread.frames().await?;
-    if frames.len() < 2 {
-        return Ok(Some(Value::Object(None)));
+    let object = arguments.pop_object()?;
+    let class = get_class(&thread, &object).await?;
+    let class_file = class.class_file();
+    for attribute in &class_file.attributes {
+        if let Attribute::EnclosingMethod {
+            class_index,
+            method_index,
+            ..
+        } = attribute
+        {
+            let vm = thread.vm()?;
+            let constant_pool = &class_file.constant_pool;
+            let class_name = constant_pool.try_get_utf8(*class_index)?;
+            let class = thread.class(class_name).await?;
+            let class = class.to_object(&vm).await?;
+            let (method_name, method_descriptor) = if *method_index == 0 {
+                (Value::Object(None), Value::Object(None))
+            } else {
+                let (name_index, descriptor_index) =
+                    constant_pool.try_get_name_and_type(*method_index)?;
+                let method_name = constant_pool.try_get_utf8(*name_index)?;
+                let method_name = method_name.to_object(&vm).await?;
+                let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
+                let method_descriptor = method_descriptor.to_object(&vm).await?;
+                (method_name, method_descriptor)
+            };
+            let object_array_class = thread.class("[Ljava/lang/Object;").await?;
+            let enclosing_information = vec![class, method_name, method_descriptor];
+            let enclosing_information_array =
+                Reference::try_from((object_array_class, enclosing_information))?;
+            return Ok(Some(Value::from(enclosing_information_array)));
+        }
     }
 
-    let frame = &frames[frames.len() - 2];
-    let vm = thread.vm()?;
-    let class = frame.class().to_object(&vm).await?;
-    let method = frame.method();
-    let method_name = method.name().to_object(&vm).await?;
-    let method_descriptor = method.descriptor().to_object(&vm).await?;
-    let object_array_class = thread.class("[Ljava/lang/Object;").await?;
-    let enclosing_information = vec![class, method_name, method_descriptor];
-    let enclosing_information_array =
-        Reference::try_from((object_array_class, enclosing_information))?;
-
-    Ok(Some(Value::from(enclosing_information_array)))
+    Ok(Some(Value::Object(None)))
 }
 
 #[async_recursion(?Send)]
