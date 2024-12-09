@@ -702,8 +702,18 @@ async fn is_hidden(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 }
 
 #[async_recursion(?Send)]
-async fn is_instance(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.lang.Class.isInstance(Ljava/lang/Object;)Z")
+async fn is_instance(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let Ok(compare_object) = arguments.pop_object() else {
+        return Ok(Some(Value::from(false)));
+    };
+    let self_object = arguments.pop_object()?;
+    let self_class = get_class(&thread, &self_object).await?;
+
+    if compare_object.instance_of(&self_class)? {
+        Ok(Some(Value::from(true)))
+    } else {
+        Ok(Some(Value::from(false)))
+    }
 }
 
 #[async_recursion(?Send)]
