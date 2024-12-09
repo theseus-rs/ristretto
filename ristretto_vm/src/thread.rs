@@ -316,7 +316,7 @@ impl Thread {
                     format!("[ERROR] {error}")
                 }
             };
-            debug!("result: {class_name}.{method_name}{method_descriptor}; {result}");
+            debug!("result: {class_name}.{method_name}{method_descriptor}: {result}");
         }
 
         if frame_added {

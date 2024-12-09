@@ -28,7 +28,7 @@
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
 //!     let (_java_home, java_version, class_loader) = runtime::version_class_loader("21").await?;
-//!     let class_name = "java/util/HashMap";
+//!     let class_name = "java.util.HashMap";
 //!     println!("Loading {class_name} from Java version {java_version}");
 //!     let class = class_loader.load(class_name).await?;
 //!     println!("{class:?}");

@@ -727,7 +727,7 @@ mod tests {
     #[tokio::test]
     async fn test_string_format() -> Result<()> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        let class = class_loader.load("java/lang/String").await?;
+        let class = class_loader.load("java.lang.String").await?;
         let object = Object::new(class)?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
@@ -963,7 +963,7 @@ mod tests {
     #[tokio::test]
     async fn test_try_from_class_vec() -> Result<()> {
         let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
-        let class_name = "java/lang/Integer";
+        let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;

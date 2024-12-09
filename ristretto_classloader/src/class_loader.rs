@@ -69,7 +69,8 @@ impl ClassLoader {
         &self,
         class_name: S,
     ) -> Result<(Arc<Class>, bool)> {
-        let class_name = class_name.as_ref();
+        let class_name = class_name.as_ref().to_string().replace('.', "/");
+        let class_name = class_name.as_str();
         {
             let classes = self.classes.read().await;
             if let Some(class) = classes.get(class_name) {

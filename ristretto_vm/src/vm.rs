@@ -275,7 +275,7 @@ impl VM {
         let thread = self.new_thread()?;
         let thread_id = i64::try_from(thread.id())?;
         let thread_group = thread
-            .object("java/lang/ThreadGroup", "", Vec::<Value>::new())
+            .object("java.lang.ThreadGroup", "", Vec::<Value>::new())
             .await?;
 
         let java_version = self.java_class_file_version();
@@ -328,18 +328,11 @@ impl VM {
         Ok(thread)
     }
 
-    /// Returns class names in the format "java.lang.Object" as "java/lang/Object".
-    fn get_class_name<S: AsRef<str>>(class_name: S) -> String {
-        let class_name = class_name.as_ref();
-        class_name.replace('.', "/")
-    }
-
     /// Load a class (e.g. "java.lang.Object").
     ///
     /// # Errors
     /// if the class cannot be loaded
     pub async fn class<S: AsRef<str>>(&self, class_name: S) -> Result<Arc<Class>> {
-        let class_name = Self::get_class_name(class_name);
         let thread = self.primordial_thread()?;
         thread.class(class_name).await
     }
@@ -448,7 +441,6 @@ impl VM {
         C: AsRef<str>,
         M: AsRef<str>,
     {
-        let class_name = Self::get_class_name(class_name);
         let thread = self.primordial_thread()?;
         thread.object(class_name, descriptor, arguments).await
     }
