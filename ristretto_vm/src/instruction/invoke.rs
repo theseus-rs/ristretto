@@ -272,7 +272,7 @@ mod test {
     #[tokio::test]
     async fn test_try_get_virtual_method_hierarchy() -> Result<()> {
         let vm = VM::default().await?;
-        let class = vm.class("java/util/TreeMap").await?;
+        let class = vm.class("java.util.TreeMap").await?;
         let method = try_get_virtual_method(&class, "size", "()I");
         assert!(method.is_ok());
         Ok(())
@@ -281,7 +281,7 @@ mod test {
     #[tokio::test]
     async fn test_try_get_virtual_method_interface_hierarchy() -> Result<()> {
         let vm = VM::default().await?;
-        let class = vm.class("java/util/NavigableMap").await?;
+        let class = vm.class("java.util.NavigableMap").await?;
         let method = try_get_virtual_method(&class, "size", "()I");
         assert!(method.is_ok());
         Ok(())
@@ -290,7 +290,7 @@ mod test {
     #[tokio::test]
     async fn test_try_get_virtual_method_not_found() -> Result<()> {
         let vm = VM::default().await?;
-        let class = vm.class("java/util/TreeMap").await?;
+        let class = vm.class("java.util.TreeMap").await?;
         let result = try_get_virtual_method(&class, "foo", "()V");
         assert!(matches!(
             result,
@@ -306,7 +306,7 @@ mod test {
     #[tokio::test]
     async fn test_try_get_special_method() -> Result<()> {
         let vm = VM::default().await?;
-        let class = vm.class("java/util/AbstractSet").await?;
+        let class = vm.class("java.util.AbstractSet").await?;
         let (method_class, method) =
             try_get_special_method(&class, "addAll", "(Ljava/util/Collection;)Z")?;
         assert_eq!(method_class.name(), "java/util/AbstractCollection");
@@ -318,7 +318,7 @@ mod test {
     #[tokio::test]
     async fn test_try_get_special_method_not_found() -> Result<()> {
         let vm = VM::default().await?;
-        let class = vm.class("java/util/AbstractSet").await?;
+        let class = vm.class("java.util.AbstractSet").await?;
         let result = try_get_special_method(&class, "foo", "()V");
         assert!(matches!(
             result,
