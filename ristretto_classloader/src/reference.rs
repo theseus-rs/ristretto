@@ -1407,11 +1407,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_object() -> Result<()> {
-        let class_name = "java/lang/Object";
+        let class_name = "java.lang.Object";
         let class = load_class(class_name).await?;
         let reference = Reference::from(Object::new(class)?);
         let object: Object = reference.try_into()?;
-        assert_eq!(class_name, object.class().name());
+        assert_eq!("java/lang/Object", object.class().name());
         Ok(())
     }
 
@@ -1430,13 +1430,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_class() -> Result<()> {
-        let class_name = "java/lang/Integer";
+        let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let reference = Reference::from(object);
         let value: Arc<Class> = reference.try_into()?;
-        assert_eq!(class_name, value.name());
+        assert_eq!("java/lang/Integer", value.name());
         Ok(())
     }
 }

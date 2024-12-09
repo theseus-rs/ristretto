@@ -30,7 +30,7 @@ async fn test_load_class_from_class_path_url() -> Result<()> {
     let class_path = ClassPath::from(class_path_url);
     let class_loader = ClassLoader::new("url-test", class_path);
     let class = class_loader
-        .load("org/springframework/boot/SpringApplication")
+        .load("org.springframework.boot.SpringApplication")
         .await?;
     assert_eq!("org/springframework/boot/SpringApplication", class.name());
     Ok(())

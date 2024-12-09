@@ -18,7 +18,7 @@ impl JavaObject for bool {
         let value = Value::from(*self);
         let result = vm
             .try_invoke(
-                "java/lang/Boolean",
+                "java.lang.Boolean",
                 "valueOf",
                 "(Z)Ljava/lang/Boolean;",
                 vec![value],
@@ -33,7 +33,7 @@ impl JavaObject for char {
         let value = Value::from(*self);
         let result = vm
             .try_invoke(
-                "java/lang/Character",
+                "java.lang.Character",
                 "valueOf",
                 "(C)Ljava/lang/Character;",
                 vec![value],
@@ -48,7 +48,7 @@ impl JavaObject for i8 {
         let value = Value::from(*self);
         let result = vm
             .try_invoke(
-                "java/lang/Byte",
+                "java.lang.Byte",
                 "valueOf",
                 "(B)Ljava/lang/Byte;",
                 vec![value],
@@ -71,7 +71,7 @@ impl JavaObject for i16 {
         let value = Value::from(*self);
         let result = vm
             .try_invoke(
-                "java/lang/Short",
+                "java.lang.Short",
                 "valueOf",
                 "(S)Ljava/lang/Short;",
                 vec![value],
@@ -94,7 +94,7 @@ impl JavaObject for i32 {
         let value = Value::from(*self);
         let result = vm
             .try_invoke(
-                "java/lang/Integer",
+                "java.lang.Integer",
                 "valueOf",
                 "(I)Ljava/lang/Integer;",
                 vec![value],
@@ -117,7 +117,7 @@ impl JavaObject for i64 {
         let value = Value::from(*self);
         let result = vm
             .try_invoke(
-                "java/lang/Long",
+                "java.lang.Long",
                 "valueOf",
                 "(J)Ljava/lang/Long;",
                 vec![value],
@@ -154,7 +154,7 @@ impl JavaObject for f32 {
         let value = Value::from(*self);
         let result = vm
             .try_invoke(
-                "java/lang/Float",
+                "java.lang.Float",
                 "valueOf",
                 "(F)Ljava/lang/Float;",
                 vec![value],
@@ -169,7 +169,7 @@ impl JavaObject for f64 {
         let value = Value::from(*self);
         let result = vm
             .try_invoke(
-                "java/lang/Double",
+                "java.lang.Double",
                 "valueOf",
                 "(D)Ljava/lang/Double;",
                 vec![value],
@@ -181,7 +181,7 @@ impl JavaObject for f64 {
 
 impl JavaObject for &str {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
-        let class = vm.class("java/lang/String").await?;
+        let class = vm.class("java.lang.String").await?;
         let object = Object::new(class)?;
 
         // The String implementation changed in Java 9.
@@ -217,9 +217,9 @@ impl JavaObject for String {
 }
 
 async fn to_class_object(vm: &VM, class: &Arc<Class>) -> Result<Value> {
-    let java_lang_class = vm.class("java/lang/Class").await?;
+    let java_lang_class = vm.class("java.lang.Class").await?;
     let object = Object::new(java_lang_class)?;
-    let class_name = class.name();
+    let class_name = class.name().replace('/', ".");
     let name = class_name.to_object(vm).await?;
     object.set_value("name", name)?;
     // TODO: a "null" class loader indicates a system class loader; this should be re-evaluated
