@@ -496,7 +496,7 @@ mod tests {
     async fn java8_string_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) =
             runtime::version_class_loader("8.432.06.1").await?;
-        class_loader.load("java/lang/String").await
+        class_loader.load("java.lang.String").await
     }
 
     async fn load_class(class: &str) -> Result<Arc<Class>> {
@@ -505,7 +505,7 @@ mod tests {
     }
 
     async fn string_class() -> Result<Arc<Class>> {
-        load_class("java/lang/String").await
+        load_class("java.lang.String").await
     }
 
     #[tokio::test]
@@ -519,7 +519,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_instance_of() -> Result<()> {
-        let class_name = "java/lang/Object";
+        let class_name = "java.lang.Object";
         let class = load_class(class_name).await?;
         let object = Object::new(class.clone())?;
         assert!(object.instance_of(&class)?);
@@ -559,7 +559,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_debug() -> Result<()> {
-        let class_name = "java/lang/Integer";
+        let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
@@ -572,7 +572,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_eq_same_references() -> Result<()> {
-        let class_name = "java/lang/Integer";
+        let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
@@ -582,7 +582,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_eq_different_references() -> Result<()> {
-        let class_name = "java/lang/Integer";
+        let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object1 = Object::new(class.clone())?;
         object1.set_value("value", Value::Int(42))?;
@@ -594,7 +594,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_eq_not_equal() -> Result<()> {
-        let class_name = "java/lang/Integer";
+        let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object1 = Object::new(class.clone())?;
         object1.set_value("value", Value::Int(3))?;
@@ -606,7 +606,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_bool() -> Result<()> {
-        let class = load_class("java/lang/Boolean").await?;
+        let class = load_class("java.lang.Boolean").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         assert_eq!("Boolean(true)", object.to_string());
@@ -615,7 +615,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_char() -> Result<()> {
-        let class = load_class("java/lang/Character").await?;
+        let class = load_class("java.lang.Character").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!("Character('*')", object.to_string());
@@ -624,7 +624,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_byte() -> Result<()> {
-        let class = load_class("java/lang/Byte").await?;
+        let class = load_class("java.lang.Byte").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!("Byte(42)", object.to_string());
@@ -633,7 +633,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_short() -> Result<()> {
-        let class = load_class("java/lang/Short").await?;
+        let class = load_class("java.lang.Short").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!("Short(42)", object.to_string());
@@ -642,7 +642,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_integer() -> Result<()> {
-        let class = load_class("java/lang/Integer").await?;
+        let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!("Integer(42)", object.to_string());
@@ -651,7 +651,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_long() -> Result<()> {
-        let class = load_class("java/lang/Long").await?;
+        let class = load_class("java.lang.Long").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         assert_eq!("Long(42)", object.to_string());
@@ -660,7 +660,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_float() -> Result<()> {
-        let class = load_class("java/lang/Float").await?;
+        let class = load_class("java.lang.Float").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Float(42.1))?;
         assert_eq!("Float(42.1)", object.to_string());
@@ -669,7 +669,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_double() -> Result<()> {
-        let class = load_class("java/lang/Double").await?;
+        let class = load_class("java.lang.Double").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Double(42.1))?;
         assert_eq!("Double(42.1)", object.to_string());
@@ -678,7 +678,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_string() -> Result<()> {
-        let class = load_class("java/lang/String").await?;
+        let class = load_class("java.lang.String").await?;
         let object = Object::new(class)?;
         #[expect(clippy::cast_possible_wrap)]
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
@@ -690,10 +690,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_class() -> Result<()> {
-        let string_class = load_class("java/lang/String").await?;
+        let string_class = load_class("java.lang.String").await?;
         let string_object = Object::new(string_class)?;
         #[expect(clippy::cast_possible_wrap)]
-        let string_bytes: Vec<i8> = "java/lang/Integer"
+        let string_bytes: Vec<i8> = "java.lang.Integer"
             .as_bytes()
             .to_vec()
             .iter()
@@ -702,17 +702,17 @@ mod tests {
         let string_value = Value::from(string_bytes);
         string_object.set_value("value", string_value)?;
 
-        let class_name = "java/lang/Class";
+        let class_name = "java.lang.Class";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
         object.set_value("name", Value::from(string_object))?;
-        assert_eq!("Class(java/lang/Integer)", object.to_string());
+        assert_eq!("Class(java.lang.Integer)", object.to_string());
         Ok(())
     }
 
     #[tokio::test]
     async fn test_to_string() -> Result<()> {
-        let class_name = "java/lang/Object";
+        let class_name = "java.lang.Object";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
         assert_eq!("Object(class java/lang/Object)", object.to_string());
@@ -721,7 +721,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_bool() -> Result<()> {
-        let class = load_class("java/lang/Boolean").await?;
+        let class = load_class("java.lang.Boolean").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         let value: bool = object.try_into()?;
@@ -731,7 +731,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_char() -> Result<()> {
-        let class = load_class("java/lang/Character").await?;
+        let class = load_class("java.lang.Character").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value: char = object.try_into()?;
@@ -741,7 +741,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_i8() -> Result<()> {
-        let class = load_class("java/lang/Byte").await?;
+        let class = load_class("java.lang.Byte").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value: i8 = object.try_into()?;
@@ -751,7 +751,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_u8() -> Result<()> {
-        let class = load_class("java/lang/Byte").await?;
+        let class = load_class("java.lang.Byte").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value: u8 = object.try_into()?;
@@ -761,7 +761,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_i16() -> Result<()> {
-        let class = load_class("java/lang/Short").await?;
+        let class = load_class("java.lang.Short").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value: i16 = object.try_into()?;
@@ -771,7 +771,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_u16() -> Result<()> {
-        let class = load_class("java/lang/Short").await?;
+        let class = load_class("java.lang.Short").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value: u16 = object.try_into()?;
@@ -781,7 +781,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_i32() -> Result<()> {
-        let class = load_class("java/lang/Integer").await?;
+        let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value: i32 = object.try_into()?;
@@ -791,7 +791,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_u32() -> Result<()> {
-        let class = load_class("java/lang/Integer").await?;
+        let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value: u32 = object.try_into()?;
@@ -801,7 +801,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_i64() -> Result<()> {
-        let class = load_class("java/lang/Long").await?;
+        let class = load_class("java.lang.Long").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value: i64 = object.try_into()?;
@@ -811,7 +811,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_u64() -> Result<()> {
-        let class = load_class("java/lang/Long").await?;
+        let class = load_class("java.lang.Long").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value: u64 = object.try_into()?;
@@ -821,7 +821,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_isize() -> Result<()> {
-        let class = load_class("java/lang/Long").await?;
+        let class = load_class("java.lang.Long").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value: isize = object.try_into()?;
@@ -831,7 +831,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_usize() -> Result<()> {
-        let class = load_class("java/lang/Long").await?;
+        let class = load_class("java.lang.Long").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value: usize = object.try_into()?;
@@ -841,7 +841,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_f32() -> Result<()> {
-        let class = load_class("java/lang/Float").await?;
+        let class = load_class("java.lang.Float").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Float(42.1))?;
         let value: f32 = object.try_into()?;
@@ -852,7 +852,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_f64() -> Result<()> {
-        let class = load_class("java/lang/Double").await?;
+        let class = load_class("java.lang.Double").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Double(42.1))?;
         let value: f64 = object.try_into()?;
@@ -863,7 +863,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_string_invalid_class() -> Result<()> {
-        let class = load_class("java/lang/Object").await?;
+        let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
         let result: Result<String> = object.try_into();
         assert!(matches!(result, Err(InvalidValueType(_))));
@@ -946,12 +946,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_class() -> Result<()> {
-        let class_name = "java/lang/Integer";
+        let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value: Arc<Class> = object.try_into()?;
-        assert_eq!(class_name, value.name());
+        assert_eq!("java/lang/Integer", value.name());
         Ok(())
     }
 }

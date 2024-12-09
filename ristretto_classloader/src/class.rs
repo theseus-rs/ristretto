@@ -505,12 +505,12 @@ mod tests {
 
     async fn object_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        class_loader.load("java/lang/Object").await
+        class_loader.load("java.lang.Object").await
     }
 
     async fn string_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        let string_class = class_loader.load("java/lang/String").await?;
+        let string_class = class_loader.load("java.lang.String").await?;
 
         let object_class = object_class().await?;
         string_class.set_parent(Some(object_class))?;
@@ -523,7 +523,7 @@ mod tests {
 
     async fn serializable_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        class_loader.load("java/io/Serializable").await
+        class_loader.load("java.io.Serializable").await
     }
 
     fn simple_class() -> Result<Class> {
@@ -690,7 +690,7 @@ mod tests {
         let string_class = string_class().await?;
         let parent = string_class
             .parent()?
-            .ok_or(Error::ClassNotFound("java/lang/Object".to_string()))?;
+            .ok_or(Error::ClassNotFound("java.lang.Object".to_string()))?;
         assert_eq!("java/lang/Object", parent.name());
         Ok(())
     }

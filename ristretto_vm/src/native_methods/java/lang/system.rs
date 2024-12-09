@@ -247,7 +247,7 @@ async fn identity_hash_code(
 async fn init_properties(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let properties = arguments.pop()?;
     let vm = thread.vm()?;
-    let properties_class = thread.class("java/util/Properties").await?;
+    let properties_class = thread.class("java.util.Properties").await?;
     let set_property_method = properties_class.try_get_method(
         "setProperty",
         "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
@@ -296,7 +296,7 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
     let vm = thread.vm()?;
     if vm.java_class_file_version() <= &JAVA_8 {
         vm.invoke(
-            "java/lang/System",
+            "java.lang.System",
             "setJavaLangAccess",
             "()V",
             Vec::<Value>::new(),
@@ -319,7 +319,7 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
         //
         // will eventually call System::getProperty() which fails if this is not initialized.
         vm.invoke(
-            "java/lang/System",
+            "java.lang.System",
             "setProperties",
             "(Ljava/util/Properties;)V",
             vec![Value::Object(None)],
@@ -352,7 +352,7 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
     )?;
     methods.push(start_threads);
     let java_lang_ref_access = Arc::new(Class::new(
-        "ristretto/internal/access/JavaLangRefAccess".to_string(),
+        "ristretto.internal.access.JavaLangRefAccess".to_string(),
         None,
         ClassFile::default(),
         None,
@@ -377,7 +377,7 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[async_recursion(?Send)]
 async fn set_in_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let input_stream = arguments.pop_reference()?;
-    let system = thread.class("java/lang/System").await?;
+    let system = thread.class("java.lang.System").await?;
     let in_field = system.static_field("in")?;
     in_field.unsafe_set_value(Value::Object(input_stream))?;
     Ok(None)
@@ -386,7 +386,7 @@ async fn set_in_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Optio
 #[async_recursion(?Send)]
 async fn set_out_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let print_stream = arguments.pop_reference()?;
-    let system = thread.class("java/lang/System").await?;
+    let system = thread.class("java.lang.System").await?;
     let out_field = system.static_field("out")?;
     out_field.unsafe_set_value(Value::Object(print_stream))?;
     Ok(None)
@@ -395,7 +395,7 @@ async fn set_out_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 #[async_recursion(?Send)]
 async fn set_err_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let print_stream = arguments.pop_reference()?;
-    let system = thread.class("java/lang/System").await?;
+    let system = thread.class("java.lang.System").await?;
     let err_field = system.static_field("err")?;
     err_field.unsafe_set_value(Value::Object(print_stream))?;
     Ok(None)
