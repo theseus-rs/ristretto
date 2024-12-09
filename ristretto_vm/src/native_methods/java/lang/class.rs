@@ -436,10 +436,29 @@ async fn get_declared_methods_0(
 
 #[async_recursion(?Send)]
 async fn get_declaring_class_0(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Object(None)))
+    let object = arguments.pop_object()?;
+    let class = get_class(&thread, &object).await?;
+
+    if class.is_array() || class.is_primitive() {
+        return Ok(Some(Value::Object(None)));
+    }
+
+    let class_name = class.name();
+    match class_name
+        .rsplit_once('$')
+        .map(|(class_name, _)| class_name)
+    {
+        Some(class_name) => {
+            let class = thread.class(class_name).await?;
+            let vm = thread.vm()?;
+            let class = class.to_object(&vm).await?;
+            Ok(Some(class))
+        }
+        None => Ok(Some(Value::Object(None))),
+    }
 }
 
 #[async_recursion(?Send)]

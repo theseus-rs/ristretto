@@ -72,7 +72,7 @@ pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Res
             (class_name, message)
         }
         Throwable(throwable) => return Ok(throwable),
-        _ => ("java/lang/InternalError".to_string(), format!("{error}")),
+        _ => ("java.lang.InternalError".to_string(), format!("{error}")),
     };
 
     let throwable = vm
