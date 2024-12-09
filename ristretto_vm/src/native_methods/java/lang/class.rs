@@ -600,10 +600,10 @@ async fn get_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 #[async_recursion(?Send)]
 async fn get_simple_binary_name_0(
     thread: Arc<Thread>,
-    _arguments: Arguments,
+    mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let frame = thread.current_frame().await?;
-    let class = frame.class();
+    let object = arguments.pop_object()?;
+    let class = get_class(&thread, &object).await?;
     let class_name = class.name();
     let class_name_parts = class_name.split('$').collect::<Vec<&str>>();
 
