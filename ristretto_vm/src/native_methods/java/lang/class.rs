@@ -438,7 +438,7 @@ async fn get_declaring_class_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    Ok(None)
+    Ok(Some(Value::Object(None)))
 }
 
 #[async_recursion(?Send)]
