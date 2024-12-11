@@ -1,5 +1,7 @@
 use crate::arguments::Arguments;
-use crate::native_methods::{apple, com, java, jdk, sun};
+#[cfg(target_os = "macos")]
+use crate::native_methods::apple;
+use crate::native_methods::{com, java, jdk, sun};
 use crate::thread::Thread;
 use crate::Result;
 use ristretto_classfile::Version;
@@ -48,11 +50,14 @@ impl MethodRegistry {
         };
 
         if java_version <= JAVA_8 {
-            apple::applescript::applescriptengine::register(&mut method_registry);
-            apple::applescript::applescriptenginefactory::register(&mut method_registry);
-            apple::launcher::javaapplauncher::register(&mut method_registry);
-            com::apple::concurrent::libdispatchnative::register(&mut method_registry);
-            com::apple::laf::screenpopupfactory::register(&mut method_registry);
+            #[cfg(target_os = "macos")]
+            {
+                apple::applescript::applescriptengine::register(&mut method_registry);
+                apple::applescript::applescriptenginefactory::register(&mut method_registry);
+                apple::launcher::javaapplauncher::register(&mut method_registry);
+                com::apple::concurrent::libdispatchnative::register(&mut method_registry);
+                com::apple::laf::screenpopupfactory::register(&mut method_registry);
+            }
             com::sun::demo::jvmti::hprof::tracker::register(&mut method_registry);
             com::sun::java::swing::plaf::gtk::gtkengine::register(&mut method_registry);
             com::sun::java::swing::plaf::gtk::gtkstyle::register(&mut method_registry);
@@ -137,7 +142,10 @@ impl MethodRegistry {
             sun::security::ec::eckeypairgenerator::register(&mut method_registry);
         }
         if java_version >= JAVA_11 {
-            com::apple::eawt::application::register(&mut method_registry);
+            #[cfg(target_os = "macos")]
+            {
+                com::apple::eawt::application::register(&mut method_registry);
+            }
             com::sun::management::internal::diagnosticcommandimpl::register(&mut method_registry);
             com::sun::management::internal::flag::register(&mut method_registry);
             com::sun::management::internal::garbagecollectorextimpl::register(&mut method_registry);
@@ -191,7 +199,12 @@ impl MethodRegistry {
             jdk::internal::reflect::reflection::register(&mut method_registry);
             jdk::internal::vm::vmsupport::register(&mut method_registry);
             jdk::jfr::internal::jvm::register(&mut method_registry);
-            jdk::net::macosxsocketoptions::register(&mut method_registry);
+
+            #[cfg(target_os = "macos")]
+            {
+                jdk::net::macosxsocketoptions::register(&mut method_registry);
+            }
+
             jdk::vm::ci::runtime::jvmci::register(&mut method_registry);
             sun::awt::platformfont::register(&mut method_registry);
             sun::awt::suntoolkit::register(&mut method_registry);
@@ -305,19 +318,62 @@ impl MethodRegistry {
             jdk::vm::ci::services::services::register(&mut method_registry);
         }
 
-        apple::laf::jrsuiconstants::register(&mut method_registry);
-        apple::laf::jrsuicontrol::register(&mut method_registry);
-        apple::laf::jrsuifocus::register(&mut method_registry);
-        apple::laf::jrsuiutils_scrollbar::register(&mut method_registry);
-        apple::security::keychainstore::register(&mut method_registry);
-        com::apple::eawt::appdockiconhandler::register(&mut method_registry);
-        com::apple::eawt::appeventhandler::register(&mut method_registry);
-        com::apple::eawt::appmenubarhandler::register(&mut method_registry);
-        com::apple::eawt::appmischandlers::register(&mut method_registry);
-        com::apple::eio::filemanager::register(&mut method_registry);
-        com::apple::laf::aquafileview::register(&mut method_registry);
-        com::apple::laf::aquanativeresources::register(&mut method_registry);
-        com::apple::laf::screenmenu::register(&mut method_registry);
+        #[cfg(target_os = "macos")]
+        {
+            apple::laf::jrsuiconstants::register(&mut method_registry);
+            apple::laf::jrsuicontrol::register(&mut method_registry);
+            apple::laf::jrsuifocus::register(&mut method_registry);
+            apple::laf::jrsuiutils_scrollbar::register(&mut method_registry);
+            apple::security::keychainstore::register(&mut method_registry);
+            com::apple::eawt::appdockiconhandler::register(&mut method_registry);
+            com::apple::eawt::appeventhandler::register(&mut method_registry);
+            com::apple::eawt::appmenubarhandler::register(&mut method_registry);
+            com::apple::eawt::appmischandlers::register(&mut method_registry);
+            com::apple::eio::filemanager::register(&mut method_registry);
+            com::apple::laf::aquafileview::register(&mut method_registry);
+            com::apple::laf::aquanativeresources::register(&mut method_registry);
+            com::apple::laf::screenmenu::register(&mut method_registry);
+            java::util::prefs::macosxpreferencesfile::register(&mut method_registry);
+            sun::lwawt::macosx::caccessibility::register(&mut method_registry);
+            sun::lwawt::macosx::caccessible::register(&mut method_registry);
+            sun::lwawt::macosx::ccheckboxmenuitem::register(&mut method_registry);
+            sun::lwawt::macosx::cclipboard::register(&mut method_registry);
+            sun::lwawt::macosx::ccursormanager::register(&mut method_registry);
+            sun::lwawt::macosx::cdatatransferer::register(&mut method_registry);
+            sun::lwawt::macosx::cdesktoppeer::register(&mut method_registry);
+            sun::lwawt::macosx::cdragsourcecontextpeer::register(&mut method_registry);
+            sun::lwawt::macosx::cdroptarget::register(&mut method_registry);
+            sun::lwawt::macosx::cdroptargetcontextpeer::register(&mut method_registry);
+            sun::lwawt::macosx::cfretainedresource::register(&mut method_registry);
+            sun::lwawt::macosx::cfiledialog::register(&mut method_registry);
+            sun::lwawt::macosx::cimage::register(&mut method_registry);
+            sun::lwawt::macosx::cinputmethod::register(&mut method_registry);
+            sun::lwawt::macosx::cinputmethoddescriptor::register(&mut method_registry);
+            sun::lwawt::macosx::cmenu::register(&mut method_registry);
+            sun::lwawt::macosx::cmenubar::register(&mut method_registry);
+            sun::lwawt::macosx::cmenuitem::register(&mut method_registry);
+            sun::lwawt::macosx::cplatformcomponent::register(&mut method_registry);
+            sun::lwawt::macosx::cplatformview::register(&mut method_registry);
+            sun::lwawt::macosx::cplatformwindow::register(&mut method_registry);
+            sun::lwawt::macosx::cpopupmenu::register(&mut method_registry);
+            sun::lwawt::macosx::cprinterjob::register(&mut method_registry);
+            sun::lwawt::macosx::cprinterjobdialog::register(&mut method_registry);
+            sun::lwawt::macosx::cprinterpagedialog::register(&mut method_registry);
+            sun::lwawt::macosx::cprintersurfacedata::register(&mut method_registry);
+            sun::lwawt::macosx::crobot::register(&mut method_registry);
+            sun::lwawt::macosx::ctextpipe::register(&mut method_registry);
+            sun::lwawt::macosx::ctrayicon::register(&mut method_registry);
+            sun::lwawt::macosx::cwrapper_nsview::register(&mut method_registry);
+            sun::lwawt::macosx::cwrapper_nswindow::register(&mut method_registry);
+            sun::lwawt::macosx::lwctoolkit::register(&mut method_registry);
+            sun::lwawt::macosx::nsevent::register(&mut method_registry);
+            sun::nio::fs::macosxnativedispatcher::register(&mut method_registry);
+        }
+        #[cfg(target_os = "windows")]
+        {
+            java::io::winntfilesystem::register(&mut method_registry);
+        }
+
         com::sun::imageio::plugins::jpeg::jpegimagereader::register(&mut method_registry);
         com::sun::imageio::plugins::jpeg::jpegimagewriter::register(&mut method_registry);
         com::sun::media::sound::directaudiodevice::register(&mut method_registry);
@@ -362,7 +418,6 @@ impl MethodRegistry {
         java::io::objectstreamclass::register(&mut method_registry);
         java::io::randomaccessfile::register(&mut method_registry);
         java::io::unixfilesystem::register(&mut method_registry);
-        java::io::winntfilesystem::register(&mut method_registry);
         java::lang::class::register(&mut method_registry);
         java::lang::classloader::register(&mut method_registry);
         java::lang::double::register(&mut method_registry);
@@ -384,7 +439,6 @@ impl MethodRegistry {
         java::net::networkinterface::register(&mut method_registry);
         java::security::accesscontroller::register(&mut method_registry);
         java::util::prefs::filesystempreferences::register(&mut method_registry);
-        java::util::prefs::macosxpreferencesfile::register(&mut method_registry);
         java::util::zip::adler32::register(&mut method_registry);
         java::util::zip::crc32::register(&mut method_registry);
         java::util::zip::deflater::register(&mut method_registry);
@@ -453,39 +507,6 @@ impl MethodRegistry {
         sun::java2d::pipe::region::register(&mut method_registry);
         sun::java2d::pipe::shapespaniterator::register(&mut method_registry);
         sun::java2d::pipe::spancliprenderer::register(&mut method_registry);
-        sun::lwawt::macosx::caccessibility::register(&mut method_registry);
-        sun::lwawt::macosx::caccessible::register(&mut method_registry);
-        sun::lwawt::macosx::ccheckboxmenuitem::register(&mut method_registry);
-        sun::lwawt::macosx::cclipboard::register(&mut method_registry);
-        sun::lwawt::macosx::ccursormanager::register(&mut method_registry);
-        sun::lwawt::macosx::cdatatransferer::register(&mut method_registry);
-        sun::lwawt::macosx::cdesktoppeer::register(&mut method_registry);
-        sun::lwawt::macosx::cdragsourcecontextpeer::register(&mut method_registry);
-        sun::lwawt::macosx::cdroptarget::register(&mut method_registry);
-        sun::lwawt::macosx::cdroptargetcontextpeer::register(&mut method_registry);
-        sun::lwawt::macosx::cfretainedresource::register(&mut method_registry);
-        sun::lwawt::macosx::cfiledialog::register(&mut method_registry);
-        sun::lwawt::macosx::cimage::register(&mut method_registry);
-        sun::lwawt::macosx::cinputmethod::register(&mut method_registry);
-        sun::lwawt::macosx::cinputmethoddescriptor::register(&mut method_registry);
-        sun::lwawt::macosx::cmenu::register(&mut method_registry);
-        sun::lwawt::macosx::cmenubar::register(&mut method_registry);
-        sun::lwawt::macosx::cmenuitem::register(&mut method_registry);
-        sun::lwawt::macosx::cplatformcomponent::register(&mut method_registry);
-        sun::lwawt::macosx::cplatformview::register(&mut method_registry);
-        sun::lwawt::macosx::cplatformwindow::register(&mut method_registry);
-        sun::lwawt::macosx::cpopupmenu::register(&mut method_registry);
-        sun::lwawt::macosx::cprinterjob::register(&mut method_registry);
-        sun::lwawt::macosx::cprinterjobdialog::register(&mut method_registry);
-        sun::lwawt::macosx::cprinterpagedialog::register(&mut method_registry);
-        sun::lwawt::macosx::cprintersurfacedata::register(&mut method_registry);
-        sun::lwawt::macosx::crobot::register(&mut method_registry);
-        sun::lwawt::macosx::ctextpipe::register(&mut method_registry);
-        sun::lwawt::macosx::ctrayicon::register(&mut method_registry);
-        sun::lwawt::macosx::cwrapper_nsview::register(&mut method_registry);
-        sun::lwawt::macosx::cwrapper_nswindow::register(&mut method_registry);
-        sun::lwawt::macosx::lwctoolkit::register(&mut method_registry);
-        sun::lwawt::macosx::nsevent::register(&mut method_registry);
         sun::management::classloadingimpl::register(&mut method_registry);
         sun::management::garbagecollectorimpl::register(&mut method_registry);
         sun::management::memoryimpl::register(&mut method_registry);
@@ -508,7 +529,6 @@ impl MethodRegistry {
         sun::nio::ch::net::register(&mut method_registry);
         sun::nio::ch::unixasynchronoussocketchannelimpl::register(&mut method_registry);
         sun::nio::fs::bsdnativedispatcher::register(&mut method_registry);
-        sun::nio::fs::macosxnativedispatcher::register(&mut method_registry);
         sun::nio::fs::utifiletypedetector::register(&mut method_registry);
         sun::nio::fs::unixnativedispatcher::register(&mut method_registry);
         sun::print::cupsprinter::register(&mut method_registry);
