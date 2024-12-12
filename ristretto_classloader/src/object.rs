@@ -207,6 +207,22 @@ impl Object {
 
         true
     }
+
+    /// Deep clone the object.
+    ///
+    /// # Errors
+    /// if the fields cannot be cloned.
+    pub fn deep_clone(&self) -> Result<Self> {
+        let mut fields = HashMap::new();
+        for (name, field) in self.fields.iter() {
+            let field = field.deep_clone()?;
+            fields.insert(name.clone(), field);
+        }
+        Ok(Self {
+            class: self.class.clone(),
+            fields: Arc::new(fields),
+        })
+    }
 }
 
 impl Debug for Object {
@@ -554,6 +570,34 @@ mod tests {
             Err(FieldNotFound { class_name, field_name })
             if class_name == "java/lang/String" && field_name == "foo"
         ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_clone() -> Result<()> {
+        let class_name = "java.lang.Integer";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(1))?;
+        let clone = object.clone();
+        assert_eq!(object, clone);
+
+        clone.set_value("value", Value::Int(1))?;
+        assert_eq!(object, clone);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_deep_clone() -> Result<()> {
+        let class_name = "java.lang.Integer";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(1))?;
+        let clone = object.deep_clone()?;
+        assert_eq!(object, clone);
+
+        clone.set_value("value", Value::Int(2))?;
+        assert_ne!(object, clone);
         Ok(())
     }
 

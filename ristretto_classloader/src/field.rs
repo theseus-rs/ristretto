@@ -79,16 +79,16 @@ impl Field {
         &self.access_flags
     }
 
-    /// Get the field name.
-    #[must_use]
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
     /// Get the field type.
     #[must_use]
     pub fn field_type(&self) -> &FieldType {
         &self.field_type
+    }
+
+    /// Get the field name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     /// Get the field value.
@@ -180,6 +180,20 @@ impl Field {
         *guarded_value = value;
         Ok(())
     }
+
+    /// Deep clone the field.
+    ///
+    /// # Errors
+    /// if the field value cannot be cloned.
+    pub fn deep_clone(&self) -> Result<Self> {
+        let value = self.value()?;
+        Ok(Self {
+            access_flags: self.access_flags,
+            field_type: self.field_type.clone(),
+            name: self.name.clone(),
+            value: Arc::new(RwLock::new(value)),
+        })
+    }
 }
 
 fn get_typed_value(
@@ -240,5 +254,264 @@ impl PartialEq for Field {
             && self.field_type == other.field_type
             && self.name == other.name
             && *value == *other_value
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ristretto_classfile::FieldAccessFlags;
+
+    #[test]
+    fn test_field_new() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Int),
+            "test".to_string(),
+            Value::Int(42),
+        );
+        assert_eq!(field.access_flags(), &FieldAccessFlags::PUBLIC);
+        assert_eq!(field.field_type(), &FieldType::Base(BaseType::Int));
+        assert_eq!(field.name(), "test");
+        assert_eq!(field.value()?, Value::Int(42));
+        Ok(())
+    }
+
+    #[test]
+    fn test_value() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Int),
+            "test".to_string(),
+            Value::Int(42),
+        );
+        assert_eq!(Value::Int(42), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_value_boolean() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Boolean),
+            "test".to_string(),
+            Value::from(false),
+        );
+        field.set_value(Value::from(true))?;
+        assert_eq!(Value::from(true), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_value_byte() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Byte),
+            "test".to_string(),
+            Value::Int(0),
+        );
+        field.set_value(Value::Int(1))?;
+        assert_eq!(Value::Int(1), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_value_char() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Char),
+            "test".to_string(),
+            Value::Int(0),
+        );
+        field.set_value(Value::Int(1))?;
+        assert_eq!(Value::Int(1), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_value_double() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Double),
+            "test".to_string(),
+            Value::Double(0.0),
+        );
+        field.set_value(Value::Double(1.0))?;
+        assert_eq!(Value::Double(1.0), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_value_float() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Float),
+            "test".to_string(),
+            Value::Float(0.0),
+        );
+        field.set_value(Value::Float(1.0))?;
+        assert_eq!(Value::Float(1.0), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_value_int() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Int),
+            "test".to_string(),
+            Value::Int(0),
+        );
+        field.set_value(Value::Int(1))?;
+        assert_eq!(Value::Int(1), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_value_long() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Long),
+            "test".to_string(),
+            Value::Long(0),
+        );
+        field.set_value(Value::Long(1))?;
+        assert_eq!(Value::Long(1), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_value_object() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Object("java/lang/Object".to_string()),
+            "test".to_string(),
+            Value::Object(None),
+        );
+        field.set_value(Value::Object(None))?;
+        assert_eq!(Value::Object(None), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_value_array() -> Result<()> {
+        let value: Value = vec![42i32].into();
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Array(Box::new(FieldType::Base(BaseType::Int))),
+            "test".to_string(),
+            value,
+        );
+        field.set_value(Value::Object(None))?;
+        assert_eq!(Value::Object(None), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_value_short() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Short),
+            "test".to_string(),
+            Value::Int(0),
+        );
+        field.set_value(Value::Int(1))?;
+        assert_eq!(Value::Int(1), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_value_invalid() {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Int),
+            "test".to_string(),
+            Value::Int(0),
+        );
+        let result = field.set_value(Value::Double(1.0));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_unsafe_set_value() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Int),
+            "test".to_string(),
+            Value::Int(1),
+        );
+        field.unsafe_set_value(Value::Int(2))?;
+        assert_eq!(Value::Int(2), field.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_clone() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Int),
+            "test".to_string(),
+            Value::Int(1),
+        );
+        let clone = field.clone();
+        assert_eq!(Value::Int(1), field.value()?);
+        assert_eq!(Value::Int(1), clone.value()?);
+
+        clone.set_value(Value::Int(2))?;
+        assert_eq!(Value::Int(2), field.value()?);
+        assert_eq!(Value::Int(2), clone.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_clone() -> Result<()> {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Int),
+            "test".to_string(),
+            Value::Int(1),
+        );
+        let clone = field.deep_clone()?;
+        assert_eq!(Value::Int(1), field.value()?);
+        assert_eq!(Value::Int(1), clone.value()?);
+
+        clone.set_value(Value::Int(2))?;
+        assert_eq!(Value::Int(1), field.value()?);
+        assert_eq!(Value::Int(2), clone.value()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_eq() {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Int),
+            "test".to_string(),
+            Value::Int(1),
+        );
+        let other = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Int),
+            "test".to_string(),
+            Value::Int(1),
+        );
+        assert_eq!(field, other);
+    }
+
+    #[test]
+    fn test_ne() {
+        let field = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Int),
+            "test".to_string(),
+            Value::Int(1),
+        );
+        let other = Field::new(
+            FieldAccessFlags::PUBLIC,
+            FieldType::Base(BaseType::Int),
+            "test".to_string(),
+            Value::Int(2),
+        );
+        assert_ne!(field, other);
     }
 }

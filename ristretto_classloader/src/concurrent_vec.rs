@@ -147,6 +147,15 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
             .map_err(|error| PoisonedLock(error.to_string()))?;
         Ok(vec.clone())
     }
+
+    /// Deep clone the concurrent vector.
+    ///
+    /// # Errors
+    /// if the lock is poisoned.
+    pub fn deep_clone(&self) -> Result<Self> {
+        let vec = self.to_vec()?;
+        Ok(Self::from(vec))
+    }
 }
 
 impl<T: Clone + Debug + PartialEq> Clone for ConcurrentVec<T> {
@@ -307,10 +316,23 @@ mod tests {
     fn test_clone() -> Result<()> {
         let vec = ConcurrentVec::new();
         vec.push(1)?;
-        vec.push(2)?;
-        vec.push(3)?;
         let clone = vec.clone();
         assert_eq!(vec, clone);
+
+        clone.set(0, 2)?;
+        assert_eq!(vec, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_clone() -> Result<()> {
+        let vec = ConcurrentVec::new();
+        vec.push(1)?;
+        let clone = vec.deep_clone()?;
+        assert_eq!(vec, clone);
+
+        clone.set(0, 2)?;
+        assert_ne!(vec, clone);
         Ok(())
     }
 

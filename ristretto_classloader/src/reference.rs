@@ -157,6 +157,37 @@ impl Reference {
             _ => Err(InvalidValueType("Expected array".to_string())),
         }
     }
+
+    /// Returns a deep clone of the reference.
+    ///
+    /// # Errors
+    /// if the reference cannot be cloned.
+    pub fn deep_clone(&self) -> Result<Reference> {
+        let value = match self {
+            Reference::ByteArray(value) => Reference::ByteArray(value.deep_clone()?),
+            Reference::CharArray(value) => Reference::CharArray(value.deep_clone()?),
+            Reference::ShortArray(value) => Reference::ShortArray(value.deep_clone()?),
+            Reference::IntArray(value) => Reference::IntArray(value.deep_clone()?),
+            Reference::LongArray(value) => Reference::LongArray(value.deep_clone()?),
+            Reference::FloatArray(value) => Reference::FloatArray(value.deep_clone()?),
+            Reference::DoubleArray(value) => Reference::DoubleArray(value.deep_clone()?),
+            Reference::Array(class, value) => {
+                let values = value.to_vec()?;
+                let array: ConcurrentVec<Option<Reference>> =
+                    ConcurrentVec::with_capacity(values.len());
+                for value in values {
+                    if let Some(reference) = value {
+                        array.push(Some(reference.deep_clone()?))?;
+                    } else {
+                        array.push(None)?;
+                    }
+                }
+                Reference::Array(class.clone(), array)
+            }
+            Reference::Object(value) => Reference::Object(value.deep_clone()?),
+        };
+        Ok(value)
+    }
 }
 
 impl Display for Reference {
@@ -843,6 +874,268 @@ mod tests {
         let reference = Reference::from(original_value.clone());
         let result = reference.to_object();
         assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_clone_byte_array() -> Result<()> {
+        let reference = Reference::from(vec![1i8]);
+        let clone = reference.clone();
+        assert_eq!(reference, clone);
+
+        let Reference::ByteArray(ref array) = clone else {
+            unreachable!("Expected byte array");
+        };
+        array.set(0, 2i8)?;
+        assert_eq!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_clone_byte_array() -> Result<()> {
+        let reference = Reference::from(vec![1i8]);
+        let clone = reference.deep_clone()?;
+        assert_eq!(reference, clone);
+
+        let Reference::ByteArray(ref array) = clone else {
+            unreachable!("Expected byte array");
+        };
+        array.set(0, 2i8)?;
+        assert_ne!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_clone_char_array() -> Result<()> {
+        let reference = Reference::from(vec![1 as char]);
+        let clone = reference.clone();
+        assert_eq!(reference, clone);
+
+        let Reference::CharArray(ref array) = clone else {
+            unreachable!("Expected char array");
+        };
+        array.set(0, 2)?;
+        assert_eq!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_clone_char_array() -> Result<()> {
+        let reference = Reference::from(vec![1 as char]);
+        let clone = reference.deep_clone()?;
+        assert_eq!(reference, clone);
+
+        let Reference::CharArray(ref array) = clone else {
+            unreachable!("Expected char array");
+        };
+        array.set(0, 2)?;
+        assert_ne!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_clone_short_array() -> Result<()> {
+        let reference = Reference::from(vec![1i16]);
+        let clone = reference.clone();
+        assert_eq!(reference, clone);
+
+        let Reference::ShortArray(ref array) = clone else {
+            unreachable!("Expected short array");
+        };
+        array.set(0, 2)?;
+        assert_eq!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_clone_short_array() -> Result<()> {
+        let reference = Reference::from(vec![1i16]);
+        let clone = reference.deep_clone()?;
+        assert_eq!(reference, clone);
+
+        let Reference::ShortArray(ref array) = clone else {
+            unreachable!("Expected short array");
+        };
+        array.set(0, 2)?;
+        assert_ne!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_clone_int_array() -> Result<()> {
+        let reference = Reference::from(vec![1i32]);
+        let clone = reference.clone();
+        assert_eq!(reference, clone);
+
+        let Reference::IntArray(ref array) = clone else {
+            unreachable!("Expected int array");
+        };
+        array.set(0, 2)?;
+        assert_eq!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_clone_int_array() -> Result<()> {
+        let reference = Reference::from(vec![1i32]);
+        let clone = reference.deep_clone()?;
+        assert_eq!(reference, clone);
+
+        let Reference::IntArray(ref array) = clone else {
+            unreachable!("Expected int array");
+        };
+        array.set(0, 2)?;
+        assert_ne!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_clone_long_array() -> Result<()> {
+        let reference = Reference::from(vec![1i64]);
+        let clone = reference.clone();
+        assert_eq!(reference, clone);
+
+        let Reference::LongArray(ref array) = clone else {
+            unreachable!("Expected long array");
+        };
+        array.set(0, 2)?;
+        assert_eq!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_clone_long_array() -> Result<()> {
+        let reference = Reference::from(vec![1i64]);
+        let clone = reference.deep_clone()?;
+        assert_eq!(reference, clone);
+
+        let Reference::LongArray(ref array) = clone else {
+            unreachable!("Expected long array");
+        };
+        array.set(0, 2)?;
+        assert_ne!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_clone_float_array() -> Result<()> {
+        let reference = Reference::from(vec![1.0f32]);
+        let clone = reference.clone();
+        assert_eq!(reference, clone);
+
+        let Reference::FloatArray(ref array) = clone else {
+            unreachable!("Expected float array");
+        };
+        array.set(0, 2.0)?;
+        assert_eq!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_clone_float_array() -> Result<()> {
+        let reference = Reference::from(vec![1.0f32]);
+        let clone = reference.deep_clone()?;
+        assert_eq!(reference, clone);
+
+        let Reference::FloatArray(ref array) = clone else {
+            unreachable!("Expected float array");
+        };
+        array.set(0, 2.0)?;
+        assert_ne!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_clone_double_array() -> Result<()> {
+        let reference = Reference::from(vec![1.0f64]);
+        let clone = reference.clone();
+        assert_eq!(reference, clone);
+
+        let Reference::DoubleArray(ref array) = clone else {
+            unreachable!("Expected double array");
+        };
+        array.set(0, 2.0)?;
+        assert_eq!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_clone_double_array() -> Result<()> {
+        let reference = Reference::from(vec![1.0f64]);
+        let clone = reference.deep_clone()?;
+        assert_eq!(reference, clone);
+
+        let Reference::DoubleArray(ref array) = clone else {
+            unreachable!("Expected double array");
+        };
+        array.set(0, 2.0)?;
+        assert_ne!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_clone_reference_array() -> Result<()> {
+        let class = minimum_class()?;
+        let reference = Reference::Array(class.clone(), ConcurrentVec::from(vec![None]));
+        let clone = reference.clone();
+        assert_eq!(reference, clone);
+
+        let Reference::Array(ref _class, ref array) = clone else {
+            unreachable!("Expected reference array");
+        };
+        array.set(0, Some(Reference::from(vec![1i8])))?;
+        assert_eq!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_clone_reference_array() -> Result<()> {
+        let class = minimum_class()?;
+        let reference = Reference::Array(class.clone(), ConcurrentVec::from(vec![None]));
+        let clone = reference.deep_clone()?;
+        assert_eq!(reference, clone);
+
+        let Reference::Array(ref _class, ref array) = clone else {
+            unreachable!("Expected reference array");
+        };
+        array.set(0, Some(Reference::from(vec![1i8])))?;
+        assert_ne!(reference, clone);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_clone_object() -> Result<()> {
+        let class_name = "java.lang.Integer";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(1))?;
+        let reference = Reference::from(object);
+        let clone = reference.clone();
+        assert_eq!(reference, clone);
+
+        let Reference::Object(ref cloned_object) = clone else {
+            unreachable!("Expected object");
+        };
+        cloned_object.set_value("value", Value::Int(2))?;
+        assert_eq!(reference, clone);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_deep_clone_object() -> Result<()> {
+        let class_name = "java.lang.Integer";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(1))?;
+        let reference = Reference::from(object);
+        let clone = reference.deep_clone()?;
+        assert_eq!(reference, clone);
+
+        let Reference::Object(ref cloned_object) = clone else {
+            unreachable!("Expected object");
+        };
+        cloned_object.set_value("value", Value::Int(2))?;
+        assert_ne!(reference, clone);
+        Ok(())
     }
 
     #[test]
