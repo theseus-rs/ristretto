@@ -1288,7 +1288,8 @@ pub(crate) async fn should_be_initialized_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.shouldBeInitialized0(Ljava/lang/Class;)Z")
+    // Classes are always initialized
+    Ok(Some(Value::from(false)))
 }
 
 #[async_recursion(?Send)]
