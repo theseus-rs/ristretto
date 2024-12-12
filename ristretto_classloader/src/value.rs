@@ -83,6 +83,19 @@ impl Value {
     pub fn is_category_2(&self) -> bool {
         matches!(self, Value::Long(_) | Value::Double(_))
     }
+
+    /// Returns a deep clone of the value.
+    ///
+    /// # Errors
+    /// if the value cannot be cloned.
+    pub fn deep_clone(&self) -> Result<Self> {
+        let value = match self {
+            Value::Object(Some(reference)) => Value::Object(Some(reference.deep_clone()?)),
+            _ => self.clone(),
+        };
+
+        Ok(value)
+    }
 }
 
 impl Display for Value {
@@ -751,6 +764,34 @@ mod tests {
         assert_eq!("unused", value.to_string());
         assert!(value.is_category_1());
         assert!(!value.is_category_2());
+    }
+
+    #[test]
+    fn test_clone() -> Result<()> {
+        let value = Value::from(vec![1i32]);
+        let clone = value.clone();
+        assert_eq!(value, clone);
+
+        let Value::Object(Some(Reference::IntArray(ref array))) = clone else {
+            unreachable!("Expected an IntArray reference");
+        };
+        array.set(0, 2)?;
+        assert_eq!(value, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_clone() -> Result<()> {
+        let value = Value::from(vec![1i32]);
+        let clone = value.deep_clone()?;
+        assert_eq!(value, clone);
+
+        let Value::Object(Some(Reference::IntArray(ref array))) = clone else {
+            unreachable!("Expected an IntArray reference");
+        };
+        array.set(0, 2)?;
+        assert_ne!(value, clone);
+        Ok(())
     }
 
     #[test]

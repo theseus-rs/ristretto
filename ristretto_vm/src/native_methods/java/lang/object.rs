@@ -46,9 +46,9 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 
 #[async_recursion(?Send)]
 async fn clone(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let object = arguments.pop_reference()?;
-    let cloned_object = object.clone();
-    Ok(Some(Value::Object(cloned_object)))
+    let value = arguments.pop()?;
+    let cloned_value = value.deep_clone()?;
+    Ok(Some(cloned_value))
 }
 
 #[async_recursion(?Send)]
