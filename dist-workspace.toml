@@ -3,12 +3,18 @@ members = ["cargo:."]
 
 # Config for 'dist'
 [dist]
+# Whether to embed dependency information using cargo-auditable
+cargo-auditable = true
+# Whether to use cargo-cyclonedx to generate an SBOM
+cargo-cyclonedx = true
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
 cargo-dist-version = "0.26.1"
 # CI backends to support
 ci = "github"
 # Whether dist should create a Github Release or use an existing draft
 create-release = false
+# Whether to enable GitHub Attestations
+github-attestations = true
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
 # Whether to install an updater program
@@ -24,7 +30,7 @@ publish-jobs = ["homebrew"]
 # A GitHub repo to push Homebrew formulas to
 tap = "theseus-rs/homebrew-tap"
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
 
 [dist.github-custom-runners]
 aarch64-apple-darwin = "macos-15"
