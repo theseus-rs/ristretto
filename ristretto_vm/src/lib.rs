@@ -48,6 +48,6 @@ pub(crate) use frame::Frame;
 pub use java_error::JavaError;
 pub(crate) use local_variables::LocalVariables;
 pub(crate) use operand_stack::OperandStack;
-pub use ristretto_classloader::{Class, ClassPath, Reference, Value};
+pub use ristretto_classloader::{Class, ClassPath, Reference, Value, DEFAULT_JAVA_VERSION};
 pub(crate) use thread::Thread;
 pub use vm::VM;
