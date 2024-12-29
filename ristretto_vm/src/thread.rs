@@ -404,8 +404,7 @@ impl Thread {
             let locals = frame.locals();
             locals.get(0)?
         };
-        Arc::try_unwrap(object)
-            .map_err(|_| InternalError("Failed to create new object".to_string()))
+        Ok(object)
     }
 }
 
