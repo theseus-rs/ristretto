@@ -2,19 +2,17 @@ use crate::Error::{InvalidLocalVariable, InvalidLocalVariableIndex};
 use crate::Result;
 use ristretto_classloader::{ConcurrentVec, Reference, Value};
 use std::fmt::Display;
-use std::sync::Arc;
 
 /// Represents the local variables in a frame.
 #[derive(Clone, Debug)]
 pub struct LocalVariables {
-    locals: ConcurrentVec<Arc<Value>>,
+    locals: ConcurrentVec<Value>,
 }
 
 impl LocalVariables {
     /// Create a new local variables with a maximum size.
-    #[expect(clippy::rc_clone_in_vec_init)]
     pub fn with_max_size(max_size: usize) -> Self {
-        let locals = ConcurrentVec::from(vec![Arc::new(Value::Unused); max_size]);
+        let locals = ConcurrentVec::from(vec![Value::Unused; max_size]);
         LocalVariables { locals }
     }
 
@@ -23,7 +21,7 @@ impl LocalVariables {
     /// # Errors
     /// if the local variable at the given index was not found.
     #[inline]
-    pub fn get(&self, index: usize) -> Result<Arc<Value>> {
+    pub fn get(&self, index: usize) -> Result<Value> {
         match self.locals.get(index)? {
             Some(value) => Ok(value),
             None => Err(InvalidLocalVariableIndex(index)),
@@ -113,7 +111,7 @@ impl LocalVariables {
     #[inline]
     pub fn set(&self, index: usize, value: Value) -> Result<()> {
         if index < self.locals.capacity()? {
-            self.locals.set(index, Arc::new(value))?;
+            self.locals.set(index, value)?;
             Ok(())
         } else {
             Err(InvalidLocalVariableIndex(index))
@@ -167,7 +165,7 @@ impl LocalVariables {
             let Some(value) = self.locals.get(index)? else {
                 continue;
             };
-            if *value != Value::Unused {
+            if value != Value::Unused {
                 length = index + 1;
             }
         }
