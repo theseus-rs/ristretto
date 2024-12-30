@@ -5,7 +5,7 @@ use crate::Result;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2l>
 #[inline]
-pub(crate) fn i2l(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn i2l(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     stack.push_long(i64::from(value))?;
     Ok(Continue)
@@ -13,7 +13,7 @@ pub(crate) fn i2l(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2f>
 #[inline]
-pub(crate) fn i2f(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn i2f(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     #[expect(clippy::cast_precision_loss)]
     stack.push_float(value as f32)?;
@@ -22,7 +22,7 @@ pub(crate) fn i2f(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2d>
 #[inline]
-pub(crate) fn i2d(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn i2d(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     stack.push_double(f64::from(value))?;
     Ok(Continue)
@@ -30,7 +30,7 @@ pub(crate) fn i2d(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.l2i>
 #[inline]
-pub(crate) fn l2i(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn l2i(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
     #[expect(clippy::cast_possible_truncation)]
     stack.push_int(value as i32)?;
@@ -39,7 +39,7 @@ pub(crate) fn l2i(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.l2f>
 #[inline]
-pub(crate) fn l2f(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn l2f(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
     #[expect(clippy::cast_precision_loss)]
     stack.push_float(value as f32)?;
@@ -48,7 +48,7 @@ pub(crate) fn l2f(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.l2d>
 #[inline]
-pub(crate) fn l2d(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn l2d(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
     #[expect(clippy::cast_precision_loss)]
     stack.push_double(value as f64)?;
@@ -57,7 +57,7 @@ pub(crate) fn l2d(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.f2i>
 #[inline]
-pub(crate) fn f2i(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn f2i(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
     #[expect(clippy::cast_possible_truncation)]
     stack.push_int(value as i32)?;
@@ -66,7 +66,7 @@ pub(crate) fn f2i(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.f2l>
 #[inline]
-pub(crate) fn f2l(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn f2l(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
     #[expect(clippy::cast_possible_truncation)]
     stack.push_long(value as i64)?;
@@ -75,7 +75,7 @@ pub(crate) fn f2l(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.f2d>
 #[inline]
-pub(crate) fn f2d(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn f2d(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
     stack.push_double(f64::from(value))?;
     Ok(Continue)
@@ -83,7 +83,7 @@ pub(crate) fn f2d(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.d2i>
 #[inline]
-pub(crate) fn d2i(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn d2i(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
     #[expect(clippy::cast_possible_truncation)]
     stack.push_int(value as i32)?;
@@ -92,7 +92,7 @@ pub(crate) fn d2i(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.d2l>
 #[inline]
-pub(crate) fn d2l(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn d2l(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
     #[expect(clippy::cast_possible_truncation)]
     stack.push_long(value as i64)?;
@@ -101,7 +101,7 @@ pub(crate) fn d2l(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.d2f>
 #[inline]
-pub(crate) fn d2f(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn d2f(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
     #[expect(clippy::cast_possible_truncation)]
     stack.push_float(value as f32)?;
@@ -110,7 +110,7 @@ pub(crate) fn d2f(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2b>
 #[inline]
-pub(crate) fn i2b(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn i2b(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     #[expect(clippy::cast_possible_truncation)]
     let byte = value as i8;
@@ -120,7 +120,7 @@ pub(crate) fn i2b(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2c>
 #[inline]
-pub(crate) fn i2c(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn i2c(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     #[expect(clippy::cast_possible_truncation)]
     #[expect(clippy::cast_sign_loss)]
@@ -131,7 +131,7 @@ pub(crate) fn i2c(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2s>
 #[inline]
-pub(crate) fn i2s(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn i2s(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     #[expect(clippy::cast_possible_truncation)]
     let short = value as i16;

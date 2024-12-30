@@ -5,7 +5,7 @@ use crate::Result;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.monitorenter>
 #[inline]
-pub(crate) fn monitorenter(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn monitorenter(stack: &mut OperandStack) -> Result<ExecutionResult> {
     // The monitorenter instruction is not currently used by this implementation.
     let _ = stack.pop_object()?;
     Ok(Continue)
@@ -13,7 +13,7 @@ pub(crate) fn monitorenter(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.monitorexit>
 #[inline]
-pub(crate) fn monitorexit(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn monitorexit(stack: &mut OperandStack) -> Result<ExecutionResult> {
     // The monitorexit instruction is not currently used by this implementation.
     let _ = stack.pop_object()?;
     Ok(Continue)

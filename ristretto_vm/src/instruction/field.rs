@@ -9,7 +9,7 @@ use std::sync::Arc;
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.getfield>
 #[inline]
 pub(crate) fn getfield(
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     class: &Arc<Class>,
     index: u16,
 ) -> Result<ExecutionResult> {
@@ -35,7 +35,7 @@ pub(crate) fn getfield(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.putfield>
 #[inline]
 pub(crate) fn putfield(
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     class: &Arc<Class>,
     index: u16,
 ) -> Result<ExecutionResult> {
@@ -101,11 +101,11 @@ mod test {
     async fn test_put_and_get_field() -> Result<()> {
         let (_vm, _thread, frame, class_index, field_index) =
             test_class_field("Child", "zero", "I").await?;
+        let stack = &mut OperandStack::with_max_size(4);
         let class = frame.class();
-        let result = new(&frame, class_index).await?;
+        let result = new(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
 
-        let stack = frame.stack();
         let result = dup(stack)?;
         assert_eq!(Continue, result);
 
@@ -132,10 +132,10 @@ mod test {
     async fn test_getfield_field_not_found() -> Result<()> {
         let (_vm, _thread, frame, class_index, field_index) =
             test_class_field("Child", "foo", "I").await?;
-        let result = new(&frame, class_index).await?;
+        let stack = &mut OperandStack::with_max_size(1);
+        let result = new(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         let class = frame.class();
-        let stack = frame.stack();
         let result = getfield(stack, class, field_index);
         assert!(result.is_err());
         Ok(())
@@ -165,9 +165,9 @@ mod test {
     async fn test_putfield_field_not_found() -> Result<()> {
         let (_vm, _thread, frame, class_index, field_index) =
             test_class_field("Child", "foo", "I").await?;
+        let stack = &mut OperandStack::with_max_size(3);
         let class = frame.class();
-        let result = new(&frame, class_index).await?;
-        let stack = frame.stack();
+        let result = new(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         let result = dup(stack)?;
         assert_eq!(Continue, result);

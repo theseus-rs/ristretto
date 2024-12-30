@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_cond>
 #[inline]
-pub(crate) fn ifeq(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn ifeq(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     if stack.pop_int()? == 0 {
         return Ok(ContinueAtPosition(usize::from(address)));
     }
@@ -16,7 +16,7 @@ pub(crate) fn ifeq(stack: &OperandStack, address: u16) -> Result<ExecutionResult
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_cond>
 #[inline]
-pub(crate) fn ifne(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn ifne(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     if stack.pop_int()? != 0 {
         return Ok(ContinueAtPosition(usize::from(address)));
     }
@@ -25,7 +25,7 @@ pub(crate) fn ifne(stack: &OperandStack, address: u16) -> Result<ExecutionResult
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_cond>
 #[inline]
-pub(crate) fn iflt(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn iflt(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     if stack.pop_int()? < 0 {
         return Ok(ContinueAtPosition(usize::from(address)));
     }
@@ -34,7 +34,7 @@ pub(crate) fn iflt(stack: &OperandStack, address: u16) -> Result<ExecutionResult
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_cond>
 #[inline]
-pub(crate) fn ifge(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn ifge(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     if stack.pop_int()? >= 0 {
         return Ok(ContinueAtPosition(usize::from(address)));
     }
@@ -43,7 +43,7 @@ pub(crate) fn ifge(stack: &OperandStack, address: u16) -> Result<ExecutionResult
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_cond>
 #[inline]
-pub(crate) fn ifgt(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn ifgt(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     if stack.pop_int()? > 0 {
         return Ok(ContinueAtPosition(usize::from(address)));
     }
@@ -52,7 +52,7 @@ pub(crate) fn ifgt(stack: &OperandStack, address: u16) -> Result<ExecutionResult
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_cond>
 #[inline]
-pub(crate) fn ifle(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn ifle(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     if stack.pop_int()? <= 0 {
         return Ok(ContinueAtPosition(usize::from(address)));
     }
@@ -61,7 +61,7 @@ pub(crate) fn ifle(stack: &OperandStack, address: u16) -> Result<ExecutionResult
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_icmp_cond>
 #[inline]
-pub(crate) fn if_icmpeq(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmpeq(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     if value1 == value2 {
@@ -72,7 +72,7 @@ pub(crate) fn if_icmpeq(stack: &OperandStack, address: u16) -> Result<ExecutionR
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_icmp_cond>
 #[inline]
-pub(crate) fn if_icmpne(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmpne(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     if value1 != value2 {
@@ -83,7 +83,7 @@ pub(crate) fn if_icmpne(stack: &OperandStack, address: u16) -> Result<ExecutionR
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_icmp_cond>
 #[inline]
-pub(crate) fn if_icmplt(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmplt(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     if value1 < value2 {
@@ -94,7 +94,7 @@ pub(crate) fn if_icmplt(stack: &OperandStack, address: u16) -> Result<ExecutionR
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_icmp_cond>
 #[inline]
-pub(crate) fn if_icmpge(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmpge(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     if value1 >= value2 {
@@ -105,7 +105,7 @@ pub(crate) fn if_icmpge(stack: &OperandStack, address: u16) -> Result<ExecutionR
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_icmp_cond>
 #[inline]
-pub(crate) fn if_icmpgt(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmpgt(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     if value1 > value2 {
@@ -116,7 +116,7 @@ pub(crate) fn if_icmpgt(stack: &OperandStack, address: u16) -> Result<ExecutionR
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_icmp_cond>
 #[inline]
-pub(crate) fn if_icmple(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmple(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
     if value1 <= value2 {
@@ -127,7 +127,7 @@ pub(crate) fn if_icmple(stack: &OperandStack, address: u16) -> Result<ExecutionR
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_acmp_cond>
 #[inline]
-pub(crate) fn if_acmpeq(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_acmpeq(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_object()?;
     let value1 = stack.pop_object()?;
     if value1 == value2 {
@@ -138,7 +138,7 @@ pub(crate) fn if_acmpeq(stack: &OperandStack, address: u16) -> Result<ExecutionR
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_acmp_cond>
 #[inline]
-pub(crate) fn if_acmpne(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_acmpne(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_object()?;
     let value1 = stack.pop_object()?;
     if value1 != value2 {
@@ -163,7 +163,7 @@ pub(crate) fn goto_w(address: i32) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.jsr>
 #[inline]
-pub(crate) fn jsr(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn jsr(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let address = i32::from(address);
     stack.push_int(address)?;
     Ok(ContinueAtPosition(usize::try_from(address)?))
@@ -172,7 +172,7 @@ pub(crate) fn jsr(stack: &OperandStack, address: u16) -> Result<ExecutionResult>
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.jsr_w>
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
-pub(crate) fn jsr_w(stack: &OperandStack, address: i32) -> Result<ExecutionResult> {
+pub(crate) fn jsr_w(stack: &mut OperandStack, address: i32) -> Result<ExecutionResult> {
     stack.push_int(address)?;
     Ok(ContinueAtPosition(usize::try_from(address)?))
 }
@@ -196,7 +196,7 @@ pub(crate) fn ret_w(locals: &LocalVariables, index: u16) -> Result<ExecutionResu
 #[expect(clippy::ptr_arg)]
 #[inline]
 pub(crate) fn tableswitch(
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     program_counter: usize,
     default: i32,
     low: i32,
@@ -216,7 +216,7 @@ pub(crate) fn tableswitch(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.lookupswitch>
 #[inline]
 pub(crate) fn lookupswitch(
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     program_counter: usize,
     default: i32,
     pairs: &IndexMap<i32, i32>,
@@ -238,7 +238,7 @@ pub(crate) fn r#return() -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ifnull>
 #[inline]
-pub(crate) fn ifnull(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn ifnull(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     if stack.pop_object()?.is_none() {
         return Ok(ContinueAtPosition(usize::from(address)));
     }
@@ -247,7 +247,7 @@ pub(crate) fn ifnull(stack: &OperandStack, address: u16) -> Result<ExecutionResu
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ifnonnull>
 #[inline]
-pub(crate) fn ifnonnull(stack: &OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn ifnonnull(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     if stack.pop_object()?.is_some() {
         return Ok(ContinueAtPosition(usize::from(address)));
     }

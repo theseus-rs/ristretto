@@ -10,14 +10,14 @@ use ristretto_classloader::Reference;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dconst_d>
 #[inline]
-pub(crate) fn dconst_0(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dconst_0(stack: &mut OperandStack) -> Result<ExecutionResult> {
     stack.push_double(0f64)?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dconst_d>
 #[inline]
-pub(crate) fn dconst_1(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dconst_1(stack: &mut OperandStack) -> Result<ExecutionResult> {
     stack.push_double(1f64)?;
     Ok(Continue)
 }
@@ -26,7 +26,7 @@ pub(crate) fn dconst_1(stack: &OperandStack) -> Result<ExecutionResult> {
 #[inline]
 pub(crate) fn dload(
     locals: &LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     index: u8,
 ) -> Result<ExecutionResult> {
     let value = locals.get_double(usize::from(index))?;
@@ -39,7 +39,7 @@ pub(crate) fn dload(
 #[inline]
 pub(crate) fn dload_w(
     locals: &LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
     let value = locals.get_double(usize::from(index))?;
@@ -49,7 +49,10 @@ pub(crate) fn dload_w(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dload_n>
 #[inline]
-pub(crate) fn dload_0(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dload_0(
+    locals: &LocalVariables,
+    stack: &mut OperandStack,
+) -> Result<ExecutionResult> {
     let value = locals.get_double(0)?;
     stack.push_double(value)?;
     Ok(Continue)
@@ -57,7 +60,10 @@ pub(crate) fn dload_0(locals: &LocalVariables, stack: &OperandStack) -> Result<E
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dload_n>
 #[inline]
-pub(crate) fn dload_1(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dload_1(
+    locals: &LocalVariables,
+    stack: &mut OperandStack,
+) -> Result<ExecutionResult> {
     let value = locals.get_double(1)?;
     stack.push_double(value)?;
     Ok(Continue)
@@ -65,7 +71,10 @@ pub(crate) fn dload_1(locals: &LocalVariables, stack: &OperandStack) -> Result<E
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dload_n>
 #[inline]
-pub(crate) fn dload_2(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dload_2(
+    locals: &LocalVariables,
+    stack: &mut OperandStack,
+) -> Result<ExecutionResult> {
     let value = locals.get_double(2)?;
     stack.push_double(value)?;
     Ok(Continue)
@@ -73,7 +82,10 @@ pub(crate) fn dload_2(locals: &LocalVariables, stack: &OperandStack) -> Result<E
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dload_n>
 #[inline]
-pub(crate) fn dload_3(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dload_3(
+    locals: &LocalVariables,
+    stack: &mut OperandStack,
+) -> Result<ExecutionResult> {
     let value = locals.get_double(3)?;
     stack.push_double(value)?;
     Ok(Continue)
@@ -83,7 +95,7 @@ pub(crate) fn dload_3(locals: &LocalVariables, stack: &OperandStack) -> Result<E
 #[inline]
 pub(crate) fn dstore(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     index: u8,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
@@ -96,7 +108,7 @@ pub(crate) fn dstore(
 #[inline]
 pub(crate) fn dstore_w(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
@@ -108,7 +120,7 @@ pub(crate) fn dstore_w(
 #[inline]
 pub(crate) fn dstore_0(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
     locals.set_double(0, value)?;
@@ -119,7 +131,7 @@ pub(crate) fn dstore_0(
 #[inline]
 pub(crate) fn dstore_1(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
     locals.set_double(1, value)?;
@@ -130,7 +142,7 @@ pub(crate) fn dstore_1(
 #[inline]
 pub(crate) fn dstore_2(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
     locals.set_double(2, value)?;
@@ -141,7 +153,7 @@ pub(crate) fn dstore_2(
 #[inline]
 pub(crate) fn dstore_3(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
     locals.set_double(3, value)?;
@@ -150,7 +162,7 @@ pub(crate) fn dstore_3(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.daload>
 #[inline]
-pub(crate) fn daload(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn daload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
@@ -172,7 +184,7 @@ pub(crate) fn daload(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dastore>
 #[inline]
-pub(crate) fn dastore(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {
@@ -195,7 +207,7 @@ pub(crate) fn dastore(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dadd>
 #[inline]
-pub(crate) fn dadd(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dadd(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     stack.push_double(value1 + value2)?;
@@ -204,7 +216,7 @@ pub(crate) fn dadd(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dsub>
 #[inline]
-pub(crate) fn dsub(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dsub(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     stack.push_double(value1 - value2)?;
@@ -213,7 +225,7 @@ pub(crate) fn dsub(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dmul>
 #[inline]
-pub(crate) fn dmul(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dmul(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     stack.push_double(value1 * value2)?;
@@ -222,7 +234,7 @@ pub(crate) fn dmul(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ddiv>
 #[inline]
-pub(crate) fn ddiv(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn ddiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
 
@@ -236,7 +248,7 @@ pub(crate) fn ddiv(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.drem>
 #[inline]
-pub(crate) fn drem(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn drem(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
 
@@ -250,7 +262,7 @@ pub(crate) fn drem(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dneg>
 #[inline]
-pub(crate) fn dneg(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dneg(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
     stack.push_double(-value)?;
     Ok(Continue)
@@ -258,7 +270,7 @@ pub(crate) fn dneg(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dcmpl>
 #[inline]
-pub(crate) fn dcmpl(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dcmpl(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     let cmp = if f64::is_nan(value1) || f64::is_nan(value2) {
@@ -276,7 +288,7 @@ pub(crate) fn dcmpl(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dcmpg>
 #[inline]
-pub(crate) fn dcmpg(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dcmpg(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     let cmp = if f64::is_nan(value1) || f64::is_nan(value2) || value1 > value2 {
@@ -292,7 +304,7 @@ pub(crate) fn dcmpg(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dreturn>
 #[inline]
-pub(crate) fn dreturn(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dreturn(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
     Ok(Return(Some(Value::Double(value))))
 }

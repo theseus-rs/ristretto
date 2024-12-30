@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aconst_null>
 #[inline]
-pub(crate) fn aconst_null(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aconst_null(stack: &mut OperandStack) -> Result<ExecutionResult> {
     stack.push_object(None)?;
     Ok(Continue)
 }
@@ -19,7 +19,7 @@ pub(crate) fn aconst_null(stack: &OperandStack) -> Result<ExecutionResult> {
 #[inline]
 pub(crate) fn aload(
     locals: &LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     index: u8,
 ) -> Result<ExecutionResult> {
     let object = locals.get_object(usize::from(index))?;
@@ -32,7 +32,7 @@ pub(crate) fn aload(
 #[inline]
 pub(crate) fn aload_w(
     locals: &LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
     let object = locals.get_object(usize::from(index))?;
@@ -42,7 +42,10 @@ pub(crate) fn aload_w(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
-pub(crate) fn aload_0(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aload_0(
+    locals: &LocalVariables,
+    stack: &mut OperandStack,
+) -> Result<ExecutionResult> {
     let object = locals.get_object(0)?;
     stack.push_object(object)?;
     Ok(Continue)
@@ -50,7 +53,10 @@ pub(crate) fn aload_0(locals: &LocalVariables, stack: &OperandStack) -> Result<E
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
-pub(crate) fn aload_1(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aload_1(
+    locals: &LocalVariables,
+    stack: &mut OperandStack,
+) -> Result<ExecutionResult> {
     let object = locals.get_object(1)?;
     stack.push_object(object)?;
     Ok(Continue)
@@ -58,7 +64,10 @@ pub(crate) fn aload_1(locals: &LocalVariables, stack: &OperandStack) -> Result<E
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
-pub(crate) fn aload_2(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aload_2(
+    locals: &LocalVariables,
+    stack: &mut OperandStack,
+) -> Result<ExecutionResult> {
     let object = locals.get_object(2)?;
     stack.push_object(object)?;
     Ok(Continue)
@@ -66,7 +75,10 @@ pub(crate) fn aload_2(locals: &LocalVariables, stack: &OperandStack) -> Result<E
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
-pub(crate) fn aload_3(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aload_3(
+    locals: &LocalVariables,
+    stack: &mut OperandStack,
+) -> Result<ExecutionResult> {
     let object = locals.get_object(3)?;
     stack.push_object(object)?;
     Ok(Continue)
@@ -76,7 +88,7 @@ pub(crate) fn aload_3(locals: &LocalVariables, stack: &OperandStack) -> Result<E
 #[inline]
 pub(crate) fn astore(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     index: u8,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
@@ -89,7 +101,7 @@ pub(crate) fn astore(
 #[inline]
 pub(crate) fn astore_w(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
@@ -101,7 +113,7 @@ pub(crate) fn astore_w(
 #[inline]
 pub(crate) fn astore_0(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     locals.set_object(0, value)?;
@@ -112,7 +124,7 @@ pub(crate) fn astore_0(
 #[inline]
 pub(crate) fn astore_1(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     locals.set_object(1, value)?;
@@ -123,7 +135,7 @@ pub(crate) fn astore_1(
 #[inline]
 pub(crate) fn astore_2(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     locals.set_object(2, value)?;
@@ -134,7 +146,7 @@ pub(crate) fn astore_2(
 #[inline]
 pub(crate) fn astore_3(
     locals: &mut LocalVariables,
-    stack: &OperandStack,
+    stack: &mut OperandStack,
 ) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     locals.set_object(3, value)?;
@@ -143,7 +155,7 @@ pub(crate) fn astore_3(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aaload>
 #[inline]
-pub(crate) fn aaload(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
@@ -165,7 +177,7 @@ pub(crate) fn aaload(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aastore>
 #[inline]
-pub(crate) fn aastore(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {
@@ -190,29 +202,35 @@ pub(crate) fn aastore(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.areturn>
 #[inline]
-pub(crate) fn areturn(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn areturn(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     Ok(Return(Some(Value::Object(value))))
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.new>
 #[inline]
-pub(crate) async fn new(frame: &Frame, index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn new(
+    frame: &Frame,
+    stack: &mut OperandStack,
+    index: u16,
+) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
     let class = thread.class(class_name).await?;
     let object = Object::new(class)?;
     let reference = Reference::from(object);
-    let stack = frame.stack();
     stack.push_object(Some(reference))?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.checkcast>
 #[inline]
-pub(crate) async fn checkcast(frame: &Frame, class_index: u16) -> Result<ExecutionResult> {
-    let stack = frame.stack();
+pub(crate) async fn checkcast(
+    frame: &Frame,
+    stack: &mut OperandStack,
+    class_index: u16,
+) -> Result<ExecutionResult> {
     let Value::Object(object) = stack.peek()? else {
         return Err(InternalError("Expected object".to_string()));
     };
@@ -239,8 +257,11 @@ pub(crate) async fn checkcast(frame: &Frame, class_index: u16) -> Result<Executi
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.instanceof>
 #[inline]
-pub(crate) async fn instanceof(frame: &Frame, class_index: u16) -> Result<ExecutionResult> {
-    let stack = frame.stack();
+pub(crate) async fn instanceof(
+    frame: &Frame,
+    stack: &mut OperandStack,
+    class_index: u16,
+) -> Result<ExecutionResult> {
     let object = stack.pop_object()?;
     let Some(object) = object else {
         stack.push_int(0)?;
@@ -430,8 +451,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_aaload() -> Result<()> {
-        let (_vm, thread, frame) = crate::test::frame().await?;
-        let stack = frame.stack();
+        let (_vm, thread, _frame) = crate::test::frame().await?;
+        let stack = &mut OperandStack::with_max_size(2);
         let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![42i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
@@ -462,8 +483,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_aaload_invalid_index() -> Result<()> {
-        let (_vm, thread, frame) = crate::test::frame().await?;
-        let stack = frame.stack();
+        let (_vm, thread, _frame) = crate::test::frame().await?;
+        let stack = &mut OperandStack::with_max_size(2);
         let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![42i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
@@ -490,8 +511,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_aastore() -> Result<()> {
-        let (_vm, thread, frame) = crate::test::frame().await?;
-        let stack = frame.stack();
+        let (_vm, thread, _frame) = crate::test::frame().await?;
+        let stack = &mut OperandStack::with_max_size(3);
         let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![3i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object)]));
@@ -523,8 +544,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_aastore_invalid_index() -> Result<()> {
-        let (_vm, thread, frame) = crate::test::frame().await?;
-        let stack = frame.stack();
+        let (_vm, thread, _frame) = crate::test::frame().await?;
+        let stack = &mut OperandStack::with_max_size(3);
         let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![3i32]);
         let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
@@ -592,9 +613,9 @@ mod tests {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("Child")?;
-        let process_result = new(&frame, class_index).await?;
+        let stack = &mut OperandStack::with_max_size(1);
+        let process_result = new(&frame, stack, class_index).await?;
         assert_eq!(process_result, Continue);
-        let stack = frame.stack();
         let object = stack.pop()?;
         assert!(matches!(object, Value::Object(Some(Reference::Object(_)))));
         Ok(())
@@ -610,10 +631,10 @@ mod tests {
     #[tokio::test]
     async fn test_checkcast_null() -> Result<()> {
         let (_vm, _thread, mut frame) = crate::test::frame().await?;
-        let stack = &mut frame.stack();
+        let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;
-        let result = checkcast(&frame, class_index).await?;
+        let result = checkcast(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         Ok(())
     }
@@ -621,11 +642,11 @@ mod tests {
     #[tokio::test]
     async fn test_checkcast_string_to_object() -> Result<()> {
         let (vm, _thread, mut frame) = crate::test::frame().await?;
-        let stack = &mut frame.stack();
+        let stack = &mut OperandStack::with_max_size(1);
         let string = "foo".to_object(&vm).await?;
         stack.push(string)?;
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;
-        let result = checkcast(&frame, class_index).await?;
+        let result = checkcast(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         Ok(())
     }
@@ -633,12 +654,12 @@ mod tests {
     #[tokio::test]
     async fn test_checkcast_object_to_string() -> Result<()> {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
-        let stack = &mut frame.stack();
+        let stack = &mut OperandStack::with_max_size(1);
         let object_class = thread.class("java/lang/Object").await?;
         let object = Object::new(object_class)?;
         stack.push_object(Some(Reference::from(object)))?;
         let class_index = get_class_index(&mut frame, "java/lang/String")?;
-        let result = checkcast(&frame, class_index).await;
+        let result = checkcast(&frame, stack, class_index).await;
         assert!(matches!(
             result,
             Err(JavaError(ClassCastException { source_class_name, target_class_name}))
@@ -650,12 +671,12 @@ mod tests {
     #[tokio::test]
     async fn test_checkcast_string_array_to_object_array() -> Result<()> {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
-        let stack = &mut frame.stack();
+        let stack = &mut OperandStack::with_max_size(1);
         let string_class = thread.class("[Ljava/lang/String;").await?;
         let string_array = Reference::Array(string_class, ConcurrentVec::default());
         stack.push_object(Some(string_array))?;
         let class_index = get_class_index(&mut frame, "[Ljava/lang/Object;")?;
-        let result = checkcast(&frame, class_index).await?;
+        let result = checkcast(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         Ok(())
     }
@@ -663,13 +684,10 @@ mod tests {
     #[tokio::test]
     async fn test_instanceof_null() -> Result<()> {
         let (_vm, _thread, mut frame) = crate::test::frame().await?;
-        {
-            let stack = &mut frame.stack();
-            stack.push_object(None)?;
-        }
+        let stack = &mut OperandStack::with_max_size(1);
+        stack.push_object(None)?;
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;
-        let result = instanceof(&frame, class_index).await?;
-        let stack = &mut frame.stack();
+        let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         assert_eq!(0, stack.pop_int()?);
         Ok(())
@@ -678,14 +696,11 @@ mod tests {
     #[tokio::test]
     async fn test_instanceof_string_to_object() -> Result<()> {
         let (vm, _thread, mut frame) = crate::test::frame().await?;
-        {
-            let stack = &mut frame.stack();
-            let string = "foo".to_object(&vm).await?;
-            stack.push(string)?;
-        }
+        let stack = &mut OperandStack::with_max_size(1);
+        let string = "foo".to_object(&vm).await?;
+        stack.push(string)?;
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;
-        let result = instanceof(&frame, class_index).await?;
-        let stack = &mut frame.stack();
+        let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         assert_eq!(1, stack.pop_int()?);
         Ok(())
@@ -694,15 +709,12 @@ mod tests {
     #[tokio::test]
     async fn test_instanceof_object_to_string() -> Result<()> {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
-        {
-            let stack = &mut frame.stack();
-            let object_class = thread.class("java/lang/Object").await?;
-            let object = Object::new(object_class)?;
-            stack.push_object(Some(Reference::from(object)))?;
-        }
+        let stack = &mut OperandStack::with_max_size(1);
+        let object_class = thread.class("java/lang/Object").await?;
+        let object = Object::new(object_class)?;
+        stack.push_object(Some(Reference::from(object)))?;
         let class_index = get_class_index(&mut frame, "java/lang/String")?;
-        let result = instanceof(&frame, class_index).await?;
-        let stack = &mut frame.stack();
+        let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         assert_eq!(0, stack.pop_int()?);
         Ok(())
@@ -711,15 +723,12 @@ mod tests {
     #[tokio::test]
     async fn test_instanceof_string_array_to_object() -> Result<()> {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
-        {
-            let stack = &mut frame.stack();
-            let string_class = thread.class("[Ljava/lang/String;").await?;
-            let string_array = Reference::Array(string_class, ConcurrentVec::default());
-            stack.push_object(Some(string_array))?;
-        }
+        let stack = &mut OperandStack::with_max_size(1);
+        let string_class = thread.class("[Ljava/lang/String;").await?;
+        let string_array = Reference::Array(string_class, ConcurrentVec::default());
+        stack.push_object(Some(string_array))?;
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;
-        let result = instanceof(&frame, class_index).await?;
-        let stack = &mut frame.stack();
+        let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         assert_eq!(1, stack.pop_int()?);
         Ok(())
@@ -728,15 +737,12 @@ mod tests {
     #[tokio::test]
     async fn test_instanceof_object_array_to_string() -> Result<()> {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
-        {
-            let stack = &mut frame.stack();
-            let object_class = thread.class("[Ljava/lang/Object;").await?;
-            let object_array = Reference::Array(object_class, ConcurrentVec::default());
-            stack.push_object(Some(object_array))?;
-        }
+        let stack = &mut OperandStack::with_max_size(1);
+        let object_class = thread.class("[Ljava/lang/Object;").await?;
+        let object_array = Reference::Array(object_class, ConcurrentVec::default());
+        stack.push_object(Some(object_array))?;
         let class_index = get_class_index(&mut frame, "java/lang/String")?;
-        let result = instanceof(&frame, class_index).await?;
-        let stack = &mut frame.stack();
+        let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         assert_eq!(0, stack.pop_int()?);
         Ok(())
@@ -745,14 +751,11 @@ mod tests {
     #[tokio::test]
     async fn test_instanceof_int_array_to_int_array() -> Result<()> {
         let (_vm, _thread, mut frame) = crate::test::frame().await?;
-        {
-            let stack = &mut frame.stack();
-            let int_array = Reference::from(vec![0i32; 0]);
-            stack.push_object(Some(int_array))?;
-        }
+        let stack = &mut OperandStack::with_max_size(1);
+        let int_array = Reference::from(vec![0i32; 0]);
+        stack.push_object(Some(int_array))?;
         let class_index = get_class_index(&mut frame, "[I")?;
-        let result = instanceof(&frame, class_index).await?;
-        let stack = &mut frame.stack();
+        let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         assert_eq!(1, stack.pop_int()?);
         Ok(())
@@ -761,14 +764,11 @@ mod tests {
     #[tokio::test]
     async fn test_instanceof_long_array_to_int_array() -> Result<()> {
         let (_vm, _thread, mut frame) = crate::test::frame().await?;
-        {
-            let stack = &mut frame.stack();
-            let long_array = Reference::LongArray(ConcurrentVec::default());
-            stack.push_object(Some(long_array))?;
-        }
+        let stack = &mut OperandStack::with_max_size(1);
+        let long_array = Reference::LongArray(ConcurrentVec::default());
+        stack.push_object(Some(long_array))?;
         let class_index = get_class_index(&mut frame, "[I")?;
-        let result = instanceof(&frame, class_index).await?;
-        let stack = &mut frame.stack();
+        let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         assert_eq!(0, stack.pop_int()?);
         Ok(())

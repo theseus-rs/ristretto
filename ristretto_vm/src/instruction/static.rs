@@ -1,11 +1,16 @@
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
+use crate::operand_stack::OperandStack;
 use crate::Result;
 use ristretto_classfile::FieldType;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.getstatic>
 #[inline]
-pub(crate) async fn getstatic(frame: &Frame, index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn getstatic(
+    frame: &Frame,
+    stack: &mut OperandStack,
+    index: u16,
+) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
@@ -16,7 +21,6 @@ pub(crate) async fn getstatic(frame: &Frame, index: u16) -> Result<ExecutionResu
     let field_name = constant_pool.try_get_utf8(*name_index)?;
     let field = class.static_field(field_name)?;
     let value = field.value()?;
-    let stack = frame.stack();
     stack.push(value)?;
 
     if let FieldType::Object(class_name) = field.field_type() {
@@ -29,7 +33,11 @@ pub(crate) async fn getstatic(frame: &Frame, index: u16) -> Result<ExecutionResu
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.putstatic>
 #[inline]
-pub(crate) async fn putstatic(frame: &Frame, index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn putstatic(
+    frame: &Frame,
+    stack: &mut OperandStack,
+    index: u16,
+) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
@@ -39,7 +47,6 @@ pub(crate) async fn putstatic(frame: &Frame, index: u16) -> Result<ExecutionResu
     let class = thread.class(class_name).await?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
     let field = class.static_field(field_name)?;
-    let stack = frame.stack();
     let value = stack.pop()?;
     field.set_value(value)?;
 
@@ -55,6 +62,7 @@ pub(crate) async fn putstatic(frame: &Frame, index: u16) -> Result<ExecutionResu
 mod test {
     use super::*;
     use crate::frame::Frame;
+    use crate::operand_stack::OperandStack;
     use crate::thread::Thread;
     use crate::VM;
     use ristretto_classfile::MethodAccessFlags;
@@ -94,9 +102,9 @@ mod test {
     async fn test_getstatic() -> Result<()> {
         let (_vm, _thread, frame, _class_index, field_index) =
             test_class_field("Constants", "INT_VALUE", "I").await?;
-        let result = getstatic(&frame, field_index).await?;
+        let stack = &mut OperandStack::with_max_size(1);
+        let result = getstatic(&frame, stack, field_index).await?;
         assert_eq!(Continue, result);
-        let stack = frame.stack();
         let value = stack.pop()?;
         assert_eq!(Value::Int(3), value);
         Ok(())
@@ -106,7 +114,8 @@ mod test {
     async fn test_getstatic_field_not_found() -> Result<()> {
         let (_vm, _thread, frame, _class_index, field_index) =
             test_class_field("Child", "foo", "I").await?;
-        let result = getstatic(&frame, field_index).await;
+        let stack = &mut OperandStack::with_max_size(1);
+        let result = getstatic(&frame, stack, field_index).await;
         assert!(result.is_err());
         Ok(())
     }
@@ -115,14 +124,13 @@ mod test {
     async fn test_putstatic() -> Result<()> {
         let (_vm, _thread, frame, _class_index, field_index) =
             test_class_field("Simple", "ANSWER", "I").await?;
-        let stack = frame.stack();
+        let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = putstatic(&frame, field_index).await?;
+        let result = putstatic(&frame, stack, field_index).await?;
         assert_eq!(Continue, result);
 
-        let result = getstatic(&frame, field_index).await?;
+        let result = getstatic(&frame, stack, field_index).await?;
         assert_eq!(Continue, result);
-        let stack = frame.stack();
         let value = stack.pop()?;
         assert_eq!(Value::Int(3), value);
         Ok(())
@@ -132,9 +140,9 @@ mod test {
     async fn test_putstatic_field_not_found() -> Result<()> {
         let (_vm, _thread, frame, _class_index, field_index) =
             test_class_field("Child", "foo", "I").await?;
-        let stack = frame.stack();
+        let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = putstatic(&frame, field_index).await;
+        let result = putstatic(&frame, stack, field_index).await;
         assert!(result.is_err());
         Ok(())
     }

@@ -8,7 +8,7 @@ use ristretto_classloader::Reference;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.caload>
 #[inline]
-pub(crate) fn caload(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn caload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
@@ -30,7 +30,7 @@ pub(crate) fn caload(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.castore>
 #[inline]
-pub(crate) fn castore(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn castore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     let index = stack.pop_int()?;
     match stack.pop_object()? {
