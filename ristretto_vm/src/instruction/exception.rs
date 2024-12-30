@@ -1,4 +1,5 @@
 use crate::frame::{ExecutionResult, Frame};
+use crate::operand_stack::OperandStack;
 use crate::Error::{InternalError, JavaError, Throwable};
 use crate::{Error, Result, VM};
 use ristretto_classloader::{Object, Reference};
@@ -6,8 +7,7 @@ use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.athrow>
 #[inline]
-pub(crate) async fn athrow(frame: &Frame) -> Result<ExecutionResult> {
-    let stack = frame.stack();
+pub(crate) async fn athrow(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let Some(Reference::Object(throwable)) = stack.pop_object()? else {
         return Err(InternalError("Expected object on top of stack".to_string()));
     };
@@ -20,7 +20,11 @@ pub(crate) async fn athrow(frame: &Frame) -> Result<ExecutionResult> {
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.3>
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.athrow>
-pub(crate) async fn process_throwable(frame: &Frame, throwable: Object) -> Result<usize> {
+pub(crate) async fn process_throwable(
+    frame: &Frame,
+    stack: &mut OperandStack,
+    throwable: Object,
+) -> Result<usize> {
     let thread = frame.thread()?;
     let vm = thread.vm()?;
     let throwable_class = throwable.class();
@@ -49,7 +53,6 @@ pub(crate) async fn process_throwable(frame: &Frame, throwable: Object) -> Resul
         };
 
         if matching_exception_handler {
-            let stack = frame.stack();
             let handler_program_counter = usize::from(exception_table_entry.handler_pc);
             stack.push_object(Some(Reference::from(throwable)))?;
             return Ok(handler_program_counter);

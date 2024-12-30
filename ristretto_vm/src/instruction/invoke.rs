@@ -1,5 +1,6 @@
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
+use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::{Error, Result};
@@ -19,7 +20,11 @@ enum InvocationType {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokevirtual>
 #[inline]
-pub(crate) async fn invokevirtual(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn invokevirtual(
+    frame: &Frame,
+    stack: &mut OperandStack,
+    method_index: u16,
+) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
@@ -31,7 +36,7 @@ pub(crate) async fn invokevirtual(frame: &Frame, method_index: u16) -> Result<Ex
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
     let method = try_get_virtual_method(&class, method_name, method_descriptor)?;
 
-    invoke_method(&thread, frame, class, method, &InvocationType::Virtual).await
+    invoke_method(&thread, stack, class, method, &InvocationType::Virtual).await
 }
 
 /// Get a virtual method by name and descriptor.
@@ -76,7 +81,11 @@ fn try_get_virtual_method<S: AsRef<str>>(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokespecial>
 #[inline]
-pub(crate) async fn invokespecial(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn invokespecial(
+    frame: &Frame,
+    stack: &mut OperandStack,
+    method_index: u16,
+) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
@@ -90,7 +99,7 @@ pub(crate) async fn invokespecial(frame: &Frame, method_index: u16) -> Result<Ex
 
     invoke_method(
         &thread,
-        frame,
+        stack,
         method_class,
         method,
         &InvocationType::Special,
@@ -134,7 +143,11 @@ fn try_get_special_method<S: AsRef<str>>(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokestatic>
 #[inline]
-pub(crate) async fn invokestatic(frame: &Frame, method_index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn invokestatic(
+    frame: &Frame,
+    stack: &mut OperandStack,
+    method_index: u16,
+) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let constant = constant_pool.try_get(method_index)?;
@@ -157,13 +170,14 @@ pub(crate) async fn invokestatic(frame: &Frame, method_index: u16) -> Result<Exe
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
     let method = class.try_get_method(method_name, method_descriptor)?;
 
-    invoke_method(&thread, frame, class, method, &InvocationType::Static).await
+    invoke_method(&thread, stack, class, method, &InvocationType::Static).await
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokeinterface>
 #[inline]
 pub(crate) async fn invokeinterface(
     frame: &Frame,
+    stack: &mut OperandStack,
     method_index: u16,
     _count: u8,
 ) -> Result<ExecutionResult> {
@@ -179,12 +193,16 @@ pub(crate) async fn invokeinterface(
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
     let method = try_get_virtual_method(&class, method_name, method_descriptor)?;
 
-    invoke_method(&thread, frame, class, method, &InvocationType::Interface).await
+    invoke_method(&thread, stack, class, method, &InvocationType::Interface).await
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokedynamic>
 #[inline]
-pub(crate) async fn invokedynamic(_frame: &Frame, _method_index: u16) -> Result<ExecutionResult> {
+pub(crate) async fn invokedynamic(
+    _frame: &Frame,
+    _stack: &mut OperandStack,
+    _method_index: u16,
+) -> Result<ExecutionResult> {
     todo!("invokedynamic")
 }
 
@@ -195,12 +213,11 @@ pub(crate) async fn invokedynamic(_frame: &Frame, _method_index: u16) -> Result<
 #[inline]
 async fn invoke_method(
     thread: &Thread,
-    frame: &Frame,
+    stack: &mut OperandStack,
     mut class: Arc<Class>,
     mut method: Arc<Method>,
     invocation_type: &InvocationType,
 ) -> Result<ExecutionResult> {
-    let stack = frame.stack();
     let parameters = method.parameters().len();
     let mut arguments = if method.is_static() {
         Vec::with_capacity(parameters)

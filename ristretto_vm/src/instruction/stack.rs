@@ -5,14 +5,14 @@ use crate::Result;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.pop>
 #[inline]
-pub(crate) fn pop(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn pop(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let _ = stack.pop()?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.pop2>
 #[inline]
-pub(crate) fn pop2(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn pop2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop()?;
     if value.is_category_1() {
         let _ = stack.pop()?;
@@ -22,7 +22,7 @@ pub(crate) fn pop2(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dup>
 #[inline]
-pub(crate) fn dup(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dup(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop()?;
     stack.push(value.clone())?;
     stack.push(value)?;
@@ -31,7 +31,7 @@ pub(crate) fn dup(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dup_x1>
 #[inline]
-pub(crate) fn dup_x1(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dup_x1(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value1 = stack.pop()?;
     let value2 = stack.pop()?;
     stack.push(value1.clone())?;
@@ -42,7 +42,7 @@ pub(crate) fn dup_x1(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dup_x2>
 #[inline]
-pub(crate) fn dup_x2(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dup_x2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value1 = stack.pop()?;
     let value2 = stack.pop()?;
     if value2.is_category_1() {
@@ -61,7 +61,7 @@ pub(crate) fn dup_x2(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dup2>
 #[inline]
-pub(crate) fn dup2(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dup2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value1 = stack.pop()?;
     if value1.is_category_1() {
         let value2 = stack.pop()?;
@@ -78,7 +78,7 @@ pub(crate) fn dup2(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dup2_x1>
 #[inline]
-pub(crate) fn dup2_x1(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dup2_x1(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value1 = stack.pop()?;
     let value2 = stack.pop()?;
     if value1.is_category_1() {
@@ -98,7 +98,7 @@ pub(crate) fn dup2_x1(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.dup2_x2>
 #[inline]
-pub(crate) fn dup2_x2(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dup2_x2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value1 = stack.pop()?;
     let value2 = stack.pop()?;
     if value1.is_category_1() {
@@ -130,7 +130,7 @@ pub(crate) fn dup2_x2(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.swap>
 #[inline]
-pub(crate) fn swap(stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn swap(stack: &mut OperandStack) -> Result<ExecutionResult> {
     // Swapping category 2 values (Double and Long) is not supported by the JVM specification and
     // there is no mention of what should happen in this case. We will just swap the values and
     // ignore the fact that category 2 values could be swapped here.
@@ -152,7 +152,7 @@ mod test {
         stack.push_object(None)?;
         let result = pop(stack)?;
         assert_eq!(Continue, result);
-        assert!(stack.is_empty()?);
+        assert!(stack.is_empty());
         Ok(())
     }
 
@@ -163,7 +163,7 @@ mod test {
         stack.push_object(None)?;
         let result = pop2(stack)?;
         assert_eq!(Continue, result);
-        assert!(stack.is_empty()?);
+        assert!(stack.is_empty());
         Ok(())
     }
 
@@ -173,7 +173,7 @@ mod test {
         stack.push_long(42)?;
         let result = pop2(stack)?;
         assert_eq!(Continue, result);
-        assert!(stack.is_empty()?);
+        assert!(stack.is_empty());
         Ok(())
     }
 
