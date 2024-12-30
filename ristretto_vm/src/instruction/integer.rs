@@ -117,7 +117,7 @@ pub(crate) fn iload_3(locals: &LocalVariables, stack: &OperandStack) -> Result<E
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.istore>
 #[inline]
 pub(crate) fn istore(
-    locals: &LocalVariables,
+    locals: &mut LocalVariables,
     stack: &OperandStack,
     index: u8,
 ) -> Result<ExecutionResult> {
@@ -130,7 +130,7 @@ pub(crate) fn istore(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
 pub(crate) fn istore_w(
-    locals: &LocalVariables,
+    locals: &mut LocalVariables,
     stack: &OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
@@ -141,7 +141,10 @@ pub(crate) fn istore_w(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.istore_n>
 #[inline]
-pub(crate) fn istore_0(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn istore_0(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     locals.set_int(0, value)?;
     Ok(Continue)
@@ -149,7 +152,10 @@ pub(crate) fn istore_0(locals: &LocalVariables, stack: &OperandStack) -> Result<
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.istore_n>
 #[inline]
-pub(crate) fn istore_1(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn istore_1(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     locals.set_int(1, value)?;
     Ok(Continue)
@@ -157,7 +163,10 @@ pub(crate) fn istore_1(locals: &LocalVariables, stack: &OperandStack) -> Result<
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.istore_n>
 #[inline]
-pub(crate) fn istore_2(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn istore_2(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     locals.set_int(2, value)?;
     Ok(Continue)
@@ -165,7 +174,10 @@ pub(crate) fn istore_2(locals: &LocalVariables, stack: &OperandStack) -> Result<
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.istore_n>
 #[inline]
-pub(crate) fn istore_3(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn istore_3(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     locals.set_int(3, value)?;
     Ok(Continue)
@@ -343,7 +355,11 @@ pub(crate) fn ixor(stack: &OperandStack) -> Result<ExecutionResult> {
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.iinc>
 #[inline]
-pub(crate) fn iinc(locals: &LocalVariables, index: u8, constant: i8) -> Result<ExecutionResult> {
+pub(crate) fn iinc(
+    locals: &mut LocalVariables,
+    index: u8,
+    constant: i8,
+) -> Result<ExecutionResult> {
     let index = usize::from(index);
     let local = locals.get_int(index)?;
     locals.set_int(index, local + i32::from(constant))?;
@@ -354,7 +370,7 @@ pub(crate) fn iinc(locals: &LocalVariables, index: u8, constant: i8) -> Result<E
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
 pub(crate) fn iinc_w(
-    locals: &LocalVariables,
+    locals: &mut LocalVariables,
     index: u16,
     constant: i16,
 ) -> Result<ExecutionResult> {
@@ -442,7 +458,7 @@ mod tests {
 
     #[test]
     fn test_iload() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_int(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload(&locals, stack, 0)?;
@@ -453,7 +469,7 @@ mod tests {
 
     #[test]
     fn test_iload_w() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_int(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload_w(&locals, stack, 0)?;
@@ -464,7 +480,7 @@ mod tests {
 
     #[test]
     fn test_iload_0() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_int(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload_0(&locals, stack)?;
@@ -475,7 +491,7 @@ mod tests {
 
     #[test]
     fn test_iload_1() -> Result<()> {
-        let locals = LocalVariables::with_max_size(2);
+        let mut locals = LocalVariables::with_max_size(2);
         locals.set_int(1, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload_1(&locals, stack)?;
@@ -486,7 +502,7 @@ mod tests {
 
     #[test]
     fn test_iload_2() -> Result<()> {
-        let locals = LocalVariables::with_max_size(3);
+        let mut locals = LocalVariables::with_max_size(3);
         locals.set_int(2, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload_2(&locals, stack)?;
@@ -497,7 +513,7 @@ mod tests {
 
     #[test]
     fn test_iload_3() -> Result<()> {
-        let locals = LocalVariables::with_max_size(4);
+        let mut locals = LocalVariables::with_max_size(4);
         locals.set_int(3, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = iload_3(&locals, stack)?;
@@ -508,7 +524,7 @@ mod tests {
 
     #[test]
     fn test_istore() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore(locals, stack, 0)?;
@@ -519,7 +535,7 @@ mod tests {
 
     #[test]
     fn test_istore_w() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore_w(locals, stack, 0)?;
@@ -530,7 +546,7 @@ mod tests {
 
     #[test]
     fn test_istore_0() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore_0(locals, stack)?;
@@ -541,7 +557,7 @@ mod tests {
 
     #[test]
     fn test_istore_1() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(2);
+        let locals = &mut LocalVariables::with_max_size(2);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore_1(locals, stack)?;
@@ -552,7 +568,7 @@ mod tests {
 
     #[test]
     fn test_istore_2() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(3);
+        let locals = &mut LocalVariables::with_max_size(3);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore_2(locals, stack)?;
@@ -563,7 +579,7 @@ mod tests {
 
     #[test]
     fn test_istore_3() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(4);
+        let locals = &mut LocalVariables::with_max_size(4);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(42)?;
         let result = istore_3(locals, stack)?;
@@ -878,7 +894,7 @@ mod tests {
 
     #[test]
     fn test_iinc() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         locals.set_int(0, 1)?;
         let result = iinc(locals, 0, 2)?;
         assert_eq!(Continue, result);
@@ -888,7 +904,7 @@ mod tests {
 
     #[test]
     fn test_iinc_w() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         locals.set_int(0, 1)?;
         let result = iinc_w(locals, 0, 2)?;
         assert_eq!(Continue, result);

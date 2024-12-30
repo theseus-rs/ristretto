@@ -401,7 +401,7 @@ impl VM {
         let class = self.class(class).await?;
         let method = class.try_get_method(method, descriptor)?;
         let thread = self.primordial_thread()?;
-        thread.execute(&class, &method, arguments, true).await
+        thread.execute(&class, &method, arguments).await
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be

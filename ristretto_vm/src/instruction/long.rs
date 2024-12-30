@@ -83,7 +83,7 @@ pub(crate) fn lload_3(locals: &LocalVariables, stack: &OperandStack) -> Result<E
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.lstore>
 #[inline]
 pub(crate) fn lstore(
-    locals: &LocalVariables,
+    locals: &mut LocalVariables,
     stack: &OperandStack,
     index: u8,
 ) -> Result<ExecutionResult> {
@@ -96,7 +96,7 @@ pub(crate) fn lstore(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
 pub(crate) fn lstore_w(
-    locals: &LocalVariables,
+    locals: &mut LocalVariables,
     stack: &OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
@@ -107,7 +107,10 @@ pub(crate) fn lstore_w(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.lstore_n>
 #[inline]
-pub(crate) fn lstore_0(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lstore_0(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
     locals.set_long(0, value)?;
     Ok(Continue)
@@ -115,7 +118,10 @@ pub(crate) fn lstore_0(locals: &LocalVariables, stack: &OperandStack) -> Result<
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.lstore_n>
 #[inline]
-pub(crate) fn lstore_1(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lstore_1(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
     locals.set_long(1, value)?;
     Ok(Continue)
@@ -123,7 +129,10 @@ pub(crate) fn lstore_1(locals: &LocalVariables, stack: &OperandStack) -> Result<
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.lstore_n>
 #[inline]
-pub(crate) fn lstore_2(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lstore_2(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
     locals.set_long(2, value)?;
     Ok(Continue)
@@ -131,7 +140,10 @@ pub(crate) fn lstore_2(locals: &LocalVariables, stack: &OperandStack) -> Result<
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.lstore_n>
 #[inline]
-pub(crate) fn lstore_3(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lstore_3(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
     locals.set_long(3, value)?;
     Ok(Continue)
@@ -354,7 +366,7 @@ mod tests {
 
     #[test]
     fn test_lload() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_long(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = lload(&locals, stack, 0)?;
@@ -365,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_lload_w() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_long(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = lload_w(&locals, stack, 0)?;
@@ -376,7 +388,7 @@ mod tests {
 
     #[test]
     fn test_lload_0() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_long(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = lload_0(&locals, stack)?;
@@ -387,7 +399,7 @@ mod tests {
 
     #[test]
     fn test_lload_1() -> Result<()> {
-        let locals = LocalVariables::with_max_size(2);
+        let mut locals = LocalVariables::with_max_size(2);
         locals.set_long(1, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = lload_1(&locals, stack)?;
@@ -398,7 +410,7 @@ mod tests {
 
     #[test]
     fn test_lload_2() -> Result<()> {
-        let locals = LocalVariables::with_max_size(3);
+        let mut locals = LocalVariables::with_max_size(3);
         locals.set_long(2, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = lload_2(&locals, stack)?;
@@ -409,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_lload_3() -> Result<()> {
-        let locals = LocalVariables::with_max_size(4);
+        let mut locals = LocalVariables::with_max_size(4);
         locals.set_long(3, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = lload_3(&locals, stack)?;
@@ -420,7 +432,7 @@ mod tests {
 
     #[test]
     fn test_lstore() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
         let result = lstore(locals, stack, 0)?;
@@ -431,7 +443,7 @@ mod tests {
 
     #[test]
     fn test_lstore_w() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
         let result = lstore_w(locals, stack, 0)?;
@@ -442,7 +454,7 @@ mod tests {
 
     #[test]
     fn test_lstore_0() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
         let result = lstore_0(locals, stack)?;
@@ -453,7 +465,7 @@ mod tests {
 
     #[test]
     fn test_lstore_1() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(2);
+        let locals = &mut LocalVariables::with_max_size(2);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
         let result = lstore_1(locals, stack)?;
@@ -464,7 +476,7 @@ mod tests {
 
     #[test]
     fn test_lstore_2() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(3);
+        let locals = &mut LocalVariables::with_max_size(3);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
         let result = lstore_2(locals, stack)?;
@@ -475,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_lstore_3() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(4);
+        let locals = &mut LocalVariables::with_max_size(4);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
         let result = lstore_3(locals, stack)?;

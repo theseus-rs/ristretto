@@ -45,6 +45,6 @@ pub(crate) async fn frame() -> Result<(Arc<VM>, Arc<Thread>, Frame)> {
         &class,
         &Arc::new(method),
         arguments,
-    )?;
+    );
     Ok((vm, thread, frame))
 }

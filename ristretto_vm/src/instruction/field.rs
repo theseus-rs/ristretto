@@ -94,7 +94,7 @@ mod test {
             &class,
             &Arc::new(method),
             arguments,
-        )?;
+        );
         Ok((vm, thread, frame, class_index, field_index))
     }
 

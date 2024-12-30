@@ -263,7 +263,7 @@ mod tests {
             &class,
             &Arc::new(method),
             arguments,
-        )?;
+        );
         let stack = frame.stack();
         stack.push_int(0)?;
         let result = anewarray(&frame, class_index).await?;
@@ -396,7 +396,7 @@ mod tests {
             &class,
             &Arc::new(method),
             arguments,
-        )?;
+        );
         let stack = frame.stack();
         stack.push_int(3)?;
         let result = anewarray(&frame, class_index).await?;
@@ -455,7 +455,7 @@ mod tests {
             &class,
             &Arc::new(method),
             arguments,
-        )?;
+        );
         let stack = frame.stack();
         stack.push_int(0)?;
         let result = multianewarray(&frame, class_index, 1).await?;
@@ -531,7 +531,7 @@ mod tests {
             &class,
             &Arc::new(method),
             arguments,
-        )?;
+        );
         let stack = frame.stack();
         stack.push_int(1)?;
         stack.push_int(2)?;

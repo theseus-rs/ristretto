@@ -647,7 +647,7 @@ mod test {
 
     #[test]
     fn test_ret() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         locals.set_int(0, 3)?;
         let result = ret(locals, 0)?;
         assert_eq!(ContinueAtPosition(3), result);
@@ -656,7 +656,7 @@ mod test {
 
     #[test]
     fn test_ret_w() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         locals.set_int(0, 3)?;
         let result = ret_w(locals, 0)?;
         assert_eq!(ContinueAtPosition(3), result);

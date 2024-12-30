@@ -256,7 +256,7 @@ async fn invoke_method(
     }
 
     // Execute the method on the current thread
-    let result = thread.execute(&class, &method, arguments, true).await?;
+    let result = thread.execute(&class, &method, arguments).await?;
     if let Some(result) = result {
         stack.push(result)?;
     }
