@@ -153,13 +153,8 @@ impl Thread {
         for current_class in classes {
             if let Some(class_initializer) = current_class.class_initializer() {
                 // Execute the class initializer on the current thread.
-                self.execute(
-                    &current_class,
-                    &class_initializer,
-                    Vec::<Value>::new(),
-                    true,
-                )
-                .await?;
+                self.execute(&current_class, &class_initializer, Vec::<Value>::new())
+                    .await?;
             }
         }
         Ok(class)
@@ -257,7 +252,6 @@ impl Thread {
         class: &Arc<Class>,
         method: &Arc<Method>,
         arguments: Vec<impl RustValue>,
-        remove_frame: bool,
     ) -> Result<Option<Value>> {
         let class_name = class.name();
         let method_name = method.name();
@@ -289,7 +283,7 @@ impl Thread {
             .into());
         } else {
             let arguments = Thread::adjust_arguments(arguments);
-            let frame = Arc::new(Frame::new(&self.thread, class, method, arguments)?);
+            let frame = Arc::new(Frame::new(&self.thread, class, method, arguments));
 
             // Limit the scope of the write lock to just adding the frame to the thread. This
             // is necessary because the thread is re-entrant.
@@ -298,7 +292,7 @@ impl Thread {
                 frames.push(frame.clone());
             }
             let result = frame.execute().await;
-            (result, remove_frame)
+            (result, true)
         };
 
         if event_enabled!(Level::DEBUG) {
@@ -337,9 +331,8 @@ impl Thread {
         class: &Arc<Class>,
         method: &Arc<Method>,
         arguments: Vec<impl RustValue>,
-        remove_frame: bool,
     ) -> Result<Value> {
-        let result = self.execute(class, method, arguments, remove_frame).await?;
+        let result = self.execute(class, method, arguments).await?;
         match result {
             Some(value) => Ok(value),
             None => Err(InternalError("No result".to_string())),
@@ -388,22 +381,15 @@ impl Thread {
         };
 
         let mut constructor_arguments = Vec::with_capacity(arguments.len() + 1);
-        let object = Object::new(class.clone())?;
-        constructor_arguments.insert(0, Value::from(object));
+        let object = Value::from(Object::new(class.clone())?);
+        constructor_arguments.insert(0, object.clone());
         for argument in arguments {
             let value = argument.to_value();
             constructor_arguments.push(value);
         }
         let vm = self.vm()?;
         let arguments = process_values(&vm, constructor_arguments).await?;
-
-        let object = {
-            self.execute(&class, &constructor, arguments, false).await?;
-            let mut frames = self.frames.write().await;
-            let frame = frames.pop().ok_or(InternalError("No frame".to_string()))?;
-            let locals = frame.locals();
-            locals.get(0)?
-        };
+        self.execute(&class, &constructor, arguments).await?;
         Ok(object)
     }
 }

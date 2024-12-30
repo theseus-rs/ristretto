@@ -89,7 +89,7 @@ pub(crate) fn fload_3(locals: &LocalVariables, stack: &OperandStack) -> Result<E
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.fstore>
 #[inline]
 pub(crate) fn fstore(
-    locals: &LocalVariables,
+    locals: &mut LocalVariables,
     stack: &OperandStack,
     index: u8,
 ) -> Result<ExecutionResult> {
@@ -102,7 +102,7 @@ pub(crate) fn fstore(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
 pub(crate) fn fstore_w(
-    locals: &LocalVariables,
+    locals: &mut LocalVariables,
     stack: &OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
@@ -113,7 +113,10 @@ pub(crate) fn fstore_w(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.fstore_n>
 #[inline]
-pub(crate) fn fstore_0(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn fstore_0(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
     locals.set_float(0, value)?;
     Ok(Continue)
@@ -121,7 +124,10 @@ pub(crate) fn fstore_0(locals: &LocalVariables, stack: &OperandStack) -> Result<
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.fstore_n>
 #[inline]
-pub(crate) fn fstore_1(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn fstore_1(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
     locals.set_float(1, value)?;
     Ok(Continue)
@@ -129,7 +135,10 @@ pub(crate) fn fstore_1(locals: &LocalVariables, stack: &OperandStack) -> Result<
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.fstore_n>
 #[inline]
-pub(crate) fn fstore_2(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn fstore_2(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
     locals.set_float(2, value)?;
     Ok(Continue)
@@ -137,7 +146,10 @@ pub(crate) fn fstore_2(locals: &LocalVariables, stack: &OperandStack) -> Result<
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.fstore_n>
 #[inline]
-pub(crate) fn fstore_3(locals: &LocalVariables, stack: &OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn fstore_3(
+    locals: &mut LocalVariables,
+    stack: &OperandStack,
+) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
     locals.set_float(3, value)?;
     Ok(Continue)
@@ -330,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_fload() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_float(0, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = fload(&locals, stack, 0)?;
@@ -342,7 +354,7 @@ mod tests {
 
     #[test]
     fn test_fload_w() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_float(0, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = fload_w(&locals, stack, 0)?;
@@ -354,7 +366,7 @@ mod tests {
 
     #[test]
     fn test_fload_0() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_float(0, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = fload_0(&locals, stack)?;
@@ -366,7 +378,7 @@ mod tests {
 
     #[test]
     fn test_fload_1() -> Result<()> {
-        let locals = LocalVariables::with_max_size(2);
+        let mut locals = LocalVariables::with_max_size(2);
         locals.set_float(1, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = fload_1(&locals, stack)?;
@@ -378,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_fload_2() -> Result<()> {
-        let locals = LocalVariables::with_max_size(3);
+        let mut locals = LocalVariables::with_max_size(3);
         locals.set_float(2, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = fload_2(&locals, stack)?;
@@ -390,7 +402,7 @@ mod tests {
 
     #[test]
     fn test_fload_3() -> Result<()> {
-        let locals = LocalVariables::with_max_size(4);
+        let mut locals = LocalVariables::with_max_size(4);
         locals.set_float(3, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = fload_3(&locals, stack)?;
@@ -402,7 +414,7 @@ mod tests {
 
     #[test]
     fn test_fstore() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_float(42.1)?;
         let result = fstore(locals, stack, 0)?;
@@ -414,7 +426,7 @@ mod tests {
 
     #[test]
     fn test_fstore_w() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_float(42.1)?;
         let result = fstore_w(locals, stack, 0)?;
@@ -426,7 +438,7 @@ mod tests {
 
     #[test]
     fn test_fstore_0() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(1);
+        let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_float(42.1)?;
         let result = fstore_0(locals, stack)?;
@@ -438,7 +450,7 @@ mod tests {
 
     #[test]
     fn test_fstore_1() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(2);
+        let locals = &mut LocalVariables::with_max_size(2);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_float(42.1)?;
         let result = fstore_1(locals, stack)?;
@@ -450,7 +462,7 @@ mod tests {
 
     #[test]
     fn test_fstore_2() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(3);
+        let locals = &mut LocalVariables::with_max_size(3);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_float(42.1)?;
         let result = fstore_2(locals, stack)?;
@@ -462,7 +474,7 @@ mod tests {
 
     #[test]
     fn test_fstore_3() -> Result<()> {
-        let locals = &LocalVariables::with_max_size(4);
+        let locals = &mut LocalVariables::with_max_size(4);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_float(42.1)?;
         let result = fstore_3(locals, stack)?;

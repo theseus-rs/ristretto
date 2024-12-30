@@ -1,19 +1,20 @@
 use crate::Error::{InvalidLocalVariable, InvalidLocalVariableIndex};
 use crate::Result;
-use ristretto_classloader::{ConcurrentVec, Reference, Value};
+use ristretto_classloader::{Reference, Value};
 use std::fmt::Display;
 
 /// Represents the local variables in a frame.
 #[derive(Clone, Debug)]
 pub struct LocalVariables {
-    locals: ConcurrentVec<Value>,
+    locals: Vec<Value>,
 }
 
 impl LocalVariables {
     /// Create a new local variables with a maximum size.
     pub fn with_max_size(max_size: usize) -> Self {
-        let locals = ConcurrentVec::from(vec![Value::Unused; max_size]);
-        LocalVariables { locals }
+        LocalVariables {
+            locals: vec![Value::Unused; max_size],
+        }
     }
 
     /// Get a value from the local variables.
@@ -22,8 +23,8 @@ impl LocalVariables {
     /// if the local variable at the given index was not found.
     #[inline]
     pub fn get(&self, index: usize) -> Result<Value> {
-        match self.locals.get(index)? {
-            Some(value) => Ok(value),
+        match self.locals.get(index) {
+            Some(value) => Ok(value.clone()),
             None => Err(InvalidLocalVariableIndex(index)),
         }
     }
@@ -109,20 +110,21 @@ impl LocalVariables {
     /// # Errors
     /// if the index is out of bounds.
     #[inline]
-    pub fn set(&self, index: usize, value: Value) -> Result<()> {
-        if index < self.locals.capacity()? {
-            self.locals.set(index, value)?;
-            Ok(())
-        } else {
-            Err(InvalidLocalVariableIndex(index))
+    pub fn set(&mut self, index: usize, value: Value) -> Result<()> {
+        if index >= self.locals.capacity() {
+            return Err(InvalidLocalVariableIndex(index));
         }
+        if index < self.locals.len() {
+            let _ = std::mem::replace(&mut self.locals[index], value);
+        }
+        Ok(())
     }
 
     /// Set an int in the local variables.
     ///
     /// # Errors
     /// if the index is out of bounds or if the value is not an int.
-    pub fn set_int(&self, index: usize, value: i32) -> Result<()> {
+    pub fn set_int(&mut self, index: usize, value: i32) -> Result<()> {
         self.set(index, Value::Int(value))
     }
 
@@ -130,7 +132,7 @@ impl LocalVariables {
     ///
     /// # Errors
     /// if the index is out of bounds or if the value is not a long.
-    pub fn set_long(&self, index: usize, value: i64) -> Result<()> {
+    pub fn set_long(&mut self, index: usize, value: i64) -> Result<()> {
         self.set(index, Value::Long(value))
     }
 
@@ -138,7 +140,7 @@ impl LocalVariables {
     ///
     /// # Errors
     /// if the index is out of bounds or if the value is not a float.
-    pub fn set_float(&self, index: usize, value: f32) -> Result<()> {
+    pub fn set_float(&mut self, index: usize, value: f32) -> Result<()> {
         self.set(index, Value::Float(value))
     }
 
@@ -146,7 +148,7 @@ impl LocalVariables {
     ///
     /// # Errors
     /// if the index is out of bounds or if the value is not a double.
-    pub fn set_double(&self, index: usize, value: f64) -> Result<()> {
+    pub fn set_double(&mut self, index: usize, value: f64) -> Result<()> {
         self.set(index, Value::Double(value))
     }
 
@@ -154,38 +156,32 @@ impl LocalVariables {
     ///
     /// # Errors
     /// if the index is out of bounds or if the value is not a null or object.
-    pub fn set_object(&self, index: usize, value: Option<Reference>) -> Result<()> {
+    pub fn set_object(&mut self, index: usize, value: Option<Reference>) -> Result<()> {
         self.set(index, Value::Object(value))
     }
 
     /// Get the length of the local variables.
-    pub fn len(&self) -> Result<usize> {
-        let mut length = 0;
-        for index in 0..self.locals.capacity()? {
-            let Some(value) = self.locals.get(index)? else {
-                continue;
-            };
-            if value != Value::Unused {
-                length = index + 1;
-            }
-        }
-        Ok(length)
+    pub fn len(&self) -> usize {
+        let length = self
+            .locals
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|&(_, value)| *value != Value::Unused)
+            .map_or(0, |(index, _)| index + 1);
+        length
     }
 
     /// Check if the local variables are empty.
-    pub fn is_empty(&self) -> Result<bool> {
-        Ok(self.len()? == 0)
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 
 impl Display for LocalVariables {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut locals = Vec::new();
-        for index in 0..self.locals.capacity().unwrap_or_default() {
-            let Ok(Some(local)) = self.locals.get(index) else {
-                locals.push(String::new());
-                continue;
-            };
+        for local in &self.locals {
             let value = local.to_string();
             let chars: Vec<char> = value.chars().collect();
             if chars.len() > 100 {
@@ -206,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_get() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Int(42))?;
         assert_eq!(locals.get(0)?.to_int()?, 42);
         Ok(())
@@ -220,7 +216,7 @@ mod tests {
 
     #[test]
     fn test_get_int() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Int(42))?;
         assert_eq!(locals.get_int(0)?, 42);
         Ok(())
@@ -249,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_get_long() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Long(42))?;
         assert_eq!(locals.get_long(0)?, 42);
         Ok(())
@@ -278,7 +274,7 @@ mod tests {
 
     #[test]
     fn test_get_float() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Float(42.1))?;
         let value = locals.get_float(0)? - 42.1f32;
         assert!(value.abs() < 0.1f32);
@@ -308,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_get_double() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Double(42.1))?;
         let value = locals.get_double(0)? - 42.1f64;
         assert!(value.abs() < 0.1f64);
@@ -338,7 +334,7 @@ mod tests {
 
     #[test]
     fn test_get_object() -> Result<()> {
-        let locals = LocalVariables::with_max_size(2);
+        let mut locals = LocalVariables::with_max_size(2);
         let object = Reference::from(vec![42i8]);
         locals.set_object(0, None)?;
         locals.set_object(1, Some(object.clone()))?;
@@ -370,7 +366,7 @@ mod tests {
 
     #[test]
     fn test_set() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Int(42))?;
         assert_eq!(locals.get(0)?.to_int()?, 42);
         Ok(())
@@ -378,7 +374,7 @@ mod tests {
 
     #[test]
     fn test_set_invalid_index() {
-        let locals = LocalVariables::with_max_size(0);
+        let mut locals = LocalVariables::with_max_size(0);
         assert!(matches!(
             locals.set(0, Value::Object(None)),
             Err(InvalidLocalVariableIndex(0))
@@ -387,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_set_int() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_int(0, 42)?;
         assert_eq!(locals.get_int(0)?, 42);
         Ok(())
@@ -395,7 +391,7 @@ mod tests {
 
     #[test]
     fn test_set_int_invalid_index() {
-        let locals = LocalVariables::with_max_size(0);
+        let mut locals = LocalVariables::with_max_size(0);
         assert!(matches!(
             locals.set_int(0, 42),
             Err(InvalidLocalVariableIndex(0))
@@ -404,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_set_long() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_long(0, 42)?;
         assert_eq!(locals.get_long(0)?, 42);
         Ok(())
@@ -412,7 +408,7 @@ mod tests {
 
     #[test]
     fn test_set_long_invalid_index() {
-        let locals = LocalVariables::with_max_size(0);
+        let mut locals = LocalVariables::with_max_size(0);
         assert!(matches!(
             locals.set_long(0, 42),
             Err(InvalidLocalVariableIndex(0))
@@ -421,7 +417,7 @@ mod tests {
 
     #[test]
     fn test_set_float() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_float(0, 42.1)?;
         let value = locals.get_float(0)? - 42.1f32;
         assert!(value.abs() < 0.1f32);
@@ -430,7 +426,7 @@ mod tests {
 
     #[test]
     fn test_set_float_invalid_index() {
-        let locals = LocalVariables::with_max_size(0);
+        let mut locals = LocalVariables::with_max_size(0);
         assert!(matches!(
             locals.set_float(0, 42.1),
             Err(InvalidLocalVariableIndex(0))
@@ -439,7 +435,7 @@ mod tests {
 
     #[test]
     fn test_set_double() -> Result<()> {
-        let locals = LocalVariables::with_max_size(1);
+        let mut locals = LocalVariables::with_max_size(1);
         locals.set_double(0, 42.1)?;
         let value = locals.get_double(0)? - 42.1f64;
         assert!(value.abs() < 0.1f64);
@@ -448,7 +444,7 @@ mod tests {
 
     #[test]
     fn test_set_double_invalid_index() {
-        let locals = LocalVariables::with_max_size(0);
+        let mut locals = LocalVariables::with_max_size(0);
         assert!(matches!(
             locals.set_double(0, 42.1),
             Err(InvalidLocalVariableIndex(0))
@@ -457,7 +453,7 @@ mod tests {
 
     #[test]
     fn test_set_object() -> Result<()> {
-        let locals = LocalVariables::with_max_size(2);
+        let mut locals = LocalVariables::with_max_size(2);
         let object = Reference::from(vec![42i8]);
         locals.set_object(0, None)?;
         locals.set_object(1, Some(object.clone()))?;
@@ -468,7 +464,7 @@ mod tests {
 
     #[test]
     fn test_set_object_invalid_index() {
-        let locals = LocalVariables::with_max_size(0);
+        let mut locals = LocalVariables::with_max_size(0);
         assert!(matches!(
             locals.set_object(0, None),
             Err(InvalidLocalVariableIndex(0))
@@ -477,25 +473,25 @@ mod tests {
 
     #[test]
     fn test_len() -> Result<()> {
-        let local_variables = LocalVariables::with_max_size(3);
-        assert_eq!(local_variables.len()?, 0);
+        let mut local_variables = LocalVariables::with_max_size(3);
+        assert_eq!(local_variables.len(), 0);
         local_variables.set(1, Value::Int(42))?;
-        assert_eq!(local_variables.len()?, 2);
+        assert_eq!(local_variables.len(), 2);
         Ok(())
     }
 
     #[test]
     fn test_is_empty() -> Result<()> {
-        let local_variables = LocalVariables::with_max_size(3);
-        assert!(local_variables.is_empty()?);
+        let mut local_variables = LocalVariables::with_max_size(3);
+        assert!(local_variables.is_empty());
         local_variables.set(1, Value::Int(42))?;
-        assert!(!local_variables.is_empty()?);
+        assert!(!local_variables.is_empty());
         Ok(())
     }
 
     #[test]
     fn test_display() -> Result<()> {
-        let local_variables = LocalVariables::with_max_size(6);
+        let mut local_variables = LocalVariables::with_max_size(6);
         local_variables.set(0, Value::Int(1))?;
         local_variables.set(1, Value::Long(42))?;
         local_variables.set(2, Value::Float(2.3))?;

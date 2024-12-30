@@ -259,7 +259,7 @@ async fn init_properties(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
         let value = value.clone();
         let arguments = vec![properties.clone(), key, value];
         thread
-            .execute(&properties_class, &set_property_method, arguments, true)
+            .execute(&properties_class, &set_property_method, arguments)
             .await?;
     }
     Ok(Some(properties))

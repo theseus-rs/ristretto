@@ -12,8 +12,6 @@
 
 [JVM](https://docs.oracle.com/javase/specs/jvms/se23/html/) implementation with deterministic memory deallocation.
 
-**This is a work in progress and is not ready for production use.**
-
 ## Getting Started
 
 `ristretto` java can be installed using the following methods:

@@ -192,7 +192,6 @@ async fn resolve(
             &method_type_class,
             &method_type_descriptor_method,
             vec![method_type],
-            true,
         )
         .await?
         .try_into()?;
