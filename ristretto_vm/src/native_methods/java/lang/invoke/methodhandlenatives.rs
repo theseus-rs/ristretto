@@ -174,7 +174,7 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 async fn resolve(
     thread: Arc<Thread>,
     member_self: Object,
-    _caller: Arc<Class>,
+    _caller: Option<Arc<Class>>,
     _lookup_mode: i32,
     _speculative_resolve: bool,
 ) -> Result<Option<Value>> {
@@ -219,7 +219,13 @@ async fn resolve(
 
 #[async_recursion(?Send)]
 async fn resolve_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let caller: Arc<Class> = arguments.pop_object()?.try_into()?;
+    let caller = match arguments.pop_object() {
+        Ok(caller) => {
+            let caller: Arc<Class> = caller.try_into()?;
+            Some(caller)
+        }
+        Err(_) => None,
+    };
     let member_self = arguments.pop_object()?;
     resolve(thread, member_self, caller, -1, true).await
 }
@@ -227,7 +233,13 @@ async fn resolve_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 #[async_recursion(?Send)]
 async fn resolve_1(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let speculative_resolve = arguments.pop_int()? != 0;
-    let caller: Arc<Class> = arguments.pop_object()?.try_into()?;
+    let caller = match arguments.pop_object() {
+        Ok(caller) => {
+            let caller: Arc<Class> = caller.try_into()?;
+            Some(caller)
+        }
+        Err(_) => None,
+    };
     let member_self = arguments.pop_object()?;
     resolve(thread, member_self, caller, -1, speculative_resolve).await
 }
@@ -236,7 +248,13 @@ async fn resolve_1(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 async fn resolve_2(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let speculative_resolve = arguments.pop_int()? != 0;
     let lookup_mode = arguments.pop_int()?;
-    let caller: Arc<Class> = arguments.pop_object()?.try_into()?;
+    let caller = match arguments.pop_object() {
+        Ok(caller) => {
+            let caller: Arc<Class> = caller.try_into()?;
+            Some(caller)
+        }
+        Err(_) => None,
+    };
     let member_self = arguments.pop_object()?;
     resolve(
         thread,
