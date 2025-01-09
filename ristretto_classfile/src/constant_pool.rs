@@ -694,7 +694,6 @@ impl fmt::Display for ConstantEntry {
     }
 }
 
-#[expect(clippy::module_name_repetitions)]
 pub struct ConstantPoolIterator<'a> {
     constant_pool: &'a ConstantPool,
     index: usize,
