@@ -26,7 +26,6 @@
 #![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
 mod arguments;
-#[expect(clippy::module_name_repetitions)]
 mod configuration;
 mod error;
 mod frame;

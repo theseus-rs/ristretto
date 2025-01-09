@@ -27,7 +27,6 @@ pub type RustMethod = fn(
     arguments: Arguments,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>>;
 
-#[expect(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct MethodRegistry {
     use_optimizations: bool,
