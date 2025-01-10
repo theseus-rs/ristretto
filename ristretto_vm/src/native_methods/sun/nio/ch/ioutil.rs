@@ -77,7 +77,7 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn iov_max(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.IOUtil.iovMax()I");
+    Ok(Some(Value::Int(16)))
 }
 
 #[async_recursion(?Send)]
@@ -102,5 +102,12 @@ async fn write_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
 
 #[async_recursion(?Send)]
 async fn writev_max(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.IOUtil.writevMax()J");
+    #[cfg(target_os = "windows")]
+    {
+        Ok(Some(Value::Long(i64::MAX)))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(Some(Value::Long(i64::from(i32::MAX))))
+    }
 }
