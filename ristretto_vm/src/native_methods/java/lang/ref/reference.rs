@@ -70,8 +70,6 @@ async fn has_reference_pending_list(
 async fn refers_to_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let object_argument = arguments.pop_reference()?;
     let object = arguments.pop_reference()?;
-    // TODO: this is performing a pointer equality check which is likely not the correct implementation;
-    // re-evaluate this logic
     if object == object_argument {
         Ok(Some(Value::Int(1)))
     } else {
