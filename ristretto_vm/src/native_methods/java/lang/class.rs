@@ -7,7 +7,7 @@ use crate::Error::InternalError;
 use crate::JavaError::NullPointerException;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::attributes::Attribute;
+use ristretto_classfile::attributes::{Attribute, InnerClass};
 use ristretto_classfile::{ClassAccessFlags, FieldAccessFlags, Version};
 use ristretto_classloader::{Class, Object, Reference, Value};
 use std::sync::Arc;
@@ -337,10 +337,44 @@ async fn get_constant_pool(_thread: Arc<Thread>, _arguments: Arguments) -> Resul
 
 #[async_recursion(?Send)]
 async fn get_declared_classes_0(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getDeclaredClasses0()[Ljava/lang/Class;")
+    let class = arguments.pop_object()?;
+    let class_name: String = class.value("name")?.try_into()?;
+    let class = thread.class(&class_name).await?;
+    let vm = thread.vm()?;
+    let mut declared_classes = Vec::new();
+
+    let class_file = class.class_file();
+    let constant_pool = &class_file.constant_pool;
+    let inner_classes = class_file
+        .attributes
+        .iter()
+        .filter_map(|attribute| match attribute {
+            Attribute::InnerClasses {
+                name_index: _,
+                classes,
+            } => Some(classes.clone()),
+            _ => None,
+        })
+        .flatten()
+        .collect::<Vec<InnerClass>>();
+    let class_name = class.name();
+    for inner_class in inner_classes {
+        let outer_class_name = constant_pool.try_get_class(inner_class.outer_class_info_index)?;
+        if outer_class_name != class_name {
+            continue;
+        }
+        let inner_class_name = constant_pool.try_get_class(inner_class.class_info_index)?;
+        let class = thread.class(inner_class_name).await?;
+        let class = class.to_object(&vm).await?;
+        declared_classes.push(class);
+    }
+
+    let class_array = thread.class("[Ljava/lang/Class;").await?;
+    let declared_classes = Value::try_from((class_array, declared_classes))?;
+    Ok(Some(declared_classes))
 }
 
 #[async_recursion(?Send)]
