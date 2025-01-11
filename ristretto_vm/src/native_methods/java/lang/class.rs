@@ -272,12 +272,7 @@ async fn for_name_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opt
     let _caller = arguments.pop_reference()?;
     let _class_loader = arguments.pop_reference()?;
     let _initialize = arguments.pop_int()? != 0;
-    let Some(Reference::Object(class_name)) = arguments.pop_reference()? else {
-        return Err(InternalError(
-            "forName0: no class_name argument".to_string(),
-        ));
-    };
-    let class_name: String = class_name.try_into()?;
+    let class_name: String = arguments.pop_object()?.try_into()?;
     let vm = thread.vm()?;
     let class = thread.class(class_name).await?;
     let class_object = class.to_object(&vm).await?;
@@ -512,8 +507,21 @@ async fn get_generic_signature_0(
 }
 
 #[async_recursion(?Send)]
-async fn get_interfaces_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getInterfaces0()[Ljava/lang/Class;")
+async fn get_interfaces_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let class = arguments.pop_object()?;
+    let class_name: String = class.value("name")?.try_into()?;
+    let class = thread.class(class_name).await?;
+    let vm = thread.vm()?;
+    let mut interfaces = Vec::new();
+
+    for interface in class.interfaces()? {
+        let interface = interface.to_object(&vm).await?;
+        interfaces.push(interface);
+    }
+
+    let class_array = thread.class("[Ljava/lang/Class;").await?;
+    let interfaces = Value::try_from((class_array, interfaces))?;
+    Ok(Some(interfaces))
 }
 
 #[async_recursion(?Send)]
