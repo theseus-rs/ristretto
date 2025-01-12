@@ -128,12 +128,10 @@ pub(crate) async fn multianewarray(
 mod tests {
     use super::*;
     use crate::frame::ExecutionResult::Continue;
-    use crate::frame::Frame;
     use crate::java_object::JavaObject;
     use crate::Error::JavaError;
     use ristretto_classfile::attributes::ArrayType;
-    use ristretto_classfile::MethodAccessFlags;
-    use ristretto_classloader::{Method, Value};
+    use ristretto_classloader::Value;
     use std::sync::Arc;
 
     #[test]
@@ -250,27 +248,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_anewarray() -> Result<()> {
-        let (_vm, thread, mut class) = crate::test::class().await?;
+        let (_vm, _thread, mut frame) = crate::test::frame().await?;
+        let class = frame.class_mut();
         let stack = &mut OperandStack::with_max_size(1);
-        let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
+        let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("java/lang/Object")?;
-        let method = Method::new(
-            MethodAccessFlags::STATIC,
-            "test",
-            "()V",
-            10,
-            10,
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-        )?;
-        let arguments = Vec::new();
-        let frame = Frame::new(
-            &Arc::downgrade(&thread),
-            &class,
-            &Arc::new(method),
-            arguments,
-        );
         stack.push_int(0)?;
         let result = anewarray(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
@@ -382,27 +364,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_arraylength_object() -> Result<()> {
-        let (_vm, thread, mut class) = crate::test::class().await?;
+        let (_vm, _thread, mut frame) = crate::test::frame().await?;
+        let class = frame.class_mut();
         let stack = &mut OperandStack::with_max_size(1);
-        let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
+        let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class("java/lang/Object")?;
-        let method = Method::new(
-            MethodAccessFlags::STATIC,
-            "test",
-            "()V",
-            10,
-            10,
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-        )?;
-        let arguments = Vec::new();
-        let frame = Frame::new(
-            &Arc::downgrade(&thread),
-            &class,
-            &Arc::new(method),
-            arguments,
-        );
         stack.push_int(3)?;
         let result = anewarray(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
@@ -440,27 +406,11 @@ mod tests {
     }
 
     async fn test_multianewarray_single_dimension(class_name: &str) -> Result<()> {
-        let (_vm, thread, mut class) = crate::test::class().await?;
+        let (_vm, _thread, mut frame) = crate::test::frame().await?;
+        let class = frame.class_mut();
         let stack = &mut OperandStack::with_max_size(1);
-        let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
+        let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class(class_name)?;
-        let method = Method::new(
-            MethodAccessFlags::STATIC,
-            "test",
-            "()V",
-            10,
-            10,
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-        )?;
-        let arguments = Vec::new();
-        let frame = Frame::new(
-            &Arc::downgrade(&thread),
-            &class,
-            &Arc::new(method),
-            arguments,
-        );
         stack.push_int(0)?;
         let result = multianewarray(&frame, stack, class_index, 1).await?;
         assert_eq!(Continue, result);
@@ -514,28 +464,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_multianewarray_multiple_dimensions() -> Result<()> {
-        let (_vm, thread, mut class) = crate::test::class().await?;
+        let (_vm, _thread, mut frame) = crate::test::frame().await?;
+        let class = frame.class_mut();
         let stack = &mut OperandStack::with_max_size(5);
-        let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
+        let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let class_name = "[[[[[I";
         let class_index = constant_pool.add_class(class_name)?;
-        let method = Method::new(
-            MethodAccessFlags::STATIC,
-            "test",
-            "()V",
-            5,
-            1,
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-        )?;
-        let arguments = Vec::new();
-        let frame = Frame::new(
-            &Arc::downgrade(&thread),
-            &class,
-            &Arc::new(method),
-            arguments,
-        );
         stack.push_int(1)?;
         stack.push_int(2)?;
         stack.push_int(3)?;
