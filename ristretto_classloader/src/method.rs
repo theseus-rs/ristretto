@@ -16,6 +16,7 @@ pub struct Method {
     code: Vec<Instruction>,
     line_numbers: Vec<LineNumber>,
     exception_table: Vec<ExceptionTableEntry>,
+    attributes: Vec<Attribute>,
 }
 
 impl Method {
@@ -73,6 +74,7 @@ impl Method {
             code,
             line_numbers,
             exception_table,
+            attributes: definition.attributes.clone(),
         })
     }
 
@@ -164,6 +166,12 @@ impl Method {
     #[must_use]
     pub fn exception_table(&self) -> &Vec<ExceptionTableEntry> {
         &self.exception_table
+    }
+
+    /// Get the attributes.
+    #[must_use]
+    pub fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
     }
 
     /// Parse the method descriptor. The descriptor is a string representing the method signature.
@@ -405,6 +413,7 @@ mod tests {
             code: Vec::new(),
             line_numbers: Vec::new(),
             exception_table: Vec::new(),
+            attributes: Vec::new(),
         };
         assert_eq!("test() -> void", method.to_string());
     }
