@@ -814,7 +814,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_method_not_fount() -> Result<()> {
+    async fn test_method_not_found() -> Result<()> {
         let class = string_class().await?;
         let method = class.method("foo", "()V");
         assert!(method.is_none());
@@ -833,7 +833,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_try_get_method_not_fount() -> Result<()> {
+    async fn test_try_get_method_not_found() -> Result<()> {
         let class = string_class().await?;
         let name = "foo";
         let descriptor = "()V";

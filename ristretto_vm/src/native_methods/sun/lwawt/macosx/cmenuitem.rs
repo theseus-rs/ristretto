@@ -50,3 +50,65 @@ async fn native_set_label(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 async fn native_set_tooltip(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuItem.nativeSetTooltip(JLjava/lang/String;)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/CMenuItem";
+        assert!(registry
+            .method(class_name, "nativeCreate", "(JZ)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetEnabled", "(JZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetImage", "(JJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetLabel", "(JLjava/lang/String;CII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetTooltip", "(JLjava/lang/String;)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CMenuItem.nativeCreate(JZ)J")]
+    async fn test_native_create() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_create(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CMenuItem.nativeSetEnabled(JZ)V")]
+    async fn test_native_set_enabled() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_enabled(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CMenuItem.nativeSetImage(JJ)V")]
+    async fn test_native_set_image() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_image(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CMenuItem.nativeSetLabel(JLjava/lang/String;CII)V")]
+    async fn test_native_set_label() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_label(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CMenuItem.nativeSetTooltip(JLjava/lang/String;)V")]
+    async fn test_native_set_tooltip() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_tooltip(thread, Arguments::default()).await;
+    }
+}

@@ -72,3 +72,87 @@ async fn get_native_path_to_shared_jdk_bundle(
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.AquaFileView.getNativePathToSharedJDKBundle()Ljava/lang/String;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/apple/laf/AquaFileView";
+        assert!(registry
+            .method(
+                class_name,
+                "getNativeDisplayName",
+                "([BZ)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getNativeLSInfo", "([BZ)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getNativeMachineName", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getNativePathForResolvedAlias",
+                "([BZ)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getNativePathToSharedJDKBundle",
+                "()Ljava/lang/String;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.laf.AquaFileView.getNativeDisplayName([BZ)Ljava/lang/String;"
+    )]
+    async fn test_get_native_display_name() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_native_display_name(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.laf.AquaFileView.getNativeLSInfo([BZ)I"
+    )]
+    async fn test_get_native_ls_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_native_ls_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.laf.AquaFileView.getNativeMachineName()Ljava/lang/String;"
+    )]
+    async fn test_get_native_machine_name() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_native_machine_name(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.laf.AquaFileView.getNativePathForResolvedAlias([BZ)Ljava/lang/String;"
+    )]
+    async fn test_get_native_path_for_resolved_alias() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_native_path_for_resolved_alias(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.laf.AquaFileView.getNativePathToSharedJDKBundle()Ljava/lang/String;"
+    )]
+    async fn test_get_native_path_to_shared_jdk_bundle() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_native_path_to_shared_jdk_bundle(thread, Arguments::default()).await;
+    }
+}

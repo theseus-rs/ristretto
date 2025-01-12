@@ -16,3 +16,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn is_set_uid(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.util.logging.FileHandler.isSetUID()Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/util/logging/FileHandler";
+        assert!(registry.method(class_name, "isSetUID", "()Z").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.logging.FileHandler.isSetUID()Z")]
+    async fn test_is_set_uid() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_set_uid(thread, Arguments::default()).await;
+    }
+}

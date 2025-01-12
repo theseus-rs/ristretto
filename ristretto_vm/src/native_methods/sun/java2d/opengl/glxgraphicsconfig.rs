@@ -36,3 +36,43 @@ async fn get_ogl_capabilities(
 async fn init_config(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.GLXGraphicsConfig.initConfig(JJ)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/java2d/opengl/GLXGraphicsConfig";
+        assert!(registry
+            .method(class_name, "getGLXConfigInfo", "(II)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getOGLCapabilities", "(J)I")
+            .is_some());
+        assert!(registry.method(class_name, "initConfig", "(JJ)V").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.opengl.GLXGraphicsConfig.getGLXConfigInfo(II)J")]
+    async fn test_get_glx_config_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_glx_config_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.opengl.GLXGraphicsConfig.getOGLCapabilities(J)I")]
+    async fn test_get_ogl_capabilities() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_ogl_capabilities(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.opengl.GLXGraphicsConfig.initConfig(JJ)V")]
+    async fn test_init_config() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_config(thread, Arguments::default()).await;
+    }
+}

@@ -38,3 +38,45 @@ async fn init_agent_properties(
 ) -> Result<Option<Value>> {
     todo!("sun.misc.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/misc/VMSupport";
+        assert!(registry
+            .method(
+                class_name,
+                "getVMTemporaryDirectory",
+                "()Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "initAgentProperties",
+                "(Ljava/util/Properties;)Ljava/util/Properties;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.misc.VMSupport.getVMTemporaryDirectory()Ljava/lang/String;")]
+    async fn test_get_vm_temporary_directory() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_vm_temporary_directory(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.misc.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;"
+    )]
+    async fn test_init_agent_properties() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_agent_properties(thread, Arguments::default()).await;
+    }
+}

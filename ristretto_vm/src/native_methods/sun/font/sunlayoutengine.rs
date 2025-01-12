@@ -53,3 +53,66 @@ async fn native_layout(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 async fn shape(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.font.SunLayoutEngine.shape(Lsun/font/Font2D;Lsun/font/FontStrike;F[FJ[CLsun/font/GlyphLayout$GVData;IIIILjava/awt/geom/Point2D$Float;II)Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/font/SunLayoutEngine";
+        let java_version = registry.java_version();
+
+        if java_version <= &JAVA_8 {
+            assert!(registry.method(class_name, "initGVIDs", "()V").is_some());
+            assert!(registry.method(class_name, "nativeLayout", "(Lsun/font/Font2D;Lsun/font/FontStrike;[FII[CIIIIIIILjava/awt/geom/Point2D$Float;Lsun/font/GlyphLayout$GVData;JJ)V").is_some());
+        } else {
+            assert!(registry
+                .method(class_name, "createFace", "(Lsun/font/Font2D;J)J")
+                .is_some());
+            assert!(registry.method(class_name, "disposeFace", "(J)V").is_some());
+            assert!(registry.method(class_name, "shape", "(Lsun/font/Font2D;Lsun/font/FontStrike;F[FJ[CLsun/font/GlyphLayout$GVData;IIIILjava/awt/geom/Point2D$Float;II)Z").is_some());
+        }
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.SunLayoutEngine.createFace(Lsun/font/Font2D;J)J")]
+    async fn test_create_face() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_face(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.SunLayoutEngine.disposeFace(J)V")]
+    async fn test_dispose_face() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = dispose_face(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.SunLayoutEngine.initGVIDs()V")]
+    async fn test_init_gv_ids() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_gv_ids(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.font.SunLayoutEngine.nativeLayout(Lsun/font/Font2D;Lsun/font/FontStrike;[FII[CIIIIIIILjava/awt/geom/Point2D$Float;Lsun/font/GlyphLayout$GVData;JJ)V"
+    )]
+    async fn test_native_layout() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_layout(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.font.SunLayoutEngine.shape(Lsun/font/Font2D;Lsun/font/FontStrike;F[FJ[CLsun/font/GlyphLayout$GVData;IIIILjava/awt/geom/Point2D$Float;II)Z"
+    )]
+    async fn test_shape() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = shape(thread, Arguments::default()).await;
+    }
+}

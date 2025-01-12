@@ -74,3 +74,94 @@ async fn set_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Optio
 async fn start(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("com.sun.java.util.jar.pack.NativeUnpack.start(Ljava/nio/ByteBuffer;J)J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/sun/java/util/jar/pack/NativeUnpack";
+        assert!(registry.method(class_name, "finish", "()J").is_some());
+        assert!(registry
+            .method(class_name, "getNextFile", "([Ljava/lang/Object;)Z")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getOption",
+                "(Ljava/lang/String;)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getUnusedInput", "()Ljava/nio/ByteBuffer;")
+            .is_some());
+        assert!(registry.method(class_name, "initIDs", "()V").is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "setOption",
+                "(Ljava/lang/String;Ljava/lang/String;)Z"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "start", "(Ljava/nio/ByteBuffer;J)J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.finish()J"
+    )]
+    async fn test_finish() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = finish(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.getNextFile([Ljava/lang/Object;)Z"
+    )]
+    async fn test_get_next_file() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_next_file(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.getOption(Ljava/lang/String;)Ljava/lang/String;"
+    )]
+    async fn test_get_option() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_option(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.getUnusedInput()Ljava/nio/ByteBuffer;"
+    )]
+    async fn test_get_unused_input() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_unused_input(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.setOption(Ljava/lang/String;Ljava/lang/String;)Z"
+    )]
+    async fn test_set_option() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_option(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.start(Ljava/nio/ByteBuffer;J)J"
+    )]
+    async fn test_start() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = start(thread, Arguments::default()).await;
+    }
+}

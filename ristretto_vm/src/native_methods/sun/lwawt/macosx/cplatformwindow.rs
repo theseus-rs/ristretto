@@ -335,3 +335,248 @@ async fn native_synthesize_mouse_entered_exited_events_2(
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSynthesizeMouseEnteredExitedEvents(JI)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/CPlatformWindow";
+        assert!(registry
+            .method(class_name, "_toggleFullScreenMode", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeCreateNSWindow", "(JJJDDDD)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeDispose", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeEnterFullScreenMode", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeExitFullScreenMode", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeGetNSWindowInsets",
+                "(J)Ljava/awt/Insets;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeGetTopmostPlatformWindowUnderMouse",
+                "()Lsun/lwawt/macosx/CPlatformWindow;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativePushNSWindowToBack", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativePushNSWindowToFront", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeRevalidateNSWindowShadow", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetEnabled", "(JZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetNSWindowBounds", "(JDDDD)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetNSWindowMenuBar", "(JJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetNSWindowMinMax", "(JDDDD)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetNSWindowMinimizedIcon", "(JJ)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeSetNSWindowRepresentedFilename",
+                "(JLjava/lang/String;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetNSWindowStyleBits", "(JII)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeSetNSWindowTitle",
+                "(JLjava/lang/String;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeSynthesizeMouseEnteredExitedEvents",
+                "()V"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow._toggleFullScreenMode(J)V")]
+    async fn test_toggle_full_screen_mode() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = toggle_full_screen_mode(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow.nativeCreateNSWindow(JJJDDDD)J")]
+    async fn test_native_create_ns_window() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_create_ns_window(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow.nativeDispose(J)V")]
+    async fn test_native_dispose() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_dispose(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow.nativeEnterFullScreenMode(J)V")]
+    async fn test_native_enter_full_screen_mode() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_enter_full_screen_mode(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow.nativeExitFullScreenMode(J)V")]
+    async fn test_native_exit_full_screen_mode() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_exit_full_screen_mode(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CPlatformWindow.nativeGetNSWindowInsets(J)Ljava/awt/Insets;"
+    )]
+    async fn test_native_get_ns_window_insets() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_ns_window_insets(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CPlatformWindow.nativeGetTopmostPlatformWindowUnderMouse()Lsun/lwawt/macosx/CPlatformWindow;"
+    )]
+    async fn test_native_get_topmost_platform_window_under_mouse() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_topmost_platform_window_under_mouse(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow.nativePushNSWindowToBack(J)V")]
+    async fn test_native_push_ns_window_to_back() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_push_ns_window_to_back(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow.nativePushNSWindowToFront(J)V")]
+    async fn test_native_push_ns_window_to_front() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_push_ns_window_to_front(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CPlatformWindow.nativeRevalidateNSWindowShadow(J)V"
+    )]
+    async fn test_native_revalidate_ns_window_shadow() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_revalidate_ns_window_shadow(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CPlatformWindow.nativeSetAllowAutomaticTabbingProperty(Z)V"
+    )]
+    async fn test_native_set_allow_automatic_tabbing_property() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_allow_automatic_tabbing_property(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow.nativeSetEnabled(JZ)V")]
+    async fn test_native_set_enabled() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_enabled(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowBounds(JDDDD)V")]
+    async fn test_native_set_ns_window_bounds() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_ns_window_bounds(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowMenuBar(JJ)V")]
+    async fn test_native_set_ns_window_menu_bar() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_ns_window_menu_bar(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowMinMax(JDDDD)V")]
+    async fn test_native_set_ns_window_min_max() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_ns_window_min_max(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowMinimizedIcon(JJ)V"
+    )]
+    async fn test_native_set_ns_window_minimized_icon() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_ns_window_minimized_icon(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowRepresentedFilename(JLjava/lang/String;)V"
+    )]
+    async fn test_native_set_ns_window_represented_filename() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_ns_window_represented_filename(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowStyleBits(JII)V")]
+    async fn test_native_set_ns_window_style_bits() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_ns_window_style_bits(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowTitle(JLjava/lang/String;)V"
+    )]
+    async fn test_native_set_ns_window_title() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_ns_window_title(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CPlatformWindow.nativeSynthesizeMouseEnteredExitedEvents()V"
+    )]
+    async fn test_native_synthesize_mouse_entered_exited_events_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_synthesize_mouse_entered_exited_events_1(thread, Arguments::default()).await;
+    }
+}

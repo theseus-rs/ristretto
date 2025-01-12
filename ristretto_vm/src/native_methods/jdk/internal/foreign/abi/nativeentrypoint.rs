@@ -52,3 +52,68 @@ async fn make_downcall_stub(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
 async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "jdk/internal/foreign/abi/NativeEntryPoint";
+        assert!(registry
+            .method(class_name, "makeDowncallStub", "(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;ZIZ)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "freeDowncallStub0", "(J)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_19() {
+        let mut registry = MethodRegistry::new(&Version::Java19 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "jdk/internal/foreign/abi/NativeEntryPoint";
+        assert!(registry
+            .method(class_name, "makeDowncallStub", "(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;Z)J")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_20() {
+        let mut registry = MethodRegistry::new(&Version::Java20 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "jdk/internal/foreign/abi/NativeEntryPoint";
+        assert!(registry
+            .method(class_name, "makeDowncallStub", "(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;ZI)J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "jdk.internal.foreign.abi.NativeEntryPoint.freeDowncallStub0(J)Z")]
+    async fn test_free_downcall_stub_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_downcall_stub_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "jdk.internal.foreign.abi.NativeEntryPoint.makeDowncallStub(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;Z)J"
+    )]
+    async fn test_make_downcall_stub() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = make_downcall_stub(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+}

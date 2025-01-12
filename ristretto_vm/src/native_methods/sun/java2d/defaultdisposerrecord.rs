@@ -24,3 +24,25 @@ async fn invoke_native_dispose(
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.DefaultDisposerRecord.invokeNativeDispose(JJ)V");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/java2d/DefaultDisposerRecord";
+        assert!(registry
+            .method(class_name, "invokeNativeDispose", "(JJ)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.DefaultDisposerRecord.invokeNativeDispose(JJ)V")]
+    async fn test_invoke_native_dispose() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = invoke_native_dispose(thread, Arguments::default()).await;
+    }
+}

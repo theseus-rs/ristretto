@@ -16,3 +16,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn draw_poly(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.OGLRenderer.drawPoly([I[IIZII)V");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/java2d/opengl/OGLRenderer";
+        assert!(registry
+            .method(class_name, "drawPoly", "([I[IIZII)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.opengl.OGLRenderer.drawPoly([I[IIZII)V")]
+    async fn test_draw_poly() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = draw_poly(thread, Arguments::default()).await;
+    }
+}

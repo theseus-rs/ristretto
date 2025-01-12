@@ -47,3 +47,55 @@ async fn wait_for_process_exit(
 ) -> Result<Option<Value>> {
     todo!("java.lang.UNIXProcess.waitForProcessExit(I)I")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/UNIXProcess";
+        assert!(registry
+            .method(class_name, "destroyProcess", "(IZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "forkAndExec", "(I[B[B[BI[BI[B[IZ)I")
+            .is_some());
+        assert!(registry.method(class_name, "init", "()V").is_some());
+        assert!(registry
+            .method(class_name, "waitForProcessExit", "(I)I")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.UNIXProcess.destroyProcess(IZ)V")]
+    async fn test_destroy_process() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = destroy_process(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.UNIXProcess.forkAndExec(I[B[B[BI[BI[B[IZ)I"
+    )]
+    async fn test_fork_and_exec() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = fork_and_exec(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.UNIXProcess.init()V")]
+    async fn test_init() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.UNIXProcess.waitForProcessExit(I)I")]
+    async fn test_wait_for_process_exit() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = wait_for_process_exit(thread, Arguments::default()).await;
+    }
+}

@@ -53,3 +53,59 @@ async fn set_boot_loader_unnamed_module_0(
     let _object = arguments.pop_reference()?;
     Ok(None)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/loader/BootLoader";
+        assert!(registry
+            .method(
+                class_name,
+                "getSystemPackageLocation",
+                "(Ljava/lang/String;)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getSystemPackageNames", "()[Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "setBootLoaderUnnamedModule0",
+                "(Ljava/lang/Module;)V"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "jdk.internal.loader.BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String;"
+    )]
+    async fn test_get_system_package_location() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_system_package_location(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "jdk.internal.loader.BootLoader.getSystemPackageNames()[Ljava/lang/String;"
+    )]
+    async fn test_get_system_package_names() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_system_package_names(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_set_boot_loader_unnamed_module_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let arguments = Arguments::new(vec![Value::Object(None)]);
+        let result = set_boot_loader_unnamed_module_0(thread, arguments).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+}

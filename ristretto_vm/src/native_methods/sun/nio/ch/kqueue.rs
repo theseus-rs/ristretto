@@ -79,3 +79,92 @@ async fn poll(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 async fn register_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.register(IIII)I");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java9 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "sun/nio/ch/KQueue";
+        assert!(registry.method(class_name, "create", "()I").is_some());
+        assert!(registry.method(class_name, "poll", "(IJIJ)I").is_some());
+        assert!(registry.method(class_name, "register", "(IIII)I").is_some());
+        assert!(registry.method(class_name, "filterOffset", "()I").is_some());
+        assert!(registry.method(class_name, "flagsOffset", "()I").is_some());
+        assert!(registry.method(class_name, "identOffset", "()I").is_some());
+        assert!(registry.method(class_name, "keventSize", "()I").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueue.create()I")]
+    async fn test_create() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueue.filterOffset()I")]
+    async fn test_filter_offset() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = filter_offset(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueue.flagsOffset()I")]
+    async fn test_flags_offset() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = flags_offset(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueue.identOffset()I")]
+    async fn test_ident_offset() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = ident_offset(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueue.keventPoll(IJI)I")]
+    async fn test_kevent_poll() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = kevent_poll(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueue.keventRegister(IIII)I")]
+    async fn test_kevent_register() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = kevent_register(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueue.keventSize()I")]
+    async fn test_kevent_size() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = kevent_size(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueue.kqueue()I")]
+    async fn test_kqueue() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = kqueue(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueue.poll(IJIJ)I")]
+    async fn test_poll() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = poll(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueue.register(IIII)I")]
+    async fn test_register_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = register_0(thread, Arguments::default()).await;
+    }
+}

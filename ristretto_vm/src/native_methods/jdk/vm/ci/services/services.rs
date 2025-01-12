@@ -24,3 +24,27 @@ async fn read_system_properties_info(
 ) -> Result<Option<Value>> {
     todo!("jdk.vm.ci.services.Services.readSystemPropertiesInfo([I)J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/vm/ci/services/Services";
+        assert!(registry
+            .method(class_name, "readSystemPropertiesInfo", "([I)J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.vm.ci.services.Services.readSystemPropertiesInfo([I)J"
+    )]
+    async fn test_read_system_properties_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = read_system_properties_info(thread, Arguments::default()).await;
+    }
+}

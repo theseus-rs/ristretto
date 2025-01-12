@@ -16,3 +16,24 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn is_big_endian(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(Some(Value::from(true)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/StringUTF16";
+        assert!(registry.method(class_name, "isBigEndian", "()Z").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_is_big_endian() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let value = is_big_endian(thread, Arguments::default()).await?;
+        assert_eq!(value, Some(Value::from(true)));
+        Ok(())
+    }
+}

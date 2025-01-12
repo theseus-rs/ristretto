@@ -49,3 +49,54 @@ async fn signal(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 async fn signal_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
     signal(thread, arguments).await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/nio/ch/NativeThread";
+        assert!(registry.method(class_name, "current", "()J").is_some());
+        assert!(registry.method(class_name, "signal", "(J)V").is_some());
+        assert!(registry.method(class_name, "init", "()V").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.NativeThread.current()J")]
+    async fn test_current() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = current(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.NativeThread.current()J")]
+    async fn test_current_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = current_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.NativeThread.signal(J)V")]
+    async fn test_signal() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = signal(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.NativeThread.signal(J)V")]
+    async fn test_signal_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = signal_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_init() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+}

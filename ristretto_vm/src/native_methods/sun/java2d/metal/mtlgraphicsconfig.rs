@@ -71,3 +71,59 @@ async fn try_load_metal_library(
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/java2d/metal/MTLGraphicsConfig";
+        assert!(registry
+            .method(class_name, "isMetalFrameworkAvailable", "()Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getMTLConfigInfo", "(ILjava/lang/String;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeGetMaxTextureSize", "()I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "tryLoadMetalLibrary", "(ILjava/lang/String;)Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.metal.MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J"
+    )]
+    async fn test_get_mtl_config_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_mtl_config_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.metal.MTLGraphicsConfig.isMetalFrameworkAvailable()Z")]
+    async fn test_is_metal_framework_available() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_metal_framework_available(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.metal.MTLGraphicsConfig.nativeGetMaxTextureSize()I")]
+    async fn test_native_get_max_texture_size() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_max_texture_size(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.metal.MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z"
+    )]
+    async fn test_try_load_metal_library() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = try_load_metal_library(thread, Arguments::default()).await;
+    }
+}

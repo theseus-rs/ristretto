@@ -38,3 +38,47 @@ async fn native_invoke_non_public(
 ) -> Result<Option<Value>> {
     todo!("apple.launcher.JavaAppLauncher.nativeInvokeNonPublic(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "apple/launcher/JavaAppLauncher";
+        assert!(registry
+            .method(
+                class_name,
+                "nativeConvertAndRelease",
+                "(J)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeInvokeNonPublic",
+                "(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: apple.launcher.JavaAppLauncher.nativeConvertAndRelease(J)Ljava/lang/Object;"
+    )]
+    async fn test_native_convert_and_release() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_convert_and_release(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: apple.launcher.JavaAppLauncher.nativeInvokeNonPublic(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V"
+    )]
+    async fn test_native_invoke_non_public() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_invoke_non_public(thread, Arguments::default()).await;
+    }
+}

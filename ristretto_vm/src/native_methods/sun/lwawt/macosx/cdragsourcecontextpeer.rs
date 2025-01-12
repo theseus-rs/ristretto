@@ -49,3 +49,26 @@ async fn release_native_drag_source(
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDragSourceContextPeer.releaseNativeDragSource(J)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/CDragSourceContextPeer";
+        assert!(registry
+            .method(
+                class_name,
+                "createNativeDragSource",
+                "(Ljava/awt/Component;JLjava/awt/datatransfer/Transferable;Ljava/awt/event/InputEvent;IIIIJLsun/lwawt/macosx/CImage;III[JLjava/util/Map;)J"
+            )
+            .is_some());
+        assert!(registry.method(class_name, "doDragging", "(J)V").is_some());
+        assert!(registry
+            .method(class_name, "releaseNativeDragSource", "(J)V")
+            .is_some());
+    }
+}

@@ -84,3 +84,97 @@ async fn is_drawable_valid(_thread: Arc<Thread>, _arguments: Arguments) -> Resul
 async fn set_invalid(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.setInvalid()V");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/java2d/x11/XSurfaceData";
+        assert!(registry.method(class_name, "XCreateGC", "(J)J").is_some());
+        assert!(registry.method(class_name, "XResetClip", "(J)V").is_some());
+        assert!(registry
+            .method(class_name, "XSetClip", "(JIIIILsun/java2d/pipe/Region;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XSetGraphicsExposures", "(JZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "flushNativeSurface", "()V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "initOps",
+                "(Lsun/awt/X11ComponentPeer;Lsun/awt/X11GraphicsConfig;I)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "isDrawableValid", "()Z")
+            .is_some());
+        assert!(registry.method(class_name, "setInvalid", "()V").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.XSurfaceData.XCreateGC(J)J")]
+    async fn test_x_create_gc() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_create_gc(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.XSurfaceData.XResetClip(J)V")]
+    async fn test_x_reset_clip() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_reset_clip(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.x11.XSurfaceData.XSetClip(JIIIILsun/java2d/pipe/Region;)V"
+    )]
+    async fn test_x_set_clip() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_set_clip(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.XSurfaceData.XSetGraphicsExposures(JZ)V")]
+    async fn test_x_set_graphics_exposures() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_set_graphics_exposures(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.XSurfaceData.flushNativeSurface()V")]
+    async fn test_flush_native_surface() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = flush_native_surface(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.x11.XSurfaceData.initOps(Lsun/awt/X11ComponentPeer;Lsun/awt/X11GraphicsConfig;I)V"
+    )]
+    async fn test_init_ops() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_ops(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.XSurfaceData.isDrawableValid()Z")]
+    async fn test_is_drawable_valid() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_drawable_valid(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.XSurfaceData.setInvalid()V")]
+    async fn test_set_invalid() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_invalid(thread, Arguments::default()).await;
+    }
+}

@@ -80,3 +80,83 @@ async fn native_get_y_thickness(
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetYThickness(I)I")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/sun/java/swing/plaf/gtk/GTKStyle";
+        assert!(registry
+            .method(
+                class_name,
+                "nativeGetClassValue",
+                "(ILjava/lang/String;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeGetColorForState", "(III)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeGetPangoFontName",
+                "(I)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeGetXThickness", "(I)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeGetYThickness", "(I)I")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetClassValue(ILjava/lang/String;)Ljava/lang/Object;"
+    )]
+    async fn test_native_get_class_value() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_class_value(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetColorForState(III)I"
+    )]
+    async fn test_native_get_color_for_state() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_color_for_state(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetPangoFontName(I)Ljava/lang/String;"
+    )]
+    async fn test_native_get_pango_font_name() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_pango_font_name(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetXThickness(I)I"
+    )]
+    async fn test_native_get_x_thickness() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_x_thickness(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetYThickness(I)I"
+    )]
+    async fn test_native_get_y_thickness() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_y_thickness(thread, Arguments::default()).await;
+    }
+}

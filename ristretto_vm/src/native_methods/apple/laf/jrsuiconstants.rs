@@ -24,3 +24,27 @@ async fn get_ptr_for_constant(
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIConstants.getPtrForConstant(I)J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "apple/laf/JRSUIConstants";
+        assert!(registry
+            .method(class_name, "getPtrForConstant", "(I)J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: apple.laf.JRSUIConstants.getPtrForConstant(I)J"
+    )]
+    async fn test_get_ptr_for_constant() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_ptr_for_constant(thread, Arguments::default()).await;
+    }
+}

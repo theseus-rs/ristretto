@@ -67,3 +67,87 @@ async fn fetch_stack_frames(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
 async fn set_continuation(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.lang.StackStreamFactory$AbstractStackWalker.setContinuation()V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/StackStreamFactory$AbstractStackWalker";
+        assert!(registry
+            .method(
+                class_name,
+                "callStackWalk",
+                "(JILjdk/internal/vm/ContinuationScope;Ljdk/internal/vm/Continuation;II[Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "setContinuation",
+                "(J[Ljava/lang/Object;Ljdk/internal/vm/Continuation;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "fetchStackFrames", "(JJII[Ljava/lang/Object;)I")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_18() {
+        let mut registry = MethodRegistry::new(&Version::Java18 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/StackStreamFactory$AbstractStackWalker";
+        assert!(registry
+            .method(
+                class_name,
+                "callStackWalk",
+                "(JIII[Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_22() {
+        let mut registry = MethodRegistry::new(&Version::Java22 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/StackStreamFactory$AbstractStackWalker";
+        assert!(registry
+            .method(
+                class_name,
+                "fetchStackFrames",
+                "(IJIII[Ljava/lang/Object;)I"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.StackStreamFactory$AbstractStackWalker.callStackWalk()Ljava/lang/Object;"
+    )]
+    async fn test_call_stack_walk() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = call_stack_walk(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.StackStreamFactory$AbstractStackWalker.fetchStackFrames()I"
+    )]
+    async fn test_fetch_stack_frames() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = fetch_stack_frames(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.StackStreamFactory$AbstractStackWalker.setContinuation()V"
+    )]
+    async fn test_set_continuation() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_continuation(thread, Arguments::default()).await;
+    }
+}

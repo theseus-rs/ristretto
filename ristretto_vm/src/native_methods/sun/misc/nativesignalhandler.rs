@@ -16,3 +16,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn handle_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.misc.NativeSignalHandler.handle0(IJ)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/misc/NativeSignalHandler";
+        assert!(registry.method(class_name, "handle0", "(IJ)V").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.misc.NativeSignalHandler.handle0(IJ)V")]
+    async fn test_handle_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = handle_0(thread, Arguments::default()).await;
+    }
+}

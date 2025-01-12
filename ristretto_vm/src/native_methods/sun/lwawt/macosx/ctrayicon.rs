@@ -74,3 +74,75 @@ async fn native_show_notification(
 async fn set_native_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CTrayIcon.setNativeImage(JJZ)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/CTrayIcon";
+        assert!(registry.method(class_name, "nativeCreate", "()J").is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeGetIconLocation",
+                "(J)Ljava/awt/geom/Point2D;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetToolTip", "(JLjava/lang/String;)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeShowNotification",
+                "(JLjava/lang/String;Ljava/lang/String;J)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "setNativeImage", "(JJZ)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CTrayIcon.nativeCreate()J")]
+    async fn test_native_create() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_create(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CTrayIcon.nativeGetIconLocation(J)Ljava/awt/geom/Point2D;"
+    )]
+    async fn test_native_get_icon_location() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_icon_location(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CTrayIcon.nativeSetToolTip(JLjava/lang/String;)V")]
+    async fn test_native_set_tool_tip() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_tool_tip(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CTrayIcon.nativeShowNotification(JLjava/lang/String;Ljava/lang/String;J)V"
+    )]
+    async fn test_native_show_notification() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_show_notification(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CTrayIcon.setNativeImage(JJZ)V")]
+    async fn test_set_native_image() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_native_image(thread, Arguments::default()).await;
+    }
+}

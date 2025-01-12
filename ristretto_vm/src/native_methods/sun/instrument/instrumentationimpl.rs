@@ -187,3 +187,181 @@ async fn set_native_method_prefixes(
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.setNativeMethodPrefixes(J[Ljava/lang/String;Z)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "sun/instrument/InstrumentationImpl";
+        assert!(registry
+            .method(class_name, "loadAgent0", "(Ljava/lang/String;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setHasTransformers", "(JZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "jarFile", "(J)Ljava/lang/String;")
+            .is_none());
+        assert!(registry
+            .method(
+                class_name,
+                "appendToClassLoaderSearch0",
+                "(JLjava/lang/String;Z)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getAllLoadedClasses0", "(J)[Ljava/lang/Class;")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getInitiatedClasses0",
+                "(JLjava/lang/ClassLoader;)[Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getObjectSize0", "(JLjava/lang/Object;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "isModifiableClass0", "(JLjava/lang/Class;)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "isRetransformClassesSupported0", "(J)Z")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "redefineClasses0",
+                "(J[Ljava/lang/instrument/ClassDefinition;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "retransformClasses0", "(J[Ljava/lang/Class;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setHasRetransformableTransformers", "(JZ)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "setNativeMethodPrefixes",
+                "(J[Ljava/lang/String;Z)V"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.instrument.InstrumentationImpl.loadAgent0(Ljava/lang/String;)V")]
+    async fn test_load_agent_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = load_agent_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.instrument.InstrumentationImpl.setHasTransformers(JZ)V")]
+    async fn test_set_has_transformers() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_has_transformers(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.instrument.InstrumentationImpl.jarFile(J)Ljava/lang/String;")]
+    async fn test_jar_file() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = jar_file(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.instrument.InstrumentationImpl.appendToClassLoaderSearch0(JLjava/lang/String;Z)V"
+    )]
+    async fn test_append_to_class_loader_search_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = append_to_class_loader_search_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.instrument.InstrumentationImpl.getAllLoadedClasses0(J)[Ljava/lang/Class;"
+    )]
+    async fn test_get_all_loaded_classes_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_all_loaded_classes_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.instrument.InstrumentationImpl.getInitiatedClasses0(JLjava/lang/ClassLoader;)[Ljava/lang/Class;"
+    )]
+    async fn test_get_initiated_classes_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_initiated_classes_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.instrument.InstrumentationImpl.getObjectSize0(JLjava/lang/Object;)J"
+    )]
+    async fn test_get_object_size_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_object_size_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.instrument.InstrumentationImpl.isModifiableClass0(JLjava/lang/Class;)Z"
+    )]
+    async fn test_is_modifiable_class_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_modifiable_class_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.instrument.InstrumentationImpl.isRetransformClassesSupported0(J)Z"
+    )]
+    async fn test_is_retransform_classes_supported_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_retransform_classes_supported_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.instrument.InstrumentationImpl.redefineClasses0(J[Ljava/lang/instrument/ClassDefinition;)V"
+    )]
+    async fn test_redefine_classes_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = redefine_classes_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.instrument.InstrumentationImpl.retransformClasses0(J[Ljava/lang/Class;)V"
+    )]
+    async fn test_retransform_classes_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = retransform_classes_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.instrument.InstrumentationImpl.setHasRetransformableTransformers(JZ)V"
+    )]
+    async fn test_set_has_retransformable_transformers() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_has_retransformable_transformers(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.instrument.InstrumentationImpl.setNativeMethodPrefixes(J[Ljava/lang/String;Z)V"
+    )]
+    async fn test_set_native_method_prefixes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_native_method_prefixes(thread, Arguments::default()).await;
+    }
+}

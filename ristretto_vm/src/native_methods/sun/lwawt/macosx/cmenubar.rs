@@ -44,3 +44,45 @@ async fn native_set_help_menu(
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuBar.nativeSetHelpMenu(JJ)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/CMenuBar";
+        assert!(registry
+            .method(class_name, "nativeCreateMenuBar", "()J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeDelMenu", "(JI)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetHelpMenu", "(JJ)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CMenuBar.nativeCreateMenuBar()J")]
+    async fn test_native_create_menu_bar() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_create_menu_bar(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CMenuBar.nativeDelMenu(JI)V")]
+    async fn test_native_del_menu() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_del_menu(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CMenuBar.nativeSetHelpMenu(JJ)V")]
+    async fn test_native_set_help_menu() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_help_menu(thread, Arguments::default()).await;
+    }
+}

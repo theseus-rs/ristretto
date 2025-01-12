@@ -24,3 +24,31 @@ async fn get_heavy_weight_popup(
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.ScreenPopupFactory._getHeavyWeightPopup(Ljava/awt/Component;Ljava/awt/Component;II)Ljavax/swing/Popup;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/apple/laf/ScreenPopupFactory";
+        assert!(registry
+            .method(
+                class_name,
+                "_getHeavyWeightPopup",
+                "(Ljava/awt/Component;Ljava/awt/Component;II)Ljavax/swing/Popup;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.laf.ScreenPopupFactory._getHeavyWeightPopup(Ljava/awt/Component;Ljava/awt/Component;II)Ljavax/swing/Popup;"
+    )]
+    async fn test_get_heavy_weight_popup() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_heavy_weight_popup(thread, Arguments::default()).await;
+    }
+}

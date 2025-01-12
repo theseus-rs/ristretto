@@ -147,3 +147,154 @@ async fn notify_jvmti_unmount_end(
 async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/VirtualThread";
+        assert!(registry
+            .method(class_name, "notifyJvmtiEnd", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "notifyJvmtiMount", "(Z)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "notifyJvmtiStart", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "notifyJvmtiUnmount", "(Z)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "notifyJvmtiHideFrames", "(Z)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_20() {
+        let mut registry = MethodRegistry::new(&Version::Java20 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/VirtualThread";
+        assert!(registry
+            .method(class_name, "notifyJvmtiMountBegin", "(Z)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "notifyJvmtiMountEnd", "(Z)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "notifyJvmtiUnmountBegin", "(Z)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "notifyJvmtiUnmountEnd", "(Z)V")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_22() {
+        let mut registry = MethodRegistry::new(&Version::Java22 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/VirtualThread";
+        assert!(registry
+            .method(class_name, "notifyJvmtiDisableSuspend", "(Z)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.VirtualThread.notifyJvmtiDisableSuspend(Z)V"
+    )]
+    async fn test_notify_jvmti_disable_suspend() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = notify_jvmti_disable_suspend(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.VirtualThread.notifyJvmtiEnd()V")]
+    async fn test_notify_jvmti_end() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = notify_jvmti_end(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.VirtualThread.notifyJvmtiHideFrames(Z)V"
+    )]
+    async fn test_notify_jvmti_hide_frames() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = notify_jvmti_hide_frames(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.VirtualThread.notifyJvmtiMount(Z)V")]
+    async fn test_notify_jvmti_mount() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = notify_jvmti_mount(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.VirtualThread.notifyJvmtiMountBegin(Z)V"
+    )]
+    async fn test_notify_jvmti_mount_begin() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = notify_jvmti_mount_begin(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.VirtualThread.notifyJvmtiMountEnd(Z)V"
+    )]
+    async fn test_notify_jvmti_mount_end() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = notify_jvmti_mount_end(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.VirtualThread.notifyJvmtiStart()V")]
+    async fn test_notify_jvmti_start() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = notify_jvmti_start(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.VirtualThread.notifyJvmtiUnmount(Z)V"
+    )]
+    async fn test_notify_jvmti_unmount() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = notify_jvmti_unmount(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.VirtualThread.notifyJvmtiUnmountBegin(Z)V"
+    )]
+    async fn test_notify_jvmti_unmount_begin() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = notify_jvmti_unmount_begin(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.VirtualThread.notifyJvmtiUnmountEnd(Z)V"
+    )]
+    async fn test_notify_jvmti_unmount_end() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = notify_jvmti_unmount_end(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+}

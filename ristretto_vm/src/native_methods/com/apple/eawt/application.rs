@@ -22,5 +22,28 @@ async fn native_initialize_application_delegate(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.eawt.Application.nativeInitializeApplicationDelegate()V")
+    Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/apple/eawt/Application";
+        assert!(registry
+            .method(class_name, "nativeInitializeApplicationDelegate", "()V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_native_initialize_application_delegate() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = native_initialize_application_delegate(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
 }

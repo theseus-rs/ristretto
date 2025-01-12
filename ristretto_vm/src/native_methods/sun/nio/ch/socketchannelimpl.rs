@@ -50,3 +50,43 @@ async fn send_out_of_band_data(
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.SocketChannelImpl.sendOutOfBandData(Ljava/io/FileDescriptor;B)I")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/nio/ch/SocketChannelImpl";
+        assert!(registry
+            .method(class_name, "checkConnect", "(Ljava/io/FileDescriptor;ZZ)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "sendOutOfBandData",
+                "(Ljava/io/FileDescriptor;B)I"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.nio.ch.SocketChannelImpl.checkConnect(Ljava/io/FileDescriptor;ZZ)I"
+    )]
+    async fn test_check_connect() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = check_connect(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.nio.ch.SocketChannelImpl.sendOutOfBandData(Ljava/io/FileDescriptor;B)I"
+    )]
+    async fn test_send_out_of_band_data() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = send_out_of_band_data(thread, Arguments::default()).await;
+    }
+}

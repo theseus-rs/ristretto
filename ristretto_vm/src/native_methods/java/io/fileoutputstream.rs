@@ -5,7 +5,7 @@ use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::Version;
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::{Object, Value};
 use std::io::Write;
 use std::sync::Arc;
 
@@ -46,34 +46,15 @@ async fn write(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Val
     todo!("java.io.FileOutputStream.write(IZ)V")
 }
 
-#[expect(clippy::cast_sign_loss)]
 #[async_recursion(?Send)]
 async fn write_bytes(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let _append = arguments.pop_int()? != 0;
     let length = usize::try_from(arguments.pop_int()?)?;
     let offset = usize::try_from(arguments.pop_int()?)?;
-    let Some(Reference::ByteArray(bytes)) = arguments.pop_reference()? else {
-        return Err(InternalError(
-            "Invalid argument type; expected byte[]".to_string(),
-        ));
-    };
-    let bytes: Vec<u8> = bytes.to_vec()?.iter().map(|&x| x as u8).collect();
-    let Some(Reference::Object(file_output_stream)) = arguments.pop_reference()? else {
-        return Err(InternalError(
-            "Invalid argument type; expected object".to_string(),
-        ));
-    };
-    let Value::Object(Some(Reference::Object(file_descriptor))) = file_output_stream.value("fd")?
-    else {
-        return Err(InternalError(
-            "Invalid argument type; expected object".to_string(),
-        ));
-    };
-    let Value::Long(handle) = file_descriptor.value("handle")? else {
-        return Err(InternalError(
-            "Invalid argument type; expected long".to_string(),
-        ));
-    };
+    let bytes: Vec<u8> = arguments.pop()?.try_into()?;
+    let file_output_stream = arguments.pop_object()?;
+    let file_descriptor: Object = file_output_stream.value("fd")?.try_into()?;
+    let handle = file_descriptor.value("handle")?.to_long()?;
 
     match handle {
         1 => {
@@ -101,4 +82,56 @@ async fn write_bytes(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
         }
     }
     Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/io/FileOutputStream";
+        assert!(registry.method(class_name, "close0", "()V").is_some());
+        assert!(registry.method(class_name, "initIDs", "()V").is_some());
+        assert!(registry
+            .method(class_name, "open0", "(Ljava/lang/String;Z)V")
+            .is_some());
+        assert!(registry.method(class_name, "write", "(IZ)V").is_some());
+        assert!(registry
+            .method(class_name, "writeBytes", "([BIIZ)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.io.FileOutputStream.close0()V")]
+    async fn test_close_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = close_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = init_ids(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.FileOutputStream.open0(Ljava/lang/String;Z)V"
+    )]
+    async fn test_open_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = open_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.io.FileOutputStream.write(IZ)V")]
+    async fn test_write() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = write(thread, Arguments::default()).await;
+    }
 }

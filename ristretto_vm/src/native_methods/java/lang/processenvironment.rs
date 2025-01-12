@@ -27,3 +27,16 @@ async fn environ(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
     let result = Reference::Array(class, ConcurrentVec::from(values));
     Ok(Some(Value::Object(Some(result))))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/ProcessEnvironment";
+        assert!(registry.method(class_name, "environ", "()[[B").is_some());
+    }
+}

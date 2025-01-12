@@ -429,3 +429,98 @@ async fn set_security_manager(
         "SecurityManager is not supported".to_string(),
     ))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/System";
+        assert!(registry
+            .method(
+                class_name,
+                "arraycopy",
+                "(Ljava/lang/Object;ILjava/lang/Object;II)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "allowSecurityManager", "()Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "currentTimeMillis", "()J")
+            .is_some());
+        assert!(registry.method(class_name, "gc", "()V").is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getSecurityManager",
+                "()Ljava/lang/SecurityManager;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "identityHashCode", "(Ljava/lang/Object;)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "initProperties",
+                "(Ljava/util/Properties;)Ljava/util/Properties;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "mapLibraryName",
+                "(Ljava/lang/String;)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry.method(class_name, "nanoTime", "()J").is_some());
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setErr0", "(Ljava/io/PrintStream;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setIn0", "(Ljava/io/InputStream;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setOut0", "(Ljava/io/PrintStream;)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "setSecurityManager",
+                "(Ljava/lang/SecurityManager;)V"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_get_security_manager() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_security_manager(thread, Arguments::default()).await?;
+        assert_eq!(Some(Value::Object(None)), result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_nano_time() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = nano_time(thread, Arguments::default()).await?;
+        let time = result.unwrap_or(Value::Long(0)).to_long()?;
+        assert!(time > 0);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_security_manager() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = set_security_manager(thread, Arguments::default()).await;
+        assert!(result.is_err());
+        Ok(())
+    }
+}

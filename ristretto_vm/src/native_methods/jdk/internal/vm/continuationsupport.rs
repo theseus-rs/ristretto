@@ -16,3 +16,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn is_supported_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.ContinuationSupport.isSupported0()Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/vm/ContinuationSupport";
+        assert!(registry.method(class_name, "isSupported0", "()Z").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "jdk.internal.vm.ContinuationSupport.isSupported0()Z")]
+    async fn test_is_supported_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_supported_0(thread, Arguments::default()).await;
+    }
+}

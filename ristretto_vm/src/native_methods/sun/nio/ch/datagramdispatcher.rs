@@ -68,3 +68,64 @@ async fn write_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
 async fn writev_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramDispatcher.writev0(Ljava/io/FileDescriptor;JI)J");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/nio/ch/DatagramDispatcher";
+        assert!(registry
+            .method(class_name, "read0", "(Ljava/io/FileDescriptor;JI)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "readv0", "(Ljava/io/FileDescriptor;JI)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "write0", "(Ljava/io/FileDescriptor;JI)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "writev0", "(Ljava/io/FileDescriptor;JI)J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.nio.ch.DatagramDispatcher.dup0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V"
+    )]
+    async fn test_dup_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = dup_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.DatagramDispatcher.read0(Ljava/io/FileDescriptor;JI)I")]
+    async fn test_read_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = read_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.DatagramDispatcher.readv0(Ljava/io/FileDescriptor;JI)J")]
+    async fn test_readv_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = readv_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.DatagramDispatcher.write0(Ljava/io/FileDescriptor;JI)I")]
+    async fn test_write_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = write_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.DatagramDispatcher.writev0")]
+    async fn test_writev_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = writev_0(thread, Arguments::default()).await;
+    }
+}

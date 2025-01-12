@@ -112,3 +112,127 @@ async fn n_get_port_type(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 async fn n_open(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nOpen(I)J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/sun/media/sound/PortMixer";
+        assert!(registry.method(class_name, "nClose", "(J)V").is_some());
+        assert!(registry
+            .method(class_name, "nControlGetFloatValue", "(J)F")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nControlGetIntValue", "(J)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nControlSetFloatValue", "(JF)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nControlSetIntValue", "(JI)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nGetControls", "(JILjava/util/Vector;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nGetPortCount", "(J)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nGetPortName", "(JI)Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nGetPortType", "(JI)I")
+            .is_some());
+        assert!(registry.method(class_name, "nOpen", "(I)J").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: com.sun.media.sound.PortMixer.nClose(J)V")]
+    async fn test_n_close() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_close(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.PortMixer.nControlGetFloatValue(J)F"
+    )]
+    async fn test_n_control_get_float_value() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_control_get_float_value(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.PortMixer.nControlGetIntValue(J)I"
+    )]
+    async fn test_n_control_get_int_value() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_control_get_int_value(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.PortMixer.nControlSetFloatValue(JF)V"
+    )]
+    async fn test_n_control_set_float_value() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_control_set_float_value(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.PortMixer.nControlSetIntValue(JI)V"
+    )]
+    async fn test_n_control_set_int_value() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_control_set_int_value(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.PortMixer.nGetControls(JILjava/util/Vector;)V"
+    )]
+    async fn test_n_get_controls() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_get_controls(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.PortMixer.nGetPortCount(J)I"
+    )]
+    async fn test_n_get_port_count() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_get_port_count(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.PortMixer.nGetPortName(JI)Ljava/lang/String;"
+    )]
+    async fn test_n_get_port_name() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_get_port_name(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.PortMixer.nGetPortType(JI)I"
+    )]
+    async fn test_n_get_port_type() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_get_port_type(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: com.sun.media.sound.PortMixer.nOpen(I)J")]
+    async fn test_n_open() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_open(thread, Arguments::default()).await;
+    }
+}

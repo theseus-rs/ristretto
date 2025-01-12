@@ -71,3 +71,66 @@ async fn max_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Optio
 async fn gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/Runtime";
+        assert!(registry
+            .method(class_name, "availableProcessors", "()I")
+            .is_some());
+        assert!(registry.method(class_name, "freeMemory", "()J").is_some());
+        assert!(registry.method(class_name, "gc", "()V").is_some());
+        assert!(registry.method(class_name, "maxMemory", "()J").is_some());
+        assert!(registry.method(class_name, "totalMemory", "()J").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_available_processors() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = available_processors(thread, Arguments::default()).await?;
+        let available_processors = result.unwrap_or(Value::Int(0)).to_int()?;
+        assert!(available_processors >= 1);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_free_memory() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = free_memory(thread, Arguments::default()).await?;
+        let free_memory = result.unwrap_or(Value::Long(0)).to_long()?;
+        assert!(free_memory >= 1);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_total_memory() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = total_memory(thread, Arguments::default()).await?;
+        let total_memory = result.unwrap_or(Value::Long(0)).to_long()?;
+        assert!(total_memory >= 1);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_max_memory() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = max_memory(thread, Arguments::default()).await?;
+        let max_memory = result.unwrap_or(Value::Long(0)).to_long()?;
+        assert!(max_memory >= 1);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_gc() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = gc(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+}

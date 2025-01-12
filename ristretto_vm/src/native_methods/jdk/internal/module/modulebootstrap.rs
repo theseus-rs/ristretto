@@ -17,3 +17,26 @@ async fn boot(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
     // TODO: remove this method once the module system is implemented
     Ok(Some(Value::Object(None)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/module/ModuleBootstrap";
+        assert!(registry
+            .method(class_name, "boot", "()Ljava/lang/ModuleLayer;")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_boot() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = boot(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
+    }
+}

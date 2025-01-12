@@ -114,3 +114,167 @@ async fn x_fill_spans(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 async fn dev_copy_area(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.devCopyArea(JJIIIIII)V");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/java2d/x11/X11Renderer";
+        assert!(registry
+            .method(
+                class_name,
+                "XDoPath",
+                "(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "XDrawArc", "(JJIIIIII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XDrawLine", "(JJIIII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XDrawOval", "(JJIIII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XDrawPoly", "(JJII[I[IIZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XDrawRect", "(JJIIII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XDrawRoundRect", "(JJIIIIII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XFillArc", "(JJIIIIII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XFillOval", "(JJIIII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XFillPoly", "(JJII[I[II)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XFillRect", "(JJIIII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XFillRoundRect", "(JJIIIIII)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "XFillSpans",
+                "(JJLsun/java2d/pipe/SpanIterator;JII)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "devCopyArea", "(JJIIIIII)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.x11.X11Renderer.XDoPath(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V"
+    )]
+    async fn test_x_do_path() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_do_path(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.XDrawArc(JJIIIIII)V")]
+    async fn test_x_draw_arc() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_draw_arc(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.XDrawLine(JJIIII)V")]
+    async fn test_x_draw_line() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_draw_line(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.XDrawOval(JJIIII)V")]
+    async fn test_x_draw_oval() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_draw_oval(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.XDrawPoly(JJII[I[IIZ)V")]
+    async fn test_x_draw_poly() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_draw_poly(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.XDrawRect(JJIIII)V")]
+    async fn test_x_draw_rect() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_draw_rect(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.XDrawRoundRect(JJIIIIII)V")]
+    async fn test_x_draw_round_rect() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_draw_round_rect(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.XFillArc(JJIIIIII)V")]
+    async fn test_x_fill_arc() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_fill_arc(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.XFillOval(JJIIII)V")]
+    async fn test_x_fill_oval() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_fill_oval(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.XFillPoly(JJII[I[II)V")]
+    async fn test_x_fill_poly() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_fill_poly(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.XFillRect(JJIIII)V")]
+    async fn test_x_fill_rect() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_fill_rect(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.XFillRoundRect(JJIIIIII)V")]
+    async fn test_x_fill_round_rect() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_fill_round_rect(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.x11.X11Renderer.XFillSpans(JJLsun/java2d/pipe/SpanIterator;JII)V"
+    )]
+    async fn test_x_fill_spans() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_fill_spans(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.x11.X11Renderer.devCopyArea(JJIIIIII)V")]
+    async fn test_dev_copy_area() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = dev_copy_area(thread, Arguments::default()).await;
+    }
+}

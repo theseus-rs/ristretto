@@ -52,3 +52,51 @@ async fn native_reply_to_app_should_terminate(
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppEventHandler.nativeReplyToAppShouldTerminate(Z)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/apple/eawt/_AppEventHandler";
+        assert!(registry
+            .method(class_name, "nativeOpenCocoaAboutWindow", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeRegisterForNotification", "(I)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeReplyToAppShouldTerminate", "(Z)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.eawt._AppEventHandler.nativeOpenCocoaAboutWindow()V"
+    )]
+    async fn test_native_open_cocoa_about_window() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_open_cocoa_about_window(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.eawt._AppEventHandler.nativeRegisterForNotification(I)V"
+    )]
+    async fn test_native_register_for_notification() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_register_for_notification(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.eawt._AppEventHandler.nativeReplyToAppShouldTerminate(Z)V"
+    )]
+    async fn test_native_reply_to_app_should_terminate() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_reply_to_app_should_terminate(thread, Arguments::default()).await;
+    }
+}

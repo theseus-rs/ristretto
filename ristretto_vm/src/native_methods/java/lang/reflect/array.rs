@@ -201,3 +201,252 @@ async fn set_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 async fn set_short(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setShort(Ljava/lang/Object;IS)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/reflect/Array";
+        assert!(registry
+            .method(class_name, "get", "(Ljava/lang/Object;I)Ljava/lang/Object;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getBoolean", "(Ljava/lang/Object;I)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getByte", "(Ljava/lang/Object;I)B")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getChar", "(Ljava/lang/Object;I)C")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getDouble", "(Ljava/lang/Object;I)D")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getFloat", "(Ljava/lang/Object;I)F")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getInt", "(Ljava/lang/Object;I)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getLength", "(Ljava/lang/Object;)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getLong", "(Ljava/lang/Object;I)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getShort", "(Ljava/lang/Object;I)S")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "multiNewArray",
+                "(Ljava/lang/Class;[I)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "newArray",
+                "(Ljava/lang/Class;I)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "set",
+                "(Ljava/lang/Object;ILjava/lang/Object;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "setBoolean", "(Ljava/lang/Object;IZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setByte", "(Ljava/lang/Object;IB)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setChar", "(Ljava/lang/Object;IC)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setDouble", "(Ljava/lang/Object;ID)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setFloat", "(Ljava/lang/Object;IF)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setInt", "(Ljava/lang/Object;II)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setLong", "(Ljava/lang/Object;IJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setShort", "(Ljava/lang/Object;IS)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.get(Ljava/lang/Object;I)Ljava/lang/Object;"
+    )]
+    async fn test_get() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.getBoolean(Ljava/lang/Object;I)Z"
+    )]
+    async fn test_get_boolean() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_boolean(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.getByte(Ljava/lang/Object;I)B"
+    )]
+    async fn test_get_byte() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_byte(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.getChar(Ljava/lang/Object;I)C"
+    )]
+    async fn test_get_char() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_char(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.getDouble(Ljava/lang/Object;I)D"
+    )]
+    async fn test_get_double() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_double(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.getFloat(Ljava/lang/Object;I)F"
+    )]
+    async fn test_get_float() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_float(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.getInt(Ljava/lang/Object;I)I"
+    )]
+    async fn test_get_int() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_int(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.getLength(Ljava/lang/Object;)I"
+    )]
+    async fn test_get_length() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_length(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.getLong(Ljava/lang/Object;I)J"
+    )]
+    async fn test_get_long() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_long(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.getShort(Ljava/lang/Object;I)S"
+    )]
+    async fn test_get_short() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_short(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.multiNewArray(Ljava/lang/Class;[I)Ljava/lang/Object;"
+    )]
+    async fn test_multi_new_array() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = multi_new_array(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.set(Ljava/lang/Object;ILjava/lang/Object;)V"
+    )]
+    async fn test_set() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.setBoolean(Ljava/lang/Object;IZ)V"
+    )]
+    async fn test_set_boolean() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_boolean(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.setByte(Ljava/lang/Object;IB)V"
+    )]
+    async fn test_set_byte() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_byte(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.setChar(Ljava/lang/Object;IC)V"
+    )]
+    async fn test_set_char() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_char(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.setDouble(Ljava/lang/Object;ID)V"
+    )]
+    async fn test_set_double() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_double(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.setFloat(Ljava/lang/Object;IF)V"
+    )]
+    async fn test_set_float() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_float(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Array.setInt(Ljava/lang/Object;II)V"
+    )]
+    async fn test_set_int() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_int(thread, Arguments::default()).await;
+    }
+}

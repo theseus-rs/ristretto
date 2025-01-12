@@ -112,3 +112,44 @@ async fn get_stack_trace_element(
 ) -> Result<Option<Value>> {
     todo!("java.lang.Throwable.getStackTraceElement(I)Ljava/lang/StackTraceElement;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/Throwable";
+        assert!(registry
+            .method(class_name, "getStackTraceDepth", "()I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getStackTraceElement",
+                "(I)Ljava/lang/StackTraceElement;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "fillInStackTrace", "(I)Ljava/lang/Throwable;")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Throwable.getStackTraceDepth()I")]
+    async fn test_get_stack_trace_depth() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_stack_trace_depth(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Throwable.getStackTraceElement(I)Ljava/lang/StackTraceElement;"
+    )]
+    async fn test_get_stack_trace_element() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_stack_trace_element(thread, Arguments::default()).await;
+    }
+}

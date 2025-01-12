@@ -24,3 +24,27 @@ async fn get_meta_inf_entry_names(
 ) -> Result<Option<Value>> {
     todo!("java.util.jar.JarFile.getMetaInfEntryNames()[Ljava/lang/String;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/util/jar/JarFile";
+        assert!(registry
+            .method(class_name, "getMetaInfEntryNames", "()[Ljava/lang/String;")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.jar.JarFile.getMetaInfEntryNames()[Ljava/lang/String;"
+    )]
+    async fn test_get_meta_inf_entry_names() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_meta_inf_entry_names(thread, Arguments::default()).await;
+    }
+}

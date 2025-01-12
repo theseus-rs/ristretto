@@ -104,30 +104,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     if java_version >= JAVA_18 {
         registry.register(
             class_name,
-            "getDumpPath",
-            "()Ljava/lang/String;",
-            get_dump_path,
-        );
-        registry.register(
-            class_name,
-            "setDumpPath",
-            "(Ljava/lang/String;)V",
-            set_dump_path,
-        );
-        registry.register(
-            class_name,
-            "setMethodSamplingInterval",
-            "(JJ)V",
-            set_method_sampling_interval,
-        );
-    }
-
-    if java_version >= JAVA_18 {
-        registry.register(
-            class_name,
             "flush",
             "(Ljdk/jfr/internal/EventWriter;II)Z",
             flush,
+        );
+        registry.register(
+            class_name,
+            "getDumpPath",
+            "()Ljava/lang/String;",
+            get_dump_path,
         );
         registry.register(
             class_name,
@@ -140,6 +125,18 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "newEventWriter",
             "()Ljdk/jfr/internal/EventWriter;",
             new_event_writer,
+        );
+        registry.register(
+            class_name,
+            "setDumpPath",
+            "(Ljava/lang/String;)V",
+            set_dump_path,
+        );
+        registry.register(
+            class_name,
+            "setMethodSamplingInterval",
+            "(JJ)V",
+            set_method_sampling_interval,
         );
         registry.register(class_name, "setSampleThreads", "(Z)V", set_sample_threads);
     } else {
@@ -812,4 +809,873 @@ async fn unregister_stack_filter(
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.unregisterStackFilter(J)V")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[expect(clippy::too_many_lines)]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "jdk/jfr/internal/JVM";
+        assert!(registry
+            .method(class_name, "abort", "(Ljava/lang/String;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "addStringConstant", "(JLjava/lang/String;)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "beginRecording", "()V")
+            .is_some());
+        assert!(registry.method(class_name, "commit", "(J)J").is_some());
+        assert!(registry.method(class_name, "counterTime", "()J").is_some());
+        assert!(registry.method(class_name, "createJFR", "(Z)Z").is_some());
+        assert!(registry.method(class_name, "destroyJFR", "()Z").is_some());
+        assert!(registry
+            .method(class_name, "emitDataLoss", "(J)V")
+            .is_some());
+        assert!(registry.method(class_name, "emitEvent", "(JJJ)Z").is_some());
+        assert!(registry
+            .method(class_name, "emitOldObjectSamples", "(JZZ)V")
+            .is_some());
+        assert!(registry.method(class_name, "endRecording", "()V").is_some());
+        assert!(registry
+            .method(class_name, "exclude", "(Ljava/lang/Thread;)V")
+            .is_some());
+        assert!(registry.method(class_name, "flush", "()V").is_some());
+        assert!(registry
+            .method(class_name, "getAllEventClasses", "()Ljava/util/List;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getAllowedToDoEventRetransforms", "()Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getChunkStartNanos", "()J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getClassId", "(Ljava/lang/Class;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getDumpPath", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getEventWriter", "()Ljava/lang/Object;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getPid", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getStackTraceId", "(I)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getThreadId", "(Ljava/lang/Thread;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getTicksFrequency", "()J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getTimeConversionFactor", "()D")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getTypeId", "(Ljava/lang/String;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getUnloadedEventClassCount", "()J")
+            .is_some());
+        assert!(registry.method(class_name, "isAvailable", "()Z").is_some());
+        assert!(registry
+            .method(class_name, "isExcluded", "(Ljava/lang/Thread;)Z")
+            .is_some());
+        assert!(registry.method(class_name, "isRecording", "()Z").is_some());
+        assert!(registry
+            .method(class_name, "log", "(IILjava/lang/String;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "logEvent", "(I[Ljava/lang/String;Z)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "markChunkFinal", "()V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "newEventWriter",
+                "()Ljdk/jfr/internal/EventWriter;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "retransformClasses", "([Ljava/lang/Class;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setCompressedIntegers", "(Z)V")
+            .is_some());
+        assert!(registry.method(class_name, "setCutoff", "(JJ)Z").is_some());
+        assert!(registry
+            .method(class_name, "setDumpPath", "(Ljava/lang/String;)V")
+            .is_some());
+        assert!(registry.method(class_name, "setEnabled", "(JZ)V").is_some());
+        assert!(registry
+            .method(class_name, "setFileNotification", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setForceInstrumentation", "(Z)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setGlobalBufferCount", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setGlobalBufferSize", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "setHandler",
+                "(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "setMemorySize", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setMethodSamplingInterval", "(JJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setMethodSamplingPeriod", "(JJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setOutput", "(Ljava/lang/String;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setRepositoryLocation", "(Ljava/lang/String;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setSampleThreads", "(Z)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setStackDepth", "(I)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setStackTraceEnabled", "(JZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setThreadBufferSize", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setThreshold", "(JJ)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setThrottle", "(JJJ)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "shouldRotateDisk", "()Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "storeMetadataDescriptor", "([B)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "subscribeLogLevel",
+                "(Ljdk/jfr/internal/LogTag;I)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "uncaughtException",
+                "(Ljava/lang/Thread;Ljava/lang/Throwable;)V"
+            )
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_11() {
+        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "jdk/jfr/internal/JVM";
+        assert!(registry
+            .method(class_name, "emitOldObjectSamples", "(JZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getClassIdNonIntrinsic", "(Ljava/lang/Class;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setMethodSamplingInterval", "(JJ)V")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_17() {
+        let mut registry = MethodRegistry::new(&Version::Java17 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "jdk/jfr/internal/JVM";
+        assert!(registry
+            .method(class_name, "emitDataLoss", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setMethodSamplingPeriod", "(JJ)V")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_18() {
+        let mut registry = MethodRegistry::new(&Version::Java18 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "jdk/jfr/internal/JVM";
+        assert!(registry
+            .method(class_name, "flush", "(Ljdk/jfr/internal/EventWriter;II)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getDumpPath", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getEventWriter", "()Ljava/lang/Object;")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "newEventWriter",
+                "()Ljdk/jfr/internal/EventWriter;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "setDumpPath", "(Ljava/lang/String;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setMethodSamplingInterval", "(JJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setSampleThreads", "(Z)V")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_20() {
+        let mut registry = MethodRegistry::new(&Version::Java20 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "jdk/jfr/internal/JVM";
+        assert!(registry
+            .method(class_name, "hostTotalMemory", "()J")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_22() {
+        let mut registry = MethodRegistry::new(&Version::Java22 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "jdk/jfr/internal/JVM";
+        assert!(registry
+            .method(
+                class_name,
+                "registerStackFilter",
+                "([Ljava/lang/String;[Ljava/lang/String;)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "setMiscellaneous", "(JJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "unregisterStackFilter", "(J)V")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_23() {
+        let mut registry = MethodRegistry::new(&Version::Java23 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "jdk/jfr/internal/JVM";
+        assert!(registry
+            .method(class_name, "hostTotalSwapMemory", "()J")
+            .is_some());
+        assert!(registry.method(class_name, "nanosNow", "()J").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.abort(Ljava/lang/String;)V"
+    )]
+    async fn test_abort() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = abort(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.addStringConstant(JLjava/lang/String;)Z"
+    )]
+    async fn test_add_string_constant() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = add_string_constant(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.beginRecording()V")]
+    async fn test_begin_recording() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = begin_recording(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.commit(J)J")]
+    async fn test_commit() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = commit(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.counterTime()J")]
+    async fn test_counter_time() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = counter_time(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.createJFR(Z)Z")]
+    async fn test_create_jfr() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_jfr(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.destroyJFR()Z")]
+    async fn test_destroy_jfr() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = destroy_jfr(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.emitDataLoss(J)V")]
+    async fn test_emit_data_loss() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = emit_data_loss(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.emitEvent(JJJ)Z")]
+    async fn test_emit_event() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = emit_event(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.emitOldObjectSamples(JZZ)V"
+    )]
+    async fn test_emit_old_object_samples() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = emit_old_object_samples(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.endRecording()V")]
+    async fn test_end_recording() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = end_recording(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.exclude(Ljava/lang/Thread;)V"
+    )]
+    async fn test_exclude() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = exclude(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.flush()")]
+    async fn test_flush() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = flush(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getAllEventClasses()Ljava/util/List;"
+    )]
+    async fn test_get_all_event_classes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_all_event_classes(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getAllowedToDoEventRetransforms()Z"
+    )]
+    async fn test_get_allowed_to_do_event_retransforms() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_allowed_to_do_event_retransforms(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.getChunkStartNanos()J")]
+    async fn test_get_chunk_start_nanos() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_chunk_start_nanos(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getClassId(Ljava/lang/Class;)J"
+    )]
+    async fn test_get_class_id() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_class_id(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getClassIdNonIntrinsic(Ljava/lang/Class;)J"
+    )]
+    async fn test_get_class_id_non_intrinsic() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_class_id_non_intrinsic(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getConfiguration(Ljava/lang/Class;)Ljava/lang/Object;"
+    )]
+    async fn test_get_configuration() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_configuration(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getDumpPath()Ljava/lang/String;"
+    )]
+    async fn test_get_dump_path() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_dump_path(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getEventWriter()Ljava/lang/Object;"
+    )]
+    async fn test_get_event_writer() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_event_writer(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getHandler(Ljava/lang/Class;)Ljava/lang"
+    )]
+    async fn test_get_handler() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_handler(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getPid()Ljava/lang/String;"
+    )]
+    async fn test_get_pid() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_pid(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.getStackTraceId(IJ)J")]
+    async fn test_get_stack_trace_id() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_stack_trace_id(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getThreadId(Ljava/lang/Thread;)J"
+    )]
+    async fn test_get_thread_id() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_thread_id(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.getTicksFrequency()J")]
+    async fn test_get_ticks_frequency() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_ticks_frequency(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getTimeConversionFactor()D"
+    )]
+    async fn test_get_time_conversion_factor() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_time_conversion_factor(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getTypeId(Ljava/lang/String;)J"
+    )]
+    async fn test_get_type_id() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_type_id(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getUnloadedEventClassCount()J"
+    )]
+    async fn test_get_unloaded_event_class_count() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_unloaded_event_class_count(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.hostTotalMemory()J")]
+    async fn test_host_total_memory() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = host_total_memory(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.hostTotalSwapMemory()J")]
+    async fn test_host_total_swap_memory() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = host_total_swap_memory(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.include(Ljava/lang/Thread;)V"
+    )]
+    async fn test_include() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = include(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.isAvailable()Z")]
+    async fn test_is_available() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_available(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.isContainerized()Z")]
+    async fn test_is_containerized() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_containerized(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.isExcluded(Ljava/lang/Thread;)Z"
+    )]
+    async fn test_is_excluded() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_excluded(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.isInstrumented(Ljava/lang/Class;)Z"
+    )]
+    async fn test_is_instrumented() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_instrumented(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.isRecording()Z")]
+    async fn test_is_recording() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_recording(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.log(IILjava/lang/String;)V"
+    )]
+    async fn test_log() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = log(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.logEvent(I[Ljava/lang/String;Z)V"
+    )]
+    async fn test_log_event() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = log_event(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.markChunkFinal()V")]
+    async fn test_mark_chunk_final() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = mark_chunk_final(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.nanosNow()J")]
+    async fn test_nanos_now() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = nanos_now(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.newEventWriter()Ljdk/jfr/internal/EventWriter;"
+    )]
+    async fn test_new_event_writer() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = new_event_writer(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.registerStackFilter([Ljava/lang/String;[Ljava/lang/String;)J"
+    )]
+    async fn test_register_stack_filter() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = register_stack_filter(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.retransformClasses([Ljava/lang/Class;)V"
+    )]
+    async fn test_retransform_classes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = retransform_classes(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.setCompressedIntegers(Z)V"
+    )]
+    async fn test_set_compressed_integers() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_compressed_integers(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.setConfiguration(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z"
+    )]
+    async fn test_set_configuration() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_configuration(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setCutoff(JJ)Z")]
+    async fn test_set_cutoff() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_cutoff(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.setDumpPath(Ljava/lang/String;)V"
+    )]
+    async fn test_set_dump_path() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_dump_path(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setEnabled(JZ)V")]
+    async fn test_set_enabled() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_enabled(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setFileNotification(J)V")]
+    async fn test_set_file_notification() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_file_notification(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.setForceInstrumentation(Z)V"
+    )]
+    async fn test_set_force_instrumentation() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_force_instrumentation(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setGlobalBufferCount(J)V")]
+    async fn test_set_global_buffer_count() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_global_buffer_count(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setGlobalBufferSize(J)V")]
+    async fn test_set_global_buffer_size() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_global_buffer_size(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.setHandler(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z"
+    )]
+    async fn test_set_handler() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_handler(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setMemorySize(J)V")]
+    async fn test_set_memory_size() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_memory_size(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.setMethodSamplingInterval(JJ)V"
+    )]
+    async fn test_set_method_sampling_interval() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_method_sampling_interval(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.setMethodSamplingPeriod(JJ)V"
+    )]
+    async fn test_set_method_sampling_period() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_method_sampling_period(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setMiscellaneous(JJ)V")]
+    async fn test_set_miscellaneous() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_miscellaneous(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.setOutput(Ljava/lang/String;)V"
+    )]
+    async fn test_set_output() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_output(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.setRepositoryLocation(Ljava/lang/String;)V"
+    )]
+    async fn test_set_repository_location() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_repository_location(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setSampleThreads(Z)V")]
+    async fn test_set_sample_threads() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_sample_threads(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setStackDepth(I)V")]
+    async fn test_set_stack_depth() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_stack_depth(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.setStackTraceEnabled(JZ)V"
+    )]
+    async fn test_set_stack_trace_enabled() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_stack_trace_enabled(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setThreadBufferSize(J)V")]
+    async fn test_set_thread_buffer_size() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_thread_buffer_size(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setThreshold(JJ)Z")]
+    async fn test_set_threshold() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_threshold(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setThrottle(JJJ)Z")]
+    async fn test_set_throttle() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_throttle(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.shouldRotateDisk()Z")]
+    async fn test_should_rotate_disk() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = should_rotate_disk(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.storeMetadataDescriptor([B)V"
+    )]
+    async fn test_store_metadata_descriptor() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = store_metadata_descriptor(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.subscribeLogLevel(Ljdk/jfr/internal/LogTag;I)V"
+    )]
+    async fn test_subscribe_log_level() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = subscribe_log_level(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.uncaughtException(Ljava/lang/Thread;Ljava/lang/Throwable;)V"
+    )]
+    async fn test_uncaught_exception() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = uncaught_exception(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.unregisterStackFilter(J)V"
+    )]
+    async fn test_unregister_stack_filter() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = unregister_stack_filter(thread, Arguments::default()).await;
+    }
 }

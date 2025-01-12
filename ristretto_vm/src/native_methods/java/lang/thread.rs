@@ -284,7 +284,7 @@ async fn set_extent_local_cache(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.Thread.setExtentLocalCache([Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
@@ -371,4 +371,374 @@ async fn r#yield(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
 #[async_recursion(?Send)]
 async fn yield_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
     r#yield(thread, arguments).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ristretto_classfile::Version::Java11;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/Thread";
+        assert!(registry
+            .method(class_name, "clearInterruptEvent", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "currentCarrierThread", "()Ljava/lang/Thread;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "currentThread", "()Ljava/lang/Thread;")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "dumpThreads",
+                "([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "ensureMaterializedForStackWalk",
+                "(Ljava/lang/Object;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "findScopedValueBindings",
+                "()Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getThreads", "()[Ljava/lang/Thread;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "holdsLock", "(Ljava/lang/Object;)Z")
+            .is_some());
+        assert!(registry.method(class_name, "interrupt0", "()V").is_some());
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "scopedValueCache", "()[Ljava/lang/Object;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setExtentLocalCache", "([Ljava/lang/Object;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setNativeName", "(Ljava/lang/String;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setPriority0", "(I)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setScopedValueCache", "([Ljava/lang/Object;)V")
+            .is_some());
+        assert!(registry.method(class_name, "sleep0", "(J)V").is_some());
+        assert!(registry.method(class_name, "start0", "()V").is_some());
+        assert!(registry
+            .method(class_name, "stop0", "(Ljava/lang/Object;)V")
+            .is_some());
+        assert!(registry.method(class_name, "suspend0", "()V").is_some());
+    }
+
+    #[test]
+    fn test_register_java_11() {
+        let mut registry = MethodRegistry::new(&Java11 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/Thread";
+        assert!(registry
+            .method(class_name, "countStackFrames", "()I")
+            .is_some());
+        assert!(registry.method(class_name, "isAlive", "()Z").is_some());
+        assert!(registry
+            .method(class_name, "isInterrupted", "(Z)Z")
+            .is_some());
+        assert!(registry.method(class_name, "resume0", "()V").is_some());
+    }
+
+    #[test]
+    fn test_register_java_19() {
+        let mut registry = MethodRegistry::new(&Version::Java19 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/Thread";
+        assert!(registry.method(class_name, "resume0", "()V").is_some());
+        assert!(registry
+            .method(class_name, "extentLocalCache", "()[Ljava/lang/Object;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "currentCarrierThread", "()Ljava/lang/Thread;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getNextThreadIdOffset", "()J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getStackTrace0", "()Ljava/lang/Object;")
+            .is_some());
+        assert!(registry.method(class_name, "isAlive0", "()Z").is_some());
+        assert!(registry
+            .method(class_name, "setCurrentThread", "(Ljava/lang/Thread;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setExtentLocalCache", "([Ljava/lang/Object;)V")
+            .is_some());
+        assert!(registry.method(class_name, "sleep0", "(J)V").is_some());
+        assert!(registry.method(class_name, "yield0", "()V").is_some());
+    }
+
+    #[test]
+    fn test_register_java_22() {
+        let mut registry = MethodRegistry::new(&Version::Java22 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/Thread";
+        assert!(registry.method(class_name, "sleepNanos0", "(J)V").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_clear_interrupt_event() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = clear_interrupt_event(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_count_stack_frames() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = count_stack_frames(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Int(0)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_current_carrier_thread() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = current_carrier_thread(thread, Arguments::default()).await?;
+        assert!(result.is_some());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_current_thread() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = current_thread(thread, Arguments::default()).await?;
+        assert!(result.is_some());
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;"
+    )]
+    async fn test_dump_threads() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = dump_threads(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V"
+    )]
+    async fn test_ensure_materialized_for_stack_walk() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = ensure_materialized_for_stack_walk(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Thread.extentLocalCache()[Ljava/lang/Object;"
+    )]
+    async fn test_extent_local_cache() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = extent_local_cache(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Thread.findScopedValueBindings()Ljava/lang/Object;"
+    )]
+    async fn test_find_scoped_value_bindings() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = find_scoped_value_bindings(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_get_next_thread_id_offset() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_next_thread_id_offset(thread, Arguments::default()).await?;
+        let thread_id = result.unwrap_or(Value::Long(0)).to_long()?;
+        assert!(thread_id > 0);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Thread.getStackTrace0()Ljava/lang/Object;"
+    )]
+    async fn test_get_stack_trace_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_stack_trace_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Thread.getThreads()[Ljava/lang/Thread;"
+    )]
+    async fn test_get_threads() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_threads(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Thread.holdsLock(Ljava/lang/Object;)Z"
+    )]
+    async fn test_holds_lock() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = holds_lock(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Thread.interrupt0()V")]
+    async fn test_interrupt_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = interrupt_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Thread.isInterrupted(Z)Z")]
+    async fn test_is_interrupted() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_interrupted(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Thread.resume0()V")]
+    async fn test_resume_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = resume_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Thread.scopedValueCache()[Ljava/lang/Object;"
+    )]
+    async fn test_scoped_value_cache() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = scoped_value_cache(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Thread.setCurrentThread(Ljava/lang/Thread;)V"
+    )]
+    async fn test_set_current_thread() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_current_thread(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Thread.setExtentLocalCache([Ljava/lang/Object;)V"
+    )]
+    async fn test_set_extent_local_cache() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_extent_local_cache(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_set_priority_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let priority = Value::Int(0);
+        let result = set_priority_0(thread, Arguments::new(vec![priority])).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Thread.setScopedValueCache([Ljava/lang/Object;)V"
+    )]
+    async fn test_set_scoped_value_cache() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_scoped_value_cache(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_sleep() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let millis = Value::Long(250);
+        let start = std::time::Instant::now();
+        let result = sleep(thread, Arguments::new(vec![millis])).await?;
+        let elapsed = start.elapsed();
+        assert_eq!(result, None);
+        assert!(elapsed.as_millis() > 200);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_sleep_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let millis = Value::Long(250);
+        let start = std::time::Instant::now();
+        let result = sleep_0(thread, Arguments::new(vec![millis])).await?;
+        let elapsed = start.elapsed();
+        assert_eq!(result, None);
+        assert!(elapsed.as_millis() > 200);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_sleep_nanos_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let millis = Value::Long(1000);
+        let start = std::time::Instant::now();
+        let result = sleep_nanos_0(thread, Arguments::new(vec![millis])).await?;
+        let elapsed = start.elapsed();
+        assert_eq!(result, None);
+        assert!(elapsed.as_nanos() > 500);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Thread.stop0(Ljava/lang/Object;)V")]
+    async fn test_stop_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = stop_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Thread.suspend0()V")]
+    async fn test_suspend_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = suspend_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_yield() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = r#yield(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_yield_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = yield_0(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
 }

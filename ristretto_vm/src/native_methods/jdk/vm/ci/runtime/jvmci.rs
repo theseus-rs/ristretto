@@ -21,3 +21,31 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn initialize_runtime(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("jdk.vm.ci.runtime.JVMCI.initializeRuntime()Ljdk/vm/ci/runtime/JVMCIRuntime;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/vm/ci/runtime/JVMCI";
+        assert!(registry
+            .method(
+                class_name,
+                "initializeRuntime",
+                "()Ljdk/vm/ci/runtime/JVMCIRuntime;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.vm.ci.runtime.JVMCI.initializeRuntime()Ljdk/vm/ci/runtime/JVMCIRuntime;"
+    )]
+    async fn test_initialize_runtime() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = initialize_runtime(thread, Arguments::default()).await;
+    }
+}

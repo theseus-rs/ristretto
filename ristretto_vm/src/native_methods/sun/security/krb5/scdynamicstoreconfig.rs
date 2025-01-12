@@ -50,3 +50,39 @@ async fn install_notification_callback(
 ) -> Result<Option<Value>> {
     todo!("sun.security.krb5.SCDynamicStoreConfig.installNotificationCallback()V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "sun/security/krb5/SCDynamicStoreConfig";
+        assert!(registry
+            .method(class_name, "getKerberosConfig", "()Ljava/util/Hashtable;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "installNotificationCallback", "()V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.krb5.SCDynamicStoreConfig.getKerberosConfig()Ljava/util/Hashtable;"
+    )]
+    async fn test_get_kerberos_config() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_kerberos_config(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.krb5.SCDynamicStoreConfig.installNotificationCallback()V"
+    )]
+    async fn test_install_notification_callback() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = install_notification_callback(thread, Arguments::default()).await;
+    }
+}

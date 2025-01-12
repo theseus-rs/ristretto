@@ -21,3 +21,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn initialize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PlatformPCSC.initialize(Ljava/lang/String;)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/security/smartcardio/PlatformPCSC";
+        assert!(registry
+            .method(class_name, "initialize", "(Ljava/lang/String;)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.smartcardio.PlatformPCSC.initialize(Ljava/lang/String;)V"
+    )]
+    async fn test_initialize() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = initialize(thread, Arguments::default()).await;
+    }
+}

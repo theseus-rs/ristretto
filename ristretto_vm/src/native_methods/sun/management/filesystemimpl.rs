@@ -24,3 +24,27 @@ async fn is_access_user_only_0(
 ) -> Result<Option<Value>> {
     todo!("sun.management.FileSystemImpl.isAccessUserOnly0(Ljava/lang/String;)Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/management/FileSystemImpl";
+        assert!(registry
+            .method(class_name, "isAccessUserOnly0", "(Ljava/lang/String;)Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.management.FileSystemImpl.isAccessUserOnly0(Ljava/lang/String;)Z"
+    )]
+    async fn test_is_access_user_only_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_access_user_only_0(thread, Arguments::default()).await;
+    }
+}

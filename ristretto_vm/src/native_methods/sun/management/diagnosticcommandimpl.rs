@@ -66,3 +66,69 @@ async fn set_notification_enabled(
 ) -> Result<Option<Value>> {
     todo!("sun.management.DiagnosticCommandImpl.setNotificationEnabled(Z)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/management/DiagnosticCommandImpl";
+        assert!(registry
+            .method(
+                class_name,
+                "executeDiagnosticCommand",
+                "(Ljava/lang/String;)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getDiagnosticCommandInfo",
+                "([Ljava/lang/String;)[Lsun/management/DiagnosticCommandInfo;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getDiagnosticCommands", "()[Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setNotificationEnabled", "(Z)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.management.DiagnosticCommandImpl.executeDiagnosticCommand(Ljava/lang/String;)Ljava/lang/String;"
+    )]
+    async fn test_execute_diagnostic_command() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = execute_diagnostic_command(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.management.DiagnosticCommandImpl.getDiagnosticCommandInfo([Ljava/lang/String;)[Lsun/management/DiagnosticCommandInfo;"
+    )]
+    async fn test_get_diagnostic_command_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_diagnostic_command_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.management.DiagnosticCommandImpl.getDiagnosticCommands()[Ljava/lang/String;"
+    )]
+    async fn test_get_diagnostic_commands() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_diagnostic_commands(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.management.DiagnosticCommandImpl.setNotificationEnabled(Z)V")]
+    async fn test_set_notification_enabled() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_notification_enabled(thread, Arguments::default()).await;
+    }
+}

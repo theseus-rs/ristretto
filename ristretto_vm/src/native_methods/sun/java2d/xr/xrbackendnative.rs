@@ -292,3 +292,304 @@ async fn set_gc_mode(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 async fn set_picture_repeat(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.java2d.xr.XRBackendNative.setPictureRepeat(II)V");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/java2d/xr/XRBackendNative";
+        assert!(registry
+            .method(class_name, "GCRectanglesNative", "(IJ[II)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XRAddGlyphsNative", "(I[JI[BI)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "XRCreateLinearGradientPaintNative",
+                "([F[SIIIIII)I"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "XRCreateRadialGradientPaintNative",
+                "([F[SIIIIII)I"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "XRFreeGlyphsNative", "(I[II)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "XRSetClipNative",
+                "(JIIIILsun/java2d/pipe/Region;Z)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "XRSetTransformNative", "(IIIIIII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XRenderCompositeTextNative", "(IIIIIJ[I[III)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XRenderCreateGlyphSetNative", "(J)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "XRenderRectanglesNative", "(IBSSSS[II)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "copyArea", "(IIJIIIIII)V")
+            .is_some());
+        assert!(registry.method(class_name, "createGC", "(I)J").is_some());
+        assert!(registry
+            .method(class_name, "createPictureNative", "(IJ)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "createPixmap", "(IIII)I")
+            .is_some());
+        assert!(registry.method(class_name, "freeGC", "(J)V").is_some());
+        assert!(registry.method(class_name, "freePicture", "(I)V").is_some());
+        assert!(registry.method(class_name, "freePixmap", "(I)V").is_some());
+        assert!(registry.method(class_name, "initIDs", "()V").is_some());
+        assert!(registry
+            .method(class_name, "padBlitNative", "(BIIIIIIIIIIIIIIIIIII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putMaskNative", "(IJ[BIIIIIIIIFJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "renderComposite", "(BIIIIIIIIIII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "renderCompositeTrapezoidsNative", "(BIJIII[I)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "renderRectangle", "(IBSSSSIIII)V")
+            .is_some());
+        assert!(registry.method(class_name, "setFilter", "(II)V").is_some());
+        assert!(registry
+            .method(class_name, "setGCExposures", "(JZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setGCForeground", "(JI)V")
+            .is_some());
+        assert!(registry.method(class_name, "setGCMode", "(JZ)V").is_some());
+        assert!(registry
+            .method(class_name, "setPictureRepeat", "(II)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.GCRectanglesNative(IJ[II)V")]
+    async fn test_gc_rectangles_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = gc_rectangles_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.XRAddGlyphsNative(I[JI[BI)V")]
+    async fn test_xr_add_glyphs_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = xr_add_glyphs_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.xr.XRBackendNative.XRCreateLinearGradientPaintNative([F[SIIIIII)I"
+    )]
+    async fn test_xr_create_linear_gradient_paint_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = xr_create_linear_gradient_paint_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.xr.XRBackendNative.XRCreateRadialGradientPaintNative([F[SIIIIII)I"
+    )]
+    async fn test_xr_create_radial_gradient_paint_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = xr_create_radial_gradient_paint_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.XRFreeGlyphsNative(I[II)V")]
+    async fn test_xr_free_glyphs_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = xr_free_glyphs_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.xr.XRBackendNative.XRSetClipNative(JIIIILsun/java2d/pipe/Region;Z)V"
+    )]
+    async fn test_xr_set_clip_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = xr_set_clip_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.XRSetTransformNative(IIIIIII)V")]
+    async fn test_xr_set_transform_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = xr_set_transform_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.xr.XRBackendNative.XRenderCompositeTextNative(IIIIIJ[I[III)V"
+    )]
+    async fn test_x_render_composite_text_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_render_composite_text_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.XRenderCreateGlyphSetNative(J)I")]
+    async fn test_x_render_create_glyph_set_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_render_create_glyph_set_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.XRenderRectanglesNative(IBSSSS[II)V")]
+    async fn test_x_render_rectangles_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = x_render_rectangles_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.copyArea(IIJIIIIII)V")]
+    async fn test_copy_area() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = copy_area(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.createGC(I)J")]
+    async fn test_create_gc() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_gc(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.createPictureNative(IJ)I")]
+    async fn test_create_picture_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_picture_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.createPixmap(IIII)I")]
+    async fn test_create_pixmap() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_pixmap(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.freeGC(J)V")]
+    async fn test_free_gc() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_gc(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.freePicture(I)V")]
+    async fn test_free_picture() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_picture(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.freePixmap(I)V")]
+    async fn test_free_pixmap() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_pixmap(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init_ids(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.padBlitNative(BIIIIIIIIIIIIIIIIIII)V")]
+    async fn test_pad_blit_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = pad_blit_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.putMaskNative(IJ[BIIIIIIIIFJ)V")]
+    async fn test_put_mask_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = put_mask_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.renderComposite(BIIIIIIIIIII)V")]
+    async fn test_render_composite() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = render_composite(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.xr.XRBackendNative.renderCompositeTrapezoidsNative(BIJIII[I)V"
+    )]
+    async fn test_render_composite_trapezoids_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = render_composite_trapezoids_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.renderRectangle(IBSSSSIIII)V")]
+    async fn test_render_rectangle() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = render_rectangle(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.setFilter(II)V")]
+    async fn test_set_filter() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_filter(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.setGCExposures(JZ)V")]
+    async fn test_set_gc_exposures() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_gc_exposures(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.setGCForeground(JI)V")]
+    async fn test_set_gc_foreground() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_gc_foreground(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.setGCMode(JZ)V")]
+    async fn test_set_gc_mode() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_gc_mode(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.xr.XRBackendNative.setPictureRepeat(II)V")]
+    async fn test_set_picture_repeat() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_picture_repeat(thread, Arguments::default()).await;
+    }
+}

@@ -21,3 +21,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn fallback_domain_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.net.dns.ResolverConfigurationImpl.fallbackDomain0()Ljava/lang/String;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/net/dns/ResolverConfigurationImpl";
+        assert!(registry
+            .method(class_name, "fallbackDomain0", "()Ljava/lang/String;")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.net.dns.ResolverConfigurationImpl.fallbackDomain0()Ljava/lang/String;"
+    )]
+    async fn test_fallback_domain_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = fallback_domain_0(thread, Arguments::default()).await;
+    }
+}

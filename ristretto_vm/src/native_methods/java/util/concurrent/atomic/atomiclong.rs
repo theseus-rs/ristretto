@@ -30,3 +30,26 @@ async fn vm_supports_cs_8(_thread: Arc<Thread>, _arguments: Arguments) -> Result
     );
     Ok(Some(Value::from(atomic_8_bytes)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/util/concurrent/atomic/AtomicLong";
+        assert!(registry
+            .method(class_name, "VMSupportsCS8", "()Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_vm_supports_cs_8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let value = vm_supports_cs_8(thread, Arguments::default()).await?;
+        assert_eq!(value, Some(Value::from(true)));
+        Ok(())
+    }
+}

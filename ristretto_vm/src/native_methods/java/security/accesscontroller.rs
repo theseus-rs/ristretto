@@ -136,3 +136,112 @@ async fn get_stack_access_control_context(
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Object(None)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/security/AccessController";
+        assert!(registry
+            .method(
+                class_name,
+                "doPrivileged",
+                "(Ljava/security/PrivilegedAction;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "doPrivileged",
+                "(Ljava/security/PrivilegedAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "doPrivileged",
+                "(Ljava/security/PrivilegedExceptionAction;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "doPrivileged",
+                "(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getInheritedAccessControlContext",
+                "()Ljava/security/AccessControlContext;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getStackAccessControlContext",
+                "()Ljava/security/AccessControlContext;"
+            )
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_12() {
+        let mut registry = MethodRegistry::new(&Version::Java12 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/security/AccessController";
+        assert!(registry
+            .method(
+                class_name,
+                "ensureMaterializedForStackWalk",
+                "(Ljava/lang/Object;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getProtectionDomain",
+                "(Ljava/lang/Class;)Ljava/security/ProtectionDomain;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_ensure_materialized_for_stack_walk() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = ensure_materialized_for_stack_walk(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.security.AccessController.getInheritedAccessControlContext()Ljava/security/AccessControlContext;"
+    )]
+    async fn test_get_inherited_access_control_context() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_inherited_access_control_context(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.security.AccessController.getProtectionDomain(Ljava/lang/Class;)Ljava/security/ProtectionDomain;"
+    )]
+    async fn test_get_protection_domain() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_protection_domain(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_get_stack_access_control_context() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_stack_access_control_context(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
+    }
+}

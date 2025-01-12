@@ -21,3 +21,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn find_entry_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("jdk.internal.loader.NativeLibrary.findEntry0(JLjava/lang/String;)J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/loader/NativeLibrary";
+        assert!(registry
+            .method(class_name, "findEntry0", "(JLjava/lang/String;)J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "jdk.internal.loader.NativeLibrary.findEntry0(JLjava/lang/String;)J")]
+    async fn test_find_entry_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = find_entry_0(thread, Arguments::default()).await;
+    }
+}

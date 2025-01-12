@@ -62,3 +62,62 @@ async fn update_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 async fn update_bytes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.util.zip.CRC32.updateBytes0(I[BII)I")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/util/zip/CRC32";
+        assert!(registry
+            .method(class_name, "updateByteBuffer", "(IJII)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "updateBytes", "(I[BII)I")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_11() {
+        let mut registry = MethodRegistry::new(&Version::Java9 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/util/zip/CRC32";
+        assert!(registry
+            .method(class_name, "updateByteBuffer0", "(IJII)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "updateBytes0", "(I[BII)I")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.CRC32.update(II)I")]
+    async fn test_update() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = update(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.CRC32.updateByteBuffer(IJII)I")]
+    async fn test_update_byte_buffer() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = update_byte_buffer(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.CRC32.updateByteBuffer0(IJII)I")]
+    async fn test_update_byte_buffer_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = update_byte_buffer_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.CRC32.updateBytes(I[BII)I")]
+    async fn test_update_bytes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = update_bytes(thread, Arguments::default()).await;
+    }
+}

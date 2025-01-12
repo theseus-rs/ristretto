@@ -16,3 +16,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn close_splash_screen(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.awt.SunToolkit.closeSplashScreen()V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/awt/SunToolkit";
+        assert!(registry
+            .method(class_name, "closeSplashScreen", "()V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.SunToolkit.closeSplashScreen()V")]
+    async fn test_close_splash_screen() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = close_splash_screen(thread, Arguments::default()).await;
+    }
+}

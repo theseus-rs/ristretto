@@ -30,3 +30,39 @@ async fn get_glyph_image_from_windows(
 async fn init_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.font.FileFontStrike.initNative()Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/font/FileFontStrike";
+        assert!(registry
+            .method(
+                class_name,
+                "_getGlyphImageFromWindows",
+                "(Ljava/lang/String;IIIZI)J"
+            )
+            .is_some());
+        assert!(registry.method(class_name, "initNative", "()Z").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.font.FileFontStrike._getGlyphImageFromWindows(Ljava/lang/String;IIIZI)J"
+    )]
+    async fn test_get_glyph_image_from_windows() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_glyph_image_from_windows(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.FileFontStrike.initNative()Z")]
+    async fn test_init_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_native(thread, Arguments::default()).await;
+    }
+}

@@ -22,3 +22,39 @@ async fn bytes_to_doubles(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 async fn bytes_to_floats(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.io.ObjectInputStream.bytesToFloats([BI[FII)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/io/ObjectInputStream";
+        assert!(registry
+            .method(class_name, "bytesToDoubles", "([BI[DII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "bytesToFloats", "([BI[FII)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.ObjectInputStream.bytesToDoubles([BI[DII)V"
+    )]
+    async fn test_bytes_to_doubles() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = bytes_to_doubles(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.ObjectInputStream.bytesToFloats([BI[FII)V"
+    )]
+    async fn test_bytes_to_floats() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = bytes_to_floats(thread, Arguments::default()).await;
+    }
+}

@@ -82,3 +82,99 @@ async fn socket(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 async fn write(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.write(I[BII)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/tools/attach/VirtualMachineImpl";
+        assert!(registry
+            .method(class_name, "checkPermissions", "(Ljava/lang/String;)V")
+            .is_some());
+        assert!(registry.method(class_name, "close", "(I)V").is_some());
+        assert!(registry
+            .method(class_name, "connect", "(ILjava/lang/String;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "createAttachFile0", "(Ljava/lang/String;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getTempDir", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry.method(class_name, "read", "(I[BII)I").is_some());
+        assert!(registry.method(class_name, "sendQuitTo", "(I)V").is_some());
+        assert!(registry.method(class_name, "socket", "()I").is_some());
+        assert!(registry.method(class_name, "write", "(I[BII)V").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.tools.attach.VirtualMachineImpl.checkPermissions(Ljava/lang/String;)V"
+    )]
+    async fn test_check_permissions() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = check_permissions(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.tools.attach.VirtualMachineImpl.close(I)V")]
+    async fn test_close() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = close(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.tools.attach.VirtualMachineImpl.connect(ILjava/lang/String;)V")]
+    async fn test_connect() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = connect(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.tools.attach.VirtualMachineImpl.createAttachFile0(Ljava/lang/String;)V"
+    )]
+    async fn test_create_attach_file_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_attach_file_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.tools.attach.VirtualMachineImpl.getTempDir()Ljava/lang/String;")]
+    async fn test_get_temp_dir() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_temp_dir(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.tools.attach.VirtualMachineImpl.read(I[BII)I")]
+    async fn test_read() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = read(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.tools.attach.VirtualMachineImpl.sendQuitTo(I)V")]
+    async fn test_send_quit_to() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = send_quit_to(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.tools.attach.VirtualMachineImpl.socket()I")]
+    async fn test_socket() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = socket(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.tools.attach.VirtualMachineImpl.write(I[BII)V")]
+    async fn test_write() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = write(thread, Arguments::default()).await;
+    }
+}

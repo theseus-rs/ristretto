@@ -67,3 +67,52 @@ async fn init_stack_trace_elements(
     }
     Ok(None)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java19 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/StackTraceElement";
+        assert!(registry
+            .method(
+                class_name,
+                "initStackTraceElements",
+                "([Ljava/lang/StackTraceElement;Ljava/lang/Object;I)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "initStackTraceElement",
+                "(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V"
+            )
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_18() {
+        let mut registry = MethodRegistry::new(&Version::Java18 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/StackTraceElement";
+        assert!(registry
+            .method(
+                class_name,
+                "initStackTraceElements",
+                "([Ljava/lang/StackTraceElement;Ljava/lang/Throwable;)V"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V"
+    )]
+    async fn test_init_stack_trace_element() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_stack_trace_element(thread, Arguments::default()).await;
+    }
+}

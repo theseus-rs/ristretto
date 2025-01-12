@@ -107,3 +107,93 @@ async fn wait(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 async fn wait_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.lang.Object.wait0(J)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java19 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/Object";
+        assert!(registry
+            .method(class_name, "clone", "()Ljava/lang/Object;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getClass", "()Ljava/lang/Class;")
+            .is_some());
+        assert!(registry.method(class_name, "hashCode", "()I").is_some());
+        assert!(registry.method(class_name, "notify", "()V").is_some());
+        assert!(registry.method(class_name, "notifyAll", "()V").is_some());
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+        assert!(registry.method(class_name, "wait0", "(J)V").is_some());
+        assert!(registry.method(class_name, "<init>", "()V").is_some());
+    }
+
+    #[test]
+    fn test_register_java_18() {
+        let mut registry = MethodRegistry::new(&Version::Java18 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/Object";
+        assert!(registry.method(class_name, "wait", "(J)V").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_init() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = notify_all(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    // TODO: Add test for deep clone of Value::Object
+    #[tokio::test]
+    async fn test_clone() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = Value::Int(42);
+        let arguments = Arguments::new(vec![object.clone()]);
+        let result = clone(thread, arguments).await?;
+        assert_eq!(result, Some(object));
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Object.notify()V")]
+    async fn test_notify() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = notify(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_notify_all() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = notify_all(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Object.wait(J)V")]
+    async fn test_wait() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = wait(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Object.wait0(J)V")]
+    async fn test_wait_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = wait_0(thread, Arguments::default()).await;
+    }
+}

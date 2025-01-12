@@ -40,3 +40,59 @@ async fn kevent_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 async fn register_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueueArrayWrapper.register0(IIII)V");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/nio/ch/KQueueArrayWrapper";
+        assert!(registry.method(class_name, "init", "()I").is_some());
+        assert!(registry
+            .method(class_name, "initStructSizes", "()V")
+            .is_some());
+        assert!(registry.method(class_name, "interrupt", "(I)V").is_some());
+        assert!(registry.method(class_name, "kevent0", "(IJIJ)I").is_some());
+        assert!(registry
+            .method(class_name, "register0", "(IIII)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueueArrayWrapper.init()I")]
+    async fn test_init() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueueArrayWrapper.initStructSizes()V")]
+    async fn test_init_struct_sizes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_struct_sizes(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueueArrayWrapper.interrupt(I)V")]
+    async fn test_interrupt() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = interrupt(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueueArrayWrapper.kevent0(IJIJ)I")]
+    async fn test_kevent_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = kevent_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.KQueueArrayWrapper.register0(IIII)V")]
+    async fn test_register_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = register_0(thread, Arguments::default()).await;
+    }
+}

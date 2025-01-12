@@ -19,3 +19,26 @@ async fn is_preview_enabled(thread: Arc<Thread>, _arguments: Arguments) -> Resul
     let preview_features = configuration.preview_features();
     Ok(Some(Value::from(preview_features)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/misc/PreviewFeatures";
+        assert!(registry
+            .method(class_name, "isPreviewEnabled", "()Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_is_preview_enabled() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let value = is_preview_enabled(thread, Arguments::default()).await?;
+        assert_eq!(value, Some(Value::from(false)));
+        Ok(())
+    }
+}
