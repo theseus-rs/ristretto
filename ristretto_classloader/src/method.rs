@@ -19,36 +19,6 @@ pub struct Method {
 }
 
 impl Method {
-    /// Create a new class method
-    ///
-    /// # Errors
-    /// if the method descriptor cannot be parsed
-    #[expect(clippy::too_many_arguments)]
-    pub fn new<S: AsRef<str>>(
-        access_flags: MethodAccessFlags,
-        name: S,
-        descriptor: S,
-        max_stack: usize,
-        max_locals: usize,
-        code: Vec<Instruction>,
-        line_numbers: Vec<LineNumber>,
-        exception_table: Vec<ExceptionTableEntry>,
-    ) -> Result<Self> {
-        let (parameters, return_type) = Method::parse_descriptor(descriptor.as_ref())?;
-        Ok(Self {
-            access_flags,
-            name: name.as_ref().to_string(),
-            descriptor: descriptor.as_ref().to_string(),
-            parameters,
-            return_type,
-            max_stack,
-            max_locals,
-            code,
-            line_numbers,
-            exception_table,
-        })
-    }
-
     /// Create a new class method with the given definition.
     ///
     /// # Errors
@@ -91,16 +61,19 @@ impl Method {
             _ => (0, 0, Vec::new(), Vec::new(), Vec::new()),
         };
 
-        Method::new(
-            definition.access_flags,
-            name.to_string(),
-            descriptor.to_string(),
+        let (parameters, return_type) = Method::parse_descriptor(descriptor.as_ref())?;
+        Ok(Self {
+            access_flags: definition.access_flags,
+            name: name.to_string(),
+            descriptor: descriptor.to_string(),
+            parameters,
+            return_type,
             max_stack,
             max_locals,
             code,
             line_numbers,
             exception_table,
-        )
+        })
     }
 
     /// Get the method access flags.
