@@ -8,8 +8,8 @@ use crate::JavaError::NullPointerException;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::attributes::{Attribute, InnerClass};
-use ristretto_classfile::{ClassAccessFlags, FieldAccessFlags, Version};
-use ristretto_classloader::{Class, Object, Reference, Value};
+use ristretto_classfile::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags, Version};
+use ristretto_classloader::{Class, Method, Object, Reference, Value};
 use std::sync::Arc;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
@@ -377,12 +377,95 @@ async fn get_declared_classes_0(
     Ok(Some(declared_classes))
 }
 
+/// Get the exceptions declared by a method.
+async fn get_exceptions(
+    thread: &Arc<Thread>,
+    class: &Arc<Class>,
+    method: &Arc<Method>,
+) -> Result<Value> {
+    let vm = thread.vm()?;
+    let constant_pool = class.constant_pool();
+    let class_array = thread.class("[Ljava/lang/Class;").await?;
+    let mut exceptions = Vec::new();
+    for attribute in method.attributes() {
+        if let Attribute::Exceptions {
+            exception_indexes, ..
+        } = attribute
+        {
+            for exception_index in exception_indexes {
+                let class_name = constant_pool.try_get_class(*exception_index)?;
+                let exception = thread.class(class_name).await?;
+                let exception = exception.to_object(&vm).await?;
+                exceptions.push(exception);
+            }
+            break;
+        }
+    }
+    let exceptions = Value::try_from((class_array, exceptions))?;
+    Ok(exceptions)
+}
+
 #[async_recursion(?Send)]
 async fn get_declared_constructors_0(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor;")
+    let public_only = arguments.pop_int()? != 0;
+    let object = arguments.pop_object()?;
+    let vm = thread.vm()?;
+    let class = get_class(&thread, &object).await?;
+    let class_object = class.to_object(&vm).await?;
+
+    let class_array = thread.class("[Ljava/lang/Class;").await?;
+    let mut constructors = Vec::new();
+    for (slot, method) in class.methods().iter().enumerate() {
+        if method.name() != "<init>" {
+            continue;
+        }
+
+        let access_flags = method.access_flags();
+        if public_only && !access_flags.contains(MethodAccessFlags::PUBLIC) {
+            continue;
+        }
+
+        let mut parameters = Vec::new();
+        for parameter in method.parameters() {
+            let class_name = parameter.class_name();
+            let class = thread.class(class_name).await?;
+            parameters.push(class.to_object(&vm).await?);
+        }
+        let parameter_types = Value::try_from((class_array.clone(), parameters))?;
+        let checked_exceptions = get_exceptions(&thread, &class, method).await?;
+        let modifiers = Value::Int(i32::from(access_flags.bits()));
+        let slot = Value::Int(i32::try_from(slot)?);
+        // TODO: Add support for generic signature
+        let signature = Value::Object(None);
+        // TODO: Add support for annotations
+        let annotations = Value::from(Vec::<i8>::new());
+        // TODO: Add support for parameter_annotations
+        let parameter_annotations = Value::from(Vec::<i8>::new());
+
+        let constructor = thread
+            .object(
+                "java/lang/reflect/Constructor",
+                "Ljava/lang/Class;[Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B",
+                vec![
+                    class_object.clone(),
+                    parameter_types,
+                    checked_exceptions,
+                    modifiers,
+                    slot,
+                    signature,
+                    annotations,
+                    parameter_annotations,
+                ],
+            )
+            .await?;
+        constructors.push(constructor);
+    }
+    let constructors_array_class = thread.class("[Ljava/lang/reflect/Constructor;").await?;
+    let constructors = Value::try_from((constructors_array_class, constructors))?;
+    Ok(Some(constructors))
 }
 
 #[async_recursion(?Send)]
@@ -414,7 +497,7 @@ async fn get_declared_fields_0(
         // TODO: Add support for generic signature
         let signature = Value::Object(None);
         // TODO: Add support for annotations
-        let annotations = Value::Object(None);
+        let annotations = Value::from(Vec::<i8>::new());
         let (descriptor, arguments) = if vm.java_class_file_version() <= &JAVA_11 {
             (
                 "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IILjava/lang/String;[B",
