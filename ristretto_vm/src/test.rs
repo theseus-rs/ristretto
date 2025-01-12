@@ -1,7 +1,7 @@
 use crate::frame::Frame;
 use crate::{Class, ConfigurationBuilder, Result, Thread, VM};
 use ristretto_classfile::{ClassFile, ConstantPool, MethodAccessFlags};
-use ristretto_classloader::{ClassPath, Method};
+use ristretto_classloader::ClassPath;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -15,11 +15,22 @@ pub(crate) async fn class() -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
         .build()?;
     let vm = VM::new(configuration).await?;
     let thread = vm.new_thread()?;
+
     let mut constant_pool = ConstantPool::default();
     let this_class = constant_pool.add_class("Test")?;
+    let test_index = constant_pool.add_utf8("test")?;
+    let test_descriptor_index = constant_pool.add_utf8("()V")?;
+    let test_method = ristretto_classfile::Method {
+        access_flags: MethodAccessFlags::PUBLIC,
+        name_index: test_index,
+        descriptor_index: test_descriptor_index,
+        ..Default::default()
+    };
+
     let class_file = ClassFile {
         constant_pool,
         this_class,
+        methods: vec![test_method],
         ..Default::default()
     };
     let class = Class::from(class_file)?;
@@ -29,22 +40,8 @@ pub(crate) async fn class() -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
 /// Get a test frame for testing.
 pub(crate) async fn frame() -> Result<(Arc<VM>, Arc<Thread>, Frame)> {
     let (vm, thread, class) = class().await?;
-    let method = Method::new(
-        MethodAccessFlags::PUBLIC,
-        "test",
-        "()V",
-        0,
-        0,
-        vec![],
-        vec![],
-        vec![],
-    )?;
+    let method = class.try_get_method("test", "()V")?;
     let arguments = Vec::new();
-    let frame = Frame::new(
-        &Arc::downgrade(&thread),
-        &class,
-        &Arc::new(method),
-        arguments,
-    );
+    let frame = Frame::new(&Arc::downgrade(&thread), &class, &method, arguments);
     Ok((vm, thread, frame))
 }

@@ -7,9 +7,9 @@ use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::attributes::Instruction;
-use ristretto_classfile::{ClassFile, MethodAccessFlags, Version};
-use ristretto_classloader::{Class, ConcurrentVec, Method, Object, Reference, Value};
+use ristretto_classfile::attributes::{Attribute, Instruction};
+use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, MethodAccessFlags, Version};
+use ristretto_classloader::{Class, ConcurrentVec, Object, Reference, Value};
 use std::cmp::min;
 use std::env::consts::OS;
 use std::fmt::Debug;
@@ -335,32 +335,7 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
     } else {
         "jdk/internal/access"
     };
-    let java_lang_ref_access = thread
-        .class(format!("{package_name}/JavaLangRefAccess"))
-        .await?;
-    let interfaces = vec![java_lang_ref_access];
-    let mut methods = Vec::new();
-    let start_threads = Method::new(
-        MethodAccessFlags::PUBLIC,
-        "startThreads",
-        "()V",
-        0,
-        1,
-        vec![Instruction::Return],
-        vec![],
-        vec![],
-    )?;
-    methods.push(start_threads);
-    let java_lang_ref_access = Arc::new(Class::new(
-        "ristretto.internal.access.JavaLangRefAccess".to_string(),
-        None,
-        ClassFile::default(),
-        None,
-        interfaces,
-        Vec::new(),
-        methods,
-    ));
-    thread.register_class(java_lang_ref_access.clone()).await?;
+    let java_lang_ref_access = java_lang_ref_access_class(&thread, package_name).await?;
     let java_lang_ref_access =
         Value::Object(Some(Reference::Object(Object::new(java_lang_ref_access)?)));
     vm.invoke(
@@ -372,6 +347,49 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
     .await?;
 
     Ok(None)
+}
+
+/// Create a class for `<package>.JavaLangRefAccess` to bootstrap the VM startup process.
+async fn java_lang_ref_access_class(
+    thread: &Arc<Thread>,
+    package_name: &str,
+) -> Result<Arc<Class>> {
+    let vm = thread.vm()?;
+    let java_class_file_version = vm.java_class_file_version();
+    let mut constant_pool = ConstantPool::default();
+    let this_class = constant_pool.add_class("ristretto.internal.access.JavaLangRefAccess")?;
+    let interface_class = constant_pool.add_class(format!("{package_name}/JavaLangRefAccess"))?;
+    let code_index = constant_pool.add_utf8("Code")?;
+    let start_threads_index = constant_pool.add_utf8("startThreads")?;
+    let start_threads_descriptor_index = constant_pool.add_utf8("()V")?;
+
+    let start_threads_method_attributes = vec![Attribute::Code {
+        name_index: code_index,
+        max_stack: 0,
+        max_locals: 1,
+        code: vec![Instruction::Return],
+        exception_table: Vec::new(),
+        attributes: Vec::new(),
+    }];
+    let start_threads_method = ristretto_classfile::Method {
+        access_flags: MethodAccessFlags::PUBLIC,
+        name_index: start_threads_index,
+        descriptor_index: start_threads_descriptor_index,
+        attributes: start_threads_method_attributes,
+    };
+    let class_file = ClassFile {
+        version: java_class_file_version.clone(),
+        access_flags: ClassAccessFlags::PUBLIC,
+        constant_pool,
+        this_class,
+        methods: vec![start_threads_method],
+        interfaces: vec![interface_class],
+        ..Default::default()
+    };
+
+    let java_lang_ref_access = Arc::new(Class::from(class_file)?);
+    thread.register_class(java_lang_ref_access.clone()).await?;
+    Ok(java_lang_ref_access)
 }
 
 #[async_recursion(?Send)]
