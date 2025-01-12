@@ -30,14 +30,14 @@ pub(crate) async fn class() -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
 pub(crate) async fn frame() -> Result<(Arc<VM>, Arc<Thread>, Frame)> {
     let (vm, thread, class) = class().await?;
     let method = Method::new(
-        MethodAccessFlags::STATIC,
+        MethodAccessFlags::PUBLIC,
         "test",
         "()V",
-        10,
-        10,
-        Vec::new(),
-        Vec::new(),
-        Vec::new(),
+        0,
+        0,
+        vec![],
+        vec![],
+        vec![],
     )?;
     let arguments = Vec::new();
     let frame = Frame::new(

@@ -65,8 +65,7 @@ mod test {
     use crate::instruction::{dup, new};
     use crate::thread::Thread;
     use crate::VM;
-    use ristretto_classfile::MethodAccessFlags;
-    use ristretto_classloader::{Method, Value};
+    use ristretto_classloader::Value;
     use std::sync::Arc;
 
     async fn test_class_field(
@@ -74,27 +73,11 @@ mod test {
         field_name: &str,
         field_type: &str,
     ) -> Result<(Arc<VM>, Arc<Thread>, Frame, u16, u16)> {
-        let (vm, thread, mut class) = crate::test::class().await?;
-        let constant_pool = Arc::get_mut(&mut class).expect("class").constant_pool_mut();
+        let (vm, thread, mut frame) = crate::test::frame().await?;
+        let class = frame.class_mut();
+        let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let class_index = constant_pool.add_class(class_name)?;
         let field_index = constant_pool.add_field_ref(class_index, field_name, field_type)?;
-        let method = Method::new(
-            MethodAccessFlags::STATIC,
-            "test",
-            "()V",
-            10,
-            10,
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-        )?;
-        let arguments = Vec::new();
-        let frame = Frame::new(
-            &Arc::downgrade(&thread),
-            &class,
-            &Arc::new(method),
-            arguments,
-        );
         Ok((vm, thread, frame, class_index, field_index))
     }
 
