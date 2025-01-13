@@ -199,7 +199,7 @@ mod tests {
     #[tokio::test]
     async fn test_load_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_directory = cargo_manifest.join("../classes");
+        let classes_directory = cargo_manifest.join("..").join("classes");
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
 
         let class_path = ClassPath::from(class_path_entries.join(":"));
@@ -217,7 +217,7 @@ mod tests {
     #[tokio::test]
     async fn test_load_class_more_than_once() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_directory = cargo_manifest.join("../classes");
+        let classes_directory = cargo_manifest.join("..").join("classes");
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
 
         let class_path = ClassPath::from(class_path_entries.join(":"));
@@ -241,7 +241,7 @@ mod tests {
     #[tokio::test]
     async fn test_load_class_parent() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_directory = cargo_manifest.join("../classes");
+        let classes_directory = cargo_manifest.join("..").join("classes");
         let class_path_entries = [classes_directory.to_string_lossy().to_string()];
         let class_path = ClassPath::from(class_path_entries.join(":"));
         let boot_class_loader = ClassLoader::new("test", class_path);
@@ -282,7 +282,10 @@ mod tests {
     #[tokio::test]
     async fn test_clone() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
         let class_path = ClassPath::from(classes_jar.to_string_lossy());
         let class_loader = ClassLoader::new("test", class_path);
         let class_name = "HelloWorld";

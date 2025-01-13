@@ -459,7 +459,10 @@ mod tests {
 
     fn classes_jar_path() -> PathBuf {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        cargo_manifest.join("../classes/classes.jar")
+        cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar")
     }
 
     fn classes_jar_class_path() -> ClassPath {

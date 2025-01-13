@@ -297,7 +297,10 @@ mod tests {
     #[test]
     fn test_new() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
         let jar = Jar::new(classes_jar.to_string_lossy());
         assert!(jar.name().ends_with("classes.jar"));
     }
@@ -305,7 +308,10 @@ mod tests {
     #[tokio::test]
     async fn test_from_bytes() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
         let bytes = fs::read(classes_jar)?;
         let jar = Jar::from_bytes("test", bytes);
         assert_eq!("test", jar.name().as_str());
@@ -317,7 +323,10 @@ mod tests {
     #[test]
     fn test_equality() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
         let jar1 = Jar::new(classes_jar.to_string_lossy());
         let jar2 = Jar::new(classes_jar.to_string_lossy());
         assert_eq!(jar1, jar2);
@@ -326,7 +335,10 @@ mod tests {
     #[tokio::test]
     async fn test_read_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
         let jar = Jar::new(classes_jar.to_string_lossy());
         // Read the class file twice to test caching
         for _ in 0..2 {
@@ -343,7 +355,10 @@ mod tests {
     #[tokio::test]
     async fn test_read_manifest() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
         let jar = Jar::new(classes_jar.to_string_lossy());
         let manifest = jar.manifest().await?;
         assert_eq!(Some("1.0"), manifest.attribute(MANIFEST_VERSION));
@@ -354,7 +369,10 @@ mod tests {
     #[tokio::test]
     async fn test_read_class_invalid_class_name() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
         let jar = Jar::new(classes_jar.to_string_lossy());
         let result = jar.read_class("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
@@ -363,7 +381,10 @@ mod tests {
     #[tokio::test]
     async fn test_class_names() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
         let jar = Jar::new(classes_jar.to_string_lossy());
         let class_names = jar.class_names().await?;
         assert!(class_names.contains(&"HelloWorld".to_string()));

@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 pub(crate) async fn thread() -> Result<(Arc<VM>, Arc<Thread>)> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let classes_path = cargo_manifest.join("../classes");
+    let classes_path = cargo_manifest.join("..").join("classes");
     let class_path = ClassPath::from(classes_path.to_string_lossy());
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())

@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn test_read_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_directory = cargo_manifest.join("../classes");
+        let classes_directory = cargo_manifest.join("..").join("classes");
         let directory = Directory::new(classes_directory.to_string_lossy());
         // Read the class file twice to test caching
         for _ in 0..2 {
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn test_read_class_invalid_class_name() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_directory = cargo_manifest.join("../classes");
+        let classes_directory = cargo_manifest.join("..").join("classes");
         let directory = Directory::new(classes_directory.to_string_lossy());
         let result = directory.read_class("Foo");
         assert!(matches!(result, Err(ClassNotFound(_))));
@@ -139,7 +139,7 @@ mod tests {
     #[tokio::test]
     async fn test_class_names() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_directory = cargo_manifest.join("../classes");
+        let classes_directory = cargo_manifest.join("..").join("classes");
         let directory = Directory::new(classes_directory.to_string_lossy());
         let class_names = directory.class_names().await?;
         assert!(class_names.contains(&"HelloWorld".to_string()));
