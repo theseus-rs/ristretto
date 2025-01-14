@@ -24,3 +24,27 @@ async fn get_extended_npe_message(
 ) -> Result<Option<Value>> {
     todo!("java.lang.NullPointerException.getExtendedNPEMessage()Ljava/lang/String;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/NullPointerException";
+        assert!(registry
+            .method(class_name, "getExtendedNPEMessage", "()Ljava/lang/String;")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.NullPointerException.getExtendedNPEMessage()Ljava/lang/String;"
+    )]
+    async fn test_get_extended_npe_message() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_extended_npe_message(thread, Arguments::default()).await;
+    }
+}

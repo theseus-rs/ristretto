@@ -16,3 +16,24 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/net/Inet4Address";
+        assert!(registry.method(class_name, "init", "()V").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_init() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+}

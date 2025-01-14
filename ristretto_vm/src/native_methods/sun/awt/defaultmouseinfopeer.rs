@@ -38,3 +38,39 @@ async fn is_window_under_mouse(
 ) -> Result<Option<Value>> {
     todo!("sun.awt.DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/awt/DefaultMouseInfoPeer";
+        assert!(registry
+            .method(class_name, "fillPointWithCoords", "(Ljava/awt/Point;)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "isWindowUnderMouse", "(Ljava/awt/Window;)Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.awt.DefaultMouseInfoPeer.fillPointWithCoords(Ljava/awt/Point;)I"
+    )]
+    async fn test_fill_point_with_coords() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = fill_point_with_coords(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.awt.DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z"
+    )]
+    async fn test_is_window_under_mouse() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_window_under_mouse(thread, Arguments::default()).await;
+    }
+}

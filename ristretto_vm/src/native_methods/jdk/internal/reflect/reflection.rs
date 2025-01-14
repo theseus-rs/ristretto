@@ -76,3 +76,37 @@ async fn get_class_access_flags(
     let class_access_flags = access_flags.bits() as i32;
     Ok(Some(Value::Int(class_access_flags)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/reflect/Reflection";
+        assert!(registry
+            .method(
+                class_name,
+                "areNestMates",
+                "(Ljava/lang/Class;Ljava/lang/Class;)Z"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getCallerClass", "()Ljava/lang/Class;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getClassAccessFlags", "(Ljava/lang/Class;)I")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "jdk.internal.reflect.Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z"
+    )]
+    async fn test_are_nest_mates() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = are_nest_mates(thread, Arguments::default()).await;
+    }
+}

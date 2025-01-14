@@ -48,3 +48,70 @@ async fn supports_optimized_upcalls(
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.ProgrammableUpcallHandler.supportsOptimizedUpcalls()Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/foreign/abi/ProgrammableUpcallHandler";
+        assert!(registry
+            .method(
+                class_name,
+                "allocateOptimizedUpcallStub",
+                "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "allocateUpcallStub",
+                "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "supportsOptimizedUpcalls", "()Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateOptimizedUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J"
+    )]
+    async fn test_allocate_optimized_upcall_stub() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = allocate_optimized_upcall_stub(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
+    )]
+    async fn test_allocate_upcall_stub() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = allocate_upcall_stub(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "jdk.internal.foreign.abi.ProgrammableUpcallHandler.supportsOptimizedUpcalls()Z"
+    )]
+    async fn test_supports_optimized_upcalls() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = supports_optimized_upcalls(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+}

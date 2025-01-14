@@ -105,3 +105,97 @@ async fn get_native_glyph_outline(
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.getNativeGlyphOutline(JIDD)Ljava/awt/geom/GeneralPath;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/font/CStrike";
+        assert!(registry
+            .method(class_name, "createNativeStrikePtr", "(J[D[DII)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "disposeNativeStrikePtr", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getFontMetrics", "(J)Lsun/font/StrikeMetrics;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getGlyphImagePtrsNative", "(J[J[II)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getNativeGlyphAdvance", "(JI)F")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getNativeGlyphImageBounds",
+                "(JILjava/awt/geom/Rectangle2D$Float;DD)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getNativeGlyphOutline",
+                "(JIDD)Ljava/awt/geom/GeneralPath;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.CStrike.createNativeStrikePtr(J[D[DII)J")]
+    async fn test_create_native_strike_ptr() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_native_strike_ptr(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.CStrike.disposeNativeStrikePtr(J)V")]
+    async fn test_dispose_native_strike_ptr() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = dispose_native_strike_ptr(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.CStrike.getFontMetrics(J)Lsun/font/StrikeMetrics;")]
+    async fn test_get_font_metrics() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_font_metrics(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.CStrike.getGlyphImagePtrsNative(J[J[II)V")]
+    async fn test_get_glyph_image_ptrs_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_glyph_image_ptrs_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.CStrike.getNativeGlyphAdvance(JI)F")]
+    async fn test_get_native_glyph_advance() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_native_glyph_advance(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.font.CStrike.getNativeGlyphImageBounds(JILjava/awt/geom/Rectangle2D$Float;DD)V"
+    )]
+    async fn test_get_native_glyph_image_bounds() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_native_glyph_image_bounds(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.font.CStrike.getNativeGlyphOutline(JIDD)Ljava/awt/geom/GeneralPath;"
+    )]
+    async fn test_get_native_glyph_outline() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_native_glyph_outline(thread, Arguments::default()).await;
+    }
+}

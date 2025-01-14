@@ -39,3 +39,41 @@ async fn int_bits_to_float(
     let float = f32::from_bits(integer as u32);
     Ok(Some(Value::Float(float)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/Float";
+        assert!(registry
+            .method(class_name, "floatToRawIntBits", "(F)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "intBitsToFloat", "(I)F")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_float_to_raw_int_bits() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let mut arguments = Arguments::default();
+        arguments.push_float(42.0);
+        let result = float_to_raw_int_bits(thread, arguments).await?;
+        assert_eq!(result, Some(Value::Int(1_109_917_696)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_int_bits_to_float() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let mut arguments = Arguments::default();
+        arguments.push_int(1_109_917_696);
+        let result = int_bits_to_float(thread, arguments).await?;
+        assert_eq!(result, Some(Value::Float(42.0)));
+        Ok(())
+    }
+}

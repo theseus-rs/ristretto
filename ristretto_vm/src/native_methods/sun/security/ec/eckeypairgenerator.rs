@@ -30,3 +30,41 @@ async fn generate_ec_key_pair(
 async fn is_curve_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.security.ec.ECKeyPairGenerator.isCurveSupported([B)Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/security/ec/ECKeyPairGenerator";
+        assert!(registry
+            .method(
+                class_name,
+                "generateECKeyPair",
+                "(I[B[B)[Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "isCurveSupported", "([B)Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.ec.ECKeyPairGenerator.generateECKeyPair(I[B[B)[Ljava/lang/Object;"
+    )]
+    async fn test_generate_ec_key_pair() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = generate_ec_key_pair(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.ec.ECKeyPairGenerator.isCurveSupported([B)Z")]
+    async fn test_is_curve_supported() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_curve_supported(thread, Arguments::default()).await;
+    }
+}

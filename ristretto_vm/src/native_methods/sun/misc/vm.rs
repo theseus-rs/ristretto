@@ -30,3 +30,38 @@ async fn latest_user_defined_loader_0(
 ) -> Result<Option<Value>> {
     todo!("sun.misc.VM.latestUserDefinedLoader0()Ljava/lang/ClassLoader;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/misc/VM";
+        assert!(registry.method(class_name, "initialize", "()V").is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "latestUserDefinedLoader0",
+                "()Ljava/lang/ClassLoader;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_initialize() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = initialize(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.misc.VM.latestUserDefinedLoader0()Ljava/lang/ClassLoader;")]
+    async fn test_latest_user_defined_loader_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = latest_user_defined_loader_0(thread, Arguments::default()).await;
+    }
+}

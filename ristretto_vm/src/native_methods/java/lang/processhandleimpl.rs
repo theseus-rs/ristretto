@@ -186,3 +186,55 @@ async fn wait_for_process_exit_0(
     // TODO: evaluate expected return value
     Ok(Some(Value::Int(0)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/ProcessHandleImpl";
+        assert!(registry.method(class_name, "destroy0", "(JJZ)Z").is_some());
+        assert!(registry
+            .method(class_name, "getCurrentPid0", "()J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getProcessPids0", "(J[J[J[J)I")
+            .is_some());
+        assert!(registry.method(class_name, "initNative", "()V").is_some());
+        assert!(registry.method(class_name, "isAlive0", "(J)J").is_some());
+        assert!(registry.method(class_name, "parent0", "(JJ)J").is_some());
+        assert!(registry
+            .method(class_name, "waitForProcessExit0", "(JZ)I")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_get_current_pid_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_current_pid_0(thread, Arguments::default()).await?;
+        let pid = i64::from(process::id());
+        assert_eq!(result, Some(Value::Long(pid)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_native() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init_native(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_alive_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let pid = Value::Long(i64::from(process::id()));
+        let result = is_alive_0(thread, Arguments::new(vec![pid])).await?;
+        let run_time = result.unwrap_or(Value::Long(0)).to_long()?;
+        assert!(run_time > 0);
+        Ok(())
+    }
+}

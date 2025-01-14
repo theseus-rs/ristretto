@@ -152,3 +152,72 @@ async fn native_set_display_mode(
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeSetDisplayMode(IIIII)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "sun/awt/CGraphicsDevice";
+        assert!(registry
+            .method(
+                class_name,
+                "nativeGetBounds",
+                "(I)Ljava/awt/geom/Rectangle2D;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeGetDisplayMode",
+                "(I)Ljava/awt/DisplayMode;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeGetDisplayModes",
+                "(I)[Ljava/awt/DisplayMode;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeGetScaleFactor", "(I)D")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeGetScreenInsets", "(I)Ljava/awt/Insets;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeGetXResolution", "(I)D")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeGetYResolution", "(I)D")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeResetDisplayMode", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetDisplayMode", "(IIIII)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.awt.CGraphicsDevice.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;"
+    )]
+    async fn test_native_get_bounds() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_bounds(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.awt.CGraphicsDevice.nativeGetDisplayMode(I)Ljava/awt/DisplayMode;"
+    )]
+    async fn test_native_get_display_mode() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_display_mode(thread, Arguments::default()).await;
+    }
+}

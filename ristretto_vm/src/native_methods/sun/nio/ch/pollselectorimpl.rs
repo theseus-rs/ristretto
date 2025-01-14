@@ -16,3 +16,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn poll(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.nio.ch.PollSelectorImpl.poll(JII)I")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/nio/ch/PollSelectorImpl";
+        assert!(registry.method(class_name, "poll", "(JII)I").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.PollSelectorImpl.poll(JII)I")]
+    async fn test_poll() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = poll(thread, Arguments::default()).await;
+    }
+}

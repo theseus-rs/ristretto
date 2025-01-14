@@ -16,3 +16,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn is_in_aqua_session(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.awt.PlatformGraphicsInfo.isInAquaSession()Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/awt/PlatformGraphicsInfo";
+        assert!(registry
+            .method(class_name, "isInAquaSession", "()Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.PlatformGraphicsInfo.isInAquaSession()Z")]
+    async fn test_is_in_aqua_session() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_in_aqua_session(thread, Arguments::default()).await;
+    }
+}

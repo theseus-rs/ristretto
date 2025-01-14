@@ -49,3 +49,82 @@ async fn load_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 async fn unload(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.unload(Ljava/lang/String;ZJ)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java9 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/ClassLoader$NativeLibrary";
+        assert!(registry
+            .method(class_name, "findEntry", "(Ljava/lang/String;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "load0", "(Ljava/lang/String;ZZ)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "unload", "(Ljava/lang/String;ZJ)V")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_8() {
+        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/ClassLoader$NativeLibrary";
+        assert!(registry
+            .method(class_name, "find", "(Ljava/lang/String;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "load", "(Ljava/lang/String;Z)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.ClassLoader$NativeLibrary.find(Ljava/lang/String;)J"
+    )]
+    async fn test_find() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = find(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.ClassLoader$NativeLibrary.findEntry(Ljava/lang/String;)J"
+    )]
+    async fn test_find_entry() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = find_entry(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.ClassLoader$NativeLibrary.load(Ljava/lang/String;Z)V"
+    )]
+    async fn test_load() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = load(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.ClassLoader$NativeLibrary.load0(Ljava/lang/String;ZZ)Z"
+    )]
+    async fn test_load_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = load_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.ClassLoader$NativeLibrary.unload(Ljava/lang/String;ZJ)V"
+    )]
+    async fn test_unload() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = unload(thread, Arguments::default()).await;
+    }
+}

@@ -136,8 +136,11 @@ mod tests {
     #[tokio::test]
     async fn test_read_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_directory = cargo_manifest.join("../classes");
-        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let classes_directory = cargo_manifest.join("..").join("classes");
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
 
         let class_path_entries = [
             classes_directory.to_string_lossy().to_string(),
@@ -168,8 +171,11 @@ mod tests {
     #[tokio::test]
     async fn test_class_names() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let classes_directory = cargo_manifest.join("../classes");
-        let classes_jar = cargo_manifest.join("../classes/classes.jar");
+        let classes_directory = cargo_manifest.join("..").join("classes");
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
 
         let class_path_entries = [
             classes_directory.to_string_lossy().to_string(),

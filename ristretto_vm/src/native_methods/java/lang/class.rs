@@ -738,7 +738,7 @@ async fn get_record_components_0(
 #[async_recursion(?Send)]
 async fn get_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: Implement get_signers
-    Ok(None)
+    Ok(Some(Value::Object(None)))
 }
 
 #[async_recursion(?Send)]
@@ -877,4 +877,272 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 async fn set_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: Implement set_signers
     Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[expect(clippy::too_many_lines)]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java17 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/Class";
+        assert!(registry
+            .method(
+                class_name,
+                "desiredAssertionStatus0",
+                "(Ljava/lang/Class;)Z"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "forName0",
+                "(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getConstantPool",
+                "()Ljdk/internal/reflect/ConstantPool;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getDeclaredClasses0", "()[Ljava/lang/Class;")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getDeclaredConstructors0",
+                "(Z)[Ljava/lang/reflect/Constructor;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getDeclaredFields0",
+                "(Z)[Ljava/lang/reflect/Field;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getDeclaredMethods0",
+                "(Z)[Ljava/lang/reflect/Method;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getDeclaringClass0", "()Ljava/lang/Class;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getEnclosingMethod0", "()[Ljava/lang/Object;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getGenericSignature0", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getInterfaces0", "()[Ljava/lang/Class;")
+            .is_some());
+        assert!(registry.method(class_name, "getModifiers", "()I").is_some());
+        assert!(registry
+            .method(class_name, "getNestHost0", "()Ljava/lang/Class;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getNestMembers0", "()[Ljava/lang/Class;")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getPrimitiveClass",
+                "(Ljava/lang/String;)Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getProtectionDomain0",
+                "()Ljava/security/ProtectionDomain;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getRawAnnotations", "()[B")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getRawTypeAnnotations", "()[B")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getSigners", "()[Ljava/lang/Object;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getSimpleBinaryName0", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getSuperclass", "()Ljava/lang/Class;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "initClassName", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry.method(class_name, "isArray", "()Z").is_some());
+        assert!(registry
+            .method(class_name, "isAssignableFrom", "(Ljava/lang/Class;)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "isInstance", "(Ljava/lang/Object;)Z")
+            .is_some());
+        assert!(registry.method(class_name, "isInterface", "()Z").is_some());
+        assert!(registry.method(class_name, "isPrimitive", "()Z").is_some());
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setSigners", "([Ljava/lang/Object;)V")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_8() {
+        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/Class";
+        assert!(registry
+            .method(class_name, "getComponentType", "()Ljava/lang/Class;")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getConstantPool",
+                "()Lsun/reflect/ConstantPool;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getName0", "()Ljava/lang/String;")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_desired_assertion_status_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = desired_assertion_status_0(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Class.getConstantPool()Lsun/reflect/ConstantPool;"
+    )]
+    async fn test_get_constant_pool() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_constant_pool(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method;"
+    )]
+    async fn test_get_declared_methods_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_declared_methods_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Class.getGenericSignature0()Ljava/lang/String;"
+    )]
+    async fn test_get_generic_signature_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_generic_signature_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Class.getNestHost0()Ljava/lang/Class;"
+    )]
+    async fn test_get_nest_host_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_nest_host_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Class.getNestMembers0()[Ljava/lang/Class;"
+    )]
+    async fn test_get_nest_members_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_nest_members_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Class.getProtectionDomain0()Ljava/security/ProtectionDomain;"
+    )]
+    async fn test_get_protection_domain_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_protection_domain_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Class.getRawAnnotations()[B")]
+    async fn test_get_raw_annotations() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_raw_annotations(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Class.getRawTypeAnnotations()[B")]
+    async fn test_get_raw_type_annotations() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_raw_type_annotations(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;"
+    )]
+    async fn test_get_record_components_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_record_components_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_get_signers() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_signers(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_hidden() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = is_hidden(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Class.isRecord0()Z")]
+    async fn test_is_record_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_record_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_signers() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = set_signers(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
 }

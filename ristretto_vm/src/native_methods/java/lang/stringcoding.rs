@@ -16,3 +16,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn err(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.lang.StringCoding.err(Ljava/lang/String;)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/StringCoding";
+        assert!(registry
+            .method(class_name, "err", "(Ljava/lang/String;)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.StringCoding.err(Ljava/lang/String;)V"
+    )]
+    async fn test_err() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = err(thread, Arguments::default()).await;
+    }
+}

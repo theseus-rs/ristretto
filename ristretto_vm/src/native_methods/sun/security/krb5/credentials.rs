@@ -24,3 +24,31 @@ async fn acquire_default_native_creds(
 ) -> Result<Option<Value>> {
     todo!("sun.security.krb5.Credentials.acquireDefaultNativeCreds([I)Lsun/security/krb5/Credentials;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/security/krb5/Credentials";
+        assert!(registry
+            .method(
+                class_name,
+                "acquireDefaultNativeCreds",
+                "([I)Lsun/security/krb5/Credentials;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.krb5.Credentials.acquireDefaultNativeCreds([I)Lsun/security/krb5/Credentials;"
+    )]
+    async fn test_acquire_default_native_creds() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = acquire_default_native_creds(thread, Arguments::default()).await;
+    }
+}

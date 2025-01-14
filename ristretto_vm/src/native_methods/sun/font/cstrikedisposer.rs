@@ -38,3 +38,35 @@ async fn remove_glyph_info_from_cache(
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrikeDisposer.removeGlyphInfoFromCache(J)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/font/CStrikeDisposer";
+        assert!(registry
+            .method(class_name, "freeNativeScalerContext", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "removeGlyphInfoFromCache", "(J)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.CStrikeDisposer.freeNativeScalerContext(J)V")]
+    async fn test_free_native_scaler_context() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_native_scaler_context(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.CStrikeDisposer.removeGlyphInfoFromCache(J)V")]
+    async fn test_remove_glyph_info_from_cache() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = remove_glyph_info_from_cache(thread, Arguments::default()).await;
+    }
+}

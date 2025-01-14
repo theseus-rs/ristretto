@@ -33,10 +33,10 @@ jobs:
 
         include:
           - platform: linux-x64
-            os: ubuntu-22.04
+            os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
           - platform: macos-arm64
-            os: macos-15
+            os: [ self-hosted, macOS, ARM64 ]
             target: aarch64-apple-darwin
           - platform: macos-x64
             os: macos-13
@@ -45,10 +45,10 @@ jobs:
             os: windows-2022
             target: x86_64-pc-windows-msvc
           - platform: wasm32-unknown
-            os: ubuntu-22.04
+            os: ubuntu-latest
             target: wasm32-unknown-unknown
           - platform: wasm32-wasi
-            os: ubuntu-22.04
+            os: ubuntu-latest
             target: wasm32-wasip1-threads
 
     steps:
@@ -61,14 +61,8 @@ jobs:
           targets: ${{ matrix.target }}
           toolchain: stable
 
-      - name: Install cargo-llvm-cov
-        if: ${{ startsWith(matrix.platform, 'linux-') }}
-        uses: taiki-e/install-action@main
-        with:
-          tool: cargo-llvm-cov
-
       - name: Build
-        if: ${{ startsWith(matrix.platform, 'wasm32-') || startsWith(matrix.platform, 'windows-')}}
+        if: ${{ matrix.platform != 'macos-arm64' }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -79,7 +73,7 @@ jobs:
           cargo build --workspace --target ${{ matrix.target }}
 
       - name: Tests
-        if: ${{ !startsWith(matrix.platform, 'linux-') && !startsWith(matrix.platform, 'wasm32-') && !startsWith(matrix.platform, 'windows-') }}
+        if: ${{ matrix.platform == 'macos-x64' }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -88,8 +82,14 @@ jobs:
         run: |
           cargo test --workspace --all-features
 
+      - name: Install cargo-llvm-cov
+        if: ${{ matrix.platform == 'macos-arm64' }}
+        uses: taiki-e/install-action@main
+        with:
+          tool: cargo-llvm-cov
+
       - name: Tests
-        if: ${{ startsWith(matrix.platform, 'linux-') }}
+        if: ${{ matrix.platform == 'macos-arm64' }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -100,7 +100,7 @@ jobs:
           cargo llvm-cov --workspace --lcov --output-path lcov.info
 
       - name: Upload to codecov.io
-        if: ${{ startsWith(matrix.platform, 'linux-') }}
+        if: ${{ matrix.platform == 'macos-arm64' }}
         uses: codecov/codecov-action@v4
         with:
           files: lcov.info

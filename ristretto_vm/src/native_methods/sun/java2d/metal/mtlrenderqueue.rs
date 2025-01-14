@@ -16,3 +16,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn flush_buffer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLRenderQueue.flushBuffer(JI)V");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/java2d/metal/MTLRenderQueue";
+        assert!(registry
+            .method(class_name, "flushBuffer", "(JI)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.metal.MTLRenderQueue.flushBuffer(JI)V")]
+    async fn test_flush_buffer() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = flush_buffer(thread, Arguments::default()).await;
+    }
+}

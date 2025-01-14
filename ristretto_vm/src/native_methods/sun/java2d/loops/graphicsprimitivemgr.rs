@@ -30,3 +30,37 @@ async fn register_native_loops(
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.loops.GraphicsPrimitiveMgr.registerNativeLoops()V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/java2d/loops/GraphicsPrimitiveMgr";
+        assert!(registry
+            .method(class_name, "initIDs", "(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "registerNativeLoops", "()V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.loops.GraphicsPrimitiveMgr.initIDs(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V"
+    )]
+    async fn test_init_ids() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_ids(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.loops.GraphicsPrimitiveMgr.registerNativeLoops()V")]
+    async fn test_register_native_loops() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = register_native_loops(thread, Arguments::default()).await;
+    }
+}

@@ -61,3 +61,79 @@ async fn local_address_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 async fn socket_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.socket0()I");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/nio/ch/UnixDomainSockets";
+        assert!(registry
+            .method(
+                class_name,
+                "accept0",
+                "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/lang/Object;)I"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "bind0", "(Ljava/io/FileDescriptor;[B)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "connect0", "(Ljava/io/FileDescriptor;[B)I")
+            .is_some());
+        assert!(registry.method(class_name, "init", "()Z").is_some());
+        assert!(registry
+            .method(class_name, "localAddress0", "(Ljava/io/FileDescriptor;)[B")
+            .is_some());
+        assert!(registry.method(class_name, "socket0", "()I").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.nio.ch.UnixDomainSockets.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/lang/Object;)I"
+    )]
+    async fn test_accept_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = accept_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.UnixDomainSockets.bind0(Ljava/io/FileDescriptor;[B)V")]
+    async fn test_bind_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = bind_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.UnixDomainSockets.connect0(Ljava/io/FileDescriptor;[B)I")]
+    async fn test_connect_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = connect_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.UnixDomainSockets.init()Z")]
+    async fn test_init() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.nio.ch.UnixDomainSockets.localAddress0(Ljava/io/FileDescriptor;)[B"
+    )]
+    async fn test_local_address_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = local_address_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.UnixDomainSockets.socket0()I")]
+    async fn test_socket_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = socket_0(thread, Arguments::default()).await;
+    }
+}

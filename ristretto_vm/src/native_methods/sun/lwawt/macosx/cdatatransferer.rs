@@ -49,3 +49,55 @@ async fn register_format_with_pasteboard(
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDataTransferer.registerFormatWithPasteboard(Ljava/lang/String;)J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/CDataTransferer";
+        assert!(registry
+            .method(class_name, "formatForIndex", "(J)Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeDragQueryFile", "([B)[Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "registerFormatWithPasteboard",
+                "(Ljava/lang/String;)J"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CDataTransferer.formatForIndex(J)Ljava/lang/String;"
+    )]
+    async fn test_format_for_index() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = format_for_index(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CDataTransferer.nativeDragQueryFile([B)[Ljava/lang/String;"
+    )]
+    async fn test_native_drag_query_file() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_drag_query_file(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CDataTransferer.registerFormatWithPasteboard(Ljava/lang/String;)J"
+    )]
+    async fn test_register_format_with_pasteboard() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = register_format_with_pasteboard(thread, Arguments::default()).await;
+    }
+}

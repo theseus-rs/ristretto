@@ -24,3 +24,25 @@ async fn free_native_scaler_context(
 ) -> Result<Option<Value>> {
     todo!("sun.font.NativeStrikeDisposer.freeNativeScalerContext(J)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/font/NativeStrikeDisposer";
+        assert!(registry
+            .method(class_name, "freeNativeScalerContext", "(J)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.NativeStrikeDisposer.freeNativeScalerContext(J)V")]
+    async fn test_free_native_scaler_context() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_native_scaler_context(thread, Arguments::default()).await;
+    }
+}

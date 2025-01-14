@@ -53,3 +53,67 @@ async fn n_send_short_message(
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.MidiOutDevice.nSendShortMessage(JIJ)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/sun/media/sound/MidiOutDevice";
+        assert!(registry.method(class_name, "nClose", "(J)V").is_some());
+        assert!(registry
+            .method(class_name, "nGetTimeStamp", "(J)J")
+            .is_some());
+        assert!(registry.method(class_name, "nOpen", "(I)J").is_some());
+        assert!(registry
+            .method(class_name, "nSendLongMessage", "(J[BIJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nSendShortMessage", "(JIJ)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: com.sun.media.sound.MidiOutDevice.nClose(J)V")]
+    async fn test_n_close() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_close(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.MidiOutDevice.nGetTimeStamp(J)J"
+    )]
+    async fn test_n_get_time_stamp() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_get_time_stamp(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: com.sun.media.sound.MidiOutDevice.nOpen(I)J")]
+    async fn test_n_open() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_open(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.MidiOutDevice.nSendLongMessage(J[BIJ)V"
+    )]
+    async fn test_n_send_long_message() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_send_long_message(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.MidiOutDevice.nSendShortMessage(JIJ)V"
+    )]
+    async fn test_n_send_short_message() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_send_short_message(thread, Arguments::default()).await;
+    }
+}

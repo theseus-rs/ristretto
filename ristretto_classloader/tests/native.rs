@@ -104,15 +104,19 @@ async fn write_native(version: &str) -> Result<()> {
 
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let template_path = cargo_manifest
-        .join("tests/template.hbs")
+        .join("tests")
+        .join("template.hbs")
         .to_string_lossy()
         .to_string();
     let native_methods_path = cargo_manifest
-        .join("../ristretto_vm/src/native_methods")
+        .join("..")
+        .join("ristretto_vm")
+        .join("src")
+        .join("native_methods")
         .to_string_lossy()
         .to_string();
 
-    let mod_file_name = format!("{native_methods_path}/mod.rs");
+    let mod_file_name = PathBuf::from(native_methods_path.clone()).join("mod.rs");
     let mut mod_file = File::create(mod_file_name)?;
 
     for class_name in classes {

@@ -24,3 +24,27 @@ async fn check_stack_walk_modes(
 ) -> Result<Option<Value>> {
     todo!("java.lang.StackStreamFactory.checkStackWalkModes()Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/StackStreamFactory";
+        assert!(registry
+            .method(class_name, "checkStackWalkModes", "()Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.StackStreamFactory.checkStackWalkModes()Z"
+    )]
+    async fn test_check_stack_walk_modes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = check_stack_walk_modes(thread, Arguments::default()).await;
+    }
+}

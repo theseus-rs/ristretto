@@ -27,3 +27,39 @@ async fn flush(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Val
 async fn init_ops(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPrinterSurfaceData.initOps(JLjava/nio/ByteBuffer;[Ljava/lang/Object;II)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/CPrinterSurfaceData";
+        assert!(registry.method(class_name, "_flush", "()V").is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "initOps",
+                "(JLjava/nio/ByteBuffer;[Ljava/lang/Object;II)V"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPrinterSurfaceData._flush()V")]
+    async fn test_flush() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = flush(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CPrinterSurfaceData.initOps(JLjava/nio/ByteBuffer;[Ljava/lang/Object;II)V"
+    )]
+    async fn test_init_ops() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_ops(thread, Arguments::default()).await;
+    }
+}

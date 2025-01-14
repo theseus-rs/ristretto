@@ -217,3 +217,241 @@ async fn set_permission(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 async fn set_read_only(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.setReadOnly(Ljava/io/File;)Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/io/WinNTFileSystem";
+        assert!(registry
+            .method(
+                class_name,
+                "canonicalize0",
+                "(Ljava/lang/String;)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "canonicalizeWithPrefix0",
+                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "checkAccess", "(Ljava/io/File;I)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "createDirectory", "(Ljava/io/File;)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "createFileExclusively", "(Ljava/lang/String;)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "delete0", "(Ljava/io/File;)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getBooleanAttributes", "(Ljava/io/File;)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getDriveDirectory", "(I)Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getLastModifiedTime", "(Ljava/io/File;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getLength", "(Ljava/io/File;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getSpace0", "(Ljava/io/File;I)J")
+            .is_some());
+        assert!(registry.method(class_name, "initIDs", "()V").is_some());
+        assert!(registry
+            .method(class_name, "list", "(Ljava/io/File;)[Ljava/lang/String;")
+            .is_some());
+        assert!(registry.method(class_name, "listRoots0", "()I").is_some());
+        assert!(registry
+            .method(class_name, "rename0", "(Ljava/io/File;Ljava/io/File;)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setLastModifiedTime", "(Ljava/io/File;J)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setPermission", "(Ljava/io/File;IZZ)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setReadOnly", "(Ljava/io/File;)Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;"
+    )]
+    async fn test_canonicalize_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = canonicalize_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.canonicalizeWithPrefix0(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"
+    )]
+    async fn test_canonicalize_with_prefix_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = canonicalize_with_prefix_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.checkAccess(Ljava/io/File;I)Z"
+    )]
+    async fn test_check_access() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = check_access(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.createDirectory(Ljava/io/File;)Z"
+    )]
+    async fn test_create_directory() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_directory(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.createFileExclusively(Ljava/lang/String;)Z"
+    )]
+    async fn test_create_file_exclusively() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_file_exclusively(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.delete0(Ljava/io/File;)Z"
+    )]
+    async fn test_delete_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = delete_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.getBooleanAttributes(Ljava/io/File;)I"
+    )]
+    async fn test_get_boolean_attributes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_boolean_attributes(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.getDriveDirectory(I)Ljava/lang/String;"
+    )]
+    async fn test_get_drive_directory() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_drive_directory(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.getLastModifiedTime(Ljava/io/File;)J"
+    )]
+    async fn test_get_last_modified_time() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_last_modified_time(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.getLength(Ljava/io/File;)J"
+    )]
+    async fn test_get_length() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_length(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.getNameMax0(Ljava/lang/String;)I"
+    )]
+    async fn test_get_name_max_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_name_max_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.getSpace0(Ljava/io/File;I)J"
+    )]
+    async fn test_get_space_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_space_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = init_ids(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.list(Ljava/io/File;)[Ljava/lang/String;"
+    )]
+    async fn test_list() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = list(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.io.WinNTFileSystem.listRoots0()I")]
+    async fn test_list_roots_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = list_roots_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z"
+    )]
+    async fn test_rename_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = rename_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.setLastModifiedTime(Ljava/io/File;J)Z"
+    )]
+    async fn test_set_last_modified_time() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_last_modified_time(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.setPermission(Ljava/io/File;IZZ)Z"
+    )]
+    async fn test_set_permission() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_permission(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.WinNTFileSystem.setReadOnly(Ljava/io/File;)Z"
+    )]
+    async fn test_set_read_only() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_read_only(thread, Arguments::default()).await;
+    }
+}

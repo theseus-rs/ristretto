@@ -56,3 +56,55 @@ async fn get_jvm_version_info(
 ) -> Result<Option<Value>> {
     todo!("sun.misc.Version.getJvmVersionInfo()Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/misc/Version";
+        assert!(registry
+            .method(class_name, "getJdkSpecialVersion", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getJdkVersionInfo", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getJvmSpecialVersion", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getJvmVersionInfo", "()Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.misc.Version.getJdkSpecialVersion()Ljava/lang/String;")]
+    async fn test_get_jdk_special_version() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_jdk_special_version(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.misc.Version.getJdkVersionInfo()V")]
+    async fn test_get_jdk_version_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_jdk_version_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.misc.Version.getJvmSpecialVersion()Ljava/lang/String;")]
+    async fn test_get_jvm_special_version() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_jvm_special_version(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.misc.Version.getJvmVersionInfo()Z")]
+    async fn test_get_jvm_version_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_jvm_version_info(thread, Arguments::default()).await;
+    }
+}

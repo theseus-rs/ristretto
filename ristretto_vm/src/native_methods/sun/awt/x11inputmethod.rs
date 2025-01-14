@@ -70,3 +70,64 @@ async fn turnoff_status_window(
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11InputMethod.turnoffStatusWindow()V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/awt/X11InputMethod";
+        assert!(registry.method(class_name, "disposeXIC", "()V").is_some());
+        assert!(registry.method(class_name, "initIDs", "()V").is_some());
+        assert!(registry
+            .method(class_name, "isCompositionEnabledNative", "()Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "resetXIC", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setCompositionEnabledNative", "(Z)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "turnoffStatusWindow", "()V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11InputMethod.disposeXIC()V")]
+    async fn test_dispose_xic() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = dispose_xic(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11InputMethod.isCompositionEnabledNative()Z")]
+    async fn test_is_composition_enabled_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_composition_enabled_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11InputMethod.resetXIC()Ljava/lang/String;")]
+    async fn test_reset_xic() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = reset_xic(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11InputMethod.setCompositionEnabledNative(Z)Z")]
+    async fn test_set_composition_enabled_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_composition_enabled_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11InputMethod.turnoffStatusWindow()V")]
+    async fn test_turnoff_status_window() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = turnoff_status_window(thread, Arguments::default()).await;
+    }
+}

@@ -106,3 +106,143 @@ async fn link_to_static(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 async fn link_to_virtual(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandle.linkToVirtual([Ljava/lang/Object;)Ljava/lang/Object;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java17 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/invoke/MethodHandle";
+        assert!(registry
+            .method(
+                class_name,
+                "linkToNative",
+                "([Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "invoke",
+                "([Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "invokeBasic",
+                "([Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "invokeExact",
+                "([Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "linkToInterface",
+                "([Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "linkToSpecial",
+                "([Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "linkToStatic",
+                "([Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "linkToVirtual",
+                "([Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_invoke() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = invoke(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_invoke_basic() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = invoke_basic(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_invoke_exact() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = invoke_exact(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandle.linkToInterface([Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_link_to_interface() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = link_to_interface(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandle.linkToNative([Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_link_to_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = link_to_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandle.linkToSpecial([Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_link_to_special() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = link_to_special(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandle.linkToStatic([Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_link_to_static() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = link_to_static(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandle.linkToVirtual([Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_link_to_virtual() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = link_to_virtual(thread, Arguments::default()).await;
+    }
+}

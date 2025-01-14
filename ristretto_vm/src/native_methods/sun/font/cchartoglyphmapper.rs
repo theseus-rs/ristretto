@@ -30,3 +30,33 @@ async fn native_chars_to_glyphs(
 ) -> Result<Option<Value>> {
     todo!("sun.font.CCharToGlyphMapper.nativeCharsToGlyphs(JI[C[I)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/font/CCharToGlyphMapper";
+        assert!(registry.method(class_name, "countGlyphs", "(J)I").is_some());
+        assert!(registry
+            .method(class_name, "nativeCharsToGlyphs", "(JI[C[I)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.CCharToGlyphMapper.countGlyphs(J)I")]
+    async fn test_count_glyphs() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = count_glyphs(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.CCharToGlyphMapper.nativeCharsToGlyphs(JI[C[I)V")]
+    async fn test_native_chars_to_glyphs() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_chars_to_glyphs(thread, Arguments::default()).await;
+    }
+}

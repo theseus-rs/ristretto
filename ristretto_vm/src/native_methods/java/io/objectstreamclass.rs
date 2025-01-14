@@ -30,3 +30,36 @@ async fn has_static_initializer(
 async fn init_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/io/ObjectStreamClass";
+        assert!(registry
+            .method(class_name, "hasStaticInitializer", "(Ljava/lang/Class;)Z")
+            .is_some());
+        assert!(registry.method(class_name, "initNative", "()V").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z"
+    )]
+    async fn test_has_static_initializer() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = has_static_initializer(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_init_native() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = init_native(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+}

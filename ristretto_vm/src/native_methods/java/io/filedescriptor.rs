@@ -79,3 +79,72 @@ async fn sync(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 async fn sync_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
     sync(thread, arguments).await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java20 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/io/FileDescriptor";
+        assert!(registry.method(class_name, "close0", "()V").is_some());
+        assert!(registry.method(class_name, "getAppend", "(I)Z").is_some());
+        assert!(registry.method(class_name, "getHandle", "(I)J").is_some());
+        assert!(registry.method(class_name, "initIDs", "()V").is_some());
+        assert!(registry.method(class_name, "sync", "()V").is_some());
+    }
+
+    #[test]
+    fn test_register_java_21() {
+        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/io/FileDescriptor";
+        assert!(registry.method(class_name, "sync0", "()V").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.io.FileDescriptor.close0()V")]
+    async fn test_close_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = close_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_get_append() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let handles = [0, 1, 2, 3];
+
+        for handle in handles {
+            let result =
+                get_append(thread.clone(), Arguments::new(vec![Value::Int(handle)])).await?;
+            assert_eq!(Some(Value::from(false)), result);
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_handle() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = get_handle(thread, Arguments::new(vec![Value::Int(1)])).await?;
+        assert_eq!(Some(Value::Long(1)), result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = init_ids(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.io.FileDescriptor.sync()V")]
+    async fn test_sync() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = sync(thread, Arguments::default()).await;
+    }
+}

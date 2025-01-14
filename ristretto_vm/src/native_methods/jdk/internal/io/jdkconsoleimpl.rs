@@ -16,3 +16,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn echo(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("jdk.internal.io.JdkConsoleImpl.echo(Z)Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/io/JdkConsoleImpl";
+        assert!(registry.method(class_name, "echo", "(Z)Z").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "jdk.internal.io.JdkConsoleImpl.echo(Z)Z")]
+    async fn test_echo() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = echo(thread, Arguments::default()).await;
+    }
+}

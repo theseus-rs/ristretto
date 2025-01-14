@@ -66,3 +66,69 @@ async fn native_set_custom_cursor(
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CCursorManager.nativeSetCustomCursor(JDD)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/CCursorManager";
+        assert!(registry
+            .method(
+                class_name,
+                "nativeGetCursorPosition",
+                "()Ljava/awt/geom/Point2D;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetAllowsCursorSetInBackground", "(Z)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nativeSetBuiltInCursor",
+                "(ILjava/lang/String;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetCustomCursor", "(JDD)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CCursorManager.nativeGetCursorPosition()Ljava/awt/geom/Point2D;"
+    )]
+    async fn test_native_get_cursor_position() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_cursor_position(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CCursorManager.nativeSetAllowsCursorSetInBackground(Z)V"
+    )]
+    async fn test_native_set_allows_cursor_set_in_background() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_allows_cursor_set_in_background(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CCursorManager.nativeSetBuiltInCursor(ILjava/lang/String;)V"
+    )]
+    async fn test_native_set_built_in_cursor() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_built_in_cursor(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CCursorManager.nativeSetCustomCursor(JDD)V")]
+    async fn test_native_set_custom_cursor() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_custom_cursor(thread, Arguments::default()).await;
+    }
+}

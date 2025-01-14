@@ -27,3 +27,36 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 async fn read_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.awt.image.JPEGImageDecoder.readImage(Ljava/io/InputStream;[B)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/awt/image/JPEGImageDecoder";
+        assert!(registry
+            .method(class_name, "initIDs", "(Ljava/lang/Class;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "readImage", "(Ljava/io/InputStream;[B)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init_ids(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.image.JPEGImageDecoder.readImage(Ljava/io/InputStream;[B)V")]
+    async fn test_read_image() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = read_image(thread, Arguments::default()).await;
+    }
+}

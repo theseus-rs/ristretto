@@ -3,7 +3,10 @@ use std::path::PathBuf;
 
 async fn test_helloworld(java_verison: &str) -> Result<()> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let classes_jar_path = cargo_manifest.join("../classes/classes.jar");
+    let classes_jar_path = cargo_manifest
+        .join("..")
+        .join("classes")
+        .join("classes.jar");
     let class_path = ClassPath::from(classes_jar_path.to_string_lossy());
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())

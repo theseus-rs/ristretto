@@ -256,3 +256,138 @@ async fn retrieve_directives(_thread: Arc<Thread>, _arguments: Arguments) -> Res
     // TODO: implement the `retrieveDirectives` native method
     Ok(Some(Value::Object(None)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java9 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/ClassLoader";
+        assert!(registry
+            .method(
+                class_name,
+                "defineClass1",
+                "(Ljava/lang/ClassLoader;Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "defineClass2",
+                "(Ljava/lang/ClassLoader;Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "findBuiltinLib",
+                "(Ljava/lang/String;)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "findBootstrapClass",
+                "(Ljava/lang/String;)Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "findLoadedClass0",
+                "(Ljava/lang/String;)Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "initSystemClassLoader",
+                "()Ljava/lang/ClassLoader;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "retrieveDirectives",
+                "()Ljava/lang/AssertionStatusDirectives;"
+            )
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_8() {
+        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/ClassLoader";
+        assert!(registry
+            .method(
+                class_name,
+                "defineClass0",
+                "(Ljava/lang/String;[BIILjava/security/ProtectionDomain;)Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "defineClass1",
+                "(Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "defineClass2",
+                "(Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "resolveClass0", "(Ljava/lang/Class;)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_find_builtin_lib() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = find_builtin_lib(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_system_class_loader() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init_system_class_loader(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_resolve_class_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = resolve_class_0(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_retrieve_directives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = retrieve_directives(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
+    }
+}

@@ -24,3 +24,25 @@ async fn get_windows_directory(
 ) -> Result<Option<Value>> {
     todo!("sun.security.krb5.Config.getWindowsDirectory(Z)Ljava/lang/String;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/security/krb5/Config";
+        assert!(registry
+            .method(class_name, "getWindowsDirectory", "(Z)Ljava/lang/String;")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.krb5.Config.getWindowsDirectory(Z)Ljava/lang/String;")]
+    async fn test_get_windows_directory() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_windows_directory(thread, Arguments::default()).await;
+    }
+}

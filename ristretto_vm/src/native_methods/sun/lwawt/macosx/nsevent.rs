@@ -100,3 +100,78 @@ async fn ns_to_java_mouse_modifiers(
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.NSEvent.nsToJavaMouseModifiers(II)I")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/NSEvent";
+        assert!(registry
+            .method(class_name, "nsToJavaChar", "(CI)C")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nsToJavaKeyModifiers", "(I)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nsToJavaMouseModifiers", "(II)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nsKeyModifiersToJavaKeyInfo", "([I[I)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nsToJavaChar", "(CIZ)C")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nsToJavaKeyInfo", "([I[I)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nsToJavaModifiers", "(I)I")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.NSEvent.nsKeyModifiersToJavaKeyInfo([I[I)V")]
+    async fn test_ns_key_modifiers_to_java_key_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = ns_key_modifiers_to_java_key_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.NSEvent.nsToJavaChar(CIZ)C")]
+    async fn test_ns_to_java_char() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = ns_to_java_char(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.NSEvent.nsToJavaKeyInfo([I[I)Z")]
+    async fn test_ns_to_java_key_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = ns_to_java_key_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.NSEvent.nsToJavaKeyModifiers(I)I")]
+    async fn test_ns_to_java_key_modifiers() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = ns_to_java_key_modifiers(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.NSEvent.nsToJavaModifiers(I)I")]
+    async fn test_ns_to_java_modifiers() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = ns_to_java_modifiers(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.NSEvent.nsToJavaMouseModifiers(II)I")]
+    async fn test_ns_to_java_mouse_modifiers() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = ns_to_java_mouse_modifiers(thread, Arguments::default()).await;
+    }
+}

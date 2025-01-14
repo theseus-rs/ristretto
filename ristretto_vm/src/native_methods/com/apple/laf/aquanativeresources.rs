@@ -24,3 +24,27 @@ async fn get_window_background_color(
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.AquaNativeResources.getWindowBackgroundColor()J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/apple/laf/AquaNativeResources";
+        assert!(registry
+            .method(class_name, "getWindowBackgroundColor", "()J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.laf.AquaNativeResources.getWindowBackgroundColor()J"
+    )]
+    async fn test_get_window_background_color() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_window_background_color(thread, Arguments::default()).await;
+    }
+}

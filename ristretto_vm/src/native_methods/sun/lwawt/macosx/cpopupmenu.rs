@@ -38,3 +38,35 @@ async fn native_show_popup_menu(
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPopupMenu.nativeShowPopupMenu(JII)J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/CPopupMenu";
+        assert!(registry
+            .method(class_name, "nativeCreatePopupMenu", "()J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeShowPopupMenu", "(JII)J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPopupMenu.nativeCreatePopupMenu()J")]
+    async fn test_native_create_popup_menu() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_create_popup_menu(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CPopupMenu.nativeShowPopupMenu(JII)J")]
+    async fn test_native_show_popup_menu() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_show_popup_menu(thread, Arguments::default()).await;
+    }
+}

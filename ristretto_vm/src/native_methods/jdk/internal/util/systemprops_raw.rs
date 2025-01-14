@@ -152,3 +152,21 @@ async fn vm_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
     let result = Value::Object(Some(Reference::Array(string_array_class, properties)));
     Ok(Some(result))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/util/SystemProps$Raw";
+        assert!(registry
+            .method(class_name, "platformProperties", "()[Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "vmProperties", "()[Ljava/lang/String;")
+            .is_some());
+    }
+}

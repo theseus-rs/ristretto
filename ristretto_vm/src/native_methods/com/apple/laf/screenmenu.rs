@@ -35,3 +35,43 @@ async fn remove_menu_listeners(
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.ScreenMenu.removeMenuListeners(J)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/apple/laf/ScreenMenu";
+        assert!(registry
+            .method(
+                class_name,
+                "addMenuListeners",
+                "(Lcom/apple/laf/ScreenMenu;J)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "removeMenuListeners", "(J)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.laf.ScreenMenu.addMenuListeners(Lcom/apple/laf/ScreenMenu;J)J"
+    )]
+    async fn test_add_menu_listeners() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = add_menu_listeners(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.laf.ScreenMenu.removeMenuListeners(J)V"
+    )]
+    async fn test_remove_menu_listeners() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = remove_menu_listeners(thread, Arguments::default()).await;
+    }
+}

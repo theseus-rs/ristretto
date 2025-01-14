@@ -21,3 +21,31 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn define_class_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Proxy.defineClass0(Ljava/lang/ClassLoader;Ljava/lang/String;[BII)Ljava/lang/Class;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/reflect/Proxy";
+        assert!(registry
+            .method(
+                class_name,
+                "defineClass0",
+                "(Ljava/lang/ClassLoader;Ljava/lang/String;[BII)Ljava/lang/Class;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.reflect.Proxy.defineClass0(Ljava/lang/ClassLoader;Ljava/lang/String;[BII)Ljava/lang/Class;"
+    )]
+    async fn test_define_class_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = define_class_0(thread, Arguments::default()).await;
+    }
+}

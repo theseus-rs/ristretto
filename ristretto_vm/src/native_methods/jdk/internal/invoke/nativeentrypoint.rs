@@ -30,3 +30,36 @@ async fn vm_storage_to_vm_reg(
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.invoke.NativeEntryPoint.vmStorageToVMReg(II)J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/invoke/NativeEntryPoint";
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "vmStorageToVMReg", "(II)J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "jdk.internal.invoke.NativeEntryPoint.vmStorageToVMReg(II)J")]
+    async fn test_vm_storage_to_vm_reg() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = vm_storage_to_vm_reg(thread, Arguments::default()).await;
+    }
+}

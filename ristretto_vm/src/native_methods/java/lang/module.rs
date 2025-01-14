@@ -86,3 +86,109 @@ async fn add_reads_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 async fn define_module_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.lang.Module.defineModule0(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/String;)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java12 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/Module";
+        assert!(registry
+            .method(
+                class_name,
+                "defineModule0",
+                "(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "addExports0",
+                "(Ljava/lang/Module;Ljava/lang/String;Ljava/lang/Module;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "addExportsToAll0",
+                "(Ljava/lang/Module;Ljava/lang/String;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "addExportsToAllUnnamed0",
+                "(Ljava/lang/Module;Ljava/lang/String;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "addReads0",
+                "(Ljava/lang/Module;Ljava/lang/Module;)V"
+            )
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_11() {
+        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/Module";
+        assert!(registry
+            .method(
+                class_name,
+                "defineModule0",
+                "(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/String;)V"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Module.addExports0(Ljava/lang/Module;Ljava/lang/String;Ljava/lang/Module;)V"
+    )]
+    async fn test_add_exports_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = add_exports_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Module.addExportsToAll0(Ljava/lang/Module;Ljava/lang/String;)V"
+    )]
+    async fn test_add_exports_to_all_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = add_exports_to_all_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Module.addExportsToAllUnnamed0(Ljava/lang/Module;Ljava/lang/String;)V"
+    )]
+    async fn test_add_exports_to_all_unnamed_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = add_exports_to_all_unnamed_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Module.addReads0(Ljava/lang/Module;Ljava/lang/Module;)V"
+    )]
+    async fn test_add_reads_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = add_reads_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Module.defineModule0(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/String;)V"
+    )]
+    async fn test_define_module_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = define_module_0(thread, Arguments::default()).await;
+    }
+}

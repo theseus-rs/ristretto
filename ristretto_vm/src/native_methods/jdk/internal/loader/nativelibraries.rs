@@ -2,10 +2,9 @@ use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
-use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::Value;
 use std::sync::Arc;
 
 /// Register all native methods for `jdk.internal.loader.NativeLibraries`.
@@ -28,9 +27,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn find_builtin_lib(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError("argument must be an object".to_string()));
-    };
+    let object = arguments.pop_object()?;
     let vm = thread.vm()?;
     let library_file_name: String = object.try_into()?;
     let library_path = vm
@@ -50,6 +47,56 @@ async fn load(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 }
 
 #[async_recursion(?Send)]
-async fn unload(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("jdk.internal.loader.NativeLibraries.unload(Ljava/lang/String;ZJ)V")
+async fn unload(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+    let _handle = arguments.pop_long()?;
+    let _is_builtin = arguments.pop_int()? != 0;
+    let _name: String = arguments.pop_object()?.try_into()?;
+    Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/loader/NativeLibraries";
+        assert!(registry
+            .method(
+                class_name,
+                "findBuiltinLib",
+                "(Ljava/lang/String;)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "load",
+                "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "unload", "(Ljava/lang/String;ZJ)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_load() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = load(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Int(1)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_unload() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let name = "foo".to_object(&vm).await?;
+        let arguments = Arguments::new(vec![name, Value::Int(1), Value::Long(2)]);
+        let result = unload(thread, arguments).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
 }

@@ -60,3 +60,39 @@ async fn native_set_menu_state(
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMenuBarHandler.nativeSetMenuState(IZZ)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/apple/eawt/_AppMenuBarHandler";
+        assert!(registry
+            .method(class_name, "nativeSetDefaultMenuBar", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "nativeSetMenuState", "(IZZ)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.eawt._AppMenuBarHandler.nativeSetDefaultMenuBar(J)V"
+    )]
+    async fn test_native_set_default_menu_bar() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_default_menu_bar(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.apple.eawt._AppMenuBarHandler.nativeSetMenuState(IZZ)V"
+    )]
+    async fn test_native_set_menu_state() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_menu_state(thread, Arguments::default()).await;
+    }
+}

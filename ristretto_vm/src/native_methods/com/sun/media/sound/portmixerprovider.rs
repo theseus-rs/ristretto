@@ -30,3 +30,43 @@ async fn n_new_port_mixer_info(
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixerProvider.nNewPortMixerInfo(I)Lcom/sun/media/sound/PortMixerProvider$PortMixerInfo;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/sun/media/sound/PortMixerProvider";
+        assert!(registry
+            .method(class_name, "nGetNumDevices", "()I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "nNewPortMixerInfo",
+                "(I)Lcom/sun/media/sound/PortMixerProvider$PortMixerInfo;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.PortMixerProvider.nGetNumDevices()I"
+    )]
+    async fn test_n_get_num_devices() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_get_num_devices(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.media.sound.PortMixerProvider.nNewPortMixerInfo(I)Lcom/sun/media/sound/PortMixerProvider$PortMixerInfo;"
+    )]
+    async fn test_n_new_port_mixer_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = n_new_port_mixer_info(thread, Arguments::default()).await;
+    }
+}

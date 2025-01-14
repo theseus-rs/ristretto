@@ -642,3 +642,808 @@ async fn get_native_key_info(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 async fn initialize_library(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.initializeLibrary(Z)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "sun/security/pkcs11/wrapper/PKCS11";
+        assert!(registry
+            .method(
+                class_name,
+                "C_GCMDecryptInitWithRetry",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_GCMEncryptInitWithRetry",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V"
+            )
+            .is_some());
+        assert!(registry.method(class_name, "disconnect", "()V").is_some());
+        assert!(registry
+            .method(class_name, "freeMechanism", "(J)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_CloseSession", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_CopyObject",
+                "(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_CreateObject",
+                "(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_Decrypt", "(JJ[BIIJ[BII)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_DecryptFinal", "(JJ[BII)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_DecryptInit",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_DecryptUpdate", "(JJ[BIIJ[BII)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_DeriveKey", "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_DestroyObject", "(JJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_DigestFinal", "(J[BII)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_DigestInit",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_DigestKey", "(JJ)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_DigestSingle",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[BII[BII)I"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_DigestUpdate", "(JJ[BII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_Encrypt", "(JJ[BIIJ[BII)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_EncryptFinal", "(JJ[BII)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_EncryptInit",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_EncryptUpdate", "(JJ[BIIJ[BII)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_Finalize", "(Ljava/lang/Object;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_FindObjects", "(JJ)[J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_FindObjectsFinal", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_FindObjectsInit",
+                "(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_GenerateKey",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_GenerateKeyPair",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)[J"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_GenerateRandom", "(J[B)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_GetAttributeValue",
+                "(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_GetInfo",
+                "()Lsun/security/pkcs11/wrapper/CK_INFO;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_GetMechanismInfo",
+                "(JJ)Lsun/security/pkcs11/wrapper/CK_MECHANISM_INFO;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_GetMechanismList", "(J)[J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_GetOperationState", "(J)[B")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_GetSessionInfo",
+                "(J)Lsun/security/pkcs11/wrapper/CK_SESSION_INFO;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_GetSlotInfo",
+                "(J)Lsun/security/pkcs11/wrapper/CK_SLOT_INFO;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_GetSlotList", "(Z)[J")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_GetTokenInfo",
+                "(J)Lsun/security/pkcs11/wrapper/CK_TOKEN_INFO;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_Initialize", "(Ljava/lang/Object;)V")
+            .is_some());
+        assert!(registry.method(class_name, "C_Login", "(JJ[C)V").is_some());
+        assert!(registry.method(class_name, "C_Logout", "(J)V").is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_OpenSession",
+                "(JJLjava/lang/Object;Lsun/security/pkcs11/wrapper/CK_NOTIFY;)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_SeedRandom", "(J[B)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_SetAttributeValue",
+                "(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_SetOperationState", "(J[BJJ)V")
+            .is_some());
+        assert!(registry.method(class_name, "C_Sign", "(J[B)[B").is_some());
+        assert!(registry
+            .method(class_name, "C_SignFinal", "(JI)[B")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_SignInit",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_SignRecover", "(J[BII[BII)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_SignRecoverInit",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_SignUpdate", "(JJ[BII)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_UnwrapKey", "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[B[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_Verify", "(J[B[B)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_VerifyFinal", "(J[B)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_VerifyInit",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_VerifyRecover", "(J[BII[BII)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_VerifyRecoverInit",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "C_VerifyUpdate", "(JJ[BII)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "C_WrapKey",
+                "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JJ)[B"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "connect",
+                "(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "createNativeKey",
+                "(J[BJLsun/security/pkcs11/wrapper/CK_MECHANISM;)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "finalizeLibrary", "()V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getNativeKeyInfo",
+                "(JJJLsun/security/pkcs11/wrapper/CK_MECHANISM;)[B"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "initializeLibrary", "(Z)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_CloseSession(J)V")]
+    async fn test_c_close_session() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_close_session(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_CopyObject(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
+    )]
+    async fn test_c_copy_object() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_copy_object(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_CreateObject(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
+    )]
+    async fn test_c_create_object() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_create_object(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_Decrypt(JJ[BIIJ[BII)I")]
+    async fn test_c_decrypt() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_decrypt(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_DecryptFinal(JJ[BII)I")]
+    async fn test_c_decrypt_final() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_decrypt_final(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_DecryptInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+    )]
+    async fn test_c_decrypt_init() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_decrypt_init(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_DecryptUpdate(JJ[BIIJ[BII)I")]
+    async fn test_c_decrypt_update() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_decrypt_update(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_DeriveKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
+    )]
+    async fn test_c_derive_key() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_derive_key(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_DestroyObject(JJ)V")]
+    async fn test_c_destroy_object() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_destroy_object(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_DigestFinal(J[BII)I")]
+    async fn test_c_digest_final() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_digest_final(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_DigestInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;)V"
+    )]
+    async fn test_c_digest_init() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_digest_init(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_DigestKey(JJ)V")]
+    async fn test_c_digest_key() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_digest_key(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_DigestSingle(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[BII[BII)I"
+    )]
+    async fn test_c_digest_single() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_digest_single(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_DigestUpdate(JJ[BII)V")]
+    async fn test_c_digest_update() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_digest_update(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_Encrypt(JJ[BIIJ[BII)I")]
+    async fn test_c_encrypt() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_encrypt(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_EncryptFinal(JJ[BII)I")]
+    async fn test_c_encrypt_final() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_encrypt_final(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_EncryptInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+    )]
+    async fn test_c_encrypt_init() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_encrypt_init(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_EncryptUpdate(JJ[BIIJ[BII)I")]
+    async fn test_c_encrypt_update() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_encrypt_update(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_Finalize(Ljava/lang/Object;)V")]
+    async fn test_c_finalize() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_finalize(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_FindObjects(JJ)[J")]
+    async fn test_c_find_objects() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_find_objects(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_FindObjectsFinal(J)V")]
+    async fn test_c_find_objects_final() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_find_objects_final(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_FindObjectsInit(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V"
+    )]
+    async fn test_c_find_objects_init() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_find_objects_init(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_GCMDecryptInitWithRetry(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V"
+    )]
+    async fn test_c_gcm_decrypt_init_with_retry() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_gcm_decrypt_init_with_retry(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_GCMEncryptInitWithRetry(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V"
+    )]
+    async fn test_c_gcm_encrypt_init_with_retry() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_gcm_encrypt_init_with_retry(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_GenerateKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
+    )]
+    async fn test_c_generate_key() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_generate_key(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_GenerateKeyPair(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)[J"
+    )]
+    async fn test_c_generate_key_pair() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_generate_key_pair(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_GenerateRandom(J[B)V")]
+    async fn test_c_generate_random() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_generate_random(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_GetAttributeValue(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V"
+    )]
+    async fn test_c_get_attribute_value() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_get_attribute_value(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_GetInfo()Lsun/security/pkcs11/wrapper/CK_INFO;"
+    )]
+    async fn test_c_get_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_get_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_GetMechanismInfo(JJ)Lsun/security/pkcs11/wrapper/CK_MECHANISM_INFO;"
+    )]
+    async fn test_c_get_mechanism_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_get_mechanism_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_GetMechanismList(J)[J")]
+    async fn test_c_get_mechanism_list() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_get_mechanism_list(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_GetOperationState(J)[B")]
+    async fn test_c_get_operation_state() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_get_operation_state(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_GetSessionInfo(J)Lsun/security/pkcs11/wrapper/CK_SESSION_INFO;"
+    )]
+    async fn test_c_get_session_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_get_session_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_GetSlotInfo(J)Lsun/security/pkcs11/wrapper/CK_SLOT_INFO;"
+    )]
+    async fn test_c_get_slot_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_get_slot_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_GetSlotList(Z)[J")]
+    async fn test_c_get_slot_list() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_get_slot_list(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_GetTokenInfo(J)Lsun/security/pkcs11/wrapper/CK_TOKEN_INFO;"
+    )]
+    async fn test_c_get_token_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_get_token_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_Initialize(Ljava/lang/Object;)V"
+    )]
+    async fn test_c_initialize() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_initialize(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_Login(JJ[C)V")]
+    async fn test_c_login() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_login(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_Logout(J)V")]
+    async fn test_c_logout() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_logout(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_OpenSession(JJLjava/lang/Object;Lsun/security/pkcs11/wrapper/CK_NOTIFY;)J"
+    )]
+    async fn test_c_open_session() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_open_session(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_SeedRandom(J[B)V")]
+    async fn test_c_seed_random() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_seed_random(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_SessionCancel(JJ)V")]
+    async fn test_c_session_cancel() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_session_cancel(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_SetAttributeValue(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V"
+    )]
+    async fn test_c_set_attribute_value() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_set_attribute_value(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_SetOperationState(J[BJJ)V")]
+    async fn test_c_set_operation_state() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_set_operation_state(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_Sign(J[B)[B")]
+    async fn test_c_sign() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_sign(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_SignFinal(JI)[B")]
+    async fn test_c_sign_final() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_sign_final(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_SignInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+    )]
+    async fn test_c_sign_init() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_sign_init(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_SignRecover(J[BII[BII)I")]
+    async fn test_c_sign_recover() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_sign_recover(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_SignRecoverInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+    )]
+    async fn test_c_sign_recover_init() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_sign_recover_init(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_SignUpdate(JJ[BII)V")]
+    async fn test_c_sign_update() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_sign_update(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_UnwrapKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[B[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
+    )]
+    async fn test_c_unwrap_key() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_unwrap_key(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_Verify(J[B[B)V")]
+    async fn test_c_verify() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_verify(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_VerifyFinal(J[B)V")]
+    async fn test_c_verify_final() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_verify_final(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_VerifyInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+    )]
+    async fn test_c_verify_init() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_verify_init(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_VerifyRecover(J[BII[BII)I")]
+    async fn test_c_verify_recover() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_verify_recover(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_VerifyRecoverInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
+    )]
+    async fn test_c_verify_recover_init() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_verify_recover_init(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.C_VerifyUpdate(JJ[BII)V")]
+    async fn test_c_verify_update() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_verify_update(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.C_WrapKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JJ)[B"
+    )]
+    async fn test_c_wrap_key() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = c_wrap_key(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.connect(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;"
+    )]
+    async fn test_connect() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = connect(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.createNativeKey(J[BJLsun/security/pkcs11/wrapper/CK_MECHANISM;)J"
+    )]
+    async fn test_create_native_key() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_native_key(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.finalizeLibrary()V")]
+    async fn test_finalize_library() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = finalize_library(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.security.pkcs11.wrapper.PKCS11.getNativeKeyInfo(JJJLsun/security/pkcs11/wrapper/CK_MECHANISM;)[B"
+    )]
+    async fn test_get_native_key_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_native_key_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.pkcs11.wrapper.PKCS11.initializeLibrary(Z)V")]
+    async fn test_initialize_library() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = initialize_library(thread, Arguments::default()).await;
+    }
+}

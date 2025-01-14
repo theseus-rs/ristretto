@@ -52,3 +52,63 @@ async fn known_to_not_exist_0(
 ) -> Result<Option<Value>> {
     todo!("sun.misc.URLClassPath.knownToNotExist0(Ljava/lang/ClassLoader;Ljava/lang/String;)Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/misc/URLClassPath";
+        assert!(registry
+            .method(
+                class_name,
+                "getLookupCacheForClassLoader",
+                "(Ljava/lang/ClassLoader;Ljava/lang/String;)[I"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getLookupCacheURLs",
+                "(Ljava/lang/ClassLoader;)[Ljava/net/URL;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "knownToNotExist0",
+                "(Ljava/lang/ClassLoader;Ljava/lang/String;)Z"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.misc.URLClassPath.getLookupCacheForClassLoader(Ljava/lang/ClassLoader;Ljava/lang/String;)[I"
+    )]
+    async fn test_get_lookup_cache_for_class_loader() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_lookup_cache_for_class_loader(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.misc.URLClassPath.getLookupCacheURLs(Ljava/lang/ClassLoader;)[Ljava/net/URL;"
+    )]
+    async fn test_get_lookup_cache_urls() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_lookup_cache_urls(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.misc.URLClassPath.knownToNotExist0(Ljava/lang/ClassLoader;Ljava/lang/String;)Z"
+    )]
+    async fn test_known_to_not_exist_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = known_to_not_exist_0(thread, Arguments::default()).await;
+    }
+}

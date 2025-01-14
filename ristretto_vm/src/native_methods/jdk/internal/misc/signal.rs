@@ -1,7 +1,7 @@
 use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
-use crate::Error::{InternalError, InvalidOperand};
+use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
@@ -22,16 +22,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn find_signal_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let value = arguments.pop()?;
-    let signal_name: String = match value {
-        Value::Object(_) => value.try_into()?,
-        value => {
-            return Err(InvalidOperand {
-                expected: "object".to_string(),
-                actual: value.to_string(),
-            });
-        }
-    };
+    let signal_name: String = arguments.pop_object()?.try_into()?;
 
     // See: https://github.com/torvalds/linux/blob/master/arch/x86/include/uapi/asm/signal.h
     let signal = match signal_name.as_str() {
@@ -84,4 +75,50 @@ async fn handle_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 #[async_recursion(?Send)]
 async fn raise_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Signal.raise0(I)V")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::java_object::JavaObject;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "jdk/internal/misc/Signal";
+        assert!(registry
+            .method(class_name, "findSignal0", "(Ljava/lang/String;)I")
+            .is_some());
+        assert!(registry.method(class_name, "handle0", "(IJ)J").is_some());
+        assert!(registry.method(class_name, "raise0", "(I)V").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_find_signal_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let signal_name = "INT".to_object(&vm).await?;
+        let arguments = Arguments::new(vec![signal_name]);
+        let value = find_signal_0(thread, arguments).await?;
+        assert_eq!(value, Some(Value::Int(2)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_handle_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let signal = Value::Int(2);
+        let handler = Value::Long(0);
+        let arguments = Arguments::new(vec![signal, handler]);
+        let value = handle_0(thread, arguments).await?;
+        assert_eq!(value, Some(Value::Long(0)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "jdk.internal.misc.Signal.raise0(I)V")]
+    async fn test_raise_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = raise_0(thread, Arguments::default()).await;
+    }
 }

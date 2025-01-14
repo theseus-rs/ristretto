@@ -119,7 +119,11 @@ impl VM {
             None
         };
 
-        let method_registry = MethodRegistry::new(&java_class_file_version);
+        // TODO: set use_optimizations based on the environment (e.g. -Xdebug / -Xint).
+        // The bespoke method optimizations should likely be removed if/when a JIT is implemented.
+        let use_optimizations = true;
+        let mut method_registry = MethodRegistry::new(&java_class_file_version, use_optimizations);
+        method_registry.initialize();
 
         let vm = Arc::new_cyclic(|vm| VM {
             vm: vm.clone(),
@@ -455,7 +459,10 @@ mod tests {
 
     fn classes_jar_path() -> PathBuf {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        cargo_manifest.join("../classes/classes.jar")
+        cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar")
     }
 
     fn classes_jar_class_path() -> ClassPath {

@@ -23,3 +23,25 @@ async fn halt_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option
     let code = arguments.pop_int()?;
     std::process::exit(code);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/Shutdown";
+        assert!(registry.method(class_name, "beforeHalt", "()V").is_some());
+        assert!(registry.method(class_name, "halt0", "(I)V").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_before_halt() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = before_halt(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+}

@@ -64,3 +64,59 @@ async fn native_get_screen_pixels(
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CRobot.nativeGetScreenPixels(IIII[I)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/CRobot";
+        assert!(registry.method(class_name, "initRobot", "()V").is_some());
+        assert!(registry.method(class_name, "keyEvent", "(IZ)V").is_some());
+        assert!(registry
+            .method(class_name, "mouseEvent", "(IIIIZZ)V")
+            .is_some());
+        assert!(registry.method(class_name, "mouseWheel", "(I)V").is_some());
+        assert!(registry
+            .method(class_name, "nativeGetScreenPixels", "(IIII[I)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CRobot.initRobot()V")]
+    async fn test_init_robot() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_robot(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CRobot.keyEvent(IZ)V")]
+    async fn test_key_event() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = key_event(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CRobot.mouseEvent(IIIIZZ)V")]
+    async fn test_mouse_event() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = mouse_event(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CRobot.mouseWheel(I)V")]
+    async fn test_mouse_wheel() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = mouse_wheel(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.lwawt.macosx.CRobot.nativeGetScreenPixels(IIII[I)V")]
+    async fn test_native_get_screen_pixels() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_screen_pixels(thread, Arguments::default()).await;
+    }
+}

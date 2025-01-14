@@ -48,3 +48,65 @@ async fn get_glyph_cache_description(
 ) -> Result<Option<Value>> {
     todo!("sun.font.StrikeCache.getGlyphCacheDescription([J)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/font/StrikeCache";
+        assert!(registry
+            .method(class_name, "freeIntMemory", "([IJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "freeIntPointer", "(I)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "freeLongMemory", "([JJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "freeLongPointer", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getGlyphCacheDescription", "([J)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.StrikeCache.freeIntMemory([IJ)V")]
+    async fn test_free_int_memory() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_int_memory(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.StrikeCache.freeIntPointer(I)V")]
+    async fn test_free_int_pointer() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_int_pointer(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.StrikeCache.freeLongMemory([JJ)V")]
+    async fn test_free_long_memory() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_long_memory(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.StrikeCache.freeLongPointer(J)V")]
+    async fn test_free_long_pointer() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_long_pointer(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.StrikeCache.getGlyphCacheDescription([J)V")]
+    async fn test_get_glyph_cache_description() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_glyph_cache_description(thread, Arguments::default()).await;
+    }
+}

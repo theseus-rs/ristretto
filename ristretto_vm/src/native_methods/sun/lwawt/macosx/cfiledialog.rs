@@ -24,3 +24,31 @@ async fn native_run_file_dialog(
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CFileDialog.nativeRunFileDialog(Ljava/lang/String;IZZZZLjava/lang/String;Ljava/lang/String;)[Ljava/lang/String;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/lwawt/macosx/CFileDialog";
+        assert!(registry
+            .method(
+                class_name,
+                "nativeRunFileDialog",
+                "(Ljava/lang/String;IZZZZLjava/lang/String;Ljava/lang/String;)[Ljava/lang/String;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.lwawt.macosx.CFileDialog.nativeRunFileDialog(Ljava/lang/String;IZZZZLjava/lang/String;Ljava/lang/String;)[Ljava/lang/String;"
+    )]
+    async fn test_native_run_file_dialog() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_run_file_dialog(thread, Arguments::default()).await;
+    }
+}

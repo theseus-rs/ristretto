@@ -16,3 +16,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn get_unix_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("com.sun.security.auth.module.UnixSystem.getUnixInfo()V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "com/sun/security/auth/module/UnixSystem";
+        assert!(registry.method(class_name, "getUnixInfo", "()V").is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: com.sun.security.auth.module.UnixSystem.getUnixInfo()V"
+    )]
+    async fn test_get_unix_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_unix_info(thread, Arguments::default()).await;
+    }
+}

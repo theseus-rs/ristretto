@@ -17,3 +17,27 @@ async fn set_error_mode(_thread: Arc<Thread>, mut arguments: Arguments) -> Resul
     let _error_mode = arguments.pop_long()?;
     Ok(Some(Value::Long(0)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/io/Win32ErrorMode";
+        assert!(registry
+            .method(class_name, "setErrorMode", "(J)J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_set_error_mode() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let arguments = Arguments::new(vec![Value::Long(0)]);
+        let result = set_error_mode(thread, arguments).await?;
+        assert_eq!(result, Some(Value::Long(0)));
+        Ok(())
+    }
+}

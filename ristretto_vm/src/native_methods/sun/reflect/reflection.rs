@@ -68,3 +68,32 @@ async fn get_class_access_flags(
     let class_access_flags = access_flags.bits() as i32;
     Ok(Some(Value::Int(class_access_flags)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/reflect/Reflection";
+        assert!(registry
+            .method(class_name, "getCallerClass", "()Ljava/lang/Class;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getCallerClass", "(I)Ljava/lang/Class;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getClassAccessFlags", "(Ljava/lang/Class;)I")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.reflect.Reflection.getCallerClass(I)Ljava/lang/Class;")]
+    async fn test_get_caller_class_2() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let arguments = Arguments::default();
+        let _ = get_caller_class_2(thread, arguments).await;
+    }
+}

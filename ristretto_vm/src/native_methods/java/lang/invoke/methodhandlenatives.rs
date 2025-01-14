@@ -289,5 +289,248 @@ async fn static_field_base(_thread: Arc<Thread>, _arguments: Arguments) -> Resul
 
 #[async_recursion(?Send)]
 async fn static_field_offset(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!()
+    todo!("java.lang.invoke.MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java20 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/invoke/MethodHandleNatives";
+        assert!(registry
+            .method(
+                class_name,
+                "clearCallSiteContext",
+                "(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "copyOutBootstrapArguments",
+                "(Ljava/lang/Class;[III[Ljava/lang/Object;IZLjava/lang/Object;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "expand", "(Ljava/lang/invoke/MemberName;)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getMemberVMInfo",
+                "(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getMembers",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getNamedCon", "(I[Ljava/lang/Object;)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "init",
+                "(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "objectFieldOffset",
+                "(Ljava/lang/invoke/MemberName;)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "resolve",
+                "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;Z)Ljava/lang/invoke/MemberName;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "resolve",
+                "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "setCallSiteTargetNormal",
+                "(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "setCallSiteTargetVolatile",
+                "(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "staticFieldBase",
+                "(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "staticFieldOffset",
+                "(Ljava/lang/invoke/MemberName;)J"
+            )
+            .is_some());
+    }
+    #[test]
+    fn test_register_java_8() {
+        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/lang/invoke/MethodHandleNatives";
+        assert!(registry.method(class_name, "getConstant", "(I)I").is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "resolve",
+                "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;"
+            )
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.clearCallSiteContext(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V"
+    )]
+    async fn test_clear_call_site_context() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = clear_call_site_context(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.copyOutBootstrapArguments(Ljava/lang/Class;[III[Ljava/lang/Object;IZLjava/lang/Object;)V"
+    )]
+    async fn test_copy_out_bootstrap_arguments() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = copy_out_bootstrap_arguments(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.expand(Ljava/lang/invoke/MemberName;)V"
+    )]
+    async fn test_expand() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = expand(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.getConstant(I)I"
+    )]
+    async fn test_get_constant() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_constant(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.getMemberVMInfo(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;"
+    )]
+    async fn test_get_member_vm_info() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_member_vm_info(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.getMembers(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I"
+    )]
+    async fn test_get_members() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_members(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.getNamedCon(I[Ljava/lang/Object;)I"
+    )]
+    async fn test_get_named_con() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_named_con(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_init() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J"
+    )]
+    async fn test_object_field_offset() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = object_field_offset(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.setCallSiteTargetNormal(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V"
+    )]
+    async fn test_set_call_site_target_normal() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_call_site_target_normal(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.setCallSiteTargetVolatile(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V"
+    )]
+    async fn test_set_call_site_target_volatile() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_call_site_target_volatile(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.staticFieldBase(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;"
+    )]
+    async fn test_static_field_base() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = static_field_base(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J"
+    )]
+    async fn test_static_field_offset() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = static_field_offset(thread, Arguments::default()).await;
+    }
 }

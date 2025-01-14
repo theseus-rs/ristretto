@@ -181,3 +181,116 @@ async fn load_profile_native(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 async fn set_tag_data_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.java2d.cmm.lcms.LCMS.setTagDataNative(JI[B)V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/java2d/cmm/lcms/LCMS";
+        assert!(registry
+            .method(class_name, "freeTransform", "(J)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "colorConvert",
+                "(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getProfileDataNative", "(J[B)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getProfileSizeNative", "(J)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "initLCMS",
+                "(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getProfileID",
+                "(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "createNativeTransform",
+                "([JIIZIZLjava/lang/Object;)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getTagNative", "(JI)[B")
+            .is_some());
+        assert!(registry
+            .method(class_name, "loadProfileNative", "([BLjava/lang/Object;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setTagDataNative", "(JI[B)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.cmm.lcms.LCMS.colorConvert(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V"
+    )]
+    async fn test_color_convert() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = color_convert(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.cmm.lcms.LCMS.createNativeTransform([JIIILjava/lang/Object;)J"
+    )]
+    async fn test_create_native_transform() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_native_transform(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.cmm.lcms.LCMS.freeTransform(J)V")]
+    async fn test_free_transform() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_transform(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.cmm.lcms.LCMS.getProfileDataNative(J[B)V")]
+    async fn test_get_profile_data_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_profile_data_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.cmm.lcms.LCMS.getProfileID(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;"
+    )]
+    async fn test_get_profile_id() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_profile_id(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.cmm.lcms.LCMS.getProfileSizeNative(J)I")]
+    async fn test_get_profile_size_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_profile_size_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.cmm.lcms.LCMS.getTagNative(JI)[B")]
+    async fn test_get_tag_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_tag_native(thread, Arguments::default()).await;
+    }
+}

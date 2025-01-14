@@ -67,3 +67,35 @@ async fn init_r_texture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 async fn init_texture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLSurfaceData.initTexture(JZII)Z");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/java2d/metal/MTLSurfaceData";
+        assert!(registry.method(class_name, "clearWindow", "()V").is_some());
+        assert!(registry
+            .method(class_name, "getMTLTexturePointer", "(J)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "initFlipBackbuffer", "(J)Z")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "initOps",
+                "(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "initRTexture", "(JZII)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "initTexture", "(JZII)Z")
+            .is_some());
+    }
+}

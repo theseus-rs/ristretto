@@ -16,3 +16,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn buffered_copy_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.nio.fs.UnixFileSystem.bufferedCopy0(IIJIJ)V");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/nio/fs/UnixFileSystem";
+        assert!(registry
+            .method(class_name, "bufferedCopy0", "(IIJIJ)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.fs.UnixFileSystem.bufferedCopy0(IIJIJ)V")]
+    async fn test_buffered_copy_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = buffered_copy_0(thread, Arguments::default()).await;
+    }
+}

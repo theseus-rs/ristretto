@@ -155,3 +155,211 @@ async fn remove_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 async fn synchronize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.synchronize(Ljava/lang/String;JJ)Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/util/prefs/MacOSXPreferencesFile";
+        assert!(registry
+            .method(
+                class_name,
+                "addChildToNode",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Z"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "addKeyToNode",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "addNode",
+                "(Ljava/lang/String;Ljava/lang/String;JJ)Z"
+            )
+            .is_some());
+        assert!(registry.method(class_name, "anyHost", "()J").is_some());
+        assert!(registry.method(class_name, "anyUser", "()J").is_some());
+        assert!(registry.method(class_name, "currentHost", "()J").is_some());
+        assert!(registry.method(class_name, "currentUser", "()J").is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getChildrenForNode",
+                "(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getKeyFromNode",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getKeysForNode",
+                "(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "removeChildFromNode",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "removeKeyFromNode",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "removeNode",
+                "(Ljava/lang/String;Ljava/lang/String;JJ)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "synchronize", "(Ljava/lang/String;JJ)Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.addChildToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Z"
+    )]
+    async fn test_add_child_to_node() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = add_child_to_node(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.addKeyToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V"
+    )]
+    async fn test_add_key_to_node() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = add_key_to_node(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.addNode(Ljava/lang/String;Ljava/lang/String;JJ)Z"
+    )]
+    async fn test_add_node() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = add_node(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.anyHost()J"
+    )]
+    async fn test_any_host() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = any_host(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.anyUser()J"
+    )]
+    async fn test_any_user() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = any_user(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.currentHost()J"
+    )]
+    async fn test_current_host() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = current_host(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.currentUser()J"
+    )]
+    async fn test_current_user() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = current_user(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.getChildrenForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;"
+    )]
+    async fn test_get_children_for_node() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_children_for_node(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.getKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Ljava/lang/String;"
+    )]
+    async fn test_get_key_from_node() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_key_from_node(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.getKeysForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;"
+    )]
+    async fn test_get_keys_for_node() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_keys_for_node(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.removeChildFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V"
+    )]
+    async fn test_remove_child_from_node() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = remove_child_from_node(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.removeKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V"
+    )]
+    async fn test_remove_key_from_node() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = remove_key_from_node(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.removeNode(Ljava/lang/String;Ljava/lang/String;JJ)V"
+    )]
+    async fn test_remove_node() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = remove_node(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.prefs.MacOSXPreferencesFile.synchronize(Ljava/lang/String;JJ)Z"
+    )]
+    async fn test_synchronize() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = synchronize(thread, Arguments::default()).await;
+    }
+}

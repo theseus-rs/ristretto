@@ -24,3 +24,25 @@ async fn max_object_inspection_age(
 ) -> Result<Option<Value>> {
     todo!("sun.rmi.transport.GC.maxObjectInspectionAge()J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/rmi/transport/GC";
+        assert!(registry
+            .method(class_name, "maxObjectInspectionAge", "()J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.rmi.transport.GC.maxObjectInspectionAge()J")]
+    async fn test_max_object_inspection_age() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = max_object_inspection_age(thread, Arguments::default()).await;
+    }
+}

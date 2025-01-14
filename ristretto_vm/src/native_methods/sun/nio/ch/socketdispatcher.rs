@@ -57,3 +57,55 @@ async fn write_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
 async fn writev_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.nio.ch.SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java20 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "sun/nio/ch/SocketDispatcher";
+        assert!(registry
+            .method(class_name, "read0", "(Ljava/io/FileDescriptor;JI)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "readv0", "(Ljava/io/FileDescriptor;JI)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "write0", "(Ljava/io/FileDescriptor;JI)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "writev0", "(Ljava/io/FileDescriptor;JI)J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I")]
+    async fn test_read_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = read_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J")]
+    async fn test_readv_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = readv_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I")]
+    async fn test_write_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = write_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.nio.ch.SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J")]
+    async fn test_writev_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = writev_0(thread, Arguments::default()).await;
+    }
+}

@@ -30,3 +30,35 @@ async fn load_native_dir_fonts(
 async fn load_native_fonts(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.font.CFontManager.loadNativeFonts()V")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/font/CFontManager";
+        assert!(registry
+            .method(class_name, "loadNativeDirFonts", "(Ljava/lang/String;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "loadNativeFonts", "()V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.CFontManager.loadNativeDirFonts(Ljava/lang/String;)V")]
+    async fn test_load_native_dir_fonts() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = load_native_dir_fonts(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.font.CFontManager.loadNativeFonts()V")]
+    async fn test_load_native_fonts() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = load_native_fonts(thread, Arguments::default()).await;
+    }
+}

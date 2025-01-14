@@ -85,3 +85,103 @@ async fn init_x_render(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 async fn p_running_xinerama(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.pRunningXinerama()Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/awt/X11GraphicsEnvironment";
+        assert!(registry.method(class_name, "checkShmExt", "()I").is_some());
+        assert!(registry
+            .method(class_name, "getDefaultScreenNum", "()I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getDisplayString", "()Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getNumScreens", "()I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getXineramaCenterPoint", "()Ljava/awt/Point;")
+            .is_some());
+        assert!(registry.method(class_name, "initDisplay", "(Z)V").is_some());
+        assert!(registry.method(class_name, "initGLX", "()Z").is_some());
+        assert!(registry
+            .method(class_name, "initXRender", "(ZZ)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "pRunningXinerama", "()Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.checkShmExt()I")]
+    async fn test_check_shm_ext() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = check_shm_ext(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.getDefaultScreenNum()I")]
+    async fn test_get_default_screen_num() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_default_screen_num(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.awt.X11GraphicsEnvironment.getDisplayString()Ljava/lang/String;"
+    )]
+    async fn test_get_display_string() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_display_string(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.getNumScreens()I")]
+    async fn test_get_num_screens() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_num_screens(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.awt.X11GraphicsEnvironment.getXineramaCenterPoint()Ljava/awt/Point;"
+    )]
+    async fn test_get_xinerama_center_point() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_xinerama_center_point(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.initDisplay(Z)V")]
+    async fn test_init_display() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_display(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.initGLX()Z")]
+    async fn test_init_glx() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_glx(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.initXRender(ZZ)Z")]
+    async fn test_init_x_render() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_x_render(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.pRunningXinerama()Z")]
+    async fn test_p_running_xinerama() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = p_running_xinerama(thread, Arguments::default()).await;
+    }
+}

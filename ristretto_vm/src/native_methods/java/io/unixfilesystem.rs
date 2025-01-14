@@ -352,3 +352,321 @@ async fn set_read_only(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 async fn set_read_only_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.setReadOnly0(Ljava/io/File;)Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java18 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/io/UnixFileSystem";
+        assert!(registry
+            .method(
+                class_name,
+                "canonicalize0",
+                "(Ljava/lang/String;)Ljava/lang/String;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "checkAccess", "(Ljava/io/File;I)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "createDirectory", "(Ljava/io/File;)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "createFileExclusively", "(Ljava/lang/String;)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "delete0", "(Ljava/io/File;)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getBooleanAttributes0", "(Ljava/io/File;)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getLastModifiedTime", "(Ljava/io/File;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getLength", "(Ljava/io/File;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getSpace", "(Ljava/io/File;I)J")
+            .is_some());
+        assert!(registry.method(class_name, "initIDs", "()V").is_some());
+        assert!(registry
+            .method(class_name, "list", "(Ljava/io/File;)[Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "rename0", "(Ljava/io/File;Ljava/io/File;)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setLastModifiedTime", "(Ljava/io/File;J)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setPermission", "(Ljava/io/File;IZZ)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setReadOnly", "(Ljava/io/File;)Z")
+            .is_some());
+    }
+
+    #[test]
+    fn test_register_java_19() {
+        let mut registry = MethodRegistry::new(&Version::Java19 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "java/io/UnixFileSystem";
+        assert!(registry
+            .method(class_name, "checkAccess0", "(Ljava/io/File;I)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "createDirectory0", "(Ljava/io/File;)Z")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "createFileExclusively0",
+                "(Ljava/lang/String;)Z"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getLastModifiedTime0", "(Ljava/io/File;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getLength0", "(Ljava/io/File;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getNameMax0", "(Ljava/lang/String;)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getSpace0", "(Ljava/io/File;I)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "list0", "(Ljava/io/File;)[Ljava/lang/String;")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setLastModifiedTime0", "(Ljava/io/File;J)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setPermission0", "(Ljava/io/File;IZZ)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setReadOnly0", "(Ljava/io/File;)Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;"
+    )]
+    async fn test_canonicalize_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = canonicalize_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.checkAccess(Ljava/io/File;I)Z"
+    )]
+    async fn test_check_access() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = check_access(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.checkAccess0(Ljava/io/File;I)Z"
+    )]
+    async fn test_check_access_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = check_access_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.createDirectory(Ljava/io/File;)Z"
+    )]
+    async fn test_create_directory() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_directory(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.createDirectory0(Ljava/io/File;)Z"
+    )]
+    async fn test_create_directory_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_directory_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.createFileExclusively(Ljava/lang/String;)Z"
+    )]
+    async fn test_create_file_exclusively() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_file_exclusively(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.createFileExclusively0(Ljava/lang/String;)Z"
+    )]
+    async fn test_create_file_exclusively_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = create_file_exclusively_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.delete0(Ljava/io/File;)Z"
+    )]
+    async fn test_delete_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = delete_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.getLastModifiedTime(Ljava/io/File;)J"
+    )]
+    async fn test_get_last_modified_time() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_last_modified_time(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.getLastModifiedTime0(Ljava/io/File;)J"
+    )]
+    async fn test_get_last_modified_time_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_last_modified_time_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.getLength(Ljava/io/File;)J"
+    )]
+    async fn test_get_length() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_length(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.getLength0(Ljava/io/File;)J"
+    )]
+    async fn test_get_length_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_length_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.getNameMax0(Ljava/lang/String;)J"
+    )]
+    async fn test_get_name_max_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_name_max_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.getSpace(Ljava/io/File;I)J"
+    )]
+    async fn test_get_space() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_space(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.getSpace0(Ljava/io/File;I)J"
+    )]
+    async fn test_get_space_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_space_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = init_ids(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.list(Ljava/io/File;)[Ljava/lang/String;"
+    )]
+    async fn test_list() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = list(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;"
+    )]
+    async fn test_list_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = list_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z"
+    )]
+    async fn test_rename_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = rename_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.setLastModifiedTime(Ljava/io/File;J)Z"
+    )]
+    async fn test_set_last_modified_time() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_last_modified_time(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.setLastModifiedTime0(Ljava/io/File;J)Z"
+    )]
+    async fn test_set_last_modified_time_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_last_modified_time_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.setPermission(Ljava/io/File;IZZ)Z"
+    )]
+    async fn test_set_permission() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_permission(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.setPermission0(Ljava/io/File;IZZ)Z"
+    )]
+    async fn test_set_permission_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_permission_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.setReadOnly(Ljava/io/File;)Z"
+    )]
+    async fn test_set_read_only() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_read_only(thread, Arguments::default()).await;
+    }
+}

@@ -72,3 +72,56 @@ async fn send_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
         "sun.nio.ch.DatagramChannelImpl.send0(ZLjava/io/FileDescriptor;JILjava/net/InetAddress;I)I"
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/nio/ch/DatagramChannelImpl";
+        assert!(registry.method(class_name, "initIDs", "()V").is_some());
+        assert!(registry
+            .method(class_name, "receive0", "(Ljava/io/FileDescriptor;JIZ)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "send0",
+                "(ZLjava/io/FileDescriptor;JILjava/net/InetAddress;I)I"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "disconnect0", "(Ljava/io/FileDescriptor;Z)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.nio.ch.DatagramChannelImpl.disconnect0(Ljava/io/FileDescriptor;Z)V"
+    )]
+    async fn test_disconnect_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = disconnect_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.nio.ch.DatagramChannelImpl.receive0(Ljava/io/FileDescriptor;JIZ)I"
+    )]
+    async fn test_receive_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = receive_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.nio.ch.DatagramChannelImpl.send0(ZLjava/io/FileDescriptor;JILjava/net/InetAddress;I)I"
+    )]
+    async fn test_send_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = send_0(thread, Arguments::default()).await;
+    }
+}

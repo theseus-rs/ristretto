@@ -24,3 +24,26 @@ async fn max_object_inspection_age(
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Long(0)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/misc/GC";
+        assert!(registry
+            .method(class_name, "maxObjectInspectionAge", "()J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_max_object_inspection_age() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = max_object_inspection_age(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Long(0)));
+        Ok(())
+    }
+}

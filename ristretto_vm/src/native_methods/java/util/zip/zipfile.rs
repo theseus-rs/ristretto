@@ -129,3 +129,196 @@ async fn read(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 async fn starts_with_loc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.util.zip.ZipFile.startsWithLOC(J)Z")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/util/zip/ZipFile";
+        assert!(registry.method(class_name, "close", "(J)V").is_some());
+        assert!(registry.method(class_name, "freeEntry", "(JJ)V").is_some());
+        assert!(registry
+            .method(class_name, "getCommentBytes", "(J)[B")
+            .is_some());
+        assert!(registry.method(class_name, "getEntry", "(J[BZ)J").is_some());
+        assert!(registry
+            .method(class_name, "getEntryBytes", "(JI)[B")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getEntryCSize", "(J)J")
+            .is_some());
+        assert!(registry.method(class_name, "getEntryCrc", "(J)J").is_some());
+        assert!(registry
+            .method(class_name, "getEntryFlag", "(J)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getEntryMethod", "(J)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getEntrySize", "(J)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getEntryTime", "(J)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getManifestNum", "(J)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getNextEntry", "(JI)J")
+            .is_some());
+        assert!(registry.method(class_name, "getTotal", "(J)I").is_some());
+        assert!(registry
+            .method(class_name, "getZipMessage", "(J)Ljava/lang/String;")
+            .is_some());
+        assert!(registry.method(class_name, "initIDs", "()V").is_some());
+        assert!(registry
+            .method(class_name, "open", "(Ljava/lang/String;IJZ)J")
+            .is_some());
+        assert!(registry.method(class_name, "read", "(JJJ[BII)I").is_some());
+        assert!(registry
+            .method(class_name, "startsWithLOC", "(J)Z")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.close(J)V")]
+    async fn test_close() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = close(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.freeEntry(JJ)V")]
+    async fn test_free_entry() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_entry(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getCommentBytes(J)[B")]
+    async fn test_get_comment_bytes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_comment_bytes(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getEntry(J[BZ)J")]
+    async fn test_get_entry() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_entry(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getEntryBytes(JI)[B")]
+    async fn test_get_entry_bytes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_entry_bytes(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getEntryCSize(J)J")]
+    async fn test_get_entry_c_size() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_entry_c_size(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getEntryCrc(J)J")]
+    async fn test_get_entry_crc() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_entry_crc(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getEntryFlag(J)I")]
+    async fn test_get_entry_flag() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_entry_flag(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getEntryMethod(J)I")]
+    async fn test_get_entry_method() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_entry_method(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getEntrySize(J)J")]
+    async fn test_get_entry_size() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_entry_size(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getEntryTime(J)J")]
+    async fn test_get_entry_time() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_entry_time(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getManifestNum(J)I")]
+    async fn test_get_manifest_num() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_manifest_num(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getNextEntry(JI)J")]
+    async fn test_get_next_entry() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_next_entry(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.getTotal(J)I")]
+    async fn test_get_total() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_total(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.zip.ZipFile.getZipMessage(J)Ljava/lang/String;"
+    )]
+    async fn test_get_zip_message() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_zip_message(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = init_ids(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.zip.ZipFile.open(Ljava/lang/String;IJZ)J"
+    )]
+    async fn test_open() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = open(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.read(JJJ[BII)I")]
+    async fn test_read() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = read(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.startsWithLOC(J)Z")]
+    async fn test_starts_with_loc() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = starts_with_loc(thread, Arguments::default()).await;
+    }
+}

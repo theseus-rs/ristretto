@@ -30,3 +30,35 @@ async fn get_collection_count(
 async fn get_collection_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.management.GarbageCollectorImpl.getCollectionTime()J")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/management/GarbageCollectorImpl";
+        assert!(registry
+            .method(class_name, "getCollectionCount", "()J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getCollectionTime", "()J")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.management.GarbageCollectorImpl.getCollectionCount()J")]
+    async fn test_get_collection_count() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_collection_count(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.management.GarbageCollectorImpl.getCollectionTime()J")]
+    async fn test_get_collection_time() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_collection_time(thread, Arguments::default()).await;
+    }
+}

@@ -977,11 +977,8 @@ pub(crate) async fn is_big_endian_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    if cfg!(target_endian = "big") {
-        Ok(Some(Value::Int(1)))
-    } else {
-        Ok(Some(Value::Int(0)))
-    }
+    let big_endian = cfg!(target_endian = "big");
+    Ok(Some(Value::from(big_endian)))
 }
 
 #[async_recursion(?Send)]
@@ -1329,7 +1326,7 @@ pub(crate) async fn unaligned_access_0(
     _thread: Arc<Thread>,
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+    Ok(Some(Value::from(false)))
 }
 
 #[async_recursion(?Send)]
@@ -1359,4 +1356,631 @@ pub(crate) async fn writeback_pre_sync_0(
     _arguments: Arguments,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.writebackPreSync0()V")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[expect(clippy::too_many_lines)]
+    fn test_register() {
+        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
+        register(&mut registry);
+        let class_name = "jdk/internal/misc/Unsafe";
+        assert!(registry.method(class_name, "addressSize0", "()I").is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "allocateInstance",
+                "(Ljava/lang/Class;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "allocateMemory0", "(J)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "arrayBaseOffset0", "(Ljava/lang/Class;)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "arrayIndexScale0", "(Ljava/lang/Class;)I")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "compareAndExchangeInt",
+                "(Ljava/lang/Object;JII)I"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "compareAndExchangeLong",
+                "(Ljava/lang/Object;JJJ)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "compareAndExchangeObject",
+                "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "compareAndExchangeReference",
+                "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "compareAndSetInt", "(Ljava/lang/Object;JII)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "compareAndSetLong", "(Ljava/lang/Object;JJJ)Z")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "compareAndSetObject",
+                "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "compareAndSetReference",
+                "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "copyMemory0",
+                "(Ljava/lang/Object;JLjava/lang/Object;JJ)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "copySwapMemory0",
+                "(Ljava/lang/Object;JLjava/lang/Object;JJJ)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "defineAnonymousClass0",
+                "(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "defineClass0",
+                "(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "ensureClassInitialized0",
+                "(Ljava/lang/Class;)V"
+            )
+            .is_some());
+        assert!(registry.method(class_name, "freeMemory0", "(J)V").is_some());
+        assert!(registry.method(class_name, "fullFence", "()V").is_some());
+        assert!(registry
+            .method(class_name, "getBoolean", "(Ljava/lang/Object;J)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getBooleanVolatile", "(Ljava/lang/Object;J)Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getByte", "(Ljava/lang/Object;J)B")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getByteVolatile", "(Ljava/lang/Object;J)B")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getChar", "(Ljava/lang/Object;J)C")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getCharVolatile", "(Ljava/lang/Object;J)C")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getDouble", "(Ljava/lang/Object;J)D")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getDoubleVolatile", "(Ljava/lang/Object;J)D")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getFloat", "(Ljava/lang/Object;J)F")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getFloatVolatile", "(Ljava/lang/Object;J)F")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getInt", "(Ljava/lang/Object;J)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getIntVolatile", "(Ljava/lang/Object;J)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getLoadAverage0", "([DI)I")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getLong", "(Ljava/lang/Object;J)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getLongVolatile", "(Ljava/lang/Object;J)J")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getObject",
+                "(Ljava/lang/Object;J)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getObjectVolatile",
+                "(Ljava/lang/Object;J)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getReference",
+                "(Ljava/lang/Object;J)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "getReferenceVolatile",
+                "(Ljava/lang/Object;J)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "getShort", "(Ljava/lang/Object;J)S")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getShortVolatile", "(Ljava/lang/Object;J)S")
+            .is_some());
+        assert!(registry
+            .method(class_name, "getUncompressedObject", "(J)Ljava/lang/Object;")
+            .is_some());
+        assert!(registry.method(class_name, "isBigEndian0", "()Z").is_some());
+        assert!(registry.method(class_name, "loadFence", "()V").is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "objectFieldOffset0",
+                "(Ljava/lang/reflect/Field;)J"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "objectFieldOffset1",
+                "(Ljava/lang/Class;Ljava/lang/String;)J"
+            )
+            .is_some());
+        assert!(registry.method(class_name, "pageSize", "()I").is_some());
+        assert!(registry.method(class_name, "park", "(ZJ)V").is_some());
+        assert!(registry
+            .method(class_name, "putBoolean", "(Ljava/lang/Object;JZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putBooleanVolatile", "(Ljava/lang/Object;JZ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putByte", "(Ljava/lang/Object;JB)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putByteVolatile", "(Ljava/lang/Object;JB)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putChar", "(Ljava/lang/Object;JC)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putCharVolatile", "(Ljava/lang/Object;JC)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putDouble", "(Ljava/lang/Object;JD)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putDoubleVolatile", "(Ljava/lang/Object;JD)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putFloat", "(Ljava/lang/Object;JF)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putFloatVolatile", "(Ljava/lang/Object;JF)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putInt", "(Ljava/lang/Object;JI)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putIntVolatile", "(Ljava/lang/Object;JI)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putLong", "(Ljava/lang/Object;JJ)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putLongVolatile", "(Ljava/lang/Object;JJ)V")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "putObject",
+                "(Ljava/lang/Object;JLjava/lang/Object;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "putObjectVolatile",
+                "(Ljava/lang/Object;JLjava/lang/Object;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "putReference",
+                "(Ljava/lang/Object;JLjava/lang/Object;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "putReferenceVolatile",
+                "(Ljava/lang/Object;JLjava/lang/Object;)V"
+            )
+            .is_some());
+        assert!(registry
+            .method(class_name, "putShort", "(Ljava/lang/Object;JS)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "putShortVolatile", "(Ljava/lang/Object;JS)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "reallocateMemory0", "(JJ)J")
+            .is_some());
+        assert!(registry
+            .method(class_name, "registerNatives", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "setMemory0", "(Ljava/lang/Object;JJB)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "shouldBeInitialized0", "(Ljava/lang/Class;)Z")
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "staticFieldBase0",
+                "(Ljava/lang/reflect/Field;)Ljava/lang/Object;"
+            )
+            .is_some());
+        assert!(registry
+            .method(
+                class_name,
+                "staticFieldOffset0",
+                "(Ljava/lang/reflect/Field;)J"
+            )
+            .is_some());
+        assert!(registry.method(class_name, "storeFence", "()V").is_some());
+        assert!(registry
+            .method(class_name, "throwException", "(Ljava/lang/Throwable;)V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "unalignedAccess0", "()Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "unpark", "(Ljava/lang/Object;)V")
+            .is_some());
+        assert!(registry.method(class_name, "writeback0", "(J)V").is_some());
+        assert!(registry
+            .method(class_name, "writebackPostSync0", "()V")
+            .is_some());
+        assert!(registry
+            .method(class_name, "writebackPreSync0", "()V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_address_size_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = address_size_0(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Int(8)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.allocateInstance(Ljava/lang/Class;)Ljava/lang/Object;"
+    )]
+    async fn test_allocate_instance() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = allocate_instance(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.allocateMemory0(J)J")]
+    async fn test_allocate_memory_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = allocate_memory_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_array_base_offset_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = array_base_offset_0(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Int(0)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_array_index_scale_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = array_index_scale_0(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Int(1)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.compareAndExchangeInt(Ljava/lang/Object;JII)I"
+    )]
+    async fn test_compare_and_exchange_int() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = compare_and_exchange_int(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.compareAndExchangeLong(Ljava/lang/Object;JJJ)J"
+    )]
+    async fn test_compare_and_exchange_long() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = compare_and_exchange_long(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.compareAndExchangeObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_compare_and_exchange_object() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = compare_and_exchange_object(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.compareAndExchangeReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_compare_and_exchange_reference() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = compare_and_exchange_reference(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.copySwapMemory0(Ljava/lang/Object;JLjava/lang/Object;JJJ)V"
+    )]
+    async fn test_copy_swap_memory_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = copy_swap_memory_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.defineAnonymousClass0(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;"
+    )]
+    async fn test_define_anonymous_class_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = define_anonymous_class_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.defineClass0(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;"
+    )]
+    async fn test_define_class_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = define_class_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_ensure_class_initialized_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = ensure_class_initialized_0(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_free_memory_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = free_memory_0(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_full_fence() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = full_fence(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.getLoadAverage0([DI)I"
+    )]
+    async fn test_get_load_average_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_load_average_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.getUncompressedObject(J)Ljava/lang/Object;"
+    )]
+    async fn test_get_uncompressed_object() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_uncompressed_object(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_is_big_endian_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = is_big_endian_0(thread, Arguments::default()).await?;
+        let big_endian = cfg!(target_endian = "big");
+        assert_eq!(result, Some(Value::from(big_endian)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_fence() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = load_fence(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_field_offset_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = object_field_offset_0(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Long(0)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.pageSize()I")]
+    async fn test_page_size() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = page_size(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.park(ZJ)V")]
+    async fn test_park() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = park(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.reallocateMemory0(JJ)J"
+    )]
+    async fn test_reallocate_memory_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = reallocate_memory_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.setMemory0(Ljava/lang/Object;JJB)V"
+    )]
+    async fn test_set_memory_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_memory_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_should_be_initialized_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = should_be_initialized_0(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;"
+    )]
+    async fn test_static_field_base_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = static_field_base_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J"
+    )]
+    async fn test_static_field_offset_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = static_field_offset_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_store_fence() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = store_fence(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.throwException(Ljava/lang/Throwable;)V"
+    )]
+    async fn test_throw_exception() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = throw_exception(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_unaligned_access_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = unaligned_access_0(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.unpark(Ljava/lang/Object;)V"
+    )]
+    async fn test_unpark() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = unpark(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.writeback0(J)V")]
+    async fn test_writeback_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = writeback_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.writebackPostSync0()V"
+    )]
+    async fn test_writeback_post_sync_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = writeback_post_sync_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.writebackPreSync0()V")]
+    async fn test_writeback_pre_sync_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = writeback_pre_sync_0(thread, Arguments::default()).await;
+    }
 }

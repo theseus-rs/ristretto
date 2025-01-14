@@ -35,3 +35,37 @@ async fn is_finalization_enabled(
 async fn report_complete(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     Ok(None)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "java/lang/ref/Finalizer";
+        assert!(registry
+            .method(class_name, "isFinalizationEnabled", "()Z")
+            .is_some());
+        assert!(registry
+            .method(class_name, "reportComplete", "(Ljava/lang/Object;)V")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_is_finalization_enabled() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = is_finalization_enabled(thread, Arguments::default()).await?;
+        assert_eq!(Some(Value::from(false)), result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_report_complete() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = report_complete(thread, Arguments::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+}

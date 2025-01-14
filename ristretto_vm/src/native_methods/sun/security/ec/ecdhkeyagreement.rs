@@ -16,3 +16,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 async fn derive_key(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.security.ec.ECDHKeyAgreement.deriveKey([B[B[B)[B")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register() {
+        let mut registry = MethodRegistry::default();
+        register(&mut registry);
+        let class_name = "sun/security/ec/ECDHKeyAgreement";
+        assert!(registry
+            .method(class_name, "deriveKey", "([B[B[B)[B")
+            .is_some());
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.security.ec.ECDHKeyAgreement.deriveKey([B[B[B)[B")]
+    async fn test_derive_key() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = derive_key(thread, Arguments::default()).await;
+    }
+}
