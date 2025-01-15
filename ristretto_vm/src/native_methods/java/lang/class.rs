@@ -540,10 +540,79 @@ async fn get_declared_fields_0(
 
 #[async_recursion(?Send)]
 async fn get_declared_methods_0(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
+    thread: Arc<Thread>,
+    mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method;")
+    let public_only = arguments.pop_int()? != 0;
+    let object = arguments.pop_object()?;
+    let vm = thread.vm()?;
+    let class = get_class(&thread, &object).await?;
+    let class_object = class.to_object(&vm).await?;
+
+    let class_array = thread.class("[Ljava/lang/Class;").await?;
+    let mut methods = Vec::new();
+    for (slot, method) in class.methods().iter().enumerate() {
+        if method.name() == "<init>" {
+            continue;
+        }
+
+        let access_flags = method.access_flags();
+        if public_only && !access_flags.contains(MethodAccessFlags::PUBLIC) {
+            continue;
+        }
+
+        let method_name = method.name().to_value();
+        let mut parameters = Vec::new();
+        for parameter in method.parameters() {
+            let class_name = parameter.class_name();
+            let class = thread.class(class_name).await?;
+            parameters.push(class.to_object(&vm).await?);
+        }
+        let parameter_types = Value::try_from((class_array.clone(), parameters))?;
+        let return_type = match method.return_type() {
+            Some(return_type) => {
+                let class_name = return_type.class_name();
+                let class = thread.class(class_name).await?;
+                class.to_object(&vm).await?
+            }
+            None => Value::Object(None),
+        };
+        let checked_exceptions = get_exceptions(&thread, &class, method).await?;
+        let modifiers = Value::Int(i32::from(access_flags.bits()));
+        let slot = Value::Int(i32::try_from(slot)?);
+        // TODO: Add support for generic signature
+        let signature = Value::Object(None);
+        // TODO: Add support for annotations
+        let annotations = Value::from(Vec::<i8>::new());
+        // TODO: Add support for parameter_annotations
+        let parameter_annotations = Value::from(Vec::<i8>::new());
+        // TODO: Add support for annotationDefault
+        let annotation_default = Value::from(Vec::<i8>::new());
+
+        let method = thread
+            .object(
+                "java/lang/reflect/Method",
+                "Ljava/lang/Class;Ljava/lang/String;[Ljava/lang/Class;Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B[B",
+                vec![
+                    class_object.clone(),
+                    method_name,
+                    parameter_types,
+                    return_type,
+                    checked_exceptions,
+                    modifiers,
+                    slot,
+                    signature,
+                    annotations,
+                    parameter_annotations,
+                    annotation_default,
+                ],
+            )
+            .await?;
+        methods.push(method);
+    }
+    let methods_array_class = thread.class("[Ljava/lang/reflect/Method;").await?;
+    let methods = Value::try_from((methods_array_class, methods))?;
+    Ok(Some(methods))
 }
 
 #[async_recursion(?Send)]
@@ -1037,15 +1106,6 @@ mod tests {
     async fn test_get_constant_pool() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_constant_pool(thread, Arguments::default()).await;
-    }
-
-    #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method;"
-    )]
-    async fn test_get_declared_methods_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_declared_methods_0(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
