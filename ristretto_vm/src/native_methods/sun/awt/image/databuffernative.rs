@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/awt/image/DataBufferNative";
+
 /// Register all native methods for `sun.awt.image.DataBufferNative`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/awt/image/DataBufferNative";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getElem",
         "(IILsun/java2d/SurfaceData;)I",
         get_elem,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setElem",
         "(IIILsun/java2d/SurfaceData;)V",
         set_elem,
@@ -37,22 +38,9 @@ async fn set_elem(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/awt/image/DataBufferNative";
-        assert!(registry
-            .method(class_name, "getElem", "(IILsun/java2d/SurfaceData;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setElem", "(IIILsun/java2d/SurfaceData;)V")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.awt.image.DataBufferNative.getElem(IILsun/java2d/SurfaceData;)I"
+        expected = "not yet implemented: sun.awt.image.DataBufferNative.getElem(IILsun/java2d/SurfaceData;)I"
     )]
     async fn test_get_elem() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -61,7 +49,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.awt.image.DataBufferNative.setElem(IIILsun/java2d/SurfaceData;)V"
+        expected = "not yet implemented: sun.awt.image.DataBufferNative.setElem(IIILsun/java2d/SurfaceData;)V"
     )]
     async fn test_set_elem() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

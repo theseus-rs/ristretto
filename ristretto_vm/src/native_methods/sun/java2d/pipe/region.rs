@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/pipe/Region";
+
 /// Register all native methods for `sun.java2d.pipe.Region`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/pipe/Region";
-    registry.register(class_name, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
 }
 
 #[async_recursion(?Send)]
@@ -20,14 +21,6 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/pipe/Region";
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-    }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {

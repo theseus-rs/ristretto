@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/awt/DefaultMouseInfoPeer";
+
 /// Register all native methods for `sun.awt.DefaultMouseInfoPeer`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/awt/DefaultMouseInfoPeer";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "fillPointWithCoords",
         "(Ljava/awt/Point;)I",
         fill_point_with_coords,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "isWindowUnderMouse",
         "(Ljava/awt/Window;)Z",
         is_window_under_mouse,
@@ -43,22 +44,9 @@ async fn is_window_under_mouse(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/awt/DefaultMouseInfoPeer";
-        assert!(registry
-            .method(class_name, "fillPointWithCoords", "(Ljava/awt/Point;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "isWindowUnderMouse", "(Ljava/awt/Window;)Z")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.awt.DefaultMouseInfoPeer.fillPointWithCoords(Ljava/awt/Point;)I"
+        expected = "not yet implemented: sun.awt.DefaultMouseInfoPeer.fillPointWithCoords(Ljava/awt/Point;)I"
     )]
     async fn test_fill_point_with_coords() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -67,7 +55,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.awt.DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z"
+        expected = "not yet implemented: sun.awt.DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z"
     )]
     async fn test_is_window_under_mouse() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

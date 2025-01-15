@@ -6,30 +6,31 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl";
+
 /// Register all native methods for `jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl";
-    registry.register(class_name, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "ioctl0",
         "(IJLjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$winsize;)V",
         ioctl_0,
     );
-    registry.register(class_name, "isatty", "(I)I", isatty);
+    registry.register(CLASS_NAME, "isatty", "(I)I", isatty);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "tcgetattr",
         "(ILjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$termios;)V",
         tcgetattr,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "tcsetattr",
         "(IILjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$termios;)V",
         tcsetattr,
     );
-    registry.register(class_name, "ttyname_r", "(I[BI)V", ttyname_r);
+    registry.register(CLASS_NAME, "ttyname_r", "(I[BI)V", ttyname_r);
 }
 
 #[async_recursion(?Send)]
@@ -66,42 +67,9 @@ async fn ttyname_r(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl";
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "ioctl0",
-                "(IJLjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$winsize;)V"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "isatty", "(I)I").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "tcgetattr",
-                "(ILjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$termios;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "tcsetattr",
-                "(IILjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$termios;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "ttyname_r", "(I[BI)V")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ioctl0(IJLjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$winsize;)V"
+        expected = "not yet implemented: jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ioctl0(IJLjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$winsize;)V"
     )]
     async fn test_ioctl_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -110,7 +78,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.isatty(I)I"
+        expected = "not yet implemented: jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.isatty(I)I"
     )]
     async fn test_isatty() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -119,7 +87,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcgetattr(ILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
+        expected = "not yet implemented: jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcgetattr(ILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
     )]
     async fn test_tcgetattr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -128,7 +96,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcsetattr(IILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
+        expected = "not yet implemented: jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcsetattr(IILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
     )]
     async fn test_tcsetattr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -137,7 +105,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ttyname_r(I[BI)V"
+        expected = "not yet implemented: jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ttyname_r(I[BI)V"
     )]
     async fn test_ttyname_r() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

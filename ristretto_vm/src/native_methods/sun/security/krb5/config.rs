@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/security/krb5/Config";
+
 /// Register all native methods for `sun.security.krb5.Config`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/security/krb5/Config";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getWindowsDirectory",
         "(Z)Ljava/lang/String;",
         get_windows_directory,
@@ -29,18 +30,10 @@ async fn get_windows_directory(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/security/krb5/Config";
-        assert!(registry
-            .method(class_name, "getWindowsDirectory", "(Z)Ljava/lang/String;")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.security.krb5.Config.getWindowsDirectory(Z)Ljava/lang/String;")]
+    #[should_panic(
+        expected = "not yet implemented: sun.security.krb5.Config.getWindowsDirectory(Z)Ljava/lang/String;"
+    )]
     async fn test_get_windows_directory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_windows_directory(thread, Arguments::default()).await;

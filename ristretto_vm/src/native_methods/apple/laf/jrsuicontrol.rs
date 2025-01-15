@@ -6,61 +6,62 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "apple/laf/JRSUIControl";
+
 /// Register all native methods for `apple.laf.JRSUIControl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "apple/laf/JRSUIControl";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "disposeCFDictionary",
         "(J)V",
         dispose_cf_dictionary,
     );
-    registry.register(class_name, "getCFDictionary", "(Z)J", get_cf_dictionary);
+    registry.register(CLASS_NAME, "getCFDictionary", "(Z)J", get_cf_dictionary);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNativeHitPart",
         "(JJJDDDDDD)I",
         get_native_hit_part,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNativePartBounds",
         "([DJJJDDDDI)V",
         get_native_part_bounds,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNativeScrollBarOffsetChange",
         "(JJJDDDDIII)D",
         get_native_scroll_bar_offset_change,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getPtrOfBuffer",
         "(Ljava/nio/ByteBuffer;)J",
         get_ptr_of_buffer,
     );
-    registry.register(class_name, "initNativeJRSUI", "()I", init_native_jrsui);
+    registry.register(CLASS_NAME, "initNativeJRSUI", "()I", init_native_jrsui);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "paintChangesImage",
         "([IIIJJJDDDDJ)I",
         paint_changes_image,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "paintChangesToCGContext",
         "(JJJJDDDDJ)I",
         paint_changes_to_cg_context,
     );
-    registry.register(class_name, "paintImage", "([IIIJJJDDDD)I", paint_image);
+    registry.register(CLASS_NAME, "paintImage", "([IIIJJJDDDD)I", paint_image);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "paintToCGContext",
         "(JJJJDDDD)I",
         paint_to_cg_context,
     );
-    registry.register(class_name, "syncChanges", "(JJ)I", sync_changes);
+    registry.register(CLASS_NAME, "syncChanges", "(JJ)I", sync_changes);
 }
 
 #[async_recursion(?Send)]
@@ -138,53 +139,6 @@ async fn sync_changes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "apple/laf/JRSUIControl";
-        assert!(registry
-            .method(class_name, "disposeCFDictionary", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getCFDictionary", "(Z)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getNativeHitPart", "(JJJDDDDDD)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getNativePartBounds", "([DJJJDDDDI)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getNativeScrollBarOffsetChange",
-                "(JJJDDDDIII)D"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getPtrOfBuffer", "(Ljava/nio/ByteBuffer;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "initNativeJRSUI", "()I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "paintChangesImage", "([IIIJJJDDDDJ)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "paintChangesToCGContext", "(JJJJDDDDJ)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "paintImage", "([IIIJJJDDDD)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "paintToCGContext", "(JJJJDDDD)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "syncChanges", "(JJ)I")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

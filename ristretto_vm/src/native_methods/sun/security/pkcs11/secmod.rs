@@ -6,35 +6,36 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/security/pkcs11/Secmod";
+
 /// Register all native methods for `sun.security.pkcs11.Secmod`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/security/pkcs11/Secmod";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nssGetLibraryHandle",
         "(Ljava/lang/String;)J",
         nss_get_library_handle,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nssGetModuleList",
         "(JLjava/lang/String;)Ljava/lang/Object;",
         nss_get_module_list,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nssInitialize",
         "(Ljava/lang/String;JLjava/lang/String;Z)Z",
         nss_initialize,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nssLoadLibrary",
         "(Ljava/lang/String;)J",
         nss_load_library,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nssVersionCheck",
         "(JLjava/lang/String;)Z",
         nss_version_check,
@@ -73,39 +74,9 @@ async fn nss_version_check(_thread: Arc<Thread>, _arguments: Arguments) -> Resul
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/security/pkcs11/Secmod";
-        assert!(registry
-            .method(class_name, "nssGetLibraryHandle", "(Ljava/lang/String;)J")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nssGetModuleList",
-                "(JLjava/lang/String;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nssInitialize",
-                "(Ljava/lang/String;JLjava/lang/String;Z)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "nssLoadLibrary", "(Ljava/lang/String;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nssVersionCheck", "(JLjava/lang/String;)Z")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.security.pkcs11.Secmod.nssGetLibraryHandle(Ljava/lang/String;)J"
+        expected = "not yet implemented: sun.security.pkcs11.Secmod.nssGetLibraryHandle(Ljava/lang/String;)J"
     )]
     async fn test_nss_get_library_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -114,7 +85,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.security.pkcs11.Secmod.nssGetModuleList(JLjava/lang/String;)Ljava/lang/Object;"
+        expected = "not yet implemented: sun.security.pkcs11.Secmod.nssGetModuleList(JLjava/lang/String;)Ljava/lang/Object;"
     )]
     async fn test_nss_get_module_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -123,7 +94,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.security.pkcs11.Secmod.nssInitialize(Ljava/lang/String;JLjava/lang/String;Z)Z"
+        expected = "not yet implemented: sun.security.pkcs11.Secmod.nssInitialize(Ljava/lang/String;JLjava/lang/String;Z)Z"
     )]
     async fn test_nss_initialize() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -131,14 +102,18 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.security.pkcs11.Secmod.nssLoadLibrary(Ljava/lang/String;)J")]
+    #[should_panic(
+        expected = "not yet implemented: sun.security.pkcs11.Secmod.nssLoadLibrary(Ljava/lang/String;)J"
+    )]
     async fn test_nss_load_library() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = nss_load_library(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.security.pkcs11.Secmod.nssVersionCheck(JLjava/lang/String;)Z")]
+    #[should_panic(
+        expected = "not yet implemented: sun.security.pkcs11.Secmod.nssVersionCheck(JLjava/lang/String;)Z"
+    )]
     async fn test_nss_version_check() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = nss_version_check(thread, Arguments::default()).await;

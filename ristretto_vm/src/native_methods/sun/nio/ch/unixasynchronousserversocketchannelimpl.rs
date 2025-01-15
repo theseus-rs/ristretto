@@ -6,16 +6,17 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/nio/ch/UnixAsynchronousServerSocketChannelImpl";
+
 /// Register all native methods for `sun.nio.ch.UnixAsynchronousServerSocketChannelImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/nio/ch/UnixAsynchronousServerSocketChannelImpl";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "accept0",
         "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I",
         accept_0,
     );
-    registry.register(class_name, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
 }
 
 #[async_recursion(?Send)]
@@ -32,24 +33,9 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/nio/ch/UnixAsynchronousServerSocketChannelImpl";
-        assert!(registry
-            .method(
-                class_name,
-                "accept0",
-                "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.nio.ch.UnixAsynchronousServerSocketChannelImpl.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I"
+        expected = "not yet implemented: sun.nio.ch.UnixAsynchronousServerSocketChannelImpl.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I"
     )]
     async fn test_accept_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/font/CStrikeDisposer";
+
 /// Register all native methods for `sun.font.CStrikeDisposer`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/font/CStrikeDisposer";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "freeNativeScalerContext",
         "(J)V",
         free_native_scaler_context,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "removeGlyphInfoFromCache",
         "(J)V",
         remove_glyph_info_from_cache,
@@ -43,28 +44,19 @@ async fn remove_glyph_info_from_cache(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/font/CStrikeDisposer";
-        assert!(registry
-            .method(class_name, "freeNativeScalerContext", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "removeGlyphInfoFromCache", "(J)V")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.font.CStrikeDisposer.freeNativeScalerContext(J)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.font.CStrikeDisposer.freeNativeScalerContext(J)V"
+    )]
     async fn test_free_native_scaler_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = free_native_scaler_context(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.font.CStrikeDisposer.removeGlyphInfoFromCache(J)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.font.CStrikeDisposer.removeGlyphInfoFromCache(J)V"
+    )]
     async fn test_remove_glyph_info_from_cache() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = remove_glyph_info_from_cache(thread, Arguments::default()).await;

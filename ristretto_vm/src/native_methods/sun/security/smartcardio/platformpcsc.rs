@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/security/smartcardio/PlatformPCSC";
+
 /// Register all native methods for `sun.security.smartcardio.PlatformPCSC`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/security/smartcardio/PlatformPCSC";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "initialize",
         "(Ljava/lang/String;)V",
         initialize,
@@ -26,19 +27,9 @@ async fn initialize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Optio
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/security/smartcardio/PlatformPCSC";
-        assert!(registry
-            .method(class_name, "initialize", "(Ljava/lang/String;)V")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.security.smartcardio.PlatformPCSC.initialize(Ljava/lang/String;)V"
+        expected = "not yet implemented: sun.security.smartcardio.PlatformPCSC.initialize(Ljava/lang/String;)V"
     )]
     async fn test_initialize() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

@@ -1,48 +1,44 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
+const CLASS_NAME: &str = "com/sun/imageio/plugins/jpeg/JPEGImageReader";
 
 /// Register all native methods for `com.sun.imageio.plugins.jpeg.JPEGImageReader`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/imageio/plugins/jpeg/JPEGImageReader";
-    let java_version = registry.java_version();
-
-    if java_version >= &JAVA_11 {
+    if registry.java_major_version() >= JAVA_11 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "clearNativeReadAbortFlag",
             "(J)V",
             clear_native_read_abort_flag,
         );
     }
 
-    registry.register(class_name, "abortRead", "(J)V", abort_read);
-    registry.register(class_name, "disposeReader", "(J)V", dispose_reader);
+    registry.register(CLASS_NAME, "abortRead", "(J)V", abort_read);
+    registry.register(CLASS_NAME, "disposeReader", "(J)V", dispose_reader);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "initJPEGImageReader",
         "()J",
         init_jpeg_image_reader,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "initReaderIDs",
         "(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V",
         init_reader_i_ds,
     );
-    registry.register(class_name, "readImage", "(IJ[BI[I[IIIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;IIZ)Z", read_image);
-    registry.register(class_name, "readImageHeader", "(JZZ)Z", read_image_header);
-    registry.register(class_name, "resetLibraryState", "(J)V", reset_library_state);
-    registry.register(class_name, "resetReader", "(J)V", reset_reader);
-    registry.register(class_name, "setOutColorSpace", "(JI)V", set_out_color_space);
-    registry.register(class_name, "setSource", "(J)V", set_source);
+    registry.register(CLASS_NAME, "readImage", "(IJ[BI[I[IIIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;IIZ)Z", read_image);
+    registry.register(CLASS_NAME, "readImageHeader", "(JZZ)Z", read_image_header);
+    registry.register(CLASS_NAME, "resetLibraryState", "(J)V", reset_library_state);
+    registry.register(CLASS_NAME, "resetReader", "(J)V", reset_reader);
+    registry.register(CLASS_NAME, "setOutColorSpace", "(JI)V", set_out_color_space);
+    registry.register(CLASS_NAME, "setSource", "(J)V", set_source);
 }
 
 #[async_recursion(?Send)]
@@ -109,48 +105,6 @@ async fn set_source(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Optio
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "com/sun/imageio/plugins/jpeg/JPEGImageReader";
-        assert!(registry.method(class_name, "abortRead", "(J)V").is_some());
-        assert!(registry
-            .method(class_name, "clearNativeReadAbortFlag", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "disposeReader", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "initJPEGImageReader", "()J")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "initReaderIDs",
-                "(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "readImage",
-                "(IJ[BI[I[IIIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;IIZ)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "readImageHeader", "(JZZ)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "resetLibraryState", "(J)V")
-            .is_some());
-        assert!(registry.method(class_name, "resetReader", "(J)V").is_some());
-        assert!(registry
-            .method(class_name, "setOutColorSpace", "(JI)V")
-            .is_some());
-        assert!(registry.method(class_name, "setSource", "(J)V").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

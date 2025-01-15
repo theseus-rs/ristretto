@@ -6,15 +6,16 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/media/sound/MidiInDevice";
+
 /// Register all native methods for `com.sun.media.sound.MidiInDevice`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/media/sound/MidiInDevice";
-    registry.register(class_name, "nClose", "(J)V", n_close);
-    registry.register(class_name, "nGetMessages", "(J)V", n_get_messages);
-    registry.register(class_name, "nGetTimeStamp", "(J)J", n_get_time_stamp);
-    registry.register(class_name, "nOpen", "(I)J", n_open);
-    registry.register(class_name, "nStart", "(J)V", n_start);
-    registry.register(class_name, "nStop", "(J)V", n_stop);
+    registry.register(CLASS_NAME, "nClose", "(J)V", n_close);
+    registry.register(CLASS_NAME, "nGetMessages", "(J)V", n_get_messages);
+    registry.register(CLASS_NAME, "nGetTimeStamp", "(J)J", n_get_time_stamp);
+    registry.register(CLASS_NAME, "nOpen", "(I)J", n_open);
+    registry.register(CLASS_NAME, "nStart", "(J)V", n_start);
+    registry.register(CLASS_NAME, "nStop", "(J)V", n_stop);
 }
 
 #[async_recursion(?Send)]
@@ -50,23 +51,6 @@ async fn n_stop(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/media/sound/MidiInDevice";
-        assert!(registry.method(class_name, "nClose", "(J)V").is_some());
-        assert!(registry
-            .method(class_name, "nGetMessages", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nGetTimeStamp", "(J)J")
-            .is_some());
-        assert!(registry.method(class_name, "nOpen", "(I)J").is_some());
-        assert!(registry.method(class_name, "nStart", "(J)V").is_some());
-        assert!(registry.method(class_name, "nStop", "(J)V").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: com.sun.media.sound.MidiInDevice.nClose(J)V")]

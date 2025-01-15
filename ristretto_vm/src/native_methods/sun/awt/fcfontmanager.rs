@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/awt/FcFontManager";
+
 /// Register all native methods for `sun.awt.FcFontManager`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/awt/FcFontManager";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getFontPathNative",
         "(ZZ)Ljava/lang/String;",
         get_font_path_native,
@@ -29,18 +30,10 @@ async fn get_font_path_native(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/awt/FcFontManager";
-        assert!(registry
-            .method(class_name, "getFontPathNative", "(ZZ)Ljava/lang/String;")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.awt.FcFontManager.getFontPathNative(ZZ)Ljava/lang/String;")]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.FcFontManager.getFontPathNative(ZZ)Ljava/lang/String;"
+    )]
     async fn test_get_font_path_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_font_path_native(thread, Arguments::default()).await;

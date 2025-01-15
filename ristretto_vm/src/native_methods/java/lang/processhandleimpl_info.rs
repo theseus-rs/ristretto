@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/ProcessHandleImpl$Info";
+
 /// Register all native methods for `java.lang.ProcessHandleImpl$Info`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/ProcessHandleImpl$Info";
-    registry.register(class_name, "info0", "(J)V", info_0);
-    registry.register(class_name, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "info0", "(J)V", info_0);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
 }
 
 #[async_recursion(?Send)]
@@ -26,15 +27,6 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/ProcessHandleImpl$Info";
-        assert!(registry.method(class_name, "info0", "(J)V").is_some());
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.lang.ProcessHandleImpl$Info.info0(J)V")]

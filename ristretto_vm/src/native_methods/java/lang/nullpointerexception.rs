@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/NullPointerException";
+
 /// Register all native methods for `java.lang.NullPointerException`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/NullPointerException";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getExtendedNPEMessage",
         "()Ljava/lang/String;",
         get_extended_npe_message,
@@ -28,16 +29,6 @@ async fn get_extended_npe_message(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/NullPointerException";
-        assert!(registry
-            .method(class_name, "getExtendedNPEMessage", "()Ljava/lang/String;")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

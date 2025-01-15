@@ -4,21 +4,21 @@ use crate::native_methods::apple;
 use crate::native_methods::{com, java, jdk, sun};
 use crate::thread::Thread;
 use crate::Result;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_11: Version = Version::Java11 { minor: 0 };
-const JAVA_17: Version = Version::Java17 { minor: 0 };
-const JAVA_18: Version = Version::Java18 { minor: 0 };
-const JAVA_19: Version = Version::Java19 { minor: 0 };
-const JAVA_20: Version = Version::Java20 { minor: 0 };
-const JAVA_21: Version = Version::Java21 { minor: 0 };
-const JAVA_22: Version = Version::Java22 { minor: 0 };
+pub(crate) const JAVA_8: u16 = 8;
+pub(crate) const JAVA_11: u16 = 11;
+pub(crate) const JAVA_17: u16 = 17;
+pub(crate) const JAVA_18: u16 = 18;
+pub(crate) const JAVA_19: u16 = 19;
+pub(crate) const JAVA_20: u16 = 20;
+pub(crate) const JAVA_21: u16 = 21;
+pub(crate) const JAVA_22: u16 = 22;
+pub(crate) const JAVA_23: u16 = 23;
 
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
@@ -29,18 +29,17 @@ pub type RustMethod = fn(
 
 #[derive(Debug, Default)]
 pub struct MethodRegistry {
+    java_major_version: u16,
     use_optimizations: bool,
-    java_version: Version,
     methods: HashMap<String, RustMethod>,
 }
 
 impl MethodRegistry {
     /// Create a new registry.
-    pub fn new(java_version: &Version, use_optimizations: bool) -> Self {
-        let java_version = java_version.clone();
+    pub fn new(java_major_version: u16, use_optimizations: bool) -> Self {
         MethodRegistry {
+            java_major_version,
             use_optimizations,
-            java_version: java_version.clone(),
             methods: HashMap::new(),
         }
     }
@@ -48,7 +47,7 @@ impl MethodRegistry {
     /// Initialize the registry with all the native methods.
     #[expect(clippy::too_many_lines)]
     pub fn initialize(&mut self) {
-        if self.java_version <= JAVA_8 {
+        if self.java_major_version <= JAVA_8 {
             #[cfg(target_os = "macos")]
             {
                 apple::applescript::applescriptengine::register(self);
@@ -123,45 +122,26 @@ impl MethodRegistry {
             sun::tracing::dtrace::jvm::register(self);
         }
 
-        if self.java_version == JAVA_11 {
-            com::sun::java::util::jar::pack::nativeunpack::register(self);
-            java::io::objectinputstream::register(self);
-            java::io::objectoutputstream::register(self);
+        if self.java_major_version <= JAVA_11 {
             java::lang::classloader_nativelibrary::register(self);
-            java::lang::stringcoding::register(self);
-            java::net::abstractplaindatagramsocketimpl::register(self);
-            java::net::abstractplainsocketimpl::register(self);
-            java::net::socketcleanable::register(self);
             java::nio::mappedbytebuffer::register(self);
             sun::nio::ch::serversocketchannelimpl::register(self);
             sun::nio::ch::socketchannelimpl::register(self);
             sun::nio::ch::unixasynchronousserversocketchannelimpl::register(self);
+        }
+        if self.java_major_version == JAVA_11 {
+            java::lang::stringcoding::register(self);
             sun::security::ec::ecdhkeyagreement::register(self);
             sun::security::ec::ecdsasignature::register(self);
             sun::security::ec::eckeypairgenerator::register(self);
         }
-        if self.java_version >= JAVA_11 {
-            #[cfg(target_os = "macos")]
-            {
-                com::apple::eawt::application::register(self);
-            }
+        if self.java_major_version >= JAVA_11 {
             com::sun::management::internal::diagnosticcommandimpl::register(self);
             com::sun::management::internal::flag::register(self);
             com::sun::management::internal::garbagecollectorextimpl::register(self);
             com::sun::management::internal::gcinfobuilder::register(self);
             com::sun::management::internal::operatingsystemimpl::register(self);
             com::sun::security::auth::module::ntsystem::register(self);
-            java::awt::scrollbar::register(self);
-            java::awt::event_mod::inputevent::register(self);
-            java::awt::event_mod::keyevent::register(self);
-            java::awt::event_mod::mouseevent::register(self);
-            java::awt::image::bufferedimage::register(self);
-            java::awt::image::colormodel::register(self);
-            java::awt::image::indexcolormodel::register(self);
-            java::awt::image::kernel::register(self);
-            java::awt::image::raster::register(self);
-            java::awt::image::samplemodel::register(self);
-            java::awt::image::singlepixelpackedsamplemodel::register(self);
             java::io::filecleanable::register(self);
             java::lang::module::register(self);
             java::lang::processhandleimpl::register(self);
@@ -171,14 +151,8 @@ impl MethodRegistry {
             java::lang::stackstreamfactory_abstractstackwalker::register(self);
             java::lang::stacktraceelement::register(self);
             java::lang::stringutf16::register(self);
-            java::lang::invoke::methodhandle::register(self);
-            java::lang::invoke::methodhandlenatives::register(self);
             java::lang::invoke::varhandle::register(self);
             java::lang::r#ref::reference::register(self);
-            java::lang::reflect::array::register(self);
-            java::lang::reflect::executable::register(self);
-            java::lang::reflect::field::register(self);
-            java::util::timezone::register(self);
             jdk::internal::agent::filesystemimpl::register(self);
             jdk::internal::jimage::nativeimagebuffer::register(self);
             jdk::internal::loader::bootloader::register(self);
@@ -188,7 +162,7 @@ impl MethodRegistry {
             jdk::internal::perf::perf::register(self);
             jdk::internal::reflect::constantpool::register(self);
 
-            if self.java_version <= JAVA_22 {
+            if self.java_major_version <= JAVA_22 {
                 jdk::internal::reflect::nativeconstructoraccessorimpl::register(self);
                 jdk::internal::reflect::nativemethodaccessorimpl::register(self);
             }
@@ -203,12 +177,6 @@ impl MethodRegistry {
             }
 
             jdk::vm::ci::runtime::jvmci::register(self);
-            sun::awt::platformfont::register(self);
-            sun::awt::suntoolkit::register(self);
-            sun::java2d::osxoffscreensurfacedata::register(self);
-            sun::java2d::surfacedata::register(self);
-            sun::java2d::cmm::lcms::lcms::register(self);
-            sun::java2d::opengl::oglrenderer::register(self);
             sun::nio::ch::pollselectorimpl::register(self);
             sun::rmi::transport::gc::register(self);
             sun::security::pkcs11::secmod::register(self);
@@ -216,19 +184,19 @@ impl MethodRegistry {
             sun::tools::attach::virtualmachineimpl::register(self);
         }
 
-        if self.java_version <= JAVA_17 {
+        if self.java_major_version <= JAVA_17 {
             java::net::datagrampacket::register(self);
             java::net::plaindatagramsocketimpl::register(self);
             java::net::plainsocketimpl::register(self);
             java::net::socketinputstream::register(self);
             java::net::socketoutputstream::register(self);
         }
-        if self.java_version == JAVA_17 {
+        if self.java_major_version == JAVA_17 || self.java_major_version == JAVA_18 {
             jdk::internal::foreign::abi::programmableinvoker::register(self);
             jdk::internal::foreign::abi::programmableupcallhandler::register(self);
             jdk::internal::invoke::nativeentrypoint::register(self);
         }
-        if self.java_version >= JAVA_17 {
+        if self.java_major_version >= JAVA_17 {
             java::lang::invoke::lambdaproxyclassarchive::register(self);
             java::lang::nullpointerexception::register(self);
             java::lang::r#ref::phantomreference::register(self);
@@ -253,20 +221,20 @@ impl MethodRegistry {
             sun::nio::ch::unixdomainsockets::register(self);
         }
 
-        if self.java_version <= JAVA_18 {
+        if self.java_major_version <= JAVA_18 {
             java::net::inetaddressimplfactory::register(self);
         }
-        if self.java_version >= JAVA_18 {
+        if self.java_major_version >= JAVA_18 {
             java::lang::r#ref::finalizer::register(self);
             jdk::internal::reflect::directconstructorhandleaccessor_nativeaccessor::register(self);
             jdk::internal::reflect::directmethodhandleaccessor_nativeaccessor::register(self);
         }
 
-        if self.java_version <= JAVA_19 {
+        if self.java_major_version <= JAVA_19 {
             sun::nio::ch::filechannelimpl::register(self);
             sun::nio::fs::unixcopyfile::register(self);
         }
-        if self.java_version >= JAVA_19 {
+        if self.java_major_version >= JAVA_19 {
             java::lang::virtualthread::register(self);
             jdk::internal::foreign::abi::nativeentrypoint::register(self);
             jdk::internal::foreign::abi::upcalllinker::register(self);
@@ -277,17 +245,17 @@ impl MethodRegistry {
             jdk::internal::vm::continuationsupport::register(self);
         }
 
-        if self.java_version <= JAVA_20 {
+        if self.java_major_version <= JAVA_20 {
             java::lang::strictmath::register(self);
         }
-        if self.java_version >= JAVA_20 {
+        if self.java_major_version >= JAVA_20 {
             sun::nio::ch::unixdispatcher::register(self);
             sun::nio::ch::unixfiledispatcherimpl::register(self);
             sun::nio::fs::bsdfilesystem::register(self);
             sun::nio::fs::unixfilesystem::register(self);
         }
 
-        if self.java_version <= JAVA_21 {
+        if self.java_major_version <= JAVA_21 {
             java::awt::button::register(self);
             java::awt::color::register(self);
             java::awt::filedialog::register(self);
@@ -297,14 +265,14 @@ impl MethodRegistry {
             java::awt::textfield::register(self);
             java::util::concurrent::atomic::atomiclong::register(self);
         }
-        if self.java_version >= JAVA_21 {
+        if self.java_major_version >= JAVA_21 {
             jdk::internal::foreign::abi::fallback::libfallback::register(self);
             jdk::internal::io::jdkconsoleimpl::register(self);
             jdk::internal::org::jline::terminal::r#impl::jna::osx::clibraryimpl::register(self);
             jdk::internal::vm::foreignlinkersupport::register(self);
         }
 
-        if self.java_version >= JAVA_22 {
+        if self.java_major_version >= JAVA_22 {
             java::lang::stackframeinfo::register(self);
             jdk::vm::ci::services::services::register(self);
         }
@@ -318,6 +286,7 @@ impl MethodRegistry {
             apple::security::keychainstore::register(self);
             com::apple::eawt::appdockiconhandler::register(self);
             com::apple::eawt::appeventhandler::register(self);
+            com::apple::eawt::application::register(self);
             com::apple::eawt::appmenubarhandler::register(self);
             com::apple::eawt::appmischandlers::register(self);
             com::apple::eio::filemanager::register(self);
@@ -325,6 +294,10 @@ impl MethodRegistry {
             com::apple::laf::aquanativeresources::register(self);
             com::apple::laf::screenmenu::register(self);
             java::util::prefs::macosxpreferencesfile::register(self);
+            sun::java2d::osxoffscreensurfacedata::register(self);
+            sun::java2d::surfacedata::register(self);
+            sun::java2d::cmm::lcms::lcms::register(self);
+            sun::java2d::opengl::oglrenderer::register(self);
             sun::lwawt::macosx::caccessibility::register(self);
             sun::lwawt::macosx::caccessible::register(self);
             sun::lwawt::macosx::ccheckboxmenuitem::register(self);
@@ -367,6 +340,7 @@ impl MethodRegistry {
 
         com::sun::imageio::plugins::jpeg::jpegimagereader::register(self);
         com::sun::imageio::plugins::jpeg::jpegimagewriter::register(self);
+        com::sun::java::util::jar::pack::nativeunpack::register(self);
         com::sun::media::sound::directaudiodevice::register(self);
         com::sun::media::sound::directaudiodeviceprovider::register(self);
         com::sun::media::sound::midiindevice::register(self);
@@ -377,6 +351,9 @@ impl MethodRegistry {
         com::sun::media::sound::portmixer::register(self);
         com::sun::media::sound::portmixerprovider::register(self);
         com::sun::security::auth::module::unixsystem::register(self);
+        java::awt::event_mod::inputevent::register(self);
+        java::awt::event_mod::keyevent::register(self);
+        java::awt::event_mod::mouseevent::register(self);
         java::awt::awtevent::register(self);
         java::awt::checkbox::register(self);
         java::awt::checkboxmenuitem::register(self);
@@ -395,6 +372,7 @@ impl MethodRegistry {
         java::awt::menu::register(self);
         java::awt::menubar::register(self);
         java::awt::menuitem::register(self);
+        java::awt::scrollbar::register(self);
         java::awt::scrollpane::register(self);
         java::awt::scrollpaneadjustable::register(self);
         java::awt::splashscreen::register(self);
@@ -402,10 +380,19 @@ impl MethodRegistry {
         java::awt::toolkit::register(self);
         java::awt::trayicon::register(self);
         java::awt::window::register(self);
+        java::awt::image::bufferedimage::register(self);
+        java::awt::image::colormodel::register(self);
+        java::awt::image::indexcolormodel::register(self);
+        java::awt::image::kernel::register(self);
+        java::awt::image::raster::register(self);
+        java::awt::image::samplemodel::register(self);
+        java::awt::image::singlepixelpackedsamplemodel::register(self);
         java::io::console::register(self);
         java::io::filedescriptor::register(self);
         java::io::fileinputstream::register(self);
         java::io::fileoutputstream::register(self);
+        java::io::objectinputstream::register(self);
+        java::io::objectoutputstream::register(self);
         java::io::objectstreamclass::register(self);
         java::io::randomaccessfile::register(self);
         java::io::unixfilesystem::register(self);
@@ -413,8 +400,13 @@ impl MethodRegistry {
         java::lang::classloader::register(self);
         java::lang::double::register(self);
         java::lang::float::register(self);
+        java::lang::invoke::methodhandle::register(self);
+        java::lang::invoke::methodhandlenatives::register(self);
         java::lang::object::register(self);
         java::lang::processenvironment::register(self);
+        java::lang::reflect::array::register(self);
+        java::lang::reflect::executable::register(self);
+        java::lang::reflect::field::register(self);
         java::lang::runtime::register(self);
         java::lang::securitymanager::register(self);
         java::lang::shutdown::register(self);
@@ -422,23 +414,29 @@ impl MethodRegistry {
         java::lang::system::register(self);
         java::lang::thread::register(self);
         java::lang::throwable::register(self);
+        java::net::abstractplaindatagramsocketimpl::register(self);
+        java::net::abstractplainsocketimpl::register(self);
         java::net::inet4address::register(self);
         java::net::inet4addressimpl::register(self);
         java::net::inet6address::register(self);
         java::net::inet6addressimpl::register(self);
         java::net::inetaddress::register(self);
         java::net::networkinterface::register(self);
+        java::net::socketcleanable::register(self);
         java::security::accesscontroller::register(self);
         java::util::prefs::filesystempreferences::register(self);
         java::util::zip::adler32::register(self);
         java::util::zip::crc32::register(self);
         java::util::zip::deflater::register(self);
         java::util::zip::inflater::register(self);
+        java::util::timezone::register(self);
         jdk::internal::module::modulebootstrap::register(self);
         sun::awt::cgraphicsdevice::register(self);
         sun::awt::cgraphicsenvironment::register(self);
         sun::awt::debugsettings::register(self);
         sun::awt::fontdescriptor::register(self);
+        sun::awt::platformfont::register(self);
+        sun::awt::suntoolkit::register(self);
         sun::awt::image::bufimgsurfacedata::register(self);
         sun::awt::image::bytecomponentraster::register(self);
         sun::awt::image::bytepackedraster::register(self);
@@ -542,8 +540,8 @@ impl MethodRegistry {
     }
 
     /// Get the java version.
-    pub fn java_version(&self) -> &Version {
-        &self.java_version
+    pub fn java_major_version(&self) -> u16 {
+        self.java_major_version
     }
 
     /// Register a new Rust method.
@@ -558,6 +556,11 @@ impl MethodRegistry {
             format!("{class_name}.{method_name}{method_descriptor}"),
             method,
         );
+    }
+
+    /// Return a map of all the registered Rust methods.
+    pub(crate) fn methods(&self) -> &HashMap<String, RustMethod> {
+        &self.methods
     }
 
     /// Get a Rust method by class and method name.
@@ -579,6 +582,7 @@ impl MethodRegistry {
 mod tests {
     use super::*;
     use async_recursion::async_recursion;
+    use ristretto_classloader::runtime;
 
     #[async_recursion(?Send)]
     async fn test_none(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
@@ -599,7 +603,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_method() -> Result<()> {
-        let mut method_registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
+        let mut method_registry = MethodRegistry::new(JAVA_21, true);
         method_registry.initialize();
         let result = method_registry.method("java/lang/Object", "hashCode", "()I");
         assert!(result.is_some());
@@ -608,10 +612,143 @@ mod tests {
 
     #[tokio::test]
     async fn test_method_not_found() -> Result<()> {
-        let mut method_registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
+        let mut method_registry = MethodRegistry::new(JAVA_21, true);
         method_registry.initialize();
         let result = method_registry.method("foo", "hashCode", "()I");
         assert!(result.is_none());
         Ok(())
+    }
+
+    /// Get all the native methods for a given Java runtime.
+    async fn get_native_methods(version: &str) -> Result<Vec<String>> {
+        let (_java_home, _java_version, class_loader) =
+            runtime::version_class_loader(version).await?;
+        let class_path = class_loader.class_path();
+        let class_names = class_path.class_names().await?;
+        let mut native_methods = Vec::new();
+        for class_name in class_names {
+            let lower_class_name = class_name.to_lowercase();
+            // Skip GraalVM and Hotspot classes
+            if lower_class_name.contains("graalvm") || lower_class_name.contains("hotspot") {
+                continue;
+            }
+
+            let class = class_loader.load(&class_name).await?;
+            for method in class.methods() {
+                if method.is_native() {
+                    let method_name = method.name();
+                    let method_descriptor = method.descriptor();
+                    native_methods.push(format!("{class_name}.{method_name}{method_descriptor}"));
+                }
+            }
+        }
+        native_methods.sort();
+        Ok(native_methods)
+    }
+
+    /// Get all the non-optimization methods for a given Java version.
+    async fn get_registry_methods(version: &str) -> Result<Vec<String>> {
+        let version_major = version.split_once('.').unwrap_or_default().0;
+        let java_major_version: u16 = version_major.parse()?;
+        let mut method_registry = MethodRegistry::new(java_major_version, false);
+        method_registry.initialize();
+        let mut registry_methods = method_registry
+            .methods()
+            .keys()
+            .cloned()
+            .collect::<Vec<String>>();
+        registry_methods.sort();
+        Ok(registry_methods)
+    }
+
+    /// Verify that all the native methods are registered for a given runtime
+    async fn test_runtime(version: &str) -> Result<()> {
+        let native_methods = get_native_methods(version).await?;
+        let registry_methods = get_registry_methods(version).await?;
+        let missing_methods = native_methods
+            .iter()
+            .filter(|method| !registry_methods.contains(method))
+            .cloned()
+            .collect::<Vec<String>>();
+        let extra_methods = registry_methods
+            .iter()
+            .filter(|method| !native_methods.contains(method))
+            .cloned()
+            .collect::<Vec<String>>();
+
+        let mut errors = Vec::new();
+        if !missing_methods.is_empty() {
+            errors.push(format!(
+                "Missing methods {}:\n{}\n",
+                missing_methods.len(),
+                missing_methods.join("\n"),
+            ));
+        };
+        if !extra_methods.is_empty() {
+            // errors.push(format!(
+            //     "Extra methods {}:\n{}\n",
+            //     extra_methods.len(),
+            //     extra_methods.join("\n"),
+            // ));
+        };
+        if !errors.is_empty() {
+            eprintln!("{}", errors.join("\n"));
+            assert!(errors.is_empty());
+        }
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn test_runtime_v8() -> Result<()> {
+        test_runtime("8.432.06.1").await
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn test_runtime_v11() -> Result<()> {
+        test_runtime("11.0.25.9.1").await
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn test_runtime_v17() -> Result<()> {
+        test_runtime("17.0.12.7.1").await
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn test_runtime_v18() -> Result<()> {
+        test_runtime("18.0.2.9.1").await
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn test_runtime_v19() -> Result<()> {
+        test_runtime("19.0.2.7.1").await
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn test_runtime_v20() -> Result<()> {
+        test_runtime("20.0.2.10.1").await
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn test_runtime_v21() -> Result<()> {
+        test_runtime("21.0.5.11.1").await
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn test_runtime_v22() -> Result<()> {
+        test_runtime("22.0.2.9.1").await
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn test_runtime_v23() -> Result<()> {
+        test_runtime("23.0.1.8.1").await
     }
 }

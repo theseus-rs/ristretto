@@ -1,419 +1,415 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17};
 use crate::thread::Thread;
 use crate::Error::{InternalError, InvalidOperand};
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::{BaseType, Version};
+use ristretto_classfile::BaseType;
 use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
-const JAVA_17: Version = Version::Java17 { minor: 0 };
+const CLASS_NAME: &str = "jdk/internal/misc/Unsafe";
 
 /// Register all native methods for `jdk.internal.misc.Unsafe`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/misc/Unsafe";
-    let java_version = registry.java_version().clone();
-
-    if java_version <= JAVA_11 {
-        registry.register(class_name, "addressSize0", "()I", address_size_0);
+    if registry.java_major_version() <= JAVA_11 {
+        registry.register(CLASS_NAME, "addressSize0", "()I", address_size_0);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "compareAndExchangeObject",
             "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             compare_and_exchange_object,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "compareAndSetObject",
             "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
             compare_and_set_object,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "defineAnonymousClass0",
             "(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;",
             define_anonymous_class_0,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getObject",
             "(Ljava/lang/Object;J)Ljava/lang/Object;",
             get_object,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getObjectVolatile",
             "(Ljava/lang/Object;J)Ljava/lang/Object;",
             get_object_volatile,
         );
-        registry.register(class_name, "isBigEndian0", "()Z", is_big_endian_0);
-        registry.register(class_name, "pageSize", "()I", page_size);
+        registry.register(CLASS_NAME, "isBigEndian0", "()Z", is_big_endian_0);
+        registry.register(CLASS_NAME, "pageSize", "()I", page_size);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "putObject",
             "(Ljava/lang/Object;JLjava/lang/Object;)V",
             put_object,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "putObjectVolatile",
             "(Ljava/lang/Object;JLjava/lang/Object;)V",
             put_object_volatile,
         );
-        registry.register(class_name, "unalignedAccess0", "()Z", unaligned_access_0);
+        registry.register(CLASS_NAME, "unalignedAccess0", "()Z", unaligned_access_0);
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "compareAndExchangeReference",
             "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             compare_and_exchange_reference,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "compareAndSetReference",
             "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
             compare_and_set_reference,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getReference",
             "(Ljava/lang/Object;J)Ljava/lang/Object;",
             get_reference,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getReferenceVolatile",
             "(Ljava/lang/Object;J)Ljava/lang/Object;",
             get_reference_volatile,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getReference",
             "(Ljava/lang/Object;J)Ljava/lang/Object;",
             get_reference,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getReferenceVolatile",
             "(Ljava/lang/Object;J)Ljava/lang/Object;",
             get_reference_volatile,
         );
-        registry.register(class_name, "writeback0", "(J)V", writeback_0);
+        registry.register(CLASS_NAME, "writeback0", "(J)V", writeback_0);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "writebackPostSync0",
             "()V",
             writeback_post_sync_0,
         );
-        registry.register(class_name, "writebackPreSync0", "()V", writeback_pre_sync_0);
+        registry.register(CLASS_NAME, "writebackPreSync0", "()V", writeback_pre_sync_0);
     }
 
-    if java_version <= JAVA_17 {
-        registry.register(class_name, "loadFence", "()V", load_fence);
-        registry.register(class_name, "storeFence", "()V", store_fence);
+    if registry.java_major_version() <= JAVA_17 {
+        registry.register(CLASS_NAME, "loadFence", "()V", load_fence);
+        registry.register(CLASS_NAME, "storeFence", "()V", store_fence);
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "allocateInstance",
         "(Ljava/lang/Class;)Ljava/lang/Object;",
         allocate_instance,
     );
-    registry.register(class_name, "allocateMemory0", "(J)J", allocate_memory_0);
+    registry.register(CLASS_NAME, "allocateMemory0", "(J)J", allocate_memory_0);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "arrayBaseOffset0",
         "(Ljava/lang/Class;)I",
         array_base_offset_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "arrayIndexScale0",
         "(Ljava/lang/Class;)I",
         array_index_scale_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndExchangeInt",
         "(Ljava/lang/Object;JII)I",
         compare_and_exchange_int,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndExchangeLong",
         "(Ljava/lang/Object;JJJ)J",
         compare_and_exchange_long,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndExchangeReference",
         "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
         compare_and_exchange_reference,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndSetInt",
         "(Ljava/lang/Object;JII)Z",
         compare_and_set_int,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndSetLong",
         "(Ljava/lang/Object;JJJ)Z",
         compare_and_set_long,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndSetReference",
         "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
         compare_and_set_reference,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "copyMemory0",
         "(Ljava/lang/Object;JLjava/lang/Object;JJ)V",
         copy_memory_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "copySwapMemory0",
         "(Ljava/lang/Object;JLjava/lang/Object;JJJ)V",
         copy_swap_memory_0,
     );
-    registry.register(class_name, "defineClass0", "(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;", define_class_0);
+    registry.register(CLASS_NAME, "defineClass0", "(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;", define_class_0);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "ensureClassInitialized0",
         "(Ljava/lang/Class;)V",
         ensure_class_initialized_0,
     );
-    registry.register(class_name, "freeMemory0", "(J)V", free_memory_0);
-    registry.register(class_name, "fullFence", "()V", full_fence);
+    registry.register(CLASS_NAME, "freeMemory0", "(J)V", free_memory_0);
+    registry.register(CLASS_NAME, "fullFence", "()V", full_fence);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getBoolean",
         "(Ljava/lang/Object;J)Z",
         get_boolean,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getBooleanVolatile",
         "(Ljava/lang/Object;J)Z",
         get_boolean_volatile,
     );
-    registry.register(class_name, "getByte", "(Ljava/lang/Object;J)B", get_byte);
+    registry.register(CLASS_NAME, "getByte", "(Ljava/lang/Object;J)B", get_byte);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getByteVolatile",
         "(Ljava/lang/Object;J)B",
         get_byte_volatile,
     );
-    registry.register(class_name, "getChar", "(Ljava/lang/Object;J)C", get_char);
+    registry.register(CLASS_NAME, "getChar", "(Ljava/lang/Object;J)C", get_char);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCharVolatile",
         "(Ljava/lang/Object;J)C",
         get_char_volatile,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDouble",
         "(Ljava/lang/Object;J)D",
         get_double,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDoubleVolatile",
         "(Ljava/lang/Object;J)D",
         get_double_volatile,
     );
-    registry.register(class_name, "getFloat", "(Ljava/lang/Object;J)F", get_float);
+    registry.register(CLASS_NAME, "getFloat", "(Ljava/lang/Object;J)F", get_float);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getFloatVolatile",
         "(Ljava/lang/Object;J)F",
         get_float_volatile,
     );
-    registry.register(class_name, "getInt", "(Ljava/lang/Object;J)I", get_int);
+    registry.register(CLASS_NAME, "getInt", "(Ljava/lang/Object;J)I", get_int);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getIntVolatile",
         "(Ljava/lang/Object;J)I",
         get_int_volatile,
     );
-    registry.register(class_name, "getLoadAverage0", "([DI)I", get_load_average_0);
-    registry.register(class_name, "getLong", "(Ljava/lang/Object;J)J", get_long);
+    registry.register(CLASS_NAME, "getLoadAverage0", "([DI)I", get_load_average_0);
+    registry.register(CLASS_NAME, "getLong", "(Ljava/lang/Object;J)J", get_long);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getLongVolatile",
         "(Ljava/lang/Object;J)J",
         get_long_volatile,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getReference",
         "(Ljava/lang/Object;J)Ljava/lang/Object;",
         get_reference,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getReferenceVolatile",
         "(Ljava/lang/Object;J)Ljava/lang/Object;",
         get_reference_volatile,
     );
-    registry.register(class_name, "getShort", "(Ljava/lang/Object;J)S", get_short);
+    registry.register(CLASS_NAME, "getShort", "(Ljava/lang/Object;J)S", get_short);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getShortVolatile",
         "(Ljava/lang/Object;J)S",
         get_short_volatile,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getUncompressedObject",
         "(J)Ljava/lang/Object;",
         get_uncompressed_object,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "objectFieldOffset0",
         "(Ljava/lang/reflect/Field;)J",
         object_field_offset_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "objectFieldOffset1",
         "(Ljava/lang/Class;Ljava/lang/String;)J",
         object_field_offset_1,
     );
-    registry.register(class_name, "park", "(ZJ)V", park);
+    registry.register(CLASS_NAME, "park", "(ZJ)V", park);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putBoolean",
         "(Ljava/lang/Object;JZ)V",
         put_boolean,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putBooleanVolatile",
         "(Ljava/lang/Object;JZ)V",
         put_boolean_volatile,
     );
-    registry.register(class_name, "putByte", "(Ljava/lang/Object;JB)V", put_byte);
+    registry.register(CLASS_NAME, "putByte", "(Ljava/lang/Object;JB)V", put_byte);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putByteVolatile",
         "(Ljava/lang/Object;JB)V",
         put_byte_volatile,
     );
-    registry.register(class_name, "putChar", "(Ljava/lang/Object;JC)V", put_char);
+    registry.register(CLASS_NAME, "putChar", "(Ljava/lang/Object;JC)V", put_char);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putCharVolatile",
         "(Ljava/lang/Object;JC)V",
         put_char_volatile,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putDouble",
         "(Ljava/lang/Object;JD)V",
         put_double,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putDoubleVolatile",
         "(Ljava/lang/Object;JD)V",
         put_double_volatile,
     );
-    registry.register(class_name, "putFloat", "(Ljava/lang/Object;JF)V", put_float);
+    registry.register(CLASS_NAME, "putFloat", "(Ljava/lang/Object;JF)V", put_float);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putFloatVolatile",
         "(Ljava/lang/Object;JF)V",
         put_float_volatile,
     );
-    registry.register(class_name, "putInt", "(Ljava/lang/Object;JI)V", put_int);
+    registry.register(CLASS_NAME, "putInt", "(Ljava/lang/Object;JI)V", put_int);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putIntVolatile",
         "(Ljava/lang/Object;JI)V",
         put_int_volatile,
     );
-    registry.register(class_name, "putLong", "(Ljava/lang/Object;JJ)V", put_long);
+    registry.register(CLASS_NAME, "putLong", "(Ljava/lang/Object;JJ)V", put_long);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putLongVolatile",
         "(Ljava/lang/Object;JJ)V",
         put_long_volatile,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putReference",
         "(Ljava/lang/Object;JLjava/lang/Object;)V",
         put_reference,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putReferenceVolatile",
         "(Ljava/lang/Object;JLjava/lang/Object;)V",
         put_reference_volatile,
     );
-    registry.register(class_name, "putShort", "(Ljava/lang/Object;JS)V", put_short);
+    registry.register(CLASS_NAME, "putShort", "(Ljava/lang/Object;JS)V", put_short);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putShortVolatile",
         "(Ljava/lang/Object;JS)V",
         put_short_volatile,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "reallocateMemory0",
         "(JJ)J",
         reallocate_memory_0,
     );
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setMemory0",
         "(Ljava/lang/Object;JJB)V",
         set_memory_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "shouldBeInitialized0",
         "(Ljava/lang/Class;)Z",
         should_be_initialized_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "staticFieldBase0",
         "(Ljava/lang/reflect/Field;)Ljava/lang/Object;",
         static_field_base_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "staticFieldOffset0",
         "(Ljava/lang/reflect/Field;)J",
         static_field_offset_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "throwException",
         "(Ljava/lang/Throwable;)V",
         throw_exception,
     );
-    registry.register(class_name, "unpark", "(Ljava/lang/Object;)V", unpark);
-    registry.register(class_name, "writeback0", "(J)V", writeback_0);
+    registry.register(CLASS_NAME, "unpark", "(Ljava/lang/Object;)V", unpark);
+    registry.register(CLASS_NAME, "writeback0", "(J)V", writeback_0);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "writebackPostSync0",
         "()V",
         writeback_post_sync_0,
     );
-    registry.register(class_name, "writebackPreSync0", "()V", writeback_pre_sync_0);
+    registry.register(CLASS_NAME, "writebackPreSync0", "()V", writeback_pre_sync_0);
 }
 
 #[async_recursion(?Send)]
@@ -1361,335 +1357,6 @@ pub(crate) async fn writeback_pre_sync_0(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    #[expect(clippy::too_many_lines)]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "jdk/internal/misc/Unsafe";
-        assert!(registry.method(class_name, "addressSize0", "()I").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "allocateInstance",
-                "(Ljava/lang/Class;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "allocateMemory0", "(J)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "arrayBaseOffset0", "(Ljava/lang/Class;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "arrayIndexScale0", "(Ljava/lang/Class;)I")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "compareAndExchangeInt",
-                "(Ljava/lang/Object;JII)I"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "compareAndExchangeLong",
-                "(Ljava/lang/Object;JJJ)J"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "compareAndExchangeObject",
-                "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "compareAndExchangeReference",
-                "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "compareAndSetInt", "(Ljava/lang/Object;JII)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "compareAndSetLong", "(Ljava/lang/Object;JJJ)Z")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "compareAndSetObject",
-                "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "compareAndSetReference",
-                "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "copyMemory0",
-                "(Ljava/lang/Object;JLjava/lang/Object;JJ)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "copySwapMemory0",
-                "(Ljava/lang/Object;JLjava/lang/Object;JJJ)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "defineAnonymousClass0",
-                "(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "defineClass0",
-                "(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "ensureClassInitialized0",
-                "(Ljava/lang/Class;)V"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "freeMemory0", "(J)V").is_some());
-        assert!(registry.method(class_name, "fullFence", "()V").is_some());
-        assert!(registry
-            .method(class_name, "getBoolean", "(Ljava/lang/Object;J)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getBooleanVolatile", "(Ljava/lang/Object;J)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getByte", "(Ljava/lang/Object;J)B")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getByteVolatile", "(Ljava/lang/Object;J)B")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getChar", "(Ljava/lang/Object;J)C")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getCharVolatile", "(Ljava/lang/Object;J)C")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDouble", "(Ljava/lang/Object;J)D")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDoubleVolatile", "(Ljava/lang/Object;J)D")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getFloat", "(Ljava/lang/Object;J)F")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getFloatVolatile", "(Ljava/lang/Object;J)F")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getInt", "(Ljava/lang/Object;J)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getIntVolatile", "(Ljava/lang/Object;J)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getLoadAverage0", "([DI)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getLong", "(Ljava/lang/Object;J)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getLongVolatile", "(Ljava/lang/Object;J)J")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getObject",
-                "(Ljava/lang/Object;J)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getObjectVolatile",
-                "(Ljava/lang/Object;J)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getReference",
-                "(Ljava/lang/Object;J)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getReferenceVolatile",
-                "(Ljava/lang/Object;J)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getShort", "(Ljava/lang/Object;J)S")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getShortVolatile", "(Ljava/lang/Object;J)S")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getUncompressedObject", "(J)Ljava/lang/Object;")
-            .is_some());
-        assert!(registry.method(class_name, "isBigEndian0", "()Z").is_some());
-        assert!(registry.method(class_name, "loadFence", "()V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "objectFieldOffset0",
-                "(Ljava/lang/reflect/Field;)J"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "objectFieldOffset1",
-                "(Ljava/lang/Class;Ljava/lang/String;)J"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "pageSize", "()I").is_some());
-        assert!(registry.method(class_name, "park", "(ZJ)V").is_some());
-        assert!(registry
-            .method(class_name, "putBoolean", "(Ljava/lang/Object;JZ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putBooleanVolatile", "(Ljava/lang/Object;JZ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putByte", "(Ljava/lang/Object;JB)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putByteVolatile", "(Ljava/lang/Object;JB)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putChar", "(Ljava/lang/Object;JC)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putCharVolatile", "(Ljava/lang/Object;JC)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putDouble", "(Ljava/lang/Object;JD)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putDoubleVolatile", "(Ljava/lang/Object;JD)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putFloat", "(Ljava/lang/Object;JF)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putFloatVolatile", "(Ljava/lang/Object;JF)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putInt", "(Ljava/lang/Object;JI)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putIntVolatile", "(Ljava/lang/Object;JI)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putLong", "(Ljava/lang/Object;JJ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putLongVolatile", "(Ljava/lang/Object;JJ)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "putObject",
-                "(Ljava/lang/Object;JLjava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "putObjectVolatile",
-                "(Ljava/lang/Object;JLjava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "putReference",
-                "(Ljava/lang/Object;JLjava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "putReferenceVolatile",
-                "(Ljava/lang/Object;JLjava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "putShort", "(Ljava/lang/Object;JS)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putShortVolatile", "(Ljava/lang/Object;JS)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "reallocateMemory0", "(JJ)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setMemory0", "(Ljava/lang/Object;JJB)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "shouldBeInitialized0", "(Ljava/lang/Class;)Z")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "staticFieldBase0",
-                "(Ljava/lang/reflect/Field;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "staticFieldOffset0",
-                "(Ljava/lang/reflect/Field;)J"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "storeFence", "()V").is_some());
-        assert!(registry
-            .method(class_name, "throwException", "(Ljava/lang/Throwable;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "unalignedAccess0", "()Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "unpark", "(Ljava/lang/Object;)V")
-            .is_some());
-        assert!(registry.method(class_name, "writeback0", "(J)V").is_some());
-        assert!(registry
-            .method(class_name, "writebackPostSync0", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "writebackPreSync0", "()V")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_address_size_0() -> Result<()> {

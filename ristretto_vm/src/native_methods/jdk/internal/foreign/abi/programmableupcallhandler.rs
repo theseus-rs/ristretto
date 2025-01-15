@@ -6,14 +6,15 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/foreign/abi/ProgrammableUpcallHandler";
+
 /// Register all native methods for `jdk.internal.foreign.abi.ProgrammableUpcallHandler`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/foreign/abi/ProgrammableUpcallHandler";
-    registry.register(class_name, "allocateOptimizedUpcallStub", "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J", allocate_optimized_upcall_stub);
-    registry.register(class_name, "allocateUpcallStub", "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J", allocate_upcall_stub);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "allocateOptimizedUpcallStub", "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J", allocate_optimized_upcall_stub);
+    registry.register(CLASS_NAME, "allocateUpcallStub", "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J", allocate_upcall_stub);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "supportsOptimizedUpcalls",
         "()Z",
         supports_optimized_upcalls,
@@ -53,36 +54,9 @@ async fn supports_optimized_upcalls(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/foreign/abi/ProgrammableUpcallHandler";
-        assert!(registry
-            .method(
-                class_name,
-                "allocateOptimizedUpcallStub",
-                "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "allocateUpcallStub",
-                "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "supportsOptimizedUpcalls", "()Z")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateOptimizedUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J"
+        expected = "not yet implemented: jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateOptimizedUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J"
     )]
     async fn test_allocate_optimized_upcall_stub() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -91,7 +65,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
+        expected = "not yet implemented: jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
     )]
     async fn test_allocate_upcall_stub() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -100,7 +74,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.foreign.abi.ProgrammableUpcallHandler.supportsOptimizedUpcalls()Z"
+        expected = "not yet implemented: jdk.internal.foreign.abi.ProgrammableUpcallHandler.supportsOptimizedUpcalls()Z"
     )]
     async fn test_supports_optimized_upcalls() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

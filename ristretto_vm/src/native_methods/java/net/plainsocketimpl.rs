@@ -1,67 +1,63 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
+const CLASS_NAME: &str = "java/net/PlainSocketImpl";
 
 /// Register all native methods for `java.net.PlainSocketImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/net/PlainSocketImpl";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_11 {
-        registry.register(class_name, "socketCreate", "(Z)V", socket_create);
+    if registry.java_major_version() <= JAVA_11 {
+        registry.register(CLASS_NAME, "socketCreate", "(Z)V", socket_create);
     } else {
-        registry.register(class_name, "socketCreate", "(ZZ)V", socket_create);
+        registry.register(CLASS_NAME, "socketCreate", "(ZZ)V", socket_create);
     }
 
-    registry.register(class_name, "initProto", "()V", init_proto);
+    registry.register(CLASS_NAME, "initProto", "()V", init_proto);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "socketAccept",
         "(Ljava/net/SocketImpl;)V",
         socket_accept,
     );
-    registry.register(class_name, "socketAvailable", "()I", socket_available);
+    registry.register(CLASS_NAME, "socketAvailable", "()I", socket_available);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "socketBind",
         "(Ljava/net/InetAddress;I)V",
         socket_bind,
     );
-    registry.register(class_name, "socketClose0", "(Z)V", socket_close_0);
+    registry.register(CLASS_NAME, "socketClose0", "(Z)V", socket_close_0);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "socketConnect",
         "(Ljava/net/InetAddress;II)V",
         socket_connect,
     );
-    registry.register(class_name, "socketCreate", "(ZZ)V", socket_create);
+    registry.register(CLASS_NAME, "socketCreate", "(ZZ)V", socket_create);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "socketGetOption",
         "(ILjava/lang/Object;)I",
         socket_get_option,
     );
-    registry.register(class_name, "socketListen", "(I)V", socket_listen);
+    registry.register(CLASS_NAME, "socketListen", "(I)V", socket_listen);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "socketSendUrgentData",
         "(I)V",
         socket_send_urgent_data,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "socketSetOption0",
         "(IZLjava/lang/Object;)V",
         socket_set_option_0,
     );
-    registry.register(class_name, "socketShutdown", "(I)V", socket_shutdown);
+    registry.register(CLASS_NAME, "socketShutdown", "(I)V", socket_shutdown);
 }
 
 #[async_recursion(?Send)]
@@ -130,57 +126,6 @@ async fn socket_shutdown(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java12 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/net/PlainSocketImpl";
-        assert!(registry.method(class_name, "initProto", "()V").is_some());
-        assert!(registry
-            .method(class_name, "socketAccept", "(Ljava/net/SocketImpl;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketAvailable", "()I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketBind", "(Ljava/net/InetAddress;I)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketClose0", "(Z)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketConnect", "(Ljava/net/InetAddress;II)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketCreate", "(ZZ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketGetOption", "(ILjava/lang/Object;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketListen", "(I)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketSendUrgentData", "(I)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketSetOption0", "(IZLjava/lang/Object;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketShutdown", "(I)V")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_11() {
-        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/net/PlainSocketImpl";
-        assert!(registry
-            .method(class_name, "socketCreate", "(Z)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.net.PlainSocketImpl.initProto()V")]

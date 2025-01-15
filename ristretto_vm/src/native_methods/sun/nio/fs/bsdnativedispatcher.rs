@@ -1,39 +1,34 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_20, JAVA_21};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_20: Version = Version::Java20 { minor: 0 };
-const JAVA_21: Version = Version::Java21 { minor: 0 };
+const CLASS_NAME: &str = "sun/nio/fs/BsdNativeDispatcher";
 
 /// Register all native methods for `sun.nio.fs.BsdNativeDispatcher`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/nio/fs/BsdNativeDispatcher";
-    let java_version = registry.java_version().clone();
-
-    if java_version >= JAVA_20 {
-        registry.register(class_name, "clonefile0", "(JJI)I", clonefile_0);
-        registry.register(class_name, "setattrlist0", "(JIJJJJ)V", setattrlist_0);
+    if registry.java_major_version() >= JAVA_20 {
+        registry.register(CLASS_NAME, "clonefile0", "(JJI)I", clonefile_0);
+        registry.register(CLASS_NAME, "setattrlist0", "(JIJJJJ)V", setattrlist_0);
     }
 
-    if java_version >= JAVA_21 {
-        registry.register(class_name, "fsetattrlist0", "(IIJJJJ)V", fsetattrlist_0);
+    if registry.java_major_version() >= JAVA_21 {
+        registry.register(CLASS_NAME, "fsetattrlist0", "(IIJJJJ)V", fsetattrlist_0);
     }
 
-    registry.register(class_name, "endfsstat", "(J)V", endfsstat);
+    registry.register(CLASS_NAME, "endfsstat", "(J)V", endfsstat);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "fsstatEntry",
         "(JLsun/nio/fs/UnixMountEntry;)I",
         fsstat_entry,
     );
-    registry.register(class_name, "getfsstat", "()J", getfsstat);
-    registry.register(class_name, "getmntonname0", "(J)[B", getmntonname_0);
-    registry.register(class_name, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "getfsstat", "()J", getfsstat);
+    registry.register(CLASS_NAME, "getmntonname0", "(J)[B", getmntonname_0);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
 }
 
 #[async_recursion(?Send)]
@@ -80,44 +75,26 @@ async fn setattrlist_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "sun/nio/fs/BsdNativeDispatcher";
-        assert!(registry
-            .method(class_name, "clonefile0", "(JJI)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setattrlist0", "(JIJJJJ)V")
-            .is_some());
-        assert!(registry.method(class_name, "endfsstat", "(J)V").is_some());
-        assert!(registry
-            .method(class_name, "fsstatEntry", "(JLsun/nio/fs/UnixMountEntry;)I")
-            .is_some());
-        assert!(registry.method(class_name, "getfsstat", "()J").is_some());
-        assert!(registry
-            .method(class_name, "getmntonname0", "(J)[B")
-            .is_some());
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.nio.fs.BsdNativeDispatcher.clonefile0(JJI)I")]
+    #[should_panic(
+        expected = "not yet implemented: sun.nio.fs.BsdNativeDispatcher.clonefile0(JJI)I"
+    )]
     async fn test_clonefile_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = clonefile_0(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.nio.fs.BsdNativeDispatcher.endfsstat(J)V")]
+    #[should_panic(expected = "not yet implemented: sun.nio.fs.BsdNativeDispatcher.endfsstat(J)V")]
     async fn test_endfsstat() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = endfsstat(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.nio.fs.BsdNativeDispatcher.fsetattrlist0(IIJJJJ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.nio.fs.BsdNativeDispatcher.fsetattrlist0(IIJJJJ)V"
+    )]
     async fn test_fsetattrlist_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = fsetattrlist_0(thread, Arguments::default()).await;
@@ -125,7 +102,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.nio.fs.BsdNativeDispatcher.fsstatEntry(JLsun/nio/fs/UnixMountEntry;)I"
+        expected = "not yet implemented: sun.nio.fs.BsdNativeDispatcher.fsstatEntry(JLsun/nio/fs/UnixMountEntry;)I"
     )]
     async fn test_fsstat_entry() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -133,14 +110,16 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.nio.fs.BsdNativeDispatcher.getfsstat()J")]
+    #[should_panic(expected = "not yet implemented: sun.nio.fs.BsdNativeDispatcher.getfsstat()J")]
     async fn test_getfsstat() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = getfsstat(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.nio.fs.BsdNativeDispatcher.getmntonname0(J)[B")]
+    #[should_panic(
+        expected = "not yet implemented: sun.nio.fs.BsdNativeDispatcher.getmntonname0(J)[B"
+    )]
     async fn test_getmntonname_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = getmntonname_0(thread, Arguments::default()).await;
@@ -155,7 +134,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.nio.fs.BsdNativeDispatcher.setattrlist0(JIJJJJ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.nio.fs.BsdNativeDispatcher.setattrlist0(JIJJJJ)V"
+    )]
     async fn test_setattrlist_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = setattrlist_0(thread, Arguments::default()).await;

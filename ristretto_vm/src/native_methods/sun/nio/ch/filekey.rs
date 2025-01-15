@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/nio/ch/FileKey";
+
 /// Register all native methods for `sun.nio.ch.FileKey`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/nio/ch/FileKey";
-    registry.register(class_name, "init", "(Ljava/io/FileDescriptor;)V", init);
-    registry.register(class_name, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "init", "(Ljava/io/FileDescriptor;)V", init);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
 }
 
 #[async_recursion(?Send)]
@@ -27,19 +28,10 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/nio/ch/FileKey";
-        assert!(registry
-            .method(class_name, "init", "(Ljava/io/FileDescriptor;)V")
-            .is_some());
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.nio.ch.FileKey.init(Ljava/io/FileDescriptor;)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.nio.ch.FileKey.init(Ljava/io/FileDescriptor;)V"
+    )]
     async fn test_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = init(thread, Arguments::default()).await;

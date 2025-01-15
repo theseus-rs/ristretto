@@ -1,122 +1,114 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_19, JAVA_20, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_11: Version = Version::Java11 { minor: 0 };
-const JAVA_17: Version = Version::Java17 { minor: 0 };
-const JAVA_19: Version = Version::Java19 { minor: 0 };
-const JAVA_20: Version = Version::Java20 { minor: 0 };
+const CLASS_NAME: &str = "sun/java2d/cmm/lcms/LCMS";
 
 /// Register all native methods for `sun.java2d.cmm.lcms.LCMS`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/cmm/lcms/LCMS";
-    let java_version = registry.java_version().clone();
-
-    if java_version <= JAVA_8 {
-        registry.register(class_name, "freeTransform", "(J)V", free_transform);
+    if registry.java_major_version() <= JAVA_8 {
+        registry.register(CLASS_NAME, "freeTransform", "(J)V", free_transform);
     }
 
-    if java_version <= JAVA_11 {
-        registry.register(class_name, "colorConvert", "(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V", color_convert);
+    if registry.java_major_version() <= JAVA_11 {
+        registry.register(CLASS_NAME, "colorConvert", "(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V", color_convert);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getProfileDataNative",
             "(J[B)V",
             get_profile_data_native,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getProfileSizeNative",
             "(J)I",
             get_profile_size_native,
         );
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "colorConvert",
             "(JLsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V",
             color_convert,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getProfileDataNative",
             "(J)[B",
             get_profile_data_native,
         );
     }
 
-    if java_version == JAVA_17 {
+    if registry.java_major_version() == JAVA_17 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "colorConvert",
             "(JLsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V",
             color_convert,
         );
     }
 
-    if java_version <= JAVA_17 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "initLCMS",
             "(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V",
             init_lcms,
         );
-    } else if java_version <= JAVA_19 {
+    } else if registry.java_major_version() <= JAVA_19 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "colorConvert",
             "(JIIIIIIZZLjava/lang/Object;Ljava/lang/Object;II)V",
             color_convert,
         );
     }
 
-    if java_version <= JAVA_19 {
+    if registry.java_major_version() <= JAVA_19 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getProfileID",
             "(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;",
             get_profile_id,
         );
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "colorConvert",
             "(JIIIIIILjava/lang/Object;Ljava/lang/Object;II)V",
             color_convert,
         );
     }
 
-    if java_version <= JAVA_20 {
+    if registry.java_major_version() <= JAVA_20 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "createNativeTransform",
             "([JIIZIZLjava/lang/Object;)J",
             create_native_transform,
         );
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "createNativeTransform",
             "([JIIILjava/lang/Object;)J",
             create_native_transform,
         );
     }
 
-    registry.register(class_name, "getTagNative", "(JI)[B", get_tag_native);
+    registry.register(CLASS_NAME, "getTagNative", "(JI)[B", get_tag_native);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "loadProfileNative",
         "([BLjava/lang/Object;)J",
         load_profile_native,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setTagDataNative",
         "(JI[B)V",
         set_tag_data_native,
@@ -186,62 +178,9 @@ async fn set_tag_data_native(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/cmm/lcms/LCMS";
-        assert!(registry
-            .method(class_name, "freeTransform", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "colorConvert",
-                "(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getProfileDataNative", "(J[B)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getProfileSizeNative", "(J)I")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "initLCMS",
-                "(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getProfileID",
-                "(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "createNativeTransform",
-                "([JIIZIZLjava/lang/Object;)J"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getTagNative", "(JI)[B")
-            .is_some());
-        assert!(registry
-            .method(class_name, "loadProfileNative", "([BLjava/lang/Object;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setTagDataNative", "(JI[B)V")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.cmm.lcms.LCMS.colorConvert(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V"
+        expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.colorConvert(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V"
     )]
     async fn test_color_convert() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -250,7 +189,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.cmm.lcms.LCMS.createNativeTransform([JIIILjava/lang/Object;)J"
+        expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.createNativeTransform([JIIILjava/lang/Object;)J"
     )]
     async fn test_create_native_transform() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -258,14 +197,16 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.cmm.lcms.LCMS.freeTransform(J)V")]
+    #[should_panic(expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.freeTransform(J)V")]
     async fn test_free_transform() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = free_transform(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.cmm.lcms.LCMS.getProfileDataNative(J[B)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.getProfileDataNative(J[B)V"
+    )]
     async fn test_get_profile_data_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_profile_data_native(thread, Arguments::default()).await;
@@ -273,7 +214,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.cmm.lcms.LCMS.getProfileID(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;"
+        expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.getProfileID(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;"
     )]
     async fn test_get_profile_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -281,14 +222,16 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.cmm.lcms.LCMS.getProfileSizeNative(J)I")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.getProfileSizeNative(J)I"
+    )]
     async fn test_get_profile_size_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_profile_size_native(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.cmm.lcms.LCMS.getTagNative(JI)[B")]
+    #[should_panic(expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.getTagNative(JI)[B")]
     async fn test_get_tag_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_tag_native(thread, Arguments::default()).await;

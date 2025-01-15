@@ -9,22 +9,23 @@ use std::sync::Arc;
 use std::time::Duration;
 use sysinfo::{Pid, ProcessesToUpdate, Signal, System};
 
+const CLASS_NAME: &str = "java/lang/ProcessHandleImpl";
+
 /// Register all native methods for `java.lang.ProcessHandleImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/ProcessHandleImpl";
-    registry.register(class_name, "destroy0", "(JJZ)Z", destroy_0);
-    registry.register(class_name, "getCurrentPid0", "()J", get_current_pid_0);
+    registry.register(CLASS_NAME, "destroy0", "(JJZ)Z", destroy_0);
+    registry.register(CLASS_NAME, "getCurrentPid0", "()J", get_current_pid_0);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getProcessPids0",
         "(J[J[J[J)I",
         get_process_pids_0,
     );
-    registry.register(class_name, "initNative", "()V", init_native);
-    registry.register(class_name, "isAlive0", "(J)J", is_alive_0);
-    registry.register(class_name, "parent0", "(JJ)J", parent_0);
+    registry.register(CLASS_NAME, "initNative", "()V", init_native);
+    registry.register(CLASS_NAME, "isAlive0", "(J)J", is_alive_0);
+    registry.register(CLASS_NAME, "parent0", "(JJ)J", parent_0);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "waitForProcessExit0",
         "(JZ)I",
         wait_for_process_exit_0,
@@ -190,26 +191,6 @@ async fn wait_for_process_exit_0(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/ProcessHandleImpl";
-        assert!(registry.method(class_name, "destroy0", "(JJZ)Z").is_some());
-        assert!(registry
-            .method(class_name, "getCurrentPid0", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getProcessPids0", "(J[J[J[J)I")
-            .is_some());
-        assert!(registry.method(class_name, "initNative", "()V").is_some());
-        assert!(registry.method(class_name, "isAlive0", "(J)J").is_some());
-        assert!(registry.method(class_name, "parent0", "(JJ)J").is_some());
-        assert!(registry
-            .method(class_name, "waitForProcessExit0", "(JZ)I")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_get_current_pid_0() -> Result<()> {

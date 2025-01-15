@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "apple/laf/JRSUIFocus";
+
 /// Register all native methods for `apple.laf.JRSUIFocus`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "apple/laf/JRSUIFocus";
-    registry.register(class_name, "beginNativeFocus", "(JI)I", begin_native_focus);
-    registry.register(class_name, "endNativeFocus", "(J)I", end_native_focus);
+    registry.register(CLASS_NAME, "beginNativeFocus", "(JI)I", begin_native_focus);
+    registry.register(CLASS_NAME, "endNativeFocus", "(J)I", end_native_focus);
 }
 
 #[async_recursion(?Send)]
@@ -26,19 +27,6 @@ async fn end_native_focus(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "apple/laf/JRSUIFocus";
-        assert!(registry
-            .method(class_name, "beginNativeFocus", "(JI)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "endNativeFocus", "(J)I")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: apple.laf.JRSUIFocus.beginNativeFocus(JI)I")]

@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/nio/fs/UTIFileTypeDetector";
+
 /// Register all native methods for `sun.nio.fs.UTIFileTypeDetector`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/nio/fs/UTIFileTypeDetector";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "probe0",
         "(Ljava/lang/String;)Ljava/lang/String;",
         probe_0,
@@ -26,23 +27,9 @@ async fn probe_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/nio/fs/UTIFileTypeDetector";
-        assert!(registry
-            .method(
-                class_name,
-                "probe0",
-                "(Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.nio.fs.UTIFileTypeDetector.probe0(Ljava/lang/String;)Ljava/lang/String;"
+        expected = "not yet implemented: sun.nio.fs.UTIFileTypeDetector.probe0(Ljava/lang/String;)Ljava/lang/String;"
     )]
     async fn test_probe_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

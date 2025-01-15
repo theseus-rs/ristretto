@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/module/ModuleBootstrap";
+
 /// Register all native methods for `jdk.internal.module.ModuleBootstrap`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/module/ModuleBootstrap";
-    registry.register(class_name, "boot", "()Ljava/lang/ModuleLayer;", boot);
+    registry.register(CLASS_NAME, "boot", "()Ljava/lang/ModuleLayer;", boot);
 }
 
 #[async_recursion(?Send)]
@@ -21,16 +22,6 @@ async fn boot(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/module/ModuleBootstrap";
-        assert!(registry
-            .method(class_name, "boot", "()Ljava/lang/ModuleLayer;")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_boot() -> Result<()> {

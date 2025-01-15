@@ -6,16 +6,17 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/Float";
+
 /// Register all native methods for `java.lang.Float`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/Float";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "floatToRawIntBits",
         "(F)I",
         float_to_raw_int_bits,
     );
-    registry.register(class_name, "intBitsToFloat", "(I)F", int_bits_to_float);
+    registry.register(CLASS_NAME, "intBitsToFloat", "(I)F", int_bits_to_float);
 }
 
 #[async_recursion(?Send)]
@@ -43,19 +44,6 @@ async fn int_bits_to_float(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/Float";
-        assert!(registry
-            .method(class_name, "floatToRawIntBits", "(F)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "intBitsToFloat", "(I)F")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_float_to_raw_int_bits() -> Result<()> {

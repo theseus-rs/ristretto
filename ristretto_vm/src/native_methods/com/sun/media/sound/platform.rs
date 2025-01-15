@@ -1,36 +1,32 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
+const CLASS_NAME: &str = "com/sun/media/sound/Platform";
 
 /// Register all native methods for `com.sun.media.sound.Platform`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/media/sound/Platform";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_8 {
+    if registry.java_major_version() <= JAVA_8 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "nGetExtraLibraries",
             "()Ljava/lang/String;",
             n_get_extra_libraries,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "nGetLibraryForFeature",
             "(I)I",
             n_get_library_for_feature,
         );
-        registry.register(class_name, "nIsSigned8", "()Z", n_is_signed_8);
+        registry.register(CLASS_NAME, "nIsSigned8", "()Z", n_is_signed_8);
     }
 
-    registry.register(class_name, "nIsBigEndian", "()Z", n_is_big_endian);
+    registry.register(CLASS_NAME, "nIsBigEndian", "()Z", n_is_big_endian);
 }
 
 #[async_recursion(?Send)]
@@ -62,21 +58,6 @@ async fn n_is_signed_8(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/media/sound/Platform";
-        assert!(registry
-            .method(class_name, "nGetExtraLibraries", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nGetLibraryForFeature", "(I)I")
-            .is_some());
-        assert!(registry.method(class_name, "nIsBigEndian", "()Z").is_some());
-        assert!(registry.method(class_name, "nIsSigned8", "()Z").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

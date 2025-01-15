@@ -1,39 +1,34 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_17: Version = Version::Java17 { minor: 0 };
+const CLASS_NAME: &str = "sun/awt/CGraphicsDevice";
 
 /// Register all native methods for `sun.awt.CGraphicsDevice`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/awt/CGraphicsDevice";
-    let java_version = registry.java_version().clone();
-
-    if java_version <= JAVA_8 {
+    if registry.java_major_version() <= JAVA_8 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "nativeResetDisplayMode",
             "()V",
             native_reset_display_mode,
         );
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "nativeGetBounds",
             "(I)Ljava/awt/geom/Rectangle2D;",
             native_get_bounds,
         );
     }
 
-    if java_version >= JAVA_17 {
+    if registry.java_major_version() >= JAVA_17 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "nativeResetDisplayMode",
             "()V",
             native_reset_display_mode,
@@ -41,43 +36,43 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetDisplayMode",
         "(I)Ljava/awt/DisplayMode;",
         native_get_display_mode,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetDisplayModes",
         "(I)[Ljava/awt/DisplayMode;",
         native_get_display_modes,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetScaleFactor",
         "(I)D",
         native_get_scale_factor,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetScreenInsets",
         "(I)Ljava/awt/Insets;",
         native_get_screen_insets,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetXResolution",
         "(I)D",
         native_get_x_resolution,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetYResolution",
         "(I)D",
         native_get_y_resolution,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeSetDisplayMode",
         "(IIIII)V",
         native_set_display_mode,
@@ -157,55 +152,9 @@ async fn native_set_display_mode(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "sun/awt/CGraphicsDevice";
-        assert!(registry
-            .method(
-                class_name,
-                "nativeGetBounds",
-                "(I)Ljava/awt/geom/Rectangle2D;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nativeGetDisplayMode",
-                "(I)Ljava/awt/DisplayMode;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nativeGetDisplayModes",
-                "(I)[Ljava/awt/DisplayMode;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeGetScaleFactor", "(I)D")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeGetScreenInsets", "(I)Ljava/awt/Insets;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeGetXResolution", "(I)D")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeGetYResolution", "(I)D")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeResetDisplayMode", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeSetDisplayMode", "(IIIII)V")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.awt.CGraphicsDevice.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;"
+        expected = "not yet implemented: sun.awt.CGraphicsDevice.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;"
     )]
     async fn test_native_get_bounds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -214,7 +163,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.awt.CGraphicsDevice.nativeGetDisplayMode(I)Ljava/awt/DisplayMode;"
+        expected = "not yet implemented: sun.awt.CGraphicsDevice.nativeGetDisplayMode(I)Ljava/awt/DisplayMode;"
     )]
     async fn test_native_get_display_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

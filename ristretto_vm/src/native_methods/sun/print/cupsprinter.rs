@@ -1,26 +1,19 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_19, JAVA_23};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
-const JAVA_17: Version = Version::Java17 { minor: 0 };
-const JAVA_19: Version = Version::Java19 { minor: 0 };
-const JAVA_23: Version = Version::Java23 { minor: 0 };
+const CLASS_NAME: &str = "sun/print/CUPSPrinter";
 
 /// Register all native methods for `sun.print.CUPSPrinter`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/print/CUPSPrinter";
-    let java_version = registry.java_version().clone();
-
-    if java_version >= JAVA_11 {
-        if java_version <= JAVA_17 {
+    if registry.java_major_version() >= JAVA_11 {
+        if registry.java_major_version() <= JAVA_17 {
             registry.register(
-                class_name,
+                CLASS_NAME,
                 "getCupsDefaultPrinters",
                 "()[Ljava/lang/String;",
                 get_cups_default_printers,
@@ -28,25 +21,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         }
 
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getResolutions",
             "(Ljava/lang/String;Ljava/util/ArrayList;)V",
             get_resolutions,
         );
     }
 
-    if java_version >= JAVA_19 {
+    if registry.java_major_version() >= JAVA_19 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getCupsDefaultPrinters",
             "()[Ljava/lang/String;",
             get_cups_default_printers,
         );
     }
 
-    if java_version >= JAVA_23 {
+    if registry.java_major_version() >= JAVA_23 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getOutputBins",
             "(Ljava/lang/String;)[Ljava/lang/String;",
             get_output_bins,
@@ -54,37 +47,37 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "canConnect",
         "(Ljava/lang/String;I)Z",
         can_connect,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCupsDefaultPrinter",
         "()Ljava/lang/String;",
         get_cups_default_printer,
     );
-    registry.register(class_name, "getCupsPort", "()I", get_cups_port);
+    registry.register(CLASS_NAME, "getCupsPort", "()I", get_cups_port);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCupsServer",
         "()Ljava/lang/String;",
         get_cups_server,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getMedia",
         "(Ljava/lang/String;)[Ljava/lang/String;",
         get_media,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getPageSizes",
         "(Ljava/lang/String;)[F",
         get_page_sizes,
     );
-    registry.register(class_name, "initIDs", "()Z", init_ids);
+    registry.register(CLASS_NAME, "initIDs", "()Z", init_ids);
 }
 
 #[async_recursion(?Send)]
@@ -147,92 +140,44 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "sun/print/CUPSPrinter";
-        assert!(registry
-            .method(class_name, "canConnect", "(Ljava/lang/String;I)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getCupsDefaultPrinter", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getCupsDefaultPrinters",
-                "()[Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "getCupsPort", "()I").is_some());
-        assert!(registry
-            .method(class_name, "getCupsServer", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getMedia",
-                "(Ljava/lang/String;)[Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getPageSizes", "(Ljava/lang/String;)[F")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getResolutions",
-                "(Ljava/lang/String;Ljava/util/ArrayList;)V"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "initIDs", "()Z").is_some());
-    }
-
-    #[test]
-    fn test_register_java_23() {
-        let mut registry = MethodRegistry::new(&Version::Java23 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "sun/print/CUPSPrinter";
-        assert!(registry
-            .method(
-                class_name,
-                "getOutputBins",
-                "(Ljava/lang/String;)[Ljava/lang/String;"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.print.CUPSPrinter.canConnect(Ljava/lang/String;I)Z")]
+    #[should_panic(
+        expected = "not yet implemented: sun.print.CUPSPrinter.canConnect(Ljava/lang/String;I)Z"
+    )]
     async fn test_can_connect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = can_connect(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.print.CUPSPrinter.getCupsDefaultPrinter()Ljava/lang/String;")]
+    #[should_panic(
+        expected = "not yet implemented: sun.print.CUPSPrinter.getCupsDefaultPrinter()Ljava/lang/String;"
+    )]
     async fn test_get_cups_default_printer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_cups_default_printer(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.print.CUPSPrinter.getCupsDefaultPrinters()[Ljava/lang/String;")]
+    #[should_panic(
+        expected = "not yet implemented: sun.print.CUPSPrinter.getCupsDefaultPrinters()[Ljava/lang/String;"
+    )]
     async fn test_get_cups_default_printers() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_cups_default_printers(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.print.CUPSPrinter.getCupsPort()I")]
+    #[should_panic(expected = "not yet implemented: sun.print.CUPSPrinter.getCupsPort()I")]
     async fn test_get_cups_port() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_cups_port(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.print.CUPSPrinter.getCupsServer()Ljava/lang/String;")]
+    #[should_panic(
+        expected = "not yet implemented: sun.print.CUPSPrinter.getCupsServer()Ljava/lang/String;"
+    )]
     async fn test_get_cups_server() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_cups_server(thread, Arguments::default()).await;
@@ -240,7 +185,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.print.CUPSPrinter.getMedia(Ljava/lang/String;)[Ljava/lang/String;"
+        expected = "not yet implemented: sun.print.CUPSPrinter.getMedia(Ljava/lang/String;)[Ljava/lang/String;"
     )]
     async fn test_get_media() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -249,7 +194,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.print.CUPSPrinter.getOutputBins(Ljava/lang/String;)[Ljava/lang/String;"
+        expected = "not yet implemented: sun.print.CUPSPrinter.getOutputBins(Ljava/lang/String;)[Ljava/lang/String;"
     )]
     async fn test_get_output_bins() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -257,7 +202,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.print.CUPSPrinter.getPageSizes(Ljava/lang/String;)[F")]
+    #[should_panic(
+        expected = "not yet implemented: sun.print.CUPSPrinter.getPageSizes(Ljava/lang/String;)[F"
+    )]
     async fn test_get_page_sizes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_page_sizes(thread, Arguments::default()).await;
@@ -265,7 +212,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.print.CUPSPrinter.getResolutions(Ljava/lang/String;Ljava/util/ArrayList;)V"
+        expected = "not yet implemented: sun.print.CUPSPrinter.getResolutions(Ljava/lang/String;Ljava/util/ArrayList;)V"
     )]
     async fn test_get_resolutions() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

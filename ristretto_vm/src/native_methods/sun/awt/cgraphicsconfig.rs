@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/awt/CGraphicsConfig";
+
 /// Register all native methods for `sun.awt.CGraphicsConfig`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/awt/CGraphicsConfig";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetBounds",
         "(I)Ljava/awt/geom/Rectangle2D;",
         native_get_bounds,
@@ -26,23 +27,9 @@ async fn native_get_bounds(_thread: Arc<Thread>, _arguments: Arguments) -> Resul
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/awt/CGraphicsConfig";
-        assert!(registry
-            .method(
-                class_name,
-                "nativeGetBounds",
-                "(I)Ljava/awt/geom/Rectangle2D;"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.awt.CGraphicsConfig.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;"
+        expected = "not yet implemented: sun.awt.CGraphicsConfig.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;"
     )]
     async fn test_native_get_bounds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

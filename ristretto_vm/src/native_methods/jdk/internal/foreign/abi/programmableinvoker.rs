@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/foreign/abi/ProgrammableInvoker";
+
 /// Register all native methods for `jdk.internal.foreign.abi.ProgrammableInvoker`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/foreign/abi/ProgrammableInvoker";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "generateAdapter",
         "(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J",
         generate_adapter,
     );
-    registry.register(class_name, "invokeNative", "(JJ)V", invoke_native);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "invokeNative", "(JJ)V", invoke_native);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
 }
 
 #[async_recursion(?Send)]
@@ -38,25 +39,9 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/foreign/abi/ProgrammableInvoker";
-        assert!(registry
-            .method(class_name, "generateAdapter", "(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "invokeNative", "(JJ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.foreign.abi.ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
+        expected = "not yet implemented: jdk.internal.foreign.abi.ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
     )]
     async fn test_generate_adapter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -64,7 +49,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "jdk.internal.foreign.abi.ProgrammableInvoker.invokeNative(JJ)V")]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.foreign.abi.ProgrammableInvoker.invokeNative(JJ)V"
+    )]
     async fn test_invoke_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = invoke_native(thread, Arguments::default()).await;

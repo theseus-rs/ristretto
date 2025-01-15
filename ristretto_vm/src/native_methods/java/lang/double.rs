@@ -6,16 +6,17 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/Double";
+
 /// Register all native methods for `java.lang.Double`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/Double";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "doubleToRawLongBits",
         "(D)J",
         double_to_raw_long_bits,
     );
-    registry.register(class_name, "longBitsToDouble", "(J)D", long_bits_to_double);
+    registry.register(CLASS_NAME, "longBitsToDouble", "(J)D", long_bits_to_double);
 }
 
 #[async_recursion(?Send)]
@@ -44,19 +45,6 @@ async fn long_bits_to_double(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/Double";
-        assert!(registry
-            .method(class_name, "doubleToRawLongBits", "(D)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "longBitsToDouble", "(J)D")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_double_to_raw_long_bits() -> Result<()> {

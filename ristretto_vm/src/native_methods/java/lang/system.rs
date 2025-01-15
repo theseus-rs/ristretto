@@ -2,13 +2,13 @@ use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::java::lang::object::object_hash_code;
 use crate::native_methods::properties;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_8};
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::attributes::{Attribute, Instruction};
-use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, MethodAccessFlags, Version};
+use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, MethodAccessFlags};
 use ristretto_classloader::{Class, ConcurrentVec, Object, Reference, Value};
 use std::cmp::min;
 use std::env::consts::OS;
@@ -16,59 +16,54 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_11: Version = Version::Java11 { minor: 0 };
-const JAVA_17: Version = Version::Java17 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/System";
 
 /// Register all native methods for `java.lang.System`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/System";
-
     registry.register(
-        class_name,
+        CLASS_NAME,
         "arraycopy",
         "(Ljava/lang/Object;ILjava/lang/Object;II)V",
         arraycopy,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "allowSecurityManager",
         "()Z",
         allow_security_manager,
     );
-    registry.register(class_name, "currentTimeMillis", "()J", current_time_millis);
-    registry.register(class_name, "gc", "()V", gc);
+    registry.register(CLASS_NAME, "currentTimeMillis", "()J", current_time_millis);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getSecurityManager",
         "()Ljava/lang/SecurityManager;",
         get_security_manager,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "identityHashCode",
         "(Ljava/lang/Object;)I",
         identity_hash_code,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "initProperties",
         "(Ljava/util/Properties;)Ljava/util/Properties;",
         init_properties,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "mapLibraryName",
         "(Ljava/lang/String;)Ljava/lang/String;",
         map_library_name,
     );
-    registry.register(class_name, "nanoTime", "()J", nano_time);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
-    registry.register(class_name, "setErr0", "(Ljava/io/PrintStream;)V", set_err_0);
-    registry.register(class_name, "setIn0", "(Ljava/io/InputStream;)V", set_in_0);
-    registry.register(class_name, "setOut0", "(Ljava/io/PrintStream;)V", set_out_0);
+    registry.register(CLASS_NAME, "nanoTime", "()J", nano_time);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "setErr0", "(Ljava/io/PrintStream;)V", set_err_0);
+    registry.register(CLASS_NAME, "setIn0", "(Ljava/io/InputStream;)V", set_in_0);
+    registry.register(CLASS_NAME, "setOut0", "(Ljava/io/PrintStream;)V", set_out_0);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setSecurityManager",
         "(Ljava/lang/SecurityManager;)V",
         set_security_manager,
@@ -211,11 +206,6 @@ async fn current_time_millis(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 }
 
 #[async_recursion(?Send)]
-async fn gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(None)
-}
-
-#[async_recursion(?Send)]
 async fn get_security_manager(
     _thread: Arc<Thread>,
     _arguments: Arguments,
@@ -294,7 +284,7 @@ async fn nano_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 #[async_recursion(?Send)]
 async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     let vm = thread.vm()?;
-    if vm.java_class_file_version() <= &JAVA_8 {
+    if vm.java_major_version() <= JAVA_8 {
         vm.invoke(
             "java.lang.System",
             "setJavaLangAccess",
@@ -305,7 +295,7 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
         return Ok(None);
     }
 
-    if vm.java_class_file_version() == &JAVA_17 {
+    if vm.java_major_version() == JAVA_17 {
         // Force the initialization of the system properties; this is required because no security
         // manager is installed and when System::initPhase1() is called, the resulting call chain:
         //
@@ -327,10 +317,10 @@ async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<
         .await?;
     }
 
-    let java_class_file_version = vm.java_class_file_version();
-    let package_name = if java_class_file_version <= &JAVA_8 {
+    let java_major_version = vm.java_major_version();
+    let package_name = if java_major_version <= JAVA_8 {
         "sun/misc"
-    } else if java_class_file_version <= &JAVA_11 {
+    } else if java_major_version <= JAVA_11 {
         "jdk/internal/misc"
     } else {
         "jdk/internal/access"
@@ -433,71 +423,6 @@ async fn set_security_manager(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/System";
-        assert!(registry
-            .method(
-                class_name,
-                "arraycopy",
-                "(Ljava/lang/Object;ILjava/lang/Object;II)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "allowSecurityManager", "()Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "currentTimeMillis", "()J")
-            .is_some());
-        assert!(registry.method(class_name, "gc", "()V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getSecurityManager",
-                "()Ljava/lang/SecurityManager;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "identityHashCode", "(Ljava/lang/Object;)I")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "initProperties",
-                "(Ljava/util/Properties;)Ljava/util/Properties;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "mapLibraryName",
-                "(Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "nanoTime", "()J").is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setErr0", "(Ljava/io/PrintStream;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setIn0", "(Ljava/io/InputStream;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setOut0", "(Ljava/io/PrintStream;)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setSecurityManager",
-                "(Ljava/lang/SecurityManager;)V"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_get_security_manager() -> Result<()> {

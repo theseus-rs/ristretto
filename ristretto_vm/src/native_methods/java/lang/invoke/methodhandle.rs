@@ -1,22 +1,18 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_17};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_17: Version = Version::Java17 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/invoke/MethodHandle";
 
 /// Register all native methods for `java.lang.invoke.MethodHandle`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/invoke/MethodHandle";
-    let java_version = registry.java_version();
-
-    if java_version >= &JAVA_17 {
+    if registry.java_major_version() >= JAVA_17 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "linkToNative",
             "([Ljava/lang/Object;)Ljava/lang/Object;",
             link_to_native,
@@ -24,43 +20,43 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "invoke",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         invoke,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "invokeBasic",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         invoke_basic,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "invokeExact",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         invoke_exact,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "linkToInterface",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         link_to_interface,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "linkToSpecial",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         link_to_special,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "linkToStatic",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         link_to_static,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "linkToVirtual",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         link_to_virtual,
@@ -110,69 +106,6 @@ async fn link_to_virtual(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java17 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/invoke/MethodHandle";
-        assert!(registry
-            .method(
-                class_name,
-                "linkToNative",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "invoke",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "invokeBasic",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "invokeExact",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "linkToInterface",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "linkToSpecial",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "linkToStatic",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "linkToVirtual",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

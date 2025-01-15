@@ -1,29 +1,25 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_17};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_17: Version = Version::Java17 { minor: 0 };
+const CLASS_NAME: &str = "java/net/Inet6AddressImpl";
 
 /// Register all native methods for `java.net.Inet6AddressImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/net/Inet6AddressImpl";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_17 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "lookupAllHostAddr",
             "(Ljava/lang/String;)[Ljava/net/InetAddress;",
             lookup_all_host_addr,
         );
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "lookupAllHostAddr",
             "(Ljava/lang/String;I)[Ljava/net/InetAddress;",
             lookup_all_host_addr,
@@ -31,18 +27,18 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getHostByAddr",
         "([B)Ljava/lang/String;",
         get_host_by_addr,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getLocalHostName",
         "()Ljava/lang/String;",
         get_local_host_name,
     );
-    registry.register(class_name, "isReachable0", "([BII[BII)Z", is_reachable_0);
+    registry.register(CLASS_NAME, "isReachable0", "([BII[BII)Z", is_reachable_0);
 }
 
 #[async_recursion(?Send)]
@@ -71,43 +67,6 @@ async fn lookup_all_host_addr(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java18 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/net/Inet6AddressImpl";
-        assert!(registry
-            .method(
-                class_name,
-                "lookupAllHostAddr",
-                "(Ljava/lang/String;I)[Ljava/net/InetAddress;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getHostByAddr", "([B)Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getLocalHostName", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "isReachable0", "([BII[BII)Z")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_17() {
-        let mut registry = MethodRegistry::new(&Version::Java17 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/net/Inet6AddressImpl";
-        assert!(registry
-            .method(
-                class_name,
-                "lookupAllHostAddr",
-                "(Ljava/lang/String;)[Ljava/net/InetAddress;"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

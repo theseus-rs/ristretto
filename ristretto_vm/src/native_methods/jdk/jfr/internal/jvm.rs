@@ -1,387 +1,381 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{
+    MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_20, JAVA_21, JAVA_22, JAVA_23,
+};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
-const JAVA_17: Version = Version::Java17 { minor: 0 };
-const JAVA_18: Version = Version::Java18 { minor: 0 };
-const JAVA_20: Version = Version::Java20 { minor: 0 };
-const JAVA_21: Version = Version::Java21 { minor: 0 };
-const JAVA_22: Version = Version::Java22 { minor: 0 };
-const JAVA_23: Version = Version::Java23 { minor: 0 };
+const CLASS_NAME: &str = "jdk/jfr/internal/JVM";
 
 /// Register all native methods for `jdk.jfr.internal.JVM`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/jfr/internal/JVM";
-    let java_version = registry.java_version().clone();
-
-    if java_version <= JAVA_11 {
+    if registry.java_major_version() <= JAVA_11 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "emitOldObjectSamples",
             "(JZ)V",
             emit_old_object_samples,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getClassIdNonIntrinsic",
             "(Ljava/lang/Class;)J",
             get_class_id_non_intrinsic,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "setMethodSamplingInterval",
             "(JJ)V",
             set_method_sampling_interval,
         );
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "emitOldObjectSamples",
             "(JZZ)V",
             emit_old_object_samples,
         );
-        registry.register(class_name, "exclude", "(Ljava/lang/Thread;)V", exclude);
-        registry.register(class_name, "flush", "()V", flush);
+        registry.register(CLASS_NAME, "exclude", "(Ljava/lang/Thread;)V", exclude);
+        registry.register(CLASS_NAME, "flush", "()V", flush);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getChunkStartNanos",
             "()J",
             get_chunk_start_nanos,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getHandler",
             "(Ljava/lang/Class;)Ljava/lang/Object;",
             get_handler,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getTypeId",
             "(Ljava/lang/String;)J",
             get_type_id,
         );
-        registry.register(class_name, "include", "(Ljava/lang/Thread;)V", include);
+        registry.register(CLASS_NAME, "include", "(Ljava/lang/Thread;)V", include);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "isExcluded",
             "(Ljava/lang/Thread;)Z",
             is_excluded,
         );
-        registry.register(class_name, "isRecording", "()Z", is_recording);
+        registry.register(CLASS_NAME, "isRecording", "()Z", is_recording);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "logEvent",
             "(I[Ljava/lang/String;Z)V",
             log_event,
         );
-        registry.register(class_name, "markChunkFinal", "()V", mark_chunk_final);
+        registry.register(CLASS_NAME, "markChunkFinal", "()V", mark_chunk_final);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "setHandler",
             "(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z",
             set_handler,
         );
-        registry.register(class_name, "setThrottle", "(JJJ)Z", set_throttle);
+        registry.register(CLASS_NAME, "setThrottle", "(JJJ)Z", set_throttle);
     }
 
-    if java_version == JAVA_17 {
-        registry.register(class_name, "emitDataLoss", "(J)V", emit_data_loss);
+    if registry.java_major_version() >= JAVA_11 {
         registry.register(
-            class_name,
+            CLASS_NAME,
+            "flush",
+            "(Ljdk/jfr/internal/EventWriter;II)Z",
+            flush,
+        );
+        registry.register(
+            CLASS_NAME,
+            "getEventWriter",
+            "()Ljava/lang/Object;",
+            get_event_writer,
+        );
+        registry.register(
+            CLASS_NAME,
+            "newEventWriter",
+            "()Ljdk/jfr/internal/EventWriter;",
+            new_event_writer,
+        );
+        registry.register(CLASS_NAME, "setSampleThreads", "(Z)V", set_sample_threads);
+    }
+
+    if registry.java_major_version() == JAVA_17 {
+        registry.register(CLASS_NAME, "emitDataLoss", "(J)V", emit_data_loss);
+        registry.register(
+            CLASS_NAME,
             "setMethodSamplingPeriod",
             "(JJ)V",
             set_method_sampling_period,
         );
     }
 
-    if java_version >= JAVA_18 {
+    if registry.java_major_version() >= JAVA_18 {
         registry.register(
-            class_name,
-            "flush",
-            "(Ljdk/jfr/internal/EventWriter;II)Z",
-            flush,
-        );
-        registry.register(
-            class_name,
+            CLASS_NAME,
             "getDumpPath",
             "()Ljava/lang/String;",
             get_dump_path,
         );
         registry.register(
-            class_name,
-            "getEventWriter",
-            "()Ljava/lang/Object;",
-            get_event_writer,
-        );
-        registry.register(
-            class_name,
-            "newEventWriter",
-            "()Ljdk/jfr/internal/EventWriter;",
-            new_event_writer,
-        );
-        registry.register(
-            class_name,
+            CLASS_NAME,
             "setDumpPath",
             "(Ljava/lang/String;)V",
             set_dump_path,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "setMethodSamplingInterval",
             "(JJ)V",
             set_method_sampling_interval,
         );
-        registry.register(class_name, "setSampleThreads", "(Z)V", set_sample_threads);
     } else {
-        registry.register(class_name, "exclude", "(Ljava/lang/Thread;)V", exclude);
-        registry.register(class_name, "flush", "()V", flush);
+        registry.register(CLASS_NAME, "exclude", "(Ljava/lang/Thread;)V", exclude);
+        registry.register(CLASS_NAME, "flush", "()V", flush);
+    }
 
-        if java_version <= JAVA_20 {
-            registry.register(
-                class_name,
-                "flush",
-                "(Ljdk/jfr/internal/event/EventWriter;II)Z",
-                flush,
-            );
-        }
-
+    if registry.java_major_version() >= JAVA_19 {
         registry.register(
-            class_name,
+            CLASS_NAME,
+            "flush",
+            "(Ljdk/jfr/internal/event/EventWriter;II)Z",
+            flush,
+        );
+        registry.register(
+            CLASS_NAME,
             "getConfiguration",
             "(Ljava/lang/Class;)Ljava/lang/Object;",
             get_configuration,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getEventWriter",
             "()Ljdk/jfr/internal/event/EventWriter;",
             get_event_writer,
         );
-        registry.register(class_name, "isContainerized", "()Z", is_containerized);
+        registry.register(CLASS_NAME, "isContainerized", "()Z", is_containerized);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "isExcluded",
             "(Ljava/lang/Class;)Z",
             is_excluded,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "isExcluded",
             "(Ljava/lang/Thread;)Z",
             is_excluded,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "isInstrumented",
             "(Ljava/lang/Class;)Z",
             is_instrumented,
         );
-        registry.register(class_name, "isRecording", "()Z", is_recording);
+        registry.register(CLASS_NAME, "isRecording", "()Z", is_recording);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "newEventWriter",
             "()Ljdk/jfr/internal/event/EventWriter;",
             new_event_writer,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "setConfiguration",
             "(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z",
             set_configuration,
         );
     }
 
-    if java_version >= JAVA_20 {
-        registry.register(class_name, "hostTotalMemory", "()J", host_total_memory);
+    if registry.java_major_version() >= JAVA_20 {
+        registry.register(CLASS_NAME, "hostTotalMemory", "()J", host_total_memory);
     }
 
-    if java_version >= JAVA_21 {
-        registry.register(class_name, "commit", "(J)J", commit);
-        registry.register(class_name, "emitDataLoss", "(J)V", emit_data_loss);
+    if registry.java_major_version() >= JAVA_21 {
+        registry.register(CLASS_NAME, "commit", "(J)J", commit);
+        registry.register(CLASS_NAME, "emitDataLoss", "(J)V", emit_data_loss);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "flush",
             "(Ljdk/jfr/internal/event/EventWriter;II)V",
             flush,
         );
     }
 
-    if java_version <= JAVA_21 {
-        registry.register(class_name, "getStackTraceId", "(I)J", get_stack_trace_id);
+    if registry.java_major_version() <= JAVA_21 {
+        registry.register(CLASS_NAME, "getStackTraceId", "(I)J", get_stack_trace_id);
     } else {
-        registry.register(class_name, "getStackTraceId", "(IJ)J", get_stack_trace_id);
+        registry.register(CLASS_NAME, "getStackTraceId", "(IJ)J", get_stack_trace_id);
     }
 
-    if java_version >= JAVA_22 {
+    if registry.java_major_version() >= JAVA_22 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "registerStackFilter",
             "([Ljava/lang/String;[Ljava/lang/String;)J",
             register_stack_filter,
         );
-        registry.register(class_name, "setMiscellaneous", "(JJ)V", set_miscellaneous);
+        registry.register(CLASS_NAME, "setMiscellaneous", "(JJ)V", set_miscellaneous);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "unregisterStackFilter",
             "(J)V",
             unregister_stack_filter,
         );
     }
 
-    if java_version >= JAVA_23 {
+    if registry.java_major_version() >= JAVA_23 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "hostTotalSwapMemory",
             "()J",
             host_total_swap_memory,
         );
-        registry.register(class_name, "nanosNow", "()J", nanos_now);
+        registry.register(CLASS_NAME, "nanosNow", "()J", nanos_now);
     }
 
-    registry.register(class_name, "abort", "(Ljava/lang/String;)V", abort);
+    registry.register(CLASS_NAME, "abort", "(Ljava/lang/String;)V", abort);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "addStringConstant",
         "(JLjava/lang/String;)Z",
         add_string_constant,
     );
-    registry.register(class_name, "beginRecording", "()V", begin_recording);
-    registry.register(class_name, "counterTime", "()J", counter_time);
-    registry.register(class_name, "createJFR", "(Z)Z", create_jfr);
-    registry.register(class_name, "destroyJFR", "()Z", destroy_jfr);
-    registry.register(class_name, "emitEvent", "(JJJ)Z", emit_event);
-    registry.register(class_name, "endRecording", "()V", end_recording);
+    registry.register(CLASS_NAME, "beginRecording", "()V", begin_recording);
+    registry.register(CLASS_NAME, "counterTime", "()J", counter_time);
+    registry.register(CLASS_NAME, "createJFR", "(Z)Z", create_jfr);
+    registry.register(CLASS_NAME, "destroyJFR", "()Z", destroy_jfr);
+    registry.register(CLASS_NAME, "emitEvent", "(JJJ)Z", emit_event);
+    registry.register(CLASS_NAME, "endRecording", "()V", end_recording);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAllEventClasses",
         "()Ljava/util/List;",
         get_all_event_classes,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAllowedToDoEventRetransforms",
         "()Z",
         get_allowed_to_do_event_retransforms,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getClassId",
         "(Ljava/lang/Class;)J",
         get_class_id,
     );
-    registry.register(class_name, "getPid", "()Ljava/lang/String;", get_pid);
+    registry.register(CLASS_NAME, "getPid", "()Ljava/lang/String;", get_pid);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getThreadId",
         "(Ljava/lang/Thread;)J",
         get_thread_id,
     );
-    registry.register(class_name, "getTicksFrequency", "()J", get_ticks_frequency);
+    registry.register(CLASS_NAME, "getTicksFrequency", "()J", get_ticks_frequency);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getTimeConversionFactor",
         "()D",
         get_time_conversion_factor,
     );
-    registry.register(class_name, "getTypeId", "(Ljava/lang/Class;)J", get_type_id);
+    registry.register(CLASS_NAME, "getTypeId", "(Ljava/lang/Class;)J", get_type_id);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getUnloadedEventClassCount",
         "()J",
         get_unloaded_event_class_count,
     );
-    registry.register(class_name, "isAvailable", "()Z", is_available);
-    registry.register(class_name, "log", "(IILjava/lang/String;)V", log);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "isAvailable", "()Z", is_available);
+    registry.register(CLASS_NAME, "log", "(IILjava/lang/String;)V", log);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "retransformClasses",
         "([Ljava/lang/Class;)V",
         retransform_classes,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setCompressedIntegers",
         "(Z)V",
         set_compressed_integers,
     );
-    registry.register(class_name, "setCutoff", "(JJ)Z", set_cutoff);
-    registry.register(class_name, "setEnabled", "(JZ)V", set_enabled);
+    registry.register(CLASS_NAME, "setCutoff", "(JJ)Z", set_cutoff);
+    registry.register(CLASS_NAME, "setEnabled", "(JZ)V", set_enabled);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setFileNotification",
         "(J)V",
         set_file_notification,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setForceInstrumentation",
         "(Z)V",
         set_force_instrumentation,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setGlobalBufferCount",
         "(J)V",
         set_global_buffer_count,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setGlobalBufferSize",
         "(J)V",
         set_global_buffer_size,
     );
-    registry.register(class_name, "setMemorySize", "(J)V", set_memory_size);
+    registry.register(CLASS_NAME, "setMemorySize", "(J)V", set_memory_size);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setMethodSamplingPeriod",
         "(JJ)V",
         set_method_sampling_period,
     );
-    registry.register(class_name, "setOutput", "(Ljava/lang/String;)V", set_output);
+    registry.register(CLASS_NAME, "setOutput", "(Ljava/lang/String;)V", set_output);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setRepositoryLocation",
         "(Ljava/lang/String;)V",
         set_repository_location,
     );
-    registry.register(class_name, "setStackDepth", "(I)V", set_stack_depth);
+    registry.register(CLASS_NAME, "setStackDepth", "(I)V", set_stack_depth);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setStackTraceEnabled",
         "(JZ)V",
         set_stack_trace_enabled,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setThreadBufferSize",
         "(J)V",
         set_thread_buffer_size,
     );
-    registry.register(class_name, "setThreshold", "(JJ)Z", set_threshold);
-    registry.register(class_name, "setThrottle", "(JJJ)Z", set_throttle);
-    registry.register(class_name, "shouldRotateDisk", "()Z", should_rotate_disk);
+    registry.register(CLASS_NAME, "setThreshold", "(JJ)Z", set_threshold);
+    registry.register(CLASS_NAME, "setThrottle", "(JJJ)Z", set_throttle);
+    registry.register(CLASS_NAME, "shouldRotateDisk", "()Z", should_rotate_disk);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "storeMetadataDescriptor",
         "([B)V",
         store_metadata_descriptor,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "subscribeLogLevel",
         "(Ljdk/jfr/internal/LogTag;I)V",
         subscribe_log_level,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "uncaughtException",
         "(Ljava/lang/Thread;Ljava/lang/Throwable;)V",
         uncaught_exception,
@@ -814,287 +808,6 @@ async fn unregister_stack_filter(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    #[expect(clippy::too_many_lines)]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "jdk/jfr/internal/JVM";
-        assert!(registry
-            .method(class_name, "abort", "(Ljava/lang/String;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "addStringConstant", "(JLjava/lang/String;)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "beginRecording", "()V")
-            .is_some());
-        assert!(registry.method(class_name, "commit", "(J)J").is_some());
-        assert!(registry.method(class_name, "counterTime", "()J").is_some());
-        assert!(registry.method(class_name, "createJFR", "(Z)Z").is_some());
-        assert!(registry.method(class_name, "destroyJFR", "()Z").is_some());
-        assert!(registry
-            .method(class_name, "emitDataLoss", "(J)V")
-            .is_some());
-        assert!(registry.method(class_name, "emitEvent", "(JJJ)Z").is_some());
-        assert!(registry
-            .method(class_name, "emitOldObjectSamples", "(JZZ)V")
-            .is_some());
-        assert!(registry.method(class_name, "endRecording", "()V").is_some());
-        assert!(registry
-            .method(class_name, "exclude", "(Ljava/lang/Thread;)V")
-            .is_some());
-        assert!(registry.method(class_name, "flush", "()V").is_some());
-        assert!(registry
-            .method(class_name, "getAllEventClasses", "()Ljava/util/List;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getAllowedToDoEventRetransforms", "()Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getChunkStartNanos", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getClassId", "(Ljava/lang/Class;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDumpPath", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getEventWriter", "()Ljava/lang/Object;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getPid", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getStackTraceId", "(I)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getThreadId", "(Ljava/lang/Thread;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getTicksFrequency", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getTimeConversionFactor", "()D")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getTypeId", "(Ljava/lang/String;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getUnloadedEventClassCount", "()J")
-            .is_some());
-        assert!(registry.method(class_name, "isAvailable", "()Z").is_some());
-        assert!(registry
-            .method(class_name, "isExcluded", "(Ljava/lang/Thread;)Z")
-            .is_some());
-        assert!(registry.method(class_name, "isRecording", "()Z").is_some());
-        assert!(registry
-            .method(class_name, "log", "(IILjava/lang/String;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "logEvent", "(I[Ljava/lang/String;Z)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "markChunkFinal", "()V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "newEventWriter",
-                "()Ljdk/jfr/internal/EventWriter;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "retransformClasses", "([Ljava/lang/Class;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setCompressedIntegers", "(Z)V")
-            .is_some());
-        assert!(registry.method(class_name, "setCutoff", "(JJ)Z").is_some());
-        assert!(registry
-            .method(class_name, "setDumpPath", "(Ljava/lang/String;)V")
-            .is_some());
-        assert!(registry.method(class_name, "setEnabled", "(JZ)V").is_some());
-        assert!(registry
-            .method(class_name, "setFileNotification", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setForceInstrumentation", "(Z)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setGlobalBufferCount", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setGlobalBufferSize", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setHandler",
-                "(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "setMemorySize", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setMethodSamplingInterval", "(JJ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setMethodSamplingPeriod", "(JJ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setOutput", "(Ljava/lang/String;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setRepositoryLocation", "(Ljava/lang/String;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setSampleThreads", "(Z)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setStackDepth", "(I)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setStackTraceEnabled", "(JZ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setThreadBufferSize", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setThreshold", "(JJ)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setThrottle", "(JJJ)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "shouldRotateDisk", "()Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "storeMetadataDescriptor", "([B)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "subscribeLogLevel",
-                "(Ljdk/jfr/internal/LogTag;I)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "uncaughtException",
-                "(Ljava/lang/Thread;Ljava/lang/Throwable;)V"
-            )
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_11() {
-        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "jdk/jfr/internal/JVM";
-        assert!(registry
-            .method(class_name, "emitOldObjectSamples", "(JZ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getClassIdNonIntrinsic", "(Ljava/lang/Class;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setMethodSamplingInterval", "(JJ)V")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_17() {
-        let mut registry = MethodRegistry::new(&Version::Java17 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "jdk/jfr/internal/JVM";
-        assert!(registry
-            .method(class_name, "emitDataLoss", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setMethodSamplingPeriod", "(JJ)V")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_18() {
-        let mut registry = MethodRegistry::new(&Version::Java18 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "jdk/jfr/internal/JVM";
-        assert!(registry
-            .method(class_name, "flush", "(Ljdk/jfr/internal/EventWriter;II)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDumpPath", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getEventWriter", "()Ljava/lang/Object;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "newEventWriter",
-                "()Ljdk/jfr/internal/EventWriter;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "setDumpPath", "(Ljava/lang/String;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setMethodSamplingInterval", "(JJ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setSampleThreads", "(Z)V")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_20() {
-        let mut registry = MethodRegistry::new(&Version::Java20 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "jdk/jfr/internal/JVM";
-        assert!(registry
-            .method(class_name, "hostTotalMemory", "()J")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_22() {
-        let mut registry = MethodRegistry::new(&Version::Java22 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "jdk/jfr/internal/JVM";
-        assert!(registry
-            .method(
-                class_name,
-                "registerStackFilter",
-                "([Ljava/lang/String;[Ljava/lang/String;)J"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "setMiscellaneous", "(JJ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "unregisterStackFilter", "(J)V")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_23() {
-        let mut registry = MethodRegistry::new(&Version::Java23 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "jdk/jfr/internal/JVM";
-        assert!(registry
-            .method(class_name, "hostTotalSwapMemory", "()J")
-            .is_some());
-        assert!(registry.method(class_name, "nanosNow", "()J").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

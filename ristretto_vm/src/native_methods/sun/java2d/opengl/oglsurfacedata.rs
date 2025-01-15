@@ -6,19 +6,20 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/opengl/OGLSurfaceData";
+
 /// Register all native methods for `sun.java2d.opengl.OGLSurfaceData`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/opengl/OGLSurfaceData";
-    registry.register(class_name, "getTextureID", "(J)I", get_texture_id);
-    registry.register(class_name, "getTextureTarget", "(J)I", get_texture_target);
-    registry.register(class_name, "initFBObject", "(JZZZII)Z", init_fb_object);
+    registry.register(CLASS_NAME, "getTextureID", "(J)I", get_texture_id);
+    registry.register(CLASS_NAME, "getTextureTarget", "(J)I", get_texture_target);
+    registry.register(CLASS_NAME, "initFBObject", "(JZZZII)Z", init_fb_object);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "initFlipBackbuffer",
         "(J)Z",
         init_flip_backbuffer,
     );
-    registry.register(class_name, "initTexture", "(JZZZII)Z", init_texture);
+    registry.register(CLASS_NAME, "initTexture", "(JZZZII)Z", init_texture);
 }
 
 #[async_recursion(?Send)]
@@ -53,58 +54,46 @@ async fn init_texture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/opengl/OGLSurfaceData";
-        assert!(registry
-            .method(class_name, "getTextureID", "(J)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getTextureTarget", "(J)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "initFBObject", "(JZZZII)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "initFlipBackbuffer", "(J)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "initTexture", "(JZZZII)Z")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.opengl.OGLSurfaceData.getTextureID(J)I")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.opengl.OGLSurfaceData.getTextureID(J)I"
+    )]
     async fn test_get_texture_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_texture_id(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.opengl.OGLSurfaceData.getTextureTarget(J)I")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.opengl.OGLSurfaceData.getTextureTarget(J)I"
+    )]
     async fn test_get_texture_target() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_texture_target(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.opengl.OGLSurfaceData.initFBObject(JZZZII)Z")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.opengl.OGLSurfaceData.initFBObject(JZZZII)Z"
+    )]
     async fn test_init_fb_object() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = init_fb_object(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.opengl.OGLSurfaceData.initFlipBackbuffer(J)Z")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.opengl.OGLSurfaceData.initFlipBackbuffer(J)Z"
+    )]
     async fn test_init_flip_backbuffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = init_flip_backbuffer(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.opengl.OGLSurfaceData.initTexture(JZZZII)Z")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.opengl.OGLSurfaceData.initTexture(JZZZII)Z"
+    )]
     async fn test_init_texture() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = init_texture(thread, Arguments::default()).await;

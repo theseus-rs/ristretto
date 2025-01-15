@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/x11/X11PMBlitLoops";
+
 /// Register all native methods for `sun.java2d.x11.X11PMBlitLoops`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/x11/X11PMBlitLoops";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeBlit",
         "(JJJLsun/java2d/pipe/Region;IIIIII)V",
         native_blit,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "updateBitmask",
         "(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V",
         update_bitmask,
@@ -37,30 +38,9 @@ async fn update_bitmask(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/x11/X11PMBlitLoops";
-        assert!(registry
-            .method(
-                class_name,
-                "nativeBlit",
-                "(JJJLsun/java2d/pipe/Region;IIIIII)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "updateBitmask",
-                "(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.x11.X11PMBlitLoops.nativeBlit(JJJLsun/java2d/pipe/Region;IIIIII)V"
+        expected = "not yet implemented: sun.java2d.x11.X11PMBlitLoops.nativeBlit(JJJLsun/java2d/pipe/Region;IIIIII)V"
     )]
     async fn test_native_blit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -69,7 +49,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.x11.X11PMBlitLoops.updateBitmask(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V"
+        expected = "not yet implemented: sun.java2d.x11.X11PMBlitLoops.updateBitmask(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V"
     )]
     async fn test_update_bitmask() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

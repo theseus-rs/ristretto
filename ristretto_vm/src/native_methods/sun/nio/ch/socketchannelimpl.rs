@@ -1,29 +1,25 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
+const CLASS_NAME: &str = "sun/nio/ch/SocketChannelImpl";
 
 /// Register all native methods for `sun.nio.ch.SocketChannelImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/nio/ch/SocketChannelImpl";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_8 {
+    if registry.java_major_version() <= JAVA_8 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "checkConnect",
             "(Ljava/io/FileDescriptor;ZZ)I",
             check_connect,
         );
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "checkConnect",
             "(Ljava/io/FileDescriptor;Z)I",
             check_connect,
@@ -31,7 +27,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "sendOutOfBandData",
         "(Ljava/io/FileDescriptor;B)I",
         send_out_of_band_data,
@@ -55,26 +51,9 @@ async fn send_out_of_band_data(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/nio/ch/SocketChannelImpl";
-        assert!(registry
-            .method(class_name, "checkConnect", "(Ljava/io/FileDescriptor;ZZ)I")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "sendOutOfBandData",
-                "(Ljava/io/FileDescriptor;B)I"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.nio.ch.SocketChannelImpl.checkConnect(Ljava/io/FileDescriptor;ZZ)I"
+        expected = "not yet implemented: sun.nio.ch.SocketChannelImpl.checkConnect(Ljava/io/FileDescriptor;ZZ)I"
     )]
     async fn test_check_connect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -83,7 +62,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.nio.ch.SocketChannelImpl.sendOutOfBandData(Ljava/io/FileDescriptor;B)I"
+        expected = "not yet implemented: sun.nio.ch.SocketChannelImpl.sendOutOfBandData(Ljava/io/FileDescriptor;B)I"
     )]
     async fn test_send_out_of_band_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

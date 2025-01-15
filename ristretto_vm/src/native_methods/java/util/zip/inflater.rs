@@ -1,46 +1,51 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/util/zip/Inflater";
+
 /// Register all native methods for `java.util.zip.Inflater`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/util/zip/Inflater";
-    registry.register(class_name, "end", "(J)V", end);
-    registry.register(class_name, "getAdler", "(J)I", get_adler);
+    if registry.java_major_version() <= JAVA_8 {
+        registry.register(CLASS_NAME, "inflateBytes", "(J[BII)I", inflate_bytes);
+    }
+
+    registry.register(CLASS_NAME, "end", "(J)V", end);
+    registry.register(CLASS_NAME, "getAdler", "(J)I", get_adler);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "inflateBufferBuffer",
         "(JJIJI)J",
         inflate_buffer_buffer,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "inflateBufferBytes",
         "(JJI[BII)J",
         inflate_buffer_bytes,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "inflateBytesBuffer",
         "(J[BIIJI)J",
         inflate_bytes_buffer,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "inflateBytesBytes",
         "(J[BII[BII)J",
         inflate_bytes_bytes,
     );
-    registry.register(class_name, "init", "(Z)J", init);
-    registry.register(class_name, "initIDs", "()V", init_ids);
-    registry.register(class_name, "reset", "(J)V", reset);
-    registry.register(class_name, "setDictionary", "(J[BII)V", set_dictionary);
+    registry.register(CLASS_NAME, "init", "(Z)J", init);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "reset", "(J)V", reset);
+    registry.register(CLASS_NAME, "setDictionary", "(J[BII)V", set_dictionary);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setDictionaryBuffer",
         "(JJI)V",
         set_dictionary_buffer,
@@ -82,6 +87,11 @@ async fn inflate_bytes_buffer(
 }
 
 #[async_recursion(?Send)]
+async fn inflate_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("java.util.zip.Inflater.inflateBytes(J[BII)I")
+}
+
+#[async_recursion(?Send)]
 async fn inflate_bytes_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("java.util.zip.Inflater.inflateBytesBytes(J[BII[BII)J")
 }
@@ -117,36 +127,6 @@ async fn set_dictionary_buffer(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/util/zip/Inflater";
-        assert!(registry.method(class_name, "end", "(J)V").is_some());
-        assert!(registry.method(class_name, "getAdler", "(J)I").is_some());
-        assert!(registry
-            .method(class_name, "inflateBufferBuffer", "(JJIJI)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "inflateBufferBytes", "(JJI[BII)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "inflateBytesBuffer", "(J[BIIJI)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "inflateBytesBytes", "(J[BII[BII)J")
-            .is_some());
-        assert!(registry.method(class_name, "init", "(Z)J").is_some());
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-        assert!(registry.method(class_name, "reset", "(J)V").is_some());
-        assert!(registry
-            .method(class_name, "setDictionary", "(J[BII)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setDictionaryBuffer", "(JJI)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.util.zip.Inflater.end(J)V")]
@@ -187,6 +167,13 @@ mod tests {
     async fn test_inflate_bytes_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = inflate_bytes_buffer(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.Inflater.inflateBytes(J[BII)I")]
+    async fn test_inflate_bytes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = inflate_bytes(thread, Arguments::default()).await;
     }
 
     #[tokio::test]

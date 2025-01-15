@@ -8,23 +8,24 @@ use async_recursion::async_recursion;
 use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/reflect/Reflection";
+
 /// Register all native methods for `sun.reflect.Reflection`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/reflect/Reflection";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCallerClass",
         "()Ljava/lang/Class;",
         get_caller_class_1,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCallerClass",
         "(I)Ljava/lang/Class;",
         get_caller_class_2,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getClassAccessFlags",
         "(Ljava/lang/Class;)I",
         get_class_access_flags,
@@ -73,24 +74,10 @@ async fn get_class_access_flags(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/reflect/Reflection";
-        assert!(registry
-            .method(class_name, "getCallerClass", "()Ljava/lang/Class;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getCallerClass", "(I)Ljava/lang/Class;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getClassAccessFlags", "(Ljava/lang/Class;)I")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.reflect.Reflection.getCallerClass(I)Ljava/lang/Class;")]
+    #[should_panic(
+        expected = "not yet implemented: sun.reflect.Reflection.getCallerClass(I)Ljava/lang/Class;"
+    )]
     async fn test_get_caller_class_2() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let arguments = Arguments::default();

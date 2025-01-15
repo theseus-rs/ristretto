@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/font/NativeStrikeDisposer";
+
 /// Register all native methods for `sun.font.NativeStrikeDisposer`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/font/NativeStrikeDisposer";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "freeNativeScalerContext",
         "(J)V",
         free_native_scaler_context,
@@ -29,18 +30,10 @@ async fn free_native_scaler_context(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/font/NativeStrikeDisposer";
-        assert!(registry
-            .method(class_name, "freeNativeScalerContext", "(J)V")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.font.NativeStrikeDisposer.freeNativeScalerContext(J)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.font.NativeStrikeDisposer.freeNativeScalerContext(J)V"
+    )]
     async fn test_free_native_scaler_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = free_native_scaler_context(thread, Arguments::default()).await;

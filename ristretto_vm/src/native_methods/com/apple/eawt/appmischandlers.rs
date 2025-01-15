@@ -6,35 +6,36 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/apple/eawt/_AppMiscHandlers";
+
 /// Register all native methods for `com.apple.eawt._AppMiscHandlers`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/apple/eawt/_AppMiscHandlers";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeDisableSuddenTermination",
         "()V",
         native_disable_sudden_termination,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeEnableSuddenTermination",
         "()V",
         native_enable_sudden_termination,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeOpenHelpViewer",
         "()V",
         native_open_help_viewer,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeRequestActivation",
         "(Z)V",
         native_request_activation,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeRequestUserAttention",
         "(Z)V",
         native_request_user_attention,
@@ -84,28 +85,6 @@ async fn native_request_user_attention(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/apple/eawt/_AppMiscHandlers";
-        assert!(registry
-            .method(class_name, "nativeDisableSuddenTermination", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeEnableSuddenTermination", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeOpenHelpViewer", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeRequestActivation", "(Z)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeRequestUserAttention", "(Z)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

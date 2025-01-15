@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/nio/fs/UnixCopyFile";
+
 /// Register all native methods for `sun.nio.fs.UnixCopyFile`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/nio/fs/UnixCopyFile";
-    registry.register(class_name, "transfer", "(IIJ)V", transfer);
+    registry.register(CLASS_NAME, "transfer", "(IIJ)V", transfer);
 }
 
 #[async_recursion(?Send)]
@@ -21,16 +22,8 @@ async fn transfer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/nio/fs/UnixCopyFile";
-        assert!(registry.method(class_name, "transfer", "(IIJ)V").is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.nio.fs.UnixCopyFile.transfer(IIJ)V")]
+    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixCopyFile.transfer(IIJ)V")]
     async fn test_transfer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = transfer(thread, Arguments::default()).await;

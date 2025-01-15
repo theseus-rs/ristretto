@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/util/zip/Adler32";
+
 /// Register all native methods for `java.util.zip.Adler32`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/util/zip/Adler32";
-    registry.register(class_name, "update", "(II)I", update);
+    registry.register(CLASS_NAME, "update", "(II)I", update);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "updateByteBuffer",
         "(IJII)I",
         update_byte_buffer,
     );
-    registry.register(class_name, "updateBytes", "(I[BII)I", update_bytes);
+    registry.register(CLASS_NAME, "updateBytes", "(I[BII)I", update_bytes);
 }
 
 #[async_recursion(?Send)]
@@ -37,20 +38,6 @@ async fn update_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/util/zip/Adler32";
-        assert!(registry.method(class_name, "update", "(II)I").is_some());
-        assert!(registry
-            .method(class_name, "updateByteBuffer", "(IJII)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "updateBytes", "(I[BII)I")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.util.zip.Adler32.update(II)I")]

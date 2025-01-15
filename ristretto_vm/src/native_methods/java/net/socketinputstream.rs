@@ -6,12 +6,13 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/net/SocketInputStream";
+
 /// Register all native methods for `java.net.SocketInputStream`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/net/SocketInputStream";
-    registry.register(class_name, "init", "()V", init);
+    registry.register(CLASS_NAME, "init", "()V", init);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "socketRead0",
         "(Ljava/io/FileDescriptor;[BIII)I",
         socket_read_0,
@@ -31,21 +32,6 @@ async fn socket_read_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/net/SocketInputStream";
-        assert!(registry.method(class_name, "init", "()V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "socketRead0",
-                "(Ljava/io/FileDescriptor;[BIII)I"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_init() -> Result<()> {

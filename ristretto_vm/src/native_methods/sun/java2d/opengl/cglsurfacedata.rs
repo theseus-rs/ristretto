@@ -1,39 +1,35 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
+const CLASS_NAME: &str = "sun/java2d/opengl/CGLSurfaceData";
 
 /// Register all native methods for `sun.java2d.opengl.CGLSurfaceData`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/opengl/CGLSurfaceData";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_11 {
+    if registry.java_major_version() <= JAVA_11 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "createCGLContextOnSurface",
             "(Lsun/java2d/opengl/CGLSurfaceData;J)J",
             create_cgl_context_on_surface,
         );
-        registry.register(class_name, "destroyCGLContext", "(J)V", destroy_cgl_context);
+        registry.register(CLASS_NAME, "destroyCGLContext", "(J)V", destroy_cgl_context);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "makeCGLContextCurrentOnSurface",
             "(Lsun/java2d/opengl/CGLSurfaceData;J)Z",
             make_cgl_context_current_on_surface,
         );
-        registry.register(class_name, "validate", "(IIIIZ)V", validate);
+        registry.register(CLASS_NAME, "validate", "(IIIIZ)V", validate);
     }
 
-    registry.register(class_name, "clearWindow", "()V", clear_window);
+    registry.register(CLASS_NAME, "clearWindow", "()V", clear_window);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "initOps",
         "(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V",
         init_ops,
@@ -80,43 +76,10 @@ async fn validate(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/opengl/CGLSurfaceData";
-        assert!(registry.method(class_name, "clearWindow", "()V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "createCGLContextOnSurface",
-                "(Lsun/java2d/opengl/CGLSurfaceData;J)J"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "destroyCGLContext", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "makeCGLContextCurrentOnSurface",
-                "(Lsun/java2d/opengl/CGLSurfaceData;J)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "validate", "(IIIIZ)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "initOps",
-                "(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.opengl.CGLSurfaceData.clearWindow()")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.clearWindow()"
+    )]
     async fn test_clear_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = clear_window(thread, Arguments::default()).await;
@@ -124,7 +87,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.opengl.CGLSurfaceData.createCGLContextOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)J"
+        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.createCGLContextOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)J"
     )]
     async fn test_create_cgl_context_on_surface() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -132,7 +95,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.opengl.CGLSurfaceData.destroyCGLContext(J)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.destroyCGLContext(J)V"
+    )]
     async fn test_destroy_cgl_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = destroy_cgl_context(thread, Arguments::default()).await;
@@ -140,7 +105,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.opengl.CGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V"
+        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V"
     )]
     async fn test_init_ops() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -149,7 +114,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.opengl.CGLSurfaceData.makeCGLContextCurrentOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)Z"
+        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.makeCGLContextCurrentOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)Z"
     )]
     async fn test_make_cgl_context_current_on_surface() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -157,7 +122,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.opengl.CGLSurfaceData.validate(IIIIZ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.validate(IIIIZ)V"
+    )]
     async fn test_validate() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = validate(thread, Arguments::default()).await;

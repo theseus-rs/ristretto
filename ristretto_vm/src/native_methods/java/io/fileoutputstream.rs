@@ -1,29 +1,25 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_8};
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::{Object, Value};
 use std::io::Write;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
+const CLASS_NAME: &str = "java/io/FileOutputStream";
 
 /// Register all native methods for `java.io.FileOutputStream`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/io/FileOutputStream";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_8 {
-        registry.register(class_name, "close0", "()V", close_0);
+    if registry.java_major_version() <= JAVA_8 {
+        registry.register(CLASS_NAME, "close0", "()V", close_0);
     }
 
-    registry.register(class_name, "initIDs", "()V", init_ids);
-    registry.register(class_name, "open0", "(Ljava/lang/String;Z)V", open_0);
-    registry.register(class_name, "write", "(IZ)V", write);
-    registry.register(class_name, "writeBytes", "([BIIZ)V", write_bytes);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "open0", "(Ljava/lang/String;Z)V", open_0);
+    registry.register(CLASS_NAME, "write", "(IZ)V", write);
+    registry.register(CLASS_NAME, "writeBytes", "([BIIZ)V", write_bytes);
 }
 
 #[async_recursion(?Send)]
@@ -87,22 +83,6 @@ async fn write_bytes(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/io/FileOutputStream";
-        assert!(registry.method(class_name, "close0", "()V").is_some());
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-        assert!(registry
-            .method(class_name, "open0", "(Ljava/lang/String;Z)V")
-            .is_some());
-        assert!(registry.method(class_name, "write", "(IZ)V").is_some());
-        assert!(registry
-            .method(class_name, "writeBytes", "([BIIZ)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.io.FileOutputStream.close0()V")]

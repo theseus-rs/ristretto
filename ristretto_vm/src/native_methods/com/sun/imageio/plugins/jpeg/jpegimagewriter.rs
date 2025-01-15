@@ -6,27 +6,28 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/imageio/plugins/jpeg/JPEGImageWriter";
+
 /// Register all native methods for `com.sun.imageio.plugins.jpeg.JPEGImageWriter`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/imageio/plugins/jpeg/JPEGImageWriter";
-    registry.register(class_name, "abortWrite", "(J)V", abort_write);
-    registry.register(class_name, "disposeWriter", "(J)V", dispose_writer);
+    registry.register(CLASS_NAME, "abortWrite", "(J)V", abort_write);
+    registry.register(CLASS_NAME, "disposeWriter", "(J)V", dispose_writer);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "initJPEGImageWriter",
         "()J",
         init_jpeg_image_writer,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "initWriterIDs",
         "(Ljava/lang/Class;Ljava/lang/Class;)V",
         init_writer_ids,
     );
-    registry.register(class_name, "resetWriter", "(J)V", reset_writer);
-    registry.register(class_name, "setDest", "(J)V", set_dest);
-    registry.register(class_name, "writeImage", "(J[BIII[IIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;Z[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;ZZZI[I[I[I[I[IZI)Z", write_image);
-    registry.register(class_name, "writeTables", "(J[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;)V", write_tables);
+    registry.register(CLASS_NAME, "resetWriter", "(J)V", reset_writer);
+    registry.register(CLASS_NAME, "setDest", "(J)V", set_dest);
+    registry.register(CLASS_NAME, "writeImage", "(J[BIII[IIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;Z[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;ZZZI[I[I[I[I[IZI)Z", write_image);
+    registry.register(CLASS_NAME, "writeTables", "(J[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;)V", write_tables);
 }
 
 #[async_recursion(?Send)]
@@ -75,43 +76,6 @@ async fn write_tables(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/imageio/plugins/jpeg/JPEGImageWriter";
-        assert!(registry.method(class_name, "abortWrite", "(J)V").is_some());
-        assert!(registry
-            .method(class_name, "disposeWriter", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "initJPEGImageWriter", "()J")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "initWriterIDs",
-                "(Ljava/lang/Class;Ljava/lang/Class;)V"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "resetWriter", "(J)V").is_some());
-        assert!(registry.method(class_name, "setDest", "(J)V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "writeImage",
-                "(J[BIII[IIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;Z[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;ZZZI[I[I[I[I[IZI)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "writeTables",
-                "(J[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;)V"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

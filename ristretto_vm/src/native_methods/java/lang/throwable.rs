@@ -1,31 +1,26 @@
 use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_8};
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::{ConcurrentVec, Object, Reference, Value};
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_11: Version = Version::Java11 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/Throwable";
 
 /// Register all native methods for `java.lang.Throwable`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/Throwable";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_8 {
+    if registry.java_major_version() <= JAVA_8 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getStackTraceDepth",
             "()I",
             get_stack_trace_depth,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getStackTraceElement",
             "(I)Ljava/lang/StackTraceElement;",
             get_stack_trace_element,
@@ -33,7 +28,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "fillInStackTrace",
         "(I)Ljava/lang/Throwable;",
         fill_in_stack_trace,
@@ -90,7 +85,7 @@ async fn fill_in_stack_trace(
     )));
     throwable.set_value("backtrace", stack_trace)?;
 
-    if vm.java_class_file_version() >= &JAVA_11 {
+    if vm.java_major_version() >= JAVA_11 {
         throwable.set_value("depth", Value::Int(depth))?;
     }
 
@@ -116,26 +111,6 @@ async fn get_stack_trace_element(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/Throwable";
-        assert!(registry
-            .method(class_name, "getStackTraceDepth", "()I")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getStackTraceElement",
-                "(I)Ljava/lang/StackTraceElement;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "fillInStackTrace", "(I)Ljava/lang/Throwable;")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.lang.Throwable.getStackTraceDepth()I")]

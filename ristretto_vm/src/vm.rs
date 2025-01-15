@@ -29,6 +29,7 @@ pub struct VM {
     main_class: Option<String>,
     java_home: PathBuf,
     java_version: String,
+    java_major_version: u16,
     java_class_file_version: Version,
     method_registry: MethodRegistry,
     next_thread_id: AtomicU64,
@@ -66,14 +67,14 @@ impl VM {
             "Java home: {}; version: {java_version}",
             java_home.to_string_lossy()
         );
-        let major_version: u16 = java_version.split('.').next().unwrap_or("0").parse()?;
+        let java_major_version: u16 = java_version.split('.').next().unwrap_or("0").parse()?;
         let class_file_minor_version = if configuration.preview_features() {
             JAVA_PREVIEW_MINOR_VERSION
         } else {
             0
         };
         let java_class_file_version = Version::from(
-            major_version + Self::CLASS_FILE_MAJOR_VERSION_OFFSET,
+            java_major_version + Self::CLASS_FILE_MAJOR_VERSION_OFFSET,
             class_file_minor_version,
         )?;
         debug!("Class file version {java_class_file_version}");
@@ -122,7 +123,7 @@ impl VM {
         // TODO: set use_optimizations based on the environment (e.g. -Xdebug / -Xint).
         // The bespoke method optimizations should likely be removed if/when a JIT is implemented.
         let use_optimizations = true;
-        let mut method_registry = MethodRegistry::new(&java_class_file_version, use_optimizations);
+        let mut method_registry = MethodRegistry::new(java_major_version, use_optimizations);
         method_registry.initialize();
 
         let vm = Arc::new_cyclic(|vm| VM {
@@ -132,6 +133,7 @@ impl VM {
             main_class,
             java_home,
             java_version,
+            java_major_version,
             java_class_file_version,
             method_registry,
             next_thread_id: AtomicU64::new(1),
@@ -177,6 +179,12 @@ impl VM {
     #[must_use]
     pub fn java_version(&self) -> &str {
         &self.java_version
+    }
+
+    /// Get the java major version
+    #[must_use]
+    pub fn java_major_version(&self) -> u16 {
+        self.java_major_version
     }
 
     /// Get the Java class file version

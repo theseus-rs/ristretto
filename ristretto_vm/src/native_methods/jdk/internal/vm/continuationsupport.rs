@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/vm/ContinuationSupport";
+
 /// Register all native methods for `jdk.internal.vm.ContinuationSupport`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/vm/ContinuationSupport";
-    registry.register(class_name, "isSupported0", "()Z", is_supported_0);
+    registry.register(CLASS_NAME, "isSupported0", "()Z", is_supported_0);
 }
 
 #[async_recursion(?Send)]
@@ -21,16 +22,10 @@ async fn is_supported_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/vm/ContinuationSupport";
-        assert!(registry.method(class_name, "isSupported0", "()Z").is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "jdk.internal.vm.ContinuationSupport.isSupported0()Z")]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.vm.ContinuationSupport.isSupported0()Z"
+    )]
     async fn test_is_supported_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = is_supported_0(thread, Arguments::default()).await;

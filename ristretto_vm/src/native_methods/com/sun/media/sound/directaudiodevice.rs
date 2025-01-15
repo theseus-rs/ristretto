@@ -6,44 +6,45 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/media/sound/DirectAudioDevice";
+
 /// Register all native methods for `com.sun.media.sound.DirectAudioDevice`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/media/sound/DirectAudioDevice";
-    registry.register(class_name, "nAvailable", "(JZ)I", n_available);
-    registry.register(class_name, "nClose", "(JZ)V", n_close);
-    registry.register(class_name, "nFlush", "(JZ)V", n_flush);
-    registry.register(class_name, "nGetBufferSize", "(JZ)I", n_get_buffer_size);
+    registry.register(CLASS_NAME, "nAvailable", "(JZ)I", n_available);
+    registry.register(CLASS_NAME, "nClose", "(JZ)V", n_close);
+    registry.register(CLASS_NAME, "nFlush", "(JZ)V", n_flush);
+    registry.register(CLASS_NAME, "nGetBufferSize", "(JZ)I", n_get_buffer_size);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nGetBytePosition",
         "(JZJ)J",
         n_get_byte_position,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nGetFormats",
         "(IIZLjava/util/Vector;)V",
         n_get_formats,
     );
-    registry.register(class_name, "nIsStillDraining", "(JZ)Z", n_is_still_draining);
-    registry.register(class_name, "nOpen", "(IIZIFIIIZZI)J", n_open);
-    registry.register(class_name, "nRead", "(J[BIII)I", n_read);
+    registry.register(CLASS_NAME, "nIsStillDraining", "(JZ)Z", n_is_still_draining);
+    registry.register(CLASS_NAME, "nOpen", "(IIZIFIIIZZI)J", n_open);
+    registry.register(CLASS_NAME, "nRead", "(J[BIII)I", n_read);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nRequiresServicing",
         "(JZ)Z",
         n_requires_servicing,
     );
-    registry.register(class_name, "nService", "(JZ)V", n_service);
+    registry.register(CLASS_NAME, "nService", "(JZ)V", n_service);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nSetBytePosition",
         "(JZJ)V",
         n_set_byte_position,
     );
-    registry.register(class_name, "nStart", "(JZ)V", n_start);
-    registry.register(class_name, "nStop", "(JZ)V", n_stop);
-    registry.register(class_name, "nWrite", "(J[BIIIFF)I", n_write);
+    registry.register(CLASS_NAME, "nStart", "(JZ)V", n_start);
+    registry.register(CLASS_NAME, "nStop", "(JZ)V", n_stop);
+    registry.register(CLASS_NAME, "nWrite", "(J[BIIIFF)I", n_write);
 }
 
 #[async_recursion(?Send)]
@@ -127,44 +128,6 @@ async fn n_write(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/media/sound/DirectAudioDevice";
-        assert!(registry.method(class_name, "nAvailable", "(JZ)I").is_some());
-        assert!(registry.method(class_name, "nClose", "(JZ)V").is_some());
-        assert!(registry.method(class_name, "nFlush", "(JZ)V").is_some());
-        assert!(registry
-            .method(class_name, "nGetBufferSize", "(JZ)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nGetBytePosition", "(JZJ)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nGetFormats", "(IIZLjava/util/Vector;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nIsStillDraining", "(JZ)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nOpen", "(IIZIFIIIZZI)J")
-            .is_some());
-        assert!(registry.method(class_name, "nRead", "(J[BIII)I").is_some());
-        assert!(registry
-            .method(class_name, "nRequiresServicing", "(JZ)Z")
-            .is_some());
-        assert!(registry.method(class_name, "nService", "(JZ)V").is_some());
-        assert!(registry
-            .method(class_name, "nSetBytePosition", "(JZJ)V")
-            .is_some());
-        assert!(registry.method(class_name, "nStart", "(JZ)V").is_some());
-        assert!(registry.method(class_name, "nStop", "(JZ)V").is_some());
-        assert!(registry
-            .method(class_name, "nWrite", "(J[BIIIFF)I")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

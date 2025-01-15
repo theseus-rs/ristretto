@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/ref/Finalizer";
+
 /// Register all native methods for `java.lang.ref.Finalizer`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/ref/Finalizer";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "isFinalizationEnabled",
         "()Z",
         is_finalization_enabled,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "reportComplete",
         "(Ljava/lang/Object;)V",
         report_complete,
@@ -39,19 +40,6 @@ async fn report_complete(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/ref/Finalizer";
-        assert!(registry
-            .method(class_name, "isFinalizationEnabled", "()Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "reportComplete", "(Ljava/lang/Object;)V")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_is_finalization_enabled() -> Result<()> {

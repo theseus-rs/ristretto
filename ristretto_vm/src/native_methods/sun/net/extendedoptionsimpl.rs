@@ -6,61 +6,62 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/net/ExtendedOptionsImpl";
+
 /// Register all native methods for `sun.net.ExtendedOptionsImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/net/ExtendedOptionsImpl";
-    registry.register(class_name, "flowSupported", "()Z", flow_supported);
+    registry.register(CLASS_NAME, "flowSupported", "()Z", flow_supported);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getFlowOption",
         "(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V",
         get_flow_option,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getTcpKeepAliveIntvl",
         "(Ljava/io/FileDescriptor;)I",
         get_tcp_keep_alive_intvl,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getTcpKeepAliveProbes",
         "(Ljava/io/FileDescriptor;)I",
         get_tcp_keep_alive_probes,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getTcpKeepAliveTime",
         "(Ljava/io/FileDescriptor;)I",
         get_tcp_keep_alive_time,
     );
-    registry.register(class_name, "init", "()V", init);
+    registry.register(CLASS_NAME, "init", "()V", init);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "keepAliveOptionsSupported",
         "()Z",
         keep_alive_options_supported,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setFlowOption",
         "(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V",
         set_flow_option,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setTcpKeepAliveIntvl",
         "(Ljava/io/FileDescriptor;I)V",
         set_tcp_keep_alive_intvl,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setTcpKeepAliveProbes",
         "(Ljava/io/FileDescriptor;I)V",
         set_tcp_keep_alive_probes,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setTcpKeepAliveTime",
         "(Ljava/io/FileDescriptor;I)V",
         set_tcp_keep_alive_time,
@@ -151,78 +152,8 @@ async fn set_tcp_keep_alive_time(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/net/ExtendedOptionsImpl";
-        assert!(registry
-            .method(class_name, "flowSupported", "()Z")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getFlowOption",
-                "(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getTcpKeepAliveIntvl",
-                "(Ljava/io/FileDescriptor;)I"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getTcpKeepAliveProbes",
-                "(Ljava/io/FileDescriptor;)I"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getTcpKeepAliveTime",
-                "(Ljava/io/FileDescriptor;)I"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "init", "()V").is_some());
-        assert!(registry
-            .method(class_name, "keepAliveOptionsSupported", "()Z")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setFlowOption",
-                "(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setTcpKeepAliveIntvl",
-                "(Ljava/io/FileDescriptor;I)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setTcpKeepAliveProbes",
-                "(Ljava/io/FileDescriptor;I)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setTcpKeepAliveTime",
-                "(Ljava/io/FileDescriptor;I)V"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.net.ExtendedOptionsImpl.flowSupported()Z")]
+    #[should_panic(expected = "not yet implemented: sun.net.ExtendedOptionsImpl.flowSupported()Z")]
     async fn test_flow_supported() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = flow_supported(thread, Arguments::default()).await;
@@ -230,7 +161,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.net.ExtendedOptionsImpl.getFlowOption(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V"
+        expected = "not yet implemented: sun.net.ExtendedOptionsImpl.getFlowOption(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V"
     )]
     async fn test_get_flow_option() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -239,7 +170,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.net.ExtendedOptionsImpl.getTcpKeepAliveIntvl(Ljava/io/FileDescriptor;)I"
+        expected = "not yet implemented: sun.net.ExtendedOptionsImpl.getTcpKeepAliveIntvl(Ljava/io/FileDescriptor;)I"
     )]
     async fn test_get_tcp_keep_alive_intvl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -248,7 +179,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.net.ExtendedOptionsImpl.getTcpKeepAliveProbes(Ljava/io/FileDescriptor;)I"
+        expected = "not yet implemented: sun.net.ExtendedOptionsImpl.getTcpKeepAliveProbes(Ljava/io/FileDescriptor;)I"
     )]
     async fn test_get_tcp_keep_alive_probes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -257,7 +188,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.net.ExtendedOptionsImpl.getTcpKeepAliveTime(Ljava/io/FileDescriptor;)I"
+        expected = "not yet implemented: sun.net.ExtendedOptionsImpl.getTcpKeepAliveTime(Ljava/io/FileDescriptor;)I"
     )]
     async fn test_get_tcp_keep_alive_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

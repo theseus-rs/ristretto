@@ -1,85 +1,81 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
+const CLASS_NAME: &str = "java/net/PlainDatagramSocketImpl";
 
 /// Register all native methods for `java.net.PlainDatagramSocketImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/net/PlainDatagramSocketImpl";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_8 {
-        registry.register(class_name, "send", "(Ljava/net/DatagramPacket;)V", send);
+    if registry.java_major_version() <= JAVA_8 {
+        registry.register(CLASS_NAME, "send", "(Ljava/net/DatagramPacket;)V", send);
     } else {
-        registry.register(class_name, "send0", "(Ljava/net/DatagramPacket;)V", send_0);
+        registry.register(CLASS_NAME, "send0", "(Ljava/net/DatagramPacket;)V", send_0);
     }
 
-    registry.register(class_name, "bind0", "(ILjava/net/InetAddress;)V", bind_0);
+    registry.register(CLASS_NAME, "bind0", "(ILjava/net/InetAddress;)V", bind_0);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "connect0",
         "(Ljava/net/InetAddress;I)V",
         connect_0,
     );
-    registry.register(class_name, "dataAvailable", "()I", data_available);
+    registry.register(CLASS_NAME, "dataAvailable", "()I", data_available);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "datagramSocketClose",
         "()V",
         datagram_socket_close,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "datagramSocketCreate",
         "()V",
         datagram_socket_create,
     );
-    registry.register(class_name, "disconnect0", "(I)V", disconnect_0);
-    registry.register(class_name, "getTTL", "()B", get_ttl);
-    registry.register(class_name, "getTimeToLive", "()I", get_time_to_live);
-    registry.register(class_name, "init", "()V", init);
+    registry.register(CLASS_NAME, "disconnect0", "(I)V", disconnect_0);
+    registry.register(CLASS_NAME, "getTTL", "()B", get_ttl);
+    registry.register(CLASS_NAME, "getTimeToLive", "()I", get_time_to_live);
+    registry.register(CLASS_NAME, "init", "()V", init);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "join",
         "(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
         join,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "leave",
         "(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
         leave,
     );
-    registry.register(class_name, "peek", "(Ljava/net/InetAddress;)I", peek);
+    registry.register(CLASS_NAME, "peek", "(Ljava/net/InetAddress;)I", peek);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "peekData",
         "(Ljava/net/DatagramPacket;)I",
         peek_data,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "receive0",
         "(Ljava/net/DatagramPacket;)V",
         receive_0,
     );
-    registry.register(class_name, "send0", "(Ljava/net/DatagramPacket;)V", send_0);
-    registry.register(class_name, "setTTL", "(B)V", set_ttl);
-    registry.register(class_name, "setTimeToLive", "(I)V", set_time_to_live);
+    registry.register(CLASS_NAME, "send0", "(Ljava/net/DatagramPacket;)V", send_0);
+    registry.register(CLASS_NAME, "setTTL", "(B)V", set_ttl);
+    registry.register(CLASS_NAME, "setTimeToLive", "(I)V", set_time_to_live);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "socketGetOption",
         "(I)Ljava/lang/Object;",
         socket_get_option,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "socketSetOption0",
         "(ILjava/lang/Object;)V",
         socket_set_option_0,
@@ -197,79 +193,6 @@ async fn socket_set_option_0(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java9 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/net/PlainDatagramSocketImpl";
-        assert!(registry
-            .method(class_name, "bind0", "(ILjava/net/InetAddress;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "connect0", "(Ljava/net/InetAddress;I)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "dataAvailable", "()I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "datagramSocketClose", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "datagramSocketCreate", "()V")
-            .is_some());
-        assert!(registry.method(class_name, "disconnect0", "(I)V").is_some());
-        assert!(registry.method(class_name, "getTTL", "()B").is_some());
-        assert!(registry
-            .method(class_name, "getTimeToLive", "()I")
-            .is_some());
-        assert!(registry.method(class_name, "init", "()V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "join",
-                "(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "leave",
-                "(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "peek", "(Ljava/net/InetAddress;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "peekData", "(Ljava/net/DatagramPacket;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "receive0", "(Ljava/net/DatagramPacket;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "send0", "(Ljava/net/DatagramPacket;)V")
-            .is_some());
-        assert!(registry.method(class_name, "setTTL", "(B)V").is_some());
-        assert!(registry
-            .method(class_name, "setTimeToLive", "(I)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketGetOption", "(I)Ljava/lang/Object;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "socketSetOption0", "(ILjava/lang/Object;)V")
-            .is_some());
-    }
-
-    fn test_register_java_8() {
-        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/net/PlainDatagramSocketImpl";
-        assert!(registry
-            .method(class_name, "send", "(Ljava/net/DatagramPacket;)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

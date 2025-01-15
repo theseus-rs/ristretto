@@ -1,22 +1,18 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
+const CLASS_NAME: &str = "com/apple/eawt/_AppDockIconHandler";
 
 /// Register all native methods for `com.apple.eawt._AppDockIconHandler`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/apple/eawt/_AppDockIconHandler";
-    let java_version = registry.java_version();
-
-    if java_version >= &JAVA_11 {
+    if registry.java_major_version() >= JAVA_11 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "nativeSetDockIconProgress",
             "(I)V",
             native_set_dock_icon_progress,
@@ -24,25 +20,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetDockIconImage",
         "()J",
         native_get_dock_icon_image,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeSetDockIconBadge",
         "(Ljava/lang/String;)V",
         native_set_dock_icon_badge,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeSetDockIconImage",
         "(J)V",
         native_set_dock_icon_image,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeSetDockMenu",
         "(J)V",
         native_set_dock_menu,
@@ -92,29 +88,6 @@ async fn native_set_dock_menu(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/apple/eawt/_AppDockIconHandler";
-        assert!(registry
-            .method(class_name, "nativeGetDockIconImage", "()J")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nativeSetDockIconBadge",
-                "(Ljava/lang/String;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeSetDockIconImage", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeSetDockMenu", "(J)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

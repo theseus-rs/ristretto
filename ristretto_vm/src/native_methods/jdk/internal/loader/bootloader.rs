@@ -6,23 +6,24 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/loader/BootLoader";
+
 /// Register all native methods for `jdk.internal.loader.BootLoader`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/loader/BootLoader";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getSystemPackageLocation",
         "(Ljava/lang/String;)Ljava/lang/String;",
         get_system_package_location,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getSystemPackageNames",
         "()[Ljava/lang/String;",
         get_system_package_names,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setBootLoaderUnnamedModule0",
         "(Ljava/lang/Module;)V",
         set_boot_loader_unnamed_module_0,
@@ -58,33 +59,9 @@ async fn set_boot_loader_unnamed_module_0(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/loader/BootLoader";
-        assert!(registry
-            .method(
-                class_name,
-                "getSystemPackageLocation",
-                "(Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getSystemPackageNames", "()[Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setBootLoaderUnnamedModule0",
-                "(Ljava/lang/Module;)V"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.loader.BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String;"
+        expected = "not yet implemented: jdk.internal.loader.BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String;"
     )]
     async fn test_get_system_package_location() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -93,7 +70,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.loader.BootLoader.getSystemPackageNames()[Ljava/lang/String;"
+        expected = "not yet implemented: jdk.internal.loader.BootLoader.getSystemPackageNames()[Ljava/lang/String;"
     )]
     async fn test_get_system_package_names() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

@@ -7,341 +7,342 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/misc/Unsafe";
+
 /// Register all native methods for `sun.misc.Unsafe`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/misc/Unsafe";
-    registry.register(class_name, "addressSize", "()I", address_size);
+    registry.register(CLASS_NAME, "addressSize", "()I", address_size);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "allocateInstance",
         "(Ljava/lang/Class;)Ljava/lang/Object;",
         allocate_instance,
     );
-    registry.register(class_name, "allocateMemory", "(J)J", allocate_memory);
+    registry.register(CLASS_NAME, "allocateMemory", "(J)J", allocate_memory);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "arrayBaseOffset",
         "(Ljava/lang/Class;)I",
         array_base_offset,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "arrayIndexScale",
         "(Ljava/lang/Class;)I",
         array_index_scale,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndSwapInt",
         "(Ljava/lang/Object;JII)Z",
         compare_and_swap_int,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndSwapLong",
         "(Ljava/lang/Object;JJJ)Z",
         compare_and_swap_long,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndSwapObject",
         "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
         compare_and_swap_object,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "copyMemory",
         "(Ljava/lang/Object;JLjava/lang/Object;JJ)V",
         copy_memory,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "defineAnonymousClass",
         "(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;",
         define_anonymous_class,
     );
-    registry.register(class_name, "defineClass", "(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;", define_class);
+    registry.register(CLASS_NAME, "defineClass", "(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;", define_class);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "ensureClassInitialized",
         "(Ljava/lang/Class;)V",
         ensure_class_initialized,
     );
-    registry.register(class_name, "freeMemory", "(J)V", free_memory);
-    registry.register(class_name, "fullFence", "()V", full_fence);
-    registry.register(class_name, "getAddress", "(J)J", get_address);
+    registry.register(CLASS_NAME, "freeMemory", "(J)V", free_memory);
+    registry.register(CLASS_NAME, "fullFence", "()V", full_fence);
+    registry.register(CLASS_NAME, "getAddress", "(J)J", get_address);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getBoolean",
         "(Ljava/lang/Object;J)Z",
         get_boolean,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getBooleanVolatile",
         "(Ljava/lang/Object;J)Z",
         get_boolean_volatile,
     );
-    registry.register(class_name, "getByte", "(J)B", get_byte_1);
-    registry.register(class_name, "getByte", "(Ljava/lang/Object;J)B", get_byte_2);
+    registry.register(CLASS_NAME, "getByte", "(J)B", get_byte_1);
+    registry.register(CLASS_NAME, "getByte", "(Ljava/lang/Object;J)B", get_byte_2);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getByteVolatile",
         "(Ljava/lang/Object;J)B",
         get_byte_volatile,
     );
-    registry.register(class_name, "getChar", "(J)C", get_char_1);
-    registry.register(class_name, "getChar", "(Ljava/lang/Object;J)C", get_char_2);
+    registry.register(CLASS_NAME, "getChar", "(J)C", get_char_1);
+    registry.register(CLASS_NAME, "getChar", "(Ljava/lang/Object;J)C", get_char_2);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCharVolatile",
         "(Ljava/lang/Object;J)C",
         get_char_volatile,
     );
-    registry.register(class_name, "getDouble", "(J)D", get_double_1);
+    registry.register(CLASS_NAME, "getDouble", "(J)D", get_double_1);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDouble",
         "(Ljava/lang/Object;J)D",
         get_double_2,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDoubleVolatile",
         "(Ljava/lang/Object;J)D",
         get_double_volatile,
     );
-    registry.register(class_name, "getFloat", "(J)F", get_float_1);
+    registry.register(CLASS_NAME, "getFloat", "(J)F", get_float_1);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getFloat",
         "(Ljava/lang/Object;J)F",
         get_float_2,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getFloatVolatile",
         "(Ljava/lang/Object;J)F",
         get_float_volatile,
     );
-    registry.register(class_name, "getInt", "(J)I", get_int_1);
-    registry.register(class_name, "getInt", "(Ljava/lang/Object;J)I", get_int_2);
+    registry.register(CLASS_NAME, "getInt", "(J)I", get_int_1);
+    registry.register(CLASS_NAME, "getInt", "(Ljava/lang/Object;J)I", get_int_2);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getIntVolatile",
         "(Ljava/lang/Object;J)I",
         get_int_volatile,
     );
-    registry.register(class_name, "getLoadAverage", "([DI)I", get_load_average);
-    registry.register(class_name, "getLong", "(J)J", get_long_1);
-    registry.register(class_name, "getLong", "(Ljava/lang/Object;J)J", get_long_2);
+    registry.register(CLASS_NAME, "getLoadAverage", "([DI)I", get_load_average);
+    registry.register(CLASS_NAME, "getLong", "(J)J", get_long_1);
+    registry.register(CLASS_NAME, "getLong", "(Ljava/lang/Object;J)J", get_long_2);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getLongVolatile",
         "(Ljava/lang/Object;J)J",
         get_long_volatile,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getObject",
         "(Ljava/lang/Object;J)Ljava/lang/Object;",
         get_object,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getObjectVolatile",
         "(Ljava/lang/Object;J)Ljava/lang/Object;",
         get_object_volatile,
     );
-    registry.register(class_name, "getShort", "(J)S", get_short_1);
+    registry.register(CLASS_NAME, "getShort", "(J)S", get_short_1);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getShort",
         "(Ljava/lang/Object;J)S",
         get_short_2,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getShortVolatile",
         "(Ljava/lang/Object;J)S",
         get_short_volatile,
     );
-    registry.register(class_name, "loadFence", "()V", load_fence);
+    registry.register(CLASS_NAME, "loadFence", "()V", load_fence);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "monitorEnter",
         "(Ljava/lang/Object;)V",
         monitor_enter,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "monitorExit",
         "(Ljava/lang/Object;)V",
         monitor_exit,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "objectFieldOffset",
         "(Ljava/lang/reflect/Field;)J",
         object_field_offset,
     );
-    registry.register(class_name, "pageSize", "()I", page_size);
-    registry.register(class_name, "park", "(ZJ)V", park);
-    registry.register(class_name, "putAddress", "(JJ)V", put_address);
+    registry.register(CLASS_NAME, "pageSize", "()I", page_size);
+    registry.register(CLASS_NAME, "park", "(ZJ)V", park);
+    registry.register(CLASS_NAME, "putAddress", "(JJ)V", put_address);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putBoolean",
         "(Ljava/lang/Object;JZ)V",
         put_boolean,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putBooleanVolatile",
         "(Ljava/lang/Object;JZ)V",
         put_boolean_volatile,
     );
-    registry.register(class_name, "putByte", "(JB)V", put_byte_1);
-    registry.register(class_name, "putByte", "(Ljava/lang/Object;JB)V", put_byte_2);
+    registry.register(CLASS_NAME, "putByte", "(JB)V", put_byte_1);
+    registry.register(CLASS_NAME, "putByte", "(Ljava/lang/Object;JB)V", put_byte_2);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putByteVolatile",
         "(Ljava/lang/Object;JB)V",
         put_byte_volatile,
     );
-    registry.register(class_name, "putChar", "(JC)V", put_char_1);
-    registry.register(class_name, "putChar", "(Ljava/lang/Object;JC)V", put_char_2);
+    registry.register(CLASS_NAME, "putChar", "(JC)V", put_char_1);
+    registry.register(CLASS_NAME, "putChar", "(Ljava/lang/Object;JC)V", put_char_2);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putCharVolatile",
         "(Ljava/lang/Object;JC)V",
         put_char_volatile,
     );
-    registry.register(class_name, "putDouble", "(JD)V", put_double_1);
+    registry.register(CLASS_NAME, "putDouble", "(JD)V", put_double_1);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putDouble",
         "(Ljava/lang/Object;JD)V",
         put_double_2,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putDoubleVolatile",
         "(Ljava/lang/Object;JD)V",
         put_double_volatile,
     );
-    registry.register(class_name, "putFloat", "(JF)V", put_float_1);
+    registry.register(CLASS_NAME, "putFloat", "(JF)V", put_float_1);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putFloat",
         "(Ljava/lang/Object;JF)V",
         put_float_2,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putFloatVolatile",
         "(Ljava/lang/Object;JF)V",
         put_float_volatile,
     );
-    registry.register(class_name, "putInt", "(JI)V", put_int_1);
-    registry.register(class_name, "putInt", "(Ljava/lang/Object;JI)V", put_int_2);
+    registry.register(CLASS_NAME, "putInt", "(JI)V", put_int_1);
+    registry.register(CLASS_NAME, "putInt", "(Ljava/lang/Object;JI)V", put_int_2);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putIntVolatile",
         "(Ljava/lang/Object;JI)V",
         put_int_volatile,
     );
-    registry.register(class_name, "putLong", "(JJ)V", put_long_1);
-    registry.register(class_name, "putLong", "(Ljava/lang/Object;JJ)V", put_long_2);
+    registry.register(CLASS_NAME, "putLong", "(JJ)V", put_long_1);
+    registry.register(CLASS_NAME, "putLong", "(Ljava/lang/Object;JJ)V", put_long_2);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putLongVolatile",
         "(Ljava/lang/Object;JJ)V",
         put_long_volatile,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putObject",
         "(Ljava/lang/Object;JLjava/lang/Object;)V",
         put_object,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putObjectVolatile",
         "(Ljava/lang/Object;JLjava/lang/Object;)V",
         put_object_volatile,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putOrderedInt",
         "(Ljava/lang/Object;JI)V",
         put_ordered_int,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putOrderedLong",
         "(Ljava/lang/Object;JJ)V",
         put_ordered_long,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putOrderedObject",
         "(Ljava/lang/Object;JLjava/lang/Object;)V",
         put_ordered_object,
     );
-    registry.register(class_name, "putShort", "(JS)V", put_short_1);
+    registry.register(CLASS_NAME, "putShort", "(JS)V", put_short_1);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putShort",
         "(Ljava/lang/Object;JS)V",
         put_short_2,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "putShortVolatile",
         "(Ljava/lang/Object;JS)V",
         put_short_volatile,
     );
-    registry.register(class_name, "reallocateMemory", "(JJ)J", reallocate_memory);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "reallocateMemory", "(JJ)J", reallocate_memory);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setMemory",
         "(Ljava/lang/Object;JJB)V",
         set_memory,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "shouldBeInitialized",
         "(Ljava/lang/Class;)Z",
         should_be_initialized,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "staticFieldBase",
         "(Ljava/lang/reflect/Field;)Ljava/lang/Object;",
         static_field_base,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "staticFieldOffset",
         "(Ljava/lang/reflect/Field;)J",
         static_field_offset,
     );
-    registry.register(class_name, "storeFence", "()V", store_fence);
+    registry.register(CLASS_NAME, "storeFence", "()V", store_fence);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "throwException",
         "(Ljava/lang/Throwable;)V",
         throw_exception,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "tryMonitorEnter",
         "(Ljava/lang/Object;)Z",
         try_monitor_enter,
     );
-    registry.register(class_name, "unpark", "(Ljava/lang/Object;)V", unpark);
+    registry.register(CLASS_NAME, "unpark", "(Ljava/lang/Object;)V", unpark);
 }
 
 #[async_recursion(?Send)]
@@ -790,412 +791,151 @@ async fn unpark(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Valu
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/misc/Unsafe";
-        assert!(registry.method(class_name, "addressSize", "()I").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "allocateInstance",
-                "(Ljava/lang/Class;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "allocateMemory", "(J)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "arrayBaseOffset", "(Ljava/lang/Class;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "arrayIndexScale", "(Ljava/lang/Class;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "compareAndSwapInt", "(Ljava/lang/Object;JII)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "compareAndSwapLong", "(Ljava/lang/Object;JJJ)Z")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "compareAndSwapObject",
-                "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "copyMemory",
-                "(Ljava/lang/Object;JLjava/lang/Object;JJ)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "defineAnonymousClass",
-                "(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "defineClass",
-                "(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "ensureClassInitialized", "(Ljava/lang/Class;)V")
-            .is_some());
-        assert!(registry.method(class_name, "freeMemory", "(J)V").is_some());
-        assert!(registry.method(class_name, "fullFence", "()V").is_some());
-        assert!(registry.method(class_name, "getAddress", "(J)J").is_some());
-        assert!(registry
-            .method(class_name, "getBoolean", "(Ljava/lang/Object;J)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getBooleanVolatile", "(Ljava/lang/Object;J)Z")
-            .is_some());
-        assert!(registry.method(class_name, "getByte", "(J)B").is_some());
-        assert!(registry
-            .method(class_name, "getByte", "(Ljava/lang/Object;J)B")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getByteVolatile", "(Ljava/lang/Object;J)B")
-            .is_some());
-        assert!(registry.method(class_name, "getChar", "(J)C").is_some());
-        assert!(registry
-            .method(class_name, "getChar", "(Ljava/lang/Object;J)C")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getCharVolatile", "(Ljava/lang/Object;J)C")
-            .is_some());
-        assert!(registry.method(class_name, "getDouble", "(J)D").is_some());
-        assert!(registry
-            .method(class_name, "getDouble", "(Ljava/lang/Object;J)D")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDoubleVolatile", "(Ljava/lang/Object;J)D")
-            .is_some());
-        assert!(registry.method(class_name, "getFloat", "(J)F").is_some());
-        assert!(registry
-            .method(class_name, "getFloat", "(Ljava/lang/Object;J)F")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getFloatVolatile", "(Ljava/lang/Object;J)F")
-            .is_some());
-        assert!(registry.method(class_name, "getInt", "(J)I").is_some());
-        assert!(registry
-            .method(class_name, "getInt", "(Ljava/lang/Object;J)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getIntVolatile", "(Ljava/lang/Object;J)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getLoadAverage", "([DI)I")
-            .is_some());
-        assert!(registry.method(class_name, "getLong", "(J)J").is_some());
-        assert!(registry
-            .method(class_name, "getLong", "(Ljava/lang/Object;J)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getLongVolatile", "(Ljava/lang/Object;J)J")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getObject",
-                "(Ljava/lang/Object;J)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getObjectVolatile",
-                "(Ljava/lang/Object;J)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "getShort", "(J)S").is_some());
-        assert!(registry
-            .method(class_name, "getShort", "(Ljava/lang/Object;J)S")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getShortVolatile", "(Ljava/lang/Object;J)S")
-            .is_some());
-        assert!(registry.method(class_name, "loadFence", "()V").is_some());
-        assert!(registry
-            .method(class_name, "monitorEnter", "(Ljava/lang/Object;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "monitorExit", "(Ljava/lang/Object;)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "objectFieldOffset",
-                "(Ljava/lang/reflect/Field;)J"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "pageSize", "()I").is_some());
-        assert!(registry.method(class_name, "park", "(ZJ)V").is_some());
-        assert!(registry.method(class_name, "putAddress", "(JJ)V").is_some());
-        assert!(registry
-            .method(class_name, "putBoolean", "(Ljava/lang/Object;JZ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putBooleanVolatile", "(Ljava/lang/Object;JZ)V")
-            .is_some());
-        assert!(registry.method(class_name, "putByte", "(JB)V").is_some());
-        assert!(registry
-            .method(class_name, "putByte", "(Ljava/lang/Object;JB)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putByteVolatile", "(Ljava/lang/Object;JB)V")
-            .is_some());
-        assert!(registry.method(class_name, "putChar", "(JC)V").is_some());
-        assert!(registry
-            .method(class_name, "putChar", "(Ljava/lang/Object;JC)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putCharVolatile", "(Ljava/lang/Object;JC)V")
-            .is_some());
-        assert!(registry.method(class_name, "putDouble", "(JD)V").is_some());
-        assert!(registry
-            .method(class_name, "putDouble", "(Ljava/lang/Object;JD)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putDoubleVolatile", "(Ljava/lang/Object;JD)V")
-            .is_some());
-        assert!(registry.method(class_name, "putFloat", "(JF)V").is_some());
-        assert!(registry
-            .method(class_name, "putFloat", "(Ljava/lang/Object;JF)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putFloatVolatile", "(Ljava/lang/Object;JF)V")
-            .is_some());
-        assert!(registry.method(class_name, "putInt", "(JI)V").is_some());
-        assert!(registry
-            .method(class_name, "putInt", "(Ljava/lang/Object;JI)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putIntVolatile", "(Ljava/lang/Object;JI)V")
-            .is_some());
-        assert!(registry.method(class_name, "putLong", "(JJ)V").is_some());
-        assert!(registry
-            .method(class_name, "putLong", "(Ljava/lang/Object;JJ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putLongVolatile", "(Ljava/lang/Object;JJ)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "putObject",
-                "(Ljava/lang/Object;JLjava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "putObjectVolatile",
-                "(Ljava/lang/Object;JLjava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "putOrderedInt", "(Ljava/lang/Object;JI)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putOrderedLong", "(Ljava/lang/Object;JJ)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "putOrderedObject",
-                "(Ljava/lang/Object;JLjava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "putShort", "(JS)V").is_some());
-        assert!(registry
-            .method(class_name, "putShort", "(Ljava/lang/Object;JS)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "putShortVolatile", "(Ljava/lang/Object;JS)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "reallocateMemory", "(JJ)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setMemory", "(Ljava/lang/Object;JJB)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "shouldBeInitialized", "(Ljava/lang/Class;)Z")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "staticFieldBase",
-                "(Ljava/lang/reflect/Field;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "staticFieldOffset",
-                "(Ljava/lang/reflect/Field;)J"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "storeFence", "()V").is_some());
-        assert!(registry
-            .method(class_name, "throwException", "(Ljava/lang/Throwable;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "tryMonitorEnter", "(Ljava/lang/Object;)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "unpark", "(Ljava/lang/Object;)V")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.compareAndSwapLong(Ljava/lang/Object;JJJ)Z")]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.compareAndSwapLong(Ljava/lang/Object;JJJ)Z"
+    )]
     async fn test_compare_and_swap_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = compare_and_swap_long(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.getAddress(J)J")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getAddress(J)J")]
     async fn test_get_address() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_address(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.getByte(J)B")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getByte(J)B")]
     async fn test_get_byte_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_byte_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.getChar(J)C")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getChar(J)C")]
     async fn test_get_char_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_char_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.getDouble(J)D")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getDouble(J)D")]
     async fn test_get_double_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_double_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.getFloat(J)F")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getFloat(J)F")]
     async fn test_get_float_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_float_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.getInt(J)I")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getInt(J)I")]
     async fn test_get_int_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_int_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.getLong(J)J")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getLong(J)J")]
     async fn test_get_long_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_long_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.getShort(J)S")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getShort(J)S")]
     async fn test_get_short_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_short_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.monitorEnter(Ljava/lang/Object;)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.monitorEnter(Ljava/lang/Object;)V"
+    )]
     async fn test_monitor_enter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = monitor_enter(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.monitorExit(Ljava/lang/Object;)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.monitorExit(Ljava/lang/Object;)V"
+    )]
     async fn test_monitor_exit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = monitor_exit(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putAddress(JJ)V")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putAddress(JJ)V")]
     async fn test_put_address() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_address(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putByte(JB)V")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putByte(JB)V")]
     async fn test_put_byte_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_byte_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putChar(JC)V")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putChar(JC)V")]
     async fn test_put_char_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_char_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putDouble(JD)V")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putDouble(JD)V")]
     async fn test_put_double_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_double_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putFloat(JF)V")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putFloat(JF)V")]
     async fn test_put_float_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_float_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putInt(JI)V")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putInt(JI)V")]
     async fn test_put_int_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_int_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putLong(JJ)V")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putLong(JJ)V")]
     async fn test_put_long_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_long_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putOrderedInt(Ljava/lang/Object;JI)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.putOrderedInt(Ljava/lang/Object;JI)V"
+    )]
     async fn test_put_ordered_int() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_ordered_int(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putOrderedLong(Ljava/lang/Object;JJ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.putOrderedLong(Ljava/lang/Object;JJ)V"
+    )]
     async fn test_put_ordered_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_ordered_long(thread, Arguments::default()).await;
@@ -1203,7 +943,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.misc.Unsafe.putOrderedObject(Ljava/lang/Object;JLjava/lang/Object;)V"
+        expected = "not yet implemented: sun.misc.Unsafe.putOrderedObject(Ljava/lang/Object;JLjava/lang/Object;)V"
     )]
     async fn test_put_ordered_object() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -1211,28 +951,34 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putShort(JS)V")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putShort(JS)V")]
     async fn test_put_short_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_short_1(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putShort(Ljava/lang/Object;JS)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.putShort(Ljava/lang/Object;JS)V"
+    )]
     async fn test_put_short_2() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_short_2(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.putShortVolatile(Ljava/lang/Object;JS)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.putShortVolatile(Ljava/lang/Object;JS)V"
+    )]
     async fn test_put_short_volatile() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_short_volatile(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Unsafe.tryMonitorEnter(Ljava/lang/Object;)Z")]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.tryMonitorEnter(Ljava/lang/Object;)Z"
+    )]
     async fn test_try_monitor_enter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = try_monitor_enter(thread, Arguments::default()).await;

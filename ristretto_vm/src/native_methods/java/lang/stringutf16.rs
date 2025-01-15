@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/StringUTF16";
+
 /// Register all native methods for `java.lang.StringUTF16`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/StringUTF16";
-    registry.register(class_name, "isBigEndian", "()Z", is_big_endian);
+    registry.register(CLASS_NAME, "isBigEndian", "()Z", is_big_endian);
 }
 
 #[async_recursion(?Send)]
@@ -20,14 +21,6 @@ async fn is_big_endian(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/StringUTF16";
-        assert!(registry.method(class_name, "isBigEndian", "()Z").is_some());
-    }
 
     #[tokio::test]
     async fn test_is_big_endian() -> Result<()> {

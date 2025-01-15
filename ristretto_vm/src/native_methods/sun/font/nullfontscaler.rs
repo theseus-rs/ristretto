@@ -6,12 +6,13 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/font/NullFontScaler";
+
 /// Register all native methods for `sun.font.NullFontScaler`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/font/NullFontScaler";
-    registry.register(class_name, "getGlyphImage", "(JI)J", get_glyph_image);
+    registry.register(CLASS_NAME, "getGlyphImage", "(JI)J", get_glyph_image);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNullScalerContext",
         "()J",
         get_null_scaler_context,
@@ -35,28 +36,17 @@ async fn get_null_scaler_context(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/font/NullFontScaler";
-        assert!(registry
-            .method(class_name, "getGlyphImage", "(JI)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getNullScalerContext", "()J")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.font.NullFontScaler.getGlyphImage(JI)J")]
+    #[should_panic(expected = "not yet implemented: sun.font.NullFontScaler.getGlyphImage(JI)J")]
     async fn test_get_glyph_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_glyph_image(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.font.NullFontScaler.getNullScalerContext()J")]
+    #[should_panic(
+        expected = "not yet implemented: sun.font.NullFontScaler.getNullScalerContext()J"
+    )]
     async fn test_get_null_scaler_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_null_scaler_context(thread, Arguments::default()).await;

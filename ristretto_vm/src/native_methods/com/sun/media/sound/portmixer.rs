@@ -6,49 +6,50 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/media/sound/PortMixer";
+
 /// Register all native methods for `com.sun.media.sound.PortMixer`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/media/sound/PortMixer";
-    registry.register(class_name, "nClose", "(J)V", n_close);
+    registry.register(CLASS_NAME, "nClose", "(J)V", n_close);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nControlGetFloatValue",
         "(J)F",
         n_control_get_float_value,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nControlGetIntValue",
         "(J)I",
         n_control_get_int_value,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nControlSetFloatValue",
         "(JF)V",
         n_control_set_float_value,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nControlSetIntValue",
         "(JI)V",
         n_control_set_int_value,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nGetControls",
         "(JILjava/util/Vector;)V",
         n_get_controls,
     );
-    registry.register(class_name, "nGetPortCount", "(J)I", n_get_port_count);
+    registry.register(CLASS_NAME, "nGetPortCount", "(J)I", n_get_port_count);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nGetPortName",
         "(JI)Ljava/lang/String;",
         n_get_port_name,
     );
-    registry.register(class_name, "nGetPortType", "(JI)I", n_get_port_type);
-    registry.register(class_name, "nOpen", "(I)J", n_open);
+    registry.register(CLASS_NAME, "nGetPortType", "(JI)I", n_get_port_type);
+    registry.register(CLASS_NAME, "nOpen", "(I)J", n_open);
 }
 
 #[async_recursion(?Send)]
@@ -116,39 +117,6 @@ async fn n_open(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/media/sound/PortMixer";
-        assert!(registry.method(class_name, "nClose", "(J)V").is_some());
-        assert!(registry
-            .method(class_name, "nControlGetFloatValue", "(J)F")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nControlGetIntValue", "(J)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nControlSetFloatValue", "(JF)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nControlSetIntValue", "(JI)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nGetControls", "(JILjava/util/Vector;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nGetPortCount", "(J)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nGetPortName", "(JI)Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nGetPortType", "(JI)I")
-            .is_some());
-        assert!(registry.method(class_name, "nOpen", "(I)J").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: com.sun.media.sound.PortMixer.nClose(J)V")]

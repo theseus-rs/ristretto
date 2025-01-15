@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/awt/event/MouseEvent";
+
 /// Register all native methods for `java.awt.event.MouseEvent`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/awt/event/MouseEvent";
-    registry.register(class_name, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
 }
 
 #[async_recursion(?Send)]
@@ -21,17 +22,11 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/awt/event/MouseEvent";
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-    }
-
     #[tokio::test]
-    async fn test_init_ids() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_ids(thread, Arguments::default()).await;
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init_ids(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 }

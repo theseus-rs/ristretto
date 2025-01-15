@@ -6,33 +6,34 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/awt/X11GraphicsEnvironment";
+
 /// Register all native methods for `sun.awt.X11GraphicsEnvironment`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/awt/X11GraphicsEnvironment";
-    registry.register(class_name, "checkShmExt", "()I", check_shm_ext);
+    registry.register(CLASS_NAME, "checkShmExt", "()I", check_shm_ext);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDefaultScreenNum",
         "()I",
         get_default_screen_num,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDisplayString",
         "()Ljava/lang/String;",
         get_display_string,
     );
-    registry.register(class_name, "getNumScreens", "()I", get_num_screens);
+    registry.register(CLASS_NAME, "getNumScreens", "()I", get_num_screens);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getXineramaCenterPoint",
         "()Ljava/awt/Point;",
         get_xinerama_center_point,
     );
-    registry.register(class_name, "initDisplay", "(Z)V", init_display);
-    registry.register(class_name, "initGLX", "()Z", init_glx);
-    registry.register(class_name, "initXRender", "(ZZ)Z", init_x_render);
-    registry.register(class_name, "pRunningXinerama", "()Z", p_running_xinerama);
+    registry.register(CLASS_NAME, "initDisplay", "(Z)V", init_display);
+    registry.register(CLASS_NAME, "initGLX", "()Z", init_glx);
+    registry.register(CLASS_NAME, "initXRender", "(ZZ)Z", init_x_render);
+    registry.register(CLASS_NAME, "pRunningXinerama", "()Z", p_running_xinerama);
 }
 
 #[async_recursion(?Send)]
@@ -90,43 +91,17 @@ async fn p_running_xinerama(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/awt/X11GraphicsEnvironment";
-        assert!(registry.method(class_name, "checkShmExt", "()I").is_some());
-        assert!(registry
-            .method(class_name, "getDefaultScreenNum", "()I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDisplayString", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getNumScreens", "()I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getXineramaCenterPoint", "()Ljava/awt/Point;")
-            .is_some());
-        assert!(registry.method(class_name, "initDisplay", "(Z)V").is_some());
-        assert!(registry.method(class_name, "initGLX", "()Z").is_some());
-        assert!(registry
-            .method(class_name, "initXRender", "(ZZ)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "pRunningXinerama", "()Z")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.checkShmExt()I")]
+    #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.checkShmExt()I")]
     async fn test_check_shm_ext() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = check_shm_ext(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.getDefaultScreenNum()I")]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.getDefaultScreenNum()I"
+    )]
     async fn test_get_default_screen_num() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_default_screen_num(thread, Arguments::default()).await;
@@ -134,7 +109,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.awt.X11GraphicsEnvironment.getDisplayString()Ljava/lang/String;"
+        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.getDisplayString()Ljava/lang/String;"
     )]
     async fn test_get_display_string() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -142,7 +117,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.getNumScreens()I")]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.getNumScreens()I"
+    )]
     async fn test_get_num_screens() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_num_screens(thread, Arguments::default()).await;
@@ -150,7 +127,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.awt.X11GraphicsEnvironment.getXineramaCenterPoint()Ljava/awt/Point;"
+        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.getXineramaCenterPoint()Ljava/awt/Point;"
     )]
     async fn test_get_xinerama_center_point() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -158,28 +135,34 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.initDisplay(Z)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.initDisplay(Z)V"
+    )]
     async fn test_init_display() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = init_display(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.initGLX()Z")]
+    #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.initGLX()Z")]
     async fn test_init_glx() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = init_glx(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.initXRender(ZZ)Z")]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.initXRender(ZZ)Z"
+    )]
     async fn test_init_x_render() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = init_x_render(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.awt.X11GraphicsEnvironment.pRunningXinerama()Z")]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.pRunningXinerama()Z"
+    )]
     async fn test_p_running_xinerama() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = p_running_xinerama(thread, Arguments::default()).await;
