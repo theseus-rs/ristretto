@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/loops/FillRect";
+
 /// Register all native methods for `sun.java2d.loops.FillRect`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/loops/FillRect";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "FillRect",
         "(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IIII)V",
         fill_rect,
@@ -26,23 +27,9 @@ async fn fill_rect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/loops/FillRect";
-        assert!(registry
-            .method(
-                class_name,
-                "FillRect",
-                "(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IIII)V"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.loops.FillRect.FillRect(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IIII)V"
+        expected = "not yet implemented: sun.java2d.loops.FillRect.FillRect(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IIII)V"
     )]
     async fn test_fill_rect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

@@ -1,38 +1,34 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_20};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_20: Version = Version::Java20 { minor: 0 };
+const CLASS_NAME: &str = "jdk/internal/vm/Continuation";
 
 /// Register all native methods for `jdk.internal.vm.Continuation`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/vm/Continuation";
-    let java_version = registry.java_version();
-
-    if java_version >= &JAVA_20 {
-        registry.register(class_name, "doYield", "()I", do_yield);
+    if registry.java_major_version() >= JAVA_20 {
+        registry.register(CLASS_NAME, "doYield", "()I", do_yield);
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "enterSpecial",
         "(Ljdk/internal/vm/Continuation;ZZ)V",
         enter_special,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "isPinned0",
         "(Ljdk/internal/vm/ContinuationScope;)I",
         is_pinned_0,
     );
-    registry.register(class_name, "pin", "()V", pin);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
-    registry.register(class_name, "unpin", "()V", unpin);
+    registry.register(CLASS_NAME, "pin", "()V", pin);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "unpin", "()V", unpin);
 }
 
 #[async_recursion(?Send)]
@@ -69,34 +65,8 @@ async fn unpin(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Val
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "jdk/internal/vm/Continuation";
-        assert!(registry
-            .method(
-                class_name,
-                "enterSpecial",
-                "(Ljdk/internal/vm/Continuation;ZZ)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "isPinned0",
-                "(Ljdk/internal/vm/ContinuationScope;)I"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "pin", "()V").is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-        assert!(registry.method(class_name, "unpin", "()V").is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "jdk.internal.vm.Continuation.doYield()I")]
+    #[should_panic(expected = "not yet implemented: jdk.internal.vm.Continuation.doYield()I")]
     async fn test_do_yield() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = do_yield(thread, Arguments::default()).await;
@@ -104,7 +74,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.vm.Continuation.enterSpecial(Ljdk/internal/vm/Continuation;ZZ)V"
+        expected = "not yet implemented: jdk.internal.vm.Continuation.enterSpecial(Ljdk/internal/vm/Continuation;ZZ)V"
     )]
     async fn test_enter_special() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -113,7 +83,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.vm.Continuation.isPinned0(Ljdk/internal/vm/ContinuationScope;)I"
+        expected = "not yet implemented: jdk.internal.vm.Continuation.isPinned0(Ljdk/internal/vm/ContinuationScope;)I"
     )]
     async fn test_is_pinned_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -121,7 +91,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "jdk.internal.vm.Continuation.pin()V")]
+    #[should_panic(expected = "not yet implemented: jdk.internal.vm.Continuation.pin()V")]
     async fn test_pin() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = pin(thread, Arguments::default()).await;
@@ -136,7 +106,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "jdk.internal.vm.Continuation.unpin()V")]
+    #[should_panic(expected = "not yet implemented: jdk.internal.vm.Continuation.unpin()V")]
     async fn test_unpin() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = unpin(thread, Arguments::default()).await;

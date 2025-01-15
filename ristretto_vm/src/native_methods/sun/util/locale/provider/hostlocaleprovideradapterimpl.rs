@@ -1,23 +1,19 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_17};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_17: Version = Version::Java17 { minor: 0 };
+const CLASS_NAME: &str = "sun/util/locale/provider/HostLocaleProviderAdapterImpl";
 
 /// Register all native methods for `sun.util.locale.provider.HostLocaleProviderAdapterImpl`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/util/locale/provider/HostLocaleProviderAdapterImpl";
-    let java_version = registry.java_version();
-
-    if java_version >= &JAVA_17 {
+    if registry.java_major_version() >= JAVA_17 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getCalendarDisplayStrings",
             "(Ljava/lang/String;II)[Ljava/lang/String;",
             get_calendar_display_strings,
@@ -25,151 +21,151 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAmPmStrings",
         "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
         get_am_pm_strings,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCalendarID",
         "(Ljava/lang/String;)Ljava/lang/String;",
         get_calendar_id,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCalendarInt",
         "(Ljava/lang/String;I)I",
         get_calendar_int,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCurrencySymbol",
         "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
         get_currency_symbol,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDateTimePatternNative",
         "(IILjava/lang/String;)Ljava/lang/String;",
         get_date_time_pattern_native,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDecimalSeparator",
         "(Ljava/lang/String;C)C",
         get_decimal_separator,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDefaultLocale",
         "(I)Ljava/lang/String;",
         get_default_locale,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDisplayString",
         "(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String;",
         get_display_string,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getEras",
         "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
         get_eras,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getExponentSeparator",
         "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
         get_exponent_separator,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getGroupingSeparator",
         "(Ljava/lang/String;C)C",
         get_grouping_separator,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getInfinity",
         "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
         get_infinity,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getInternationalCurrencySymbol",
         "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
         get_international_currency_symbol,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getMinusSign",
         "(Ljava/lang/String;C)C",
         get_minus_sign,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getMonetaryDecimalSeparator",
         "(Ljava/lang/String;C)C",
         get_monetary_decimal_separator,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getMonths",
         "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
         get_months,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNaN",
         "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
         get_nan,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNumberPatternNative",
         "(ILjava/lang/String;)Ljava/lang/String;",
         get_number_pattern_native,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getPerMill",
         "(Ljava/lang/String;C)C",
         get_per_mill,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getPercent",
         "(Ljava/lang/String;C)C",
         get_percent,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getShortMonths",
         "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
         get_short_months,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getShortWeekdays",
         "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
         get_short_weekdays,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getTimeZoneDisplayString",
         "(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String;",
         get_time_zone_display_string,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getWeekdays",
         "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
         get_weekdays,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getZeroDigit",
         "(Ljava/lang/String;C)C",
         get_zero_digit,
@@ -341,166 +337,9 @@ async fn get_zero_digit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java17 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "sun/util/locale/provider/HostLocaleProviderAdapterImpl";
-        assert!(registry
-            .method(
-                class_name,
-                "getAmPmStrings",
-                "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getCalendarDisplayStrings",
-                "(Ljava/lang/String;II)[Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getCalendarID",
-                "(Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getCalendarInt", "(Ljava/lang/String;I)I")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getCurrencySymbol",
-                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getDateTimePatternNative",
-                "(IILjava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDecimalSeparator", "(Ljava/lang/String;C)C")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDefaultLocale", "(I)Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getDisplayString",
-                "(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getEras",
-                "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getExponentSeparator",
-                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getGroupingSeparator", "(Ljava/lang/String;C)C")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getInfinity",
-                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getInternationalCurrencySymbol",
-                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getMinusSign", "(Ljava/lang/String;C)C")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getMonetaryDecimalSeparator",
-                "(Ljava/lang/String;C)C"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getMonths",
-                "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getNaN",
-                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getNumberPatternNative",
-                "(ILjava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getPerMill", "(Ljava/lang/String;C)C")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getPercent", "(Ljava/lang/String;C)C")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getShortMonths",
-                "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getShortWeekdays",
-                "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getTimeZoneDisplayString",
-                "(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getWeekdays",
-                "(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getZeroDigit", "(Ljava/lang/String;C)C")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getAmPmStrings(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getAmPmStrings(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
     )]
     async fn test_get_am_pm_strings() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -509,7 +348,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;II)[Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;II)[Ljava/lang/String"
     )]
     async fn test_get_calendar_display_strings() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -518,7 +357,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)Ljava/lang/String"
     )]
     async fn test_get_calendar_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -527,7 +366,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarInt(Ljava/lang/String;I)I"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarInt(Ljava/lang/String;I)I"
     )]
     async fn test_get_calendar_int() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -536,7 +375,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCurrencySymbol(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCurrencySymbol(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
     )]
     async fn test_get_currency_symbol() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -545,7 +384,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDateTimePatternNative(IILjava/lang/String;)Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDateTimePatternNative(IILjava/lang/String;)Ljava/lang/String"
     )]
     async fn test_get_date_time_pattern_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -554,7 +393,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDecimalSeparator(Ljava/lang/String;C)C"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDecimalSeparator(Ljava/lang/String;C)C"
     )]
     async fn test_get_decimal_separator() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -563,7 +402,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDefaultLocale(I)Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDefaultLocale(I)Ljava/lang/String"
     )]
     async fn test_get_default_locale() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -572,7 +411,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDisplayString(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDisplayString(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String"
     )]
     async fn test_get_display_string() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -581,7 +420,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getEras(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getEras(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
     )]
     async fn test_get_eras() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -590,7 +429,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getExponentSeparator(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getExponentSeparator(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
     )]
     async fn test_get_exponent_separator() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -599,7 +438,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getGroupingSeparator(Ljava/lang/String;C)C"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getGroupingSeparator(Ljava/lang/String;C)C"
     )]
     async fn test_get_grouping_separator() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -608,7 +447,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getInfinity(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getInfinity(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
     )]
     async fn test_get_infinity() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -617,7 +456,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getInternationalCurrencySymbol(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getInternationalCurrencySymbol(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
     )]
     async fn test_get_international_currency_symbol() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -626,7 +465,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getMinusSign(Ljava/lang/String;C)C"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getMinusSign(Ljava/lang/String;C)C"
     )]
     async fn test_get_minus_sign() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -635,7 +474,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getMonetaryDecimalSeparator(Ljava/lang/String;C)C"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getMonetaryDecimalSeparator(Ljava/lang/String;C)C"
     )]
     async fn test_get_monetary_decimal_separator() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -644,7 +483,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getMonths(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getMonths(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
     )]
     async fn test_get_months() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -653,7 +492,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getNaN(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getNaN(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
     )]
     async fn test_get_nan() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -662,7 +501,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getNumberPatternNative(ILjava/lang/String;)Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getNumberPatternNative(ILjava/lang/String;)Ljava/lang/String"
     )]
     async fn test_get_number_pattern_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -671,7 +510,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getPerMill(Ljava/lang/String;C)C"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getPerMill(Ljava/lang/String;C)C"
     )]
     async fn test_get_per_mill() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -680,7 +519,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getPercent(Ljava/lang/String;C)C"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getPercent(Ljava/lang/String;C)C"
     )]
     async fn test_get_percent() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -689,7 +528,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getShortMonths(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getShortMonths(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
     )]
     async fn test_get_short_months() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -698,7 +537,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getShortWeekdays(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getShortWeekdays(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
     )]
     async fn test_get_short_weekdays() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -707,7 +546,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getTimeZoneDisplayString(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getTimeZoneDisplayString(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String"
     )]
     async fn test_get_time_zone_display_string() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -716,7 +555,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getWeekdays(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getWeekdays(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
     )]
     async fn test_get_weekdays() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -725,7 +564,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getZeroDigit(Ljava/lang/String;C)C"
+        expected = "not yet implemented: sun.util.locale.provider.HostLocaleProviderAdapterImpl.getZeroDigit(Ljava/lang/String;C)C"
     )]
     async fn test_get_zero_digit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

@@ -6,16 +6,17 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/vm/vector/VectorSupport";
+
 /// Register all native methods for `jdk.internal.vm.vector.VectorSupport`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/vm/vector/VectorSupport";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getMaxLaneCount",
         "(Ljava/lang/Class;)I",
         get_max_lane_count,
     );
-    registry.register(class_name, "registerNatives", "()I", register_natives);
+    registry.register(CLASS_NAME, "registerNatives", "()I", register_natives);
 }
 
 #[async_recursion(?Send)]

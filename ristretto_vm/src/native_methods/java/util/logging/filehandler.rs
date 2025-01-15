@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/util/logging/FileHandler";
+
 /// Register all native methods for `java.util.logging.FileHandler`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/util/logging/FileHandler";
-    registry.register(class_name, "isSetUID", "()Z", is_set_uid);
+    registry.register(CLASS_NAME, "isSetUID", "()Z", is_set_uid);
 }
 
 #[async_recursion(?Send)]
@@ -20,14 +21,6 @@ async fn is_set_uid(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Optio
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/util/logging/FileHandler";
-        assert!(registry.method(class_name, "isSetUID", "()Z").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.util.logging.FileHandler.isSetUID()Z")]

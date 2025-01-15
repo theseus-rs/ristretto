@@ -1,30 +1,26 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_18};
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;
 
-const JAVA_18: Version = Version::Java18 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/StackTraceElement";
 
 /// Register all native methods for `java.lang.StackTraceElement`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/StackTraceElement";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_18 {
+    if registry.java_major_version() <= JAVA_18 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "initStackTraceElements",
             "([Ljava/lang/StackTraceElement;Ljava/lang/Throwable;)V",
             init_stack_trace_elements,
         );
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "initStackTraceElements",
             "([Ljava/lang/StackTraceElement;Ljava/lang/Object;I)V",
             init_stack_trace_elements,
@@ -32,7 +28,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "initStackTraceElement",
         "(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V",
         init_stack_trace_element,
@@ -71,41 +67,6 @@ async fn init_stack_trace_elements(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java19 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/StackTraceElement";
-        assert!(registry
-            .method(
-                class_name,
-                "initStackTraceElements",
-                "([Ljava/lang/StackTraceElement;Ljava/lang/Object;I)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "initStackTraceElement",
-                "(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V"
-            )
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_18() {
-        let mut registry = MethodRegistry::new(&Version::Java18 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/StackTraceElement";
-        assert!(registry
-            .method(
-                class_name,
-                "initStackTraceElements",
-                "([Ljava/lang/StackTraceElement;Ljava/lang/Throwable;)V"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

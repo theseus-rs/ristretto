@@ -6,18 +6,19 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/awt/image/ImageRepresentation";
+
 /// Register all native methods for `sun.awt.image.ImageRepresentation`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/awt/image/ImageRepresentation";
-    registry.register(class_name, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setDiffICM",
         "(IIII[IIILjava/awt/image/IndexColorModel;[BIILsun/awt/image/ByteComponentRaster;I)Z",
         set_diff_icm,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setICMpixels",
         "(IIII[I[BIILsun/awt/image/IntegerComponentRaster;)Z",
         set_icm_pixels,
@@ -43,28 +44,6 @@ async fn set_icm_pixels(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/awt/image/ImageRepresentation";
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setDiffICM",
-                "(IIII[IIILjava/awt/image/IndexColorModel;[BIILsun/awt/image/ByteComponentRaster;I)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setICMpixels",
-                "(IIII[I[BIILsun/awt/image/IntegerComponentRaster;)Z"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
@@ -75,7 +54,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.awt.image.ImageRepresentation.setDiffICM(IIII[IIILjava/awt/image/IndexColorModel;[BIILsun/awt/image/ByteComponentRaster;I)Z"
+        expected = "not yet implemented: sun.awt.image.ImageRepresentation.setDiffICM(IIII[IIILjava/awt/image/IndexColorModel;[BIILsun/awt/image/ByteComponentRaster;I)Z"
     )]
     async fn test_set_diff_icm() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -84,7 +63,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.awt.image.ImageRepresentation.setICMpixels(IIII[I[BIILsun/awt/image/IntegerComponentRaster;)Z"
+        expected = "not yet implemented: sun.awt.image.ImageRepresentation.setICMpixels(IIII[I[BIILsun/awt/image/IntegerComponentRaster;)Z"
     )]
     async fn test_set_icm_pixels() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

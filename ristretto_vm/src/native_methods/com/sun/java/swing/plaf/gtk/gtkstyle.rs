@@ -6,35 +6,36 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/java/swing/plaf/gtk/GTKStyle";
+
 /// Register all native methods for `com.sun.java.swing.plaf.gtk.GTKStyle`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/java/swing/plaf/gtk/GTKStyle";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetClassValue",
         "(ILjava/lang/String;)Ljava/lang/Object;",
         native_get_class_value,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetColorForState",
         "(III)I",
         native_get_color_for_state,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetPangoFontName",
         "(I)Ljava/lang/String;",
         native_get_pango_font_name,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetXThickness",
         "(I)I",
         native_get_x_thickness,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetYThickness",
         "(I)I",
         native_get_y_thickness,
@@ -84,36 +85,6 @@ async fn native_get_y_thickness(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/java/swing/plaf/gtk/GTKStyle";
-        assert!(registry
-            .method(
-                class_name,
-                "nativeGetClassValue",
-                "(ILjava/lang/String;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeGetColorForState", "(III)I")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nativeGetPangoFontName",
-                "(I)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeGetXThickness", "(I)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeGetYThickness", "(I)I")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

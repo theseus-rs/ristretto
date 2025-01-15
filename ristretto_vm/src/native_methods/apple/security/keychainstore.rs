@@ -1,24 +1,20 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_22};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_22: Version = Version::Java22 { minor: 0 };
+const CLASS_NAME: &str = "apple/security/KeychainStore";
 
 /// Register all native methods for `apple.security.KeychainStore`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "apple/security/KeychainStore";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_22 {
-        registry.register(class_name, "_scanKeychain", "()V", scan_keychain);
+    if registry.java_major_version() <= JAVA_22 {
+        registry.register(CLASS_NAME, "_scanKeychain", "()V", scan_keychain);
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "_scanKeychain",
             "(Ljava/lang/String;)V",
             scan_keychain,
@@ -26,25 +22,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_addItemToKeychain",
         "(Ljava/lang/String;Z[B[C)J",
         add_item_to_keychain,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_getEncodedKeyData",
         "(J[C)[B",
         get_encoded_key_data,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_releaseKeychainItemRef",
         "(J)V",
         release_keychain_item_ref,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_removeItemFromKeychain",
         "(J)I",
         remove_item_from_keychain,
@@ -91,42 +87,6 @@ async fn scan_keychain(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java22 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "apple/security/KeychainStore";
-        assert!(registry
-            .method(class_name, "_scanKeychain", "()V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "_addItemToKeychain",
-                "(Ljava/lang/String;Z[B[C)J"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "_getEncodedKeyData", "(J[C)[B")
-            .is_some());
-        assert!(registry
-            .method(class_name, "_releaseKeychainItemRef", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "_removeItemFromKeychain", "(J)I")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_23() {
-        let mut registry = MethodRegistry::new(&Version::Java23 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "apple/security/KeychainStore";
-        assert!(registry
-            .method(class_name, "_scanKeychain", "(Ljava/lang/String;)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

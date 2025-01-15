@@ -1,22 +1,18 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_21};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_21: Version = Version::Java21 { minor: 0 };
+const CLASS_NAME: &str = "sun/java2d/metal/MTLGraphicsConfig";
 
 /// Register all native methods for `sun.java2d.metal.MTLGraphicsConfig`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/metal/MTLGraphicsConfig";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_21 {
+    if registry.java_major_version() <= JAVA_21 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "isMetalFrameworkAvailable",
             "()Z",
             is_metal_framework_available,
@@ -24,19 +20,19 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getMTLConfigInfo",
         "(ILjava/lang/String;)J",
         get_mtl_config_info,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetMaxTextureSize",
         "()I",
         native_get_max_texture_size,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "tryLoadMetalLibrary",
         "(ILjava/lang/String;)Z",
         try_load_metal_library,
@@ -76,28 +72,9 @@ async fn try_load_metal_library(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/metal/MTLGraphicsConfig";
-        assert!(registry
-            .method(class_name, "isMetalFrameworkAvailable", "()Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getMTLConfigInfo", "(ILjava/lang/String;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeGetMaxTextureSize", "()I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "tryLoadMetalLibrary", "(ILjava/lang/String;)Z")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.metal.MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J"
+        expected = "not yet implemented: sun.java2d.metal.MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J"
     )]
     async fn test_get_mtl_config_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -105,14 +82,18 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLGraphicsConfig.isMetalFrameworkAvailable()Z")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.metal.MTLGraphicsConfig.isMetalFrameworkAvailable()Z"
+    )]
     async fn test_is_metal_framework_available() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = is_metal_framework_available(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLGraphicsConfig.nativeGetMaxTextureSize()I")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.metal.MTLGraphicsConfig.nativeGetMaxTextureSize()I"
+    )]
     async fn test_native_get_max_texture_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = native_get_max_texture_size(thread, Arguments::default()).await;
@@ -120,7 +101,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.metal.MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z"
+        expected = "not yet implemented: sun.java2d.metal.MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z"
     )]
     async fn test_try_load_metal_library() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

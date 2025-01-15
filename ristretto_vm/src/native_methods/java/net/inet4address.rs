@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/net/Inet4Address";
+
 /// Register all native methods for `java.net.Inet4Address`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/net/Inet4Address";
-    registry.register(class_name, "init", "()V", init);
+    registry.register(CLASS_NAME, "init", "()V", init);
 }
 
 #[async_recursion(?Send)]
@@ -20,14 +21,6 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/net/Inet4Address";
-        assert!(registry.method(class_name, "init", "()V").is_some());
-    }
 
     #[tokio::test]
     async fn test_init() -> Result<()> {

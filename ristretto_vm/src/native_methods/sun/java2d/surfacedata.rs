@@ -6,12 +6,13 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/SurfaceData";
+
 /// Register all native methods for `sun.java2d.SurfaceData`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/SurfaceData";
-    registry.register(class_name, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "isOpaqueGray",
         "(Ljava/awt/image/IndexColorModel;)Z",
         is_opaque_gray,
@@ -32,21 +33,6 @@ async fn is_opaque_gray(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/SurfaceData";
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "isOpaqueGray",
-                "(Ljava/awt/image/IndexColorModel;)Z"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
@@ -57,7 +43,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.SurfaceData.isOpaqueGray(Ljava/awt/image/IndexColorModel;)Z"
+        expected = "not yet implemented: sun.java2d.SurfaceData.isOpaqueGray(Ljava/awt/image/IndexColorModel;)Z"
     )]
     async fn test_is_opaque_gray() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

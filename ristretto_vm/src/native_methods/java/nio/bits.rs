@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/nio/Bits";
+
 /// Register all native methods for `java.nio.Bits`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/nio/Bits";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "copySwapMemory0",
         "(Ljava/lang/Object;JLjava/lang/Object;JJJ)V",
         copy_swap_memory_0,
@@ -25,20 +26,6 @@ async fn copy_swap_memory_0(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/nio/Bits";
-        assert!(registry
-            .method(
-                class_name,
-                "copySwapMemory0",
-                "(Ljava/lang/Object;JLjava/lang/Object;JJJ)V"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

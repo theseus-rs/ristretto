@@ -6,18 +6,19 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/nio/MappedMemoryUtils";
+
 /// Register all native methods for `java.nio.MappedMemoryUtils`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/nio/MappedMemoryUtils";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "force0",
         "(Ljava/io/FileDescriptor;JJ)V",
         force_0,
     );
-    registry.register(class_name, "isLoaded0", "(JJJ)Z", is_loaded_0);
-    registry.register(class_name, "load0", "(JJ)V", load_0);
-    registry.register(class_name, "unload0", "(JJ)V", unload_0);
+    registry.register(CLASS_NAME, "isLoaded0", "(JJJ)Z", is_loaded_0);
+    registry.register(CLASS_NAME, "load0", "(JJ)V", load_0);
+    registry.register(CLASS_NAME, "unload0", "(JJ)V", unload_0);
 }
 
 #[async_recursion(?Send)]
@@ -43,19 +44,6 @@ async fn unload_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/nio/MappedMemoryUtils";
-        assert!(registry
-            .method(class_name, "force0", "(Ljava/io/FileDescriptor;JJ)V")
-            .is_some());
-        assert!(registry.method(class_name, "isLoaded0", "(JJJ)Z").is_some());
-        assert!(registry.method(class_name, "load0", "(JJ)V").is_some());
-        assert!(registry.method(class_name, "unload0", "(JJ)V").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

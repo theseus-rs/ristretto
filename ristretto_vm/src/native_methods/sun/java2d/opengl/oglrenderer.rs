@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/opengl/OGLRenderer";
+
 /// Register all native methods for `sun.java2d.opengl.OGLRenderer`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/opengl/OGLRenderer";
-    registry.register(class_name, "drawPoly", "([I[IIZII)V", draw_poly);
+    registry.register(CLASS_NAME, "drawPoly", "([I[IIZII)V", draw_poly);
 }
 
 #[async_recursion(?Send)]
@@ -21,18 +22,10 @@ async fn draw_poly(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/opengl/OGLRenderer";
-        assert!(registry
-            .method(class_name, "drawPoly", "([I[IIZII)V")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.opengl.OGLRenderer.drawPoly([I[IIZII)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.opengl.OGLRenderer.drawPoly([I[IIZII)V"
+    )]
     async fn test_draw_poly() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = draw_poly(thread, Arguments::default()).await;

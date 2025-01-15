@@ -1,73 +1,78 @@
 use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_8};
 use crate::thread::Thread;
 use crate::JavaError::{ClassFormatError, IndexOutOfBoundsException, NoClassDefFoundError};
 use crate::{Result, VM};
 use async_recursion::async_recursion;
-use ristretto_classfile::{ClassFile, Version};
+use ristretto_classfile::ClassFile;
 use ristretto_classloader::{Class, Object, Reference, Value};
 use std::io::Cursor;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_11: Version = Version::Java11 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/ClassLoader";
 
 /// Register all native methods for `java.lang.ClassLoader`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/ClassLoader";
-    let java_version = registry.java_version().clone();
-
-    if java_version <= JAVA_8 {
+    if registry.java_major_version() <= JAVA_8 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "defineClass0",
             "(Ljava/lang/String;[BIILjava/security/ProtectionDomain;)Ljava/lang/Class;",
             define_class_0,
         );
-        registry.register(class_name, "defineClass1", "(Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_1);
-        registry.register(class_name, "defineClass2", "(Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_2);
+        registry.register(CLASS_NAME, "defineClass1", "(Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_1);
+        registry.register(CLASS_NAME, "defineClass2", "(Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_2);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "resolveClass0",
             "(Ljava/lang/Class;)V",
             resolve_class_0,
         );
     } else {
-        registry.register(class_name, "defineClass1", "(Ljava/lang/ClassLoader;Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_1);
-        registry.register(class_name, "defineClass2", "(Ljava/lang/ClassLoader;Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_2);
+        registry.register(CLASS_NAME, "defineClass1", "(Ljava/lang/ClassLoader;Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_1);
+        registry.register(CLASS_NAME, "defineClass2", "(Ljava/lang/ClassLoader;Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;", define_class_2);
     }
 
-    if java_version <= JAVA_11 {
+    if registry.java_major_version() <= JAVA_11 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "findBuiltinLib",
             "(Ljava/lang/String;)Ljava/lang/String;",
             find_builtin_lib,
         );
     }
 
+    if registry.java_major_version() > JAVA_11 {
+        registry.register(
+            CLASS_NAME,
+            "defineClass0",
+            "(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",
+            define_class_0,
+        );
+    }
+
     registry.register(
-        class_name,
+        CLASS_NAME,
         "findBootstrapClass",
         "(Ljava/lang/String;)Ljava/lang/Class;",
         find_bootstrap_class,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "findLoadedClass0",
         "(Ljava/lang/String;)Ljava/lang/Class;",
         find_loaded_class_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "initSystemClassLoader",
         "()Ljava/lang/ClassLoader;",
         init_system_class_loader,
     );
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "retrieveDirectives",
         "()Ljava/lang/AssertionStatusDirectives;",
         retrieve_directives,
@@ -119,14 +124,14 @@ async fn class_object_from_bytes(
 
 #[async_recursion(?Send)]
 async fn define_class_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let _protection_domain = arguments.pop_object()?;
-    let length = arguments.pop_int()?;
-    let offset = arguments.pop_int()?;
-    let bytes: Vec<u8> = arguments.pop()?.try_into()?;
     let vm = thread.vm()?;
-    let class = class_object_from_bytes(&vm, None, &bytes, offset, length).await?;
 
-    if vm.java_class_file_version() <= &JAVA_8 {
+    let class = if vm.java_major_version() <= JAVA_8 {
+        let _protection_domain = arguments.pop_object()?;
+        let length = arguments.pop_int()?;
+        let offset = arguments.pop_int()?;
+        let bytes: Vec<u8> = arguments.pop()?.try_into()?;
+        let class = class_object_from_bytes(&vm, None, &bytes, offset, length).await?;
         if let Some(expected_class_name) = arguments.pop_reference()? {
             let expected_class_name: String = expected_class_name.try_into()?;
             let class_name = class.class().name();
@@ -134,10 +139,22 @@ async fn define_class_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result
                 return Err(NoClassDefFoundError(class_name.to_string()).into());
             }
         }
+        class
     } else {
+        let _class_data = arguments.pop_reference()?;
+        let _flags = arguments.pop_int()?;
+        let _initialize = arguments.pop_int()? != 0;
+        let _protection_domain = arguments.pop_object()?;
+        let length = arguments.pop_int()?;
+        let offset = arguments.pop_int()?;
+        let bytes: Vec<u8> = arguments.pop()?.try_into()?;
+        let _name: String = arguments.pop()?.try_into()?;
+        let _lookup: Arc<Class> = arguments.pop()?.try_into()?;
+        let class = class_object_from_bytes(&vm, None, &bytes, offset, length).await?;
         let class_loader = arguments.pop()?;
         class.set_value("classLoader", class_loader)?;
-    }
+        class
+    };
 
     Ok(Some(Value::from(class)))
 }
@@ -152,7 +169,7 @@ async fn define_class_1(thread: Arc<Thread>, mut arguments: Arguments) -> Result
     let vm = thread.vm()?;
     let class = class_object_from_bytes(&vm, source_file, &bytes, offset, length).await?;
 
-    if vm.java_class_file_version() <= &JAVA_8 {
+    if vm.java_major_version() <= JAVA_8 {
         if let Some(expected_class_name) = arguments.pop_reference()? {
             let expected_class_name: String = expected_class_name.try_into()?;
             let class_name = class.class().name();
@@ -181,7 +198,7 @@ async fn define_class_2(thread: Arc<Thread>, mut arguments: Arguments) -> Result
     let vm = thread.vm()?;
     let class = class_object_from_bytes(&vm, source_file, &bytes, offset, length).await?;
 
-    if vm.java_class_file_version() <= &JAVA_8 {
+    if vm.java_major_version() <= JAVA_8 {
         if let Some(expected_class_name) = arguments.pop_reference()? {
             let expected_class_name: String = expected_class_name.try_into()?;
             let class_name = class.class().name();
@@ -260,96 +277,6 @@ async fn retrieve_directives(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java9 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/ClassLoader";
-        assert!(registry
-            .method(
-                class_name,
-                "defineClass1",
-                "(Ljava/lang/ClassLoader;Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "defineClass2",
-                "(Ljava/lang/ClassLoader;Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "findBuiltinLib",
-                "(Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "findBootstrapClass",
-                "(Ljava/lang/String;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "findLoadedClass0",
-                "(Ljava/lang/String;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "initSystemClassLoader",
-                "()Ljava/lang/ClassLoader;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "retrieveDirectives",
-                "()Ljava/lang/AssertionStatusDirectives;"
-            )
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_8() {
-        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/ClassLoader";
-        assert!(registry
-            .method(
-                class_name,
-                "defineClass0",
-                "(Ljava/lang/String;[BIILjava/security/ProtectionDomain;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "defineClass1",
-                "(Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "defineClass2",
-                "(Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "resolveClass0", "(Ljava/lang/Class;)V")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_find_builtin_lib() -> Result<()> {

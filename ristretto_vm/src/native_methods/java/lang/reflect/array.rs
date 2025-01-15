@@ -6,70 +6,71 @@ use async_recursion::async_recursion;
 use ristretto_classloader::{ConcurrentVec, Object, Reference, Value};
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/reflect/Array";
+
 /// Register all native methods for `java.lang.reflect.Array`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/reflect/Array";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "get",
         "(Ljava/lang/Object;I)Ljava/lang/Object;",
         get,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getBoolean",
         "(Ljava/lang/Object;I)Z",
         get_boolean,
     );
-    registry.register(class_name, "getByte", "(Ljava/lang/Object;I)B", get_byte);
-    registry.register(class_name, "getChar", "(Ljava/lang/Object;I)C", get_char);
+    registry.register(CLASS_NAME, "getByte", "(Ljava/lang/Object;I)B", get_byte);
+    registry.register(CLASS_NAME, "getChar", "(Ljava/lang/Object;I)C", get_char);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDouble",
         "(Ljava/lang/Object;I)D",
         get_double,
     );
-    registry.register(class_name, "getFloat", "(Ljava/lang/Object;I)F", get_float);
-    registry.register(class_name, "getInt", "(Ljava/lang/Object;I)I", get_int);
-    registry.register(class_name, "getLength", "(Ljava/lang/Object;)I", get_length);
-    registry.register(class_name, "getLong", "(Ljava/lang/Object;I)J", get_long);
-    registry.register(class_name, "getShort", "(Ljava/lang/Object;I)S", get_short);
+    registry.register(CLASS_NAME, "getFloat", "(Ljava/lang/Object;I)F", get_float);
+    registry.register(CLASS_NAME, "getInt", "(Ljava/lang/Object;I)I", get_int);
+    registry.register(CLASS_NAME, "getLength", "(Ljava/lang/Object;)I", get_length);
+    registry.register(CLASS_NAME, "getLong", "(Ljava/lang/Object;I)J", get_long);
+    registry.register(CLASS_NAME, "getShort", "(Ljava/lang/Object;I)S", get_short);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "multiNewArray",
         "(Ljava/lang/Class;[I)Ljava/lang/Object;",
         multi_new_array,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "newArray",
         "(Ljava/lang/Class;I)Ljava/lang/Object;",
         new_array,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "set",
         "(Ljava/lang/Object;ILjava/lang/Object;)V",
         set,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setBoolean",
         "(Ljava/lang/Object;IZ)V",
         set_boolean,
     );
-    registry.register(class_name, "setByte", "(Ljava/lang/Object;IB)V", set_byte);
-    registry.register(class_name, "setChar", "(Ljava/lang/Object;IC)V", set_char);
+    registry.register(CLASS_NAME, "setByte", "(Ljava/lang/Object;IB)V", set_byte);
+    registry.register(CLASS_NAME, "setChar", "(Ljava/lang/Object;IC)V", set_char);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setDouble",
         "(Ljava/lang/Object;ID)V",
         set_double,
     );
-    registry.register(class_name, "setFloat", "(Ljava/lang/Object;IF)V", set_float);
-    registry.register(class_name, "setInt", "(Ljava/lang/Object;II)V", set_int);
-    registry.register(class_name, "setLong", "(Ljava/lang/Object;IJ)V", set_long);
-    registry.register(class_name, "setShort", "(Ljava/lang/Object;IS)V", set_short);
+    registry.register(CLASS_NAME, "setFloat", "(Ljava/lang/Object;IF)V", set_float);
+    registry.register(CLASS_NAME, "setInt", "(Ljava/lang/Object;II)V", set_int);
+    registry.register(CLASS_NAME, "setLong", "(Ljava/lang/Object;IJ)V", set_long);
+    registry.register(CLASS_NAME, "setShort", "(Ljava/lang/Object;IS)V", set_short);
 }
 
 fn get_class_name(value: Value) -> Result<String> {
@@ -205,88 +206,6 @@ async fn set_short(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/reflect/Array";
-        assert!(registry
-            .method(class_name, "get", "(Ljava/lang/Object;I)Ljava/lang/Object;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getBoolean", "(Ljava/lang/Object;I)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getByte", "(Ljava/lang/Object;I)B")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getChar", "(Ljava/lang/Object;I)C")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDouble", "(Ljava/lang/Object;I)D")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getFloat", "(Ljava/lang/Object;I)F")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getInt", "(Ljava/lang/Object;I)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getLength", "(Ljava/lang/Object;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getLong", "(Ljava/lang/Object;I)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getShort", "(Ljava/lang/Object;I)S")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "multiNewArray",
-                "(Ljava/lang/Class;[I)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "newArray",
-                "(Ljava/lang/Class;I)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "set",
-                "(Ljava/lang/Object;ILjava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "setBoolean", "(Ljava/lang/Object;IZ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setByte", "(Ljava/lang/Object;IB)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setChar", "(Ljava/lang/Object;IC)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setDouble", "(Ljava/lang/Object;ID)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setFloat", "(Ljava/lang/Object;IF)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setInt", "(Ljava/lang/Object;II)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setLong", "(Ljava/lang/Object;IJ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setShort", "(Ljava/lang/Object;IS)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

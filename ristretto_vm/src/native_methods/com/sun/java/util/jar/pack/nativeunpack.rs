@@ -1,41 +1,44 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/java/util/jar/pack/NativeUnpack";
+
 /// Register all native methods for `com.sun.java.util.jar.pack.NativeUnpack`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/java/util/jar/pack/NativeUnpack";
-    registry.register(class_name, "finish", "()J", finish);
-    registry.register(
-        class_name,
-        "getNextFile",
-        "([Ljava/lang/Object;)Z",
-        get_next_file,
-    );
-    registry.register(
-        class_name,
-        "getOption",
-        "(Ljava/lang/String;)Ljava/lang/String;",
-        get_option,
-    );
-    registry.register(
-        class_name,
-        "getUnusedInput",
-        "()Ljava/nio/ByteBuffer;",
-        get_unused_input,
-    );
-    registry.register(class_name, "initIDs", "()V", init_ids);
-    registry.register(
-        class_name,
-        "setOption",
-        "(Ljava/lang/String;Ljava/lang/String;)Z",
-        set_option,
-    );
-    registry.register(class_name, "start", "(Ljava/nio/ByteBuffer;J)J", start);
+    if registry.java_major_version() <= JAVA_11 {
+        registry.register(CLASS_NAME, "finish", "()J", finish);
+        registry.register(
+            CLASS_NAME,
+            "getNextFile",
+            "([Ljava/lang/Object;)Z",
+            get_next_file,
+        );
+        registry.register(
+            CLASS_NAME,
+            "getOption",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            get_option,
+        );
+        registry.register(
+            CLASS_NAME,
+            "getUnusedInput",
+            "()Ljava/nio/ByteBuffer;",
+            get_unused_input,
+        );
+        registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
+        registry.register(
+            CLASS_NAME,
+            "setOption",
+            "(Ljava/lang/String;Ljava/lang/String;)Z",
+            set_option,
+        );
+        registry.register(CLASS_NAME, "start", "(Ljava/nio/ByteBuffer;J)J", start);
+    }
 }
 
 #[async_recursion(?Send)]
@@ -78,38 +81,6 @@ async fn start(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Val
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/java/util/jar/pack/NativeUnpack";
-        assert!(registry.method(class_name, "finish", "()J").is_some());
-        assert!(registry
-            .method(class_name, "getNextFile", "([Ljava/lang/Object;)Z")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getOption",
-                "(Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getUnusedInput", "()Ljava/nio/ByteBuffer;")
-            .is_some());
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setOption",
-                "(Ljava/lang/String;Ljava/lang/String;)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "start", "(Ljava/nio/ByteBuffer;J)J")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

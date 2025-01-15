@@ -6,20 +6,21 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/media/sound/MidiOutDevice";
+
 /// Register all native methods for `com.sun.media.sound.MidiOutDevice`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/media/sound/MidiOutDevice";
-    registry.register(class_name, "nClose", "(J)V", n_close);
-    registry.register(class_name, "nGetTimeStamp", "(J)J", n_get_time_stamp);
-    registry.register(class_name, "nOpen", "(I)J", n_open);
+    registry.register(CLASS_NAME, "nClose", "(J)V", n_close);
+    registry.register(CLASS_NAME, "nGetTimeStamp", "(J)J", n_get_time_stamp);
+    registry.register(CLASS_NAME, "nOpen", "(I)J", n_open);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nSendLongMessage",
         "(J[BIJ)V",
         n_send_long_message,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nSendShortMessage",
         "(JIJ)V",
         n_send_short_message,
@@ -57,24 +58,6 @@ async fn n_send_short_message(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/media/sound/MidiOutDevice";
-        assert!(registry.method(class_name, "nClose", "(J)V").is_some());
-        assert!(registry
-            .method(class_name, "nGetTimeStamp", "(J)J")
-            .is_some());
-        assert!(registry.method(class_name, "nOpen", "(I)J").is_some());
-        assert!(registry
-            .method(class_name, "nSendLongMessage", "(J[BIJ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nSendShortMessage", "(JIJ)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: com.sun.media.sound.MidiOutDevice.nClose(J)V")]

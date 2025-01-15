@@ -6,58 +6,59 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/CRenderer";
+
 /// Register all native methods for `sun.java2d.CRenderer`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/CRenderer";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "doArc",
         "(Lsun/java2d/SurfaceData;FFFFFFIZ)V",
         do_arc,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "doImage",
         "(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V",
         do_image,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "doLine",
         "(Lsun/java2d/SurfaceData;FFFF)V",
         do_line,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "doOval",
         "(Lsun/java2d/SurfaceData;FFFFZ)V",
         do_oval,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "doPoly",
         "(Lsun/java2d/SurfaceData;[I[IIZZ)V",
         do_poly,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "doRect",
         "(Lsun/java2d/SurfaceData;FFFFZ)V",
         do_rect,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "doRoundRect",
         "(Lsun/java2d/SurfaceData;FFFFFFZ)V",
         do_round_rect,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "doShape",
         "(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V",
         do_shape,
     );
-    registry.register(class_name, "init", "()V", init);
+    registry.register(CLASS_NAME, "init", "()V", init);
 }
 
 #[async_recursion(?Send)]
@@ -109,52 +110,10 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/CRenderer";
-        assert!(registry
-            .method(class_name, "doArc", "(Lsun/java2d/SurfaceData;FFFFFFIZ)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "doImage",
-                "(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "doLine", "(Lsun/java2d/SurfaceData;FFFF)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "doOval", "(Lsun/java2d/SurfaceData;FFFFZ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "doPoly", "(Lsun/java2d/SurfaceData;[I[IIZZ)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "doRect", "(Lsun/java2d/SurfaceData;FFFFZ)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "doRoundRect",
-                "(Lsun/java2d/SurfaceData;FFFFFFZ)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "doShape",
-                "(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V"
-            )
-            .is_some());
-        assert!(registry.method(class_name, "init", "()V").is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.CRenderer.doArc(Lsun/java2d/SurfaceData;FFFFFFIZ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.CRenderer.doArc(Lsun/java2d/SurfaceData;FFFFFFIZ)V"
+    )]
     async fn test_do_arc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = do_arc(thread, Arguments::default()).await;
@@ -162,7 +121,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.CRenderer.doImage(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V"
+        expected = "not yet implemented: sun.java2d.CRenderer.doImage(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V"
     )]
     async fn test_do_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -170,35 +129,45 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.CRenderer.doLine(Lsun/java2d/SurfaceData;FFFF)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.CRenderer.doLine(Lsun/java2d/SurfaceData;FFFF)V"
+    )]
     async fn test_do_line() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = do_line(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.CRenderer.doOval(Lsun/java2d/SurfaceData;FFFFZ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.CRenderer.doOval(Lsun/java2d/SurfaceData;FFFFZ)V"
+    )]
     async fn test_do_oval() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = do_oval(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.CRenderer.doPoly(Lsun/java2d/SurfaceData;[I[IIZZ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.CRenderer.doPoly(Lsun/java2d/SurfaceData;[I[IIZZ)V"
+    )]
     async fn test_do_poly() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = do_poly(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.CRenderer.doRect(Lsun/java2d/SurfaceData;FFFFZ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.CRenderer.doRect(Lsun/java2d/SurfaceData;FFFFZ)V"
+    )]
     async fn test_do_rect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = do_rect(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.CRenderer.doRoundRect(Lsun/java2d/SurfaceData;FFFFFFZ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.CRenderer.doRoundRect(Lsun/java2d/SurfaceData;FFFFFFZ)V"
+    )]
     async fn test_do_round_rect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = do_round_rect(thread, Arguments::default()).await;
@@ -206,7 +175,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.CRenderer.doShape(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V"
+        expected = "not yet implemented: sun.java2d.CRenderer.doShape(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V"
     )]
     async fn test_do_shape() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

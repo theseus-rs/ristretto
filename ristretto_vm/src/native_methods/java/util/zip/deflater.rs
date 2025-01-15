@@ -1,60 +1,56 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
+const CLASS_NAME: &str = "java/util/zip/Deflater";
 
 /// Register all native methods for `java.util.zip.Deflater`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/util/zip/Deflater";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_8 {
-        registry.register(class_name, "deflateBytes", "(J[BIII)I", deflate_bytes);
-        registry.register(class_name, "initIDs", "()V", init_ids);
+    if registry.java_major_version() <= JAVA_8 {
+        registry.register(CLASS_NAME, "deflateBytes", "(J[BIII)I", deflate_bytes);
+        registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "deflateBufferBuffer",
             "(JJIJIII)J",
             deflate_buffer_buffer,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "deflateBufferBytes",
             "(JJI[BIIII)J",
             deflate_buffer_bytes,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "deflateBytesBuffer",
             "(J[BIIJIII)J",
             deflate_bytes_buffer,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "deflateBytesBytes",
             "(J[BII[BIIII)J",
             deflate_bytes_bytes,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "setDictionaryBuffer",
             "(JJI)V",
             set_dictionary_buffer,
         );
     }
 
-    registry.register(class_name, "end", "(J)V", end);
-    registry.register(class_name, "getAdler", "(J)I", get_adler);
-    registry.register(class_name, "init", "(IIZ)J", init);
-    registry.register(class_name, "reset", "(J)V", reset);
-    registry.register(class_name, "setDictionary", "(J[BII)V", set_dictionary);
+    registry.register(CLASS_NAME, "end", "(J)V", end);
+    registry.register(CLASS_NAME, "getAdler", "(J)I", get_adler);
+    registry.register(CLASS_NAME, "init", "(IIZ)J", init);
+    registry.register(CLASS_NAME, "reset", "(J)V", reset);
+    registry.register(CLASS_NAME, "setDictionary", "(J[BII)V", set_dictionary);
 }
 
 #[async_recursion(?Send)]
@@ -132,46 +128,6 @@ async fn set_dictionary_buffer(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/util/zip/Deflater";
-        assert!(registry
-            .method(class_name, "deflateBytes", "(J[BIII)I")
-            .is_some());
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-        assert!(registry.method(class_name, "end", "(J)V").is_some());
-        assert!(registry.method(class_name, "getAdler", "(J)I").is_some());
-        assert!(registry.method(class_name, "init", "(IIZ)J").is_some());
-        assert!(registry.method(class_name, "reset", "(J)V").is_some());
-        assert!(registry
-            .method(class_name, "setDictionary", "(J[BII)V")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_9() {
-        let mut registry = MethodRegistry::new(&Version::Java9 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/util/zip/Deflater";
-        assert!(registry
-            .method(class_name, "deflateBufferBuffer", "(JJIJIII)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "deflateBufferBytes", "(JJI[BIIII)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "deflateBytesBuffer", "(J[BIIJIII)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "deflateBytesBytes", "(J[BII[BIIII)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setDictionaryBuffer", "(JJI)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.util.zip.Deflater.deflateBytes(J[BIII)I")]

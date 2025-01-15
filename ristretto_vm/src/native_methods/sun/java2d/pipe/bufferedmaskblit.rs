@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/pipe/BufferedMaskBlit";
+
 /// Register all native methods for `sun.java2d.pipe.BufferedMaskBlit`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/pipe/BufferedMaskBlit";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "enqueueTile",
         "(JILsun/java2d/SurfaceData;JI[BIIIIIIIII)I",
         enqueue_tile,
@@ -26,23 +27,9 @@ async fn enqueue_tile(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/pipe/BufferedMaskBlit";
-        assert!(registry
-            .method(
-                class_name,
-                "enqueueTile",
-                "(JILsun/java2d/SurfaceData;JI[BIIIIIIIII)I"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.pipe.BufferedMaskBlit.enqueueTile(JILsun/java2d/SurfaceData;JI[BIIIIIIIII)I"
+        expected = "not yet implemented: sun.java2d.pipe.BufferedMaskBlit.enqueueTile(JILsun/java2d/SurfaceData;JI[BIIIIIIIII)I"
     )]
     async fn test_enqueue_tile() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

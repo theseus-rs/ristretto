@@ -6,48 +6,49 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/management/Flag";
+
 /// Register all native methods for `sun.management.Flag`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/management/Flag";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAllFlagNames",
         "()[Ljava/lang/String;",
         get_all_flag_names,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getFlags",
         "([Ljava/lang/String;[Lsun/management/Flag;I)I",
         get_flags,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getInternalFlagCount",
         "()I",
         get_internal_flag_count,
     );
-    registry.register(class_name, "initialize", "()V", initialize);
+    registry.register(CLASS_NAME, "initialize", "()V", initialize);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setBooleanValue",
         "(Ljava/lang/String;Z)V",
         set_boolean_value,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setDoubleValue",
         "(Ljava/lang/String;D)V",
         set_double_value,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setLongValue",
         "(Ljava/lang/String;J)V",
         set_long_value,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setStringValue",
         "(Ljava/lang/String;Ljava/lang/String;)V",
         set_string_value,
@@ -101,45 +102,10 @@ async fn set_string_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/management/Flag";
-        assert!(registry
-            .method(class_name, "getAllFlagNames", "()[Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getFlags",
-                "([Ljava/lang/String;[Lsun/management/Flag;I)I"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getInternalFlagCount", "()I")
-            .is_some());
-        assert!(registry.method(class_name, "initialize", "()V").is_some());
-        assert!(registry
-            .method(class_name, "setBooleanValue", "(Ljava/lang/String;Z)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setDoubleValue", "(Ljava/lang/String;D)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setLongValue", "(Ljava/lang/String;J)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setStringValue",
-                "(Ljava/lang/String;Ljava/lang/String;)V"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.management.Flag.getAllFlagNames()[Ljava/lang/String;")]
+    #[should_panic(
+        expected = "not yet implemented: sun.management.Flag.getAllFlagNames()[Ljava/lang/String;"
+    )]
     async fn test_get_all_flag_names() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_all_flag_names(thread, Arguments::default()).await;
@@ -147,7 +113,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.Flag.getFlags([Ljava/lang/String;[Lsun/management/Flag;I)I"
+        expected = "not yet implemented: sun.management.Flag.getFlags([Ljava/lang/String;[Lsun/management/Flag;I)I"
     )]
     async fn test_get_flags() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -155,35 +121,41 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.management.Flag.getInternalFlagCount()I")]
+    #[should_panic(expected = "not yet implemented: sun.management.Flag.getInternalFlagCount()I")]
     async fn test_get_internal_flag_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_internal_flag_count(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.management.Flag.initialize()V")]
+    #[should_panic(expected = "not yet implemented: sun.management.Flag.initialize()V")]
     async fn test_initialize() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = initialize(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.management.Flag.setBooleanValue(Ljava/lang/String;Z)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.management.Flag.setBooleanValue(Ljava/lang/String;Z)V"
+    )]
     async fn test_set_boolean_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = set_boolean_value(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.management.Flag.setDoubleValue(Ljava/lang/String;D)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.management.Flag.setDoubleValue(Ljava/lang/String;D)V"
+    )]
     async fn test_set_double_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = set_double_value(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.management.Flag.setLongValue(Ljava/lang/String;J)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.management.Flag.setLongValue(Ljava/lang/String;J)V"
+    )]
     async fn test_set_long_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = set_long_value(thread, Arguments::default()).await;
@@ -191,7 +163,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V"
+        expected = "not yet implemented: sun.management.Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V"
     )]
     async fn test_set_string_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

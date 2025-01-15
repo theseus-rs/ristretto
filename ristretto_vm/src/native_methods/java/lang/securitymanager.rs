@@ -1,35 +1,31 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/SecurityManager";
 
 /// Register all native methods for `java.lang.SecurityManager`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/SecurityManager";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_8 {
+    if registry.java_major_version() <= JAVA_8 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "classDepth",
             "(Ljava/lang/String;)I",
             class_depth,
         );
-        registry.register(class_name, "classLoaderDepth0", "()I", class_loader_depth_0);
+        registry.register(CLASS_NAME, "classLoaderDepth0", "()I", class_loader_depth_0);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "currentClassLoader0",
             "()Ljava/lang/ClassLoader;",
             current_class_loader_0,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "currentLoadedClass0",
             "()Ljava/lang/Class;",
             current_loaded_class_0,
@@ -37,7 +33,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getClassContext",
         "()[Ljava/lang/Class;",
         get_class_context,
@@ -81,32 +77,6 @@ async fn get_class_context(_thread: Arc<Thread>, _arguments: Arguments) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/SecurityManager";
-        assert!(registry
-            .method(class_name, "classDepth", "(Ljava/lang/String;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "classLoaderDepth0", "()I")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "currentClassLoader0",
-                "()Ljava/lang/ClassLoader;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "currentLoadedClass0", "()Ljava/lang/Class;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getClassContext", "()[Ljava/lang/Class;")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

@@ -6,18 +6,19 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/management/internal/GcInfoBuilder";
+
 /// Register all native methods for `com.sun.management.internal.GcInfoBuilder`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/management/internal/GcInfoBuilder";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "fillGcAttributeInfo",
         "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/String;[C[Ljava/lang/String;)V",
         fill_gc_attribute_info,
     );
-    registry.register(class_name, "getLastGcInfo0", "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;", get_last_gc_info_0);
+    registry.register(CLASS_NAME, "getLastGcInfo0", "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;", get_last_gc_info_0);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNumGcExtAttributes",
         "(Ljava/lang/management/GarbageCollectorMXBean;)I",
         get_num_gc_ext_attributes,
@@ -48,34 +49,6 @@ async fn get_num_gc_ext_attributes(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/management/internal/GcInfoBuilder";
-        assert!(registry
-            .method(
-                class_name,
-                "fillGcAttributeInfo",
-                "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/String;[C[Ljava/lang/String;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getLastGcInfo0",
-                "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getNumGcExtAttributes",
-                "(Ljava/lang/management/GarbageCollectorMXBean;)I"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

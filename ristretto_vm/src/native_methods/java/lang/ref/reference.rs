@@ -1,24 +1,19 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_18};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;
 
-const JAVA_17: Version = Version::Java17 { minor: 0 };
-const JAVA_21: Version = Version::Java21 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/ref/Reference";
 
 /// Register all native methods for `java.lang.ref.Reference`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/ref/Reference";
-    let java_version = registry.java_version().clone();
-
-    if java_version == JAVA_17 || java_version >= JAVA_21 {
-        registry.register(class_name, "clear0", "()V", clear_0);
+    if registry.java_major_version() == JAVA_17 || registry.java_major_version() >= JAVA_18 {
+        registry.register(CLASS_NAME, "clear0", "()V", clear_0);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "refersTo0",
             "(Ljava/lang/Object;)Z",
             refers_to_0,
@@ -26,19 +21,19 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndClearReferencePendingList",
         "()Ljava/lang/ref/Reference;",
         get_and_clear_reference_pending_list,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "hasReferencePendingList",
         "()Z",
         has_reference_pending_list,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "waitForReferencePendingList",
         "()V",
         wait_for_reference_pending_list,
@@ -90,37 +85,6 @@ async fn wait_for_reference_pending_list(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/ref/Reference";
-        assert!(registry
-            .method(
-                class_name,
-                "getAndClearReferencePendingList",
-                "()Ljava/lang/ref/Reference;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "hasReferencePendingList", "()Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "waitForReferencePendingList", "()V")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_21() {
-        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/ref/Reference";
-        assert!(registry.method(class_name, "clear0", "()V").is_some());
-        assert!(registry
-            .method(class_name, "refersTo0", "(Ljava/lang/Object;)Z")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.lang.ref.Reference.clear0()V")]

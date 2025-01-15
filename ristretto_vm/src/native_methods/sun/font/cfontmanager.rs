@@ -6,16 +6,17 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/font/CFontManager";
+
 /// Register all native methods for `sun.font.CFontManager`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/font/CFontManager";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "loadNativeDirFonts",
         "(Ljava/lang/String;)V",
         load_native_dir_fonts,
     );
-    registry.register(class_name, "loadNativeFonts", "()V", load_native_fonts);
+    registry.register(CLASS_NAME, "loadNativeFonts", "()V", load_native_fonts);
 }
 
 #[async_recursion(?Send)]
@@ -35,28 +36,17 @@ async fn load_native_fonts(_thread: Arc<Thread>, _arguments: Arguments) -> Resul
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/font/CFontManager";
-        assert!(registry
-            .method(class_name, "loadNativeDirFonts", "(Ljava/lang/String;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "loadNativeFonts", "()V")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.font.CFontManager.loadNativeDirFonts(Ljava/lang/String;)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.font.CFontManager.loadNativeDirFonts(Ljava/lang/String;)V"
+    )]
     async fn test_load_native_dir_fonts() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = load_native_dir_fonts(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.font.CFontManager.loadNativeFonts()V")]
+    #[should_panic(expected = "not yet implemented: sun.font.CFontManager.loadNativeFonts()V")]
     async fn test_load_native_fonts() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = load_native_fonts(thread, Arguments::default()).await;

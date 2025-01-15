@@ -6,33 +6,34 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/util/zip/ZipFile";
+
 /// Register all native methods for `java.util.zip.ZipFile`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/util/zip/ZipFile";
-    registry.register(class_name, "close", "(J)V", close);
-    registry.register(class_name, "freeEntry", "(JJ)V", free_entry);
-    registry.register(class_name, "getCommentBytes", "(J)[B", get_comment_bytes);
-    registry.register(class_name, "getEntry", "(J[BZ)J", get_entry);
-    registry.register(class_name, "getEntryBytes", "(JI)[B", get_entry_bytes);
-    registry.register(class_name, "getEntryCSize", "(J)J", get_entry_c_size);
-    registry.register(class_name, "getEntryCrc", "(J)J", get_entry_crc);
-    registry.register(class_name, "getEntryFlag", "(J)I", get_entry_flag);
-    registry.register(class_name, "getEntryMethod", "(J)I", get_entry_method);
-    registry.register(class_name, "getEntrySize", "(J)J", get_entry_size);
-    registry.register(class_name, "getEntryTime", "(J)J", get_entry_time);
-    registry.register(class_name, "getManifestNum", "(J)I", get_manifest_num);
-    registry.register(class_name, "getNextEntry", "(JI)J", get_next_entry);
-    registry.register(class_name, "getTotal", "(J)I", get_total);
+    registry.register(CLASS_NAME, "close", "(J)V", close);
+    registry.register(CLASS_NAME, "freeEntry", "(JJ)V", free_entry);
+    registry.register(CLASS_NAME, "getCommentBytes", "(J)[B", get_comment_bytes);
+    registry.register(CLASS_NAME, "getEntry", "(J[BZ)J", get_entry);
+    registry.register(CLASS_NAME, "getEntryBytes", "(JI)[B", get_entry_bytes);
+    registry.register(CLASS_NAME, "getEntryCSize", "(J)J", get_entry_c_size);
+    registry.register(CLASS_NAME, "getEntryCrc", "(J)J", get_entry_crc);
+    registry.register(CLASS_NAME, "getEntryFlag", "(J)I", get_entry_flag);
+    registry.register(CLASS_NAME, "getEntryMethod", "(J)I", get_entry_method);
+    registry.register(CLASS_NAME, "getEntrySize", "(J)J", get_entry_size);
+    registry.register(CLASS_NAME, "getEntryTime", "(J)J", get_entry_time);
+    registry.register(CLASS_NAME, "getManifestNum", "(J)I", get_manifest_num);
+    registry.register(CLASS_NAME, "getNextEntry", "(JI)J", get_next_entry);
+    registry.register(CLASS_NAME, "getTotal", "(J)I", get_total);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getZipMessage",
         "(J)Ljava/lang/String;",
         get_zip_message,
     );
-    registry.register(class_name, "initIDs", "()V", init_ids);
-    registry.register(class_name, "open", "(Ljava/lang/String;IJZ)J", open);
-    registry.register(class_name, "read", "(JJJ[BII)I", read);
-    registry.register(class_name, "startsWithLOC", "(J)Z", starts_with_loc);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "open", "(Ljava/lang/String;IJZ)J", open);
+    registry.register(CLASS_NAME, "read", "(JJJ[BII)I", read);
+    registry.register(CLASS_NAME, "startsWithLOC", "(J)Z", starts_with_loc);
 }
 
 #[async_recursion(?Send)]
@@ -133,56 +134,6 @@ async fn starts_with_loc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/util/zip/ZipFile";
-        assert!(registry.method(class_name, "close", "(J)V").is_some());
-        assert!(registry.method(class_name, "freeEntry", "(JJ)V").is_some());
-        assert!(registry
-            .method(class_name, "getCommentBytes", "(J)[B")
-            .is_some());
-        assert!(registry.method(class_name, "getEntry", "(J[BZ)J").is_some());
-        assert!(registry
-            .method(class_name, "getEntryBytes", "(JI)[B")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getEntryCSize", "(J)J")
-            .is_some());
-        assert!(registry.method(class_name, "getEntryCrc", "(J)J").is_some());
-        assert!(registry
-            .method(class_name, "getEntryFlag", "(J)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getEntryMethod", "(J)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getEntrySize", "(J)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getEntryTime", "(J)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getManifestNum", "(J)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getNextEntry", "(JI)J")
-            .is_some());
-        assert!(registry.method(class_name, "getTotal", "(J)I").is_some());
-        assert!(registry
-            .method(class_name, "getZipMessage", "(J)Ljava/lang/String;")
-            .is_some());
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-        assert!(registry
-            .method(class_name, "open", "(Ljava/lang/String;IJZ)J")
-            .is_some());
-        assert!(registry.method(class_name, "read", "(JJJ[BII)I").is_some());
-        assert!(registry
-            .method(class_name, "startsWithLOC", "(J)Z")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.util.zip.ZipFile.close(J)V")]

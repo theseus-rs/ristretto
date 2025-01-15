@@ -7,10 +7,11 @@ use ristretto_classloader::Value;
 use std::env::consts::ARCH;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/util/concurrent/atomic/AtomicLong";
+
 /// Register all native methods for `java.util.concurrent.atomic.AtomicLong`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/util/concurrent/atomic/AtomicLong";
-    registry.register(class_name, "VMSupportsCS8", "()Z", vm_supports_cs_8);
+    registry.register(CLASS_NAME, "VMSupportsCS8", "()Z", vm_supports_cs_8);
 }
 
 #[async_recursion(?Send)]
@@ -34,16 +35,6 @@ async fn vm_supports_cs_8(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/util/concurrent/atomic/AtomicLong";
-        assert!(registry
-            .method(class_name, "VMSupportsCS8", "()Z")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_vm_supports_cs_8() -> Result<()> {

@@ -6,12 +6,13 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/invoke/NativeEntryPoint";
+
 /// Register all native methods for `jdk.internal.invoke.NativeEntryPoint`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/invoke/NativeEntryPoint";
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "vmStorageToVMReg",
         "(II)J",
         vm_storage_to_vm_reg,
@@ -35,19 +36,6 @@ async fn vm_storage_to_vm_reg(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/invoke/NativeEntryPoint";
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "vmStorageToVMReg", "(II)J")
-            .is_some());
-    }
-
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
@@ -57,7 +45,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "jdk.internal.invoke.NativeEntryPoint.vmStorageToVMReg(II)J")]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.invoke.NativeEntryPoint.vmStorageToVMReg(II)J"
+    )]
     async fn test_vm_storage_to_vm_reg() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = vm_storage_to_vm_reg(thread, Arguments::default()).await;

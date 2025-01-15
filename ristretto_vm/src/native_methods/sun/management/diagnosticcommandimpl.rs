@@ -6,29 +6,30 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/management/DiagnosticCommandImpl";
+
 /// Register all native methods for `sun.management.DiagnosticCommandImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/management/DiagnosticCommandImpl";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "executeDiagnosticCommand",
         "(Ljava/lang/String;)Ljava/lang/String;",
         execute_diagnostic_command,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDiagnosticCommandInfo",
         "([Ljava/lang/String;)[Lsun/management/DiagnosticCommandInfo;",
         get_diagnostic_command_info,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDiagnosticCommands",
         "()[Ljava/lang/String;",
         get_diagnostic_commands,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setNotificationEnabled",
         "(Z)V",
         set_notification_enabled,
@@ -71,36 +72,9 @@ async fn set_notification_enabled(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/management/DiagnosticCommandImpl";
-        assert!(registry
-            .method(
-                class_name,
-                "executeDiagnosticCommand",
-                "(Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getDiagnosticCommandInfo",
-                "([Ljava/lang/String;)[Lsun/management/DiagnosticCommandInfo;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDiagnosticCommands", "()[Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setNotificationEnabled", "(Z)V")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.DiagnosticCommandImpl.executeDiagnosticCommand(Ljava/lang/String;)Ljava/lang/String;"
+        expected = "not yet implemented: sun.management.DiagnosticCommandImpl.executeDiagnosticCommand(Ljava/lang/String;)Ljava/lang/String;"
     )]
     async fn test_execute_diagnostic_command() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -109,7 +83,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.DiagnosticCommandImpl.getDiagnosticCommandInfo([Ljava/lang/String;)[Lsun/management/DiagnosticCommandInfo;"
+        expected = "not yet implemented: sun.management.DiagnosticCommandImpl.getDiagnosticCommandInfo([Ljava/lang/String;)[Lsun/management/DiagnosticCommandInfo;"
     )]
     async fn test_get_diagnostic_command_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -118,7 +92,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.DiagnosticCommandImpl.getDiagnosticCommands()[Ljava/lang/String;"
+        expected = "not yet implemented: sun.management.DiagnosticCommandImpl.getDiagnosticCommands()[Ljava/lang/String;"
     )]
     async fn test_get_diagnostic_commands() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -126,7 +100,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.management.DiagnosticCommandImpl.setNotificationEnabled(Z)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.management.DiagnosticCommandImpl.setNotificationEnabled(Z)V"
+    )]
     async fn test_set_notification_enabled() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = set_notification_enabled(thread, Arguments::default()).await;

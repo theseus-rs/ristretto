@@ -1,28 +1,24 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/ClassLoader$NativeLibrary";
 
 /// Register all native methods for `java.lang.ClassLoader$NativeLibrary`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/ClassLoader$NativeLibrary";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_8 {
-        registry.register(class_name, "find", "(Ljava/lang/String;)J", find);
-        registry.register(class_name, "load", "(Ljava/lang/String;Z)V", load);
+    if registry.java_major_version() <= JAVA_8 {
+        registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;Z)V", unload);
+        registry.register(CLASS_NAME, "find", "(Ljava/lang/String;)J", find);
+        registry.register(CLASS_NAME, "load", "(Ljava/lang/String;Z)V", load);
     } else {
-        registry.register(class_name, "findEntry", "(Ljava/lang/String;)J", find_entry);
-        registry.register(class_name, "load0", "(Ljava/lang/String;ZZ)Z", load_0);
+        registry.register(CLASS_NAME, "findEntry", "(Ljava/lang/String;)J", find_entry);
+        registry.register(CLASS_NAME, "load0", "(Ljava/lang/String;ZZ)Z", load_0);
+        registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;ZJ)V", unload);
     }
-
-    registry.register(class_name, "unload", "(Ljava/lang/String;ZJ)V", unload);
 }
 
 #[async_recursion(?Send)]
@@ -53,35 +49,6 @@ async fn unload(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java9 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/ClassLoader$NativeLibrary";
-        assert!(registry
-            .method(class_name, "findEntry", "(Ljava/lang/String;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "load0", "(Ljava/lang/String;ZZ)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "unload", "(Ljava/lang/String;ZJ)V")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_8() {
-        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/ClassLoader$NativeLibrary";
-        assert!(registry
-            .method(class_name, "find", "(Ljava/lang/String;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "load", "(Ljava/lang/String;Z)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

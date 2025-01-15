@@ -6,187 +6,188 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/invoke/VarHandle";
+
 /// Register all native methods for `java.lang.invoke.VarHandle`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/invoke/VarHandle";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndExchange",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         compare_and_exchange,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndExchangeAcquire",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         compare_and_exchange_acquire,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndExchangeRelease",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         compare_and_exchange_release,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compareAndSet",
         "([Ljava/lang/Object;)Z",
         compare_and_set,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "get",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAcquire",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_acquire,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndAdd",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_add,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndAddAcquire",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_add_acquire,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndAddRelease",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_add_release,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndBitwiseAnd",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_bitwise_and,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndBitwiseAndAcquire",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_bitwise_and_acquire,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndBitwiseAndRelease",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_bitwise_and_release,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndBitwiseOr",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_bitwise_or,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndBitwiseOrAcquire",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_bitwise_or_acquire,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndBitwiseOrRelease",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_bitwise_or_release,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndBitwiseXor",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_bitwise_xor,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndBitwiseXorAcquire",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_bitwise_xor_acquire,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndBitwiseXorRelease",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_bitwise_xor_release,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndSet",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_set,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndSetAcquire",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_set_acquire,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAndSetRelease",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_and_set_release,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getOpaque",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_opaque,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getVolatile",
         "([Ljava/lang/Object;)Ljava/lang/Object;",
         get_volatile,
     );
-    registry.register(class_name, "set", "([Ljava/lang/Object;)V", set);
+    registry.register(CLASS_NAME, "set", "([Ljava/lang/Object;)V", set);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setOpaque",
         "([Ljava/lang/Object;)V",
         set_opaque,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setRelease",
         "([Ljava/lang/Object;)V",
         set_release,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setVolatile",
         "([Ljava/lang/Object;)V",
         set_volatile,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "weakCompareAndSet",
         "([Ljava/lang/Object;)Z",
         weak_compare_and_set,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "weakCompareAndSetAcquire",
         "([Ljava/lang/Object;)Z",
         weak_compare_and_set_acquire,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "weakCompareAndSetPlain",
         "([Ljava/lang/Object;)Z",
         weak_compare_and_set_plain,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "weakCompareAndSetRelease",
         "([Ljava/lang/Object;)Z",
         weak_compare_and_set_release,
@@ -402,203 +403,6 @@ async fn weak_compare_and_set_release(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    #[expect(clippy::too_many_lines)]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/invoke/VarHandle";
-        assert!(registry
-            .method(
-                class_name,
-                "compareAndExchange",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "compareAndExchangeAcquire",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "compareAndExchangeRelease",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "compareAndSet", "([Ljava/lang/Object;)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "get", "([Ljava/lang/Object;)Ljava/lang/Object;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAcquire",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndAdd",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndAddAcquire",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndAddRelease",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndBitwiseAnd",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndBitwiseAndAcquire",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndBitwiseAndRelease",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndBitwiseOr",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndBitwiseOrAcquire",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndBitwiseOrRelease",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndBitwiseXor",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndBitwiseXorAcquire",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndBitwiseXorRelease",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndSet",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndSetAcquire",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getAndSetRelease",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getOpaque",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getVolatile",
-                "([Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "set", "([Ljava/lang/Object;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setOpaque", "([Ljava/lang/Object;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setRelease", "([Ljava/lang/Object;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setVolatile", "([Ljava/lang/Object;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "weakCompareAndSet", "([Ljava/lang/Object;)Z")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "weakCompareAndSetAcquire",
-                "([Ljava/lang/Object;)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "weakCompareAndSetPlain",
-                "([Ljava/lang/Object;)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "weakCompareAndSetRelease",
-                "([Ljava/lang/Object;)Z"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

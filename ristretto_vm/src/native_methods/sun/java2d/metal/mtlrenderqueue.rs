@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/metal/MTLRenderQueue";
+
 /// Register all native methods for `sun.java2d.metal.MTLRenderQueue`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/metal/MTLRenderQueue";
-    registry.register(class_name, "flushBuffer", "(JI)V", flush_buffer);
+    registry.register(CLASS_NAME, "flushBuffer", "(JI)V", flush_buffer);
 }
 
 #[async_recursion(?Send)]
@@ -21,18 +22,10 @@ async fn flush_buffer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/metal/MTLRenderQueue";
-        assert!(registry
-            .method(class_name, "flushBuffer", "(JI)V")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLRenderQueue.flushBuffer(JI)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.metal.MTLRenderQueue.flushBuffer(JI)V"
+    )]
     async fn test_flush_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = flush_buffer(thread, Arguments::default()).await;

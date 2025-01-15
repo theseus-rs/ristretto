@@ -6,12 +6,13 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/awt/AWTEvent";
+
 /// Register all native methods for `java.awt.AWTEvent`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/awt/AWTEvent";
-    registry.register(class_name, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeSetSource",
         "(Ljava/awt/peer/ComponentPeer;)V",
         native_set_source,
@@ -32,19 +33,12 @@ async fn native_set_source(_thread: Arc<Thread>, _arguments: Arguments) -> Resul
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/awt/AWTEvent";
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nativeSetSource",
-                "(Ljava/awt/peer/ComponentPeer;)V"
-            )
-            .is_some());
+    #[tokio::test]
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init_ids(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]

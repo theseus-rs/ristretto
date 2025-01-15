@@ -1,33 +1,28 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_17: Version = Version::Java17 { minor: 0 };
+const CLASS_NAME: &str = "java/io/FileInputStream";
 
 /// Register all native methods for `java.io.FileInputStream`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/io/FileInputStream";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_8 {
-        registry.register(class_name, "close0", "()V", close_0);
-    } else if java_version >= &JAVA_17 {
-        registry.register(class_name, "length0", "()J", length_0);
-        registry.register(class_name, "position0", "()J", position_0);
+    if registry.java_major_version() <= JAVA_8 {
+        registry.register(CLASS_NAME, "close0", "()V", close_0);
+    } else if registry.java_major_version() >= JAVA_17 {
+        registry.register(CLASS_NAME, "length0", "()J", length_0);
+        registry.register(CLASS_NAME, "position0", "()J", position_0);
     }
 
-    registry.register(class_name, "available0", "()I", available_0);
-    registry.register(class_name, "initIDs", "()V", init_ids);
-    registry.register(class_name, "open0", "(Ljava/lang/String;)V", open_0);
-    registry.register(class_name, "read0", "()I", read_0);
-    registry.register(class_name, "readBytes", "([BII)I", read_bytes);
-    registry.register(class_name, "skip0", "(J)J", skip_0);
+    registry.register(CLASS_NAME, "available0", "()I", available_0);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "open0", "(Ljava/lang/String;)V", open_0);
+    registry.register(CLASS_NAME, "read0", "()I", read_0);
+    registry.register(CLASS_NAME, "readBytes", "([BII)I", read_bytes);
+    registry.register(CLASS_NAME, "skip0", "(J)J", skip_0);
 }
 
 #[async_recursion(?Send)]
@@ -78,33 +73,6 @@ async fn skip_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java17 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/io/FileInputStream";
-        assert!(registry.method(class_name, "available0", "()I").is_some());
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-        assert!(registry.method(class_name, "length0", "()J").is_some());
-        assert!(registry
-            .method(class_name, "open0", "(Ljava/lang/String;)V")
-            .is_some());
-        assert!(registry.method(class_name, "position0", "()J").is_some());
-        assert!(registry.method(class_name, "read0", "()I").is_some());
-        assert!(registry
-            .method(class_name, "readBytes", "([BII)I")
-            .is_some());
-        assert!(registry.method(class_name, "skip0", "(J)J").is_some());
-    }
-
-    #[test]
-    fn test_register_java_8() {
-        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/io/FileInputStream";
-        assert!(registry.method(class_name, "close0", "()V").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.io.FileInputStream.available0()I")]

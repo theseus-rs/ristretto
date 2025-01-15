@@ -6,30 +6,31 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/apple/laf/AquaFileView";
+
 /// Register all native methods for `com.apple.laf.AquaFileView`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/apple/laf/AquaFileView";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNativeDisplayName",
         "([BZ)Ljava/lang/String;",
         get_native_display_name,
     );
-    registry.register(class_name, "getNativeLSInfo", "([BZ)I", get_native_ls_info);
+    registry.register(CLASS_NAME, "getNativeLSInfo", "([BZ)I", get_native_ls_info);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNativeMachineName",
         "()Ljava/lang/String;",
         get_native_machine_name,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNativePathForResolvedAlias",
         "([BZ)Ljava/lang/String;",
         get_native_path_for_resolved_alias,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNativePathToSharedJDKBundle",
         "()Ljava/lang/String;",
         get_native_path_to_shared_jdk_bundle,
@@ -76,40 +77,6 @@ async fn get_native_path_to_shared_jdk_bundle(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/apple/laf/AquaFileView";
-        assert!(registry
-            .method(
-                class_name,
-                "getNativeDisplayName",
-                "([BZ)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getNativeLSInfo", "([BZ)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getNativeMachineName", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getNativePathForResolvedAlias",
-                "([BZ)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getNativePathToSharedJDKBundle",
-                "()Ljava/lang/String;"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

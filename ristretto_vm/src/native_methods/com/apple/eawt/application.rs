@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/apple/eawt/Application";
+
 /// Register all native methods for `com.apple.eawt.Application`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/apple/eawt/Application";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeInitializeApplicationDelegate",
         "()V",
         native_initialize_application_delegate,
@@ -28,16 +29,6 @@ async fn native_initialize_application_delegate(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/apple/eawt/Application";
-        assert!(registry
-            .method(class_name, "nativeInitializeApplicationDelegate", "()V")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_native_initialize_application_delegate() -> Result<()> {

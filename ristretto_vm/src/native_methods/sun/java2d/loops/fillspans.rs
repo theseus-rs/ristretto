@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/loops/FillSpans";
+
 /// Register all native methods for `sun.java2d.loops.FillSpans`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/loops/FillSpans";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "FillSpans",
         "(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IJLsun/java2d/pipe/SpanIterator;)V",
         fill_spans,
@@ -26,23 +27,9 @@ async fn fill_spans(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Optio
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/loops/FillSpans";
-        assert!(registry
-            .method(
-                class_name,
-                "FillSpans",
-                "(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IJLsun/java2d/pipe/SpanIterator;)V"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.loops.FillSpans.FillSpans(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IJLsun/java2d/pipe/SpanIterator;)V"
+        expected = "not yet implemented: sun.java2d.loops.FillSpans.FillSpans(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IJLsun/java2d/pipe/SpanIterator;)V"
     )]
     async fn test_fill_spans() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

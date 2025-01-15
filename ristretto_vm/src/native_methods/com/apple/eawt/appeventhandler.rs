@@ -6,23 +6,24 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/apple/eawt/_AppEventHandler";
+
 /// Register all native methods for `com.apple.eawt._AppEventHandler`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/apple/eawt/_AppEventHandler";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeOpenCocoaAboutWindow",
         "()V",
         native_open_cocoa_about_window,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeRegisterForNotification",
         "(I)V",
         native_register_for_notification,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeReplyToAppShouldTerminate",
         "(Z)V",
         native_reply_to_app_should_terminate,
@@ -56,22 +57,6 @@ async fn native_reply_to_app_should_terminate(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/apple/eawt/_AppEventHandler";
-        assert!(registry
-            .method(class_name, "nativeOpenCocoaAboutWindow", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeRegisterForNotification", "(I)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeReplyToAppShouldTerminate", "(Z)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

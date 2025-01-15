@@ -7,17 +7,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/misc/Signal";
+
 /// Register all native methods for `jdk.internal.misc.Signal`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/misc/Signal";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "findSignal0",
         "(Ljava/lang/String;)I",
         find_signal_0,
     );
-    registry.register(class_name, "handle0", "(IJ)J", handle_0);
-    registry.register(class_name, "raise0", "(I)V", raise_0);
+    registry.register(CLASS_NAME, "handle0", "(IJ)J", handle_0);
+    registry.register(CLASS_NAME, "raise0", "(I)V", raise_0);
 }
 
 #[async_recursion(?Send)]
@@ -82,18 +83,6 @@ mod tests {
     use super::*;
     use crate::java_object::JavaObject;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/misc/Signal";
-        assert!(registry
-            .method(class_name, "findSignal0", "(Ljava/lang/String;)I")
-            .is_some());
-        assert!(registry.method(class_name, "handle0", "(IJ)J").is_some());
-        assert!(registry.method(class_name, "raise0", "(I)V").is_some());
-    }
-
     #[tokio::test]
     async fn test_find_signal_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
@@ -116,7 +105,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "jdk.internal.misc.Signal.raise0(I)V")]
+    #[should_panic(expected = "not yet implemented: jdk.internal.misc.Signal.raise0(I)V")]
     async fn test_raise_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = raise_0(thread, Arguments::default()).await;

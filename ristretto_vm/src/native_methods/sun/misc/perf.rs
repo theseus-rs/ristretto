@@ -6,31 +6,32 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/misc/Perf";
+
 /// Register all native methods for `sun.misc.Perf`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/misc/Perf";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "attach",
         "(Ljava/lang/String;II)Ljava/nio/ByteBuffer;",
         attach,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "createByteArray",
         "(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
         create_byte_array,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "createLong",
         "(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
         create_long,
     );
-    registry.register(class_name, "detach", "(Ljava/nio/ByteBuffer;)V", detach);
-    registry.register(class_name, "highResCounter", "()J", high_res_counter);
-    registry.register(class_name, "highResFrequency", "()J", high_res_frequency);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "detach", "(Ljava/nio/ByteBuffer;)V", detach);
+    registry.register(CLASS_NAME, "highResCounter", "()J", high_res_counter);
+    registry.register(CLASS_NAME, "highResFrequency", "()J", high_res_frequency);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
 }
 
 #[async_recursion(?Send)]
@@ -72,48 +73,10 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/misc/Perf";
-        assert!(registry
-            .method(
-                class_name,
-                "attach",
-                "(Ljava/lang/String;II)Ljava/nio/ByteBuffer;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "createByteArray",
-                "(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "createLong",
-                "(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "detach", "(Ljava/nio/ByteBuffer;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "highResCounter", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "highResFrequency", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;")]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;"
+    )]
     async fn test_attach() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = attach(thread, Arguments::default()).await;
@@ -121,7 +84,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.misc.Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;"
+        expected = "not yet implemented: sun.misc.Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;"
     )]
     async fn test_create_byte_array() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -130,7 +93,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.misc.Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;"
+        expected = "not yet implemented: sun.misc.Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;"
     )]
     async fn test_create_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -138,21 +101,21 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Perf.detach(Ljava/nio/ByteBuffer;)V")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Perf.detach(Ljava/nio/ByteBuffer;)V")]
     async fn test_detach() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = detach(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Perf.highResCounter()J")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Perf.highResCounter()J")]
     async fn test_high_res_counter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = high_res_counter(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.misc.Perf.highResFrequency()J")]
+    #[should_panic(expected = "not yet implemented: sun.misc.Perf.highResFrequency()J")]
     async fn test_high_res_frequency() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = high_res_frequency(thread, Arguments::default()).await;

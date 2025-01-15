@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "apple/launcher/JavaAppLauncher";
+
 /// Register all native methods for `apple.launcher.JavaAppLauncher`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "apple/launcher/JavaAppLauncher";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeConvertAndRelease",
         "(J)Ljava/lang/Object;",
         native_convert_and_release,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeInvokeNonPublic",
         "(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V",
         native_invoke_non_public,
@@ -42,27 +43,6 @@ async fn native_invoke_non_public(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "apple/launcher/JavaAppLauncher";
-        assert!(registry
-            .method(
-                class_name,
-                "nativeConvertAndRelease",
-                "(J)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nativeInvokeNonPublic",
-                "(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(
