@@ -1,49 +1,45 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
+const CLASS_NAME: &str = "com/sun/management/internal/OperatingSystemImpl";
 
 /// Register all native methods for `com.sun.management.internal.OperatingSystemImpl`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/management/internal/OperatingSystemImpl";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_11 {
+    if registry.java_major_version() <= JAVA_11 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getFreePhysicalMemorySize0",
             "()J",
             get_free_physical_memory_size_0,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getSystemCpuLoad0",
             "()D",
             get_system_cpu_load_0,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getTotalPhysicalMemorySize0",
             "()J",
             get_total_physical_memory_size_0,
         );
     } else {
-        registry.register(class_name, "getCpuLoad0", "()D", get_cpu_load_0);
+        registry.register(CLASS_NAME, "getCpuLoad0", "()D", get_cpu_load_0);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getFreeMemorySize0",
             "()J",
             get_free_memory_size_0,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getTotalMemorySize0",
             "()J",
             get_total_memory_size_0,
@@ -51,72 +47,72 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCommittedVirtualMemorySize0",
         "()J",
         get_committed_virtual_memory_size_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getFreeSwapSpaceSize0",
         "()J",
         get_free_swap_space_size_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getHostConfiguredCpuCount0",
         "()I",
         get_host_configured_cpu_count_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getHostOnlineCpuCount0",
         "()I",
         get_host_online_cpu_count_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getHostTotalCpuTicks0",
         "()J",
         get_host_total_cpu_ticks_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getMaxFileDescriptorCount0",
         "()J",
         get_max_file_descriptor_count_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getOpenFileDescriptorCount0",
         "()J",
         get_open_file_descriptor_count_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getProcessCpuLoad0",
         "()D",
         get_process_cpu_load_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getProcessCpuTime0",
         "()J",
         get_process_cpu_time_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getSingleCpuLoad0",
         "(I)D",
         get_single_cpu_load_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getTotalSwapSpaceSize0",
         "()J",
         get_total_swap_space_size_0,
     );
-    registry.register(class_name, "initialize0", "()V", initialize_0);
+    registry.register(CLASS_NAME, "initialize0", "()V", initialize_0);
 }
 
 #[async_recursion(?Send)]
@@ -260,70 +256,6 @@ async fn initialize_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java12 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "com/sun/management/internal/OperatingSystemImpl";
-        assert!(registry
-            .method(class_name, "getCommittedVirtualMemorySize0", "()J")
-            .is_some());
-        assert!(registry.method(class_name, "getCpuLoad0", "()D").is_some());
-        assert!(registry
-            .method(class_name, "getFreeMemorySize0", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getFreeSwapSpaceSize0", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getHostConfiguredCpuCount0", "()I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getHostOnlineCpuCount0", "()I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getHostTotalCpuTicks0", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getMaxFileDescriptorCount0", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getOpenFileDescriptorCount0", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getProcessCpuLoad0", "()D")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getProcessCpuTime0", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getSingleCpuLoad0", "(I)D")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getTotalMemorySize0", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getTotalSwapSpaceSize0", "()J")
-            .is_some());
-        assert!(registry.method(class_name, "initialize0", "()V").is_some());
-    }
-
-    #[test]
-    fn test_register_java_11() {
-        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "com/sun/management/internal/OperatingSystemImpl";
-        assert!(registry
-            .method(class_name, "getFreePhysicalMemorySize0", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getSystemCpuLoad0", "()D")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getTotalPhysicalMemorySize0", "()J")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

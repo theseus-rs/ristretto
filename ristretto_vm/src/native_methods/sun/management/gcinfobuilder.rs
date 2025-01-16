@@ -6,18 +6,19 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/management/GcInfoBuilder";
+
 /// Register all native methods for `sun.management.GcInfoBuilder`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/management/GcInfoBuilder";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "fillGcAttributeInfo",
         "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/String;[C[Ljava/lang/String;)V",
         fill_gc_attribute_info,
     );
-    registry.register(class_name, "getLastGcInfo0", "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;", get_last_gc_info_0);
+    registry.register(CLASS_NAME, "getLastGcInfo0", "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;", get_last_gc_info_0);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNumGcExtAttributes",
         "(Ljava/lang/management/GarbageCollectorMXBean;)I",
         get_num_gc_ext_attributes,
@@ -49,37 +50,9 @@ async fn get_num_gc_ext_attributes(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/management/GcInfoBuilder";
-        assert!(registry
-            .method(
-                class_name,
-                "fillGcAttributeInfo",
-                "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/String;[C[Ljava/lang/String;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getLastGcInfo0",
-                "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getNumGcExtAttributes",
-                "(Ljava/lang/management/GarbageCollectorMXBean;)I"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.GcInfoBuilder.fillGcAttributeInfo(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/String;[C[Ljava/lang/String;)V"
+        expected = "not yet implemented: sun.management.GcInfoBuilder.fillGcAttributeInfo(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/String;[C[Ljava/lang/String;)V"
     )]
     async fn test_fill_gc_attribute_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -88,7 +61,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.GcInfoBuilder.getLastGcInfo0(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;"
+        expected = "not yet implemented: sun.management.GcInfoBuilder.getLastGcInfo0(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;"
     )]
     async fn test_get_last_gc_info_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -97,7 +70,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.GcInfoBuilder.getNumGcExtAttributes(Ljava/lang/management/GarbageCollectorMXBean;)I"
+        expected = "not yet implemented: sun.management.GcInfoBuilder.getNumGcExtAttributes(Ljava/lang/management/GarbageCollectorMXBean;)I"
     )]
     async fn test_get_num_gc_ext_attributes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

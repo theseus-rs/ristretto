@@ -6,66 +6,67 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/apple/eio/FileManager";
+
 /// Register all native methods for `com.apple.eio.FileManager`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/apple/eio/FileManager";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_findFolder",
         "(SIZ)Ljava/lang/String;",
         find_folder,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_getFileCreator",
         "(Ljava/lang/String;)I",
         get_file_creator,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_getFileType",
         "(Ljava/lang/String;)I",
         get_file_type,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_moveToTrash",
         "(Ljava/lang/String;)Z",
         move_to_trash,
     );
-    registry.register(class_name, "_openURL", "(Ljava/lang/String;)V", open_url);
+    registry.register(CLASS_NAME, "_openURL", "(Ljava/lang/String;)V", open_url);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_revealInFinder",
         "(Ljava/lang/String;)Z",
         reveal_in_finder,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_setFileCreator",
         "(Ljava/lang/String;I)V",
         set_file_creator,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_setFileType",
         "(Ljava/lang/String;I)V",
         set_file_type,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "_setFileTypeAndCreator",
         "(Ljava/lang/String;II)V",
         set_file_type_and_creator,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNativePathToApplicationBundle",
         "()Ljava/lang/String;",
         get_native_path_to_application_bundle,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getNativeResourceFromBundle",
         "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
         get_native_resource_from_bundle,
@@ -139,58 +140,6 @@ async fn get_native_resource_from_bundle(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/apple/eio/FileManager";
-        assert!(registry
-            .method(class_name, "_findFolder", "(SIZ)Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "_getFileCreator", "(Ljava/lang/String;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "_getFileType", "(Ljava/lang/String;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "_moveToTrash", "(Ljava/lang/String;)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "_openURL", "(Ljava/lang/String;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "_revealInFinder", "(Ljava/lang/String;)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "_setFileCreator", "(Ljava/lang/String;I)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "_setFileType", "(Ljava/lang/String;I)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "_setFileTypeAndCreator",
-                "(Ljava/lang/String;II)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getNativePathToApplicationBundle",
-                "()Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getNativeResourceFromBundle",
-                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

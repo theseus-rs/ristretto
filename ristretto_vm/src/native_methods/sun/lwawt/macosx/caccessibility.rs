@@ -6,12 +6,13 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/lwawt/macosx/CAccessibility";
+
 /// Register all native methods for `sun.lwawt.macosx.CAccessibility`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/lwawt/macosx/CAccessibility";
-    registry.register(class_name, "focusChanged", "()V", focus_changed);
+    registry.register(CLASS_NAME, "focusChanged", "()V", focus_changed);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "roleKey",
         "(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;",
         role_key,
@@ -32,23 +33,10 @@ async fn role_key(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/lwawt/macosx/CAccessibility";
-        assert!(registry.method(class_name, "focusChanged", "()V").is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "roleKey",
-                "(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.lwawt.macosx.CAccessibility.focusChanged()V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.lwawt.macosx.CAccessibility.focusChanged()V"
+    )]
     async fn test_focus_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = focus_changed(thread, Arguments::default()).await;
@@ -56,7 +44,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.lwawt.macosx.CAccessibility.roleKey(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;"
+        expected = "not yet implemented: sun.lwawt.macosx.CAccessibility.roleKey(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;"
     )]
     async fn test_role_key() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

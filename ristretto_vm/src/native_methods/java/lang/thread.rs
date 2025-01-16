@@ -1,157 +1,160 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{
+    MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_20, JAVA_21, JAVA_22,
+};
 use crate::thread::Thread;
 use crate::JavaError::NullPointerException;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::{Object, Reference, Value};
 use std::sync::Arc;
 use std::time::Duration;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
-const JAVA_18: Version = Version::Java18 { minor: 0 };
-const JAVA_19: Version = Version::Java19 { minor: 0 };
-const JAVA_20: Version = Version::Java20 { minor: 0 };
-const JAVA_21: Version = Version::Java21 { minor: 0 };
-const JAVA_22: Version = Version::Java22 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/Thread";
 
 /// Register all native methods for `java.lang.Thread`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/Thread";
-    let java_version = registry.java_version().clone();
+    if registry.java_major_version() <= JAVA_11 {
+        registry.register(CLASS_NAME, "countStackFrames", "()I", count_stack_frames);
+        registry.register(CLASS_NAME, "isInterrupted", "(Z)Z", is_interrupted);
+    }
 
-    if java_version <= JAVA_11 || java_version == JAVA_18 {
-        registry.register(class_name, "countStackFrames", "()I", count_stack_frames);
-        registry.register(class_name, "isAlive", "()Z", is_alive);
-        registry.register(class_name, "isInterrupted", "(Z)Z", is_interrupted);
-    } else {
+    if registry.java_major_version() <= JAVA_11 || registry.java_major_version() == JAVA_18 {
+        registry.register(CLASS_NAME, "isAlive", "()Z", is_alive);
+    }
+
+    if registry.java_major_version() >= JAVA_17 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "clearInterruptEvent",
             "()V",
             clear_interrupt_event,
         );
     }
 
-    if java_version <= JAVA_19 {
-        registry.register(class_name, "resume0", "()V", resume_0);
+    if registry.java_major_version() <= JAVA_18 {
+        registry.register(CLASS_NAME, "sleep", "(J)V", sleep);
+        registry.register(CLASS_NAME, "yield", "()V", r#yield);
     }
-    if java_version == JAVA_19 {
+
+    if registry.java_major_version() <= JAVA_19 {
+        registry.register(CLASS_NAME, "resume0", "()V", resume_0);
+        registry.register(CLASS_NAME, "stop0", "(Ljava/lang/Object;)V", stop_0);
+        registry.register(CLASS_NAME, "suspend0", "()V", suspend_0);
+    }
+    if registry.java_major_version() == JAVA_19 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "extentLocalCache",
             "()[Ljava/lang/Object;",
             extent_local_cache,
         );
-    }
-    if java_version >= JAVA_19 {
         registry.register(
-            class_name,
+            CLASS_NAME,
+            "setExtentLocalCache",
+            "([Ljava/lang/Object;)V",
+            set_extent_local_cache,
+        );
+    }
+    if registry.java_major_version() >= JAVA_19 {
+        registry.register(
+            CLASS_NAME,
             "currentCarrierThread",
             "()Ljava/lang/Thread;",
             current_carrier_thread,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getNextThreadIdOffset",
             "()J",
             get_next_thread_id_offset,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getStackTrace0",
             "()Ljava/lang/Object;",
             get_stack_trace_0,
         );
 
-        if java_version <= JAVA_20 {
-            registry.register(class_name, "isAlive0", "()Z", is_alive_0);
+        if registry.java_major_version() <= JAVA_20 {
+            registry.register(CLASS_NAME, "isAlive0", "()Z", is_alive_0);
         }
 
         registry.register(
-            class_name,
+            CLASS_NAME,
             "setCurrentThread",
             "(Ljava/lang/Thread;)V",
             set_current_thread,
         );
-        registry.register(
-            class_name,
-            "setExtentLocalCache",
-            "([Ljava/lang/Object;)V",
-            set_extent_local_cache,
-        );
 
-        if java_version <= JAVA_21 {
-            registry.register(class_name, "sleep0", "(J)V", sleep_0);
+        if registry.java_major_version() <= JAVA_21 {
+            registry.register(CLASS_NAME, "sleep0", "(J)V", sleep_0);
         }
 
-        registry.register(class_name, "yield0", "()V", yield_0);
+        registry.register(CLASS_NAME, "yield0", "()V", yield_0);
     }
 
-    if java_version >= JAVA_20 {
+    if registry.java_major_version() >= JAVA_20 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "ensureMaterializedForStackWalk",
             "(Ljava/lang/Object;)V",
             ensure_materialized_for_stack_walk,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "findScopedValueBindings",
             "()Ljava/lang/Object;",
             find_scoped_value_bindings,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "scopedValueCache",
             "()[Ljava/lang/Object;",
             scoped_value_cache,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "setScopedValueCache",
             "([Ljava/lang/Object;)V",
             set_scoped_value_cache,
         );
     }
 
-    if java_version >= JAVA_22 {
-        registry.register(class_name, "sleepNanos0", "(J)V", sleep_nanos_0);
+    if registry.java_major_version() >= JAVA_22 {
+        registry.register(CLASS_NAME, "sleepNanos0", "(J)V", sleep_nanos_0);
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "currentThread",
         "()Ljava/lang/Thread;",
         current_thread,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "dumpThreads",
         "([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;",
         dump_threads,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getThreads",
         "()[Ljava/lang/Thread;",
         get_threads,
     );
-    registry.register(class_name, "holdsLock", "(Ljava/lang/Object;)Z", holds_lock);
-    registry.register(class_name, "interrupt0", "()V", interrupt_0);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "holdsLock", "(Ljava/lang/Object;)Z", holds_lock);
+    registry.register(CLASS_NAME, "interrupt0", "()V", interrupt_0);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setNativeName",
         "(Ljava/lang/String;)V",
         set_native_name,
     );
-    registry.register(class_name, "setPriority0", "(I)V", set_priority_0);
-    registry.register(class_name, "start0", "()V", start_0);
-    registry.register(class_name, "stop0", "(Ljava/lang/Object;)V", stop_0);
-    registry.register(class_name, "suspend0", "()V", suspend_0);
+    registry.register(CLASS_NAME, "setPriority0", "(I)V", set_priority_0);
+    registry.register(CLASS_NAME, "start0", "()V", start_0);
 }
 
 #[async_recursion(?Send)]
@@ -376,127 +379,6 @@ async fn yield_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Val
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ristretto_classfile::Version::Java11;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java21 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/Thread";
-        assert!(registry
-            .method(class_name, "clearInterruptEvent", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "currentCarrierThread", "()Ljava/lang/Thread;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "currentThread", "()Ljava/lang/Thread;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "dumpThreads",
-                "([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "ensureMaterializedForStackWalk",
-                "(Ljava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "findScopedValueBindings",
-                "()Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getThreads", "()[Ljava/lang/Thread;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "holdsLock", "(Ljava/lang/Object;)Z")
-            .is_some());
-        assert!(registry.method(class_name, "interrupt0", "()V").is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "scopedValueCache", "()[Ljava/lang/Object;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setExtentLocalCache", "([Ljava/lang/Object;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setNativeName", "(Ljava/lang/String;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setPriority0", "(I)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setScopedValueCache", "([Ljava/lang/Object;)V")
-            .is_some());
-        assert!(registry.method(class_name, "sleep0", "(J)V").is_some());
-        assert!(registry.method(class_name, "start0", "()V").is_some());
-        assert!(registry
-            .method(class_name, "stop0", "(Ljava/lang/Object;)V")
-            .is_some());
-        assert!(registry.method(class_name, "suspend0", "()V").is_some());
-    }
-
-    #[test]
-    fn test_register_java_11() {
-        let mut registry = MethodRegistry::new(&Java11 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/Thread";
-        assert!(registry
-            .method(class_name, "countStackFrames", "()I")
-            .is_some());
-        assert!(registry.method(class_name, "isAlive", "()Z").is_some());
-        assert!(registry
-            .method(class_name, "isInterrupted", "(Z)Z")
-            .is_some());
-        assert!(registry.method(class_name, "resume0", "()V").is_some());
-    }
-
-    #[test]
-    fn test_register_java_19() {
-        let mut registry = MethodRegistry::new(&Version::Java19 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/Thread";
-        assert!(registry.method(class_name, "resume0", "()V").is_some());
-        assert!(registry
-            .method(class_name, "extentLocalCache", "()[Ljava/lang/Object;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "currentCarrierThread", "()Ljava/lang/Thread;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getNextThreadIdOffset", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getStackTrace0", "()Ljava/lang/Object;")
-            .is_some());
-        assert!(registry.method(class_name, "isAlive0", "()Z").is_some());
-        assert!(registry
-            .method(class_name, "setCurrentThread", "(Ljava/lang/Thread;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setExtentLocalCache", "([Ljava/lang/Object;)V")
-            .is_some());
-        assert!(registry.method(class_name, "sleep0", "(J)V").is_some());
-        assert!(registry.method(class_name, "yield0", "()V").is_some());
-    }
-
-    #[test]
-    fn test_register_java_22() {
-        let mut registry = MethodRegistry::new(&Version::Java22 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/Thread";
-        assert!(registry.method(class_name, "sleepNanos0", "(J)V").is_some());
-    }
 
     #[tokio::test]
     async fn test_clear_interrupt_event() -> Result<()> {

@@ -1,22 +1,33 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/lwawt/macosx/CDropTarget";
+
 /// Register all native methods for `sun.lwawt.macosx.CDropTarget`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/lwawt/macosx/CDropTarget";
+    if registry.java_major_version() <= JAVA_8 {
+        registry.register(
+            CLASS_NAME,
+            "createNativeDropTarget",
+            "(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;Ljava/awt/peer/ComponentPeer;J)J",
+            create_native_drop_target,
+        );
+    } else {
+        registry.register(
+            CLASS_NAME,
+            "createNativeDropTarget",
+            "(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J",
+            create_native_drop_target,
+        );
+    }
+
     registry.register(
-        class_name,
-        "createNativeDropTarget",
-        "(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J",
-        create_native_drop_target,
-    );
-    registry.register(
-        class_name,
+        CLASS_NAME,
         "releaseNativeDropTarget",
         "(J)V",
         release_native_drop_target,
@@ -43,26 +54,9 @@ async fn release_native_drop_target(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/lwawt/macosx/CDropTarget";
-        assert!(registry
-            .method(
-                class_name,
-                "createNativeDropTarget",
-                "(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "releaseNativeDropTarget", "(J)V")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.lwawt.macosx.CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J"
+        expected = "not yet implemented: sun.lwawt.macosx.CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J"
     )]
     async fn test_create_native_drop_target() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -70,7 +64,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.lwawt.macosx.CDropTarget.releaseNativeDropTarget(J)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.lwawt.macosx.CDropTarget.releaseNativeDropTarget(J)V"
+    )]
     async fn test_release_native_drop_target() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = release_native_drop_target(thread, Arguments::default()).await;

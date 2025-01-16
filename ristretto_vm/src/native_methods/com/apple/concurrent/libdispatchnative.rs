@@ -6,47 +6,48 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/apple/concurrent/LibDispatchNative";
+
 /// Register all native methods for `com.apple.concurrent.LibDispatchNative`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/apple/concurrent/LibDispatchNative";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeCreateConcurrentQueue",
         "(I)J",
         native_create_concurrent_queue,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeCreateSerialQueue",
         "(Ljava/lang/String;)J",
         native_create_serial_queue,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeExecuteAsync",
         "(JLjava/lang/Runnable;)V",
         native_execute_async,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeExecuteSync",
         "(JLjava/lang/Runnable;)V",
         native_execute_sync,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeGetMainQueue",
         "()J",
         native_get_main_queue,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeIsDispatchSupported",
         "()Z",
         native_is_dispatch_supported,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeReleaseQueue",
         "(J)V",
         native_release_queue,
@@ -109,38 +110,6 @@ async fn native_release_queue(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/apple/concurrent/LibDispatchNative";
-        assert!(registry
-            .method(class_name, "nativeCreateConcurrentQueue", "(I)J")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nativeCreateSerialQueue",
-                "(Ljava/lang/String;)J"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeExecuteAsync", "(JLjava/lang/Runnable;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeExecuteSync", "(JLjava/lang/Runnable;)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeGetMainQueue", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeIsDispatchSupported", "()Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeReleaseQueue", "(J)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

@@ -1,29 +1,27 @@
 use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::properties;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_19};
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::{ConcurrentVec, Reference, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-const JAVA_19: Version = Version::Java19 { minor: 0 };
+const CLASS_NAME: &str = "jdk/internal/util/SystemProps$Raw";
 
 /// Register all native methods for `jdk.internal.util.SystemProps$Raw`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/util/SystemProps$Raw";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "platformProperties",
         "()[Ljava/lang/String;",
         platform_properties,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "vmProperties",
         "()[Ljava/lang/String;",
         vm_properties,
@@ -35,7 +33,7 @@ async fn platform_properties(thread: Arc<Thread>, _arguments: Arguments) -> Resu
     let vm = thread.vm()?;
     let string_array_class = thread.class("[Ljava/lang/String;").await?;
     let system_properties = &mut properties::system(&thread).await?;
-    let java_version = vm.java_class_file_version();
+    let java_version = vm.java_major_version();
 
     // VM properties must be returned in a specific order as they are accessed by array index.
     let mut properties: Vec<Option<Reference>> = Vec::new();
@@ -66,7 +64,7 @@ async fn platform_properties(thread: Arc<Thread>, _arguments: Arguments) -> Resu
     push_property(system_properties, &mut properties, "socksNonProxyHosts")?;
     push_property(system_properties, &mut properties, "socksProxyHost")?;
     push_property(system_properties, &mut properties, "socksProxyPort")?;
-    if java_version >= &JAVA_19 {
+    if java_version >= JAVA_19 {
         push_property(system_properties, &mut properties, "stderr.encoding")?;
         push_property(system_properties, &mut properties, "stdout.encoding")?;
     }
@@ -81,7 +79,7 @@ async fn platform_properties(thread: Arc<Thread>, _arguments: Arguments) -> Resu
     )?;
     push_property(system_properties, &mut properties, "sun.jnu.encoding")?;
     push_property(system_properties, &mut properties, "sun.os.patch.level")?;
-    if java_version < &JAVA_19 {
+    if java_version < JAVA_19 {
         push_property(system_properties, &mut properties, "sun.stderr.encoding")?;
         push_property(system_properties, &mut properties, "sun.stdout.encoding")?;
     }
@@ -151,22 +149,4 @@ async fn vm_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
     let properties = ConcurrentVec::from(properties);
     let result = Value::Object(Some(Reference::Array(string_array_class, properties)));
     Ok(Some(result))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/util/SystemProps$Raw";
-        assert!(registry
-            .method(class_name, "platformProperties", "()[Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "vmProperties", "()[Ljava/lang/String;")
-            .is_some());
-    }
 }

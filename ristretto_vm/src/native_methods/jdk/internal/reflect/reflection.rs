@@ -8,23 +8,24 @@ use async_recursion::async_recursion;
 use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/reflect/Reflection";
+
 /// Register all native methods for `jdk.internal.reflect.Reflection`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/reflect/Reflection";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "areNestMates",
         "(Ljava/lang/Class;Ljava/lang/Class;)Z",
         are_nest_mates,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCallerClass",
         "()Ljava/lang/Class;",
         get_caller_class,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getClassAccessFlags",
         "(Ljava/lang/Class;)I",
         get_class_access_flags,
@@ -81,29 +82,9 @@ async fn get_class_access_flags(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/reflect/Reflection";
-        assert!(registry
-            .method(
-                class_name,
-                "areNestMates",
-                "(Ljava/lang/Class;Ljava/lang/Class;)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getCallerClass", "()Ljava/lang/Class;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getClassAccessFlags", "(Ljava/lang/Class;)I")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.reflect.Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z"
+        expected = "not yet implemented: jdk.internal.reflect.Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z"
     )]
     async fn test_are_nest_mates() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

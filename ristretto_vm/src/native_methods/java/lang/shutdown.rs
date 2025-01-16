@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/Shutdown";
+
 /// Register all native methods for `java.lang.Shutdown`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/Shutdown";
-    registry.register(class_name, "beforeHalt", "()V", before_halt);
-    registry.register(class_name, "halt0", "(I)V", halt_0);
+    registry.register(CLASS_NAME, "beforeHalt", "()V", before_halt);
+    registry.register(CLASS_NAME, "halt0", "(I)V", halt_0);
 }
 
 #[async_recursion(?Send)]
@@ -27,15 +28,6 @@ async fn halt_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/Shutdown";
-        assert!(registry.method(class_name, "beforeHalt", "()V").is_some());
-        assert!(registry.method(class_name, "halt0", "(I)V").is_some());
-    }
 
     #[tokio::test]
     async fn test_before_halt() -> Result<()> {

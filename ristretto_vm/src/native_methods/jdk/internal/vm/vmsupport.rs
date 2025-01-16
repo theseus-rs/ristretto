@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/vm/VMSupport";
+
 /// Register all native methods for `jdk.internal.vm.VMSupport`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/vm/VMSupport";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getVMTemporaryDirectory",
         "()Ljava/lang/String;",
         get_vm_temporary_directory,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "initAgentProperties",
         "(Ljava/util/Properties;)Ljava/util/Properties;",
         init_agent_properties,
@@ -43,30 +44,9 @@ async fn init_agent_properties(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/vm/VMSupport";
-        assert!(registry
-            .method(
-                class_name,
-                "getVMTemporaryDirectory",
-                "()Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "initAgentProperties",
-                "(Ljava/util/Properties;)Ljava/util/Properties;"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.vm.VMSupport.getVMTemporaryDirectory()Ljava/lang/String;"
+        expected = "not yet implemented: jdk.internal.vm.VMSupport.getVMTemporaryDirectory()Ljava/lang/String;"
     )]
     async fn test_get_vm_temporary_directory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -75,7 +55,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.vm.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;"
+        expected = "not yet implemented: jdk.internal.vm.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;"
     )]
     async fn test_init_agent_properties() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

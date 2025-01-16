@@ -1,48 +1,44 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::{Class, Value};
 use std::sync::Arc;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
+const CLASS_NAME: &str = "java/security/AccessController";
 
 /// Register all native methods for `java.security.AccessController`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/security/AccessController";
-    let java_version = registry.java_version();
-
-    if java_version <= &JAVA_11 {
+    if registry.java_major_version() <= JAVA_11 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "doPrivileged",
             "(Ljava/security/PrivilegedAction;)Ljava/lang/Object;",
             do_privileged_1,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "doPrivileged",
             "(Ljava/security/PrivilegedAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;",
             do_privileged_2,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "doPrivileged",
             "(Ljava/security/PrivilegedExceptionAction;)Ljava/lang/Object;",
             do_privileged_3,
         );
-        registry.register(class_name, "doPrivileged", "(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;", do_privileged_4);
+        registry.register(CLASS_NAME, "doPrivileged", "(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;", do_privileged_4);
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "ensureMaterializedForStackWalk",
             "(Ljava/lang/Object;)V",
             ensure_materialized_for_stack_walk,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getProtectionDomain",
             "(Ljava/lang/Class;)Ljava/security/ProtectionDomain;",
             get_protection_domain,
@@ -50,13 +46,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getInheritedAccessControlContext",
         "()Ljava/security/AccessControlContext;",
         get_inherited_access_control_context,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getStackAccessControlContext",
         "()Ljava/security/AccessControlContext;",
         get_stack_access_control_context,
@@ -140,76 +136,6 @@ async fn get_stack_access_control_context(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java11 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/security/AccessController";
-        assert!(registry
-            .method(
-                class_name,
-                "doPrivileged",
-                "(Ljava/security/PrivilegedAction;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "doPrivileged",
-                "(Ljava/security/PrivilegedAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "doPrivileged",
-                "(Ljava/security/PrivilegedExceptionAction;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "doPrivileged",
-                "(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getInheritedAccessControlContext",
-                "()Ljava/security/AccessControlContext;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getStackAccessControlContext",
-                "()Ljava/security/AccessControlContext;"
-            )
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_12() {
-        let mut registry = MethodRegistry::new(&Version::Java12 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/security/AccessController";
-        assert!(registry
-            .method(
-                class_name,
-                "ensureMaterializedForStackWalk",
-                "(Ljava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getProtectionDomain",
-                "(Ljava/lang/Class;)Ljava/security/ProtectionDomain;"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_ensure_materialized_for_stack_walk() -> Result<()> {

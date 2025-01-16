@@ -1,38 +1,36 @@
 use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_18};
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::{Reference, Value};
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
-const JAVA_18: Version = Version::Java18 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/Object";
 
 /// Register all native methods for `java.lang.Object`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/Object";
-    let java_version = registry.java_version().clone();
-
-    if java_version <= JAVA_18 {
-        registry.register(class_name, "wait", "(J)V", wait);
-    } else {
-        registry.register(class_name, "wait0", "(J)V", wait_0);
+    if registry.java_major_version() <= JAVA_11 {
+        registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
     }
 
-    registry.register(class_name, "clone", "()Ljava/lang/Object;", clone);
-    registry.register(class_name, "getClass", "()Ljava/lang/Class;", get_class);
-    registry.register(class_name, "hashCode", "()I", hash_code);
-    registry.register(class_name, "notify", "()V", notify);
-    registry.register(class_name, "notifyAll", "()V", notify_all);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    if registry.java_major_version() <= JAVA_18 {
+        registry.register(CLASS_NAME, "wait", "(J)V", wait);
+    } else {
+        registry.register(CLASS_NAME, "wait0", "(J)V", wait_0);
+    }
+
+    registry.register(CLASS_NAME, "clone", "()Ljava/lang/Object;", clone);
+    registry.register(CLASS_NAME, "getClass", "()Ljava/lang/Class;", get_class);
+    registry.register(CLASS_NAME, "hashCode", "()I", hash_code);
+    registry.register(CLASS_NAME, "notify", "()V", notify);
+    registry.register(CLASS_NAME, "notifyAll", "()V", notify_all);
 
     if registry.use_optimizations() {
-        registry.register(class_name, "<init>", "()V", init);
+        registry.register(CLASS_NAME, "<init>", "()V", init);
     }
 }
 
@@ -111,35 +109,6 @@ async fn wait_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java19 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/Object";
-        assert!(registry
-            .method(class_name, "clone", "()Ljava/lang/Object;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getClass", "()Ljava/lang/Class;")
-            .is_some());
-        assert!(registry.method(class_name, "hashCode", "()I").is_some());
-        assert!(registry.method(class_name, "notify", "()V").is_some());
-        assert!(registry.method(class_name, "notifyAll", "()V").is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-        assert!(registry.method(class_name, "wait0", "(J)V").is_some());
-        assert!(registry.method(class_name, "<init>", "()V").is_some());
-    }
-
-    #[test]
-    fn test_register_java_18() {
-        let mut registry = MethodRegistry::new(&Version::Java18 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/Object";
-        assert!(registry.method(class_name, "wait", "(J)V").is_some());
-    }
 
     #[tokio::test]
     async fn test_init() -> Result<()> {

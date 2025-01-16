@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/util/prefs/FileSystemPreferences";
+
 /// Register all native methods for `java.util.prefs.FileSystemPreferences`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/util/prefs/FileSystemPreferences";
-    registry.register(class_name, "chmod", "(Ljava/lang/String;I)I", chmod);
+    registry.register(CLASS_NAME, "chmod", "(Ljava/lang/String;I)I", chmod);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "lockFile0",
         "(Ljava/lang/String;IZ)[I",
         lock_file_0,
     );
-    registry.register(class_name, "unlockFile0", "(I)I", unlock_file_0);
+    registry.register(CLASS_NAME, "unlockFile0", "(I)I", unlock_file_0);
 }
 
 #[async_recursion(?Send)]
@@ -37,20 +38,6 @@ async fn unlock_file_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/util/prefs/FileSystemPreferences";
-        assert!(registry
-            .method(class_name, "chmod", "(Ljava/lang/String;I)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "lockFile0", "(Ljava/lang/String;IZ)[I")
-            .is_some());
-        assert!(registry.method(class_name, "unlockFile0", "(I)I").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

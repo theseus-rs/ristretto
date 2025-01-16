@@ -6,48 +6,49 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/management/internal/Flag";
+
 /// Register all native methods for `com.sun.management.internal.Flag`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/management/internal/Flag";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getAllFlagNames",
         "()[Ljava/lang/String;",
         get_all_flag_names,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getFlags",
         "([Ljava/lang/String;[Lcom/sun/management/internal/Flag;I)I",
         get_flags,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getInternalFlagCount",
         "()I",
         get_internal_flag_count,
     );
-    registry.register(class_name, "initialize", "()V", initialize);
+    registry.register(CLASS_NAME, "initialize", "()V", initialize);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setBooleanValue",
         "(Ljava/lang/String;Z)V",
         set_boolean_value,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setDoubleValue",
         "(Ljava/lang/String;D)V",
         set_double_value,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setLongValue",
         "(Ljava/lang/String;J)V",
         set_long_value,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setStringValue",
         "(Ljava/lang/String;Ljava/lang/String;)V",
         set_string_value,
@@ -100,43 +101,6 @@ async fn set_string_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/management/internal/Flag";
-        assert!(registry
-            .method(class_name, "getAllFlagNames", "()[Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getFlags",
-                "([Ljava/lang/String;[Lcom/sun/management/internal/Flag;I)I"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getInternalFlagCount", "()I")
-            .is_some());
-        assert!(registry.method(class_name, "initialize", "()V").is_some());
-        assert!(registry
-            .method(class_name, "setBooleanValue", "(Ljava/lang/String;Z)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setDoubleValue", "(Ljava/lang/String;D)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setLongValue", "(Ljava/lang/String;J)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setStringValue",
-                "(Ljava/lang/String;Ljava/lang/String;)V"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

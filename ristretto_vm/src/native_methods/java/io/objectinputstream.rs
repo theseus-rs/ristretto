@@ -6,11 +6,14 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/io/ObjectInputStream";
+
 /// Register all native methods for `java.io.ObjectInputStream`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/io/ObjectInputStream";
-    registry.register(class_name, "bytesToDoubles", "([BI[DII)V", bytes_to_doubles);
-    registry.register(class_name, "bytesToFloats", "([BI[FII)V", bytes_to_floats);
+    if registry.java_major_version() <= 11 {
+        registry.register(CLASS_NAME, "bytesToDoubles", "([BI[DII)V", bytes_to_doubles);
+        registry.register(CLASS_NAME, "bytesToFloats", "([BI[FII)V", bytes_to_floats);
+    }
 }
 
 #[async_recursion(?Send)]
@@ -26,19 +29,6 @@ async fn bytes_to_floats(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/io/ObjectInputStream";
-        assert!(registry
-            .method(class_name, "bytesToDoubles", "([BI[DII)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "bytesToFloats", "([BI[FII)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

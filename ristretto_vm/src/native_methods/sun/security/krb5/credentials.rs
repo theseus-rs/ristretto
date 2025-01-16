@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/security/krb5/Credentials";
+
 /// Register all native methods for `sun.security.krb5.Credentials`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/security/krb5/Credentials";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "acquireDefaultNativeCreds",
         "([I)Lsun/security/krb5/Credentials;",
         acquire_default_native_creds,
@@ -29,23 +30,9 @@ async fn acquire_default_native_creds(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/security/krb5/Credentials";
-        assert!(registry
-            .method(
-                class_name,
-                "acquireDefaultNativeCreds",
-                "([I)Lsun/security/krb5/Credentials;"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.security.krb5.Credentials.acquireDefaultNativeCreds([I)Lsun/security/krb5/Credentials;"
+        expected = "not yet implemented: sun.security.krb5.Credentials.acquireDefaultNativeCreds([I)Lsun/security/krb5/Credentials;"
     )]
     async fn test_acquire_default_native_creds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

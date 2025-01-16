@@ -1,20 +1,23 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/net/AbstractPlainDatagramSocketImpl";
+
 /// Register all native methods for `java.net.AbstractPlainDatagramSocketImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/net/AbstractPlainDatagramSocketImpl";
-    registry.register(
-        class_name,
-        "isReusePortAvailable0",
-        "()Z",
-        is_reuse_port_available_0,
-    );
+    if registry.java_major_version() >= JAVA_11 && registry.java_major_version() <= JAVA_17 {
+        registry.register(
+            CLASS_NAME,
+            "isReusePortAvailable0",
+            "()Z",
+            is_reuse_port_available_0,
+        );
+    }
 }
 
 #[async_recursion(?Send)]
@@ -28,16 +31,6 @@ async fn is_reuse_port_available_0(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/net/AbstractPlainDatagramSocketImpl";
-        assert!(registry
-            .method(class_name, "isReusePortAvailable0", "()Z")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

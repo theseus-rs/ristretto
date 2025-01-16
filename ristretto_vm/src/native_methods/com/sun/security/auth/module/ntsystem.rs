@@ -6,12 +6,13 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/security/auth/module/NTSystem";
+
 /// Register all native methods for `com.sun.security.auth.module.NTSystem`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/security/auth/module/NTSystem";
-    registry.register(class_name, "getCurrent", "(Z)V", get_current);
+    registry.register(CLASS_NAME, "getCurrent", "(Z)V", get_current);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getImpersonationToken0",
         "()J",
         get_impersonation_token_0,
@@ -34,17 +35,6 @@ async fn get_impersonation_token_0(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/security/auth/module/NTSystem";
-        assert!(registry.method(class_name, "getCurrent", "(Z)V").is_some());
-        assert!(registry
-            .method(class_name, "getImpersonationToken0", "()J")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

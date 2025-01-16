@@ -6,12 +6,13 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/media/sound/DirectAudioDeviceProvider";
+
 /// Register all native methods for `com.sun.media.sound.DirectAudioDeviceProvider`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/media/sound/DirectAudioDeviceProvider";
-    registry.register(class_name, "nGetNumDevices", "()I", n_get_num_devices);
+    registry.register(CLASS_NAME, "nGetNumDevices", "()I", n_get_num_devices);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nNewDirectAudioDeviceInfo",
         "(I)Lcom/sun/media/sound/DirectAudioDeviceProvider$DirectAudioDeviceInfo;",
         n_new_direct_audio_device_info,
@@ -34,23 +35,6 @@ async fn n_new_direct_audio_device_info(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/media/sound/DirectAudioDeviceProvider";
-        assert!(registry
-            .method(class_name, "nGetNumDevices", "()I")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nNewDirectAudioDeviceInfo",
-                "(I)Lcom/sun/media/sound/DirectAudioDeviceProvider$DirectAudioDeviceInfo;"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

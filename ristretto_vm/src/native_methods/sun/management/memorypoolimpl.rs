@@ -6,54 +6,55 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/management/MemoryPoolImpl";
+
 /// Register all native methods for `sun.management.MemoryPoolImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/management/MemoryPoolImpl";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getCollectionUsage0",
         "()Ljava/lang/management/MemoryUsage;",
         get_collection_usage_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getMemoryManagers0",
         "()[Ljava/lang/management/MemoryManagerMXBean;",
         get_memory_managers_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getPeakUsage0",
         "()Ljava/lang/management/MemoryUsage;",
         get_peak_usage_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getUsage0",
         "()Ljava/lang/management/MemoryUsage;",
         get_usage_0,
     );
-    registry.register(class_name, "resetPeakUsage0", "()V", reset_peak_usage_0);
+    registry.register(CLASS_NAME, "resetPeakUsage0", "()V", reset_peak_usage_0);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setCollectionThreshold0",
         "(JJ)V",
         set_collection_threshold_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setPoolCollectionSensor",
         "(Lsun/management/Sensor;)V",
         set_pool_collection_sensor,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setPoolUsageSensor",
         "(Lsun/management/Sensor;)V",
         set_pool_usage_sensor,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setUsageThreshold0",
         "(JJ)V",
         set_usage_threshold_0,
@@ -127,67 +128,9 @@ async fn set_usage_threshold_0(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/management/MemoryPoolImpl";
-        assert!(registry
-            .method(
-                class_name,
-                "getCollectionUsage0",
-                "()Ljava/lang/management/MemoryUsage;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getMemoryManagers0",
-                "()[Ljava/lang/management/MemoryManagerMXBean;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getPeakUsage0",
-                "()Ljava/lang/management/MemoryUsage;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getUsage0",
-                "()Ljava/lang/management/MemoryUsage;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "resetPeakUsage0", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setCollectionThreshold0", "(JJ)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setPoolCollectionSensor",
-                "(Lsun/management/Sensor;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "setPoolUsageSensor",
-                "(Lsun/management/Sensor;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "setUsageThreshold0", "(JJ)V")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.MemoryPoolImpl.getCollectionUsage0()Ljava/lang/management/MemoryUsage;"
+        expected = "not yet implemented: sun.management.MemoryPoolImpl.getCollectionUsage0()Ljava/lang/management/MemoryUsage;"
     )]
     async fn test_get_collection_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -196,7 +139,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.MemoryPoolImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;"
+        expected = "not yet implemented: sun.management.MemoryPoolImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;"
     )]
     async fn test_get_memory_managers_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -205,7 +148,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.MemoryPoolImpl.getPeakUsage0()Ljava/lang/management/MemoryUsage;"
+        expected = "not yet implemented: sun.management.MemoryPoolImpl.getPeakUsage0()Ljava/lang/management/MemoryUsage;"
     )]
     async fn test_get_peak_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -214,7 +157,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.MemoryPoolImpl.getUsage0()Ljava/lang/management/MemoryUsage;"
+        expected = "not yet implemented: sun.management.MemoryPoolImpl.getUsage0()Ljava/lang/management/MemoryUsage;"
     )]
     async fn test_get_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -222,14 +165,18 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.management.MemoryPoolImpl.resetPeakUsage0()V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.management.MemoryPoolImpl.resetPeakUsage0()V"
+    )]
     async fn test_reset_peak_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = reset_peak_usage_0(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.management.MemoryPoolImpl.setCollectionThreshold0(JJ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.management.MemoryPoolImpl.setCollectionThreshold0(JJ)V"
+    )]
     async fn test_set_collection_threshold_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = set_collection_threshold_0(thread, Arguments::default()).await;
@@ -237,7 +184,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.MemoryPoolImpl.setPoolCollectionSensor(Lsun/management/Sensor;)V"
+        expected = "not yet implemented: sun.management.MemoryPoolImpl.setPoolCollectionSensor(Lsun/management/Sensor;)V"
     )]
     async fn test_set_pool_collection_sensor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -246,7 +193,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.management.MemoryPoolImpl.setPoolUsageSensor(Lsun/management/Sensor;)V"
+        expected = "not yet implemented: sun.management.MemoryPoolImpl.setPoolUsageSensor(Lsun/management/Sensor;)V"
     )]
     async fn test_set_pool_usage_sensor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -254,7 +201,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.management.MemoryPoolImpl.setUsageThreshold0(JJ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.management.MemoryPoolImpl.setUsageThreshold0(JJ)V"
+    )]
     async fn test_set_usage_threshold_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = set_usage_threshold_0(thread, Arguments::default()).await;

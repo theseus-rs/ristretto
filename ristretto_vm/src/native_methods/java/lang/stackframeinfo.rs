@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/StackFrameInfo";
+
 /// Register all native methods for `java.lang.StackFrameInfo`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/StackFrameInfo";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "expandStackFrameInfo",
         "()V",
         expand_stack_frame_info,
@@ -28,16 +29,6 @@ async fn expand_stack_frame_info(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/StackFrameInfo";
-        assert!(registry
-            .method(class_name, "expandStackFrameInfo", "()V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

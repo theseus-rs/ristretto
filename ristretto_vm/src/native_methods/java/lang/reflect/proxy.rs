@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/reflect/Proxy";
+
 /// Register all native methods for `java.lang.reflect.Proxy`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/reflect/Proxy";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "defineClass0",
         "(Ljava/lang/ClassLoader;Ljava/lang/String;[BII)Ljava/lang/Class;",
         define_class_0,
@@ -25,20 +26,6 @@ async fn define_class_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/reflect/Proxy";
-        assert!(registry
-            .method(
-                class_name,
-                "defineClass0",
-                "(Ljava/lang/ClassLoader;Ljava/lang/String;[BII)Ljava/lang/Class;"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

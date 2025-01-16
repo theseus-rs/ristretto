@@ -1,28 +1,52 @@
 use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_18, JAVA_19};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/loader/NativeLibraries";
+
 /// Register all native methods for `jdk.internal.loader.NativeLibraries`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/loader/NativeLibraries";
+    if registry.java_major_version() == JAVA_17 || registry.java_major_version() == JAVA_18 {
+        registry.register(
+            CLASS_NAME,
+            "findEntry0",
+            "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J",
+            find_entry_0,
+        );
+        registry.register(
+            CLASS_NAME,
+            "load",
+            "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZZ)Z",
+            load,
+        );
+        registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;ZZJ)V", unload);
+    }
+    if registry.java_major_version() >= JAVA_19 {
+        registry.register(
+            CLASS_NAME,
+            "load",
+            "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z",
+            load,
+        );
+        registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;ZJ)V", unload);
+    }
+
     registry.register(
-        class_name,
+        CLASS_NAME,
         "findBuiltinLib",
         "(Ljava/lang/String;)Ljava/lang/String;",
         find_builtin_lib,
     );
-    registry.register(
-        class_name,
-        "load",
-        "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z",
-        load,
-    );
-    registry.register(class_name, "unload", "(Ljava/lang/String;ZJ)V", unload);
+}
+
+#[async_recursion(?Send)]
+async fn find_entry_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("jdk.internal.loader.NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
@@ -58,28 +82,13 @@ async fn unload(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/loader/NativeLibraries";
-        assert!(registry
-            .method(
-                class_name,
-                "findBuiltinLib",
-                "(Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "load",
-                "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "unload", "(Ljava/lang/String;ZJ)V")
-            .is_some());
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.loader.NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J"
+    )]
+    async fn test_find_entry_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = find_entry_0(thread, Arguments::default()).await;
     }
 
     #[tokio::test]

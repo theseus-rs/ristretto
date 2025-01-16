@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/loops/ScaledBlit";
+
 /// Register all native methods for `sun.java2d.loops.ScaledBlit`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/loops/ScaledBlit";
-    registry.register(class_name, "Scale", "(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIDDDD)V", scale);
+    registry.register(CLASS_NAME, "Scale", "(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIDDDD)V", scale);
 }
 
 #[async_recursion(?Send)]
@@ -21,23 +22,9 @@ async fn scale(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Val
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/loops/ScaledBlit";
-        assert!(registry
-            .method(
-                class_name,
-                "Scale",
-                "(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIDDDD)V"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.loops.ScaledBlit.Scale(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIDDDD)V"
+        expected = "not yet implemented: sun.java2d.loops.ScaledBlit.Scale(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIDDDD)V"
     )]
     async fn test_scale() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

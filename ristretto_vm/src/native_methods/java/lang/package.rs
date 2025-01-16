@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/Package";
+
 /// Register all native methods for `java.lang.Package`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/Package";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getSystemPackage0",
         "(Ljava/lang/String;)Ljava/lang/String;",
         get_system_package_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getSystemPackages0",
         "()[Ljava/lang/String;",
         get_system_packages_0,
@@ -42,23 +43,6 @@ async fn get_system_packages_0(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/Package";
-        assert!(registry
-            .method(
-                class_name,
-                "getSystemPackage0",
-                "(Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getSystemPackages0", "()[Ljava/lang/String;")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

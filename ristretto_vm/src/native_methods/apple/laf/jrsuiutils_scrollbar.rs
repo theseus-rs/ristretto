@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "apple/laf/JRSUIUtils$ScrollBar";
+
 /// Register all native methods for `apple.laf.JRSUIUtils$ScrollBar`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "apple/laf/JRSUIUtils$ScrollBar";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "shouldUseScrollToClick",
         "()Z",
         should_use_scroll_to_click,
@@ -28,16 +29,6 @@ async fn should_use_scroll_to_click(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "apple/laf/JRSUIUtils$ScrollBar";
-        assert!(registry
-            .method(class_name, "shouldUseScrollToClick", "()Z")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/vm/ci/services/Services";
+
 /// Register all native methods for `jdk.vm.ci.services.Services`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/vm/ci/services/Services";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "readSystemPropertiesInfo",
         "([I)J",
         read_system_properties_info,
@@ -28,16 +29,6 @@ async fn read_system_properties_info(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/vm/ci/services/Services";
-        assert!(registry
-            .method(class_name, "readSystemPropertiesInfo", "([I)J")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

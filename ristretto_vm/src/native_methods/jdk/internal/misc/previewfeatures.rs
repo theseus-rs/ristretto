@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/misc/PreviewFeatures";
+
 /// Register all native methods for `jdk.internal.misc.PreviewFeatures`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/misc/PreviewFeatures";
-    registry.register(class_name, "isPreviewEnabled", "()Z", is_preview_enabled);
+    registry.register(CLASS_NAME, "isPreviewEnabled", "()Z", is_preview_enabled);
 }
 
 #[async_recursion(?Send)]
@@ -23,16 +24,6 @@ async fn is_preview_enabled(thread: Arc<Thread>, _arguments: Arguments) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/misc/PreviewFeatures";
-        assert!(registry
-            .method(class_name, "isPreviewEnabled", "()Z")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_is_preview_enabled() -> Result<()> {

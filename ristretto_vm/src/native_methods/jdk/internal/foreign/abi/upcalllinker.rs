@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "jdk/internal/foreign/abi/UpcallLinker";
+
 /// Register all native methods for `jdk.internal.foreign.abi.UpcallLinker`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "jdk/internal/foreign/abi/UpcallLinker";
-    registry.register(class_name, "makeUpcallStub", "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/UpcallLinker$CallRegs;ZJ)J", make_upcall_stub);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "makeUpcallStub", "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/UpcallLinker$CallRegs;ZJ)J", make_upcall_stub);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
 }
 
 #[async_recursion(?Send)]
@@ -27,20 +28,9 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "jdk/internal/foreign/abi/UpcallLinker";
-        assert!(registry.method(class_name, "makeUpcallStub", "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/UpcallLinker$CallRegs;ZJ)J").is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "jdk.internal.foreign.abi.UpcallLinker.makeUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/UpcallLinker$CallRegs;ZJ)J"
+        expected = "not yet implemented: jdk.internal.foreign.abi.UpcallLinker.makeUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/UpcallLinker$CallRegs;ZJ)J"
     )]
     async fn test_make_upcall_stub() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

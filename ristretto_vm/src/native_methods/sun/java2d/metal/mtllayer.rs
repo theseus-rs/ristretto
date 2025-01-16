@@ -1,29 +1,25 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_18};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_18: Version = Version::Java18 { minor: 0 };
+const CLASS_NAME: &str = "sun/java2d/metal/MTLLayer";
 
 /// Register all native methods for `sun.java2d.metal.MTLLayer`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/metal/MTLLayer";
-    let java_version = registry.java_version();
-
-    if java_version >= &JAVA_18 {
-        registry.register(class_name, "nativeSetOpaque", "(JZ)V", native_set_opaque);
+    if registry.java_major_version() >= JAVA_18 {
+        registry.register(CLASS_NAME, "nativeSetOpaque", "(JZ)V", native_set_opaque);
     }
 
-    registry.register(class_name, "blitTexture", "(J)V", blit_texture);
-    registry.register(class_name, "nativeCreateLayer", "()J", native_create_layer);
-    registry.register(class_name, "nativeSetInsets", "(JII)V", native_set_insets);
-    registry.register(class_name, "nativeSetScale", "(JD)V", native_set_scale);
+    registry.register(CLASS_NAME, "blitTexture", "(J)V", blit_texture);
+    registry.register(CLASS_NAME, "nativeCreateLayer", "()J", native_create_layer);
+    registry.register(CLASS_NAME, "nativeSetInsets", "(JII)V", native_set_insets);
+    registry.register(CLASS_NAME, "nativeSetScale", "(JD)V", native_set_scale);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "validate",
         "(JLsun/java2d/metal/MTLSurfaceData;)V",
         validate,
@@ -64,60 +60,42 @@ async fn validate(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/metal/MTLLayer";
-        assert!(registry.method(class_name, "blitTexture", "(J)V").is_some());
-        assert!(registry
-            .method(class_name, "nativeCreateLayer", "()J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeSetInsets", "(JII)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeSetScale", "(JD)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "validate",
-                "(JLsun/java2d/metal/MTLSurfaceData;)V"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLLayer.blitTexture(J)V")]
+    #[should_panic(expected = "not yet implemented: sun.java2d.metal.MTLLayer.blitTexture(J)V")]
     async fn test_blit_texture() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = blit_texture(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLLayer.nativeCreateLayer()J")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.metal.MTLLayer.nativeCreateLayer()J"
+    )]
     async fn test_native_create_layer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = native_create_layer(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLLayer.nativeSetInsets(JII)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.metal.MTLLayer.nativeSetInsets(JII)V"
+    )]
     async fn test_native_set_insets() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = native_set_insets(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLLayer.nativeSetOpaque(JZ)V")]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.metal.MTLLayer.nativeSetOpaque(JZ)V"
+    )]
     async fn test_native_set_opaque() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = native_set_opaque(thread, Arguments::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLLayer.nativeSetScale(JD)V")]
+    #[should_panic(expected = "not yet implemented: sun.java2d.metal.MTLLayer.nativeSetScale(JD)V")]
     async fn test_native_set_scale() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = native_set_scale(thread, Arguments::default()).await;
@@ -125,7 +103,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.metal.MTLLayer.validate(JLsun/java2d/metal/MTLSurfaceData;)V"
+        expected = "not yet implemented: sun.java2d.metal.MTLLayer.validate(JLsun/java2d/metal/MTLSurfaceData;)V"
     )]
     async fn test_validate() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

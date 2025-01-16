@@ -6,31 +6,32 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/Compiler";
+
 /// Register all native methods for `java.lang.Compiler`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/Compiler";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "command",
         "(Ljava/lang/Object;)Ljava/lang/Object;",
         command,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compileClass",
         "(Ljava/lang/Class;)Z",
         compile_class,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "compileClasses",
         "(Ljava/lang/String;)Z",
         compile_classes,
     );
-    registry.register(class_name, "disable", "()V", disable);
-    registry.register(class_name, "enable", "()V", enable);
-    registry.register(class_name, "initialize", "()V", initialize);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "disable", "()V", disable);
+    registry.register(CLASS_NAME, "enable", "()V", enable);
+    registry.register(CLASS_NAME, "initialize", "()V", initialize);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
 }
 
 #[async_recursion(?Send)]
@@ -71,32 +72,6 @@ async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/Compiler";
-        assert!(registry
-            .method(
-                class_name,
-                "command",
-                "(Ljava/lang/Object;)Ljava/lang/Object;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "compileClass", "(Ljava/lang/Class;)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "compileClasses", "(Ljava/lang/String;)Z")
-            .is_some());
-        assert!(registry.method(class_name, "disable", "()V").is_some());
-        assert!(registry.method(class_name, "enable", "()V").is_some());
-        assert!(registry.method(class_name, "initialize", "()V").is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

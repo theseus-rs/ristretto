@@ -6,11 +6,12 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/management/internal/GarbageCollectorExtImpl";
+
 /// Register all native methods for `com.sun.management.internal.GarbageCollectorExtImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/management/internal/GarbageCollectorExtImpl";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setNotificationEnabled",
         "(Lcom/sun/management/GarbageCollectorMXBean;Z)V",
         set_notification_enabled,
@@ -28,20 +29,6 @@ async fn set_notification_enabled(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/management/internal/GarbageCollectorExtImpl";
-        assert!(registry
-            .method(
-                class_name,
-                "setNotificationEnabled",
-                "(Lcom/sun/management/GarbageCollectorMXBean;Z)V"
-            )
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

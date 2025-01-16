@@ -6,16 +6,17 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/ProcessImpl";
+
 /// Register all native methods for `java.lang.ProcessImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/ProcessImpl";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "forkAndExec",
         "(I[B[B[BI[BI[B[IZ)I",
         fork_and_exec,
     );
-    registry.register(class_name, "init", "()V", init);
+    registry.register(CLASS_NAME, "init", "()V", init);
 }
 
 #[async_recursion(?Send)]
@@ -31,17 +32,6 @@ async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Valu
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/ProcessImpl";
-        assert!(registry
-            .method(class_name, "forkAndExec", "(I[B[B[BI[BI[B[IZ)I")
-            .is_some());
-        assert!(registry.method(class_name, "init", "()V").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

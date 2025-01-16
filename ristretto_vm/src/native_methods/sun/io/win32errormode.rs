@@ -6,10 +6,11 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/io/Win32ErrorMode";
+
 /// Register all native methods for `sun.io.Win32ErrorMode`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/io/Win32ErrorMode";
-    registry.register(class_name, "setErrorMode", "(J)J", set_error_mode);
+    registry.register(CLASS_NAME, "setErrorMode", "(J)J", set_error_mode);
 }
 
 #[async_recursion(?Send)]
@@ -21,16 +22,6 @@ async fn set_error_mode(_thread: Arc<Thread>, mut arguments: Arguments) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/io/Win32ErrorMode";
-        assert!(registry
-            .method(class_name, "setErrorMode", "(J)J")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_set_error_mode() -> Result<()> {

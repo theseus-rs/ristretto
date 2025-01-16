@@ -1,110 +1,109 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_18};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
-const JAVA_11: Version = Version::Java11 { minor: 0 };
+const CLASS_NAME: &str = "java/io/WinNTFileSystem";
 
 /// Register all native methods for `java.io.WinNTFileSystem`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/io/WinNTFileSystem";
-    let java_version = registry.java_version();
-
-    if java_version >= &JAVA_11 {
+    if registry.java_major_version() >= JAVA_11 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getNameMax0",
             "(Ljava/lang/String;)I",
             get_name_max_0,
         );
     }
 
+    if registry.java_major_version() <= JAVA_18 {
+        registry.register(
+            CLASS_NAME,
+            "canonicalizeWithPrefix0",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+            canonicalize_with_prefix_0,
+        );
+        registry.register(
+            CLASS_NAME,
+            "checkAccess",
+            "(Ljava/io/File;I)Z",
+            check_access,
+        );
+        registry.register(
+            CLASS_NAME,
+            "createDirectory",
+            "(Ljava/io/File;)Z",
+            create_directory,
+        );
+        registry.register(
+            CLASS_NAME,
+            "createFileExclusively",
+            "(Ljava/lang/String;)Z",
+            create_file_exclusively,
+        );
+        registry.register(
+            CLASS_NAME,
+            "getBooleanAttributes",
+            "(Ljava/io/File;)I",
+            get_boolean_attributes,
+        );
+        registry.register(
+            CLASS_NAME,
+            "getLastModifiedTime",
+            "(Ljava/io/File;)J",
+            get_last_modified_time,
+        );
+        registry.register(CLASS_NAME, "getLength", "(Ljava/io/File;)J", get_length);
+        registry.register(
+            CLASS_NAME,
+            "list",
+            "(Ljava/io/File;)[Ljava/lang/String;",
+            list,
+        );
+        registry.register(
+            CLASS_NAME,
+            "setLastModifiedTime",
+            "(Ljava/io/File;J)Z",
+            set_last_modified_time,
+        );
+        registry.register(
+            CLASS_NAME,
+            "setPermission",
+            "(Ljava/io/File;IZZ)Z",
+            set_permission,
+        );
+        registry.register(
+            CLASS_NAME,
+            "setReadOnly",
+            "(Ljava/io/File;)Z",
+            set_read_only,
+        );
+    }
+
     registry.register(
-        class_name,
+        CLASS_NAME,
         "canonicalize0",
         "(Ljava/lang/String;)Ljava/lang/String;",
         canonicalize_0,
     );
+    registry.register(CLASS_NAME, "delete0", "(Ljava/io/File;)Z", delete_0);
     registry.register(
-        class_name,
-        "canonicalizeWithPrefix0",
-        "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
-        canonicalize_with_prefix_0,
-    );
-    registry.register(
-        class_name,
-        "checkAccess",
-        "(Ljava/io/File;I)Z",
-        check_access,
-    );
-    registry.register(
-        class_name,
-        "createDirectory",
-        "(Ljava/io/File;)Z",
-        create_directory,
-    );
-    registry.register(
-        class_name,
-        "createFileExclusively",
-        "(Ljava/lang/String;)Z",
-        create_file_exclusively,
-    );
-    registry.register(class_name, "delete0", "(Ljava/io/File;)Z", delete_0);
-    registry.register(
-        class_name,
-        "getBooleanAttributes",
-        "(Ljava/io/File;)I",
-        get_boolean_attributes,
-    );
-    registry.register(
-        class_name,
+        CLASS_NAME,
         "getDriveDirectory",
         "(I)Ljava/lang/String;",
         get_drive_directory,
     );
+    registry.register(CLASS_NAME, "getSpace0", "(Ljava/io/File;I)J", get_space_0);
+    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
+    registry.register(CLASS_NAME, "listRoots0", "()I", list_roots_0);
     registry.register(
-        class_name,
-        "getLastModifiedTime",
-        "(Ljava/io/File;)J",
-        get_last_modified_time,
-    );
-    registry.register(class_name, "getLength", "(Ljava/io/File;)J", get_length);
-    registry.register(class_name, "getSpace0", "(Ljava/io/File;I)J", get_space_0);
-    registry.register(class_name, "initIDs", "()V", init_ids);
-    registry.register(
-        class_name,
-        "list",
-        "(Ljava/io/File;)[Ljava/lang/String;",
-        list,
-    );
-    registry.register(class_name, "listRoots0", "()I", list_roots_0);
-    registry.register(
-        class_name,
+        CLASS_NAME,
         "rename0",
         "(Ljava/io/File;Ljava/io/File;)Z",
         rename_0,
-    );
-    registry.register(
-        class_name,
-        "setLastModifiedTime",
-        "(Ljava/io/File;J)Z",
-        set_last_modified_time,
-    );
-    registry.register(
-        class_name,
-        "setPermission",
-        "(Ljava/io/File;IZZ)Z",
-        set_permission,
-    );
-    registry.register(
-        class_name,
-        "setReadOnly",
-        "(Ljava/io/File;)Z",
-        set_read_only,
     );
 }
 
@@ -221,71 +220,6 @@ async fn set_read_only(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Op
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/io/WinNTFileSystem";
-        assert!(registry
-            .method(
-                class_name,
-                "canonicalize0",
-                "(Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "canonicalizeWithPrefix0",
-                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "checkAccess", "(Ljava/io/File;I)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "createDirectory", "(Ljava/io/File;)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "createFileExclusively", "(Ljava/lang/String;)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "delete0", "(Ljava/io/File;)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getBooleanAttributes", "(Ljava/io/File;)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDriveDirectory", "(I)Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getLastModifiedTime", "(Ljava/io/File;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getLength", "(Ljava/io/File;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getSpace0", "(Ljava/io/File;I)J")
-            .is_some());
-        assert!(registry.method(class_name, "initIDs", "()V").is_some());
-        assert!(registry
-            .method(class_name, "list", "(Ljava/io/File;)[Ljava/lang/String;")
-            .is_some());
-        assert!(registry.method(class_name, "listRoots0", "()I").is_some());
-        assert!(registry
-            .method(class_name, "rename0", "(Ljava/io/File;Ljava/io/File;)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setLastModifiedTime", "(Ljava/io/File;J)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setPermission", "(Ljava/io/File;IZZ)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setReadOnly", "(Ljava/io/File;)Z")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

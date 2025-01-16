@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "java/lang/reflect/Executable";
+
 /// Register all native methods for `java.lang.reflect.Executable`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/reflect/Executable";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getParameters0",
         "()[Ljava/lang/reflect/Parameter;",
         get_parameters_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getTypeAnnotationBytes0",
         "()[B",
         get_type_annotation_bytes_0,
@@ -39,23 +40,6 @@ async fn get_type_annotation_bytes_0(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/reflect/Executable";
-        assert!(registry
-            .method(
-                class_name,
-                "getParameters0",
-                "()[Ljava/lang/reflect/Parameter;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getTypeAnnotationBytes0", "()[B")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

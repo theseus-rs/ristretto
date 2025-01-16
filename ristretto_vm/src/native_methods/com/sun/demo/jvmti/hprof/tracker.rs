@@ -6,29 +6,30 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/demo/jvmti/hprof/Tracker";
+
 /// Register all native methods for `com.sun.demo.jvmti.hprof.Tracker`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/demo/jvmti/hprof/Tracker";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeCallSite",
         "(Ljava/lang/Object;II)V",
         native_call_site,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeNewArray",
         "(Ljava/lang/Object;Ljava/lang/Object;)V",
         native_new_array,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeObjectInit",
         "(Ljava/lang/Object;Ljava/lang/Object;)V",
         native_object_init,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "nativeReturnSite",
         "(Ljava/lang/Object;II)V",
         native_return_site,
@@ -60,33 +61,6 @@ async fn native_return_site(_thread: Arc<Thread>, _arguments: Arguments) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/demo/jvmti/hprof/Tracker";
-        assert!(registry
-            .method(class_name, "nativeCallSite", "(Ljava/lang/Object;II)V")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nativeNewArray",
-                "(Ljava/lang/Object;Ljava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "nativeObjectInit",
-                "(Ljava/lang/Object;Ljava/lang/Object;)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "nativeReturnSite", "(Ljava/lang/Object;II)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

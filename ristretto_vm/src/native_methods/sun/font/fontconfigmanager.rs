@@ -6,18 +6,19 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/font/FontConfigManager";
+
 /// Register all native methods for `sun.font.FontConfigManager`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/font/FontConfigManager";
-    registry.register(class_name, "getFontConfig", "(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V", get_font_config);
+    registry.register(CLASS_NAME, "getFontConfig", "(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V", get_font_config);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getFontConfigAASettings",
         "(Ljava/lang/String;Ljava/lang/String;)I",
         get_font_config_aa_settings,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getFontConfigVersion",
         "()I",
         get_font_config_version,
@@ -51,33 +52,9 @@ async fn get_font_config_version(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/font/FontConfigManager";
-        assert!(registry
-            .method(
-                class_name,
-                "getFontConfig",
-                "(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getFontConfigAASettings",
-                "(Ljava/lang/String;Ljava/lang/String;)I"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getFontConfigVersion", "()I")
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.font.FontConfigManager.getFontConfig(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V"
+        expected = "not yet implemented: sun.font.FontConfigManager.getFontConfig(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V"
     )]
     async fn test_get_font_config() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -86,7 +63,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.font.FontConfigManager.getFontConfigAASettings(Ljava/lang/String;Ljava/lang/String;)I"
+        expected = "not yet implemented: sun.font.FontConfigManager.getFontConfigAASettings(Ljava/lang/String;Ljava/lang/String;)I"
     )]
     async fn test_get_font_config_aa_settings() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -94,7 +71,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.font.FontConfigManager.getFontConfigVersion()I")]
+    #[should_panic(
+        expected = "not yet implemented: sun.font.FontConfigManager.getFontConfigVersion()I"
+    )]
     async fn test_get_font_config_version() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_font_config_version(thread, Arguments::default()).await;

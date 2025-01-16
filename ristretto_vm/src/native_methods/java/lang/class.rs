@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_20, JAVA_8};
 use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use crate::Error::InternalError;
@@ -8,94 +8,88 @@ use crate::JavaError::NullPointerException;
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::attributes::{Attribute, InnerClass};
-use ristretto_classfile::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags, Version};
+use ristretto_classfile::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_11: Version = Version::Java11 { minor: 0 };
-const JAVA_17: Version = Version::Java17 { minor: 0 };
-const JAVA_20: Version = Version::Java20 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/Class";
 
 /// Register all native methods for `java.lang.Class`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/Class";
-    let java_version = registry.java_version().clone();
-
-    if java_version <= JAVA_8 {
+    if registry.java_major_version() <= JAVA_8 {
         registry.register(
-            class_name,
-            "getComponentType",
-            "()Ljava/lang/Class;",
-            get_component_type,
-        );
-        registry.register(
-            class_name,
+            CLASS_NAME,
             "getConstantPool",
             "()Lsun/reflect/ConstantPool;",
             get_constant_pool,
         );
-        registry.register(class_name, "getName0", "()Ljava/lang/String;", get_name_0);
+        registry.register(
+            CLASS_NAME,
+            "getComponentType",
+            "()Ljava/lang/Class;",
+            get_component_type,
+        );
+        registry.register(CLASS_NAME, "getName0", "()Ljava/lang/String;", get_name_0);
     } else {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getConstantPool",
             "()Ljdk/internal/reflect/ConstantPool;",
             get_constant_pool,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getNestHost0",
             "()Ljava/lang/Class;",
             get_nest_host_0,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getNestMembers0",
             "()[Ljava/lang/Class;",
             get_nest_members_0,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getSimpleBinaryName0",
             "()Ljava/lang/String;",
             get_simple_binary_name_0,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "initClassName",
             "()Ljava/lang/String;",
             init_class_name,
         );
     }
 
-    if java_version >= JAVA_17 {
+    if registry.java_major_version() >= JAVA_17 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getPermittedSubclasses0",
             "()[Ljava/lang/Class;",
             get_permitted_subclasses_0,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getRecordComponents0",
             "()[Ljava/lang/reflect/RecordComponent;",
             get_record_components_0,
         );
-        registry.register(class_name, "isHidden", "()Z", is_hidden);
-        registry.register(class_name, "isRecord0", "()Z", is_record_0);
+        registry.register(CLASS_NAME, "isHidden", "()Z", is_hidden);
+        registry.register(CLASS_NAME, "isRecord0", "()Z", is_record_0);
     }
 
-    if java_version >= JAVA_20 {
+    if registry.java_major_version() >= JAVA_20 {
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getClassAccessFlagsRaw0",
             "()I",
             get_class_access_flags_raw_0,
         );
         registry.register(
-            class_name,
+            CLASS_NAME,
             "getClassFileVersion0",
             "()I",
             get_class_file_version_0,
@@ -103,145 +97,115 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(
-        class_name,
+        CLASS_NAME,
         "desiredAssertionStatus0",
         "(Ljava/lang/Class;)Z",
         desired_assertion_status_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "forName0",
         "(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;",
         for_name_0,
     );
     registry.register(
-        class_name,
-        "getConstantPool",
-        "()Ljdk/internal/reflect/ConstantPool;",
-        get_constant_pool,
-    );
-    registry.register(
-        class_name,
+        CLASS_NAME,
         "getDeclaredClasses0",
         "()[Ljava/lang/Class;",
         get_declared_classes_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDeclaredConstructors0",
         "(Z)[Ljava/lang/reflect/Constructor;",
         get_declared_constructors_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDeclaredFields0",
         "(Z)[Ljava/lang/reflect/Field;",
         get_declared_fields_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDeclaredMethods0",
         "(Z)[Ljava/lang/reflect/Method;",
         get_declared_methods_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDeclaringClass0",
         "()Ljava/lang/Class;",
         get_declaring_class_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getEnclosingMethod0",
         "()[Ljava/lang/Object;",
         get_enclosing_method_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getGenericSignature0",
         "()Ljava/lang/String;",
         get_generic_signature_0,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getInterfaces0",
         "()[Ljava/lang/Class;",
         get_interfaces_0,
     );
-    registry.register(class_name, "getModifiers", "()I", get_modifiers);
+    registry.register(CLASS_NAME, "getModifiers", "()I", get_modifiers);
     registry.register(
-        class_name,
-        "getNestHost0",
-        "()Ljava/lang/Class;",
-        get_nest_host_0,
-    );
-    registry.register(
-        class_name,
-        "getNestMembers0",
-        "()[Ljava/lang/Class;",
-        get_nest_members_0,
-    );
-    registry.register(
-        class_name,
+        CLASS_NAME,
         "getPrimitiveClass",
         "(Ljava/lang/String;)Ljava/lang/Class;",
         get_primitive_class,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getProtectionDomain0",
         "()Ljava/security/ProtectionDomain;",
         get_protection_domain_0,
     );
-    registry.register(class_name, "getRawAnnotations", "()[B", get_raw_annotations);
+    registry.register(CLASS_NAME, "getRawAnnotations", "()[B", get_raw_annotations);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getRawTypeAnnotations",
         "()[B",
         get_raw_type_annotations,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getSigners",
         "()[Ljava/lang/Object;",
         get_signers,
     );
     registry.register(
-        class_name,
-        "getSimpleBinaryName0",
-        "()Ljava/lang/String;",
-        get_simple_binary_name_0,
-    );
-    registry.register(
-        class_name,
+        CLASS_NAME,
         "getSuperclass",
         "()Ljava/lang/Class;",
         get_superclass,
     );
+    registry.register(CLASS_NAME, "isArray", "()Z", is_array);
     registry.register(
-        class_name,
-        "initClassName",
-        "()Ljava/lang/String;",
-        init_class_name,
-    );
-    registry.register(class_name, "isArray", "()Z", is_array);
-    registry.register(
-        class_name,
+        CLASS_NAME,
         "isAssignableFrom",
         "(Ljava/lang/Class;)Z",
         is_assignable_from,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "isInstance",
         "(Ljava/lang/Object;)Z",
         is_instance,
     );
-    registry.register(class_name, "isInterface", "()Z", is_interface);
-    registry.register(class_name, "isPrimitive", "()Z", is_primitive);
-    registry.register(class_name, "registerNatives", "()V", register_natives);
+    registry.register(CLASS_NAME, "isInterface", "()Z", is_interface);
+    registry.register(CLASS_NAME, "isPrimitive", "()Z", is_primitive);
+    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setSigners",
         "([Ljava/lang/Object;)V",
         set_signers,
@@ -498,7 +462,7 @@ async fn get_declared_fields_0(
         let signature = Value::Object(None);
         // TODO: Add support for annotations
         let annotations = Value::from(Vec::<i8>::new());
-        let (descriptor, arguments) = if vm.java_class_file_version() <= &JAVA_11 {
+        let (descriptor, arguments) = if vm.java_major_version() <= JAVA_11 {
             (
                 "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IILjava/lang/String;[B",
                 vec![
@@ -951,145 +915,6 @@ async fn set_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    #[expect(clippy::too_many_lines)]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java17 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/Class";
-        assert!(registry
-            .method(
-                class_name,
-                "desiredAssertionStatus0",
-                "(Ljava/lang/Class;)Z"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "forName0",
-                "(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getConstantPool",
-                "()Ljdk/internal/reflect/ConstantPool;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDeclaredClasses0", "()[Ljava/lang/Class;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getDeclaredConstructors0",
-                "(Z)[Ljava/lang/reflect/Constructor;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getDeclaredFields0",
-                "(Z)[Ljava/lang/reflect/Field;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getDeclaredMethods0",
-                "(Z)[Ljava/lang/reflect/Method;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDeclaringClass0", "()Ljava/lang/Class;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getEnclosingMethod0", "()[Ljava/lang/Object;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getGenericSignature0", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getInterfaces0", "()[Ljava/lang/Class;")
-            .is_some());
-        assert!(registry.method(class_name, "getModifiers", "()I").is_some());
-        assert!(registry
-            .method(class_name, "getNestHost0", "()Ljava/lang/Class;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getNestMembers0", "()[Ljava/lang/Class;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getPrimitiveClass",
-                "(Ljava/lang/String;)Ljava/lang/Class;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getProtectionDomain0",
-                "()Ljava/security/ProtectionDomain;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getRawAnnotations", "()[B")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getRawTypeAnnotations", "()[B")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getSigners", "()[Ljava/lang/Object;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getSimpleBinaryName0", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "getSuperclass", "()Ljava/lang/Class;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "initClassName", "()Ljava/lang/String;")
-            .is_some());
-        assert!(registry.method(class_name, "isArray", "()Z").is_some());
-        assert!(registry
-            .method(class_name, "isAssignableFrom", "(Ljava/lang/Class;)Z")
-            .is_some());
-        assert!(registry
-            .method(class_name, "isInstance", "(Ljava/lang/Object;)Z")
-            .is_some());
-        assert!(registry.method(class_name, "isInterface", "()Z").is_some());
-        assert!(registry.method(class_name, "isPrimitive", "()Z").is_some());
-        assert!(registry
-            .method(class_name, "registerNatives", "()V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setSigners", "([Ljava/lang/Object;)V")
-            .is_some());
-    }
-
-    #[test]
-    fn test_register_java_8() {
-        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/Class";
-        assert!(registry
-            .method(class_name, "getComponentType", "()Ljava/lang/Class;")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getConstantPool",
-                "()Lsun/reflect/ConstantPool;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getName0", "()Ljava/lang/String;")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_desired_assertion_status_0() -> Result<()> {

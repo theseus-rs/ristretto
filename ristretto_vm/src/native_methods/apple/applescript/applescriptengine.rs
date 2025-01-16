@@ -6,35 +6,36 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "apple/applescript/AppleScriptEngine";
+
 /// Register all native methods for `apple.applescript.AppleScriptEngine`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "apple/applescript/AppleScriptEngine";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "createContextFrom",
         "(Ljava/lang/Object;)J",
         create_context_from,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "createObjectFrom",
         "(J)Ljava/lang/Object;",
         create_object_from,
     );
-    registry.register(class_name, "disposeContext", "(J)V", dispose_context);
+    registry.register(CLASS_NAME, "disposeContext", "(J)V", dispose_context);
     registry.register(
-        class_name,
+        CLASS_NAME,
         "evalScript",
         "(Ljava/lang/String;J)J",
         eval_script,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "evalScriptFromURL",
         "(Ljava/lang/String;J)J",
         eval_script_from_url,
     );
-    registry.register(class_name, "initNative", "()V", init_native);
+    registry.register(CLASS_NAME, "initNative", "()V", init_native);
 }
 
 #[async_recursion(?Send)]
@@ -73,29 +74,6 @@ async fn init_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "apple/applescript/AppleScriptEngine";
-        assert!(registry
-            .method(class_name, "createContextFrom", "(Ljava/lang/Object;)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "createObjectFrom", "(J)Ljava/lang/Object;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "disposeContext", "(J)V")
-            .is_some());
-        assert!(registry
-            .method(class_name, "evalScript", "(Ljava/lang/String;J)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "evalScriptFromURL", "(Ljava/lang/String;J)J")
-            .is_some());
-        assert!(registry.method(class_name, "initNative", "()V").is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

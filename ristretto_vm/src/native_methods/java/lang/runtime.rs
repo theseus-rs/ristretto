@@ -1,5 +1,5 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -8,19 +8,26 @@ use std::cmp::min;
 use std::sync::Arc;
 use sysinfo::System;
 
+const CLASS_NAME: &str = "java/lang/Runtime";
+
 /// Register all native methods for `java.lang.Runtime`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/Runtime";
+    if registry.java_major_version() <= JAVA_8 {
+        registry.register(CLASS_NAME, "runFinalization0", "()V", run_finalization_0);
+        registry.register(CLASS_NAME, "traceInstructions", "(Z)V", trace_instructions);
+        registry.register(CLASS_NAME, "traceMethodCalls", "(Z)V", trace_method_calls);
+    }
+
     registry.register(
-        class_name,
+        CLASS_NAME,
         "availableProcessors",
         "()I",
         available_processors,
     );
-    registry.register(class_name, "freeMemory", "()J", free_memory);
-    registry.register(class_name, "gc", "()V", gc);
-    registry.register(class_name, "maxMemory", "()J", max_memory);
-    registry.register(class_name, "totalMemory", "()J", total_memory);
+    registry.register(CLASS_NAME, "freeMemory", "()J", free_memory);
+    registry.register(CLASS_NAME, "gc", "()V", gc);
+    registry.register(CLASS_NAME, "maxMemory", "()J", max_memory);
+    registry.register(CLASS_NAME, "totalMemory", "()J", total_memory);
 }
 
 #[async_recursion(?Send)]
@@ -47,6 +54,34 @@ async fn free_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 }
 
 #[async_recursion(?Send)]
+async fn gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[async_recursion(?Send)]
+async fn max_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    let sys = System::new_all();
+    let total_memory = min(sys.total_memory(), u64::try_from(i64::MAX)?);
+    let total_memory = i64::try_from(total_memory)?;
+    Ok(Some(Value::Long(total_memory)))
+}
+
+#[async_recursion(?Send)]
+async fn run_finalization_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("java.lang.Runtime.runFinalization0()V")
+}
+
+#[async_recursion(?Send)]
+async fn trace_instructions(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("java.lang.Runtime.traceInstructions(Z)V")
+}
+
+#[async_recursion(?Send)]
+async fn trace_method_calls(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("java.lang.Runtime.traceMethodCalls(Z)V")
+}
+
+#[async_recursion(?Send)]
 async fn total_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     // TODO: This is not the correct implementation; should be the total memory of the JVM
     let sys = System::new_all();
@@ -59,36 +94,9 @@ async fn total_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opt
     Ok(Some(Value::Long(free_memory)))
 }
 
-#[async_recursion(?Send)]
-async fn max_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    let sys = System::new_all();
-    let total_memory = min(sys.total_memory(), u64::try_from(i64::MAX)?);
-    let total_memory = i64::try_from(total_memory)?;
-    Ok(Some(Value::Long(total_memory)))
-}
-
-#[async_recursion(?Send)]
-async fn gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    Ok(None)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "java/lang/Runtime";
-        assert!(registry
-            .method(class_name, "availableProcessors", "()I")
-            .is_some());
-        assert!(registry.method(class_name, "freeMemory", "()J").is_some());
-        assert!(registry.method(class_name, "gc", "()V").is_some());
-        assert!(registry.method(class_name, "maxMemory", "()J").is_some());
-        assert!(registry.method(class_name, "totalMemory", "()J").is_some());
-    }
 
     #[tokio::test]
     async fn test_available_processors() -> Result<()> {
@@ -109,11 +117,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_total_memory() -> Result<()> {
+    async fn test_gc() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = total_memory(thread, Arguments::default()).await?;
-        let total_memory = result.unwrap_or(Value::Long(0)).to_long()?;
-        assert!(total_memory >= 1);
+        let result = gc(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
         Ok(())
     }
 
@@ -127,10 +134,32 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_gc() -> Result<()> {
+    #[should_panic(expected = "not yet implemented: java.lang.Runtime.runFinalization0()V")]
+    async fn test_run_finalization_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = run_finalization_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Runtime.traceInstructions(Z)V")]
+    async fn test_trace_instructions() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = trace_instructions(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.lang.Runtime.traceMethodCalls(Z)V")]
+    async fn test_trace_method_calls() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = trace_method_calls(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_total_memory() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = gc(thread, Arguments::default()).await?;
-        assert_eq!(result, None);
+        let result = total_memory(thread, Arguments::default()).await?;
+        let total_memory = result.unwrap_or(Value::Long(0)).to_long()?;
+        assert!(total_memory >= 1);
         Ok(())
     }
 }

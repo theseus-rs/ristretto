@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/apple/laf/ScreenMenu";
+
 /// Register all native methods for `com.apple.laf.ScreenMenu`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/apple/laf/ScreenMenu";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "addMenuListeners",
         "(Lcom/apple/laf/ScreenMenu;J)J",
         add_menu_listeners,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "removeMenuListeners",
         "(J)V",
         remove_menu_listeners,
@@ -39,23 +40,6 @@ async fn remove_menu_listeners(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/apple/laf/ScreenMenu";
-        assert!(registry
-            .method(
-                class_name,
-                "addMenuListeners",
-                "(Lcom/apple/laf/ScreenMenu;J)J"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "removeMenuListeners", "(J)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

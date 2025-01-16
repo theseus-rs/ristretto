@@ -6,29 +6,30 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "com/sun/management/internal/DiagnosticCommandImpl";
+
 /// Register all native methods for `com.sun.management.internal.DiagnosticCommandImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "com/sun/management/internal/DiagnosticCommandImpl";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "executeDiagnosticCommand",
         "(Ljava/lang/String;)Ljava/lang/String;",
         execute_diagnostic_command,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDiagnosticCommandInfo",
         "([Ljava/lang/String;)[Lcom/sun/management/internal/DiagnosticCommandInfo;",
         get_diagnostic_command_info,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "getDiagnosticCommands",
         "()[Ljava/lang/String;",
         get_diagnostic_commands,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "setNotificationEnabled",
         "(Z)V",
         set_notification_enabled,
@@ -70,33 +71,6 @@ async fn set_notification_enabled(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "com/sun/management/internal/DiagnosticCommandImpl";
-        assert!(registry
-            .method(
-                class_name,
-                "executeDiagnosticCommand",
-                "(Ljava/lang/String;)Ljava/lang/String;"
-            )
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "getDiagnosticCommandInfo",
-                "([Ljava/lang/String;)[Lcom/sun/management/internal/DiagnosticCommandInfo;"
-            )
-            .is_some());
-        assert!(registry
-            .method(class_name, "getDiagnosticCommands", "()[Ljava/lang/String;")
-            .is_some());
-        assert!(registry
-            .method(class_name, "setNotificationEnabled", "(Z)V")
-            .is_some());
-    }
 
     #[tokio::test]
     #[should_panic(

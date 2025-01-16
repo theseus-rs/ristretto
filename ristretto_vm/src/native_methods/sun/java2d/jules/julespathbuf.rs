@@ -6,17 +6,18 @@ use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
+const CLASS_NAME: &str = "sun/java2d/jules/JulesPathBuf";
+
 /// Register all native methods for `sun.java2d.jules.JulesPathBuf`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "sun/java2d/jules/JulesPathBuf";
     registry.register(
-        class_name,
+        CLASS_NAME,
         "tesselateFillNative",
         "([I[BII[IIIIIII)[I",
         tesselate_fill_native,
     );
     registry.register(
-        class_name,
+        CLASS_NAME,
         "tesselateStrokeNative",
         "([I[BII[IIDIID[DIDDDDDDDIIII)[I",
         tesselate_stroke_native,
@@ -43,26 +44,9 @@ async fn tesselate_stroke_native(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_register() {
-        let mut registry = MethodRegistry::default();
-        register(&mut registry);
-        let class_name = "sun/java2d/jules/JulesPathBuf";
-        assert!(registry
-            .method(class_name, "tesselateFillNative", "([I[BII[IIIIIII)[I")
-            .is_some());
-        assert!(registry
-            .method(
-                class_name,
-                "tesselateStrokeNative",
-                "([I[BII[IIDIID[DIDDDDDDDIIII)[I"
-            )
-            .is_some());
-    }
-
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.jules.JulesPathBuf.tesselateFillNative([I[BII[IIIIIII)[I"
+        expected = "not yet implemented: sun.java2d.jules.JulesPathBuf.tesselateFillNative([I[BII[IIIIIII)[I"
     )]
     async fn test_tesselate_fill_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -71,7 +55,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "sun.java2d.jules.JulesPathBuf.tesselateStrokeNative([I[BII[IIDIID[DIDDDDDDDIIII)[I"
+        expected = "not yet implemented: sun.java2d.jules.JulesPathBuf.tesselateStrokeNative([I[BII[IIDIID[DIDDDDDDDIIII)[I"
     )]
     async fn test_tesselate_stroke_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

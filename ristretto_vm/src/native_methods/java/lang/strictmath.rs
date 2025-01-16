@@ -1,5 +1,5 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_20, JAVA_8};
 use crate::thread::Thread;
 #[cfg(target_arch = "wasm32")]
 use crate::Error::InternalError;
@@ -8,128 +8,124 @@ use crate::Result;
 use async_recursion::async_recursion;
 #[cfg(not(target_arch = "wasm32"))]
 use rand::Rng;
-use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::ops::Rem;
 use std::sync::Arc;
 
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_20: Version = Version::Java20 { minor: 0 };
+const CLASS_NAME: &str = "java/lang/StrictMath";
 
 /// Register all native methods for `java.lang.StrictMath`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    let class_name = "java/lang/StrictMath";
     let use_optimizations = registry.use_optimizations();
-    let java_version = registry.java_version().clone();
 
-    if use_optimizations || java_version <= JAVA_8 {
-        registry.register(class_name, "cbrt", "(D)D", cbrt);
-        registry.register(class_name, "exp", "(D)D", exp);
-        registry.register(class_name, "hypot", "(DD)D", hypot);
-        registry.register(class_name, "pow", "(DD)D", pow);
+    if use_optimizations || registry.java_major_version() <= JAVA_8 {
+        registry.register(CLASS_NAME, "cbrt", "(D)D", cbrt);
+        registry.register(CLASS_NAME, "exp", "(D)D", exp);
+        registry.register(CLASS_NAME, "hypot", "(DD)D", hypot);
+        registry.register(CLASS_NAME, "pow", "(DD)D", pow);
     }
 
-    if use_optimizations || java_version <= JAVA_20 {
-        registry.register(class_name, "IEEEremainder", "(DD)D", ieee_remainder);
-        registry.register(class_name, "acos", "(D)D", acos);
-        registry.register(class_name, "asin", "(D)D", asin);
-        registry.register(class_name, "atan", "(D)D", atan);
-        registry.register(class_name, "atan2", "(DD)D", atan_2);
-        registry.register(class_name, "cos", "(D)D", cos);
-        registry.register(class_name, "cosh", "(D)D", cosh);
-        registry.register(class_name, "expm1", "(D)D", expm_1);
-        registry.register(class_name, "log", "(D)D", log);
-        registry.register(class_name, "log10", "(D)D", log_10);
-        registry.register(class_name, "log1p", "(D)D", log_1p);
-        registry.register(class_name, "sin", "(D)D", sin);
-        registry.register(class_name, "sinh", "(D)D", sinh);
-        registry.register(class_name, "sqrt", "(D)D", sqrt);
-        registry.register(class_name, "tan", "(D)D", tan);
-        registry.register(class_name, "tanh", "(D)D", tanh);
+    if use_optimizations || registry.java_major_version() <= JAVA_20 {
+        registry.register(CLASS_NAME, "IEEEremainder", "(DD)D", ieee_remainder);
+        registry.register(CLASS_NAME, "acos", "(D)D", acos);
+        registry.register(CLASS_NAME, "asin", "(D)D", asin);
+        registry.register(CLASS_NAME, "atan", "(D)D", atan);
+        registry.register(CLASS_NAME, "atan2", "(DD)D", atan_2);
+        registry.register(CLASS_NAME, "cos", "(D)D", cos);
+        registry.register(CLASS_NAME, "cosh", "(D)D", cosh);
+        registry.register(CLASS_NAME, "expm1", "(D)D", expm_1);
+        registry.register(CLASS_NAME, "log", "(D)D", log);
+        registry.register(CLASS_NAME, "log10", "(D)D", log_10);
+        registry.register(CLASS_NAME, "log1p", "(D)D", log_1p);
+        registry.register(CLASS_NAME, "sin", "(D)D", sin);
+        registry.register(CLASS_NAME, "sinh", "(D)D", sinh);
+        registry.register(CLASS_NAME, "sqrt", "(D)D", sqrt);
+        registry.register(CLASS_NAME, "tan", "(D)D", tan);
+        registry.register(CLASS_NAME, "tanh", "(D)D", tanh);
     }
 
     if use_optimizations {
-        registry.register(class_name, "abs", "(D)D", abs_d);
-        registry.register(class_name, "abs", "(F)F", abs_f);
-        registry.register(class_name, "abs", "(I)I", abs_i);
-        registry.register(class_name, "abs", "(J)J", abs_j);
-        registry.register(class_name, "absExact", "(I)I", abs_exact_i);
-        registry.register(class_name, "absExact", "(J)J", abs_exact_j);
-        registry.register(class_name, "addExact", "(II)I", add_exact_i);
-        registry.register(class_name, "addExact", "(JJ)J", add_exact_j);
-        registry.register(class_name, "ceil", "(D)D", ceil);
-        registry.register(class_name, "ceilDiv", "(II)I", ceil_div_i);
-        registry.register(class_name, "ceilDiv", "(JI)J", ceil_div_j_1);
-        registry.register(class_name, "ceilDiv", "(JJ)J", ceil_div_j_2);
-        registry.register(class_name, "ceilDivExact", "(II)I", ceil_div_exact_i);
-        registry.register(class_name, "ceilDivExact", "(JJ)J", ceil_div_exact_j);
-        registry.register(class_name, "ceilMod", "(II)I", ceil_mod_i);
-        registry.register(class_name, "ceilMod", "(JI)I", ceil_mod_j_1);
-        registry.register(class_name, "ceilMod", "(JJ)J", ceil_mod_j_2);
-        registry.register(class_name, "clamp", "(DDD)D", clamp_d);
-        registry.register(class_name, "clamp", "(FFF)F", clamp_f);
-        registry.register(class_name, "clamp", "(JII)I", clamp_i);
-        registry.register(class_name, "clamp", "(JJJ)J", clamp_j);
-        registry.register(class_name, "copySign", "(DD)D", copy_sign_d);
-        registry.register(class_name, "copySign", "(FF)F", copy_sign_f);
-        registry.register(class_name, "decrementExact", "(I)I", decrement_exact_i);
-        registry.register(class_name, "decrementExact", "(J)J", decrement_exact_j);
-        registry.register(class_name, "divideExact", "(II)I", divide_exact_i);
-        registry.register(class_name, "divideExact", "(JJ)J", divide_exact_j);
-        registry.register(class_name, "floor", "(D)D", floor);
-        registry.register(class_name, "floorDiv", "(II)I", floor_div_i);
-        registry.register(class_name, "floorDiv", "(JI)J", floor_div_j_1);
-        registry.register(class_name, "floorDiv", "(JJ)J", floor_div_j_2);
-        registry.register(class_name, "floorDivExact", "(II)I", floor_div_exact_i);
-        registry.register(class_name, "floorDivExact", "(JJ)J", floor_div_exact_j);
-        registry.register(class_name, "floorMod", "(II)I", floor_mod_i);
-        registry.register(class_name, "floorMod", "(JI)I", floor_mod_j_1);
-        registry.register(class_name, "floorMod", "(JJ)J", floor_mod_j_2);
-        registry.register(class_name, "fma", "(DDD)D", fma_d);
-        registry.register(class_name, "fma", "(FFF)F", fma_f);
-        registry.register(class_name, "getExponent", "(D)I", get_exponent_d);
-        registry.register(class_name, "getExponent", "(F)I", get_exponent_f);
-        registry.register(class_name, "incrementExact", "(I)I", increment_exact_i);
-        registry.register(class_name, "incrementExact", "(J)J", increment_exact_j);
-        registry.register(class_name, "max", "(DD)D", max_d);
-        registry.register(class_name, "max", "(FF)F", max_f);
-        registry.register(class_name, "max", "(II)I", max_i);
-        registry.register(class_name, "max", "(JJ)J", max_j);
-        registry.register(class_name, "min", "(DD)D", min_d);
-        registry.register(class_name, "min", "(FF)F", min_f);
-        registry.register(class_name, "min", "(II)I", min_i);
-        registry.register(class_name, "min", "(JJ)J", min_j);
-        registry.register(class_name, "multiplyExact", "(II)I", multiply_exact_i);
-        registry.register(class_name, "multiplyExact", "(JI)J", multiply_exact_j_1);
-        registry.register(class_name, "multiplyExact", "(JJ)J", multiply_exact_j_2);
-        registry.register(class_name, "multiplyFull", "(II)J", multiply_full);
-        registry.register(class_name, "multiplyHigh", "(JJ)J", multiply_high);
-        registry.register(class_name, "negateExact", "(I)I", negate_exact_i);
-        registry.register(class_name, "negateExact", "(J)J", negate_exact_j);
-        registry.register(class_name, "nextAfter", "(DD)D", next_after_d);
-        registry.register(class_name, "nextAfter", "(FD)F", next_after_f);
-        registry.register(class_name, "nextDown", "(D)D", next_down_d);
-        registry.register(class_name, "nextDown", "(F)F", next_down_f);
-        registry.register(class_name, "nextUp", "(D)D", next_up_d);
-        registry.register(class_name, "nextUp", "(F)F", next_up_f);
-        registry.register(class_name, "random", "()D", random);
-        registry.register(class_name, "rint", "(D)D", rint);
-        registry.register(class_name, "round", "(D)J", round_d);
-        registry.register(class_name, "round", "(F)I", round_f);
-        registry.register(class_name, "scalb", "(DI)D", scalb_d);
-        registry.register(class_name, "scalb", "(FI)F", scalb_f);
-        registry.register(class_name, "signum", "(D)D", signum_d);
-        registry.register(class_name, "signum", "(F)F", signum_f);
-        registry.register(class_name, "subtractExact", "(II)I", subtract_exact_i);
-        registry.register(class_name, "subtractExact", "(JJ)J", subtract_exact_j);
-        registry.register(class_name, "toDegrees", "(D)D", to_degrees);
-        registry.register(class_name, "toIntExact", "(J)I", to_int_exact);
-        registry.register(class_name, "toRadians", "(D)D", to_radians);
-        registry.register(class_name, "ulp", "(D)D", ulp_d);
-        registry.register(class_name, "ulp", "(F)F", ulp_f);
+        registry.register(CLASS_NAME, "abs", "(D)D", abs_d);
+        registry.register(CLASS_NAME, "abs", "(F)F", abs_f);
+        registry.register(CLASS_NAME, "abs", "(I)I", abs_i);
+        registry.register(CLASS_NAME, "abs", "(J)J", abs_j);
+        registry.register(CLASS_NAME, "absExact", "(I)I", abs_exact_i);
+        registry.register(CLASS_NAME, "absExact", "(J)J", abs_exact_j);
+        registry.register(CLASS_NAME, "addExact", "(II)I", add_exact_i);
+        registry.register(CLASS_NAME, "addExact", "(JJ)J", add_exact_j);
+        registry.register(CLASS_NAME, "ceil", "(D)D", ceil);
+        registry.register(CLASS_NAME, "ceilDiv", "(II)I", ceil_div_i);
+        registry.register(CLASS_NAME, "ceilDiv", "(JI)J", ceil_div_j_1);
+        registry.register(CLASS_NAME, "ceilDiv", "(JJ)J", ceil_div_j_2);
+        registry.register(CLASS_NAME, "ceilDivExact", "(II)I", ceil_div_exact_i);
+        registry.register(CLASS_NAME, "ceilDivExact", "(JJ)J", ceil_div_exact_j);
+        registry.register(CLASS_NAME, "ceilMod", "(II)I", ceil_mod_i);
+        registry.register(CLASS_NAME, "ceilMod", "(JI)I", ceil_mod_j_1);
+        registry.register(CLASS_NAME, "ceilMod", "(JJ)J", ceil_mod_j_2);
+        registry.register(CLASS_NAME, "clamp", "(DDD)D", clamp_d);
+        registry.register(CLASS_NAME, "clamp", "(FFF)F", clamp_f);
+        registry.register(CLASS_NAME, "clamp", "(JII)I", clamp_i);
+        registry.register(CLASS_NAME, "clamp", "(JJJ)J", clamp_j);
+        registry.register(CLASS_NAME, "copySign", "(DD)D", copy_sign_d);
+        registry.register(CLASS_NAME, "copySign", "(FF)F", copy_sign_f);
+        registry.register(CLASS_NAME, "decrementExact", "(I)I", decrement_exact_i);
+        registry.register(CLASS_NAME, "decrementExact", "(J)J", decrement_exact_j);
+        registry.register(CLASS_NAME, "divideExact", "(II)I", divide_exact_i);
+        registry.register(CLASS_NAME, "divideExact", "(JJ)J", divide_exact_j);
+        registry.register(CLASS_NAME, "floor", "(D)D", floor);
+        registry.register(CLASS_NAME, "floorDiv", "(II)I", floor_div_i);
+        registry.register(CLASS_NAME, "floorDiv", "(JI)J", floor_div_j_1);
+        registry.register(CLASS_NAME, "floorDiv", "(JJ)J", floor_div_j_2);
+        registry.register(CLASS_NAME, "floorDivExact", "(II)I", floor_div_exact_i);
+        registry.register(CLASS_NAME, "floorDivExact", "(JJ)J", floor_div_exact_j);
+        registry.register(CLASS_NAME, "floorMod", "(II)I", floor_mod_i);
+        registry.register(CLASS_NAME, "floorMod", "(JI)I", floor_mod_j_1);
+        registry.register(CLASS_NAME, "floorMod", "(JJ)J", floor_mod_j_2);
+        registry.register(CLASS_NAME, "fma", "(DDD)D", fma_d);
+        registry.register(CLASS_NAME, "fma", "(FFF)F", fma_f);
+        registry.register(CLASS_NAME, "getExponent", "(D)I", get_exponent_d);
+        registry.register(CLASS_NAME, "getExponent", "(F)I", get_exponent_f);
+        registry.register(CLASS_NAME, "incrementExact", "(I)I", increment_exact_i);
+        registry.register(CLASS_NAME, "incrementExact", "(J)J", increment_exact_j);
+        registry.register(CLASS_NAME, "max", "(DD)D", max_d);
+        registry.register(CLASS_NAME, "max", "(FF)F", max_f);
+        registry.register(CLASS_NAME, "max", "(II)I", max_i);
+        registry.register(CLASS_NAME, "max", "(JJ)J", max_j);
+        registry.register(CLASS_NAME, "min", "(DD)D", min_d);
+        registry.register(CLASS_NAME, "min", "(FF)F", min_f);
+        registry.register(CLASS_NAME, "min", "(II)I", min_i);
+        registry.register(CLASS_NAME, "min", "(JJ)J", min_j);
+        registry.register(CLASS_NAME, "multiplyExact", "(II)I", multiply_exact_i);
+        registry.register(CLASS_NAME, "multiplyExact", "(JI)J", multiply_exact_j_1);
+        registry.register(CLASS_NAME, "multiplyExact", "(JJ)J", multiply_exact_j_2);
+        registry.register(CLASS_NAME, "multiplyFull", "(II)J", multiply_full);
+        registry.register(CLASS_NAME, "multiplyHigh", "(JJ)J", multiply_high);
+        registry.register(CLASS_NAME, "negateExact", "(I)I", negate_exact_i);
+        registry.register(CLASS_NAME, "negateExact", "(J)J", negate_exact_j);
+        registry.register(CLASS_NAME, "nextAfter", "(DD)D", next_after_d);
+        registry.register(CLASS_NAME, "nextAfter", "(FD)F", next_after_f);
+        registry.register(CLASS_NAME, "nextDown", "(D)D", next_down_d);
+        registry.register(CLASS_NAME, "nextDown", "(F)F", next_down_f);
+        registry.register(CLASS_NAME, "nextUp", "(D)D", next_up_d);
+        registry.register(CLASS_NAME, "nextUp", "(F)F", next_up_f);
+        registry.register(CLASS_NAME, "random", "()D", random);
+        registry.register(CLASS_NAME, "rint", "(D)D", rint);
+        registry.register(CLASS_NAME, "round", "(D)J", round_d);
+        registry.register(CLASS_NAME, "round", "(F)I", round_f);
+        registry.register(CLASS_NAME, "scalb", "(DI)D", scalb_d);
+        registry.register(CLASS_NAME, "scalb", "(FI)F", scalb_f);
+        registry.register(CLASS_NAME, "signum", "(D)D", signum_d);
+        registry.register(CLASS_NAME, "signum", "(F)F", signum_f);
+        registry.register(CLASS_NAME, "subtractExact", "(II)I", subtract_exact_i);
+        registry.register(CLASS_NAME, "subtractExact", "(JJ)J", subtract_exact_j);
+        registry.register(CLASS_NAME, "toDegrees", "(D)D", to_degrees);
+        registry.register(CLASS_NAME, "toIntExact", "(J)I", to_int_exact);
+        registry.register(CLASS_NAME, "toRadians", "(D)D", to_radians);
+        registry.register(CLASS_NAME, "ulp", "(D)D", ulp_d);
+        registry.register(CLASS_NAME, "ulp", "(F)F", ulp_f);
         registry.register(
-            class_name,
+            CLASS_NAME,
             "unsignedMultiplyHigh",
             "(JJ)J",
             unsigned_multiply_high,
@@ -1378,151 +1374,6 @@ pub(crate) async fn unsigned_multiply_high(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    #[expect(clippy::too_many_lines)]
-    fn test_register() {
-        let mut registry = MethodRegistry::new(&Version::Java8 { minor: 0 }, true);
-        register(&mut registry);
-        let class_name = "java/lang/StrictMath";
-        assert!(registry
-            .method(class_name, "IEEEremainder", "(DD)D")
-            .is_some());
-        assert!(registry.method(class_name, "abs", "(D)D").is_some());
-        assert!(registry.method(class_name, "abs", "(F)F").is_some());
-        assert!(registry.method(class_name, "abs", "(I)I").is_some());
-        assert!(registry.method(class_name, "abs", "(J)J").is_some());
-        assert!(registry.method(class_name, "absExact", "(I)I").is_some());
-        assert!(registry.method(class_name, "absExact", "(J)J").is_some());
-        assert!(registry.method(class_name, "acos", "(D)D").is_some());
-        assert!(registry.method(class_name, "addExact", "(II)I").is_some());
-        assert!(registry.method(class_name, "addExact", "(JJ)J").is_some());
-        assert!(registry.method(class_name, "asin", "(D)D").is_some());
-        assert!(registry.method(class_name, "atan", "(D)D").is_some());
-        assert!(registry.method(class_name, "atan2", "(DD)D").is_some());
-        assert!(registry.method(class_name, "cbrt", "(D)D").is_some());
-        assert!(registry.method(class_name, "ceil", "(D)D").is_some());
-        assert!(registry.method(class_name, "ceilDiv", "(II)I").is_some());
-        assert!(registry.method(class_name, "ceilDiv", "(JI)J").is_some());
-        assert!(registry.method(class_name, "ceilDiv", "(JJ)J").is_some());
-        assert!(registry
-            .method(class_name, "ceilDivExact", "(II)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "ceilDivExact", "(JJ)J")
-            .is_some());
-        assert!(registry.method(class_name, "ceilMod", "(II)I").is_some());
-        assert!(registry.method(class_name, "ceilMod", "(JI)I").is_some());
-        assert!(registry.method(class_name, "ceilMod", "(JJ)J").is_some());
-        assert!(registry.method(class_name, "clamp", "(DDD)D").is_some());
-        assert!(registry.method(class_name, "clamp", "(FFF)F").is_some());
-        assert!(registry.method(class_name, "clamp", "(JII)I").is_some());
-        assert!(registry.method(class_name, "clamp", "(JJJ)J").is_some());
-        assert!(registry.method(class_name, "copySign", "(DD)D").is_some());
-        assert!(registry.method(class_name, "copySign", "(FF)F").is_some());
-        assert!(registry.method(class_name, "cos", "(D)D").is_some());
-        assert!(registry.method(class_name, "cosh", "(D)D").is_some());
-        assert!(registry
-            .method(class_name, "decrementExact", "(I)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "decrementExact", "(J)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "divideExact", "(II)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "divideExact", "(JJ)J")
-            .is_some());
-        assert!(registry.method(class_name, "exp", "(D)D").is_some());
-        assert!(registry.method(class_name, "expm1", "(D)D").is_some());
-        assert!(registry.method(class_name, "floor", "(D)D").is_some());
-        assert!(registry.method(class_name, "floorDiv", "(II)I").is_some());
-        assert!(registry.method(class_name, "floorDiv", "(JI)J").is_some());
-        assert!(registry.method(class_name, "floorDiv", "(JJ)J").is_some());
-        assert!(registry
-            .method(class_name, "floorDivExact", "(II)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "floorDivExact", "(JJ)J")
-            .is_some());
-        assert!(registry.method(class_name, "floorMod", "(II)I").is_some());
-        assert!(registry.method(class_name, "floorMod", "(JI)I").is_some());
-        assert!(registry.method(class_name, "floorMod", "(JJ)J").is_some());
-        assert!(registry.method(class_name, "fma", "(DDD)D").is_some());
-        assert!(registry.method(class_name, "fma", "(FFF)F").is_some());
-        assert!(registry.method(class_name, "getExponent", "(D)I").is_some());
-        assert!(registry.method(class_name, "getExponent", "(F)I").is_some());
-        assert!(registry.method(class_name, "hypot", "(DD)D").is_some());
-        assert!(registry
-            .method(class_name, "incrementExact", "(I)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "incrementExact", "(J)J")
-            .is_some());
-        assert!(registry.method(class_name, "log", "(D)D").is_some());
-        assert!(registry.method(class_name, "log10", "(D)D").is_some());
-        assert!(registry.method(class_name, "log1p", "(D)D").is_some());
-        assert!(registry.method(class_name, "max", "(DD)D").is_some());
-        assert!(registry.method(class_name, "max", "(FF)F").is_some());
-        assert!(registry.method(class_name, "max", "(II)I").is_some());
-        assert!(registry.method(class_name, "max", "(JJ)J").is_some());
-        assert!(registry.method(class_name, "min", "(DD)D").is_some());
-        assert!(registry.method(class_name, "min", "(FF)F").is_some());
-        assert!(registry.method(class_name, "min", "(II)I").is_some());
-        assert!(registry.method(class_name, "min", "(JJ)J").is_some());
-        assert!(registry
-            .method(class_name, "multiplyExact", "(II)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "multiplyExact", "(JI)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "multiplyExact", "(JJ)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "multiplyFull", "(II)J")
-            .is_some());
-        assert!(registry
-            .method(class_name, "multiplyHigh", "(JJ)J")
-            .is_some());
-        assert!(registry.method(class_name, "negateExact", "(I)I").is_some());
-        assert!(registry.method(class_name, "negateExact", "(J)J").is_some());
-        assert!(registry.method(class_name, "nextAfter", "(DD)D").is_some());
-        assert!(registry.method(class_name, "nextAfter", "(FD)F").is_some());
-        assert!(registry.method(class_name, "nextDown", "(D)D").is_some());
-        assert!(registry.method(class_name, "nextDown", "(F)F").is_some());
-        assert!(registry.method(class_name, "nextUp", "(D)D").is_some());
-        assert!(registry.method(class_name, "nextUp", "(F)F").is_some());
-        assert!(registry.method(class_name, "pow", "(DD)D").is_some());
-        assert!(registry.method(class_name, "random", "()D").is_some());
-        assert!(registry.method(class_name, "rint", "(D)D").is_some());
-        assert!(registry.method(class_name, "round", "(D)J").is_some());
-        assert!(registry.method(class_name, "round", "(F)I").is_some());
-        assert!(registry.method(class_name, "scalb", "(DI)D").is_some());
-        assert!(registry.method(class_name, "scalb", "(FI)F").is_some());
-        assert!(registry.method(class_name, "signum", "(D)D").is_some());
-        assert!(registry.method(class_name, "signum", "(F)F").is_some());
-        assert!(registry.method(class_name, "sin", "(D)D").is_some());
-        assert!(registry.method(class_name, "sinh", "(D)D").is_some());
-        assert!(registry.method(class_name, "sqrt", "(D)D").is_some());
-        assert!(registry
-            .method(class_name, "subtractExact", "(II)I")
-            .is_some());
-        assert!(registry
-            .method(class_name, "subtractExact", "(JJ)J")
-            .is_some());
-        assert!(registry.method(class_name, "tan", "(D)D").is_some());
-        assert!(registry.method(class_name, "tanh", "(D)D").is_some());
-        assert!(registry.method(class_name, "toDegrees", "(D)D").is_some());
-        assert!(registry.method(class_name, "toIntExact", "(J)I").is_some());
-        assert!(registry.method(class_name, "toRadians", "(D)D").is_some());
-        assert!(registry.method(class_name, "ulp", "(D)D").is_some());
-        assert!(registry.method(class_name, "ulp", "(F)F").is_some());
-        assert!(registry
-            .method(class_name, "unsignedMultiplyHigh", "(JJ)J")
-            .is_some());
-    }
 
     #[tokio::test]
     async fn test_ieee_remainder() -> Result<()> {
