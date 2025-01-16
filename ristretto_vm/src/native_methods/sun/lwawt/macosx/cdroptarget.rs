@@ -17,14 +17,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;Ljava/awt/peer/ComponentPeer;J)J",
             create_native_drop_target,
         );
+    } else {
+        registry.register(
+            CLASS_NAME,
+            "createNativeDropTarget",
+            "(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J",
+            create_native_drop_target,
+        );
     }
 
-    registry.register(
-        CLASS_NAME,
-        "createNativeDropTarget",
-        "(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J",
-        create_native_drop_target,
-    );
     registry.register(
         CLASS_NAME,
         "releaseNativeDropTarget",

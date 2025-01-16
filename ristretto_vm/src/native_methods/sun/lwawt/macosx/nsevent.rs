@@ -40,18 +40,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "([I[I)V",
         ns_key_modifiers_to_java_key_info,
     );
-    registry.register(CLASS_NAME, "nsToJavaChar", "(CIZ)C", ns_to_java_char);
     registry.register(
         CLASS_NAME,
         "nsToJavaKeyInfo",
         "([I[I)Z",
         ns_to_java_key_info,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nsToJavaModifiers",
-        "(I)I",
-        ns_to_java_modifiers,
     );
 }
 

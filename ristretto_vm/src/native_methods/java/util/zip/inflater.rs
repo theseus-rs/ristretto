@@ -12,44 +12,45 @@ const CLASS_NAME: &str = "java/util/zip/Inflater";
 pub(crate) fn register(registry: &mut MethodRegistry) {
     if registry.java_major_version() <= JAVA_8 {
         registry.register(CLASS_NAME, "inflateBytes", "(J[BII)I", inflate_bytes);
+    } else {
+        registry.register(
+            CLASS_NAME,
+            "inflateBufferBuffer",
+            "(JJIJI)J",
+            inflate_buffer_buffer,
+        );
+        registry.register(
+            CLASS_NAME,
+            "inflateBufferBytes",
+            "(JJI[BII)J",
+            inflate_buffer_bytes,
+        );
+        registry.register(
+            CLASS_NAME,
+            "inflateBytesBuffer",
+            "(J[BIIJI)J",
+            inflate_bytes_buffer,
+        );
+        registry.register(
+            CLASS_NAME,
+            "inflateBytesBytes",
+            "(J[BII[BII)J",
+            inflate_bytes_bytes,
+        );
+        registry.register(
+            CLASS_NAME,
+            "setDictionaryBuffer",
+            "(JJI)V",
+            set_dictionary_buffer,
+        );
     }
 
     registry.register(CLASS_NAME, "end", "(J)V", end);
     registry.register(CLASS_NAME, "getAdler", "(J)I", get_adler);
-    registry.register(
-        CLASS_NAME,
-        "inflateBufferBuffer",
-        "(JJIJI)J",
-        inflate_buffer_buffer,
-    );
-    registry.register(
-        CLASS_NAME,
-        "inflateBufferBytes",
-        "(JJI[BII)J",
-        inflate_buffer_bytes,
-    );
-    registry.register(
-        CLASS_NAME,
-        "inflateBytesBuffer",
-        "(J[BIIJI)J",
-        inflate_bytes_buffer,
-    );
-    registry.register(
-        CLASS_NAME,
-        "inflateBytesBytes",
-        "(J[BII[BII)J",
-        inflate_bytes_bytes,
-    );
     registry.register(CLASS_NAME, "init", "(Z)J", init);
     registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
     registry.register(CLASS_NAME, "reset", "(J)V", reset);
     registry.register(CLASS_NAME, "setDictionary", "(J[BII)V", set_dictionary);
-    registry.register(
-        CLASS_NAME,
-        "setDictionaryBuffer",
-        "(JJI)V",
-        set_dictionary_buffer,
-    );
 }
 
 #[async_recursion(?Send)]

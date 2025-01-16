@@ -39,6 +39,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
     if registry.java_major_version() >= JAVA_18 {
         registry.register(CLASS_NAME, "C_SessionCancel", "(JJ)V", c_session_cancel);
+        registry.register(
+            CLASS_NAME,
+            "connect",
+            "(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;",
+            connect,
+        );
     }
     if registry.java_major_version() <= JAVA_18 {
         registry.register(CLASS_NAME, "disconnect", "()V", disconnect);
@@ -269,12 +275,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "C_WrapKey",
         "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JJ)[B",
         c_wrap_key,
-    );
-    registry.register(
-        CLASS_NAME,
-        "connect",
-        "(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;",
-        connect,
     );
     registry.register(
         CLASS_NAME,

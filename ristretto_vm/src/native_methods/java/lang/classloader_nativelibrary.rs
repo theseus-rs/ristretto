@@ -17,9 +17,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     } else {
         registry.register(CLASS_NAME, "findEntry", "(Ljava/lang/String;)J", find_entry);
         registry.register(CLASS_NAME, "load0", "(Ljava/lang/String;ZZ)Z", load_0);
+        registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;ZJ)V", unload);
     }
-
-    registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;ZJ)V", unload);
 }
 
 #[async_recursion(?Send)]

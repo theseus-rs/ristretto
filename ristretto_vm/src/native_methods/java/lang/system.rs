@@ -20,6 +20,15 @@ const CLASS_NAME: &str = "java/lang/System";
 
 /// Register all native methods for `java.lang.System`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
+    if registry.java_major_version() <= JAVA_11 {
+        registry.register(
+            CLASS_NAME,
+            "initProperties",
+            "(Ljava/util/Properties;)Ljava/util/Properties;",
+            init_properties,
+        );
+    }
+
     registry.register(
         CLASS_NAME,
         "arraycopy",
@@ -44,12 +53,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "identityHashCode",
         "(Ljava/lang/Object;)I",
         identity_hash_code,
-    );
-    registry.register(
-        CLASS_NAME,
-        "initProperties",
-        "(Ljava/util/Properties;)Ljava/util/Properties;",
-        init_properties,
     );
     registry.register(
         CLASS_NAME,

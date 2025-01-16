@@ -1,6 +1,6 @@
 use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
-use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_18};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_18, JAVA_19};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -26,6 +26,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
         registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;ZZJ)V", unload);
     }
+    if registry.java_major_version() >= JAVA_19 {
+        registry.register(
+            CLASS_NAME,
+            "load",
+            "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z",
+            load,
+        );
+        registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;ZJ)V", unload);
+    }
 
     registry.register(
         CLASS_NAME,
@@ -33,13 +42,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/String;)Ljava/lang/String;",
         find_builtin_lib,
     );
-    registry.register(
-        CLASS_NAME,
-        "load",
-        "(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z",
-        load,
-    );
-    registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;ZJ)V", unload);
 }
 
 #[async_recursion(?Send)]

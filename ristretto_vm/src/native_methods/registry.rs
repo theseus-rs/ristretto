@@ -55,6 +55,7 @@ impl MethodRegistry {
                 apple::launcher::javaapplauncher::register(self);
                 com::apple::concurrent::libdispatchnative::register(self);
                 com::apple::laf::screenpopupfactory::register(self);
+                sun::awt::cgraphicsconfig::register(self);
             }
             com::sun::demo::jvmti::hprof::tracker::register(self);
             com::sun::java::swing::plaf::gtk::gtkengine::register(self);
@@ -68,7 +69,6 @@ impl MethodRegistry {
             java::util::jar::jarfile::register(self);
             java::util::logging::filehandler::register(self);
             java::util::zip::zipfile::register(self);
-            sun::awt::cgraphicsconfig::register(self);
             sun::awt::defaultmouseinfopeer::register(self);
             sun::awt::fcfontmanager::register(self);
             sun::awt::unixtoolkit::register(self);
@@ -111,8 +111,13 @@ impl MethodRegistry {
             sun::misc::vm::register(self);
             sun::misc::vmsupport::register(self);
             sun::net::extendedoptionsimpl::register(self);
-            sun::nio::ch::kqueuearraywrapper::register(self);
-            sun::nio::ch::kqueueport::register(self);
+
+            #[cfg(target_os = "macos")]
+            {
+                sun::nio::ch::kqueuearraywrapper::register(self);
+                sun::nio::ch::kqueueport::register(self);
+            }
+
             sun::nio::ch::pollarraywrapper::register(self);
             sun::nio::ch::sctp::sctpnet::register(self);
             sun::reflect::constantpool::register(self);
@@ -150,7 +155,6 @@ impl MethodRegistry {
             java::lang::stackstreamfactory::register(self);
             java::lang::stackstreamfactory_abstractstackwalker::register(self);
             java::lang::stacktraceelement::register(self);
-            java::lang::stringutf16::register(self);
             java::lang::invoke::varhandle::register(self);
             java::lang::r#ref::reference::register(self);
             jdk::internal::agent::filesystemimpl::register(self);
@@ -162,32 +166,35 @@ impl MethodRegistry {
             jdk::internal::perf::perf::register(self);
             jdk::internal::reflect::constantpool::register(self);
 
-            if self.java_major_version <= JAVA_22 {
+            if self.java_major_version <= JAVA_21 {
                 jdk::internal::reflect::nativeconstructoraccessorimpl::register(self);
                 jdk::internal::reflect::nativemethodaccessorimpl::register(self);
+            }
+            if self.java_major_version <= JAVA_22 {
+                java::lang::stringutf16::register(self);
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+                jdk::net::macosxsocketoptions::register(self);
+                sun::nio::fs::utifiletypedetector::register(self);
+                sun::tools::attach::virtualmachineimpl::register(self);
             }
 
             jdk::internal::reflect::reflection::register(self);
             jdk::internal::vm::vmsupport::register(self);
             jdk::jfr::internal::jvm::register(self);
-
-            #[cfg(target_os = "macos")]
-            {
-                jdk::net::macosxsocketoptions::register(self);
-            }
-
             jdk::vm::ci::runtime::jvmci::register(self);
             sun::nio::ch::pollselectorimpl::register(self);
             sun::rmi::transport::gc::register(self);
             sun::security::pkcs11::secmod::register(self);
             sun::security::pkcs11::wrapper::pkcs11::register(self);
-            sun::tools::attach::virtualmachineimpl::register(self);
         }
 
         if self.java_major_version <= JAVA_17 {
             java::net::datagrampacket::register(self);
-            java::net::plaindatagramsocketimpl::register(self);
             java::net::plainsocketimpl::register(self);
+            java::net::plaindatagramsocketimpl::register(self);
             java::net::socketinputstream::register(self);
             java::net::socketoutputstream::register(self);
         }
@@ -197,6 +204,18 @@ impl MethodRegistry {
             jdk::internal::invoke::nativeentrypoint::register(self);
         }
         if self.java_major_version >= JAVA_17 {
+            #[cfg(target_os = "macos")]
+            {
+                sun::awt::platformgraphicsinfo::register(self);
+                sun::java2d::metal::mtlgraphicsconfig::register(self);
+                sun::java2d::metal::mtllayer::register(self);
+                sun::java2d::metal::mtlmaskfill::register(self);
+                sun::java2d::metal::mtlrenderqueue::register(self);
+                sun::java2d::metal::mtlrenderer::register(self);
+                sun::java2d::metal::mtlsurfacedata::register(self);
+                sun::java2d::metal::mtltextrenderer::register(self);
+            }
+
             java::lang::invoke::lambdaproxyclassarchive::register(self);
             java::lang::nullpointerexception::register(self);
             java::lang::r#ref::phantomreference::register(self);
@@ -207,15 +226,7 @@ impl MethodRegistry {
             jdk::internal::misc::scopedmemoryaccess::register(self);
             jdk::internal::util::systemprops_raw::register(self);
             jdk::internal::vm::vector::vectorsupport::register(self);
-            sun::awt::platformgraphicsinfo::register(self);
             sun::font::colorglyphsurfacedata::register(self);
-            sun::java2d::metal::mtlgraphicsconfig::register(self);
-            sun::java2d::metal::mtllayer::register(self);
-            sun::java2d::metal::mtlmaskfill::register(self);
-            sun::java2d::metal::mtlrenderqueue::register(self);
-            sun::java2d::metal::mtlrenderer::register(self);
-            sun::java2d::metal::mtlsurfacedata::register(self);
-            sun::java2d::metal::mtltextrenderer::register(self);
             sun::nio::ch::nativesocketaddress::register(self);
             sun::nio::ch::socketdispatcher::register(self);
             sun::nio::ch::unixdomainsockets::register(self);
@@ -249,9 +260,13 @@ impl MethodRegistry {
             java::lang::strictmath::register(self);
         }
         if self.java_major_version >= JAVA_20 {
+            #[cfg(target_os = "macos")]
+            {
+                sun::nio::fs::bsdfilesystem::register(self);
+            }
+
             sun::nio::ch::unixdispatcher::register(self);
             sun::nio::ch::unixfiledispatcherimpl::register(self);
-            sun::nio::fs::bsdfilesystem::register(self);
             sun::nio::fs::unixfilesystem::register(self);
         }
 
@@ -268,7 +283,6 @@ impl MethodRegistry {
         if self.java_major_version >= JAVA_21 {
             jdk::internal::foreign::abi::fallback::libfallback::register(self);
             jdk::internal::io::jdkconsoleimpl::register(self);
-            jdk::internal::org::jline::terminal::r#impl::jna::osx::clibraryimpl::register(self);
             jdk::internal::vm::foreignlinkersupport::register(self);
         }
 
@@ -294,6 +308,18 @@ impl MethodRegistry {
             com::apple::laf::aquanativeresources::register(self);
             com::apple::laf::screenmenu::register(self);
             java::util::prefs::macosxpreferencesfile::register(self);
+            jdk::internal::org::jline::terminal::r#impl::jna::osx::clibraryimpl::register(self);
+            sun::awt::cgraphicsdevice::register(self);
+            sun::awt::cgraphicsenvironment::register(self);
+            sun::font::cchartoglyphmapper::register(self);
+            sun::font::cfont::register(self);
+            sun::font::cfontmanager::register(self);
+            sun::font::cstrike::register(self);
+            sun::font::cstrikedisposer::register(self);
+            sun::java2d::crenderer::register(self);
+            sun::java2d::opengl::cglgraphicsconfig::register(self);
+            sun::java2d::opengl::cgllayer::register(self);
+            sun::java2d::opengl::cglsurfacedata::register(self);
             sun::java2d::osxoffscreensurfacedata::register(self);
             sun::java2d::surfacedata::register(self);
             sun::java2d::cmm::lcms::lcms::register(self);
@@ -331,7 +357,10 @@ impl MethodRegistry {
             sun::lwawt::macosx::cwrapper_nswindow::register(self);
             sun::lwawt::macosx::lwctoolkit::register(self);
             sun::lwawt::macosx::nsevent::register(self);
+            sun::nio::ch::kqueue::register(self);
+            sun::nio::fs::bsdnativedispatcher::register(self);
             sun::nio::fs::macosxnativedispatcher::register(self);
+            sun::util::locale::provider::hostlocaleprovideradapterimpl::register(self);
         }
         #[cfg(target_os = "windows")]
         {
@@ -431,8 +460,6 @@ impl MethodRegistry {
         java::util::zip::inflater::register(self);
         java::util::timezone::register(self);
         jdk::internal::module::modulebootstrap::register(self);
-        sun::awt::cgraphicsdevice::register(self);
-        sun::awt::cgraphicsenvironment::register(self);
         sun::awt::debugsettings::register(self);
         sun::awt::fontdescriptor::register(self);
         sun::awt::platformfont::register(self);
@@ -447,11 +474,6 @@ impl MethodRegistry {
         sun::awt::image::integercomponentraster::register(self);
         sun::awt::image::jpegimagedecoder::register(self);
         sun::awt::image::shortcomponentraster::register(self);
-        sun::font::cchartoglyphmapper::register(self);
-        sun::font::cfont::register(self);
-        sun::font::cfontmanager::register(self);
-        sun::font::cstrike::register(self);
-        sun::font::cstrikedisposer::register(self);
         sun::font::filefontstrike::register(self);
         sun::font::freetypefontscaler::register(self);
         sun::font::nullfontscaler::register(self);
@@ -460,7 +482,6 @@ impl MethodRegistry {
         sun::font::sunlayoutengine::register(self);
         sun::instrument::instrumentationimpl::register(self);
         sun::io::win32errormode::register(self);
-        sun::java2d::crenderer::register(self);
         sun::java2d::defaultdisposerrecord::register(self);
         sun::java2d::disposer::register(self);
         sun::java2d::loops::blit::register(self);
@@ -483,9 +504,6 @@ impl MethodRegistry {
         sun::java2d::loops::scaledblit::register(self);
         sun::java2d::loops::transformblit::register(self);
         sun::java2d::loops::transformhelper::register(self);
-        sun::java2d::opengl::cglgraphicsconfig::register(self);
-        sun::java2d::opengl::cgllayer::register(self);
-        sun::java2d::opengl::cglsurfacedata::register(self);
         sun::java2d::opengl::oglcontext::register(self);
         sun::java2d::opengl::oglmaskfill::register(self);
         sun::java2d::opengl::oglrenderqueue::register(self);
@@ -513,12 +531,9 @@ impl MethodRegistry {
         sun::nio::ch::filekey::register(self);
         sun::nio::ch::ioutil::register(self);
         sun::nio::ch::inheritedchannel::register(self);
-        sun::nio::ch::kqueue::register(self);
         sun::nio::ch::nativethread::register(self);
         sun::nio::ch::net::register(self);
         sun::nio::ch::unixasynchronoussocketchannelimpl::register(self);
-        sun::nio::fs::bsdnativedispatcher::register(self);
-        sun::nio::fs::utifiletypedetector::register(self);
         sun::nio::fs::unixnativedispatcher::register(self);
         sun::print::cupsprinter::register(self);
         sun::security::jgss::wrapper::gsslibstub::register(self);
@@ -527,7 +542,6 @@ impl MethodRegistry {
         sun::security::krb5::scdynamicstoreconfig::register(self);
         sun::security::smartcardio::pcsc::register(self);
         sun::security::smartcardio::platformpcsc::register(self);
-        sun::util::locale::provider::hostlocaleprovideradapterimpl::register(self);
 
         if self.use_optimizations {
             java::lang::math::register(self);
@@ -665,6 +679,21 @@ mod tests {
     async fn test_runtime(version: &str) -> Result<()> {
         let native_methods = get_native_methods(version).await?;
         let registry_methods = get_registry_methods(version).await?;
+        // Required methods for ristretto
+        let required_methods = [
+            "java/lang/ClassLoader.initSystemClassLoader()Ljava/lang/ClassLoader;".to_string(),
+            "java/lang/System.allowSecurityManager()Z".to_string(),
+            "java/lang/System.getSecurityManager()Ljava/lang/SecurityManager;".to_string(),
+            "java/lang/System.setSecurityManager(Ljava/lang/SecurityManager;)V".to_string(),
+            "jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;".to_string(),
+            "sun/io/Win32ErrorMode.setErrorMode(J)J".to_string(),
+        ];
+        let missing_required_methods = required_methods
+            .iter()
+            .filter(|method| !registry_methods.contains(method))
+            .cloned()
+            .collect::<Vec<String>>();
+        #[cfg(target_os = "macos")]
         let missing_methods = native_methods
             .iter()
             .filter(|method| !registry_methods.contains(method))
@@ -672,11 +701,19 @@ mod tests {
             .collect::<Vec<String>>();
         let extra_methods = registry_methods
             .iter()
-            .filter(|method| !native_methods.contains(method))
+            .filter(|method| !native_methods.contains(method) && !required_methods.contains(method))
             .cloned()
             .collect::<Vec<String>>();
 
         let mut errors = Vec::new();
+        if !missing_required_methods.is_empty() {
+            errors.push(format!(
+                "Missing required methods {}:\n{}\n",
+                missing_required_methods.len(),
+                missing_required_methods.join("\n"),
+            ));
+        };
+        #[cfg(target_os = "macos")]
         if !missing_methods.is_empty() {
             errors.push(format!(
                 "Missing methods {}:\n{}\n",
@@ -685,11 +722,11 @@ mod tests {
             ));
         };
         if !extra_methods.is_empty() {
-            // errors.push(format!(
-            //     "Extra methods {}:\n{}\n",
-            //     extra_methods.len(),
-            //     extra_methods.join("\n"),
-            // ));
+            errors.push(format!(
+                "Extra methods {}:\n{}\n",
+                extra_methods.len(),
+                extra_methods.join("\n"),
+            ));
         };
         if !errors.is_empty() {
             eprintln!("{}", errors.join("\n"));
@@ -698,55 +735,46 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(target_os = "macos")]
     #[tokio::test]
     async fn test_runtime_v8() -> Result<()> {
         test_runtime("8.432.06.1").await
     }
 
-    #[cfg(target_os = "macos")]
     #[tokio::test]
     async fn test_runtime_v11() -> Result<()> {
         test_runtime("11.0.25.9.1").await
     }
 
-    #[cfg(target_os = "macos")]
     #[tokio::test]
     async fn test_runtime_v17() -> Result<()> {
         test_runtime("17.0.12.7.1").await
     }
 
-    #[cfg(target_os = "macos")]
     #[tokio::test]
     async fn test_runtime_v18() -> Result<()> {
         test_runtime("18.0.2.9.1").await
     }
 
-    #[cfg(target_os = "macos")]
     #[tokio::test]
     async fn test_runtime_v19() -> Result<()> {
         test_runtime("19.0.2.7.1").await
     }
 
-    #[cfg(target_os = "macos")]
     #[tokio::test]
     async fn test_runtime_v20() -> Result<()> {
         test_runtime("20.0.2.10.1").await
     }
 
-    #[cfg(target_os = "macos")]
     #[tokio::test]
     async fn test_runtime_v21() -> Result<()> {
         test_runtime("21.0.5.11.1").await
     }
 
-    #[cfg(target_os = "macos")]
     #[tokio::test]
     async fn test_runtime_v22() -> Result<()> {
         test_runtime("22.0.2.9.1").await
     }
 
-    #[cfg(target_os = "macos")]
     #[tokio::test]
     async fn test_runtime_v23() -> Result<()> {
         test_runtime("23.0.1.8.1").await

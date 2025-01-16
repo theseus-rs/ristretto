@@ -65,7 +65,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/net/DatagramPacket;)V",
         receive_0,
     );
-    registry.register(CLASS_NAME, "send0", "(Ljava/net/DatagramPacket;)V", send_0);
     registry.register(CLASS_NAME, "setTTL", "(B)V", set_ttl);
     registry.register(CLASS_NAME, "setTimeToLive", "(I)V", set_time_to_live);
     registry.register(

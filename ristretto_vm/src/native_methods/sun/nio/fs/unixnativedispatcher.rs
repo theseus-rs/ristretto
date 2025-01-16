@@ -1,5 +1,7 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_18, JAVA_19, JAVA_22, JAVA_8};
+use crate::native_methods::registry::{
+    MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_22, JAVA_8,
+};
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
@@ -41,6 +43,28 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "pathconf0", "(JI)J", pathconf_0);
     }
 
+    if registry.java_major_version() >= JAVA_11 {
+        if registry.java_major_version() <= JAVA_19 {
+            registry.register(CLASS_NAME, "stat1", "(J)I", stat_1);
+        }
+        if registry.java_major_version() <= JAVA_22 {
+            registry.register(CLASS_NAME, "exists0", "(J)Z", exists_0);
+        }
+        registry.register(CLASS_NAME, "close0", "(I)V", close_0);
+        registry.register(CLASS_NAME, "getlinelen", "(J)I", getlinelen);
+    }
+
+    if registry.java_major_version() >= JAVA_17 {
+        if registry.java_major_version() <= JAVA_18 {
+            registry.register(CLASS_NAME, "futimens", "(IJJ)V", futimens);
+        }
+        registry.register(CLASS_NAME, "fgetxattr0", "(IJJI)I", fgetxattr_0);
+        registry.register(CLASS_NAME, "flistxattr", "(IJI)I", flistxattr);
+        registry.register(CLASS_NAME, "fremovexattr0", "(IJ)V", fremovexattr_0);
+        registry.register(CLASS_NAME, "fsetxattr0", "(IJJI)V", fsetxattr_0);
+        registry.register(CLASS_NAME, "lutimes0", "(JJJ)V", lutimes_0);
+    }
+
     if registry.java_major_version() <= JAVA_18 {
         registry.register(CLASS_NAME, "fchmod", "(II)V", fchmod);
         registry.register(CLASS_NAME, "fchown", "(III)V", fchown);
@@ -50,51 +74,48 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(ILsun/nio/fs/UnixFileAttributes;)V",
             fstat,
         );
-        registry.register(CLASS_NAME, "futimens", "(IJJ)V", futimens);
         registry.register(CLASS_NAME, "futimes", "(IJJ)V", futimes);
         registry.register(CLASS_NAME, "read", "(IJI)I", read);
         registry.register(CLASS_NAME, "readdir", "(J)[B", readdir);
         registry.register(CLASS_NAME, "write", "(IJI)I", write);
     }
 
+    if registry.java_major_version() >= JAVA_19 {
+        registry.register(CLASS_NAME, "fchmod0", "(II)V", fchmod_0);
+        registry.register(CLASS_NAME, "fchown0", "(III)V", fchown_0);
+        registry.register(
+            CLASS_NAME,
+            "fstat0",
+            "(ILsun/nio/fs/UnixFileAttributes;)V",
+            fstat_0,
+        );
+        registry.register(CLASS_NAME, "futimens0", "(IJJ)V", futimens_0);
+        registry.register(CLASS_NAME, "futimes0", "(IJJ)V", futimes_0);
+        registry.register(CLASS_NAME, "read0", "(IJI)I", read_0);
+        registry.register(CLASS_NAME, "readdir0", "(J)[B", readdir_0);
+        registry.register(CLASS_NAME, "write0", "(IJI)I", write_0);
+    }
+
     if registry.java_major_version() <= JAVA_22 {
         registry.register(CLASS_NAME, "access0", "(JI)V", access_0);
-        registry.register(CLASS_NAME, "exists0", "(J)Z", exists_0);
     } else {
         registry.register(CLASS_NAME, "access0", "(JI)I", access_0);
     }
 
-    registry.register(CLASS_NAME, "access0", "(JI)I", access_0);
     registry.register(CLASS_NAME, "chmod0", "(JI)V", chmod_0);
     registry.register(CLASS_NAME, "chown0", "(JII)V", chown_0);
-    registry.register(CLASS_NAME, "close0", "(I)V", close_0);
     registry.register(CLASS_NAME, "closedir", "(J)V", closedir);
     registry.register(CLASS_NAME, "dup", "(I)I", dup);
-    registry.register(CLASS_NAME, "fchmod0", "(II)V", fchmod_0);
-    registry.register(CLASS_NAME, "fchown0", "(III)V", fchown_0);
     registry.register(CLASS_NAME, "fdopendir", "(I)J", fdopendir);
-    registry.register(CLASS_NAME, "fgetxattr0", "(IJJI)I", fgetxattr_0);
-    registry.register(CLASS_NAME, "flistxattr", "(IJI)I", flistxattr);
-    registry.register(CLASS_NAME, "fremovexattr0", "(IJ)V", fremovexattr_0);
-    registry.register(CLASS_NAME, "fsetxattr0", "(IJJI)V", fsetxattr_0);
-    registry.register(
-        CLASS_NAME,
-        "fstat0",
-        "(ILsun/nio/fs/UnixFileAttributes;)V",
-        fstat_0,
-    );
     registry.register(
         CLASS_NAME,
         "fstatat0",
         "(IJILsun/nio/fs/UnixFileAttributes;)V",
         fstatat_0,
     );
-    registry.register(CLASS_NAME, "futimens0", "(IJJ)V", futimens_0);
-    registry.register(CLASS_NAME, "futimes0", "(IJJ)V", futimes_0);
     registry.register(CLASS_NAME, "getcwd", "()[B", getcwd);
     registry.register(CLASS_NAME, "getgrgid", "(I)[B", getgrgid);
     registry.register(CLASS_NAME, "getgrnam0", "(J)I", getgrnam_0);
-    registry.register(CLASS_NAME, "getlinelen", "(J)I", getlinelen);
     registry.register(CLASS_NAME, "getpwnam0", "(J)I", getpwnam_0);
     registry.register(CLASS_NAME, "getpwuid", "(I)[B", getpwuid);
     registry.register(CLASS_NAME, "init", "()I", init);
@@ -106,14 +127,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(JLsun/nio/fs/UnixFileAttributes;)V",
         lstat_0,
     );
-    registry.register(CLASS_NAME, "lutimes0", "(JJJ)V", lutimes_0);
     registry.register(CLASS_NAME, "mkdir0", "(JI)V", mkdir_0);
     registry.register(CLASS_NAME, "mknod0", "(JIJ)V", mknod_0);
     registry.register(CLASS_NAME, "open0", "(JII)I", open_0);
     registry.register(CLASS_NAME, "openat0", "(IJII)I", openat_0);
     registry.register(CLASS_NAME, "opendir0", "(J)J", opendir_0);
-    registry.register(CLASS_NAME, "read0", "(IJI)I", read_0);
-    registry.register(CLASS_NAME, "readdir0", "(J)[B", readdir_0);
     registry.register(CLASS_NAME, "readlink0", "(J)[B", readlink_0);
     registry.register(CLASS_NAME, "realpath0", "(J)[B", realpath_0);
     registry.register(CLASS_NAME, "rename0", "(JJ)V", rename_0);
@@ -128,7 +146,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(JLsun/nio/fs/UnixFileAttributes;)V",
             stat_0,
         );
-        registry.register(CLASS_NAME, "stat1", "(J)I", stat_1);
     } else {
         registry.register(
             CLASS_NAME,
@@ -149,7 +166,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(CLASS_NAME, "unlink0", "(J)V", unlink_0);
     registry.register(CLASS_NAME, "unlinkat0", "(IJI)V", unlinkat_0);
     registry.register(CLASS_NAME, "utimes0", "(JJJ)V", utimes_0);
-    registry.register(CLASS_NAME, "write0", "(IJI)I", write_0);
 }
 
 #[async_recursion(?Send)]

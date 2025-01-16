@@ -25,13 +25,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             draw_glyph_list,
         );
     }
-
-    registry.register(
-        CLASS_NAME,
-        "DrawGlyphList",
-        "(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Lsun/font/GlyphList;II)V",
-        draw_glyph_list,
-    );
 }
 
 #[async_recursion(?Send)]

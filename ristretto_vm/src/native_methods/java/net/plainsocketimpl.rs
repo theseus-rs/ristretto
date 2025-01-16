@@ -37,7 +37,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/net/InetAddress;II)V",
         socket_connect,
     );
-    registry.register(CLASS_NAME, "socketCreate", "(ZZ)V", socket_create);
     registry.register(
         CLASS_NAME,
         "socketGetOption",

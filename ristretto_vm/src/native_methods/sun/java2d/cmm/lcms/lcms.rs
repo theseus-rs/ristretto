@@ -31,12 +31,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     } else {
         registry.register(
             CLASS_NAME,
-            "colorConvert",
-            "(JLsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V",
-            color_convert,
-        );
-        registry.register(
-            CLASS_NAME,
             "getProfileDataNative",
             "(J)[B",
             get_profile_data_native,

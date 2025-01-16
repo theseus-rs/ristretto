@@ -87,15 +87,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
         registry.register(
             CLASS_NAME,
-            "getReference",
-            "(Ljava/lang/Object;J)Ljava/lang/Object;",
-            get_reference,
+            "putReference",
+            "(Ljava/lang/Object;JLjava/lang/Object;)V",
+            put_reference,
         );
         registry.register(
             CLASS_NAME,
-            "getReferenceVolatile",
-            "(Ljava/lang/Object;J)Ljava/lang/Object;",
-            get_reference_volatile,
+            "putReferenceVolatile",
+            "(Ljava/lang/Object;JLjava/lang/Object;)V",
+            put_reference_volatile,
         );
         registry.register(CLASS_NAME, "writeback0", "(J)V", writeback_0);
         registry.register(
@@ -145,12 +145,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         CLASS_NAME,
-        "compareAndExchangeReference",
-        "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-        compare_and_exchange_reference,
-    );
-    registry.register(
-        CLASS_NAME,
         "compareAndSetInt",
         "(Ljava/lang/Object;JII)Z",
         compare_and_set_int,
@@ -160,12 +154,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "compareAndSetLong",
         "(Ljava/lang/Object;JJJ)Z",
         compare_and_set_long,
-    );
-    registry.register(
-        CLASS_NAME,
-        "compareAndSetReference",
-        "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
-        compare_and_set_reference,
     );
     registry.register(
         CLASS_NAME,
@@ -247,18 +235,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "getLongVolatile",
         "(Ljava/lang/Object;J)J",
         get_long_volatile,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getReference",
-        "(Ljava/lang/Object;J)Ljava/lang/Object;",
-        get_reference,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getReferenceVolatile",
-        "(Ljava/lang/Object;J)Ljava/lang/Object;",
-        get_reference_volatile,
     );
     registry.register(CLASS_NAME, "getShort", "(Ljava/lang/Object;J)S", get_short);
     registry.register(
@@ -345,18 +321,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "(Ljava/lang/Object;JJ)V",
         put_long_volatile,
     );
-    registry.register(
-        CLASS_NAME,
-        "putReference",
-        "(Ljava/lang/Object;JLjava/lang/Object;)V",
-        put_reference,
-    );
-    registry.register(
-        CLASS_NAME,
-        "putReferenceVolatile",
-        "(Ljava/lang/Object;JLjava/lang/Object;)V",
-        put_reference_volatile,
-    );
     registry.register(CLASS_NAME, "putShort", "(Ljava/lang/Object;JS)V", put_short);
     registry.register(
         CLASS_NAME,
@@ -402,14 +366,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         throw_exception,
     );
     registry.register(CLASS_NAME, "unpark", "(Ljava/lang/Object;)V", unpark);
-    registry.register(CLASS_NAME, "writeback0", "(J)V", writeback_0);
-    registry.register(
-        CLASS_NAME,
-        "writebackPostSync0",
-        "()V",
-        writeback_post_sync_0,
-    );
-    registry.register(CLASS_NAME, "writebackPreSync0", "()V", writeback_pre_sync_0);
 }
 
 #[async_recursion(?Send)]

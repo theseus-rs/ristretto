@@ -49,12 +49,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
         registry.register(
             CLASS_NAME,
-            "getHandler",
-            "(Ljava/lang/Class;)Ljava/lang/Object;",
-            get_handler,
-        );
-        registry.register(
-            CLASS_NAME,
             "getTypeId",
             "(Ljava/lang/String;)J",
             get_type_id,
@@ -74,16 +68,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             log_event,
         );
         registry.register(CLASS_NAME, "markChunkFinal", "()V", mark_chunk_final);
-        registry.register(
-            CLASS_NAME,
-            "setHandler",
-            "(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z",
-            set_handler,
-        );
         registry.register(CLASS_NAME, "setThrottle", "(JJJ)Z", set_throttle);
     }
 
-    if registry.java_major_version() >= JAVA_11 {
+    if registry.java_major_version() != JAVA_11 {
+        registry.register(CLASS_NAME, "setThrottle", "(JJJ)Z", set_throttle);
+    }
+
+    if registry.java_major_version() >= JAVA_11 && registry.java_major_version() <= JAVA_18 {
         registry.register(
             CLASS_NAME,
             "flush",
@@ -107,11 +99,38 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
     if registry.java_major_version() == JAVA_17 {
         registry.register(CLASS_NAME, "emitDataLoss", "(J)V", emit_data_loss);
+    }
+
+    if registry.java_major_version() == JAVA_17 || registry.java_major_version() == JAVA_18 {
+        registry.register(
+            CLASS_NAME,
+            "getHandler",
+            "(Ljava/lang/Class;)Ljava/lang/Object;",
+            get_handler,
+        );
+        registry.register(
+            CLASS_NAME,
+            "setHandler",
+            "(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z",
+            set_handler,
+        );
+    }
+
+    if registry.java_major_version() == JAVA_17 || registry.java_major_version() >= JAVA_19 {
         registry.register(
             CLASS_NAME,
             "setMethodSamplingPeriod",
             "(JJ)V",
             set_method_sampling_period,
+        );
+    }
+
+    if registry.java_major_version() == JAVA_18 {
+        registry.register(
+            CLASS_NAME,
+            "setMethodSamplingInterval",
+            "(JJ)V",
+            set_method_sampling_interval,
         );
     }
 
@@ -128,24 +147,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(Ljava/lang/String;)V",
             set_dump_path,
         );
-        registry.register(
-            CLASS_NAME,
-            "setMethodSamplingInterval",
-            "(JJ)V",
-            set_method_sampling_interval,
-        );
-    } else {
-        registry.register(CLASS_NAME, "exclude", "(Ljava/lang/Thread;)V", exclude);
-        registry.register(CLASS_NAME, "flush", "()V", flush);
     }
 
     if registry.java_major_version() >= JAVA_19 {
-        registry.register(
-            CLASS_NAME,
-            "flush",
-            "(Ljdk/jfr/internal/event/EventWriter;II)Z",
-            flush,
-        );
+        if registry.java_major_version() <= JAVA_20 {
+            registry.register(
+                CLASS_NAME,
+                "flush",
+                "(Ljdk/jfr/internal/event/EventWriter;II)Z",
+                flush,
+            );
+        }
         registry.register(
             CLASS_NAME,
             "getConfiguration",
@@ -333,12 +345,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         set_global_buffer_size,
     );
     registry.register(CLASS_NAME, "setMemorySize", "(J)V", set_memory_size);
-    registry.register(
-        CLASS_NAME,
-        "setMethodSamplingPeriod",
-        "(JJ)V",
-        set_method_sampling_period,
-    );
     registry.register(CLASS_NAME, "setOutput", "(Ljava/lang/String;)V", set_output);
     registry.register(
         CLASS_NAME,
@@ -360,7 +366,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         set_thread_buffer_size,
     );
     registry.register(CLASS_NAME, "setThreshold", "(JJ)Z", set_threshold);
-    registry.register(CLASS_NAME, "setThrottle", "(JJJ)Z", set_throttle);
     registry.register(CLASS_NAME, "shouldRotateDisk", "()Z", should_rotate_disk);
     registry.register(
         CLASS_NAME,

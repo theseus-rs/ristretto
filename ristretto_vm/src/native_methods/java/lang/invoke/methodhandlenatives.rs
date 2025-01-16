@@ -1,5 +1,5 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_20, JAVA_8};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_20, JAVA_8};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -31,6 +31,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(Ljava/lang/Class;[III[Ljava/lang/Object;IZLjava/lang/Object;)V",
             copy_out_bootstrap_arguments,
         );
+    }
+
+    if registry.java_major_version() == JAVA_11 {
         registry.register(
             CLASS_NAME,
             "resolve",

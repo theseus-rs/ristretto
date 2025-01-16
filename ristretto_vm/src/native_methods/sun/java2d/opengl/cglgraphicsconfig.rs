@@ -1,5 +1,5 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::{MethodRegistry, JAVA_17};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -10,17 +10,17 @@ const CLASS_NAME: &str = "sun/java2d/opengl/CGLGraphicsConfig";
 
 /// Register all native methods for `sun.java2d.opengl.CGLGraphicsConfig`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(CLASS_NAME, "getCGLConfigInfo", "()J", get_cgl_config_info_0);
-    }
-
-    if registry.java_major_version() <= JAVA_17 {
+    if registry.java_major_version() <= JAVA_11 {
         registry.register(
             CLASS_NAME,
             "getCGLConfigInfo",
             "(III)J",
             get_cgl_config_info_1,
         );
+    }
+
+    if registry.java_major_version() >= JAVA_17 {
+        registry.register(CLASS_NAME, "getCGLConfigInfo", "()J", get_cgl_config_info_0);
     }
 
     registry.register(

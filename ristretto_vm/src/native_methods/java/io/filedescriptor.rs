@@ -23,7 +23,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(CLASS_NAME, "sync", "()V", sync);
 }
 
 #[async_recursion(?Send)]

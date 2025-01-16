@@ -20,15 +20,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     if registry.java_major_version() <= JAVA_8 {
         registry.register(
             CLASS_NAME,
-            "getComponentType",
-            "()Ljava/lang/Class;",
-            get_component_type,
-        );
-        registry.register(
-            CLASS_NAME,
             "getConstantPool",
             "()Lsun/reflect/ConstantPool;",
             get_constant_pool,
+        );
+        registry.register(
+            CLASS_NAME,
+            "getComponentType",
+            "()Ljava/lang/Class;",
+            get_component_type,
         );
         registry.register(CLASS_NAME, "getName0", "()Ljava/lang/String;", get_name_0);
     } else {
@@ -110,12 +110,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         CLASS_NAME,
-        "getConstantPool",
-        "()Ljdk/internal/reflect/ConstantPool;",
-        get_constant_pool,
-    );
-    registry.register(
-        CLASS_NAME,
         "getDeclaredClasses0",
         "()[Ljava/lang/Class;",
         get_declared_classes_0,
@@ -165,18 +159,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(CLASS_NAME, "getModifiers", "()I", get_modifiers);
     registry.register(
         CLASS_NAME,
-        "getNestHost0",
-        "()Ljava/lang/Class;",
-        get_nest_host_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNestMembers0",
-        "()[Ljava/lang/Class;",
-        get_nest_members_0,
-    );
-    registry.register(
-        CLASS_NAME,
         "getPrimitiveClass",
         "(Ljava/lang/String;)Ljava/lang/Class;",
         get_primitive_class,
@@ -202,21 +184,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         CLASS_NAME,
-        "getSimpleBinaryName0",
-        "()Ljava/lang/String;",
-        get_simple_binary_name_0,
-    );
-    registry.register(
-        CLASS_NAME,
         "getSuperclass",
         "()Ljava/lang/Class;",
         get_superclass,
-    );
-    registry.register(
-        CLASS_NAME,
-        "initClassName",
-        "()Ljava/lang/String;",
-        init_class_name,
     );
     registry.register(CLASS_NAME, "isArray", "()Z", is_array);
     registry.register(

@@ -15,10 +15,13 @@ const CLASS_NAME: &str = "java/lang/Thread";
 /// Register all native methods for `java.lang.Thread`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 || registry.java_major_version() == JAVA_18 {
+    if registry.java_major_version() <= JAVA_11 {
         registry.register(CLASS_NAME, "countStackFrames", "()I", count_stack_frames);
-        registry.register(CLASS_NAME, "isAlive", "()Z", is_alive);
         registry.register(CLASS_NAME, "isInterrupted", "(Z)Z", is_interrupted);
+    }
+
+    if registry.java_major_version() <= JAVA_11 || registry.java_major_version() == JAVA_18 {
+        registry.register(CLASS_NAME, "isAlive", "()Z", is_alive);
     }
 
     if registry.java_major_version() >= JAVA_17 {
@@ -37,6 +40,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
     if registry.java_major_version() <= JAVA_19 {
         registry.register(CLASS_NAME, "resume0", "()V", resume_0);
+        registry.register(CLASS_NAME, "stop0", "(Ljava/lang/Object;)V", stop_0);
+        registry.register(CLASS_NAME, "suspend0", "()V", suspend_0);
     }
     if registry.java_major_version() == JAVA_19 {
         registry.register(
@@ -44,6 +49,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "extentLocalCache",
             "()[Ljava/lang/Object;",
             extent_local_cache,
+        );
+        registry.register(
+            CLASS_NAME,
+            "setExtentLocalCache",
+            "([Ljava/lang/Object;)V",
+            set_extent_local_cache,
         );
     }
     if registry.java_major_version() >= JAVA_19 {
@@ -75,12 +86,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "setCurrentThread",
             "(Ljava/lang/Thread;)V",
             set_current_thread,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setExtentLocalCache",
-            "([Ljava/lang/Object;)V",
-            set_extent_local_cache,
         );
 
         if registry.java_major_version() <= JAVA_21 {
@@ -150,8 +155,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(CLASS_NAME, "setPriority0", "(I)V", set_priority_0);
     registry.register(CLASS_NAME, "start0", "()V", start_0);
-    registry.register(CLASS_NAME, "stop0", "(Ljava/lang/Object;)V", stop_0);
-    registry.register(CLASS_NAME, "suspend0", "()V", suspend_0);
 }
 
 #[async_recursion(?Send)]

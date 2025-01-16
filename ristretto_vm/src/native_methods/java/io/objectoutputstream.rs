@@ -10,8 +10,10 @@ const CLASS_NAME: &str = "java/io/ObjectOutputStream";
 
 /// Register all native methods for `java.io.ObjectOutputStream`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "doublesToBytes", "([DI[BII)V", doubles_to_bytes);
-    registry.register(CLASS_NAME, "floatsToBytes", "([FI[BII)V", floats_to_bytes);
+    if registry.java_major_version() <= 11 {
+        registry.register(CLASS_NAME, "doublesToBytes", "([DI[BII)V", doubles_to_bytes);
+        registry.register(CLASS_NAME, "floatsToBytes", "([FI[BII)V", floats_to_bytes);
+    }
 }
 
 #[async_recursion(?Send)]

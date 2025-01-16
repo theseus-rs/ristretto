@@ -1,5 +1,5 @@
 use crate::arguments::Arguments;
-use crate::native_methods::registry::{MethodRegistry, JAVA_19};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_19, JAVA_20};
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -10,21 +10,32 @@ const CLASS_NAME: &str = "sun/nio/ch/FileDispatcherImpl";
 
 /// Register all native methods for `sun.nio.ch.FileDispatcherImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_19 {
+    if registry.java_major_version() >= JAVA_11 && registry.java_major_version() <= JAVA_19 {
         registry.register(
             CLASS_NAME,
-            "canTransferToFromOverlappedMap0",
-            "()Z",
-            can_transfer_to_from_overlapped_map_0,
+            "setDirect0",
+            "(Ljava/io/FileDescriptor;)I",
+            set_direct_0,
         );
+    }
+
+    if registry.java_major_version() <= JAVA_19 {
+        if registry.java_major_version() >= JAVA_17 {
+            registry.register(
+                CLASS_NAME,
+                "canTransferToFromOverlappedMap0",
+                "()Z",
+                can_transfer_to_from_overlapped_map_0,
+            );
+            registry.register(
+                CLASS_NAME,
+                "dup0",
+                "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V",
+                dup_0,
+            );
+        }
         registry.register(CLASS_NAME, "close0", "(Ljava/io/FileDescriptor;)V", close_0);
         registry.register(CLASS_NAME, "closeIntFD", "(I)V", close_int_fd);
-        registry.register(
-            CLASS_NAME,
-            "dup0",
-            "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V",
-            dup_0,
-        );
         registry.register(CLASS_NAME, "init", "()V", init);
         registry.register(
             CLASS_NAME,
@@ -64,12 +75,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             release_0,
         );
         registry.register(CLASS_NAME, "seek0", "(Ljava/io/FileDescriptor;J)J", seek_0);
-        registry.register(
-            CLASS_NAME,
-            "setDirect0",
-            "(Ljava/io/FileDescriptor;)I",
-            set_direct_0,
-        );
         registry.register(CLASS_NAME, "size0", "(Ljava/io/FileDescriptor;)J", size_0);
         registry.register(
             CLASS_NAME,
@@ -91,18 +96,24 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    registry.register(
-        CLASS_NAME,
-        "force0",
-        "(Ljava/io/FileDescriptor;Z)I",
-        force_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "transferTo0",
-        "(Ljava/io/FileDescriptor;JJLjava/io/FileDescriptor;Z)J",
-        transfer_to_0,
-    );
+    if registry.java_major_version() >= JAVA_20 {
+        registry.register(
+            CLASS_NAME,
+            "transferTo0",
+            "(Ljava/io/FileDescriptor;JJLjava/io/FileDescriptor;Z)J",
+            transfer_to_0,
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        registry.register(
+            crate::native_methods::sun::nio::ch::filedispatcherimpl::CLASS_NAME,
+            "force0",
+            "(Ljava/io/FileDescriptor;Z)I",
+            crate::native_methods::sun::nio::ch::filedispatcherimpl::force_0,
+        );
+    }
 }
 
 #[async_recursion(?Send)]
@@ -128,6 +139,7 @@ async fn dup_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Val
     todo!("sun.nio.ch.FileDispatcherImpl.dup0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V");
 }
 
+#[cfg(target_os = "macos")]
 #[async_recursion(?Send)]
 async fn force_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.force0(Ljava/io/FileDescriptor;Z)I");
@@ -246,6 +258,7 @@ mod tests {
         let _ = dup_0(thread, Arguments::default()).await;
     }
 
+    #[cfg(target_os = "macos")]
     #[tokio::test]
     #[should_panic(
         expected = "not yet implemented: sun.nio.ch.FileDispatcherImpl.force0(Ljava/io/FileDescriptor;Z)I"

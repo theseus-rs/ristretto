@@ -111,12 +111,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             get_last_modified_time_0,
         );
         registry.register(CLASS_NAME, "getLength0", "(Ljava/io/File;)J", get_length_0);
-        registry.register(
-            CLASS_NAME,
-            "getNameMax0",
-            "(Ljava/lang/String;)J",
-            get_name_max_0,
-        );
         registry.register(CLASS_NAME, "getSpace0", "(Ljava/io/File;I)J", get_space_0);
         registry.register(
             CLASS_NAME,
@@ -156,12 +150,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         "getBooleanAttributes0",
         "(Ljava/io/File;)I",
         get_boolean_attributes_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNameMax0",
-        "(Ljava/lang/String;)J",
-        get_name_max_0,
     );
     registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
     registry.register(
