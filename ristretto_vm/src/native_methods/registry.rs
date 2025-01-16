@@ -705,6 +705,8 @@ mod tests {
         let native_methods = get_native_methods(version).await?;
         let registry_methods = get_registry_methods(version).await?;
         // Required methods for ristretto
+        #[expect(unused_mut)]
+        #[expect(clippy::useless_vec)]
         let mut required_methods = vec![
             "java/lang/ClassLoader.initSystemClassLoader()Ljava/lang/ClassLoader;".to_string(),
             "java/lang/System.allowSecurityManager()Z".to_string(),
