@@ -816,7 +816,8 @@ async fn init_class_name(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
     let object = arguments.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_name = class.name().replace('/', ".");
-    let value = class_name.to_value();
+    let vm = thread.vm()?;
+    let value = class_name.to_object(&vm).await?;
     Ok(Some(value))
 }
 
@@ -915,6 +916,7 @@ async fn set_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Error::JavaError;
 
     #[tokio::test]
     async fn test_desired_assertion_status_0() -> Result<()> {
@@ -1001,9 +1003,163 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_get_superclass() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&vm).await?;
+        let arguments = Arguments::new(vec![object]);
+        let result = get_superclass(thread, arguments).await?.expect("result");
+        let result_object: Object = result.try_into()?;
+        let class_name: String = result_object.value("name")?.try_into()?;
+        assert_eq!(class_name, "java.lang.Object");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_class_name() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&vm).await?;
+        let arguments = Arguments::new(vec![object]);
+        let result = init_class_name(thread, arguments).await?.expect("result");
+        let result_object: String = result.try_into()?;
+        assert_eq!(result_object, "java.lang.String");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_array() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class: Arc<Class> = thread.class("[int").await?;
+        let object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![object]);
+        let result = is_array(thread, arguments).await?;
+        assert_eq!(result, Some(Value::from(true)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_array_false() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class: Arc<Class> = thread.class("int").await?;
+        let object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![object]);
+        let result = is_array(thread, arguments).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_assignable_from() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let object = thread
+            .object("java.lang.Object", "", Vec::<Value>::new())
+            .await?;
+        let string_object = "foo".to_object(&vm).await?;
+        let arguments = Arguments::new(vec![object, string_object]);
+        let result = is_assignable_from(thread, arguments).await?;
+        assert_eq!(result, Some(Value::from(true)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_assignable_from_false() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let object = thread
+            .object("java.lang.Object", "", Vec::<Value>::new())
+            .await?;
+        let string_object = "foo".to_object(&vm).await?;
+        let arguments = Arguments::new(vec![string_object, object]);
+        let result = is_assignable_from(thread, arguments).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_assignable_from_npe() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = thread
+            .object("java.lang.Object", "", Vec::<Value>::new())
+            .await?;
+        let null_object = Value::Object(None);
+        let arguments = Arguments::new(vec![object, null_object]);
+        let result = is_assignable_from(thread, arguments).await;
+        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_is_hidden() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = is_hidden(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_instance() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let object = thread
+            .object("java.lang.Object", "", Vec::<Value>::new())
+            .await?;
+        let string_object = "foo".to_object(&vm).await?;
+        let arguments = Arguments::new(vec![object, string_object]);
+        let result = is_instance(thread, arguments).await?;
+        assert_eq!(result, Some(Value::from(true)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_instance_false() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = thread
+            .object("java.lang.Object", "", Vec::<Value>::new())
+            .await?;
+        let null_object = Value::Object(None);
+        let arguments = Arguments::new(vec![object, null_object]);
+        let result = is_instance(thread, arguments).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_interface() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class: Arc<Class> = thread.class("java.lang.Cloneable").await?;
+        let object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![object]);
+        let result = is_interface(thread, arguments).await?;
+        assert_eq!(result, Some(Value::from(true)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_interface_false() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class: Arc<Class> = thread.class("java.lang.Integer").await?;
+        let object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![object]);
+        let result = is_interface(thread, arguments).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_primitive() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class: Arc<Class> = thread.class("int").await?;
+        let object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![object]);
+        let result = is_primitive(thread, arguments).await?;
+        assert_eq!(result, Some(Value::from(true)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_primitive_false() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class: Arc<Class> = thread.class("java.lang.Integer").await?;
+        let object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![object]);
+        let result = is_primitive(thread, arguments).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
