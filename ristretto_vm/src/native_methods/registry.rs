@@ -57,49 +57,53 @@ impl MethodRegistry {
                 com::apple::laf::screenpopupfactory::register(self);
                 sun::awt::cgraphicsconfig::register(self);
             }
+            #[cfg(not(target_os = "windows"))]
+            {
+                com::sun::java::swing::plaf::gtk::gtkengine::register(self);
+                com::sun::java::swing::plaf::gtk::gtkstyle::register(self);
+                java::lang::unixprocess::register(self);
+                sun::awt::fcfontmanager::register(self);
+                sun::awt::unixtoolkit::register(self);
+                sun::awt::x11graphicsconfig::register(self);
+                sun::awt::x11graphicsdevice::register(self);
+                sun::awt::x11graphicsenvironment::register(self);
+                sun::awt::x11inputmethod::register(self);
+                sun::font::fontconfigmanager::register(self);
+                sun::font::nativefont::register(self);
+                sun::font::nativestrike::register(self);
+                sun::font::nativestrikedisposer::register(self);
+                sun::font::x11textrenderer::register(self);
+                sun::java2d::jules::julesaatilegenerator::register(self);
+                sun::java2d::jules::julespathbuf::register(self);
+                sun::java2d::opengl::glxgraphicsconfig::register(self);
+                sun::java2d::opengl::glxsurfacedata::register(self);
+                sun::java2d::x11::x11pmblitbgloops::register(self);
+                sun::java2d::x11::x11pmblitloops::register(self);
+                sun::java2d::x11::x11renderer::register(self);
+                sun::java2d::x11::x11surfacedata::register(self);
+                sun::java2d::x11::xsurfacedata::register(self);
+                sun::java2d::xr::xidgenerator::register(self);
+                sun::java2d::xr::xrbackendnative::register(self);
+                sun::java2d::xr::xrmaskblit::register(self);
+                sun::java2d::xr::xrmaskfill::register(self);
+                sun::java2d::xr::xrsurfacedata::register(self);
+                sun::management::operatingsystemimpl::register(self);
+            }
+
             com::sun::demo::jvmti::hprof::tracker::register(self);
-            com::sun::java::swing::plaf::gtk::gtkengine::register(self);
-            com::sun::java::swing::plaf::gtk::gtkstyle::register(self);
             java::awt::image::componentsamplemodel::register(self);
             java::lang::compiler::register(self);
             java::lang::package::register(self);
             java::lang::reflect::proxy::register(self);
-            java::lang::unixprocess::register(self);
             java::nio::bits::register(self);
             java::util::jar::jarfile::register(self);
             java::util::logging::filehandler::register(self);
             java::util::zip::zipfile::register(self);
             sun::awt::defaultmouseinfopeer::register(self);
-            sun::awt::fcfontmanager::register(self);
-            sun::awt::unixtoolkit::register(self);
-            sun::awt::x11graphicsconfig::register(self);
-            sun::awt::x11graphicsdevice::register(self);
-            sun::awt::x11graphicsenvironment::register(self);
-            sun::awt::x11inputmethod::register(self);
-            sun::font::fontconfigmanager::register(self);
-            sun::font::nativefont::register(self);
-            sun::font::nativestrike::register(self);
-            sun::font::nativestrikedisposer::register(self);
-            sun::font::x11textrenderer::register(self);
-            sun::java2d::jules::julesaatilegenerator::register(self);
-            sun::java2d::jules::julespathbuf::register(self);
-            sun::java2d::opengl::glxgraphicsconfig::register(self);
-            sun::java2d::opengl::glxsurfacedata::register(self);
-            sun::java2d::x11::x11pmblitbgloops::register(self);
-            sun::java2d::x11::x11pmblitloops::register(self);
-            sun::java2d::x11::x11renderer::register(self);
-            sun::java2d::x11::x11surfacedata::register(self);
-            sun::java2d::x11::xsurfacedata::register(self);
-            sun::java2d::xr::xidgenerator::register(self);
-            sun::java2d::xr::xrbackendnative::register(self);
-            sun::java2d::xr::xrmaskblit::register(self);
-            sun::java2d::xr::xrmaskfill::register(self);
-            sun::java2d::xr::xrsurfacedata::register(self);
             sun::management::diagnosticcommandimpl::register(self);
             sun::management::filesystemimpl::register(self);
             sun::management::flag::register(self);
             sun::management::gcinfobuilder::register(self);
-            sun::management::operatingsystemimpl::register(self);
             sun::misc::gc::register(self);
             sun::misc::messageutils::register(self);
             sun::misc::nativesignalhandler::register(self);
@@ -116,10 +120,10 @@ impl MethodRegistry {
             {
                 sun::nio::ch::kqueuearraywrapper::register(self);
                 sun::nio::ch::kqueueport::register(self);
+                sun::nio::ch::pollarraywrapper::register(self);
+                sun::nio::ch::sctp::sctpnet::register(self);
             }
 
-            sun::nio::ch::pollarraywrapper::register(self);
-            sun::nio::ch::sctp::sctpnet::register(self);
             sun::reflect::constantpool::register(self);
             sun::reflect::nativeconstructoraccessorimpl::register(self);
             sun::reflect::nativemethodaccessorimpl::register(self);
@@ -128,11 +132,15 @@ impl MethodRegistry {
         }
 
         if self.java_major_version <= JAVA_11 {
+            #[cfg(not(target_os = "windows"))]
+            {
+                sun::nio::ch::unixasynchronousserversocketchannelimpl::register(self);
+            }
+
             java::lang::classloader_nativelibrary::register(self);
             java::nio::mappedbytebuffer::register(self);
             sun::nio::ch::serversocketchannelimpl::register(self);
             sun::nio::ch::socketchannelimpl::register(self);
-            sun::nio::ch::unixasynchronousserversocketchannelimpl::register(self);
         }
         if self.java_major_version == JAVA_11 {
             java::lang::stringcoding::register(self);
@@ -141,17 +149,21 @@ impl MethodRegistry {
             sun::security::ec::eckeypairgenerator::register(self);
         }
         if self.java_major_version >= JAVA_11 {
+            #[cfg(not(target_os = "windows"))]
+            {
+                com::sun::management::internal::operatingsystemimpl::register(self);
+                java::lang::processimpl::register(self);
+            }
+
             com::sun::management::internal::diagnosticcommandimpl::register(self);
             com::sun::management::internal::flag::register(self);
             com::sun::management::internal::garbagecollectorextimpl::register(self);
             com::sun::management::internal::gcinfobuilder::register(self);
-            com::sun::management::internal::operatingsystemimpl::register(self);
             com::sun::security::auth::module::ntsystem::register(self);
             java::io::filecleanable::register(self);
             java::lang::module::register(self);
             java::lang::processhandleimpl::register(self);
             java::lang::processhandleimpl_info::register(self);
-            java::lang::processimpl::register(self);
             java::lang::stackstreamfactory::register(self);
             java::lang::stackstreamfactory_abstractstackwalker::register(self);
             java::lang::stacktraceelement::register(self);
@@ -177,6 +189,7 @@ impl MethodRegistry {
             #[cfg(target_os = "macos")]
             {
                 jdk::net::macosxsocketoptions::register(self);
+                sun::nio::ch::pollselectorimpl::register(self);
                 sun::nio::fs::utifiletypedetector::register(self);
                 sun::tools::attach::virtualmachineimpl::register(self);
             }
@@ -185,16 +198,19 @@ impl MethodRegistry {
             jdk::internal::vm::vmsupport::register(self);
             jdk::jfr::internal::jvm::register(self);
             jdk::vm::ci::runtime::jvmci::register(self);
-            sun::nio::ch::pollselectorimpl::register(self);
             sun::rmi::transport::gc::register(self);
             sun::security::pkcs11::secmod::register(self);
             sun::security::pkcs11::wrapper::pkcs11::register(self);
         }
 
         if self.java_major_version <= JAVA_17 {
+            #[cfg(not(target_os = "windows"))]
+            {
+                java::net::plaindatagramsocketimpl::register(self);
+                java::net::plainsocketimpl::register(self);
+            }
+
             java::net::datagrampacket::register(self);
-            java::net::plainsocketimpl::register(self);
-            java::net::plaindatagramsocketimpl::register(self);
             java::net::socketinputstream::register(self);
             java::net::socketoutputstream::register(self);
         }
@@ -242,8 +258,12 @@ impl MethodRegistry {
         }
 
         if self.java_major_version <= JAVA_19 {
+            #[cfg(not(target_os = "windows"))]
+            {
+                sun::nio::fs::unixcopyfile::register(self);
+            }
+
             sun::nio::ch::filechannelimpl::register(self);
-            sun::nio::fs::unixcopyfile::register(self);
         }
         if self.java_major_version >= JAVA_19 {
             java::lang::virtualthread::register(self);
@@ -264,10 +284,12 @@ impl MethodRegistry {
             {
                 sun::nio::fs::bsdfilesystem::register(self);
             }
-
-            sun::nio::ch::unixdispatcher::register(self);
-            sun::nio::ch::unixfiledispatcherimpl::register(self);
-            sun::nio::fs::unixfilesystem::register(self);
+            #[cfg(not(target_os = "windows"))]
+            {
+                sun::nio::ch::unixdispatcher::register(self);
+                sun::nio::ch::unixfiledispatcherimpl::register(self);
+                sun::nio::fs::unixfilesystem::register(self);
+            }
         }
 
         if self.java_major_version <= JAVA_21 {
@@ -362,9 +384,27 @@ impl MethodRegistry {
             sun::nio::fs::macosxnativedispatcher::register(self);
             sun::util::locale::provider::hostlocaleprovideradapterimpl::register(self);
         }
+        #[cfg(not(target_os = "windows"))]
+        {
+            java::io::unixfilesystem::register(self);
+            java::lang::processenvironment::register(self);
+            java::util::prefs::filesystempreferences::register(self);
+            com::sun::security::auth::module::unixsystem::register(self);
+            sun::net::dns::resolverconfigurationimpl::register(self);
+            sun::net::portconfig::register(self);
+            sun::nio::ch::datagramdispatcher::register(self);
+            sun::nio::ch::filedispatcherimpl::register(self);
+            sun::nio::ch::inheritedchannel::register(self);
+            sun::nio::ch::nativethread::register(self);
+            sun::nio::ch::unixasynchronoussocketchannelimpl::register(self);
+            sun::nio::fs::unixnativedispatcher::register(self);
+            sun::print::cupsprinter::register(self);
+            sun::security::smartcardio::platformpcsc::register(self);
+        }
         #[cfg(target_os = "windows")]
         {
             java::io::winntfilesystem::register(self);
+            sun::io::win32errormode::register(self);
         }
 
         com::sun::imageio::plugins::jpeg::jpegimagereader::register(self);
@@ -379,7 +419,6 @@ impl MethodRegistry {
         com::sun::media::sound::platform::register(self);
         com::sun::media::sound::portmixer::register(self);
         com::sun::media::sound::portmixerprovider::register(self);
-        com::sun::security::auth::module::unixsystem::register(self);
         java::awt::event_mod::inputevent::register(self);
         java::awt::event_mod::keyevent::register(self);
         java::awt::event_mod::mouseevent::register(self);
@@ -424,7 +463,6 @@ impl MethodRegistry {
         java::io::objectoutputstream::register(self);
         java::io::objectstreamclass::register(self);
         java::io::randomaccessfile::register(self);
-        java::io::unixfilesystem::register(self);
         java::lang::class::register(self);
         java::lang::classloader::register(self);
         java::lang::double::register(self);
@@ -432,7 +470,6 @@ impl MethodRegistry {
         java::lang::invoke::methodhandle::register(self);
         java::lang::invoke::methodhandlenatives::register(self);
         java::lang::object::register(self);
-        java::lang::processenvironment::register(self);
         java::lang::reflect::array::register(self);
         java::lang::reflect::executable::register(self);
         java::lang::reflect::field::register(self);
@@ -453,7 +490,6 @@ impl MethodRegistry {
         java::net::networkinterface::register(self);
         java::net::socketcleanable::register(self);
         java::security::accesscontroller::register(self);
-        java::util::prefs::filesystempreferences::register(self);
         java::util::zip::adler32::register(self);
         java::util::zip::crc32::register(self);
         java::util::zip::deflater::register(self);
@@ -481,7 +517,6 @@ impl MethodRegistry {
         sun::font::sunfontmanager::register(self);
         sun::font::sunlayoutengine::register(self);
         sun::instrument::instrumentationimpl::register(self);
-        sun::io::win32errormode::register(self);
         sun::java2d::defaultdisposerrecord::register(self);
         sun::java2d::disposer::register(self);
         sun::java2d::loops::blit::register(self);
@@ -521,27 +556,17 @@ impl MethodRegistry {
         sun::management::memorypoolimpl::register(self);
         sun::management::threadimpl::register(self);
         sun::management::vmmanagementimpl::register(self);
-        sun::net::portconfig::register(self);
-        sun::net::dns::resolverconfigurationimpl::register(self);
         sun::net::sdp::sdpsupport::register(self);
         sun::net::spi::defaultproxyselector::register(self);
         sun::nio::ch::datagramchannelimpl::register(self);
-        sun::nio::ch::datagramdispatcher::register(self);
-        sun::nio::ch::filedispatcherimpl::register(self);
         sun::nio::ch::filekey::register(self);
         sun::nio::ch::ioutil::register(self);
-        sun::nio::ch::inheritedchannel::register(self);
-        sun::nio::ch::nativethread::register(self);
         sun::nio::ch::net::register(self);
-        sun::nio::ch::unixasynchronoussocketchannelimpl::register(self);
-        sun::nio::fs::unixnativedispatcher::register(self);
-        sun::print::cupsprinter::register(self);
         sun::security::jgss::wrapper::gsslibstub::register(self);
         sun::security::krb5::config::register(self);
         sun::security::krb5::credentials::register(self);
         sun::security::krb5::scdynamicstoreconfig::register(self);
         sun::security::smartcardio::pcsc::register(self);
-        sun::security::smartcardio::platformpcsc::register(self);
 
         if self.use_optimizations {
             java::lang::math::register(self);
@@ -680,14 +705,19 @@ mod tests {
         let native_methods = get_native_methods(version).await?;
         let registry_methods = get_registry_methods(version).await?;
         // Required methods for ristretto
-        let required_methods = [
+        let mut required_methods = vec![
             "java/lang/ClassLoader.initSystemClassLoader()Ljava/lang/ClassLoader;".to_string(),
             "java/lang/System.allowSecurityManager()Z".to_string(),
             "java/lang/System.getSecurityManager()Ljava/lang/SecurityManager;".to_string(),
             "java/lang/System.setSecurityManager(Ljava/lang/SecurityManager;)V".to_string(),
             "jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;".to_string(),
-            "sun/io/Win32ErrorMode.setErrorMode(J)J".to_string(),
         ];
+        #[cfg(target_os = "windows")]
+        {
+            required_methods.push("java/io/WinNTFileSystem.initIDs()V".to_string());
+            required_methods.push("sun/io/Win32ErrorMode.setErrorMode(J)J".to_string());
+        }
+
         let missing_required_methods = required_methods
             .iter()
             .filter(|method| !registry_methods.contains(method))
