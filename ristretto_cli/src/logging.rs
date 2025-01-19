@@ -16,3 +16,14 @@ pub(crate) fn initialize() {
         .event_format(format)
         .init();
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_initialize() {
+        // This test just checks that the function doesn't panic.
+        initialize();
+    }
+}
