@@ -479,6 +479,14 @@ impl TryInto<Vec<f64>> for Reference {
     }
 }
 
+impl TryInto<(Arc<Class>, Vec<Option<Reference>>)> for Reference {
+    type Error = crate::Error;
+
+    fn try_into(self) -> Result<(Arc<Class>, Vec<Option<Reference>>)> {
+        self.to_class_vec()
+    }
+}
+
 impl TryInto<bool> for Reference {
     type Error = crate::Error;
 
@@ -1391,8 +1399,8 @@ mod tests {
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = Value::from(object);
-        let original_value = vec![value];
-        let reference = Reference::try_from((original_class.clone(), original_value.clone()))?;
+        let original_values = vec![value];
+        let reference = Reference::try_from((original_class.clone(), original_values.clone()))?;
         assert!(matches!(reference, Reference::Array(_, _)));
         Ok(())
     }
@@ -1539,6 +1547,22 @@ mod tests {
         let reference = Reference::from(original_value.clone());
         let value: Vec<f64> = reference.try_into()?;
         assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_into_class_vec() -> Result<()> {
+        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let class_name = "java.lang.Integer";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class.clone())?;
+        object.set_value("value", Value::Int(42))?;
+        let value = Value::from(object);
+        let original_values = vec![value];
+        let reference = Reference::try_from((original_class.clone(), original_values.clone()))?;
+        let (reference_class, reference_values) = reference.try_into()?;
+        assert_eq!(original_class.name(), reference_class.name());
+        assert_eq!(original_values.len(), reference_values.len());
         Ok(())
     }
 
