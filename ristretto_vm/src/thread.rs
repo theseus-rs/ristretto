@@ -376,7 +376,7 @@ impl Thread {
         let class = self.class(class_name).await?;
         let Some(constructor) = class.method("<init>", descriptor) else {
             return Err(InternalError(format!(
-                "No constructor found: {class_name}.<init>({descriptor})"
+                "No constructor found: {class_name}.<init>{descriptor}"
             )));
         };
 
