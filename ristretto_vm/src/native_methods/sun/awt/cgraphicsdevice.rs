@@ -169,4 +169,67 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = native_get_display_mode(thread, Arguments::default()).await;
     }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.CGraphicsDevice.nativeGetDisplayModes(I)[Ljava/awt/DisplayMode;"
+    )]
+    async fn test_native_get_display_modes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_display_modes(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.CGraphicsDevice.nativeGetScaleFactor(I)D"
+    )]
+    async fn test_native_get_scale_factor() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_scale_factor(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.CGraphicsDevice.nativeGetScreenInsets(I)Ljava/awt/Insets;"
+    )]
+    async fn test_native_get_screen_insets() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_screen_insets(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.CGraphicsDevice.nativeGetXResolution(I)D"
+    )]
+    async fn test_native_get_x_resolution() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_x_resolution(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.CGraphicsDevice.nativeGetYResolution(I)D"
+    )]
+    async fn test_native_get_y_resolution() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_y_resolution(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.CGraphicsDevice.nativeResetDisplayMode()V"
+    )]
+    async fn test_native_reset_display_mode() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_reset_display_mode(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.awt.CGraphicsDevice.nativeSetDisplayMode(IIIII)V"
+    )]
+    async fn test_native_set_display_mode() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_display_mode(thread, Arguments::default()).await;
+    }
 }

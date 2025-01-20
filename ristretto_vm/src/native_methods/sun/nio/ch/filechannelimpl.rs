@@ -102,6 +102,14 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init_ids(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
     #[should_panic(
         expected = "not yet implemented: sun.nio.ch.FileChannelImpl.allocationGranularity0()J"
     )]

@@ -2,10 +2,9 @@ use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::thread::Thread;
-use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::Value;
 use std::sync::Arc;
 
 const CLASS_NAME: &str = "sun/reflect/Reflection";
@@ -56,11 +55,7 @@ async fn get_class_access_flags(
     thread: Arc<Thread>,
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError(
-            "getClassAccessFlags: no arguments".to_string(),
-        ));
-    };
+    let object = arguments.pop_object()?;
     let class_name: String = object.value("name")?.try_into()?;
     let class = thread.class(&class_name).await?;
     let class_file = class.class_file();
@@ -75,6 +70,15 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn test_get_caller_class_1_null() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let arguments = Arguments::default();
+        let result = get_caller_class_1(thread, arguments).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
+    }
+
+    #[tokio::test]
     #[should_panic(
         expected = "not yet implemented: sun.reflect.Reflection.getCallerClass(I)Ljava/lang/Class;"
     )]
@@ -82,5 +86,17 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let arguments = Arguments::default();
         let _ = get_caller_class_2(thread, arguments).await;
+    }
+
+    #[tokio::test]
+    async fn test_get_class_access_flags() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.String").await?;
+        let class_object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![class_object]);
+        let result = get_class_access_flags(thread, arguments).await?;
+        let access_flags: i32 = result.expect("access_flags").try_into()?;
+        assert_eq!(access_flags, 49);
+        Ok(())
     }
 }

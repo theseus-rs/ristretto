@@ -63,6 +63,15 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
+        expected = "not yet implemented: com.apple.eawt._AppMenuBarHandler.nativeActivateDefaultMenuBar(J)V"
+    )]
+    async fn test_native_activate_default_menu_bar() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_activate_default_menu_bar(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
         expected = "not yet implemented: com.apple.eawt._AppMenuBarHandler.nativeSetDefaultMenuBar(J)V"
     )]
     async fn test_native_set_default_menu_bar() {

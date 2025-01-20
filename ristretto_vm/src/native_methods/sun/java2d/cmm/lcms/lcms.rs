@@ -230,4 +230,31 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_tag_native(thread, Arguments::default()).await;
     }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.initLCMS(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V"
+    )]
+    async fn test_init_lcms() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_lcms(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.loadProfileNative([BLjava/lang/Object;)J"
+    )]
+    async fn test_load_profile_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = load_profile_native(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.setTagDataNative(JI[B)V"
+    )]
+    async fn test_set_tag_data_native() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_tag_data_native(thread, Arguments::default()).await;
+    }
 }

@@ -454,6 +454,15 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
+        expected = "not yet implemented: sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowLocationByPlatform(J)V"
+    )]
+    async fn test_native_set_ns_window_location_by_platform() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_ns_window_location_by_platform(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
         expected = "not yet implemented: sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowMenuBar(JJ)V"
     )]
     async fn test_native_set_ns_window_menu_bar() {
@@ -490,6 +499,15 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
+        expected = "not yet implemented: sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowStandardFrame(JDDDD)V"
+    )]
+    async fn testnative_set_ns_window_standard_frame() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_set_ns_window_standard_frame(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
         expected = "not yet implemented: sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowStyleBits(JII)V"
     )]
     async fn test_native_set_ns_window_style_bits() {
@@ -513,5 +531,14 @@ mod tests {
     async fn test_native_synthesize_mouse_entered_exited_events_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = native_synthesize_mouse_entered_exited_events_1(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.lwawt.macosx.CPlatformWindow.nativeSynthesizeMouseEnteredExitedEvents(JI)V"
+    )]
+    async fn test_native_synthesize_mouse_entered_exited_events_2() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_synthesize_mouse_entered_exited_events_2(thread, Arguments::default()).await;
     }
 }

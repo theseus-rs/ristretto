@@ -183,6 +183,15 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
+        expected = "not yet implemented: sun.nio.ch.InheritedChannel.peerAddress0(I)Ljava/net/InetAddress;"
+    )]
+    async fn test_peer_address_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = peer_address_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
         expected = "not yet implemented: sun.nio.ch.InheritedChannel.unixPeerAddress0(I)[B"
     )]
     async fn test_unix_peer_address_0() {

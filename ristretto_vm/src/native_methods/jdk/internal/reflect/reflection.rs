@@ -90,4 +90,16 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = are_nest_mates(thread, Arguments::default()).await;
     }
+
+    #[tokio::test]
+    async fn test_get_class_access_flags() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.String").await?;
+        let class_object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![class_object]);
+        let result = get_class_access_flags(thread, arguments).await?;
+        let access_flags: i32 = result.expect("access_flags").try_into()?;
+        assert_eq!(access_flags, 49);
+        Ok(())
+    }
 }

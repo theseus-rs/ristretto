@@ -350,6 +350,24 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
+        expected = "not yet implemented: sun.nio.ch.FileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;)I"
+    )]
+    async fn test_set_direct_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_direct_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.nio.ch.FileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J"
+    )]
+    async fn test_size_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = size_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
         expected = "not yet implemented: sun.nio.ch.FileDispatcherImpl.transferTo0(Ljava/io/FileDescriptor;JJLjava/io/FileDescriptor;Z)J"
     )]
     async fn test_transfer_to_0() {
