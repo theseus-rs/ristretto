@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_18};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -108,112 +108,115 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn canonicalize_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn canonicalize_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn canonicalize_with_prefix_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.canonicalizeWithPrefix0(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn check_access(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn check_access(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.checkAccess(Ljava/io/File;I)Z")
 }
 
 #[async_recursion(?Send)]
-async fn create_directory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn create_directory(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.createDirectory(Ljava/io/File;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn create_file_exclusively(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.createFileExclusively(Ljava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn delete_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn delete_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.delete0(Ljava/io/File;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn get_boolean_attributes(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getBooleanAttributes(Ljava/io/File;)I")
 }
 
 #[async_recursion(?Send)]
-async fn get_drive_directory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_drive_directory(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getDriveDirectory(I)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn get_last_modified_time(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getLastModifiedTime(Ljava/io/File;)J")
 }
 
 #[async_recursion(?Send)]
-async fn get_length(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_length(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getLength(Ljava/io/File;)J")
 }
 
 #[async_recursion(?Send)]
-async fn get_name_max_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_name_max_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getNameMax0(Ljava/lang/String;)I")
 }
 
 #[async_recursion(?Send)]
-async fn get_space_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_space_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getSpace0(Ljava/io/File;I)J")
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn list(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.list(Ljava/io/File;)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn list_roots_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn list_roots_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.listRoots0()I")
 }
 
 #[async_recursion(?Send)]
-async fn rename_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn rename_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z")
 }
 
 #[async_recursion(?Send)]
 async fn set_last_modified_time(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.setLastModifiedTime(Ljava/io/File;J)Z")
 }
 
 #[async_recursion(?Send)]
-async fn set_permission(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_permission(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.setPermission(Ljava/io/File;IZZ)Z")
 }
 
 #[async_recursion(?Send)]
-async fn set_read_only(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_read_only(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.setReadOnly(Ljava/io/File;)Z")
 }
 
@@ -227,7 +230,7 @@ mod tests {
     )]
     async fn test_canonicalize_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = canonicalize_0(thread, Arguments::default()).await;
+        let _ = canonicalize_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -236,7 +239,7 @@ mod tests {
     )]
     async fn test_canonicalize_with_prefix_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = canonicalize_with_prefix_0(thread, Arguments::default()).await;
+        let _ = canonicalize_with_prefix_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -245,7 +248,7 @@ mod tests {
     )]
     async fn test_check_access() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = check_access(thread, Arguments::default()).await;
+        let _ = check_access(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -254,7 +257,7 @@ mod tests {
     )]
     async fn test_create_directory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_directory(thread, Arguments::default()).await;
+        let _ = create_directory(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -263,7 +266,7 @@ mod tests {
     )]
     async fn test_create_file_exclusively() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_file_exclusively(thread, Arguments::default()).await;
+        let _ = create_file_exclusively(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -272,7 +275,7 @@ mod tests {
     )]
     async fn test_delete_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = delete_0(thread, Arguments::default()).await;
+        let _ = delete_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -281,7 +284,7 @@ mod tests {
     )]
     async fn test_get_boolean_attributes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_boolean_attributes(thread, Arguments::default()).await;
+        let _ = get_boolean_attributes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -290,7 +293,7 @@ mod tests {
     )]
     async fn test_get_drive_directory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_drive_directory(thread, Arguments::default()).await;
+        let _ = get_drive_directory(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -299,7 +302,7 @@ mod tests {
     )]
     async fn test_get_last_modified_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_last_modified_time(thread, Arguments::default()).await;
+        let _ = get_last_modified_time(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -308,7 +311,7 @@ mod tests {
     )]
     async fn test_get_length() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_length(thread, Arguments::default()).await;
+        let _ = get_length(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -317,7 +320,7 @@ mod tests {
     )]
     async fn test_get_name_max_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_name_max_0(thread, Arguments::default()).await;
+        let _ = get_name_max_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -326,13 +329,13 @@ mod tests {
     )]
     async fn test_get_space_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_space_0(thread, Arguments::default()).await;
+        let _ = get_space_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -343,14 +346,14 @@ mod tests {
     )]
     async fn test_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = list(thread, Arguments::default()).await;
+        let _ = list(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.io.WinNTFileSystem.listRoots0()I")]
     async fn test_list_roots_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = list_roots_0(thread, Arguments::default()).await;
+        let _ = list_roots_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -359,7 +362,7 @@ mod tests {
     )]
     async fn test_rename_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = rename_0(thread, Arguments::default()).await;
+        let _ = rename_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -368,7 +371,7 @@ mod tests {
     )]
     async fn test_set_last_modified_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_last_modified_time(thread, Arguments::default()).await;
+        let _ = set_last_modified_time(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -377,7 +380,7 @@ mod tests {
     )]
     async fn test_set_permission() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_permission(thread, Arguments::default()).await;
+        let _ = set_permission(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -386,6 +389,6 @@ mod tests {
     )]
     async fn test_set_read_only() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_read_only(thread, Arguments::default()).await;
+        let _ = set_read_only(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -19,7 +19,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn invoke_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn invoke_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
@@ -33,6 +33,6 @@ mod tests {
     )]
     async fn test_invoke_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke_0(thread, Arguments::default()).await;
+        let _ = invoke_0(thread, Parameters::default()).await;
     }
 }

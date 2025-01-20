@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -15,12 +15,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn add_to_archive(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn add_to_archive(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.invoke.LambdaProxyClassArchive.addToArchive(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MemberName;Ljava/lang/invoke/MethodType;Ljava/lang/Class;)V")
 }
 
 #[async_recursion(?Send)]
-async fn find_from_archive(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn find_from_archive(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.invoke.LambdaProxyClassArchive.findFromArchive(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MemberName;Ljava/lang/invoke/MethodType;)Ljava/lang/Class;")
 }
 
@@ -34,7 +34,7 @@ mod tests {
     )]
     async fn test_add_to_archive() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_to_archive(thread, Arguments::default()).await;
+        let _ = add_to_archive(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -43,6 +43,6 @@ mod tests {
     )]
     async fn test_find_from_archive() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = find_from_archive(thread, Arguments::default()).await;
+        let _ = find_from_archive(thread, Parameters::default()).await;
     }
 }

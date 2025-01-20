@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_20, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -115,7 +115,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn clear_call_site_context(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.clearCallSiteContext(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V")
 }
@@ -123,48 +123,54 @@ async fn clear_call_site_context(
 #[async_recursion(?Send)]
 async fn copy_out_bootstrap_arguments(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.copyOutBootstrapArguments(Ljava/lang/Class;[III[Ljava/lang/Object;IZLjava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
-async fn expand(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn expand(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.expand(Ljava/lang/invoke/MemberName;)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_constant(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_constant(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.getConstant(I)I")
 }
 
 #[async_recursion(?Send)]
-async fn get_member_vm_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_member_vm_info(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.getMemberVMInfo(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn get_members(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_members(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.getMembers(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I")
 }
 
 #[async_recursion(?Send)]
-async fn get_named_con(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_named_con(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.getNamedCon(I[Ljava/lang/Object;)I")
 }
 
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn object_field_offset(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn object_field_offset(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J")
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
@@ -215,44 +221,44 @@ async fn resolve(
 }
 
 #[async_recursion(?Send)]
-async fn resolve_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let caller = match arguments.pop_object() {
+async fn resolve_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let caller = match parameters.pop_object() {
         Ok(caller) => {
             let caller: Arc<Class> = caller.try_into()?;
             Some(caller)
         }
         Err(_) => None,
     };
-    let member_self = arguments.pop_object()?;
+    let member_self = parameters.pop_object()?;
     resolve(thread, member_self, caller, -1, true).await
 }
 
 #[async_recursion(?Send)]
-async fn resolve_1(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let speculative_resolve = arguments.pop_int()? != 0;
-    let caller = match arguments.pop_object() {
+async fn resolve_1(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let speculative_resolve = parameters.pop_int()? != 0;
+    let caller = match parameters.pop_object() {
         Ok(caller) => {
             let caller: Arc<Class> = caller.try_into()?;
             Some(caller)
         }
         Err(_) => None,
     };
-    let member_self = arguments.pop_object()?;
+    let member_self = parameters.pop_object()?;
     resolve(thread, member_self, caller, -1, speculative_resolve).await
 }
 
 #[async_recursion(?Send)]
-async fn resolve_2(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let speculative_resolve = arguments.pop_int()? != 0;
-    let lookup_mode = arguments.pop_int()?;
-    let caller = match arguments.pop_object() {
+async fn resolve_2(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let speculative_resolve = parameters.pop_int()? != 0;
+    let lookup_mode = parameters.pop_int()?;
+    let caller = match parameters.pop_object() {
         Ok(caller) => {
             let caller: Arc<Class> = caller.try_into()?;
             Some(caller)
         }
         Err(_) => None,
     };
-    let member_self = arguments.pop_object()?;
+    let member_self = parameters.pop_object()?;
     resolve(
         thread,
         member_self,
@@ -266,7 +272,7 @@ async fn resolve_2(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 #[async_recursion(?Send)]
 async fn set_call_site_target_normal(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.setCallSiteTargetNormal(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V")
 }
@@ -274,18 +280,21 @@ async fn set_call_site_target_normal(
 #[async_recursion(?Send)]
 async fn set_call_site_target_volatile(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.setCallSiteTargetVolatile(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V")
 }
 
 #[async_recursion(?Send)]
-async fn static_field_base(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn static_field_base(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.staticFieldBase(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn static_field_offset(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn static_field_offset(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J")
 }
 
@@ -299,7 +308,7 @@ mod tests {
     )]
     async fn test_clear_call_site_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = clear_call_site_context(thread, Arguments::default()).await;
+        let _ = clear_call_site_context(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -308,7 +317,7 @@ mod tests {
     )]
     async fn test_copy_out_bootstrap_arguments() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = copy_out_bootstrap_arguments(thread, Arguments::default()).await;
+        let _ = copy_out_bootstrap_arguments(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -317,7 +326,7 @@ mod tests {
     )]
     async fn test_expand() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = expand(thread, Arguments::default()).await;
+        let _ = expand(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -326,7 +335,7 @@ mod tests {
     )]
     async fn test_get_constant() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_constant(thread, Arguments::default()).await;
+        let _ = get_constant(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -335,7 +344,7 @@ mod tests {
     )]
     async fn test_get_member_vm_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_member_vm_info(thread, Arguments::default()).await;
+        let _ = get_member_vm_info(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -344,7 +353,7 @@ mod tests {
     )]
     async fn test_get_members() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_members(thread, Arguments::default()).await;
+        let _ = get_members(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -353,13 +362,13 @@ mod tests {
     )]
     async fn test_get_named_con() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_named_con(thread, Arguments::default()).await;
+        let _ = get_named_con(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init(thread, Arguments::default()).await?;
+        let result = init(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -370,13 +379,13 @@ mod tests {
     )]
     async fn test_object_field_offset() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = object_field_offset(thread, Arguments::default()).await;
+        let _ = object_field_offset(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Arguments::default()).await?;
+        let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -387,7 +396,7 @@ mod tests {
     )]
     async fn test_set_call_site_target_normal() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_call_site_target_normal(thread, Arguments::default()).await;
+        let _ = set_call_site_target_normal(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -396,7 +405,7 @@ mod tests {
     )]
     async fn test_set_call_site_target_volatile() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_call_site_target_volatile(thread, Arguments::default()).await;
+        let _ = set_call_site_target_volatile(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -405,7 +414,7 @@ mod tests {
     )]
     async fn test_static_field_base() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = static_field_base(thread, Arguments::default()).await;
+        let _ = static_field_base(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -414,6 +423,6 @@ mod tests {
     )]
     async fn test_static_field_offset() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = static_field_offset(thread, Arguments::default()).await;
+        let _ = static_field_offset(thread, Parameters::default()).await;
     }
 }

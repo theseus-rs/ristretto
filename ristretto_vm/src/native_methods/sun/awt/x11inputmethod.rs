@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -34,32 +34,32 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn dispose_xic(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn dispose_xic(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11InputMethod.disposeXIC()V")
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn is_composition_enabled_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11InputMethod.isCompositionEnabledNative()Z")
 }
 
 #[async_recursion(?Send)]
-async fn reset_xic(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn reset_xic(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11InputMethod.resetXIC()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn set_composition_enabled_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11InputMethod.setCompositionEnabledNative(Z)Z")
 }
@@ -67,7 +67,7 @@ async fn set_composition_enabled_native(
 #[async_recursion(?Send)]
 async fn turnoff_status_window(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11InputMethod.turnoffStatusWindow()V")
 }
@@ -80,13 +80,13 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.awt.X11InputMethod.disposeXIC()V")]
     async fn test_dispose_xic() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dispose_xic(thread, Arguments::default()).await;
+        let _ = dispose_xic(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -97,7 +97,7 @@ mod tests {
     )]
     async fn test_is_composition_enabled_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_composition_enabled_native(thread, Arguments::default()).await;
+        let _ = is_composition_enabled_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -106,7 +106,7 @@ mod tests {
     )]
     async fn test_reset_xic() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = reset_xic(thread, Arguments::default()).await;
+        let _ = reset_xic(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -115,13 +115,13 @@ mod tests {
     )]
     async fn test_set_composition_enabled_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_composition_enabled_native(thread, Arguments::default()).await;
+        let _ = set_composition_enabled_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.awt.X11InputMethod.turnoffStatusWindow()V")]
     async fn test_turnoff_status_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = turnoff_status_window(thread, Arguments::default()).await;
+        let _ = turnoff_status_window(thread, Parameters::default()).await;
     }
 }

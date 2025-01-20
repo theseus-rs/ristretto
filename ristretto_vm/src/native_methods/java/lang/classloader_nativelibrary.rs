@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -22,27 +22,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn find(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn find(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.find(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
-async fn find_entry(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn find_entry(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.findEntry(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
-async fn load(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn load(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.load(Ljava/lang/String;Z)V")
 }
 
 #[async_recursion(?Send)]
-async fn load_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.load0(Ljava/lang/String;ZZ)Z")
 }
 
 #[async_recursion(?Send)]
-async fn unload(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn unload(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.unload(Ljava/lang/String;ZJ)V")
 }
 
@@ -56,7 +56,7 @@ mod tests {
     )]
     async fn test_find() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = find(thread, Arguments::default()).await;
+        let _ = find(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -65,7 +65,7 @@ mod tests {
     )]
     async fn test_find_entry() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = find_entry(thread, Arguments::default()).await;
+        let _ = find_entry(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -74,7 +74,7 @@ mod tests {
     )]
     async fn test_load() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = load(thread, Arguments::default()).await;
+        let _ = load(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -83,7 +83,7 @@ mod tests {
     )]
     async fn test_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = load_0(thread, Arguments::default()).await;
+        let _ = load_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -92,6 +92,6 @@ mod tests {
     )]
     async fn test_unload() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unload(thread, Arguments::default()).await;
+        let _ = unload(thread, Parameters::default()).await;
     }
 }

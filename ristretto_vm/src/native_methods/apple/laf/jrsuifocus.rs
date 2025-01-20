@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -15,12 +15,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn begin_native_focus(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn begin_native_focus(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIFocus.beginNativeFocus(JI)I")
 }
 
 #[async_recursion(?Send)]
-async fn end_native_focus(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn end_native_focus(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIFocus.endNativeFocus(J)I")
 }
 
@@ -32,13 +35,13 @@ mod tests {
     #[should_panic(expected = "not yet implemented: apple.laf.JRSUIFocus.beginNativeFocus(JI)I")]
     async fn test_begin_native_focus() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = begin_native_focus(thread, Arguments::default()).await;
+        let _ = begin_native_focus(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: apple.laf.JRSUIFocus.endNativeFocus(J)I")]
     async fn test_end_native_focus() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = end_native_focus(thread, Arguments::default()).await;
+        let _ = end_native_focus(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn native_blit_bg(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_blit_bg(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11PMBlitBgLoops.nativeBlitBg(JJJIIIIIII)V");
 }
 
@@ -28,6 +28,6 @@ mod tests {
     )]
     async fn test_native_blit_bg() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_blit_bg(thread, Arguments::default()).await;
+        let _ = native_blit_bg(thread, Parameters::default()).await;
     }
 }

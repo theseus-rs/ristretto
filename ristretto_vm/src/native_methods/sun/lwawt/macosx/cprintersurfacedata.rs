@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,12 +20,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn flush(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn flush(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPrinterSurfaceData._flush()V")
 }
 
 #[async_recursion(?Send)]
-async fn init_ops(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ops(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPrinterSurfaceData.initOps(JLjava/nio/ByteBuffer;[Ljava/lang/Object;II)V")
 }
 
@@ -39,7 +39,7 @@ mod tests {
     )]
     async fn test_flush() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = flush(thread, Arguments::default()).await;
+        let _ = flush(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -48,6 +48,6 @@ mod tests {
     )]
     async fn test_init_ops() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_ops(thread, Arguments::default()).await;
+        let _ = init_ops(thread, Parameters::default()).await;
     }
 }

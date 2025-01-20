@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn set_verbose_class(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_verbose_class(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.management.ClassLoadingImpl.setVerboseClass(Z)V")
 }
 
@@ -28,6 +28,6 @@ mod tests {
     )]
     async fn test_set_verbose_class() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_verbose_class(thread, Arguments::default()).await;
+        let _ = set_verbose_class(thread, Parameters::default()).await;
     }
 }

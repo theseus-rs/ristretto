@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -31,17 +31,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn draw_aa_pgram(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn draw_aa_pgram(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.loops.MaskFill.DrawAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDDDD)V");
 }
 
 #[async_recursion(?Send)]
-async fn fill_aa_pgram(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn fill_aa_pgram(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.loops.MaskFill.FillAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDD)V");
 }
 
 #[async_recursion(?Send)]
-async fn mask_fill(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn mask_fill(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.loops.MaskFill.MaskFill(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;IIII[BII)V");
 }
 
@@ -55,7 +55,7 @@ mod tests {
     )]
     async fn test_draw_aa_pgram() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = draw_aa_pgram(thread, Arguments::default()).await;
+        let _ = draw_aa_pgram(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -64,7 +64,7 @@ mod tests {
     )]
     async fn test_fill_aa_pgram() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fill_aa_pgram(thread, Arguments::default()).await;
+        let _ = fill_aa_pgram(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -73,6 +73,6 @@ mod tests {
     )]
     async fn test_mask_fill() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = mask_fill(thread, Arguments::default()).await;
+        let _ = mask_fill(thread, Parameters::default()).await;
     }
 }

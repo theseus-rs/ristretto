@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -27,13 +27,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn is_finalization_enabled(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
 
 #[async_recursion(?Send)]
-async fn report_complete(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn report_complete(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
@@ -44,7 +44,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_finalization_enabled() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = is_finalization_enabled(thread, Arguments::default()).await?;
+        let result = is_finalization_enabled(thread, Parameters::default()).await?;
         assert_eq!(Some(Value::from(false)), result);
         Ok(())
     }
@@ -52,7 +52,7 @@ mod tests {
     #[tokio::test]
     async fn test_report_complete() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = report_complete(thread, Arguments::default()).await?;
+        let result = report_complete(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
     }

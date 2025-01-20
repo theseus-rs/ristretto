@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -25,14 +25,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_parameters_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_parameters_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Executable.getParameters0()[Ljava/lang/reflect/Parameter;")
 }
 
 #[async_recursion(?Send)]
 async fn get_type_annotation_bytes_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Executable.getTypeAnnotationBytes0()[B")
 }
@@ -47,7 +47,7 @@ mod tests {
     )]
     async fn test_get_parameters_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_parameters_0(thread, Arguments::default()).await;
+        let _ = get_parameters_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -56,6 +56,6 @@ mod tests {
     )]
     async fn test_get_type_annotation_bytes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_type_annotation_bytes_0(thread, Arguments::default()).await;
+        let _ = get_type_annotation_bytes_0(thread, Parameters::default()).await;
     }
 }

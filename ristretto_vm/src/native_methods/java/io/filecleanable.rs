@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn cleanup_close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn cleanup_close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileCleanable.cleanupClose0(IJ)V")
 }
 
@@ -26,6 +26,6 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.io.FileCleanable.cleanupClose0(IJ)V")]
     async fn test_cleanup_close_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = cleanup_close_0(thread, Arguments::default()).await;
+        let _ = cleanup_close_0(thread, Parameters::default()).await;
     }
 }

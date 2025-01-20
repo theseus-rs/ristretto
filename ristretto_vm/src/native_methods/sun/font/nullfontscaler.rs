@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,14 +20,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_glyph_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_glyph_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.NullFontScaler.getGlyphImage(JI)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_null_scaler_context(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.NullFontScaler.getNullScalerContext()J")
 }
@@ -40,7 +40,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.font.NullFontScaler.getGlyphImage(JI)J")]
     async fn test_get_glyph_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_image(thread, Arguments::default()).await;
+        let _ = get_glyph_image(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -49,6 +49,6 @@ mod tests {
     )]
     async fn test_get_null_scaler_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_null_scaler_context(thread, Arguments::default()).await;
+        let _ = get_null_scaler_context(thread, Parameters::default()).await;
     }
 }

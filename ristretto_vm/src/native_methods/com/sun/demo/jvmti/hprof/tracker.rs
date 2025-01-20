@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -37,24 +37,30 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn native_call_site(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_call_site(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.demo.jvmti.hprof.Tracker.nativeCallSite(Ljava/lang/Object;II)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_new_array(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_new_array(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.demo.jvmti.hprof.Tracker.nativeNewArray(Ljava/lang/Object;Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_object_init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_object_init(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "com.sun.demo.jvmti.hprof.Tracker.nativeObjectInit(Ljava/lang/Object;Ljava/lang/Object;)V"
     )
 }
 
 #[async_recursion(?Send)]
-async fn native_return_site(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_return_site(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.demo.jvmti.hprof.Tracker.nativeReturnSite(Ljava/lang/Object;II)V")
 }
 
@@ -68,7 +74,7 @@ mod tests {
     )]
     async fn test_native_call_site() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_call_site(thread, Arguments::default()).await;
+        let _ = native_call_site(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -77,7 +83,7 @@ mod tests {
     )]
     async fn test_native_new_array() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_new_array(thread, Arguments::default()).await;
+        let _ = native_new_array(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -86,7 +92,7 @@ mod tests {
     )]
     async fn test_native_object_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_object_init(thread, Arguments::default()).await;
+        let _ = native_object_init(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -95,6 +101,6 @@ mod tests {
     )]
     async fn test_native_return_site() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_return_site(thread, Arguments::default()).await;
+        let _ = native_return_site(thread, Parameters::default()).await;
     }
 }

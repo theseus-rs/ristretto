@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -22,13 +22,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn generate_ec_key_pair(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.ec.ECKeyPairGenerator.generateECKeyPair(I[B[B)[Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn is_curve_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_curve_supported(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.ec.ECKeyPairGenerator.isCurveSupported([B)Z")
 }
 
@@ -42,7 +45,7 @@ mod tests {
     )]
     async fn test_generate_ec_key_pair() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = generate_ec_key_pair(thread, Arguments::default()).await;
+        let _ = generate_ec_key_pair(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -51,6 +54,6 @@ mod tests {
     )]
     async fn test_is_curve_supported() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_curve_supported(thread, Arguments::default()).await;
+        let _ = is_curve_supported(thread, Parameters::default()).await;
     }
 }

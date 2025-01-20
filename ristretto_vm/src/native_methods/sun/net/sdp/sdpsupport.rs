@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -15,12 +15,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn convert_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn convert_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.net.sdp.SdpSupport.convert0(I)V")
 }
 
 #[async_recursion(?Send)]
-async fn create_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn create_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.net.sdp.SdpSupport.create0()I")
 }
 
@@ -32,13 +32,13 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.net.sdp.SdpSupport.convert0(I)V")]
     async fn test_convert_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = convert_0(thread, Arguments::default()).await;
+        let _ = convert_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.net.sdp.SdpSupport.create0()I")]
     async fn test_create_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_0(thread, Arguments::default()).await;
+        let _ = create_0(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -26,14 +26,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_font_config(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_font_config(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.FontConfigManager.getFontConfig(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_font_config_aa_settings(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!(
         "sun.font.FontConfigManager.getFontConfigAASettings(Ljava/lang/String;Ljava/lang/String;)I"
@@ -43,7 +43,7 @@ async fn get_font_config_aa_settings(
 #[async_recursion(?Send)]
 async fn get_font_config_version(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FontConfigManager.getFontConfigVersion()I")
 }
@@ -58,7 +58,7 @@ mod tests {
     )]
     async fn test_get_font_config() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_font_config(thread, Arguments::default()).await;
+        let _ = get_font_config(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -67,7 +67,7 @@ mod tests {
     )]
     async fn test_get_font_config_aa_settings() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_font_config_aa_settings(thread, Arguments::default()).await;
+        let _ = get_font_config_aa_settings(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -76,6 +76,6 @@ mod tests {
     )]
     async fn test_get_font_config_version() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_font_config_version(thread, Arguments::default()).await;
+        let _ = get_font_config_version(thread, Parameters::default()).await;
     }
 }

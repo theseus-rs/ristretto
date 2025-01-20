@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -45,28 +45,31 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn nss_get_library_handle(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.Secmod.nssGetLibraryHandle(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
-async fn nss_get_module_list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn nss_get_module_list(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.Secmod.nssGetModuleList(JLjava/lang/String;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn nss_initialize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn nss_initialize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.Secmod.nssInitialize(Ljava/lang/String;JLjava/lang/String;Z)Z")
 }
 
 #[async_recursion(?Send)]
-async fn nss_load_library(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn nss_load_library(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.Secmod.nssLoadLibrary(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
-async fn nss_version_check(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn nss_version_check(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.Secmod.nssVersionCheck(JLjava/lang/String;)Z")
 }
 
@@ -80,7 +83,7 @@ mod tests {
     )]
     async fn test_nss_get_library_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = nss_get_library_handle(thread, Arguments::default()).await;
+        let _ = nss_get_library_handle(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -89,7 +92,7 @@ mod tests {
     )]
     async fn test_nss_get_module_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = nss_get_module_list(thread, Arguments::default()).await;
+        let _ = nss_get_module_list(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -98,7 +101,7 @@ mod tests {
     )]
     async fn test_nss_initialize() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = nss_initialize(thread, Arguments::default()).await;
+        let _ = nss_initialize(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -107,7 +110,7 @@ mod tests {
     )]
     async fn test_nss_load_library() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = nss_load_library(thread, Arguments::default()).await;
+        let _ = nss_load_library(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -116,6 +119,6 @@ mod tests {
     )]
     async fn test_nss_version_check() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = nss_version_check(thread, Arguments::default()).await;
+        let _ = nss_version_check(thread, Parameters::default()).await;
     }
 }

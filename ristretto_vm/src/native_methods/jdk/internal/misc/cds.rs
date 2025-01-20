@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_22};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -70,20 +70,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn define_archived_modules(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V")
 }
 
 #[async_recursion(?Send)]
-async fn dump_class_list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn dump_class_list(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.CDS.dumpClassList(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn dump_dynamic_archive(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.CDS.dumpDynamicArchive(Ljava/lang/String;)V")
 }
@@ -91,7 +91,7 @@ async fn dump_dynamic_archive(
 #[async_recursion(?Send)]
 async fn get_cds_config_status(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
 }
@@ -100,7 +100,7 @@ async fn get_cds_config_status(
 #[async_recursion(?Send)]
 async fn get_random_seed_for_dumping(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     let version = env!("CARGO_PKG_VERSION");
     let mut hasher = DefaultHasher::new();
@@ -112,16 +112,16 @@ async fn get_random_seed_for_dumping(
 #[async_recursion(?Send)]
 async fn initialize_from_archive(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _class = arguments.pop_reference()?;
+    let _class = parameters.pop_reference()?;
     Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn is_dumping_archive_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
@@ -129,7 +129,7 @@ async fn is_dumping_archive_0(
 #[async_recursion(?Send)]
 async fn is_dumping_class_list_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
@@ -137,7 +137,7 @@ async fn is_dumping_class_list_0(
 #[async_recursion(?Send)]
 async fn is_sharing_enabled_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
@@ -145,7 +145,7 @@ async fn is_sharing_enabled_0(
 #[async_recursion(?Send)]
 async fn log_lambda_form_invoker(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.CDS.logLambdaFormInvoker(Ljava/lang/String;)V")
 }
@@ -160,7 +160,7 @@ mod tests {
     )]
     async fn test_define_archived_modules() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = define_archived_modules(thread, Arguments::default()).await;
+        let _ = define_archived_modules(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -169,7 +169,7 @@ mod tests {
     )]
     async fn test_dump_class_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dump_class_list(thread, Arguments::default()).await;
+        let _ = dump_class_list(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -178,13 +178,13 @@ mod tests {
     )]
     async fn test_dump_dynamic_archive() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dump_dynamic_archive(thread, Arguments::default()).await;
+        let _ = dump_dynamic_archive(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_get_cds_config_status() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_cds_config_status(thread, Arguments::default()).await?;
+        let result = get_cds_config_status(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -192,7 +192,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_random_seed_for_dumping() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_random_seed_for_dumping(thread, Arguments::default()).await?;
+        let result = get_random_seed_for_dumping(thread, Parameters::default()).await?;
         let hash = result.unwrap_or(Value::Long(0)).to_long()?;
         assert_ne!(0, hash);
         Ok(())
@@ -201,8 +201,8 @@ mod tests {
     #[tokio::test]
     async fn test_initialize_from_archive() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Object(None)]);
-        let result = initialize_from_archive(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Object(None)]);
+        let result = initialize_from_archive(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -210,7 +210,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_dumping_archive_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = is_dumping_archive_0(thread, Arguments::default()).await?;
+        let result = is_dumping_archive_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -218,7 +218,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_dumping_class_list_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = is_dumping_class_list_0(thread, Arguments::default()).await?;
+        let result = is_dumping_class_list_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -226,7 +226,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_sharing_enabled_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = is_sharing_enabled_0(thread, Arguments::default()).await?;
+        let result = is_sharing_enabled_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -237,6 +237,6 @@ mod tests {
     )]
     async fn test_log_lambda_form_invoker() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = log_lambda_form_invoker(thread, Arguments::default()).await;
+        let _ = log_lambda_form_invoker(thread, Parameters::default()).await;
     }
 }

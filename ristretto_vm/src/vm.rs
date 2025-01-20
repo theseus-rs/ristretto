@@ -356,7 +356,7 @@ impl VM {
     /// * if the main class is not specified
     /// * if the main class does not specify a main method
     /// * if the main method cannot be invoked
-    pub async fn invoke_main<S: AsRef<str>>(&self, arguments: Vec<S>) -> Result<Option<Value>> {
+    pub async fn invoke_main<S: AsRef<str>>(&self, parameters: Vec<S>) -> Result<Option<Value>> {
         let Some(main_class_name) = &self.main_class else {
             return Err(InternalError("No main class specified".into()));
         };
@@ -367,34 +367,34 @@ impl VM {
             )));
         };
 
-        let mut string_arguments = Vec::new();
-        for argument in arguments {
-            let argument = argument.as_ref();
-            let Value::Object(value) = argument.to_object(self).await? else {
+        let mut string_parameters = Vec::new();
+        for parameter in parameters {
+            let parameter = parameter.as_ref();
+            let Value::Object(value) = parameter.to_object(self).await? else {
                 return Err(InternalError(format!(
-                    "Failed to create string for argument {argument}"
+                    "Failed to create string for parameter {parameter}"
                 )));
             };
-            string_arguments.push(value);
+            string_parameters.push(value);
         }
 
         let string_array_class = self.class("[Ljava/lang/String;").await?;
-        let string_arguments = Value::Object(Some(Reference::Array(
+        let string_parameter = Value::Object(Some(Reference::Array(
             string_array_class,
-            ConcurrentVec::from(string_arguments),
+            ConcurrentVec::from(string_parameters),
         )));
 
         self.invoke(
             main_class_name,
             main_method.name(),
             main_method.descriptor(),
-            vec![string_arguments],
+            vec![string_parameter],
         )
         .await
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
-    /// the first argument in the arguments vector.
+    /// the first parameter in the parameters vector.
     ///
     /// # Errors
     /// if the method cannot be invoked
@@ -403,7 +403,7 @@ impl VM {
         class: C,
         method: M,
         descriptor: D,
-        arguments: Vec<impl RustValue>,
+        parameters: Vec<impl RustValue>,
     ) -> Result<Option<Value>>
     where
         C: AsRef<str>,
@@ -413,11 +413,11 @@ impl VM {
         let class = self.class(class).await?;
         let method = class.try_get_method(method, descriptor)?;
         let thread = self.primordial_thread()?;
-        thread.execute(&class, &method, arguments).await
+        thread.execute(&class, &method, parameters).await
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
-    /// the first argument in the arguments vector.
+    /// the first parameter in the parameters vector.
     ///
     /// # Errors
     /// if the method cannot be invoked
@@ -426,14 +426,14 @@ impl VM {
         class: C,
         method: M,
         descriptor: D,
-        arguments: Vec<impl RustValue>,
+        parameters: Vec<impl RustValue>,
     ) -> Result<Value>
     where
         C: AsRef<str>,
         M: AsRef<str>,
         D: AsRef<str>,
     {
-        let Some(value) = self.invoke(class, method, descriptor, arguments).await? else {
+        let Some(value) = self.invoke(class, method, descriptor, parameters).await? else {
             return Err(InternalError("No return value".into()));
         };
         Ok(value)
@@ -447,14 +447,14 @@ impl VM {
         &self,
         class_name: C,
         descriptor: M,
-        arguments: Vec<impl RustValue>,
+        parameters: Vec<impl RustValue>,
     ) -> Result<Value>
     where
         C: AsRef<str>,
         M: AsRef<str>,
     {
         let thread = self.primordial_thread()?;
-        thread.object(class_name, descriptor, arguments).await
+        thread.object(class_name, descriptor, parameters).await
     }
 }
 

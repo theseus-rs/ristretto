@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_run_file_dialog(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CFileDialog.nativeRunFileDialog(Ljava/lang/String;IZZZZLjava/lang/String;Ljava/lang/String;)[Ljava/lang/String;")
 }
@@ -36,6 +36,6 @@ mod tests {
     )]
     async fn test_native_run_file_dialog() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_run_file_dialog(thread, Arguments::default()).await;
+        let _ = native_run_file_dialog(thread, Parameters::default()).await;
     }
 }

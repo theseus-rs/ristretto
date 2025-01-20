@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -17,22 +17,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueuePort.close0(I)V");
 }
 
 #[async_recursion(?Send)]
-async fn drain_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn drain_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueuePort.drain1(I)V");
 }
 
 #[async_recursion(?Send)]
-async fn interrupt(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn interrupt(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueuePort.interrupt(I)V");
 }
 
 #[async_recursion(?Send)]
-async fn socketpair(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn socketpair(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueuePort.socketpair([I)V");
 }
 
@@ -44,27 +44,27 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueuePort.close0(I)V")]
     async fn test_close_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_0(thread, Arguments::default()).await;
+        let _ = close_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueuePort.drain1(I)V")]
     async fn test_drain_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = drain_1(thread, Arguments::default()).await;
+        let _ = drain_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueuePort.interrupt(I)V")]
     async fn test_interrupt() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = interrupt(thread, Arguments::default()).await;
+        let _ = interrupt(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueuePort.socketpair([I)V")]
     async fn test_socketpair() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = socketpair(thread, Arguments::default()).await;
+        let _ = socketpair(thread, Parameters::default()).await;
     }
 }

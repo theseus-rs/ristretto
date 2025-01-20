@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,17 +21,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn update(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.Adler32.update(II)I")
 }
 
 #[async_recursion(?Send)]
-async fn update_byte_buffer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn update_byte_buffer(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.util.zip.Adler32.updateByteBuffer(IJII)I")
 }
 
 #[async_recursion(?Send)]
-async fn update_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn update_bytes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.Adler32.updateBytes(I[BII)I")
 }
 
@@ -43,20 +46,20 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.util.zip.Adler32.update(II)I")]
     async fn test_update() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = update(thread, Arguments::default()).await;
+        let _ = update(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.util.zip.Adler32.updateByteBuffer(IJII)I")]
     async fn test_update_byte_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = update_byte_buffer(thread, Arguments::default()).await;
+        let _ = update_byte_buffer(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.util.zip.Adler32.updateBytes(I[BII)I")]
     async fn test_update_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = update_bytes(thread, Arguments::default()).await;
+        let _ = update_bytes(thread, Parameters::default()).await;
     }
 }

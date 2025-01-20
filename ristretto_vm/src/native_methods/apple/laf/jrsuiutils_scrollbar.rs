@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn should_use_scroll_to_click(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIUtils$ScrollBar.shouldUseScrollToClick()Z")
 }
@@ -36,6 +36,6 @@ mod tests {
     )]
     async fn test_should_use_scroll_to_click() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = should_use_scroll_to_click(thread, Arguments::default()).await;
+        let _ = should_use_scroll_to_click(thread, Parameters::default()).await;
     }
 }

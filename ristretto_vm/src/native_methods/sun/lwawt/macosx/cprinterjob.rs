@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -30,40 +30,40 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn safe_print_loop(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn safe_print_loop(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPrinterJob._safePrintLoop(JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn abort_doc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn abort_doc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPrinterJob.abortDoc()V")
 }
 
 #[async_recursion(?Send)]
 async fn create_ns_print_info(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPrinterJob.createNSPrintInfo()J")
 }
 
 #[async_recursion(?Send)]
-async fn dispose(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn dispose(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPrinterJob.dispose(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_default_page(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_default_page(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPrinterJob.getDefaultPage(Ljava/awt/print/PageFormat;)V")
 }
 
 #[async_recursion(?Send)]
-async fn print_loop(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn print_loop(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPrinterJob.printLoop(ZII)Z")
 }
 
 #[async_recursion(?Send)]
-async fn validate_paper(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn validate_paper(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "sun.lwawt.macosx.CPrinterJob.validatePaper(Ljava/awt/print/Paper;Ljava/awt/print/Paper;)V"
     )
@@ -79,14 +79,14 @@ mod tests {
     )]
     async fn test_safe_print_loop() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = safe_print_loop(thread, Arguments::default()).await;
+        let _ = safe_print_loop(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CPrinterJob.abortDoc()V")]
     async fn test_abort_doc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = abort_doc(thread, Arguments::default()).await;
+        let _ = abort_doc(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -95,14 +95,14 @@ mod tests {
     )]
     async fn test_create_ns_print_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_ns_print_info(thread, Arguments::default()).await;
+        let _ = create_ns_print_info(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CPrinterJob.dispose(J)V")]
     async fn test_dispose() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dispose(thread, Arguments::default()).await;
+        let _ = dispose(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -111,14 +111,14 @@ mod tests {
     )]
     async fn test_get_default_page() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_default_page(thread, Arguments::default()).await;
+        let _ = get_default_page(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CPrinterJob.printLoop(ZII)Z")]
     async fn test_print_loop() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = print_loop(thread, Arguments::default()).await;
+        let _ = print_loop(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -127,6 +127,6 @@ mod tests {
     )]
     async fn test_validate_paper() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = validate_paper(thread, Arguments::default()).await;
+        let _ = validate_paper(thread, Parameters::default()).await;
     }
 }

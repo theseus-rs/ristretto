@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -30,17 +30,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_system_proxies(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_system_proxies(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.net.spi.DefaultProxySelector.getSystemProxies(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;")
 }
 
 #[async_recursion(?Send)]
-async fn get_system_proxy(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_system_proxy(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.net.spi.DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;")
 }
 
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
@@ -54,7 +57,7 @@ mod tests {
     )]
     async fn test_get_system_proxies() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_proxies(thread, Arguments::default()).await;
+        let _ = get_system_proxies(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -63,13 +66,13 @@ mod tests {
     )]
     async fn test_get_system_proxy() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_proxy(thread, Arguments::default()).await;
+        let _ = get_system_proxy(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init(thread, Arguments::default()).await?;
+        let result = init(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }

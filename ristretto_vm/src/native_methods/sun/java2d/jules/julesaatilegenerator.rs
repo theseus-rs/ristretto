@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,14 +20,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn free_pixman_img_ptr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn free_pixman_img_ptr(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.jules.JulesAATileGenerator.freePixmanImgPtr(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn rasterize_trapezoids_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.jules.JulesAATileGenerator.rasterizeTrapezoidsNative(J[I[II[BII)J")
 }
@@ -42,7 +45,7 @@ mod tests {
     )]
     async fn test_free_pixman_img_ptr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = free_pixman_img_ptr(thread, Arguments::default()).await;
+        let _ = free_pixman_img_ptr(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -51,6 +54,6 @@ mod tests {
     )]
     async fn test_rasterize_trapezoids_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = rasterize_trapezoids_native(thread, Arguments::default()).await;
+        let _ = rasterize_trapezoids_native(thread, Parameters::default()).await;
     }
 }

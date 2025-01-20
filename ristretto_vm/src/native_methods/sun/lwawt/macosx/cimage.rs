@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -93,7 +93,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_copy_ns_image_into_array(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeCopyNSImageIntoArray(J[IIIII)V")
 }
@@ -101,7 +101,7 @@ async fn native_copy_ns_image_into_array(
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_array(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromArray([III)J")
 }
@@ -109,7 +109,7 @@ async fn native_create_ns_image_from_array(
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_arrays(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromArrays([[I[I[I)J")
 }
@@ -117,7 +117,7 @@ async fn native_create_ns_image_from_arrays(
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_bytes(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromBytes([B)J")
 }
@@ -125,7 +125,7 @@ async fn native_create_ns_image_from_bytes(
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_file_contents(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromFileContents(Ljava/lang/String;)J")
 }
@@ -133,7 +133,7 @@ async fn native_create_ns_image_from_file_contents(
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_icon_selector(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromIconSelector(I)J")
 }
@@ -141,7 +141,7 @@ async fn native_create_ns_image_from_icon_selector(
 #[async_recursion(?Send)]
 async fn native_create_ns_image_from_image_name(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromImageName(Ljava/lang/String;)J")
 }
@@ -149,7 +149,7 @@ async fn native_create_ns_image_from_image_name(
 #[async_recursion(?Send)]
 async fn native_create_ns_image_of_file_from_launch_services(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!(
         "sun.lwawt.macosx.CImage.nativeCreateNSImageOfFileFromLaunchServices(Ljava/lang/String;)J"
@@ -159,7 +159,7 @@ async fn native_create_ns_image_of_file_from_launch_services(
 #[async_recursion(?Send)]
 async fn native_get_ns_image_representation_sizes(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeGetNSImageRepresentationSizes(JDD)[Ljava/awt/geom/Dimension2D;")
 }
@@ -167,7 +167,7 @@ async fn native_get_ns_image_representation_sizes(
 #[async_recursion(?Send)]
 async fn native_get_ns_image_size(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeGetNSImageSize(J)Ljava/awt/geom/Dimension2D;")
 }
@@ -175,7 +175,7 @@ async fn native_get_ns_image_size(
 #[async_recursion(?Send)]
 async fn native_get_platform_image_bytes(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeGetPlatformImageBytes([III)[B")
 }
@@ -183,7 +183,7 @@ async fn native_get_platform_image_bytes(
 #[async_recursion(?Send)]
 async fn native_resize_ns_image_representations(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeResizeNSImageRepresentations(JDD)V")
 }
@@ -191,7 +191,7 @@ async fn native_resize_ns_image_representations(
 #[async_recursion(?Send)]
 async fn native_set_ns_image_size(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CImage.nativeSetNSImageSize(JDD)V")
 }
@@ -206,7 +206,7 @@ mod tests {
     )]
     async fn test_native_copy_ns_image_into_array() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_copy_ns_image_into_array(thread, Arguments::default()).await;
+        let _ = native_copy_ns_image_into_array(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -215,7 +215,7 @@ mod tests {
     )]
     async fn test_native_create_ns_image_from_array() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_array(thread, Arguments::default()).await;
+        let _ = native_create_ns_image_from_array(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -224,7 +224,7 @@ mod tests {
     )]
     async fn test_native_create_ns_image_from_arrays() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_arrays(thread, Arguments::default()).await;
+        let _ = native_create_ns_image_from_arrays(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -233,7 +233,7 @@ mod tests {
     )]
     async fn test_native_create_ns_image_from_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_bytes(thread, Arguments::default()).await;
+        let _ = native_create_ns_image_from_bytes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -242,7 +242,7 @@ mod tests {
     )]
     async fn test_native_create_ns_image_from_file_contents() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_file_contents(thread, Arguments::default()).await;
+        let _ = native_create_ns_image_from_file_contents(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -251,7 +251,7 @@ mod tests {
     )]
     async fn test_native_create_ns_image_from_icon_selector() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_icon_selector(thread, Arguments::default()).await;
+        let _ = native_create_ns_image_from_icon_selector(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -260,7 +260,7 @@ mod tests {
     )]
     async fn test_native_create_ns_image_from_image_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_image_name(thread, Arguments::default()).await;
+        let _ = native_create_ns_image_from_image_name(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -269,8 +269,8 @@ mod tests {
     )]
     async fn test_native_create_ns_image_of_file_from_launch_services() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ =
-            native_create_ns_image_of_file_from_launch_services(thread, Arguments::default()).await;
+        let _ = native_create_ns_image_of_file_from_launch_services(thread, Parameters::default())
+            .await;
     }
 
     #[tokio::test]
@@ -279,7 +279,7 @@ mod tests {
     )]
     async fn test_native_get_ns_image_representation_sizes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_ns_image_representation_sizes(thread, Arguments::default()).await;
+        let _ = native_get_ns_image_representation_sizes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -288,7 +288,7 @@ mod tests {
     )]
     async fn test_native_get_ns_image_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_ns_image_size(thread, Arguments::default()).await;
+        let _ = native_get_ns_image_size(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -297,7 +297,7 @@ mod tests {
     )]
     async fn test_native_get_platform_image_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_platform_image_bytes(thread, Arguments::default()).await;
+        let _ = native_get_platform_image_bytes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -306,7 +306,7 @@ mod tests {
     )]
     async fn test_native_resize_ns_image_representations() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_resize_ns_image_representations(thread, Arguments::default()).await;
+        let _ = native_resize_ns_image_representations(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -315,6 +315,6 @@ mod tests {
     )]
     async fn test_native_set_ns_image_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_ns_image_size(thread, Arguments::default()).await;
+        let _ = native_set_ns_image_size(thread, Parameters::default()).await;
     }
 }

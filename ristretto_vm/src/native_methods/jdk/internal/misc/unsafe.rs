@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::{InternalError, InvalidOperand};
 use crate::Result;
@@ -371,7 +371,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 pub(crate) async fn address_size_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(8))) // 64-bit pointers
 }
@@ -379,7 +379,7 @@ pub(crate) async fn address_size_0(
 #[async_recursion(?Send)]
 pub(crate) async fn allocate_instance(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.allocateInstance(Ljava/lang/Class;)Ljava/lang/Object;")
 }
@@ -387,7 +387,7 @@ pub(crate) async fn allocate_instance(
 #[async_recursion(?Send)]
 pub(crate) async fn allocate_memory_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.allocateMemory0(J)J")
 }
@@ -395,7 +395,7 @@ pub(crate) async fn allocate_memory_0(
 #[async_recursion(?Send)]
 pub(crate) async fn array_base_offset_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
 }
@@ -403,7 +403,7 @@ pub(crate) async fn array_base_offset_0(
 #[async_recursion(?Send)]
 pub(crate) async fn array_index_scale_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(1)))
 }
@@ -411,7 +411,7 @@ pub(crate) async fn array_index_scale_0(
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_int(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.compareAndExchangeInt(Ljava/lang/Object;JII)I")
 }
@@ -419,7 +419,7 @@ pub(crate) async fn compare_and_exchange_int(
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_long(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.compareAndExchangeLong(Ljava/lang/Object;JJJ)J")
 }
@@ -427,7 +427,7 @@ pub(crate) async fn compare_and_exchange_long(
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_object(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.compareAndExchangeObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
 }
@@ -435,7 +435,7 @@ pub(crate) async fn compare_and_exchange_object(
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_reference(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.compareAndExchangeReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
 }
@@ -443,11 +443,11 @@ pub(crate) async fn compare_and_exchange_reference(
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_set_int(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop_int()?;
-    let expected = arguments.pop_int()?;
-    let mut offset = arguments.pop()?;
+    let x = parameters.pop_int()?;
+    let expected = parameters.pop_int()?;
+    let mut offset = parameters.pop()?;
     let Value::Long(ref mut offset) = offset else {
         return Err(InvalidOperand {
             expected: "long".to_string(),
@@ -456,7 +456,7 @@ pub(crate) async fn compare_and_set_int(
     };
 
     // TODO: the compare and set operation should be atomic
-    let result = if let Some(Reference::Object(object)) = arguments.pop_reference()? {
+    let result = if let Some(Reference::Object(object)) = parameters.pop_reference()? {
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
@@ -480,11 +480,11 @@ pub(crate) async fn compare_and_set_int(
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_set_long(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop_long()?;
-    let expected = arguments.pop_long()?;
-    let mut offset = arguments.pop()?;
+    let x = parameters.pop_long()?;
+    let expected = parameters.pop_long()?;
+    let mut offset = parameters.pop()?;
     let Value::Long(ref mut offset) = offset else {
         return Err(InvalidOperand {
             expected: "long".to_string(),
@@ -493,7 +493,7 @@ pub(crate) async fn compare_and_set_long(
     };
 
     // TODO: the compare and set operation should be atomic
-    let result = if let Some(Reference::Object(object)) = arguments.pop_reference()? {
+    let result = if let Some(Reference::Object(object)) = parameters.pop_reference()? {
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
@@ -517,21 +517,21 @@ pub(crate) async fn compare_and_set_long(
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_set_object(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    compare_and_set_reference(thread, arguments).await
+    compare_and_set_reference(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_set_reference(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop()?;
-    let expected = arguments.pop()?;
-    let offset = arguments.pop_long()?;
+    let x = parameters.pop()?;
+    let expected = parameters.pop()?;
+    let offset = parameters.pop_long()?;
     let offset = usize::try_from(offset)?;
-    let Some(object) = arguments.pop_reference()? else {
+    let Some(object) = parameters.pop_reference()? else {
         return Err(InternalError(
             "compareAndSetReference: Invalid reference".to_string(),
         ));
@@ -588,17 +588,17 @@ pub(crate) async fn compare_and_set_reference(
 #[async_recursion(?Send)]
 pub(crate) async fn copy_memory_0(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _bytes = usize::try_from(arguments.pop_long()?)?;
-    let _destination_offset = usize::try_from(arguments.pop_long()?)?;
-    let Value::Object(ref mut destination) = arguments.pop()? else {
+    let _bytes = usize::try_from(parameters.pop_long()?)?;
+    let _destination_offset = usize::try_from(parameters.pop_long()?)?;
+    let Value::Object(ref mut destination) = parameters.pop()? else {
         return Err(InternalError(
             "copyMemory0: Invalid destination".to_string(),
         ));
     };
-    let _source_offset = usize::try_from(arguments.pop_long()?)?;
-    let Value::Object(ref mut source) = arguments.pop()? else {
+    let _source_offset = usize::try_from(parameters.pop_long()?)?;
+    let Value::Object(ref mut source) = parameters.pop()? else {
         return Err(InternalError("copyMemory0: Invalid source".to_string()));
     };
     destination.clone_from(source);
@@ -608,7 +608,7 @@ pub(crate) async fn copy_memory_0(
 #[async_recursion(?Send)]
 pub(crate) async fn copy_swap_memory_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.copySwapMemory0(Ljava/lang/Object;JLjava/lang/Object;JJJ)V")
 }
@@ -616,7 +616,7 @@ pub(crate) async fn copy_swap_memory_0(
 #[async_recursion(?Send)]
 pub(crate) async fn define_anonymous_class_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.defineAnonymousClass0(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;")
 }
@@ -624,7 +624,7 @@ pub(crate) async fn define_anonymous_class_0(
 #[async_recursion(?Send)]
 pub(crate) async fn define_class_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.defineClass0(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;")
 }
@@ -632,7 +632,7 @@ pub(crate) async fn define_class_0(
 #[async_recursion(?Send)]
 pub(crate) async fn ensure_class_initialized_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -640,7 +640,7 @@ pub(crate) async fn ensure_class_initialized_0(
 #[async_recursion(?Send)]
 pub(crate) async fn free_memory_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -648,7 +648,7 @@ pub(crate) async fn free_memory_0(
 #[async_recursion(?Send)]
 pub(crate) async fn full_fence(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -656,11 +656,11 @@ pub(crate) async fn full_fence(
 #[expect(clippy::too_many_lines)]
 fn get_reference_type(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
     base_type: Option<BaseType>,
 ) -> Result<Option<Value>> {
-    let offset = arguments.pop_long()?;
-    let Some(reference) = arguments.pop_reference()? else {
+    let offset = parameters.pop_long()?;
+    let Some(reference) = parameters.pop_reference()? else {
         let Some(base_type) = base_type else {
             return Err(InternalError(
                 "getReferenceType: Invalid reference".to_string(),
@@ -775,151 +775,163 @@ fn get_reference_type(
 #[async_recursion(?Send)]
 pub(crate) async fn get_boolean(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_boolean_volatile(thread, arguments).await
+    get_boolean_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_boolean_volatile(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, Some(BaseType::Boolean))
+    get_reference_type(thread, parameters, Some(BaseType::Boolean))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_byte(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    get_byte_volatile(thread, arguments).await
+pub(crate) async fn get_byte(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    get_byte_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_byte_volatile(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, Some(BaseType::Byte))
+    get_reference_type(thread, parameters, Some(BaseType::Byte))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_char(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    get_char_volatile(thread, arguments).await
+pub(crate) async fn get_char(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    get_char_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_char_volatile(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, Some(BaseType::Char))
+    get_reference_type(thread, parameters, Some(BaseType::Char))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_double(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    get_double_volatile(thread, arguments).await
+pub(crate) async fn get_double(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    get_double_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_double_volatile(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, Some(BaseType::Double))
+    get_reference_type(thread, parameters, Some(BaseType::Double))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_float(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    get_float_volatile(thread, arguments).await
+pub(crate) async fn get_float(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    get_float_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_float_volatile(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, Some(BaseType::Float))
+    get_reference_type(thread, parameters, Some(BaseType::Float))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_int(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    get_int_volatile(thread, arguments).await
+pub(crate) async fn get_int(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    get_int_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_int_volatile(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, Some(BaseType::Int))
+    get_reference_type(thread, parameters, Some(BaseType::Int))
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_load_average_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.getLoadAverage0([DI)I")
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_long(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    get_long_volatile(thread, arguments).await
+pub(crate) async fn get_long(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    get_long_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_long_volatile(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, Some(BaseType::Long))
+    get_reference_type(thread, parameters, Some(BaseType::Long))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_object(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    get_object_volatile(thread, arguments).await
+pub(crate) async fn get_object(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    get_object_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_object_volatile(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, None)
+    get_reference_type(thread, parameters, None)
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_reference(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_reference_volatile(thread, arguments).await
+    get_reference_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_reference_volatile(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, None)
+    get_reference_type(thread, parameters, None)
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn get_short(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    get_short_volatile(thread, arguments).await
+pub(crate) async fn get_short(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    get_short_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_short_volatile(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_reference_type(thread, arguments, Some(BaseType::Short))
+    get_reference_type(thread, parameters, Some(BaseType::Short))
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_uncompressed_object(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.getUncompressedObject(J)Ljava/lang/Object;")
 }
@@ -927,7 +939,7 @@ pub(crate) async fn get_uncompressed_object(
 #[async_recursion(?Send)]
 pub(crate) async fn is_big_endian_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     let big_endian = cfg!(target_endian = "big");
     Ok(Some(Value::from(big_endian)))
@@ -936,7 +948,7 @@ pub(crate) async fn is_big_endian_0(
 #[async_recursion(?Send)]
 pub(crate) async fn load_fence(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -944,7 +956,7 @@ pub(crate) async fn load_fence(
 #[async_recursion(?Send)]
 pub(crate) async fn object_field_offset_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Long(0)))
 }
@@ -952,9 +964,9 @@ pub(crate) async fn object_field_offset_0(
 #[async_recursion(?Send)]
 pub(crate) async fn object_field_offset_1(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let value = arguments.pop()?;
+    let value = parameters.pop()?;
     let field_name: String = match value {
         Value::Object(_) => value.try_into()?,
         value => {
@@ -964,7 +976,7 @@ pub(crate) async fn object_field_offset_1(
             });
         }
     };
-    let Some(Reference::Object(class_object)) = arguments.pop_reference()? else {
+    let Some(Reference::Object(class_object)) = parameters.pop_reference()? else {
         return Err(InternalError(
             "objectFieldOffset1: Invalid class reference".to_string(),
         ));
@@ -979,32 +991,32 @@ pub(crate) async fn object_field_offset_1(
 #[async_recursion(?Send)]
 pub(crate) async fn page_size(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.pageSize()I")
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn park(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+pub(crate) async fn park(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.park(ZJ)V")
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_boolean(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    put_boolean_volatile(thread, arguments).await
+    put_boolean_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_boolean_volatile(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop_int()? != 0;
-    let offset = usize::try_from(arguments.pop_long()?)?;
-    let Value::Object(ref mut object) = arguments.pop()? else {
+    let x = parameters.pop_int()? != 0;
+    let offset = usize::try_from(parameters.pop_long()?)?;
+    let Value::Object(ref mut object) = parameters.pop()? else {
         return Err(InternalError("putBoolean: Invalid reference".to_string()));
     };
     let bytes = Reference::from(vec![x; offset]);
@@ -1013,18 +1025,18 @@ pub(crate) async fn put_boolean_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_byte(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    put_byte_volatile(thread, arguments).await
+pub(crate) async fn put_byte(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    put_byte_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_byte_volatile(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = i8::try_from(arguments.pop_int()?)?;
-    let offset = usize::try_from(arguments.pop_long()?)?;
-    let Value::Object(ref mut object) = arguments.pop()? else {
+    let x = i8::try_from(parameters.pop_int()?)?;
+    let offset = usize::try_from(parameters.pop_long()?)?;
+    let Value::Object(ref mut object) = parameters.pop()? else {
         return Err(InternalError("putByte: Invalid reference".to_string()));
     };
     let bytes = Reference::from(vec![x; offset]);
@@ -1033,22 +1045,22 @@ pub(crate) async fn put_byte_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_char(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    put_char_volatile(thread, arguments).await
+pub(crate) async fn put_char(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    put_char_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_char_volatile(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     #[expect(clippy::cast_sign_loss)]
-    let x = arguments.pop_int()? as u32;
+    let x = parameters.pop_int()? as u32;
     let Some(x) = char::from_u32(x) else {
         return Err(InternalError("putChar: Invalid character".to_string()));
     };
-    let offset = usize::try_from(arguments.pop_long()?)?;
-    let Value::Object(ref mut object) = arguments.pop()? else {
+    let offset = usize::try_from(parameters.pop_long()?)?;
+    let Value::Object(ref mut object) = parameters.pop()? else {
         return Err(InternalError("putChar: Invalid reference".to_string()));
     };
     let bytes = Reference::from(vec![x; offset]);
@@ -1057,18 +1069,21 @@ pub(crate) async fn put_char_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_double(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    put_double_volatile(thread, arguments).await
+pub(crate) async fn put_double(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    put_double_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_double_volatile(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop_double()?;
-    let offset = usize::try_from(arguments.pop_long()?)?;
-    let Value::Object(ref mut object) = arguments.pop()? else {
+    let x = parameters.pop_double()?;
+    let offset = usize::try_from(parameters.pop_long()?)?;
+    let Value::Object(ref mut object) = parameters.pop()? else {
         return Err(InternalError("putDouble: Invalid reference".to_string()));
     };
     let bytes = Reference::from(vec![x; offset]);
@@ -1077,18 +1092,21 @@ pub(crate) async fn put_double_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_float(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    put_float_volatile(thread, arguments).await
+pub(crate) async fn put_float(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    put_float_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_float_volatile(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop_float()?;
-    let offset = usize::try_from(arguments.pop_long()?)?;
-    let Value::Object(ref mut object) = arguments.pop()? else {
+    let x = parameters.pop_float()?;
+    let offset = usize::try_from(parameters.pop_long()?)?;
+    let Value::Object(ref mut object) = parameters.pop()? else {
         return Err(InternalError("putFloat: Invalid reference".to_string()));
     };
     let bytes = Reference::from(vec![x; offset]);
@@ -1097,18 +1115,18 @@ pub(crate) async fn put_float_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_int(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    put_int_volatile(thread, arguments).await
+pub(crate) async fn put_int(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    put_int_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_int_volatile(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop_int()?;
-    let offset = usize::try_from(arguments.pop_long()?)?;
-    let Value::Object(ref mut object) = arguments.pop()? else {
+    let x = parameters.pop_int()?;
+    let offset = usize::try_from(parameters.pop_long()?)?;
+    let Value::Object(ref mut object) = parameters.pop()? else {
         return Err(InternalError("putInt: Invalid reference".to_string()));
     };
     let bytes = Reference::from(vec![x; offset]);
@@ -1117,18 +1135,18 @@ pub(crate) async fn put_int_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_long(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    put_long_volatile(thread, arguments).await
+pub(crate) async fn put_long(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    put_long_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_long_volatile(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop_long()?;
-    let offset = usize::try_from(arguments.pop_long()?)?;
-    let Value::Object(ref mut object) = arguments.pop()? else {
+    let x = parameters.pop_long()?;
+    let offset = usize::try_from(parameters.pop_long()?)?;
+    let Value::Object(ref mut object) = parameters.pop()? else {
         return Err(InternalError("putlong: Invalid reference".to_string()));
     };
     let bytes = Reference::from(vec![x; offset]);
@@ -1137,35 +1155,38 @@ pub(crate) async fn put_long_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_object(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    put_object_volatile(thread, arguments).await
+pub(crate) async fn put_object(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    put_object_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_object_volatile(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    put_reference_volatile(thread, arguments).await
+    put_reference_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_reference(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    put_reference_volatile(thread, arguments).await
+    put_reference_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_reference_volatile(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop()?;
-    let offset = arguments.pop_long()?;
+    let x = parameters.pop()?;
+    let offset = parameters.pop_long()?;
     let offset = usize::try_from(offset)?;
-    let Some(object) = arguments.pop_reference()? else {
+    let Some(object) = parameters.pop_reference()? else {
         return Err(InternalError(
             "putReferenceVolatile: Invalid reference".to_string(),
         ));
@@ -1189,18 +1210,21 @@ pub(crate) async fn put_reference_volatile(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn put_short(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    put_short_volatile(thread, arguments).await
+pub(crate) async fn put_short(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    put_short_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn put_short_volatile(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = i16::try_from(arguments.pop_int()?)?;
-    let offset = usize::try_from(arguments.pop_long()?)?;
-    let Value::Object(ref mut object) = arguments.pop()? else {
+    let x = i16::try_from(parameters.pop_int()?)?;
+    let offset = usize::try_from(parameters.pop_long()?)?;
+    let Value::Object(ref mut object) = parameters.pop()? else {
         return Err(InternalError("putShort: Invalid reference".to_string()));
     };
     let bytes = Reference::from(vec![x; offset]);
@@ -1211,7 +1235,7 @@ pub(crate) async fn put_short_volatile(
 #[async_recursion(?Send)]
 pub(crate) async fn reallocate_memory_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.reallocateMemory0(JJ)J")
 }
@@ -1219,7 +1243,7 @@ pub(crate) async fn reallocate_memory_0(
 #[async_recursion(?Send)]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -1227,7 +1251,7 @@ pub(crate) async fn register_natives(
 #[async_recursion(?Send)]
 pub(crate) async fn set_memory_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.setMemory0(Ljava/lang/Object;JJB)V")
 }
@@ -1235,7 +1259,7 @@ pub(crate) async fn set_memory_0(
 #[async_recursion(?Send)]
 pub(crate) async fn should_be_initialized_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     // Classes are always initialized
     Ok(Some(Value::from(false)))
@@ -1244,7 +1268,7 @@ pub(crate) async fn should_be_initialized_0(
 #[async_recursion(?Send)]
 pub(crate) async fn static_field_base_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;")
 }
@@ -1252,7 +1276,7 @@ pub(crate) async fn static_field_base_0(
 #[async_recursion(?Send)]
 pub(crate) async fn static_field_offset_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J")
 }
@@ -1260,7 +1284,7 @@ pub(crate) async fn static_field_offset_0(
 #[async_recursion(?Send)]
 pub(crate) async fn store_fence(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -1268,7 +1292,7 @@ pub(crate) async fn store_fence(
 #[async_recursion(?Send)]
 pub(crate) async fn throw_exception(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.throwException(Ljava/lang/Throwable;)V")
 }
@@ -1276,20 +1300,20 @@ pub(crate) async fn throw_exception(
 #[async_recursion(?Send)]
 pub(crate) async fn unaligned_access_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn unpark(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+pub(crate) async fn unpark(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.unpark(Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn writeback_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.writeback0(J)V")
 }
@@ -1297,7 +1321,7 @@ pub(crate) async fn writeback_0(
 #[async_recursion(?Send)]
 pub(crate) async fn writeback_post_sync_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.writebackPostSync0()V")
 }
@@ -1305,7 +1329,7 @@ pub(crate) async fn writeback_post_sync_0(
 #[async_recursion(?Send)]
 pub(crate) async fn writeback_pre_sync_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.writebackPreSync0()V")
 }
@@ -1317,7 +1341,7 @@ mod tests {
     #[tokio::test]
     async fn test_address_size_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = address_size_0(thread, Arguments::default()).await?;
+        let result = address_size_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(8)));
         Ok(())
     }
@@ -1328,20 +1352,20 @@ mod tests {
     )]
     async fn test_allocate_instance() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = allocate_instance(thread, Arguments::default()).await;
+        let _ = allocate_instance(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.allocateMemory0(J)J")]
     async fn test_allocate_memory_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = allocate_memory_0(thread, Arguments::default()).await;
+        let _ = allocate_memory_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_array_base_offset_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = array_base_offset_0(thread, Arguments::default()).await?;
+        let result = array_base_offset_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -1349,7 +1373,7 @@ mod tests {
     #[tokio::test]
     async fn test_array_index_scale_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = array_index_scale_0(thread, Arguments::default()).await?;
+        let result = array_index_scale_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -1360,7 +1384,7 @@ mod tests {
     )]
     async fn test_compare_and_exchange_int() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compare_and_exchange_int(thread, Arguments::default()).await;
+        let _ = compare_and_exchange_int(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1369,7 +1393,7 @@ mod tests {
     )]
     async fn test_compare_and_exchange_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compare_and_exchange_long(thread, Arguments::default()).await;
+        let _ = compare_and_exchange_long(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1378,7 +1402,7 @@ mod tests {
     )]
     async fn test_compare_and_exchange_object() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compare_and_exchange_object(thread, Arguments::default()).await;
+        let _ = compare_and_exchange_object(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1387,7 +1411,7 @@ mod tests {
     )]
     async fn test_compare_and_exchange_reference() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compare_and_exchange_reference(thread, Arguments::default()).await;
+        let _ = compare_and_exchange_reference(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1396,7 +1420,7 @@ mod tests {
     )]
     async fn test_copy_swap_memory_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = copy_swap_memory_0(thread, Arguments::default()).await;
+        let _ = copy_swap_memory_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1405,7 +1429,7 @@ mod tests {
     )]
     async fn test_define_anonymous_class_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = define_anonymous_class_0(thread, Arguments::default()).await;
+        let _ = define_anonymous_class_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1414,13 +1438,13 @@ mod tests {
     )]
     async fn test_define_class_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = define_class_0(thread, Arguments::default()).await;
+        let _ = define_class_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_ensure_class_initialized_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = ensure_class_initialized_0(thread, Arguments::default()).await?;
+        let result = ensure_class_initialized_0(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1428,7 +1452,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_memory_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = free_memory_0(thread, Arguments::default()).await?;
+        let result = free_memory_0(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1436,7 +1460,7 @@ mod tests {
     #[tokio::test]
     async fn test_full_fence() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = full_fence(thread, Arguments::default()).await?;
+        let result = full_fence(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1447,7 +1471,7 @@ mod tests {
     )]
     async fn test_get_load_average_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_load_average_0(thread, Arguments::default()).await;
+        let _ = get_load_average_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1456,13 +1480,13 @@ mod tests {
     )]
     async fn test_get_uncompressed_object() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_uncompressed_object(thread, Arguments::default()).await;
+        let _ = get_uncompressed_object(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_is_big_endian_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = is_big_endian_0(thread, Arguments::default()).await?;
+        let result = is_big_endian_0(thread, Parameters::default()).await?;
         let big_endian = cfg!(target_endian = "big");
         assert_eq!(result, Some(Value::from(big_endian)));
         Ok(())
@@ -1471,7 +1495,7 @@ mod tests {
     #[tokio::test]
     async fn test_load_fence() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = load_fence(thread, Arguments::default()).await?;
+        let result = load_fence(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1479,7 +1503,7 @@ mod tests {
     #[tokio::test]
     async fn test_object_field_offset_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = object_field_offset_0(thread, Arguments::default()).await?;
+        let result = object_field_offset_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
@@ -1488,14 +1512,14 @@ mod tests {
     #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.pageSize()I")]
     async fn test_page_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = page_size(thread, Arguments::default()).await;
+        let _ = page_size(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.park(ZJ)V")]
     async fn test_park() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = park(thread, Arguments::default()).await;
+        let _ = park(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1504,13 +1528,13 @@ mod tests {
     )]
     async fn test_reallocate_memory_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = reallocate_memory_0(thread, Arguments::default()).await;
+        let _ = reallocate_memory_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Arguments::default()).await?;
+        let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1521,13 +1545,13 @@ mod tests {
     )]
     async fn test_set_memory_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_memory_0(thread, Arguments::default()).await;
+        let _ = set_memory_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_should_be_initialized_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = should_be_initialized_0(thread, Arguments::default()).await?;
+        let result = should_be_initialized_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -1538,7 +1562,7 @@ mod tests {
     )]
     async fn test_static_field_base_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = static_field_base_0(thread, Arguments::default()).await;
+        let _ = static_field_base_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1547,13 +1571,13 @@ mod tests {
     )]
     async fn test_static_field_offset_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = static_field_offset_0(thread, Arguments::default()).await;
+        let _ = static_field_offset_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_store_fence() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = store_fence(thread, Arguments::default()).await?;
+        let result = store_fence(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1564,13 +1588,13 @@ mod tests {
     )]
     async fn test_throw_exception() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = throw_exception(thread, Arguments::default()).await;
+        let _ = throw_exception(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_unaligned_access_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = unaligned_access_0(thread, Arguments::default()).await?;
+        let result = unaligned_access_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -1581,14 +1605,14 @@ mod tests {
     )]
     async fn test_unpark() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unpark(thread, Arguments::default()).await;
+        let _ = unpark(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.writeback0(J)V")]
     async fn test_writeback_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = writeback_0(thread, Arguments::default()).await;
+        let _ = writeback_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1597,13 +1621,13 @@ mod tests {
     )]
     async fn test_writeback_post_sync_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = writeback_post_sync_0(thread, Arguments::default()).await;
+        let _ = writeback_post_sync_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.writebackPreSync0()V")]
     async fn test_writeback_pre_sync_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = writeback_pre_sync_0(thread, Arguments::default()).await;
+        let _ = writeback_pre_sync_0(thread, Parameters::default()).await;
     }
 }

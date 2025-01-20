@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -26,47 +26,47 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn available_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn available_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.available0()I")
 }
 
 #[async_recursion(?Send)]
-async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.close0()V")
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn length_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn length_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.length0()J")
 }
 
 #[async_recursion(?Send)]
-async fn open_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.open0(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
-async fn position_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn position_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.position0()J")
 }
 
 #[async_recursion(?Send)]
-async fn read_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.read0()I")
 }
 
 #[async_recursion(?Send)]
-async fn read_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn read_bytes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.readBytes([BII)I")
 }
 
 #[async_recursion(?Send)]
-async fn skip_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn skip_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.skip0(J)J")
 }
 
@@ -78,20 +78,20 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.io.FileInputStream.available0()I")]
     async fn test_available_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = available_0(thread, Arguments::default()).await;
+        let _ = available_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.io.FileInputStream.close0()V")]
     async fn test_close_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_0(thread, Arguments::default()).await;
+        let _ = close_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -100,7 +100,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.io.FileInputStream.length0()J")]
     async fn test_length_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = length_0(thread, Arguments::default()).await;
+        let _ = length_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -109,34 +109,34 @@ mod tests {
     )]
     async fn test_open_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = open_0(thread, Arguments::default()).await;
+        let _ = open_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.io.FileInputStream.position0()J")]
     async fn test_position_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = position_0(thread, Arguments::default()).await;
+        let _ = position_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.io.FileInputStream.read0()I")]
     async fn test_read_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = read_0(thread, Arguments::default()).await;
+        let _ = read_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.io.FileInputStream.readBytes([BII)I")]
     async fn test_read_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = read_bytes(thread, Arguments::default()).await;
+        let _ = read_bytes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.io.FileInputStream.skip0(J)J")]
     async fn test_skip_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = skip_0(thread, Arguments::default()).await;
+        let _ = skip_0(thread, Parameters::default()).await;
     }
 }

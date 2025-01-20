@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -19,7 +19,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn initialize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn initialize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PlatformPCSC.initialize(Ljava/lang/String;)V")
 }
 
@@ -33,6 +33,6 @@ mod tests {
     )]
     async fn test_initialize() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = initialize(thread, Arguments::default()).await;
+        let _ = initialize(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -19,7 +19,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn draw_parallelogram(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn draw_parallelogram(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.loops.DrawParallelogram.DrawParallelogram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;DDDDDDDD)V");
 }
 
@@ -33,6 +36,6 @@ mod tests {
     )]
     async fn test_draw_parallelogram() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = draw_parallelogram(thread, Arguments::default()).await;
+        let _ = draw_parallelogram(thread, Parameters::default()).await;
     }
 }

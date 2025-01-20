@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -15,12 +15,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn to_stderr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn to_stderr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.MessageUtils.toStderr(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
-async fn to_stdout(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn to_stdout(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.MessageUtils.toStdout(Ljava/lang/String;)V")
 }
 
@@ -34,7 +34,7 @@ mod tests {
     )]
     async fn test_to_stderr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = to_stderr(thread, Arguments::default()).await;
+        let _ = to_stderr(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -43,6 +43,6 @@ mod tests {
     )]
     async fn test_to_stdout() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = to_stdout(thread, Arguments::default()).await;
+        let _ = to_stdout(thread, Parameters::default()).await;
     }
 }

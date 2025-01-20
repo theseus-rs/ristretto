@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -28,20 +28,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn fill_gc_attribute_info(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.GcInfoBuilder.fillGcAttributeInfo(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/String;[C[Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_last_gc_info_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_last_gc_info_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.GcInfoBuilder.getLastGcInfo0(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;")
 }
 
 #[async_recursion(?Send)]
 async fn get_num_gc_ext_attributes(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.GcInfoBuilder.getNumGcExtAttributes(Ljava/lang/management/GarbageCollectorMXBean;)I")
 }
@@ -56,7 +59,7 @@ mod tests {
     )]
     async fn test_fill_gc_attribute_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fill_gc_attribute_info(thread, Arguments::default()).await;
+        let _ = fill_gc_attribute_info(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -65,7 +68,7 @@ mod tests {
     )]
     async fn test_get_last_gc_info_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_last_gc_info_0(thread, Arguments::default()).await;
+        let _ = get_last_gc_info_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -74,6 +77,6 @@ mod tests {
     )]
     async fn test_get_num_gc_ext_attributes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_num_gc_ext_attributes(thread, Arguments::default()).await;
+        let _ = get_num_gc_ext_attributes(thread, Parameters::default()).await;
     }
 }

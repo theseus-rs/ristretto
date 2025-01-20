@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -35,68 +35,74 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn afinet(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn afinet(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.AF_INET()I");
 }
 
 #[async_recursion(?Send)]
-async fn afinet_6(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn afinet_6(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.AF_INET6()I");
 }
 
 #[async_recursion(?Send)]
-async fn offset_family(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn offset_family(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetFamily()I");
 }
 
 #[async_recursion(?Send)]
-async fn offset_sin_4_addr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn offset_sin_4_addr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin4Addr()I");
 }
 
 #[async_recursion(?Send)]
-async fn offset_sin_4_port(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn offset_sin_4_port(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin4Port()I");
 }
 
 #[async_recursion(?Send)]
-async fn offset_sin_6_addr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn offset_sin_6_addr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin6Addr()I");
 }
 
 #[async_recursion(?Send)]
 async fn offset_sin_6_flow_info(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin6FlowInfo()I");
 }
 
 #[async_recursion(?Send)]
-async fn offset_sin_6_port(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn offset_sin_6_port(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin6Port()I");
 }
 
 #[async_recursion(?Send)]
 async fn offset_sin_6_scope_id(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin6ScopeId()I");
 }
 
 #[async_recursion(?Send)]
-async fn sizeof_family(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn sizeof_family(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.sizeofFamily()I");
 }
 
 #[async_recursion(?Send)]
-async fn sizeof_sock_addr_4(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn sizeof_sock_addr_4(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.sizeofSockAddr4()I");
 }
 
 #[async_recursion(?Send)]
-async fn sizeof_sock_addr_6(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn sizeof_sock_addr_6(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.sizeofSockAddr6()I");
 }
 
@@ -108,14 +114,14 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.nio.ch.NativeSocketAddress.AF_INET()I")]
     async fn test_afinet() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = afinet(thread, Arguments::default()).await;
+        let _ = afinet(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.NativeSocketAddress.AF_INET6()I")]
     async fn test_afinet_6() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = afinet_6(thread, Arguments::default()).await;
+        let _ = afinet_6(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -124,7 +130,7 @@ mod tests {
     )]
     async fn test_offset_family() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = offset_family(thread, Arguments::default()).await;
+        let _ = offset_family(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -133,7 +139,7 @@ mod tests {
     )]
     async fn test_offset_sin_4_addr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = offset_sin_4_addr(thread, Arguments::default()).await;
+        let _ = offset_sin_4_addr(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -142,7 +148,7 @@ mod tests {
     )]
     async fn test_offset_sin_4_port() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = offset_sin_4_port(thread, Arguments::default()).await;
+        let _ = offset_sin_4_port(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -151,7 +157,7 @@ mod tests {
     )]
     async fn test_offset_sin_6_addr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = offset_sin_6_addr(thread, Arguments::default()).await;
+        let _ = offset_sin_6_addr(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -160,7 +166,7 @@ mod tests {
     )]
     async fn test_offset_sin_6_flow_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = offset_sin_6_flow_info(thread, Arguments::default()).await;
+        let _ = offset_sin_6_flow_info(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -169,7 +175,7 @@ mod tests {
     )]
     async fn test_offset_sin_6_port() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = offset_sin_6_port(thread, Arguments::default()).await;
+        let _ = offset_sin_6_port(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -178,7 +184,7 @@ mod tests {
     )]
     async fn test_offset_sin_6_scope_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = offset_sin_6_scope_id(thread, Arguments::default()).await;
+        let _ = offset_sin_6_scope_id(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -187,7 +193,7 @@ mod tests {
     )]
     async fn test_sizeof_family() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = sizeof_family(thread, Arguments::default()).await;
+        let _ = sizeof_family(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -196,7 +202,7 @@ mod tests {
     )]
     async fn test_sizeof_sock_addr_4() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = sizeof_sock_addr_4(thread, Arguments::default()).await;
+        let _ = sizeof_sock_addr_4(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -205,6 +211,6 @@ mod tests {
     )]
     async fn test_sizeof_sock_addr_6() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = sizeof_sock_addr_6(thread, Arguments::default()).await;
+        let _ = sizeof_sock_addr_6(thread, Parameters::default()).await;
     }
 }

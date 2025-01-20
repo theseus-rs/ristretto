@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_18};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -41,62 +41,65 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn configure_blocking(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn configure_blocking(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.configureBlocking(Ljava/io/FileDescriptor;Z)V");
 }
 
 #[async_recursion(?Send)]
-async fn drain(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn drain(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.drain(I)Z");
 }
 
 #[async_recursion(?Send)]
-async fn drain_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn drain_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.drain1(I)I");
 }
 
 #[async_recursion(?Send)]
-async fn fd_limit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn fd_limit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.fdLimit()I");
 }
 
 #[async_recursion(?Send)]
-async fn fd_val(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn fd_val(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.fdVal(Ljava/io/FileDescriptor;)I");
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn iov_max(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn iov_max(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(Some(Value::Int(16)))
 }
 
 #[async_recursion(?Send)]
-async fn make_pipe(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn make_pipe(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.makePipe(Z)J");
 }
 
 #[async_recursion(?Send)]
-async fn random_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn random_bytes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.randomBytes([B)Z");
 }
 
 #[async_recursion(?Send)]
-async fn setfd_val(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn setfd_val(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.setfdVal(Ljava/io/FileDescriptor;I)V");
 }
 
 #[async_recursion(?Send)]
-async fn write_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn write_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.write1(IB)I");
 }
 
 #[async_recursion(?Send)]
-async fn writev_max(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn writev_max(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     #[cfg(target_os = "windows")]
     {
         Ok(Some(Value::Long(i64::MAX)))
@@ -118,21 +121,21 @@ mod tests {
     )]
     async fn test_configure_blocking() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = configure_blocking(thread, Arguments::default()).await;
+        let _ = configure_blocking(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.IOUtil.drain(I)Z")]
     async fn test_drain() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = drain(thread, Arguments::default()).await;
+        let _ = drain(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.IOUtil.fdLimit()I")]
     async fn test_fd_limit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fd_limit(thread, Arguments::default()).await;
+        let _ = fd_limit(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -141,13 +144,13 @@ mod tests {
     )]
     async fn test_fd_val() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fd_val(thread, Arguments::default()).await;
+        let _ = fd_val(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -155,7 +158,7 @@ mod tests {
     #[tokio::test]
     async fn test_iov_max() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = iov_max(thread, Arguments::default()).await?;
+        let result = iov_max(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(16)));
         Ok(())
     }
@@ -164,14 +167,14 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.nio.ch.IOUtil.makePipe(Z)J")]
     async fn test_make_pipe() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = make_pipe(thread, Arguments::default()).await;
+        let _ = make_pipe(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.IOUtil.randomBytes([B)Z")]
     async fn test_random_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = random_bytes(thread, Arguments::default()).await;
+        let _ = random_bytes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -180,27 +183,27 @@ mod tests {
     )]
     async fn test_setfd_val() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = setfd_val(thread, Arguments::default()).await;
+        let _ = setfd_val(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.IOUtil.drain1(I)I")]
     async fn test_drain_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = drain_1(thread, Arguments::default()).await;
+        let _ = drain_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.IOUtil.write1(IB)I")]
     async fn test_write_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = write_1(thread, Arguments::default()).await;
+        let _ = write_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_writev_max() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = writev_max(thread, Arguments::default()).await?;
+        let result = writev_max(thread, Parameters::default()).await?;
         let expected = match OS {
             "windows" => i64::MAX,
             _ => i64::from(i32::MAX),

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -19,7 +19,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn new_instance_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn new_instance_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.reflect.NativeConstructorAccessorImpl.newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
@@ -33,6 +33,6 @@ mod tests {
     )]
     async fn test_new_instance_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = new_instance_0(thread, Arguments::default()).await;
+        let _ = new_instance_0(thread, Parameters::default()).await;
     }
 }

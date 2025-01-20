@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -22,13 +22,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_get_available_locales(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CInputMethodDescriptor.nativeGetAvailableLocales()Ljava/util/List;")
 }
 
 #[async_recursion(?Send)]
-async fn native_init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CInputMethodDescriptor.nativeInit()V")
 }
 
@@ -42,7 +42,7 @@ mod tests {
     )]
     async fn test_native_get_available_locales() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_available_locales(thread, Arguments::default()).await;
+        let _ = native_get_available_locales(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -51,6 +51,6 @@ mod tests {
     )]
     async fn test_native_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_init(thread, Arguments::default()).await;
+        let _ = native_init(thread, Parameters::default()).await;
     }
 }

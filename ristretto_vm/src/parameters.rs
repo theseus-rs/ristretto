@@ -1,61 +1,61 @@
-use crate::Error::{ArgumentsUnderflow, InvalidOperand};
+use crate::Error::{InvalidOperand, ParametersUnderflow};
 use crate::Result;
 use ristretto_classloader::{Object, Reference, Value};
 use std::fmt::Display;
 
-/// Arguments for Ristretto VM rust arguments
+/// Parameters for Ristretto VM methods
 #[derive(Clone, Debug, Default)]
-pub(crate) struct Arguments {
-    arguments: Vec<Value>,
+pub(crate) struct Parameters {
+    parameters: Vec<Value>,
 }
 
-impl Arguments {
-    /// Create arguments from a vector of values.
-    pub(crate) fn new(arguments: Vec<Value>) -> Self {
-        Arguments { arguments }
+impl Parameters {
+    /// Create parameters from a vector of values.
+    pub(crate) fn new(parameters: Vec<Value>) -> Self {
+        Parameters { parameters }
     }
 
-    /// Push a value onto the arguments.
+    /// Push a value onto the parameters.
     #[inline]
     pub fn push(&mut self, value: Value) {
-        self.arguments.push(value);
+        self.parameters.push(value);
     }
 
-    /// Push an int value onto the arguments.
+    /// Push an int value onto the parameters.
     pub fn push_int(&mut self, value: i32) {
         self.push(Value::Int(value));
     }
 
-    /// Push a long value onto the arguments.
+    /// Push a long value onto the parameters.
     pub fn push_long(&mut self, value: i64) {
         self.push(Value::Long(value));
     }
 
-    /// Push a float value onto the arguments.
+    /// Push a float value onto the parameters.
     pub fn push_float(&mut self, value: f32) {
         self.push(Value::Float(value));
     }
 
-    /// Push a double value onto the arguments.
+    /// Push a double value onto the parameters.
     pub fn push_double(&mut self, value: f64) {
         self.push(Value::Double(value));
     }
 
-    /// Push a reference onto the arguments.
+    /// Push a reference onto the parameters.
     pub fn push_reference(&mut self, value: Option<Reference>) {
         self.push(Value::Object(value));
     }
 
-    /// Pop a value from the arguments.
+    /// Pop a value from the parameters.
     #[inline]
     pub fn pop(&mut self) -> Result<Value> {
-        let Some(value) = self.arguments.pop() else {
-            return Err(ArgumentsUnderflow);
+        let Some(value) = self.parameters.pop() else {
+            return Err(ParametersUnderflow);
         };
         Ok(value)
     }
 
-    /// Pop an int from the arguments.
+    /// Pop an int from the parameters.
     pub fn pop_int(&mut self) -> Result<i32> {
         match self.pop()? {
             Value::Int(value) => Ok(value),
@@ -66,7 +66,7 @@ impl Arguments {
         }
     }
 
-    /// Pop a long from the arguments.
+    /// Pop a long from the parameters.
     pub fn pop_long(&mut self) -> Result<i64> {
         match self.pop()? {
             Value::Long(value) => Ok(value),
@@ -77,7 +77,7 @@ impl Arguments {
         }
     }
 
-    /// Pop a float from the arguments.
+    /// Pop a float from the parameters.
     pub fn pop_float(&mut self) -> Result<f32> {
         match self.pop()? {
             Value::Float(value) => Ok(value),
@@ -88,7 +88,7 @@ impl Arguments {
         }
     }
 
-    /// Pop a double from the arguments.
+    /// Pop a double from the parameters.
     pub fn pop_double(&mut self) -> Result<f64> {
         match self.pop()? {
             Value::Double(value) => Ok(value),
@@ -99,7 +99,7 @@ impl Arguments {
         }
     }
 
-    /// Pop a null or reference from the arguments.
+    /// Pop a null or reference from the parameters.
     pub fn pop_reference(&mut self) -> Result<Option<Reference>> {
         let value = self.pop()?;
         match value {
@@ -111,7 +111,7 @@ impl Arguments {
         }
     }
 
-    /// Pop an object from the arguments.
+    /// Pop an object from the parameters.
     pub fn pop_object(&mut self) -> Result<Object> {
         let value = self.pop_reference()?;
         match value {
@@ -123,31 +123,31 @@ impl Arguments {
         }
     }
 
-    /// Peek at the top value on the arguments.
+    /// Peek at the top value on the parameters.
     pub fn peek(&self) -> Result<&Value> {
-        let Some(value) = self.arguments.last() else {
-            return Err(ArgumentsUnderflow);
+        let Some(value) = self.parameters.last() else {
+            return Err(ParametersUnderflow);
         };
         Ok(value)
     }
 
-    /// Get the number of values on the arguments.
+    /// Get the number of values on the parameters.
     pub fn len(&self) -> usize {
-        self.arguments.len()
+        self.parameters.len()
     }
 
-    /// Check if the arguments is empty.
+    /// Check if the parameters is empty.
     pub fn is_empty(&self) -> bool {
-        self.arguments.is_empty()
+        self.parameters.is_empty()
     }
 }
 
-impl Display for Arguments {
+impl Display for Parameters {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "[{}]",
-            self.arguments
+            self.parameters
                 .iter()
                 .map(ToString::to_string)
                 .collect::<Vec<_>>()
@@ -163,31 +163,31 @@ mod tests {
 
     #[test]
     fn test_can_push_and_pop_values() -> Result<()> {
-        let mut arguments = Arguments::default();
-        arguments.push(Value::Int(1));
-        arguments.push(Value::Int(2));
+        let mut parameters = Parameters::default();
+        parameters.push(Value::Int(1));
+        parameters.push(Value::Int(2));
 
-        assert_eq!(arguments.len(), 2);
+        assert_eq!(parameters.len(), 2);
 
-        assert_eq!(arguments.pop()?, Value::Int(2));
-        assert_eq!(arguments.pop()?, Value::Int(1));
+        assert_eq!(parameters.pop()?, Value::Int(2));
+        assert_eq!(parameters.pop()?, Value::Int(1));
         Ok(())
     }
 
     #[test]
     fn test_pop_int() -> Result<()> {
-        let mut arguments = Arguments::default();
-        arguments.push_int(42);
-        assert_eq!(arguments.pop_int()?, 42);
+        let mut parameters = Parameters::default();
+        parameters.push_int(42);
+        assert_eq!(parameters.pop_int()?, 42);
         Ok(())
     }
 
     #[test]
     fn test_pop_int_invalid_operand() {
-        let mut arguments = Arguments::default();
-        arguments.push_reference(None);
+        let mut parameters = Parameters::default();
+        parameters.push_reference(None);
         assert!(matches!(
-            arguments.pop_int(),
+            parameters.pop_int(),
             Err(InvalidOperand {
                 expected,
                 actual
@@ -197,18 +197,18 @@ mod tests {
 
     #[test]
     fn test_pop_long() -> Result<()> {
-        let mut arguments = Arguments::default();
-        arguments.push_long(42);
-        assert_eq!(arguments.pop_long()?, 42);
+        let mut parameters = Parameters::default();
+        parameters.push_long(42);
+        assert_eq!(parameters.pop_long()?, 42);
         Ok(())
     }
 
     #[test]
     fn test_pop_long_invalid_operand() {
-        let mut arguments = Arguments::default();
-        arguments.push_reference(None);
+        let mut parameters = Parameters::default();
+        parameters.push_reference(None);
         assert!(matches!(
-            arguments.pop_long(),
+            parameters.pop_long(),
             Err(InvalidOperand {
                 expected,
                 actual
@@ -218,19 +218,19 @@ mod tests {
 
     #[test]
     fn test_pop_float() -> Result<()> {
-        let mut arguments = Arguments::default();
-        arguments.push_float(42.1);
-        let value = arguments.pop_float()? - 42.1f32;
+        let mut parameters = Parameters::default();
+        parameters.push_float(42.1);
+        let value = parameters.pop_float()? - 42.1f32;
         assert!(value.abs() < 0.1f32);
         Ok(())
     }
 
     #[test]
     fn test_pop_float_invalid_operand() {
-        let mut arguments = Arguments::default();
-        arguments.push_reference(None);
+        let mut parameters = Parameters::default();
+        parameters.push_reference(None);
         assert!(matches!(
-            arguments.pop_float(),
+            parameters.pop_float(),
             Err(InvalidOperand {
                 expected,
                 actual
@@ -240,19 +240,19 @@ mod tests {
 
     #[test]
     fn test_pop_double() -> Result<()> {
-        let mut arguments = Arguments::default();
-        arguments.push_double(42.1);
-        let value = arguments.pop_double()? - 42.1f64;
+        let mut parameters = Parameters::default();
+        parameters.push_double(42.1);
+        let value = parameters.pop_double()? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
     }
 
     #[test]
     fn test_pop_double_invalid_operand() {
-        let mut arguments = Arguments::default();
-        arguments.push_reference(None);
+        let mut parameters = Parameters::default();
+        parameters.push_reference(None);
         assert!(matches!(
-            arguments.pop_double(),
+            parameters.pop_double(),
             Err(InvalidOperand {
                 expected,
                 actual
@@ -262,21 +262,21 @@ mod tests {
 
     #[test]
     fn test_pop_reference() -> Result<()> {
-        let mut arguments = Arguments::default();
+        let mut parameters = Parameters::default();
         let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
-        arguments.push_reference(None);
-        arguments.push_reference(Some(object.clone()));
-        assert_eq!(arguments.pop_reference()?, Some(object));
-        assert_eq!(arguments.pop_reference()?, None);
+        parameters.push_reference(None);
+        parameters.push_reference(Some(object.clone()));
+        assert_eq!(parameters.pop_reference()?, Some(object));
+        assert_eq!(parameters.pop_reference()?, None);
         Ok(())
     }
 
     #[test]
     fn test_pop_reference_invalid_operand() {
-        let mut arguments = Arguments::default();
-        arguments.push_int(42);
+        let mut parameters = Parameters::default();
+        parameters.push_int(42);
         assert!(matches!(
-            arguments.pop_reference(),
+            parameters.pop_reference(),
             Err(InvalidOperand {
                 expected,
                 actual
@@ -286,22 +286,22 @@ mod tests {
 
     #[test]
     fn test_pop_object() -> Result<()> {
-        let mut arguments = Arguments::default();
+        let mut parameters = Parameters::default();
         let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
-        arguments.push_reference(None);
-        arguments.push_reference(Some(object.clone()));
-        assert_eq!(arguments.pop_reference()?, Some(object));
-        assert_eq!(arguments.pop_reference()?, None);
+        parameters.push_reference(None);
+        parameters.push_reference(Some(object.clone()));
+        assert_eq!(parameters.pop_reference()?, Some(object));
+        assert_eq!(parameters.pop_reference()?, None);
         Ok(())
     }
 
     #[test]
     fn test_pop_object_invalid_operand() {
-        let mut arguments = Arguments::default();
+        let mut parameters = Parameters::default();
         let value = Value::from(vec![42]);
-        arguments.push(value);
+        parameters.push(value);
         assert!(matches!(
-            arguments.pop_object(),
+            parameters.pop_object(),
             Err(InvalidOperand {
                 expected,
                 actual
@@ -311,43 +311,43 @@ mod tests {
 
     #[test]
     fn test_pop_underflow() {
-        let mut arguments = Arguments::default();
-        let result = arguments.pop();
-        assert!(matches!(result, Err(ArgumentsUnderflow)));
+        let mut parameters = Parameters::default();
+        let result = parameters.pop();
+        assert!(matches!(result, Err(ParametersUnderflow)));
     }
 
     #[test]
     fn test_peek_top_value() -> Result<()> {
-        let mut arguments = Arguments::default();
-        arguments.push_int(1);
-        arguments.push_int(2);
+        let mut parameters = Parameters::default();
+        parameters.push_int(1);
+        parameters.push_int(2);
 
-        assert_eq!(arguments.peek()?, &Value::Int(2));
-        assert_eq!(arguments.len(), 2);
+        assert_eq!(parameters.peek()?, &Value::Int(2));
+        assert_eq!(parameters.len(), 2);
         Ok(())
     }
 
     #[test]
     fn test_peek_underflow() {
-        let arguments = Arguments::default();
-        let result = arguments.peek();
-        assert!(matches!(result, Err(ArgumentsUnderflow)));
+        let parameters = Parameters::default();
+        let result = parameters.peek();
+        assert!(matches!(result, Err(ParametersUnderflow)));
     }
 
     #[test]
     fn test_is_empty() {
-        let mut arguments = Arguments::default();
-        assert!(arguments.is_empty());
+        let mut parameters = Parameters::default();
+        assert!(parameters.is_empty());
 
-        arguments.push_int(42);
-        assert!(!arguments.is_empty());
+        parameters.push_int(42);
+        assert!(!parameters.is_empty());
     }
 
     #[test]
     fn test_display() {
-        let mut arguments = Arguments::default();
-        arguments.push_int(1);
-        arguments.push_int(2);
-        assert_eq!("[int(1), int(2)]", arguments.to_string());
+        let mut parameters = Parameters::default();
+        parameters.push_int(1);
+        parameters.push_int(2);
+        assert_eq!("[int(1), int(2)]", parameters.to_string());
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -35,31 +35,34 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn check_pasteboard_without_notification(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CClipboard.checkPasteboardWithoutNotification()Z")
 }
 
 #[async_recursion(?Send)]
-async fn declare_types(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn declare_types(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CClipboard.declareTypes([JLsun/awt/datatransfer/SunClipboard;)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_clipboard_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_clipboard_data(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CClipboard.getClipboardData(J)[B")
 }
 
 #[async_recursion(?Send)]
 async fn get_clipboard_formats(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CClipboard.getClipboardFormats()[J")
 }
 
 #[async_recursion(?Send)]
-async fn set_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_data(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CClipboard.setData([BJ)V")
 }
 
@@ -73,7 +76,7 @@ mod tests {
     )]
     async fn test_check_pasteboard_without_notification() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = check_pasteboard_without_notification(thread, Arguments::default()).await;
+        let _ = check_pasteboard_without_notification(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -82,7 +85,7 @@ mod tests {
     )]
     async fn test_declare_types() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = declare_types(thread, Arguments::default()).await;
+        let _ = declare_types(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -91,7 +94,7 @@ mod tests {
     )]
     async fn test_get_clipboard_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_clipboard_data(thread, Arguments::default()).await;
+        let _ = get_clipboard_data(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -100,13 +103,13 @@ mod tests {
     )]
     async fn test_get_clipboard_formats() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_clipboard_formats(thread, Arguments::default()).await;
+        let _ = get_clipboard_formats(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CClipboard.setData([BJ)V")]
     async fn test_set_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_data(thread, Arguments::default()).await;
+        let _ = set_data(thread, Parameters::default()).await;
     }
 }

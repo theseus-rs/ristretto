@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,12 +20,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn focus_changed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn focus_changed(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessibility.focusChanged()V")
 }
 
 #[async_recursion(?Send)]
-async fn role_key(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn role_key(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessibility.roleKey(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;")
 }
 
@@ -39,7 +39,7 @@ mod tests {
     )]
     async fn test_focus_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = focus_changed(thread, Arguments::default()).await;
+        let _ = focus_changed(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -48,6 +48,6 @@ mod tests {
     )]
     async fn test_role_key() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = role_key(thread, Arguments::default()).await;
+        let _ = role_key(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -100,7 +100,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn get_committed_virtual_memory_size_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getCommittedVirtualMemorySize0()J")
 }
@@ -108,7 +108,7 @@ async fn get_committed_virtual_memory_size_0(
 #[async_recursion(?Send)]
 async fn get_free_physical_memory_size_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getFreePhysicalMemorySize0()J")
 }
@@ -116,7 +116,7 @@ async fn get_free_physical_memory_size_0(
 #[async_recursion(?Send)]
 async fn get_free_swap_space_size_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getFreeSwapSpaceSize0()J")
 }
@@ -124,7 +124,7 @@ async fn get_free_swap_space_size_0(
 #[async_recursion(?Send)]
 async fn get_host_configured_cpu_count_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getHostConfiguredCpuCount0()I")
 }
@@ -132,7 +132,7 @@ async fn get_host_configured_cpu_count_0(
 #[async_recursion(?Send)]
 async fn get_host_online_cpu_count_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getHostOnlineCpuCount0()I")
 }
@@ -140,7 +140,7 @@ async fn get_host_online_cpu_count_0(
 #[async_recursion(?Send)]
 async fn get_host_total_cpu_ticks_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getHostTotalCpuTicks0()J")
 }
@@ -148,7 +148,7 @@ async fn get_host_total_cpu_ticks_0(
 #[async_recursion(?Send)]
 async fn get_max_file_descriptor_count_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getMaxFileDescriptorCount0()J")
 }
@@ -156,7 +156,7 @@ async fn get_max_file_descriptor_count_0(
 #[async_recursion(?Send)]
 async fn get_open_file_descriptor_count_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getOpenFileDescriptorCount0()J")
 }
@@ -164,7 +164,7 @@ async fn get_open_file_descriptor_count_0(
 #[async_recursion(?Send)]
 async fn get_process_cpu_load_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getProcessCpuLoad0()D")
 }
@@ -172,7 +172,7 @@ async fn get_process_cpu_load_0(
 #[async_recursion(?Send)]
 async fn get_process_cpu_time_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getProcessCpuTime0()J")
 }
@@ -180,7 +180,7 @@ async fn get_process_cpu_time_0(
 #[async_recursion(?Send)]
 async fn get_single_cpu_load_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getSingleCpuLoad0(I)D")
 }
@@ -188,7 +188,7 @@ async fn get_single_cpu_load_0(
 #[async_recursion(?Send)]
 async fn get_system_cpu_load_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getSystemCpuLoad0()D")
 }
@@ -196,7 +196,7 @@ async fn get_system_cpu_load_0(
 #[async_recursion(?Send)]
 async fn get_total_physical_memory_size_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getTotalPhysicalMemorySize0()J")
 }
@@ -204,13 +204,13 @@ async fn get_total_physical_memory_size_0(
 #[async_recursion(?Send)]
 async fn get_total_swap_space_size_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.getTotalSwapSpaceSize0()J")
 }
 
 #[async_recursion(?Send)]
-async fn initialize_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn initialize_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.management.OperatingSystemImpl.initialize0()V")
 }
 
@@ -224,7 +224,7 @@ mod tests {
     )]
     async fn test_get_committed_virtual_memory_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_committed_virtual_memory_size_0(thread, Arguments::default()).await;
+        let _ = get_committed_virtual_memory_size_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -233,7 +233,7 @@ mod tests {
     )]
     async fn test_get_free_physical_memory_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_free_physical_memory_size_0(thread, Arguments::default()).await;
+        let _ = get_free_physical_memory_size_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -242,7 +242,7 @@ mod tests {
     )]
     async fn test_get_free_swap_space_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_free_swap_space_size_0(thread, Arguments::default()).await;
+        let _ = get_free_swap_space_size_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -251,7 +251,7 @@ mod tests {
     )]
     async fn test_get_host_configured_cpu_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_host_configured_cpu_count_0(thread, Arguments::default()).await;
+        let _ = get_host_configured_cpu_count_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -260,7 +260,7 @@ mod tests {
     )]
     async fn test_get_host_online_cpu_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_host_online_cpu_count_0(thread, Arguments::default()).await;
+        let _ = get_host_online_cpu_count_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -269,7 +269,7 @@ mod tests {
     )]
     async fn test_get_host_total_cpu_ticks_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_host_total_cpu_ticks_0(thread, Arguments::default()).await;
+        let _ = get_host_total_cpu_ticks_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -278,7 +278,7 @@ mod tests {
     )]
     async fn test_get_max_file_descriptor_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_max_file_descriptor_count_0(thread, Arguments::default()).await;
+        let _ = get_max_file_descriptor_count_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -287,7 +287,7 @@ mod tests {
     )]
     async fn test_get_open_file_descriptor_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_open_file_descriptor_count_0(thread, Arguments::default()).await;
+        let _ = get_open_file_descriptor_count_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -296,7 +296,7 @@ mod tests {
     )]
     async fn test_get_process_cpu_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_process_cpu_load_0(thread, Arguments::default()).await;
+        let _ = get_process_cpu_load_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -305,7 +305,7 @@ mod tests {
     )]
     async fn test_get_process_cpu_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_process_cpu_time_0(thread, Arguments::default()).await;
+        let _ = get_process_cpu_time_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -314,7 +314,7 @@ mod tests {
     )]
     async fn test_get_single_cpu_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_single_cpu_load_0(thread, Arguments::default()).await;
+        let _ = get_single_cpu_load_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -323,7 +323,7 @@ mod tests {
     )]
     async fn test_get_system_cpu_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_cpu_load_0(thread, Arguments::default()).await;
+        let _ = get_system_cpu_load_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -332,7 +332,7 @@ mod tests {
     )]
     async fn test_get_total_physical_memory_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_total_physical_memory_size_0(thread, Arguments::default()).await;
+        let _ = get_total_physical_memory_size_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -341,7 +341,7 @@ mod tests {
     )]
     async fn test_get_total_swap_space_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_total_swap_space_size_0(thread, Arguments::default()).await;
+        let _ = get_total_swap_space_size_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -350,6 +350,6 @@ mod tests {
     )]
     async fn test_initialize_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = initialize_0(thread, Arguments::default()).await;
+        let _ = initialize_0(thread, Parameters::default()).await;
     }
 }

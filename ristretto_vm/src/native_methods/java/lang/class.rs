@@ -1,6 +1,6 @@
-use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_20, JAVA_8};
+use crate::parameters::Parameters;
 use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use crate::Error::InternalError;
@@ -225,18 +225,18 @@ async fn get_class(thread: &Thread, object: &Object) -> Result<Arc<Class>> {
 #[async_recursion(?Send)]
 async fn desired_assertion_status_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
 
 #[async_recursion(?Send)]
-async fn for_name_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    // TODO: Add support for unused arguments
-    let _caller = arguments.pop_reference()?;
-    let _class_loader = arguments.pop_reference()?;
-    let _initialize = arguments.pop_int()? != 0;
-    let Ok(object) = arguments.pop_object() else {
+async fn for_name_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    // TODO: Add support for unused parameters
+    let _caller = parameters.pop_reference()?;
+    let _class_loader = parameters.pop_reference()?;
+    let _initialize = parameters.pop_int()? != 0;
+    let Ok(object) = parameters.pop_object() else {
         return Err(NullPointerException("className cannot be null".to_string()).into());
     };
     let class_name: String = object.try_into()?;
@@ -254,9 +254,9 @@ async fn for_name_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opt
 #[async_recursion(?Send)]
 async fn get_class_access_flags_raw_0(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+    let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags;
@@ -268,9 +268,9 @@ async fn get_class_access_flags_raw_0(
 #[async_recursion(?Send)]
 async fn get_class_file_version_0(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+    let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let version = &class_file.version;
@@ -285,9 +285,9 @@ async fn get_class_file_version_0(
 #[async_recursion(?Send)]
 async fn get_component_type(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+    let object = parameters.pop_object()?;
     let class_name: String = object.value("name")?.try_into()?;
     let class = thread.class(&class_name).await?;
 
@@ -304,16 +304,16 @@ async fn get_component_type(
 }
 
 #[async_recursion(?Send)]
-async fn get_constant_pool(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_constant_pool(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Class.getConstantPool()Lsun/reflect/ConstantPool;")
 }
 
 #[async_recursion(?Send)]
 async fn get_declared_classes_0(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let class = arguments.pop_object()?;
+    let class = parameters.pop_object()?;
     let class_name: String = class.value("name")?.try_into()?;
     let class = thread.class(&class_name).await?;
     let vm = thread.vm()?;
@@ -381,10 +381,10 @@ async fn get_exceptions(
 #[async_recursion(?Send)]
 async fn get_declared_constructors_0(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let public_only = arguments.pop_int()? != 0;
-    let object = arguments.pop_object()?;
+    let public_only = parameters.pop_int()? != 0;
+    let object = parameters.pop_object()?;
     let vm = thread.vm()?;
     let class = get_class(&thread, &object).await?;
     let class_object = class.to_object(&vm).await?;
@@ -444,10 +444,10 @@ async fn get_declared_constructors_0(
 #[async_recursion(?Send)]
 async fn get_declared_fields_0(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let public_only = arguments.pop_int()? != 0;
-    let object = arguments.pop_object()?;
+    let public_only = parameters.pop_int()? != 0;
+    let object = parameters.pop_object()?;
     let vm = thread.vm()?;
     let class = get_class(&thread, &object).await?;
     let class_object = class.to_object(&vm).await?;
@@ -471,7 +471,7 @@ async fn get_declared_fields_0(
         let signature = Value::Object(None);
         // TODO: Add support for annotations
         let annotations = Value::from(Vec::<i8>::new());
-        let (descriptor, arguments) = if vm.java_major_version() <= JAVA_11 {
+        let (descriptor, parameters) = if vm.java_major_version() <= JAVA_11 {
             (
                 "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IILjava/lang/String;[B",
                 vec![
@@ -502,7 +502,7 @@ async fn get_declared_fields_0(
             )
         };
         let field = thread
-            .object("java/lang/reflect/Field", descriptor, arguments)
+            .object("java/lang/reflect/Field", descriptor, parameters)
             .await?;
         fields.push(field);
     }
@@ -514,10 +514,10 @@ async fn get_declared_fields_0(
 #[async_recursion(?Send)]
 async fn get_declared_methods_0(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let public_only = arguments.pop_int()? != 0;
-    let object = arguments.pop_object()?;
+    let public_only = parameters.pop_int()? != 0;
+    let object = parameters.pop_object()?;
     let vm = thread.vm()?;
     let class = get_class(&thread, &object).await?;
     let class_object = class.to_object(&vm).await?;
@@ -591,9 +591,9 @@ async fn get_declared_methods_0(
 #[async_recursion(?Send)]
 async fn get_declaring_class_0(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+    let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
 
     if class.is_array() || class.is_primitive() {
@@ -618,9 +618,9 @@ async fn get_declaring_class_0(
 #[async_recursion(?Send)]
 async fn get_enclosing_method_0(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+    let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     for attribute in &class_file.attributes {
@@ -660,14 +660,17 @@ async fn get_enclosing_method_0(
 #[async_recursion(?Send)]
 async fn get_generic_signature_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Class.getGenericSignature0()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_interfaces_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let class = arguments.pop_object()?;
+async fn get_interfaces_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let class = parameters.pop_object()?;
     let class_name: String = class.value("name")?.try_into()?;
     let class = thread.class(class_name).await?;
     let vm = thread.vm()?;
@@ -684,8 +687,8 @@ async fn get_interfaces_0(thread: Arc<Thread>, mut arguments: Arguments) -> Resu
 }
 
 #[async_recursion(?Send)]
-async fn get_modifiers(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+async fn get_modifiers(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags.bits();
@@ -703,8 +706,8 @@ async fn get_modifiers(thread: Arc<Thread>, mut arguments: Arguments) -> Result<
 }
 
 #[async_recursion(?Send)]
-async fn get_name_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+async fn get_name_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_name = class.name().replace('/', ".");
     let vm = thread.vm()?;
@@ -713,21 +716,24 @@ async fn get_name_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opt
 }
 
 #[async_recursion(?Send)]
-async fn get_nest_host_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_nest_host_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Class.getNestHost0()Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
-async fn get_nest_members_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_nest_members_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Class.getNestMembers0()[Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
 async fn get_permitted_subclasses_0(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+    let object = parameters.pop_object()?;
     let _class = get_class(&thread, &object).await?;
     // TODO: add support for sealed classes
     Ok(Some(Value::Object(None)))
@@ -736,9 +742,9 @@ async fn get_permitted_subclasses_0(
 #[async_recursion(?Send)]
 async fn get_primitive_class(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let primitive: Object = arguments.pop_object()?;
+    let primitive: Object = parameters.pop_object()?;
     let class_name: String = primitive.try_into()?;
     let vm = thread.vm()?;
     let class = thread.class(class_name).await?;
@@ -749,20 +755,23 @@ async fn get_primitive_class(
 #[async_recursion(?Send)]
 async fn get_protection_domain_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Class.getProtectionDomain0()Ljava/security/ProtectionDomain;")
 }
 
 #[async_recursion(?Send)]
-async fn get_raw_annotations(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_raw_annotations(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Class.getRawAnnotations()[B")
 }
 
 #[async_recursion(?Send)]
 async fn get_raw_type_annotations(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Class.getRawTypeAnnotations()[B")
 }
@@ -770,13 +779,13 @@ async fn get_raw_type_annotations(
 #[async_recursion(?Send)]
 async fn get_record_components_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;")
 }
 
 #[async_recursion(?Send)]
-async fn get_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_signers(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // TODO: Implement get_signers
     Ok(Some(Value::Object(None)))
 }
@@ -784,9 +793,9 @@ async fn get_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 #[async_recursion(?Send)]
 async fn get_simple_binary_name_0(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+    let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_name = class.name();
     let class_name_parts = class_name.split('$').collect::<Vec<&str>>();
@@ -802,8 +811,8 @@ async fn get_simple_binary_name_0(
 }
 
 #[async_recursion(?Send)]
-async fn get_superclass(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+async fn get_superclass(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let object = parameters.pop_object()?;
     let class = object.class();
     match class.parent()? {
         Some(parent) => {
@@ -818,9 +827,9 @@ async fn get_superclass(thread: Arc<Thread>, mut arguments: Arguments) -> Result
 }
 
 #[async_recursion(?Send)]
-async fn init_class_name(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+async fn init_class_name(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     // TODO: implement support for hidden classes
-    let object = arguments.pop_object()?;
+    let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_name = class.name().replace('/', ".");
     let vm = thread.vm()?;
@@ -829,8 +838,8 @@ async fn init_class_name(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
 }
 
 #[async_recursion(?Send)]
-async fn is_array(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+async fn is_array(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     if class.is_array() {
         Ok(Some(Value::from(true)))
@@ -842,19 +851,19 @@ async fn is_array(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Optio
 #[async_recursion(?Send)]
 async fn is_assignable_from(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object_argument = match arguments.pop_reference()? {
+    let object_parameter = match parameters.pop_reference()? {
         Some(Reference::Object(object)) => object,
         None => return Err(NullPointerException("object cannot be null".to_string()).into()),
-        _ => return Err(InternalError("isAssignableFrom: no arguments".to_string())),
+        _ => return Err(InternalError("isAssignableFrom: no parameters".to_string())),
     };
-    let class_argument = get_class(&thread, &object_argument).await?;
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
+    let class_parameter = get_class(&thread, &object_parameter).await?;
+    let Some(Reference::Object(object)) = parameters.pop_reference()? else {
         return Err(InternalError("isAssignableFrom: no instance".to_string()));
     };
     let class = get_class(&thread, &object).await?;
-    if class.is_assignable_from(&class_argument)? {
+    if class.is_assignable_from(&class_parameter)? {
         Ok(Some(Value::from(true)))
     } else {
         Ok(Some(Value::from(false)))
@@ -862,17 +871,17 @@ async fn is_assignable_from(
 }
 
 #[async_recursion(?Send)]
-async fn is_hidden(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_hidden(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // TODO: implement support for hidden classes
     Ok(Some(Value::from(false)))
 }
 
 #[async_recursion(?Send)]
-async fn is_instance(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Ok(compare_object) = arguments.pop_object() else {
+async fn is_instance(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let Ok(compare_object) = parameters.pop_object() else {
         return Ok(Some(Value::from(false)));
     };
-    let self_object = arguments.pop_object()?;
+    let self_object = parameters.pop_object()?;
     let self_class = get_class(&thread, &self_object).await?;
 
     if compare_object.instance_of(&self_class)? {
@@ -883,8 +892,8 @@ async fn is_instance(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Op
 }
 
 #[async_recursion(?Send)]
-async fn is_interface(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+async fn is_interface(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     if class.is_interface() {
         Ok(Some(Value::from(true)))
@@ -894,8 +903,8 @@ async fn is_interface(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
 }
 
 #[async_recursion(?Send)]
-async fn is_primitive(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+async fn is_primitive(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     if class.is_primitive() {
         Ok(Some(Value::from(true)))
@@ -905,17 +914,17 @@ async fn is_primitive(thread: Arc<Thread>, mut arguments: Arguments) -> Result<O
 }
 
 #[async_recursion(?Send)]
-async fn is_record_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_record_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Class.isRecord0()Z")
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn set_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_signers(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // TODO: Implement set_signers
     Ok(None)
 }
@@ -929,7 +938,7 @@ mod tests {
     #[tokio::test]
     async fn test_desired_assertion_status_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = desired_assertion_status_0(thread, Arguments::default()).await?;
+        let result = desired_assertion_status_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -938,13 +947,13 @@ mod tests {
     async fn test_for_name_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = "java.lang.String".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![
+        let parameters = Parameters::new(vec![
             object,
             Value::from(true),
             Value::Object(None),
             Value::Object(None),
         ]);
-        let result = for_name_0(thread, arguments).await?;
+        let result = for_name_0(thread, parameters).await?;
         let class_object: Object = result.expect("class").try_into()?;
         let class_name: String = class_object.value("name")?.try_into()?;
         assert_eq!(class_name.as_str(), "java.lang.String");
@@ -955,13 +964,13 @@ mod tests {
     async fn test_for_name_0_npe() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let object = Value::Object(None);
-        let arguments = Arguments::new(vec![
+        let parameters = Parameters::new(vec![
             object,
             Value::from(true),
             Value::Object(None),
             Value::Object(None),
         ]);
-        let result = for_name_0(thread, arguments).await;
+        let result = for_name_0(thread, parameters).await;
         assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
         Ok(())
     }
@@ -970,13 +979,13 @@ mod tests {
     async fn test_for_name_0_class_not_found() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![
+        let parameters = Parameters::new(vec![
             object,
             Value::from(true),
             Value::Object(None),
             Value::Object(None),
         ]);
-        let result = for_name_0(thread, arguments).await;
+        let result = for_name_0(thread, parameters).await;
         assert!(matches!(result, Err(JavaError(ClassNotFoundException(_)))));
         Ok(())
     }
@@ -986,8 +995,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.String").await?;
         let class_object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![class_object]);
-        let result = get_class_access_flags_raw_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_class_access_flags_raw_0(thread, parameters).await?;
         let access_flags: i32 = result.expect("access_flags").try_into()?;
         assert_eq!(access_flags, 49);
         Ok(())
@@ -998,8 +1007,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.Object").await?;
         let class_object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![class_object]);
-        let result = get_class_file_version_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_class_file_version_0(thread, parameters).await?;
         let version: i32 = result.expect("version").try_into()?;
         assert_eq!(version, i32::from(Version::Java21 { minor: 0 }.major()));
         Ok(())
@@ -1010,8 +1019,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class = thread.class("[int").await?;
         let class_object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![class_object]);
-        let result = get_component_type(thread, arguments).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_component_type(thread, parameters).await?;
         let class_object: Object = result.expect("class").try_into()?;
         let class_name: String = class_object.value("name")?.try_into()?;
         assert_eq!(class_name.as_str(), "int");
@@ -1023,8 +1032,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.String").await?;
         let class_object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![class_object]);
-        let result = get_component_type(thread, arguments).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_component_type(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -1035,7 +1044,7 @@ mod tests {
     )]
     async fn test_get_constant_pool() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_constant_pool(thread, Arguments::default()).await;
+        let _ = get_constant_pool(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1053,8 +1062,8 @@ mod tests {
                 ],
             )
             .await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = get_declaring_class_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_declaring_class_0(thread, parameters).await?;
         let class_object: Object = result.expect("class").try_into()?;
         let class_name: String = class_object.value("name")?.try_into()?;
         assert_eq!(class_name.as_str(), "java.util.HashMap");
@@ -1066,8 +1075,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class = thread.class("int").await?;
         let class_object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![class_object]);
-        let result = get_declaring_class_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_declaring_class_0(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -1076,8 +1085,8 @@ mod tests {
     async fn test_get_declaring_class_0_non_inner() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = get_declaring_class_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_declaring_class_0(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -1088,7 +1097,7 @@ mod tests {
     )]
     async fn test_get_generic_signature_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_generic_signature_0(thread, Arguments::default()).await;
+        let _ = get_generic_signature_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1096,8 +1105,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.String").await?;
         let object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = get_interfaces_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_interfaces_0(thread, parameters).await?;
         let (class, values) = result.expect("interfaces").try_into()?;
         assert_eq!(class.name(), "[Ljava/lang/Class;");
         let mut class_names = Vec::new();
@@ -1124,8 +1133,8 @@ mod tests {
     async fn test_get_modifiers() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = get_modifiers(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_modifiers(thread, parameters).await?;
         let modifiers: i32 = result.expect("modifiers").try_into()?;
         assert_eq!(modifiers, 17);
         Ok(())
@@ -1135,8 +1144,8 @@ mod tests {
     async fn test_get_name_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = get_name_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_name_0(thread, parameters).await?;
         let class_name: String = result.expect("object").try_into()?;
         assert_eq!(class_name.as_str(), "java.lang.String");
         Ok(())
@@ -1148,7 +1157,7 @@ mod tests {
     )]
     async fn test_get_nest_host_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_nest_host_0(thread, Arguments::default()).await;
+        let _ = get_nest_host_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1157,15 +1166,15 @@ mod tests {
     )]
     async fn test_get_nest_members_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_nest_members_0(thread, Arguments::default()).await;
+        let _ = get_nest_members_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_get_permitted_subclasses_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = get_permitted_subclasses_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_permitted_subclasses_0(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -1174,8 +1183,8 @@ mod tests {
     async fn test_get_primitive_class() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = "int".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = get_primitive_class(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_primitive_class(thread, parameters).await?;
         let class_object: Object = result.expect("class").try_into()?;
         let class_name: String = class_object.value("name")?.try_into()?;
         assert_eq!(class_name.as_str(), "int");
@@ -1188,21 +1197,21 @@ mod tests {
     )]
     async fn test_get_protection_domain_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_protection_domain_0(thread, Arguments::default()).await;
+        let _ = get_protection_domain_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.lang.Class.getRawAnnotations()[B")]
     async fn test_get_raw_annotations() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_raw_annotations(thread, Arguments::default()).await;
+        let _ = get_raw_annotations(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.lang.Class.getRawTypeAnnotations()[B")]
     async fn test_get_raw_type_annotations() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_raw_type_annotations(thread, Arguments::default()).await;
+        let _ = get_raw_type_annotations(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1211,13 +1220,13 @@ mod tests {
     )]
     async fn test_get_record_components_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_record_components_0(thread, Arguments::default()).await;
+        let _ = get_record_components_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_get_signers() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_signers(thread, Arguments::default()).await?;
+        let result = get_signers(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -1237,8 +1246,8 @@ mod tests {
                 ],
             )
             .await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = get_simple_binary_name_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_simple_binary_name_0(thread, parameters).await?;
         let result_object: String = result.expect("string").try_into()?;
         assert_eq!(result_object.as_str(), "Node");
         Ok(())
@@ -1248,8 +1257,8 @@ mod tests {
     async fn test_get_simple_binary_name_0_non_inner_class_returns_none() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = get_simple_binary_name_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_simple_binary_name_0(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -1258,8 +1267,8 @@ mod tests {
     async fn test_get_superclass() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = get_superclass(thread, arguments).await?.expect("result");
+        let parameters = Parameters::new(vec![object]);
+        let result = get_superclass(thread, parameters).await?.expect("result");
         let result_object: Object = result.try_into()?;
         let class_name: String = result_object.value("name")?.try_into()?;
         assert_eq!(class_name, "java.lang.Object");
@@ -1270,8 +1279,8 @@ mod tests {
     async fn test_init_class_name() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = init_class_name(thread, arguments).await?.expect("result");
+        let parameters = Parameters::new(vec![object]);
+        let result = init_class_name(thread, parameters).await?.expect("result");
         let result_object: String = result.try_into()?;
         assert_eq!(result_object, "java.lang.String");
         Ok(())
@@ -1282,8 +1291,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("[int").await?;
         let object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = is_array(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = is_array(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(true)));
         Ok(())
     }
@@ -1293,8 +1302,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("int").await?;
         let object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = is_array(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = is_array(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -1306,8 +1315,8 @@ mod tests {
             .object("java.lang.Object", "", Vec::<Value>::new())
             .await?;
         let string_object = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object, string_object]);
-        let result = is_assignable_from(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object, string_object]);
+        let result = is_assignable_from(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(true)));
         Ok(())
     }
@@ -1319,8 +1328,8 @@ mod tests {
             .object("java.lang.Object", "", Vec::<Value>::new())
             .await?;
         let string_object = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![string_object, object]);
-        let result = is_assignable_from(thread, arguments).await?;
+        let parameters = Parameters::new(vec![string_object, object]);
+        let result = is_assignable_from(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -1332,8 +1341,8 @@ mod tests {
             .object("java.lang.Object", "", Vec::<Value>::new())
             .await?;
         let null_object = Value::Object(None);
-        let arguments = Arguments::new(vec![object, null_object]);
-        let result = is_assignable_from(thread, arguments).await;
+        let parameters = Parameters::new(vec![object, null_object]);
+        let result = is_assignable_from(thread, parameters).await;
         assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
         Ok(())
     }
@@ -1341,7 +1350,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_hidden() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = is_hidden(thread, Arguments::default()).await?;
+        let result = is_hidden(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -1353,8 +1362,8 @@ mod tests {
             .object("java.lang.Object", "", Vec::<Value>::new())
             .await?;
         let string_object = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object, string_object]);
-        let result = is_instance(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object, string_object]);
+        let result = is_instance(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(true)));
         Ok(())
     }
@@ -1366,8 +1375,8 @@ mod tests {
             .object("java.lang.Object", "", Vec::<Value>::new())
             .await?;
         let null_object = Value::Object(None);
-        let arguments = Arguments::new(vec![object, null_object]);
-        let result = is_instance(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object, null_object]);
+        let result = is_instance(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -1377,8 +1386,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("java.lang.Cloneable").await?;
         let object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = is_interface(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = is_interface(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(true)));
         Ok(())
     }
@@ -1388,8 +1397,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("java.lang.Integer").await?;
         let object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = is_interface(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = is_interface(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -1399,8 +1408,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("int").await?;
         let object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = is_primitive(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = is_primitive(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(true)));
         Ok(())
     }
@@ -1410,8 +1419,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("java.lang.Integer").await?;
         let object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![object]);
-        let result = is_primitive(thread, arguments).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = is_primitive(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -1420,13 +1429,13 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.lang.Class.isRecord0()Z")]
     async fn test_is_record_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_record_0(thread, Arguments::default()).await;
+        let _ = is_record_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Arguments::default()).await?;
+        let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1434,7 +1443,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_signers() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = set_signers(thread, Arguments::default()).await?;
+        let result = set_signers(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }

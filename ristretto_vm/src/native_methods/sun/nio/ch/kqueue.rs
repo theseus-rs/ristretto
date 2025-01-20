@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -27,52 +27,52 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn create(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn create(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.create()I");
 }
 
 #[async_recursion(?Send)]
-async fn filter_offset(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn filter_offset(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.filterOffset()I");
 }
 
 #[async_recursion(?Send)]
-async fn flags_offset(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn flags_offset(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.flagsOffset()I");
 }
 
 #[async_recursion(?Send)]
-async fn ident_offset(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn ident_offset(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.identOffset()I");
 }
 
 #[async_recursion(?Send)]
-async fn kevent_poll(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn kevent_poll(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.keventPoll(IJI)I");
 }
 
 #[async_recursion(?Send)]
-async fn kevent_register(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn kevent_register(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.keventRegister(IIII)I");
 }
 
 #[async_recursion(?Send)]
-async fn kevent_size(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn kevent_size(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.keventSize()I");
 }
 
 #[async_recursion(?Send)]
-async fn kqueue(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn kqueue(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.kqueue()I");
 }
 
 #[async_recursion(?Send)]
-async fn poll(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn poll(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.poll(IJIJ)I");
 }
 
 #[async_recursion(?Send)]
-async fn register_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.register(IIII)I");
 }
 
@@ -84,69 +84,69 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.create()I")]
     async fn test_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create(thread, Arguments::default()).await;
+        let _ = create(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.filterOffset()I")]
     async fn test_filter_offset() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = filter_offset(thread, Arguments::default()).await;
+        let _ = filter_offset(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.flagsOffset()I")]
     async fn test_flags_offset() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = flags_offset(thread, Arguments::default()).await;
+        let _ = flags_offset(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.identOffset()I")]
     async fn test_ident_offset() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ident_offset(thread, Arguments::default()).await;
+        let _ = ident_offset(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.keventPoll(IJI)I")]
     async fn test_kevent_poll() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = kevent_poll(thread, Arguments::default()).await;
+        let _ = kevent_poll(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.keventRegister(IIII)I")]
     async fn test_kevent_register() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = kevent_register(thread, Arguments::default()).await;
+        let _ = kevent_register(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.keventSize()I")]
     async fn test_kevent_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = kevent_size(thread, Arguments::default()).await;
+        let _ = kevent_size(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.kqueue()I")]
     async fn test_kqueue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = kqueue(thread, Arguments::default()).await;
+        let _ = kqueue(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.poll(IJIJ)I")]
     async fn test_poll() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = poll(thread, Arguments::default()).await;
+        let _ = poll(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.register(IIII)I")]
     async fn test_register_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = register_0(thread, Arguments::default()).await;
+        let _ = register_0(thread, Parameters::default()).await;
     }
 }

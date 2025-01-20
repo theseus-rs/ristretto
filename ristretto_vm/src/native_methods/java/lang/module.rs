@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -53,14 +53,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn add_exports_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn add_exports_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Module.addExports0(Ljava/lang/Module;Ljava/lang/String;Ljava/lang/Module;)V")
 }
 
 #[async_recursion(?Send)]
 async fn add_exports_to_all_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Module.addExportsToAll0(Ljava/lang/Module;Ljava/lang/String;)V")
 }
@@ -68,18 +68,18 @@ async fn add_exports_to_all_0(
 #[async_recursion(?Send)]
 async fn add_exports_to_all_unnamed_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Module.addExportsToAllUnnamed0(Ljava/lang/Module;Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
-async fn add_reads_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn add_reads_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Module.addReads0(Ljava/lang/Module;Ljava/lang/Module;)V")
 }
 
 #[async_recursion(?Send)]
-async fn define_module_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn define_module_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Module.defineModule0(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/String;)V")
 }
 
@@ -93,7 +93,7 @@ mod tests {
     )]
     async fn test_add_exports_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_exports_0(thread, Arguments::default()).await;
+        let _ = add_exports_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -102,7 +102,7 @@ mod tests {
     )]
     async fn test_add_exports_to_all_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_exports_to_all_0(thread, Arguments::default()).await;
+        let _ = add_exports_to_all_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -111,7 +111,7 @@ mod tests {
     )]
     async fn test_add_exports_to_all_unnamed_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_exports_to_all_unnamed_0(thread, Arguments::default()).await;
+        let _ = add_exports_to_all_unnamed_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -120,7 +120,7 @@ mod tests {
     )]
     async fn test_add_reads_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_reads_0(thread, Arguments::default()).await;
+        let _ = add_reads_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -129,6 +129,6 @@ mod tests {
     )]
     async fn test_define_module_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = define_module_0(thread, Arguments::default()).await;
+        let _ = define_module_0(thread, Parameters::default()).await;
     }
 }

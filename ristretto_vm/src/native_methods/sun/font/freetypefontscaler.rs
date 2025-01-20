@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -115,7 +115,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn create_scaler_context_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.createScalerContextNative(J[DIIFF)J")
 }
@@ -123,7 +123,7 @@ async fn create_scaler_context_native(
 #[async_recursion(?Send)]
 async fn dispose_native_scaler(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.disposeNativeScaler(Lsun/font/Font2D;J)V")
 }
@@ -131,7 +131,7 @@ async fn dispose_native_scaler(
 #[async_recursion(?Send)]
 async fn get_font_metrics_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getFontMetricsNative(Lsun/font/Font2D;JJ)Lsun/font/StrikeMetrics;")
 }
@@ -139,7 +139,7 @@ async fn get_font_metrics_native(
 #[async_recursion(?Send)]
 async fn get_glyph_advance_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getGlyphAdvanceNative(Lsun/font/Font2D;JJI)F")
 }
@@ -147,7 +147,7 @@ async fn get_glyph_advance_native(
 #[async_recursion(?Send)]
 async fn get_glyph_code_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getGlyphCodeNative(Lsun/font/Font2D;JC)I")
 }
@@ -155,7 +155,7 @@ async fn get_glyph_code_native(
 #[async_recursion(?Send)]
 async fn get_glyph_image_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getGlyphImageNative(Lsun/font/Font2D;JJI)J")
 }
@@ -163,7 +163,7 @@ async fn get_glyph_image_native(
 #[async_recursion(?Send)]
 async fn get_glyph_metrics_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getGlyphMetricsNative(Lsun/font/Font2D;JJILjava/awt/geom/Point2D$Float;)V")
 }
@@ -171,7 +171,7 @@ async fn get_glyph_metrics_native(
 #[async_recursion(?Send)]
 async fn get_glyph_outline_bounds_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getGlyphOutlineBoundsNative(Lsun/font/Font2D;JJI)Ljava/awt/geom/Rectangle2D$Float;")
 }
@@ -179,7 +179,7 @@ async fn get_glyph_outline_bounds_native(
 #[async_recursion(?Send)]
 async fn get_glyph_outline_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getGlyphOutlineNative(Lsun/font/Font2D;JJIFF)Ljava/awt/geom/GeneralPath;")
 }
@@ -187,7 +187,7 @@ async fn get_glyph_outline_native(
 #[async_recursion(?Send)]
 async fn get_glyph_point_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getGlyphPointNative(Lsun/font/Font2D;JJII)Ljava/awt/geom/Point2D$Float;")
 }
@@ -195,7 +195,7 @@ async fn get_glyph_point_native(
 #[async_recursion(?Send)]
 async fn get_glyph_vector_outline_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getGlyphVectorOutlineNative(Lsun/font/Font2D;JJ[IIFF)Ljava/awt/geom/GeneralPath;")
 }
@@ -203,7 +203,7 @@ async fn get_glyph_vector_outline_native(
 #[async_recursion(?Send)]
 async fn get_layout_table_cache_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getLayoutTableCacheNative(J)J")
 }
@@ -211,7 +211,7 @@ async fn get_layout_table_cache_native(
 #[async_recursion(?Send)]
 async fn get_missing_glyph_code_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getMissingGlyphCodeNative(J)I")
 }
@@ -219,7 +219,7 @@ async fn get_missing_glyph_code_native(
 #[async_recursion(?Send)]
 async fn get_num_glyphs_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getNumGlyphsNative(J)I")
 }
@@ -227,18 +227,21 @@ async fn get_num_glyphs_native(
 #[async_recursion(?Send)]
 async fn get_units_per_em_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getUnitsPerEMNative(J)J")
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn init_native_scaler(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_native_scaler(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.initNativeScaler(Lsun/font/Font2D;IIZI)J")
 }
 
@@ -252,7 +255,7 @@ mod tests {
     )]
     async fn test_create_scaler_context_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_scaler_context_native(thread, Arguments::default()).await;
+        let _ = create_scaler_context_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -261,7 +264,7 @@ mod tests {
     )]
     async fn test_dispose_native_scaler() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dispose_native_scaler(thread, Arguments::default()).await;
+        let _ = dispose_native_scaler(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -270,7 +273,7 @@ mod tests {
     )]
     async fn test_get_font_metrics_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_font_metrics_native(thread, Arguments::default()).await;
+        let _ = get_font_metrics_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -279,7 +282,7 @@ mod tests {
     )]
     async fn test_get_glyph_advance_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_advance_native(thread, Arguments::default()).await;
+        let _ = get_glyph_advance_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -288,7 +291,7 @@ mod tests {
     )]
     async fn test_get_glyph_code_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_code_native(thread, Arguments::default()).await;
+        let _ = get_glyph_code_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -297,7 +300,7 @@ mod tests {
     )]
     async fn test_get_glyph_image_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_image_native(thread, Arguments::default()).await;
+        let _ = get_glyph_image_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -306,7 +309,7 @@ mod tests {
     )]
     async fn test_get_glyph_metrics_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_metrics_native(thread, Arguments::default()).await;
+        let _ = get_glyph_metrics_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -315,7 +318,7 @@ mod tests {
     )]
     async fn test_get_glyph_outline_bounds_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_outline_bounds_native(thread, Arguments::default()).await;
+        let _ = get_glyph_outline_bounds_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -324,7 +327,7 @@ mod tests {
     )]
     async fn test_get_glyph_outline_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_outline_native(thread, Arguments::default()).await;
+        let _ = get_glyph_outline_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -333,7 +336,7 @@ mod tests {
     )]
     async fn test_get_glyph_point_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_point_native(thread, Arguments::default()).await;
+        let _ = get_glyph_point_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -342,7 +345,7 @@ mod tests {
     )]
     async fn test_get_glyph_vector_outline_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_vector_outline_native(thread, Arguments::default()).await;
+        let _ = get_glyph_vector_outline_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -351,7 +354,7 @@ mod tests {
     )]
     async fn test_get_layout_table_cache_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_layout_table_cache_native(thread, Arguments::default()).await;
+        let _ = get_layout_table_cache_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -360,7 +363,7 @@ mod tests {
     )]
     async fn test_get_missing_glyph_code_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_missing_glyph_code_native(thread, Arguments::default()).await;
+        let _ = get_missing_glyph_code_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -369,7 +372,7 @@ mod tests {
     )]
     async fn test_get_num_glyphs_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_num_glyphs_native(thread, Arguments::default()).await;
+        let _ = get_num_glyphs_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -378,13 +381,13 @@ mod tests {
     )]
     async fn test_get_units_per_em_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_units_per_em_native(thread, Arguments::default()).await;
+        let _ = get_units_per_em_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -395,6 +398,6 @@ mod tests {
     )]
     async fn test_init_native_scaler() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_native_scaler(thread, Arguments::default()).await;
+        let _ = init_native_scaler(thread, Parameters::default()).await;
     }
 }

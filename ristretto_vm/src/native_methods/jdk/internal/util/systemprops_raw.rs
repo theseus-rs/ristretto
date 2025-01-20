@@ -1,7 +1,7 @@
-use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::properties;
 use crate::native_methods::registry::{MethodRegistry, JAVA_19};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
@@ -29,7 +29,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn platform_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn platform_properties(
+    thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     let string_array_class = thread.class("[Ljava/lang/String;").await?;
     let system_properties = &mut properties::system(&thread).await?;
@@ -107,7 +110,7 @@ fn push_property(
 }
 
 #[async_recursion(?Send)]
-async fn vm_properties(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn vm_properties(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     let java_home = vm.java_home();
     let class_path = vm.configuration().class_path().to_string();

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -19,7 +19,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn fill_rect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn fill_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.loops.FillRect.FillRect(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IIII)V");
 }
 
@@ -33,6 +33,6 @@ mod tests {
     )]
     async fn test_fill_rect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fill_rect(thread, Arguments::default()).await;
+        let _ = fill_rect(thread, Parameters::default()).await;
     }
 }

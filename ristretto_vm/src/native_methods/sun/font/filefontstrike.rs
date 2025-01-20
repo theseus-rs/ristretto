@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -22,13 +22,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn get_glyph_image_from_windows(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FileFontStrike._getGlyphImageFromWindows(Ljava/lang/String;IIIZI)J")
 }
 
 #[async_recursion(?Send)]
-async fn init_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_native(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.FileFontStrike.initNative()Z")
 }
 
@@ -42,13 +42,13 @@ mod tests {
     )]
     async fn test_get_glyph_image_from_windows() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_image_from_windows(thread, Arguments::default()).await;
+        let _ = get_glyph_image_from_windows(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.FileFontStrike.initNative()Z")]
     async fn test_init_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_native(thread, Arguments::default()).await;
+        let _ = init_native(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -73,45 +73,54 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn config_display_mode(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn config_display_mode(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.configDisplayMode(IIII)V")
 }
 
 #[async_recursion(?Send)]
 async fn enter_full_screen_exclusive(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.enterFullScreenExclusive(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn enum_display_modes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn enum_display_modes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.enumDisplayModes(ILjava/util/ArrayList;)V")
 }
 
 #[async_recursion(?Send)]
 async fn exit_full_screen_exclusive(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.exitFullScreenExclusive(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_config_colormap(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_config_colormap(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getConfigColormap(II)I")
 }
 
 #[async_recursion(?Send)]
-async fn get_config_depth(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_config_depth(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getConfigDepth(II)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_config_visual_id(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getConfigVisualId(II)I")
 }
@@ -119,49 +128,49 @@ async fn get_config_visual_id(
 #[async_recursion(?Send)]
 async fn get_current_display_mode(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getCurrentDisplayMode(I)Ljava/awt/DisplayMode;")
 }
 
 #[async_recursion(?Send)]
-async fn get_display(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_display(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getDisplay()J")
 }
 
 #[async_recursion(?Send)]
 async fn get_double_buffer_visuals(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getDoubleBufferVisuals(I)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_num_configs(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_num_configs(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getNumConfigs(I)I")
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn init_xrandr_extension(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.initXrandrExtension()Z")
 }
 
 #[async_recursion(?Send)]
-async fn is_dbe_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_dbe_supported(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.isDBESupported()Z")
 }
 
 #[async_recursion(?Send)]
-async fn reset_native_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn reset_native_data(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.resetNativeData(I)V")
 }
 
@@ -175,7 +184,7 @@ mod tests {
     )]
     async fn test_config_display_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = config_display_mode(thread, Arguments::default()).await;
+        let _ = config_display_mode(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -184,7 +193,7 @@ mod tests {
     )]
     async fn test_enter_full_screen_exclusive() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = enter_full_screen_exclusive(thread, Arguments::default()).await;
+        let _ = enter_full_screen_exclusive(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -193,7 +202,7 @@ mod tests {
     )]
     async fn test_enum_display_modes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = enum_display_modes(thread, Arguments::default()).await;
+        let _ = enum_display_modes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -202,7 +211,7 @@ mod tests {
     )]
     async fn test_exit_full_screen_exclusive() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = exit_full_screen_exclusive(thread, Arguments::default()).await;
+        let _ = exit_full_screen_exclusive(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -211,14 +220,14 @@ mod tests {
     )]
     async fn test_get_config_colormap() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_config_colormap(thread, Arguments::default()).await;
+        let _ = get_config_colormap(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsDevice.getConfigDepth(II)I")]
     async fn test_get_config_depth() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_config_depth(thread, Arguments::default()).await;
+        let _ = get_config_depth(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -227,7 +236,7 @@ mod tests {
     )]
     async fn test_get_config_visual_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_config_visual_id(thread, Arguments::default()).await;
+        let _ = get_config_visual_id(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -236,14 +245,14 @@ mod tests {
     )]
     async fn test_get_current_display_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_current_display_mode(thread, Arguments::default()).await;
+        let _ = get_current_display_mode(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsDevice.getDisplay()J")]
     async fn test_get_display() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_display(thread, Arguments::default()).await;
+        let _ = get_display(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -252,20 +261,20 @@ mod tests {
     )]
     async fn test_get_double_buffer_visuals() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_double_buffer_visuals(thread, Arguments::default()).await;
+        let _ = get_double_buffer_visuals(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsDevice.getNumConfigs(I)I")]
     async fn test_get_num_configs() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_num_configs(thread, Arguments::default()).await;
+        let _ = get_num_configs(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -276,20 +285,20 @@ mod tests {
     )]
     async fn test_init_xrandr_extension() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_xrandr_extension(thread, Arguments::default()).await;
+        let _ = init_xrandr_extension(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsDevice.isDBESupported()Z")]
     async fn test_is_dbe_supported() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_dbe_supported(thread, Arguments::default()).await;
+        let _ = is_dbe_supported(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsDevice.resetNativeData(I)V")]
     async fn test_reset_native_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = reset_native_data(thread, Arguments::default()).await;
+        let _ = reset_native_data(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -77,62 +77,62 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn add_child_to_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn add_child_to_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.addChildToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Z")
 }
 
 #[async_recursion(?Send)]
-async fn add_key_to_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn add_key_to_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.addKeyToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn add_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn add_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.addNode(Ljava/lang/String;Ljava/lang/String;JJ)Z")
 }
 
 #[async_recursion(?Send)]
-async fn any_host(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn any_host(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.anyHost()J")
 }
 
 #[async_recursion(?Send)]
-async fn any_user(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn any_user(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.anyUser()J")
 }
 
 #[async_recursion(?Send)]
-async fn current_host(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn current_host(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.currentHost()J")
 }
 
 #[async_recursion(?Send)]
-async fn current_user(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn current_user(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.currentUser()J")
 }
 
 #[async_recursion(?Send)]
 async fn get_children_for_node(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.getChildrenForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_key_from_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_key_from_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.getKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_keys_for_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_keys_for_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.getKeysForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
 async fn remove_child_from_node(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.removeChildFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V")
 }
@@ -140,20 +140,20 @@ async fn remove_child_from_node(
 #[async_recursion(?Send)]
 async fn remove_key_from_node(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.removeKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn remove_node(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn remove_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "java.util.prefs.MacOSXPreferencesFile.removeNode(Ljava/lang/String;Ljava/lang/String;JJ)V"
     )
 }
 
 #[async_recursion(?Send)]
-async fn synchronize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn synchronize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.synchronize(Ljava/lang/String;JJ)Z")
 }
 
@@ -167,7 +167,7 @@ mod tests {
     )]
     async fn test_add_child_to_node() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_child_to_node(thread, Arguments::default()).await;
+        let _ = add_child_to_node(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -176,7 +176,7 @@ mod tests {
     )]
     async fn test_add_key_to_node() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_key_to_node(thread, Arguments::default()).await;
+        let _ = add_key_to_node(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -185,7 +185,7 @@ mod tests {
     )]
     async fn test_add_node() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_node(thread, Arguments::default()).await;
+        let _ = add_node(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -194,7 +194,7 @@ mod tests {
     )]
     async fn test_any_host() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = any_host(thread, Arguments::default()).await;
+        let _ = any_host(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -203,7 +203,7 @@ mod tests {
     )]
     async fn test_any_user() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = any_user(thread, Arguments::default()).await;
+        let _ = any_user(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -212,7 +212,7 @@ mod tests {
     )]
     async fn test_current_host() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = current_host(thread, Arguments::default()).await;
+        let _ = current_host(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -221,7 +221,7 @@ mod tests {
     )]
     async fn test_current_user() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = current_user(thread, Arguments::default()).await;
+        let _ = current_user(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -230,7 +230,7 @@ mod tests {
     )]
     async fn test_get_children_for_node() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_children_for_node(thread, Arguments::default()).await;
+        let _ = get_children_for_node(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -239,7 +239,7 @@ mod tests {
     )]
     async fn test_get_key_from_node() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_key_from_node(thread, Arguments::default()).await;
+        let _ = get_key_from_node(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -248,7 +248,7 @@ mod tests {
     )]
     async fn test_get_keys_for_node() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_keys_for_node(thread, Arguments::default()).await;
+        let _ = get_keys_for_node(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -257,7 +257,7 @@ mod tests {
     )]
     async fn test_remove_child_from_node() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = remove_child_from_node(thread, Arguments::default()).await;
+        let _ = remove_child_from_node(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -266,7 +266,7 @@ mod tests {
     )]
     async fn test_remove_key_from_node() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = remove_key_from_node(thread, Arguments::default()).await;
+        let _ = remove_key_from_node(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -275,7 +275,7 @@ mod tests {
     )]
     async fn test_remove_node() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = remove_node(thread, Arguments::default()).await;
+        let _ = remove_node(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -284,6 +284,6 @@ mod tests {
     )]
     async fn test_synchronize() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = synchronize(thread, Arguments::default()).await;
+        let _ = synchronize(thread, Parameters::default()).await;
     }
 }

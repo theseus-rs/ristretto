@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,17 +21,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn chmod(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn chmod(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.FileSystemPreferences.chmod(Ljava/lang/String;I)I")
 }
 
 #[async_recursion(?Send)]
-async fn lock_file_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn lock_file_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.FileSystemPreferences.lockFile0(Ljava/lang/String;IZ)[I")
 }
 
 #[async_recursion(?Send)]
-async fn unlock_file_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn unlock_file_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.FileSystemPreferences.unlockFile0(I)I")
 }
 
@@ -45,7 +45,7 @@ mod tests {
     )]
     async fn test_chmod() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = chmod(thread, Arguments::default()).await;
+        let _ = chmod(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -54,7 +54,7 @@ mod tests {
     )]
     async fn test_lock_file_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = lock_file_0(thread, Arguments::default()).await;
+        let _ = lock_file_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -63,6 +63,6 @@ mod tests {
     )]
     async fn test_unlock_file_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unlock_file_0(thread, Arguments::default()).await;
+        let _ = unlock_file_0(thread, Parameters::default()).await;
     }
 }

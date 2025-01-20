@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -15,7 +15,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn environ(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn environ(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let mut values = Vec::new();
     for (key, value) in std::env::vars() {
         let key = Some(Reference::from(mutf8::to_bytes(key)?));

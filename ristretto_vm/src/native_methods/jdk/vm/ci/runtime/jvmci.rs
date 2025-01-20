@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -19,7 +19,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn initialize_runtime(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn initialize_runtime(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.vm.ci.runtime.JVMCI.initializeRuntime()Ljdk/vm/ci/runtime/JVMCIRuntime;")
 }
 
@@ -33,6 +36,6 @@ mod tests {
     )]
     async fn test_initialize_runtime() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = initialize_runtime(thread, Arguments::default()).await;
+        let _ = initialize_runtime(thread, Parameters::default()).await;
     }
 }

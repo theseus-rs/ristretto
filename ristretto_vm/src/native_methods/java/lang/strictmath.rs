@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_20, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 #[cfg(target_arch = "wasm32")]
 use crate::Error::InternalError;
@@ -136,38 +136,50 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 pub(crate) async fn ieee_remainder(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let f2 = arguments.pop_double()?;
-    let f1 = arguments.pop_double()?;
+    let f2 = parameters.pop_double()?;
+    let f1 = parameters.pop_double()?;
     let result = f1.rem(f2);
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn abs_d(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn abs_d(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.abs();
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn abs_f(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_float()?;
+pub(crate) async fn abs_f(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_float()?;
     let result = a.abs();
     Ok(Some(Value::Float(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn abs_i(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_int()?;
+pub(crate) async fn abs_i(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_int()?;
     let result = a.abs();
     Ok(Some(Value::Int(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn abs_j(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_long()?;
+pub(crate) async fn abs_j(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_long()?;
     let result = a.abs();
     Ok(Some(Value::Long(result)))
 }
@@ -175,9 +187,9 @@ pub(crate) async fn abs_j(_thread: Arc<Thread>, mut arguments: Arguments) -> Res
 #[async_recursion(?Send)]
 pub(crate) async fn abs_exact_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_int()?;
+    let a = parameters.pop_int()?;
     if a == i32::MIN {
         return Err(ArithmeticException(
             "Overflow to represent absolute value of Integer.MIN_VALUE".to_string(),
@@ -191,9 +203,9 @@ pub(crate) async fn abs_exact_i(
 #[async_recursion(?Send)]
 pub(crate) async fn abs_exact_j(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_long()?;
+    let a = parameters.pop_long()?;
     if a == i64::MIN {
         return Err(ArithmeticException(
             "Overflow to represent absolute value of Long.MIN_VALUE".to_string(),
@@ -207,10 +219,10 @@ pub(crate) async fn abs_exact_j(
 #[async_recursion(?Send)]
 pub(crate) async fn add_exact_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_int()?;
-    let x = arguments.pop_int()?;
+    let y = parameters.pop_int()?;
+    let x = parameters.pop_int()?;
     let Some(result) = x.checked_add(y) else {
         return Err(ArithmeticException("integer overflow".to_string()).into());
     };
@@ -220,10 +232,10 @@ pub(crate) async fn add_exact_i(
 #[async_recursion(?Send)]
 pub(crate) async fn add_exact_j(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_long()?;
-    let x = arguments.pop_long()?;
+    let y = parameters.pop_long()?;
+    let x = parameters.pop_long()?;
     let Some(result) = x.checked_add(y) else {
         return Err(ArithmeticException("long overflow".to_string()).into());
     };
@@ -231,22 +243,31 @@ pub(crate) async fn add_exact_j(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn acos(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn acos(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.acos();
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn asin(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn asin(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.asin();
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn atan(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn atan(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.atan();
     Ok(Some(Value::Double(result)))
 }
@@ -254,24 +275,30 @@ pub(crate) async fn atan(_thread: Arc<Thread>, mut arguments: Arguments) -> Resu
 #[async_recursion(?Send)]
 pub(crate) async fn atan_2(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = arguments.pop_double()?;
-    let y = arguments.pop_double()?;
+    let x = parameters.pop_double()?;
+    let y = parameters.pop_double()?;
     let result = x.atan2(y);
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn cbrt(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn cbrt(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.cbrt();
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn ceil(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn ceil(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.ceil();
     Ok(Some(Value::Double(result)))
 }
@@ -279,10 +306,10 @@ pub(crate) async fn ceil(_thread: Arc<Thread>, mut arguments: Arguments) -> Resu
 #[async_recursion(?Send)]
 pub(crate) async fn ceil_div_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_int()?;
-    let x = arguments.pop_int()?;
+    let y = parameters.pop_int()?;
+    let x = parameters.pop_int()?;
     let Some(mut result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -298,10 +325,10 @@ pub(crate) async fn ceil_div_i(
 #[async_recursion(?Send)]
 pub(crate) async fn ceil_div_j_1(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = i64::from(arguments.pop_int()?);
-    let x = arguments.pop_long()?;
+    let y = i64::from(parameters.pop_int()?);
+    let x = parameters.pop_long()?;
     let Some(mut result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -317,10 +344,10 @@ pub(crate) async fn ceil_div_j_1(
 #[async_recursion(?Send)]
 pub(crate) async fn ceil_div_j_2(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_long()?;
-    let x = arguments.pop_long()?;
+    let y = parameters.pop_long()?;
+    let x = parameters.pop_long()?;
     let Some(mut result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -336,10 +363,10 @@ pub(crate) async fn ceil_div_j_2(
 #[async_recursion(?Send)]
 pub(crate) async fn ceil_div_exact_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_int()?;
-    let x = arguments.pop_int()?;
+    let y = parameters.pop_int()?;
+    let x = parameters.pop_int()?;
     let Some(mut result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -355,10 +382,10 @@ pub(crate) async fn ceil_div_exact_i(
 #[async_recursion(?Send)]
 pub(crate) async fn ceil_div_exact_j(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_long()?;
-    let x = arguments.pop_long()?;
+    let y = parameters.pop_long()?;
+    let x = parameters.pop_long()?;
     let Some(mut result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -374,10 +401,10 @@ pub(crate) async fn ceil_div_exact_j(
 #[async_recursion(?Send)]
 pub(crate) async fn ceil_mod_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_int()?;
-    let x = arguments.pop_int()?;
+    let y = parameters.pop_int()?;
+    let x = parameters.pop_int()?;
     let Some(mut result) = x.checked_rem(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -393,10 +420,10 @@ pub(crate) async fn ceil_mod_i(
 #[async_recursion(?Send)]
 pub(crate) async fn ceil_mod_j_1(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = i64::from(arguments.pop_int()?);
-    let x = arguments.pop_long()?;
+    let y = i64::from(parameters.pop_int()?);
+    let x = parameters.pop_long()?;
     let Some(mut result) = x.checked_rem(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -413,10 +440,10 @@ pub(crate) async fn ceil_mod_j_1(
 #[async_recursion(?Send)]
 pub(crate) async fn ceil_mod_j_2(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_long()?;
-    let x = arguments.pop_long()?;
+    let y = parameters.pop_long()?;
+    let x = parameters.pop_long()?;
     let Some(mut result) = x.checked_rem(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -432,11 +459,11 @@ pub(crate) async fn ceil_mod_j_2(
 #[async_recursion(?Send)]
 pub(crate) async fn clamp_d(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let max = arguments.pop_double()?;
-    let min = arguments.pop_double()?;
-    let value = arguments.pop_double()?;
+    let max = parameters.pop_double()?;
+    let min = parameters.pop_double()?;
+    let value = parameters.pop_double()?;
     if min > max {
         return Err(IllegalArgumentException(format!("{min} > {max}")).into());
     }
@@ -447,11 +474,11 @@ pub(crate) async fn clamp_d(
 #[async_recursion(?Send)]
 pub(crate) async fn clamp_f(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let max = arguments.pop_float()?;
-    let min = arguments.pop_float()?;
-    let value = arguments.pop_float()?;
+    let max = parameters.pop_float()?;
+    let min = parameters.pop_float()?;
+    let value = parameters.pop_float()?;
     if min > max {
         return Err(IllegalArgumentException(format!("{min} > {max}")).into());
     }
@@ -462,11 +489,11 @@ pub(crate) async fn clamp_f(
 #[async_recursion(?Send)]
 pub(crate) async fn clamp_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let max = i64::from(arguments.pop_int()?);
-    let min = i64::from(arguments.pop_int()?);
-    let value = arguments.pop_long()?;
+    let max = i64::from(parameters.pop_int()?);
+    let min = i64::from(parameters.pop_int()?);
+    let value = parameters.pop_long()?;
     if min > max {
         return Err(IllegalArgumentException(format!("{min} > {max}")).into());
     }
@@ -477,11 +504,11 @@ pub(crate) async fn clamp_i(
 #[async_recursion(?Send)]
 pub(crate) async fn clamp_j(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let max = arguments.pop_long()?;
-    let min = arguments.pop_long()?;
-    let value = arguments.pop_long()?;
+    let max = parameters.pop_long()?;
+    let min = parameters.pop_long()?;
+    let value = parameters.pop_long()?;
     if min > max {
         return Err(IllegalArgumentException(format!("{min} > {max}")).into());
     }
@@ -492,10 +519,10 @@ pub(crate) async fn clamp_j(
 #[async_recursion(?Send)]
 pub(crate) async fn copy_sign_d(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let sign = arguments.pop_double()?;
-    let magnitude = arguments.pop_double()?;
+    let sign = parameters.pop_double()?;
+    let magnitude = parameters.pop_double()?;
     let result = magnitude.copysign(sign);
     Ok(Some(Value::Double(result)))
 }
@@ -503,24 +530,27 @@ pub(crate) async fn copy_sign_d(
 #[async_recursion(?Send)]
 pub(crate) async fn copy_sign_f(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let sign = arguments.pop_float()?;
-    let magnitude = arguments.pop_float()?;
+    let sign = parameters.pop_float()?;
+    let magnitude = parameters.pop_float()?;
     let result = magnitude.copysign(sign);
     Ok(Some(Value::Float(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn cos(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn cos(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.cos();
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn cosh(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn cosh(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.cosh();
     Ok(Some(Value::Double(result)))
 }
@@ -528,9 +558,9 @@ pub(crate) async fn cosh(_thread: Arc<Thread>, mut arguments: Arguments) -> Resu
 #[async_recursion(?Send)]
 pub(crate) async fn decrement_exact_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_int()?;
+    let a = parameters.pop_int()?;
     let Some(result) = a.checked_sub(1) else {
         return Err(ArithmeticException("integer overflow".to_string()).into());
     };
@@ -540,9 +570,9 @@ pub(crate) async fn decrement_exact_i(
 #[async_recursion(?Send)]
 pub(crate) async fn decrement_exact_j(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_long()?;
+    let a = parameters.pop_long()?;
     let Some(result) = a.checked_sub(1) else {
         return Err(ArithmeticException("long overflow".to_string()).into());
     };
@@ -552,10 +582,10 @@ pub(crate) async fn decrement_exact_j(
 #[async_recursion(?Send)]
 pub(crate) async fn divide_exact_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_int()?;
-    let x = arguments.pop_int()?;
+    let y = parameters.pop_int()?;
+    let x = parameters.pop_int()?;
     let Some(result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -568,10 +598,10 @@ pub(crate) async fn divide_exact_i(
 #[async_recursion(?Send)]
 pub(crate) async fn divide_exact_j(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_long()?;
-    let x = arguments.pop_long()?;
+    let y = parameters.pop_long()?;
+    let x = parameters.pop_long()?;
     let Some(result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -582,8 +612,8 @@ pub(crate) async fn divide_exact_j(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn exp(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn exp(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.exp();
     Ok(Some(Value::Double(result)))
 }
@@ -591,16 +621,19 @@ pub(crate) async fn exp(_thread: Arc<Thread>, mut arguments: Arguments) -> Resul
 #[async_recursion(?Send)]
 pub(crate) async fn expm_1(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+    let a = parameters.pop_double()?;
     let result = a.exp_m1();
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn floor(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn floor(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.floor();
     Ok(Some(Value::Double(result)))
 }
@@ -608,10 +641,10 @@ pub(crate) async fn floor(_thread: Arc<Thread>, mut arguments: Arguments) -> Res
 #[async_recursion(?Send)]
 pub(crate) async fn floor_div_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_int()?;
-    let x = arguments.pop_int()?;
+    let y = parameters.pop_int()?;
+    let x = parameters.pop_int()?;
     let Some(result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -624,10 +657,10 @@ pub(crate) async fn floor_div_i(
 #[async_recursion(?Send)]
 pub(crate) async fn floor_div_j_1(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = i64::from(arguments.pop_int()?);
-    let x = arguments.pop_long()?;
+    let y = i64::from(parameters.pop_int()?);
+    let x = parameters.pop_long()?;
     let Some(result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -640,10 +673,10 @@ pub(crate) async fn floor_div_j_1(
 #[async_recursion(?Send)]
 pub(crate) async fn floor_div_j_2(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_long()?;
-    let x = arguments.pop_long()?;
+    let y = parameters.pop_long()?;
+    let x = parameters.pop_long()?;
     let Some(result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -656,10 +689,10 @@ pub(crate) async fn floor_div_j_2(
 #[async_recursion(?Send)]
 pub(crate) async fn floor_div_exact_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_int()?;
-    let x = arguments.pop_int()?;
+    let y = parameters.pop_int()?;
+    let x = parameters.pop_int()?;
     let Some(result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -672,10 +705,10 @@ pub(crate) async fn floor_div_exact_i(
 #[async_recursion(?Send)]
 pub(crate) async fn floor_div_exact_j(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_long()?;
-    let x = arguments.pop_long()?;
+    let y = parameters.pop_long()?;
+    let x = parameters.pop_long()?;
     let Some(result) = x.checked_div(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -688,10 +721,10 @@ pub(crate) async fn floor_div_exact_j(
 #[async_recursion(?Send)]
 pub(crate) async fn floor_mod_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_int()?;
-    let x = arguments.pop_int()?;
+    let y = parameters.pop_int()?;
+    let x = parameters.pop_int()?;
     let Some(mut result) = x.checked_rem(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -707,10 +740,10 @@ pub(crate) async fn floor_mod_i(
 #[async_recursion(?Send)]
 pub(crate) async fn floor_mod_j_1(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = i64::from(arguments.pop_int()?);
-    let x = arguments.pop_long()?;
+    let y = i64::from(parameters.pop_int()?);
+    let x = parameters.pop_long()?;
     let Some(mut result) = x.checked_rem(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -727,10 +760,10 @@ pub(crate) async fn floor_mod_j_1(
 #[async_recursion(?Send)]
 pub(crate) async fn floor_mod_j_2(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_long()?;
-    let x = arguments.pop_long()?;
+    let y = parameters.pop_long()?;
+    let x = parameters.pop_long()?;
     let Some(mut result) = x.checked_rem(y) else {
         if y == 0 {
             return Err(ArithmeticException("/ by zero".to_string()).into());
@@ -744,19 +777,25 @@ pub(crate) async fn floor_mod_j_2(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn fma_d(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let c = arguments.pop_double()?;
-    let b = arguments.pop_double()?;
-    let a = arguments.pop_double()?;
+pub(crate) async fn fma_d(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let c = parameters.pop_double()?;
+    let b = parameters.pop_double()?;
+    let a = parameters.pop_double()?;
     let result = a.mul_add(b, c);
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn fma_f(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let c = arguments.pop_float()?;
-    let b = arguments.pop_float()?;
-    let a = arguments.pop_float()?;
+pub(crate) async fn fma_f(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let c = parameters.pop_float()?;
+    let b = parameters.pop_float()?;
+    let a = parameters.pop_float()?;
     let result = a.mul_add(b, c);
     Ok(Some(Value::Float(result)))
 }
@@ -764,9 +803,9 @@ pub(crate) async fn fma_f(_thread: Arc<Thread>, mut arguments: Arguments) -> Res
 #[async_recursion(?Send)]
 pub(crate) async fn get_exponent_d(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let d = arguments.pop_double()?;
+    let d = parameters.pop_double()?;
     if d.is_nan() || d.is_infinite() {
         return Ok(Some(Value::Int(1024)));
     }
@@ -780,9 +819,9 @@ pub(crate) async fn get_exponent_d(
 #[async_recursion(?Send)]
 pub(crate) async fn get_exponent_f(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let f = arguments.pop_float()?;
+    let f = parameters.pop_float()?;
     if f.is_nan() || f.is_infinite() {
         return Ok(Some(Value::Int(128)));
     }
@@ -793,9 +832,12 @@ pub(crate) async fn get_exponent_f(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn hypot(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let y = arguments.pop_double()?;
-    let x = arguments.pop_double()?;
+pub(crate) async fn hypot(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let y = parameters.pop_double()?;
+    let x = parameters.pop_double()?;
     let result = x.hypot(y);
     Ok(Some(Value::Double(result)))
 }
@@ -803,9 +845,9 @@ pub(crate) async fn hypot(_thread: Arc<Thread>, mut arguments: Arguments) -> Res
 #[async_recursion(?Send)]
 pub(crate) async fn increment_exact_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_int()?;
+    let a = parameters.pop_int()?;
     let Some(result) = a.checked_add(1) else {
         return Err(ArithmeticException("integer overflow".to_string()).into());
     };
@@ -815,9 +857,9 @@ pub(crate) async fn increment_exact_i(
 #[async_recursion(?Send)]
 pub(crate) async fn increment_exact_j(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_long()?;
+    let a = parameters.pop_long()?;
     let Some(result) = a.checked_add(1) else {
         return Err(ArithmeticException("long overflow".to_string()).into());
     };
@@ -825,8 +867,8 @@ pub(crate) async fn increment_exact_j(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn log(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn log(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.ln();
     Ok(Some(Value::Double(result)))
 }
@@ -834,9 +876,9 @@ pub(crate) async fn log(_thread: Arc<Thread>, mut arguments: Arguments) -> Resul
 #[async_recursion(?Send)]
 pub(crate) async fn log_10(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+    let a = parameters.pop_double()?;
     let result = a.log10();
     Ok(Some(Value::Double(result)))
 }
@@ -844,73 +886,97 @@ pub(crate) async fn log_10(
 #[async_recursion(?Send)]
 pub(crate) async fn log_1p(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+    let a = parameters.pop_double()?;
     let result = a.ln_1p();
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn max_d(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let b = arguments.pop_double()?;
-    let a = arguments.pop_double()?;
+pub(crate) async fn max_d(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let b = parameters.pop_double()?;
+    let a = parameters.pop_double()?;
     let result = a.max(b);
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn max_f(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let b = arguments.pop_float()?;
-    let a = arguments.pop_float()?;
+pub(crate) async fn max_f(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let b = parameters.pop_float()?;
+    let a = parameters.pop_float()?;
     let result = a.max(b);
     Ok(Some(Value::Float(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn max_i(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let b = arguments.pop_int()?;
-    let a = arguments.pop_int()?;
+pub(crate) async fn max_i(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let b = parameters.pop_int()?;
+    let a = parameters.pop_int()?;
     let result = a.max(b);
     Ok(Some(Value::Int(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn max_j(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let b = arguments.pop_long()?;
-    let a = arguments.pop_long()?;
+pub(crate) async fn max_j(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let b = parameters.pop_long()?;
+    let a = parameters.pop_long()?;
     let result = a.max(b);
     Ok(Some(Value::Long(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn min_d(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let b = arguments.pop_double()?;
-    let a = arguments.pop_double()?;
+pub(crate) async fn min_d(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let b = parameters.pop_double()?;
+    let a = parameters.pop_double()?;
     let result = a.min(b);
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn min_f(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let b = arguments.pop_float()?;
-    let a = arguments.pop_float()?;
+pub(crate) async fn min_f(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let b = parameters.pop_float()?;
+    let a = parameters.pop_float()?;
     let result = a.min(b);
     Ok(Some(Value::Float(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn min_i(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let b = arguments.pop_int()?;
-    let a = arguments.pop_int()?;
+pub(crate) async fn min_i(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let b = parameters.pop_int()?;
+    let a = parameters.pop_int()?;
     let result = a.min(b);
     Ok(Some(Value::Int(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn min_j(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let b = arguments.pop_long()?;
-    let a = arguments.pop_long()?;
+pub(crate) async fn min_j(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let b = parameters.pop_long()?;
+    let a = parameters.pop_long()?;
     let result = a.min(b);
     Ok(Some(Value::Long(result)))
 }
@@ -918,10 +984,10 @@ pub(crate) async fn min_j(_thread: Arc<Thread>, mut arguments: Arguments) -> Res
 #[async_recursion(?Send)]
 pub(crate) async fn multiply_exact_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_int()?;
-    let x = arguments.pop_int()?;
+    let y = parameters.pop_int()?;
+    let x = parameters.pop_int()?;
     let Some(result) = x.checked_mul(y) else {
         return Err(ArithmeticException("integer overflow".to_string()).into());
     };
@@ -931,10 +997,10 @@ pub(crate) async fn multiply_exact_i(
 #[async_recursion(?Send)]
 pub(crate) async fn multiply_exact_j_1(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = i64::from(arguments.pop_int()?);
-    let x = arguments.pop_long()?;
+    let y = i64::from(parameters.pop_int()?);
+    let x = parameters.pop_long()?;
     let Some(result) = x.checked_mul(y) else {
         return Err(ArithmeticException("long overflow".to_string()).into());
     };
@@ -944,10 +1010,10 @@ pub(crate) async fn multiply_exact_j_1(
 #[async_recursion(?Send)]
 pub(crate) async fn multiply_exact_j_2(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_long()?;
-    let x = arguments.pop_long()?;
+    let y = parameters.pop_long()?;
+    let x = parameters.pop_long()?;
     let Some(result) = x.checked_mul(y) else {
         return Err(ArithmeticException("long overflow".to_string()).into());
     };
@@ -957,10 +1023,10 @@ pub(crate) async fn multiply_exact_j_2(
 #[async_recursion(?Send)]
 pub(crate) async fn multiply_full(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = i64::from(arguments.pop_int()?);
-    let x = i64::from(arguments.pop_int()?);
+    let y = i64::from(parameters.pop_int()?);
+    let x = i64::from(parameters.pop_int()?);
     let result = x * y;
     Ok(Some(Value::Long(result)))
 }
@@ -968,10 +1034,10 @@ pub(crate) async fn multiply_full(
 #[async_recursion(?Send)]
 pub(crate) async fn multiply_high(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = i128::from(arguments.pop_long()?);
-    let x = i128::from(arguments.pop_long()?);
+    let y = i128::from(parameters.pop_long()?);
+    let x = i128::from(parameters.pop_long()?);
     let product = x * y;
     let result = (product >> 64) as i64;
     Ok(Some(Value::Long(result)))
@@ -980,9 +1046,9 @@ pub(crate) async fn multiply_high(
 #[async_recursion(?Send)]
 pub(crate) async fn negate_exact_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_int()?;
+    let a = parameters.pop_int()?;
     let Some(result) = a.checked_neg() else {
         return Err(ArithmeticException("integer overflow".to_string()).into());
     };
@@ -992,9 +1058,9 @@ pub(crate) async fn negate_exact_i(
 #[async_recursion(?Send)]
 pub(crate) async fn negate_exact_j(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_long()?;
+    let a = parameters.pop_long()?;
     let Some(result) = a.checked_neg() else {
         return Err(ArithmeticException("long overflow".to_string()).into());
     };
@@ -1004,10 +1070,10 @@ pub(crate) async fn negate_exact_j(
 #[async_recursion(?Send)]
 pub(crate) async fn next_after_d(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let direction = arguments.pop_double()?;
-    let start = arguments.pop_double()?;
+    let direction = parameters.pop_double()?;
+    let start = parameters.pop_double()?;
     if start.is_nan() || direction.is_nan() {
         return Ok(Some(Value::Double(f64::NAN)));
     }
@@ -1035,11 +1101,11 @@ pub(crate) async fn next_after_d(
 #[async_recursion(?Send)]
 pub(crate) async fn next_after_f(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     #[expect(clippy::cast_possible_truncation)]
-    let direction = arguments.pop_double()? as f32;
-    let start = arguments.pop_float()?;
+    let direction = parameters.pop_double()? as f32;
+    let start = parameters.pop_float()?;
     if start.is_nan() || direction.is_nan() {
         return Ok(Some(Value::Float(f32::NAN)));
     }
@@ -1067,9 +1133,9 @@ pub(crate) async fn next_after_f(
 #[async_recursion(?Send)]
 pub(crate) async fn next_down_d(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let d = arguments.pop_double()?;
+    let d = parameters.pop_double()?;
     if d.is_nan() {
         return Ok(Some(Value::Double(d)));
     }
@@ -1086,9 +1152,9 @@ pub(crate) async fn next_down_d(
 #[async_recursion(?Send)]
 pub(crate) async fn next_down_f(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let f = arguments.pop_float()?;
+    let f = parameters.pop_float()?;
     if f.is_nan() {
         return Ok(Some(Value::Float(f)));
     }
@@ -1105,9 +1171,9 @@ pub(crate) async fn next_down_f(
 #[async_recursion(?Send)]
 pub(crate) async fn next_up_d(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let d = arguments.pop_double()?;
+    let d = parameters.pop_double()?;
     if d.is_nan() || d == f64::INFINITY {
         return Ok(Some(Value::Double(d)));
     }
@@ -1123,9 +1189,9 @@ pub(crate) async fn next_up_d(
 #[async_recursion(?Send)]
 pub(crate) async fn next_up_f(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let f = arguments.pop_float()?;
+    let f = parameters.pop_float()?;
     if f.is_nan() || f == f32::INFINITY {
         return Ok(Some(Value::Float(f)));
     }
@@ -1139,15 +1205,15 @@ pub(crate) async fn next_up_f(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn pow(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let b = arguments.pop_double()?;
-    let a = arguments.pop_double()?;
+pub(crate) async fn pow(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let b = parameters.pop_double()?;
+    let a = parameters.pop_double()?;
     let result = a.powf(b);
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn random(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+pub(crate) async fn random(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     #[cfg(target_arch = "wasm32")]
     let result = {
         let mut buf = [0u8; 8];
@@ -1164,8 +1230,11 @@ pub(crate) async fn random(_thread: Arc<Thread>, _arguments: Arguments) -> Resul
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn rint(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn rint(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let mut rounded = a.round();
     #[expect(clippy::float_cmp)]
     if (a - rounded).abs() == 0.5 && rounded % 2.0 != 0.0 {
@@ -1177,9 +1246,9 @@ pub(crate) async fn rint(_thread: Arc<Thread>, mut arguments: Arguments) -> Resu
 #[async_recursion(?Send)]
 pub(crate) async fn round_d(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+    let a = parameters.pop_double()?;
     #[expect(clippy::cast_possible_truncation)]
     let result = a.round() as i64;
     Ok(Some(Value::Long(result)))
@@ -1188,9 +1257,9 @@ pub(crate) async fn round_d(
 #[async_recursion(?Send)]
 pub(crate) async fn round_f(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_float()?;
+    let a = parameters.pop_float()?;
     #[expect(clippy::cast_possible_truncation)]
     let result = a.round() as i32;
     Ok(Some(Value::Int(result)))
@@ -1199,10 +1268,10 @@ pub(crate) async fn round_f(
 #[async_recursion(?Send)]
 pub(crate) async fn scalb_d(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let scale_factor = arguments.pop_int()?;
-    let d = arguments.pop_double()?;
+    let scale_factor = parameters.pop_int()?;
+    let d = parameters.pop_double()?;
     let result = d * 2f64.powi(scale_factor);
     Ok(Some(Value::Double(result)))
 }
@@ -1210,10 +1279,10 @@ pub(crate) async fn scalb_d(
 #[async_recursion(?Send)]
 pub(crate) async fn scalb_f(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let scale_factor = arguments.pop_int()?;
-    let d = arguments.pop_float()?;
+    let scale_factor = parameters.pop_int()?;
+    let d = parameters.pop_float()?;
     let result = d * 2f32.powi(scale_factor);
     Ok(Some(Value::Float(result)))
 }
@@ -1221,9 +1290,9 @@ pub(crate) async fn scalb_f(
 #[async_recursion(?Send)]
 pub(crate) async fn signum_d(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+    let a = parameters.pop_double()?;
     let result = a.signum();
     Ok(Some(Value::Double(result)))
 }
@@ -1231,30 +1300,36 @@ pub(crate) async fn signum_d(
 #[async_recursion(?Send)]
 pub(crate) async fn signum_f(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_float()?;
+    let a = parameters.pop_float()?;
     let result = a.signum();
     Ok(Some(Value::Float(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn sin(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn sin(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.sin();
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn sinh(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn sinh(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.sinh();
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn sqrt(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn sqrt(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.sqrt();
     Ok(Some(Value::Double(result)))
 }
@@ -1262,10 +1337,10 @@ pub(crate) async fn sqrt(_thread: Arc<Thread>, mut arguments: Arguments) -> Resu
 #[async_recursion(?Send)]
 pub(crate) async fn subtract_exact_i(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_int()?;
-    let x = arguments.pop_int()?;
+    let y = parameters.pop_int()?;
+    let x = parameters.pop_int()?;
     let Some(result) = x.checked_sub(y) else {
         return Err(ArithmeticException("integer overflow".to_string()).into());
     };
@@ -1275,10 +1350,10 @@ pub(crate) async fn subtract_exact_i(
 #[async_recursion(?Send)]
 pub(crate) async fn subtract_exact_j(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_long()?;
-    let x = arguments.pop_long()?;
+    let y = parameters.pop_long()?;
+    let x = parameters.pop_long()?;
     let Some(result) = x.checked_sub(y) else {
         return Err(ArithmeticException("long overflow".to_string()).into());
     };
@@ -1286,15 +1361,18 @@ pub(crate) async fn subtract_exact_j(
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn tan(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn tan(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.tan();
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn tanh(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+pub(crate) async fn tanh(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let a = parameters.pop_double()?;
     let result = a.tanh();
     Ok(Some(Value::Double(result)))
 }
@@ -1302,9 +1380,9 @@ pub(crate) async fn tanh(_thread: Arc<Thread>, mut arguments: Arguments) -> Resu
 #[async_recursion(?Send)]
 pub(crate) async fn to_degrees(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+    let a = parameters.pop_double()?;
     let result = a.to_degrees();
     Ok(Some(Value::Double(result)))
 }
@@ -1312,9 +1390,9 @@ pub(crate) async fn to_degrees(
 #[async_recursion(?Send)]
 pub(crate) async fn to_int_exact(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_long()?;
+    let a = parameters.pop_long()?;
     let Ok(result) = i32::try_from(a) else {
         return Err(ArithmeticException("integer overflow".to_string()).into());
     };
@@ -1324,16 +1402,19 @@ pub(crate) async fn to_int_exact(
 #[async_recursion(?Send)]
 pub(crate) async fn to_radians(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let a = arguments.pop_double()?;
+    let a = parameters.pop_double()?;
     let result = a.to_radians();
     Ok(Some(Value::Double(result)))
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn ulp_d(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let d = arguments.pop_double()?;
+pub(crate) async fn ulp_d(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let d = parameters.pop_double()?;
     let result = if d.is_infinite() || d.is_nan() {
         f64::NAN
     } else {
@@ -1345,8 +1426,11 @@ pub(crate) async fn ulp_d(_thread: Arc<Thread>, mut arguments: Arguments) -> Res
 }
 
 #[async_recursion(?Send)]
-pub(crate) async fn ulp_f(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let f = arguments.pop_float()?;
+pub(crate) async fn ulp_f(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let f = parameters.pop_float()?;
     let result = if f.is_infinite() || f.is_nan() {
         f32::NAN
     } else {
@@ -1362,10 +1446,10 @@ pub(crate) async fn ulp_f(_thread: Arc<Thread>, mut arguments: Arguments) -> Res
 #[async_recursion(?Send)]
 pub(crate) async fn unsigned_multiply_high(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let y = arguments.pop_long()? as u64;
-    let x = arguments.pop_long()? as u64;
+    let y = parameters.pop_long()? as u64;
+    let x = parameters.pop_long()? as u64;
     let product = u128::from(x) * u128::from(y);
     let result = (product >> 64) as u64;
     Ok(Some(Value::Long(result as i64)))
@@ -1378,8 +1462,8 @@ mod tests {
     #[tokio::test]
     async fn test_ieee_remainder() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.0), Value::Double(2.0)]);
-        let result = ieee_remainder(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.0), Value::Double(2.0)]);
+        let result = ieee_remainder(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -1387,8 +1471,8 @@ mod tests {
     #[tokio::test]
     async fn test_abs_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(-1.0)]);
-        let result = abs_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(-1.0)]);
+        let result = abs_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -1396,8 +1480,8 @@ mod tests {
     #[tokio::test]
     async fn test_abs_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(-1.0)]);
-        let result = abs_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(-1.0)]);
+        let result = abs_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Float(1.0)));
         Ok(())
     }
@@ -1405,8 +1489,8 @@ mod tests {
     #[tokio::test]
     async fn test_abs_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(-1)]);
-        let result = abs_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(-1)]);
+        let result = abs_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -1414,8 +1498,8 @@ mod tests {
     #[tokio::test]
     async fn test_abs_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(-1)]);
-        let result = abs_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(-1)]);
+        let result = abs_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(1)));
         Ok(())
     }
@@ -1423,8 +1507,8 @@ mod tests {
     #[tokio::test]
     async fn test_abs_exact_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(-1)]);
-        let result = abs_exact_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(-1)]);
+        let result = abs_exact_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -1432,8 +1516,8 @@ mod tests {
     #[tokio::test]
     async fn test_abs_exact_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(-1)]);
-        let result = abs_exact_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(-1)]);
+        let result = abs_exact_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(1)));
         Ok(())
     }
@@ -1441,8 +1525,8 @@ mod tests {
     #[tokio::test]
     async fn test_acos() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0)]);
-        let result = acos(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0)]);
+        let result = acos(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(std::f64::consts::FRAC_PI_2)));
         Ok(())
     }
@@ -1450,8 +1534,8 @@ mod tests {
     #[tokio::test]
     async fn test_add_exact_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(1), Value::Int(2)]);
-        let result = add_exact_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(1), Value::Int(2)]);
+        let result = add_exact_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(3)));
         Ok(())
     }
@@ -1459,8 +1543,8 @@ mod tests {
     #[tokio::test]
     async fn test_add_exact_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(1), Value::Long(2)]);
-        let result = add_exact_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(1), Value::Long(2)]);
+        let result = add_exact_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(3)));
         Ok(())
     }
@@ -1468,8 +1552,8 @@ mod tests {
     #[tokio::test]
     async fn test_asin() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0)]);
-        let result = asin(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0)]);
+        let result = asin(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -1477,8 +1561,8 @@ mod tests {
     #[tokio::test]
     async fn test_atan() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0)]);
-        let result = atan(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0)]);
+        let result = atan(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -1486,8 +1570,8 @@ mod tests {
     #[tokio::test]
     async fn test_atan_2() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0), Value::Double(0.0)]);
-        let result = atan_2(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0), Value::Double(0.0)]);
+        let result = atan_2(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -1495,8 +1579,8 @@ mod tests {
     #[tokio::test]
     async fn test_cbrt() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(8.0)]);
-        let result = cbrt(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(8.0)]);
+        let result = cbrt(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(2.0)));
         Ok(())
     }
@@ -1504,8 +1588,8 @@ mod tests {
     #[tokio::test]
     async fn test_ceil() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.1)]);
-        let result = ceil(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.1)]);
+        let result = ceil(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(2.0)));
         Ok(())
     }
@@ -1513,8 +1597,8 @@ mod tests {
     #[tokio::test]
     async fn test_ceil_div_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(5), Value::Int(2)]);
-        let result = ceil_div_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(5), Value::Int(2)]);
+        let result = ceil_div_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(3)));
         Ok(())
     }
@@ -1522,8 +1606,8 @@ mod tests {
     #[tokio::test]
     async fn test_ceil_div_j_1() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(5), Value::Int(2)]);
-        let result = ceil_div_j_1(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(5), Value::Int(2)]);
+        let result = ceil_div_j_1(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(3)));
         Ok(())
     }
@@ -1531,8 +1615,8 @@ mod tests {
     #[tokio::test]
     async fn test_ceil_div_j_2() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(5), Value::Long(2)]);
-        let result = ceil_div_j_2(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(5), Value::Long(2)]);
+        let result = ceil_div_j_2(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(3)));
         Ok(())
     }
@@ -1540,8 +1624,8 @@ mod tests {
     #[tokio::test]
     async fn test_ceil_div_exact_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(5), Value::Int(2)]);
-        let result = ceil_div_exact_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(5), Value::Int(2)]);
+        let result = ceil_div_exact_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(3)));
         Ok(())
     }
@@ -1549,8 +1633,8 @@ mod tests {
     #[tokio::test]
     async fn test_ceil_div_exact_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(5), Value::Long(2)]);
-        let result = ceil_div_exact_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(5), Value::Long(2)]);
+        let result = ceil_div_exact_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(3)));
         Ok(())
     }
@@ -1558,8 +1642,8 @@ mod tests {
     #[tokio::test]
     async fn test_ceil_mod_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(5), Value::Int(2)]);
-        let result = ceil_mod_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(5), Value::Int(2)]);
+        let result = ceil_mod_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -1567,8 +1651,8 @@ mod tests {
     #[tokio::test]
     async fn test_ceil_mod_j_1() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(5), Value::Int(2)]);
-        let result = ceil_mod_j_1(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(5), Value::Int(2)]);
+        let result = ceil_mod_j_1(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -1576,8 +1660,8 @@ mod tests {
     #[tokio::test]
     async fn test_ceil_mod_j_2() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(5), Value::Long(2)]);
-        let result = ceil_mod_j_2(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(5), Value::Long(2)]);
+        let result = ceil_mod_j_2(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(1)));
         Ok(())
     }
@@ -1585,12 +1669,12 @@ mod tests {
     #[tokio::test]
     async fn test_clamp_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![
+        let parameters = Parameters::new(vec![
             Value::Double(1.0),
             Value::Double(2.0),
             Value::Double(3.0),
         ]);
-        let result = clamp_d(thread, arguments).await?;
+        let result = clamp_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(2.0)));
         Ok(())
     }
@@ -1598,12 +1682,12 @@ mod tests {
     #[tokio::test]
     async fn test_clamp_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![
+        let parameters = Parameters::new(vec![
             Value::Float(1.0),
             Value::Float(2.0),
             Value::Float(3.0),
         ]);
-        let result = clamp_f(thread, arguments).await?;
+        let result = clamp_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Float(2.0)));
         Ok(())
     }
@@ -1611,8 +1695,8 @@ mod tests {
     #[tokio::test]
     async fn test_clamp_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(1), Value::Int(2), Value::Int(3)]);
-        let result = clamp_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(1), Value::Int(2), Value::Int(3)]);
+        let result = clamp_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(2)));
         Ok(())
     }
@@ -1620,8 +1704,8 @@ mod tests {
     #[tokio::test]
     async fn test_clamp_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(1), Value::Long(2), Value::Long(3)]);
-        let result = clamp_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(1), Value::Long(2), Value::Long(3)]);
+        let result = clamp_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(2)));
         Ok(())
     }
@@ -1629,8 +1713,8 @@ mod tests {
     #[tokio::test]
     async fn test_copy_sign_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(-1.0), Value::Double(2.0)]);
-        let result = copy_sign_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(-1.0), Value::Double(2.0)]);
+        let result = copy_sign_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -1638,8 +1722,8 @@ mod tests {
     #[tokio::test]
     async fn test_copy_sign_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(-1.0), Value::Float(2.0)]);
-        let result = copy_sign_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(-1.0), Value::Float(2.0)]);
+        let result = copy_sign_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Float(1.0)));
         Ok(())
     }
@@ -1647,8 +1731,8 @@ mod tests {
     #[tokio::test]
     async fn test_cos() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0)]);
-        let result = cos(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0)]);
+        let result = cos(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -1656,8 +1740,8 @@ mod tests {
     #[tokio::test]
     async fn test_cosh() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0)]);
-        let result = cosh(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0)]);
+        let result = cosh(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -1665,8 +1749,8 @@ mod tests {
     #[tokio::test]
     async fn test_decrement_exact_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(1)]);
-        let result = decrement_exact_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(1)]);
+        let result = decrement_exact_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -1674,8 +1758,8 @@ mod tests {
     #[tokio::test]
     async fn test_decrement_exact_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(1)]);
-        let result = decrement_exact_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(1)]);
+        let result = decrement_exact_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
@@ -1683,8 +1767,8 @@ mod tests {
     #[tokio::test]
     async fn test_divide_exact_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(5), Value::Int(2)]);
-        let result = divide_exact_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(5), Value::Int(2)]);
+        let result = divide_exact_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(2)));
         Ok(())
     }
@@ -1692,8 +1776,8 @@ mod tests {
     #[tokio::test]
     async fn test_divide_exact_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(5), Value::Long(2)]);
-        let result = divide_exact_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(5), Value::Long(2)]);
+        let result = divide_exact_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(2)));
         Ok(())
     }
@@ -1701,8 +1785,8 @@ mod tests {
     #[tokio::test]
     async fn test_exp() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0)]);
-        let result = exp(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0)]);
+        let result = exp(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -1710,8 +1794,8 @@ mod tests {
     #[tokio::test]
     async fn test_expm_1() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0)]);
-        let result = expm_1(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0)]);
+        let result = expm_1(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -1719,8 +1803,8 @@ mod tests {
     #[tokio::test]
     async fn test_floor() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.1)]);
-        let result = floor(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.1)]);
+        let result = floor(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -1728,8 +1812,8 @@ mod tests {
     #[tokio::test]
     async fn test_floor_div_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(5), Value::Int(2)]);
-        let result = floor_div_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(5), Value::Int(2)]);
+        let result = floor_div_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(2)));
         Ok(())
     }
@@ -1737,8 +1821,8 @@ mod tests {
     #[tokio::test]
     async fn test_floor_div_j_1() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(5), Value::Int(2)]);
-        let result = floor_div_j_1(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(5), Value::Int(2)]);
+        let result = floor_div_j_1(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(2)));
         Ok(())
     }
@@ -1746,8 +1830,8 @@ mod tests {
     #[tokio::test]
     async fn test_floor_div_j_2() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(5), Value::Long(2)]);
-        let result = floor_div_j_2(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(5), Value::Long(2)]);
+        let result = floor_div_j_2(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(2)));
         Ok(())
     }
@@ -1755,8 +1839,8 @@ mod tests {
     #[tokio::test]
     async fn test_floor_div_exact_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(5), Value::Int(2)]);
-        let result = floor_div_exact_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(5), Value::Int(2)]);
+        let result = floor_div_exact_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(2)));
         Ok(())
     }
@@ -1764,8 +1848,8 @@ mod tests {
     #[tokio::test]
     async fn test_floor_div_exact_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(5), Value::Long(2)]);
-        let result = floor_div_exact_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(5), Value::Long(2)]);
+        let result = floor_div_exact_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(2)));
         Ok(())
     }
@@ -1773,8 +1857,8 @@ mod tests {
     #[tokio::test]
     async fn test_floor_mod_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(5), Value::Int(2)]);
-        let result = floor_mod_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(5), Value::Int(2)]);
+        let result = floor_mod_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -1782,8 +1866,8 @@ mod tests {
     #[tokio::test]
     async fn test_floor_mod_j_1() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(5), Value::Int(2)]);
-        let result = floor_mod_j_1(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(5), Value::Int(2)]);
+        let result = floor_mod_j_1(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -1791,8 +1875,8 @@ mod tests {
     #[tokio::test]
     async fn test_floor_mod_j_2() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(5), Value::Long(2)]);
-        let result = floor_mod_j_2(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(5), Value::Long(2)]);
+        let result = floor_mod_j_2(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(1)));
         Ok(())
     }
@@ -1800,12 +1884,12 @@ mod tests {
     #[tokio::test]
     async fn test_fma_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![
+        let parameters = Parameters::new(vec![
             Value::Double(1.0),
             Value::Double(2.0),
             Value::Double(3.0),
         ]);
-        let result = fma_d(thread, arguments).await?;
+        let result = fma_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(5.0)));
         Ok(())
     }
@@ -1813,12 +1897,12 @@ mod tests {
     #[tokio::test]
     async fn test_fma_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![
+        let parameters = Parameters::new(vec![
             Value::Float(1.0),
             Value::Float(2.0),
             Value::Float(3.0),
         ]);
-        let result = fma_f(thread, arguments).await?;
+        let result = fma_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Float(5.0)));
         Ok(())
     }
@@ -1826,8 +1910,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_exponent_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.0)]);
-        let result = get_exponent_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.0)]);
+        let result = get_exponent_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -1835,8 +1919,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_exponent_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(1.0)]);
-        let result = get_exponent_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(1.0)]);
+        let result = get_exponent_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -1844,8 +1928,8 @@ mod tests {
     #[tokio::test]
     async fn test_hypot() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(3.0), Value::Double(4.0)]);
-        let result = hypot(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(3.0), Value::Double(4.0)]);
+        let result = hypot(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(5.0)));
         Ok(())
     }
@@ -1853,8 +1937,8 @@ mod tests {
     #[tokio::test]
     async fn test_increment_exact_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(1)]);
-        let result = increment_exact_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(1)]);
+        let result = increment_exact_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(2)));
         Ok(())
     }
@@ -1862,8 +1946,8 @@ mod tests {
     #[tokio::test]
     async fn test_increment_exact_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(1)]);
-        let result = increment_exact_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(1)]);
+        let result = increment_exact_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(2)));
         Ok(())
     }
@@ -1871,8 +1955,8 @@ mod tests {
     #[tokio::test]
     async fn test_log() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(std::f64::consts::E)]);
-        let result = log(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(std::f64::consts::E)]);
+        let result = log(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -1880,8 +1964,8 @@ mod tests {
     #[tokio::test]
     async fn test_log_10() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(100.0)]);
-        let result = log_10(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(100.0)]);
+        let result = log_10(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(2.0)));
         Ok(())
     }
@@ -1889,8 +1973,8 @@ mod tests {
     #[tokio::test]
     async fn test_log_1p() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(std::f64::consts::E - 1.0)]);
-        let result = log_1p(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(std::f64::consts::E - 1.0)]);
+        let result = log_1p(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -1898,8 +1982,8 @@ mod tests {
     #[tokio::test]
     async fn test_max_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.0), Value::Double(2.0)]);
-        let result = max_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.0), Value::Double(2.0)]);
+        let result = max_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(2.0)));
         Ok(())
     }
@@ -1907,8 +1991,8 @@ mod tests {
     #[tokio::test]
     async fn test_max_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(1.0), Value::Float(2.0)]);
-        let result = max_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(1.0), Value::Float(2.0)]);
+        let result = max_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Float(2.0)));
         Ok(())
     }
@@ -1916,8 +2000,8 @@ mod tests {
     #[tokio::test]
     async fn test_max_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(1), Value::Int(2)]);
-        let result = max_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(1), Value::Int(2)]);
+        let result = max_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(2)));
         Ok(())
     }
@@ -1925,8 +2009,8 @@ mod tests {
     #[tokio::test]
     async fn test_max_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(1), Value::Long(2)]);
-        let result = max_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(1), Value::Long(2)]);
+        let result = max_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(2)));
         Ok(())
     }
@@ -1934,8 +2018,8 @@ mod tests {
     #[tokio::test]
     async fn test_min_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.0), Value::Double(2.0)]);
-        let result = min_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.0), Value::Double(2.0)]);
+        let result = min_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -1943,8 +2027,8 @@ mod tests {
     #[tokio::test]
     async fn test_min_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(1.0), Value::Float(2.0)]);
-        let result = min_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(1.0), Value::Float(2.0)]);
+        let result = min_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Float(1.0)));
         Ok(())
     }
@@ -1952,8 +2036,8 @@ mod tests {
     #[tokio::test]
     async fn test_min_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(1), Value::Int(2)]);
-        let result = min_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(1), Value::Int(2)]);
+        let result = min_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -1961,8 +2045,8 @@ mod tests {
     #[tokio::test]
     async fn test_min_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(1), Value::Long(2)]);
-        let result = min_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(1), Value::Long(2)]);
+        let result = min_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(1)));
         Ok(())
     }
@@ -1970,8 +2054,8 @@ mod tests {
     #[tokio::test]
     async fn test_multiply_exact_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(2), Value::Int(3)]);
-        let result = multiply_exact_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(2), Value::Int(3)]);
+        let result = multiply_exact_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(6)));
         Ok(())
     }
@@ -1979,8 +2063,8 @@ mod tests {
     #[tokio::test]
     async fn test_multiply_exact_j_1() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(2), Value::Int(3)]);
-        let result = multiply_exact_j_1(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(2), Value::Int(3)]);
+        let result = multiply_exact_j_1(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(6)));
         Ok(())
     }
@@ -1988,8 +2072,8 @@ mod tests {
     #[tokio::test]
     async fn test_multiply_exact_j_2() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(2), Value::Long(3)]);
-        let result = multiply_exact_j_2(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(2), Value::Long(3)]);
+        let result = multiply_exact_j_2(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(6)));
         Ok(())
     }
@@ -1997,8 +2081,8 @@ mod tests {
     #[tokio::test]
     async fn test_multiply_full() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(2), Value::Int(3)]);
-        let result = multiply_full(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(2), Value::Int(3)]);
+        let result = multiply_full(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(6)));
         Ok(())
     }
@@ -2006,8 +2090,8 @@ mod tests {
     #[tokio::test]
     async fn test_multiply_high() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(2), Value::Long(3)]);
-        let result = multiply_high(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(2), Value::Long(3)]);
+        let result = multiply_high(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
@@ -2015,8 +2099,8 @@ mod tests {
     #[tokio::test]
     async fn test_negate_exact_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(1)]);
-        let result = negate_exact_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(1)]);
+        let result = negate_exact_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(-1)));
         Ok(())
     }
@@ -2024,8 +2108,8 @@ mod tests {
     #[tokio::test]
     async fn test_negate_exact_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(1)]);
-        let result = negate_exact_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(1)]);
+        let result = negate_exact_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(-1)));
         Ok(())
     }
@@ -2033,8 +2117,8 @@ mod tests {
     #[tokio::test]
     async fn test_next_after_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.0), Value::Double(2.0)]);
-        let result = next_after_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.0), Value::Double(2.0)]);
+        let result = next_after_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0 + f64::EPSILON)));
         Ok(())
     }
@@ -2042,8 +2126,8 @@ mod tests {
     #[tokio::test]
     async fn test_next_after_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(1.0), Value::Double(2.0)]);
-        let result = next_after_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(1.0), Value::Double(2.0)]);
+        let result = next_after_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Float(1.0 + f32::EPSILON)));
         Ok(())
     }
@@ -2051,8 +2135,8 @@ mod tests {
     #[tokio::test]
     async fn test_next_down_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.0)]);
-        let result = next_down_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.0)]);
+        let result = next_down_d(thread, parameters).await?;
         let value = result.unwrap_or(Value::Double(0.0)).to_double()? - 1.000f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -2061,8 +2145,8 @@ mod tests {
     #[tokio::test]
     async fn test_next_down_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(1.0)]);
-        let result = next_down_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(1.0)]);
+        let result = next_down_f(thread, parameters).await?;
         let value = result.unwrap_or(Value::Float(0.0)).to_float()? - 1.047f32;
         assert!(value.abs() < 0.1f32);
         Ok(())
@@ -2071,8 +2155,8 @@ mod tests {
     #[tokio::test]
     async fn test_next_up_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.0)]);
-        let result = next_up_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.0)]);
+        let result = next_up_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0 + f64::EPSILON)));
         Ok(())
     }
@@ -2080,8 +2164,8 @@ mod tests {
     #[tokio::test]
     async fn test_next_up_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(1.0)]);
-        let result = next_up_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(1.0)]);
+        let result = next_up_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Float(1.0 + f32::EPSILON)));
         Ok(())
     }
@@ -2089,8 +2173,8 @@ mod tests {
     #[tokio::test]
     async fn test_pow() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(2.0), Value::Double(3.0)]);
-        let result = pow(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(2.0), Value::Double(3.0)]);
+        let result = pow(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(8.0)));
         Ok(())
     }
@@ -2098,8 +2182,8 @@ mod tests {
     #[tokio::test]
     async fn test_random() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![]);
-        let result = random(thread, arguments).await?;
+        let parameters = Parameters::new(vec![]);
+        let result = random(thread, parameters).await?;
         assert!(result.is_some());
         Ok(())
     }
@@ -2107,8 +2191,8 @@ mod tests {
     #[tokio::test]
     async fn test_rint() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.1)]);
-        let result = rint(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.1)]);
+        let result = rint(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -2116,8 +2200,8 @@ mod tests {
     #[tokio::test]
     async fn test_round_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.1)]);
-        let result = round_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.1)]);
+        let result = round_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(1)));
         Ok(())
     }
@@ -2125,8 +2209,8 @@ mod tests {
     #[tokio::test]
     async fn test_round_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(1.1)]);
-        let result = round_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(1.1)]);
+        let result = round_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -2134,8 +2218,8 @@ mod tests {
     #[tokio::test]
     async fn test_scalb_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.0), Value::Int(2)]);
-        let result = scalb_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.0), Value::Int(2)]);
+        let result = scalb_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(4.0)));
         Ok(())
     }
@@ -2143,8 +2227,8 @@ mod tests {
     #[tokio::test]
     async fn test_scalb_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(1.0), Value::Int(2)]);
-        let result = scalb_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(1.0), Value::Int(2)]);
+        let result = scalb_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Float(4.0)));
         Ok(())
     }
@@ -2152,8 +2236,8 @@ mod tests {
     #[tokio::test]
     async fn test_signum_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(-1.0)]);
-        let result = signum_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(-1.0)]);
+        let result = signum_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(-1.0)));
         Ok(())
     }
@@ -2161,8 +2245,8 @@ mod tests {
     #[tokio::test]
     async fn test_signum_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(-1.0)]);
-        let result = signum_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(-1.0)]);
+        let result = signum_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Float(-1.0)));
         Ok(())
     }
@@ -2170,8 +2254,8 @@ mod tests {
     #[tokio::test]
     async fn test_sin() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0)]);
-        let result = sin(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0)]);
+        let result = sin(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -2179,8 +2263,8 @@ mod tests {
     #[tokio::test]
     async fn test_sinh() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0)]);
-        let result = sinh(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0)]);
+        let result = sinh(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -2188,8 +2272,8 @@ mod tests {
     #[tokio::test]
     async fn test_sqrt() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(4.0)]);
-        let result = sqrt(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(4.0)]);
+        let result = sqrt(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(2.0)));
         Ok(())
     }
@@ -2197,8 +2281,8 @@ mod tests {
     #[tokio::test]
     async fn test_subtract_exact_i() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Int(3), Value::Int(2)]);
-        let result = subtract_exact_i(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Int(3), Value::Int(2)]);
+        let result = subtract_exact_i(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -2206,8 +2290,8 @@ mod tests {
     #[tokio::test]
     async fn test_subtract_exact_j() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(3), Value::Long(2)]);
-        let result = subtract_exact_j(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(3), Value::Long(2)]);
+        let result = subtract_exact_j(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(1)));
         Ok(())
     }
@@ -2215,8 +2299,8 @@ mod tests {
     #[tokio::test]
     async fn test_tan() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0)]);
-        let result = tan(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0)]);
+        let result = tan(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -2224,8 +2308,8 @@ mod tests {
     #[tokio::test]
     async fn test_tanh() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(0.0)]);
-        let result = tanh(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(0.0)]);
+        let result = tanh(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -2233,8 +2317,8 @@ mod tests {
     #[tokio::test]
     async fn test_to_int_exact() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(1)]);
-        let result = to_int_exact(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(1)]);
+        let result = to_int_exact(thread, parameters).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -2242,8 +2326,8 @@ mod tests {
     #[tokio::test]
     async fn test_to_degrees() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(std::f64::consts::PI)]);
-        let result = to_degrees(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(std::f64::consts::PI)]);
+        let result = to_degrees(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(180.0)));
         Ok(())
     }
@@ -2251,8 +2335,8 @@ mod tests {
     #[tokio::test]
     async fn test_to_radians() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(180.0)]);
-        let result = to_radians(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(180.0)]);
+        let result = to_radians(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(std::f64::consts::PI)));
         Ok(())
     }
@@ -2260,8 +2344,8 @@ mod tests {
     #[tokio::test]
     async fn test_ulp_d() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Double(1.0)]);
-        let result = ulp_d(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Double(1.0)]);
+        let result = ulp_d(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(f64::EPSILON)));
         Ok(())
     }
@@ -2269,8 +2353,8 @@ mod tests {
     #[tokio::test]
     async fn test_ulp_f() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Float(1.0)]);
-        let result = ulp_f(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Float(1.0)]);
+        let result = ulp_f(thread, parameters).await?;
         assert_eq!(result, Some(Value::Float(f32::EPSILON)));
         Ok(())
     }
@@ -2278,8 +2362,8 @@ mod tests {
     #[tokio::test]
     async fn test_unsigned_multiply_high() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(2), Value::Long(3)]);
-        let result = unsigned_multiply_high(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(2), Value::Long(3)]);
+        let result = unsigned_multiply_high(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }

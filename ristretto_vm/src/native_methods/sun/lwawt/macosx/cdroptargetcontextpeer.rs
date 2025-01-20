@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -16,17 +16,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn add_transfer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn add_transfer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDropTargetContextPeer.addTransfer(JJJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn drop_done(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn drop_done(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDropTargetContextPeer.dropDone(JJZZI)V")
 }
 
 #[async_recursion(?Send)]
-async fn start_transfer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn start_transfer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDropTargetContextPeer.startTransfer(JJ)J")
 }
 
@@ -40,7 +40,7 @@ mod tests {
     )]
     async fn test_add_transfer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_transfer(thread, Arguments::default()).await;
+        let _ = add_transfer(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -49,7 +49,7 @@ mod tests {
     )]
     async fn test_drop_done() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = drop_done(thread, Arguments::default()).await;
+        let _ = drop_done(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -58,6 +58,6 @@ mod tests {
     )]
     async fn test_start_transfer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = start_transfer(thread, Arguments::default()).await;
+        let _ = start_transfer(thread, Parameters::default()).await;
     }
 }

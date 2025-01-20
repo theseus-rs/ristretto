@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_18};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
@@ -38,7 +38,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn init_stack_trace_element(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V")
 }
@@ -46,13 +46,13 @@ async fn init_stack_trace_element(
 #[async_recursion(?Send)]
 async fn init_stack_trace_elements(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let depth = usize::try_from(arguments.pop_int()?)?;
-    let Some(Reference::Array(_class, back_trace)) = arguments.pop_reference()? else {
+    let depth = usize::try_from(parameters.pop_int()?)?;
+    let Some(Reference::Array(_class, back_trace)) = parameters.pop_reference()? else {
         return Err(InternalError("No back trace object found".to_string()));
     };
-    let Some(Reference::Array(_class, stack_trace)) = arguments.pop_reference()? else {
+    let Some(Reference::Array(_class, stack_trace)) = parameters.pop_reference()? else {
         return Err(InternalError("No stack trace object found".to_string()));
     };
     for index in 0..depth {
@@ -74,6 +74,6 @@ mod tests {
     )]
     async fn test_init_stack_trace_element() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_stack_trace_element(thread, Arguments::default()).await;
+        let _ = init_stack_trace_element(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -22,13 +22,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn load_native_dir_fonts(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CFontManager.loadNativeDirFonts(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
-async fn load_native_fonts(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn load_native_fonts(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.CFontManager.loadNativeFonts()V")
 }
 
@@ -42,13 +42,13 @@ mod tests {
     )]
     async fn test_load_native_dir_fonts() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = load_native_dir_fonts(thread, Arguments::default()).await;
+        let _ = load_native_dir_fonts(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.CFontManager.loadNativeFonts()V")]
     async fn test_load_native_fonts() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = load_native_fonts(thread, Arguments::default()).await;
+        let _ = load_native_fonts(thread, Parameters::default()).await;
     }
 }

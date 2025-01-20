@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -41,14 +41,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn class_depth(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn class_depth(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.SecurityManager.classDepth(Ljava/lang/String;)I")
 }
 
 #[async_recursion(?Send)]
 async fn class_loader_depth_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.SecurityManager.classLoaderDepth0()I")
 }
@@ -56,7 +56,7 @@ async fn class_loader_depth_0(
 #[async_recursion(?Send)]
 async fn current_class_loader_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.SecurityManager.currentClassLoader0()Ljava/lang/ClassLoader;")
 }
@@ -64,13 +64,13 @@ async fn current_class_loader_0(
 #[async_recursion(?Send)]
 async fn current_loaded_class_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.SecurityManager.currentLoadedClass0()Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
-async fn get_class_context(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_class_context(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.SecurityManager.getClassContext()[Ljava/lang/Class;")
 }
 
@@ -84,7 +84,7 @@ mod tests {
     )]
     async fn test_class_depth() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = class_depth(thread, Arguments::default()).await;
+        let _ = class_depth(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -93,7 +93,7 @@ mod tests {
     )]
     async fn test_class_loader_depth_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = class_loader_depth_0(thread, Arguments::default()).await;
+        let _ = class_loader_depth_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -102,7 +102,7 @@ mod tests {
     )]
     async fn test_current_class_loader_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = current_class_loader_0(thread, Arguments::default()).await;
+        let _ = current_class_loader_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -111,7 +111,7 @@ mod tests {
     )]
     async fn test_current_loaded_class_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = current_loaded_class_0(thread, Arguments::default()).await;
+        let _ = current_loaded_class_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -120,6 +120,6 @@ mod tests {
     )]
     async fn test_get_class_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_class_context(thread, Arguments::default()).await;
+        let _ = get_class_context(thread, Parameters::default()).await;
     }
 }

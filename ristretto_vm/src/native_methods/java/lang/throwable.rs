@@ -1,6 +1,6 @@
-use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
@@ -38,10 +38,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn fill_in_stack_trace(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _dummy = usize::try_from(arguments.pop_int()?)?;
-    let object = arguments.pop_reference()?;
+    let _dummy = usize::try_from(parameters.pop_int()?)?;
+    let object = parameters.pop_reference()?;
     let Some(Reference::Object(ref throwable)) = object else {
         return Err(InternalError("No throwable object found".to_string()));
     };
@@ -95,7 +95,7 @@ async fn fill_in_stack_trace(
 #[async_recursion(?Send)]
 async fn get_stack_trace_depth(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Throwable.getStackTraceDepth()I")
 }
@@ -103,7 +103,7 @@ async fn get_stack_trace_depth(
 #[async_recursion(?Send)]
 async fn get_stack_trace_element(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Throwable.getStackTraceElement(I)Ljava/lang/StackTraceElement;")
 }
@@ -116,7 +116,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.lang.Throwable.getStackTraceDepth()I")]
     async fn test_get_stack_trace_depth() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_stack_trace_depth(thread, Arguments::default()).await;
+        let _ = get_stack_trace_depth(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -125,6 +125,6 @@ mod tests {
     )]
     async fn test_get_stack_trace_element() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_stack_trace_element(thread, Arguments::default()).await;
+        let _ = get_stack_trace_element(thread, Parameters::default()).await;
     }
 }

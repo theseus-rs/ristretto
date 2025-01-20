@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -34,32 +34,32 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn accept_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn accept_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/lang/Object;)I");
 }
 
 #[async_recursion(?Send)]
-async fn bind_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.bind0(Ljava/io/FileDescriptor;[B)V");
 }
 
 #[async_recursion(?Send)]
-async fn connect_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn connect_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.connect0(Ljava/io/FileDescriptor;[B)I");
 }
 
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.init()Z");
 }
 
 #[async_recursion(?Send)]
-async fn local_address_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn local_address_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.localAddress0(Ljava/io/FileDescriptor;)[B");
 }
 
 #[async_recursion(?Send)]
-async fn socket_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn socket_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.socket0()I");
 }
 
@@ -73,7 +73,7 @@ mod tests {
     )]
     async fn test_accept_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = accept_0(thread, Arguments::default()).await;
+        let _ = accept_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -82,7 +82,7 @@ mod tests {
     )]
     async fn test_bind_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = bind_0(thread, Arguments::default()).await;
+        let _ = bind_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -91,14 +91,14 @@ mod tests {
     )]
     async fn test_connect_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = connect_0(thread, Arguments::default()).await;
+        let _ = connect_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.UnixDomainSockets.init()Z")]
     async fn test_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init(thread, Arguments::default()).await;
+        let _ = init(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -107,13 +107,13 @@ mod tests {
     )]
     async fn test_local_address_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = local_address_0(thread, Arguments::default()).await;
+        let _ = local_address_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.UnixDomainSockets.socket0()I")]
     async fn test_socket_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = socket_0(thread, Arguments::default()).await;
+        let _ = socket_0(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -25,14 +25,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn add_menu_listeners(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn add_menu_listeners(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.apple.laf.ScreenMenu.addMenuListeners(Lcom/apple/laf/ScreenMenu;J)J")
 }
 
 #[async_recursion(?Send)]
 async fn remove_menu_listeners(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.ScreenMenu.removeMenuListeners(J)V")
 }
@@ -47,7 +50,7 @@ mod tests {
     )]
     async fn test_add_menu_listeners() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_menu_listeners(thread, Arguments::default()).await;
+        let _ = add_menu_listeners(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -56,6 +59,6 @@ mod tests {
     )]
     async fn test_remove_menu_listeners() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = remove_menu_listeners(thread, Arguments::default()).await;
+        let _ = remove_menu_listeners(thread, Parameters::default()).await;
     }
 }

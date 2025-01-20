@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -28,20 +28,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_create_menu_bar(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuBar.nativeCreateMenuBar()J")
 }
 
 #[async_recursion(?Send)]
-async fn native_del_menu(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_del_menu(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuBar.nativeDelMenu(JI)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_set_help_menu(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuBar.nativeSetHelpMenu(JJ)V")
 }
@@ -56,14 +56,14 @@ mod tests {
     )]
     async fn test_native_create_menu_bar() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_menu_bar(thread, Arguments::default()).await;
+        let _ = native_create_menu_bar(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CMenuBar.nativeDelMenu(JI)V")]
     async fn test_native_del_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_del_menu(thread, Arguments::default()).await;
+        let _ = native_del_menu(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -72,6 +72,6 @@ mod tests {
     )]
     async fn test_native_set_help_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_help_menu(thread, Arguments::default()).await;
+        let _ = native_set_help_menu(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -42,39 +42,39 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn finish(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn finish(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.java.util.jar.pack.NativeUnpack.finish()J")
 }
 
 #[async_recursion(?Send)]
-async fn get_next_file(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_next_file(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.java.util.jar.pack.NativeUnpack.getNextFile([Ljava/lang/Object;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn get_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_option(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.java.util.jar.pack.NativeUnpack.getOption(Ljava/lang/String;)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_unused_input(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_unused_input(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.java.util.jar.pack.NativeUnpack.getUnusedInput()Ljava/nio/ByteBuffer;")
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn set_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_option(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "com.sun.java.util.jar.pack.NativeUnpack.setOption(Ljava/lang/String;Ljava/lang/String;)Z"
     )
 }
 
 #[async_recursion(?Send)]
-async fn start(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn start(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.java.util.jar.pack.NativeUnpack.start(Ljava/nio/ByteBuffer;J)J")
 }
 
@@ -88,7 +88,7 @@ mod tests {
     )]
     async fn test_finish() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = finish(thread, Arguments::default()).await;
+        let _ = finish(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -97,7 +97,7 @@ mod tests {
     )]
     async fn test_get_next_file() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_next_file(thread, Arguments::default()).await;
+        let _ = get_next_file(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -106,7 +106,7 @@ mod tests {
     )]
     async fn test_get_option() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_option(thread, Arguments::default()).await;
+        let _ = get_option(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -115,13 +115,13 @@ mod tests {
     )]
     async fn test_get_unused_input() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_unused_input(thread, Arguments::default()).await;
+        let _ = get_unused_input(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -132,7 +132,7 @@ mod tests {
     )]
     async fn test_set_option() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_option(thread, Arguments::default()).await;
+        let _ = set_option(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -141,6 +141,6 @@ mod tests {
     )]
     async fn test_start() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = start(thread, Arguments::default()).await;
+        let _ = start(thread, Parameters::default()).await;
     }
 }

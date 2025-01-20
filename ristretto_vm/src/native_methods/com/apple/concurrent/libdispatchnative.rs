@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -57,7 +57,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_create_concurrent_queue(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.concurrent.LibDispatchNative.nativeCreateConcurrentQueue(I)J")
 }
@@ -65,7 +65,7 @@ async fn native_create_concurrent_queue(
 #[async_recursion(?Send)]
 async fn native_create_serial_queue(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.concurrent.LibDispatchNative.nativeCreateSerialQueue(Ljava/lang/String;)J")
 }
@@ -73,20 +73,23 @@ async fn native_create_serial_queue(
 #[async_recursion(?Send)]
 async fn native_execute_async(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.concurrent.LibDispatchNative.nativeExecuteAsync(JLjava/lang/Runnable;)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_execute_sync(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_execute_sync(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.apple.concurrent.LibDispatchNative.nativeExecuteSync(JLjava/lang/Runnable;)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_get_main_queue(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.concurrent.LibDispatchNative.nativeGetMainQueue()J")
 }
@@ -94,7 +97,7 @@ async fn native_get_main_queue(
 #[async_recursion(?Send)]
 async fn native_is_dispatch_supported(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.concurrent.LibDispatchNative.nativeIsDispatchSupported()Z")
 }
@@ -102,7 +105,7 @@ async fn native_is_dispatch_supported(
 #[async_recursion(?Send)]
 async fn native_release_queue(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.concurrent.LibDispatchNative.nativeReleaseQueue(J)V")
 }
@@ -117,7 +120,7 @@ mod tests {
     )]
     async fn test_native_create_concurrent_queue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_concurrent_queue(thread, Arguments::default()).await;
+        let _ = native_create_concurrent_queue(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -126,7 +129,7 @@ mod tests {
     )]
     async fn test_native_create_serial_queue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_serial_queue(thread, Arguments::default()).await;
+        let _ = native_create_serial_queue(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -135,7 +138,7 @@ mod tests {
     )]
     async fn test_native_execute_async() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_execute_async(thread, Arguments::default()).await;
+        let _ = native_execute_async(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -144,7 +147,7 @@ mod tests {
     )]
     async fn test_native_execute_sync() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_execute_sync(thread, Arguments::default()).await;
+        let _ = native_execute_sync(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -153,7 +156,7 @@ mod tests {
     )]
     async fn test_native_get_main_queue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_main_queue(thread, Arguments::default()).await;
+        let _ = native_get_main_queue(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -162,7 +165,7 @@ mod tests {
     )]
     async fn test_native_is_dispatch_supported() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_is_dispatch_supported(thread, Arguments::default()).await;
+        let _ = native_is_dispatch_supported(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -171,6 +174,6 @@ mod tests {
     )]
     async fn test_native_release_queue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_release_queue(thread, Arguments::default()).await;
+        let _ = native_release_queue(thread, Parameters::default()).await;
     }
 }

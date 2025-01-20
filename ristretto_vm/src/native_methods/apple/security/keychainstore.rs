@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_22};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -50,7 +50,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn add_item_to_keychain(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.security.KeychainStore._addItemToKeychain(Ljava/lang/String;Z[B[C)J")
 }
@@ -58,7 +58,7 @@ async fn add_item_to_keychain(
 #[async_recursion(?Send)]
 async fn get_encoded_key_data(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.security.KeychainStore._getEncodedKeyData(J[C)[B")
 }
@@ -66,7 +66,7 @@ async fn get_encoded_key_data(
 #[async_recursion(?Send)]
 async fn release_keychain_item_ref(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.security.KeychainStore._releaseKeychainItemRef(J)V")
 }
@@ -74,13 +74,13 @@ async fn release_keychain_item_ref(
 #[async_recursion(?Send)]
 async fn remove_item_from_keychain(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.security.KeychainStore._removeItemFromKeychain(J)I")
 }
 
 #[async_recursion(?Send)]
-async fn scan_keychain(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn scan_keychain(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("apple.security.KeychainStore._scanKeychain(Ljava/lang/String;)V")
 }
 
@@ -94,7 +94,7 @@ mod tests {
     )]
     async fn test_add_item_to_keychain() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_item_to_keychain(thread, Arguments::default()).await;
+        let _ = add_item_to_keychain(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -103,7 +103,7 @@ mod tests {
     )]
     async fn test_get_encoded_key_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_encoded_key_data(thread, Arguments::default()).await;
+        let _ = get_encoded_key_data(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -112,7 +112,7 @@ mod tests {
     )]
     async fn test_release_keychain_item_ref() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = release_keychain_item_ref(thread, Arguments::default()).await;
+        let _ = release_keychain_item_ref(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -121,7 +121,7 @@ mod tests {
     )]
     async fn test_remove_item_from_keychain() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = remove_item_from_keychain(thread, Arguments::default()).await;
+        let _ = remove_item_from_keychain(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -130,6 +130,6 @@ mod tests {
     )]
     async fn test_scan_keychain() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = scan_keychain(thread, Arguments::default()).await;
+        let _ = scan_keychain(thread, Parameters::default()).await;
     }
 }

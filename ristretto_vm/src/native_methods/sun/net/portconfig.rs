@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -15,12 +15,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_lower_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_lower_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.net.PortConfig.getLower0()I")
 }
 
 #[async_recursion(?Send)]
-async fn get_upper_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_upper_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.net.PortConfig.getUpper0()I")
 }
 
@@ -32,13 +32,13 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.net.PortConfig.getLower0()I")]
     async fn test_get_lower_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_lower_0(thread, Arguments::default()).await;
+        let _ = get_lower_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.net.PortConfig.getUpper0()I")]
     async fn test_get_upper_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_upper_0(thread, Arguments::default()).await;
+        let _ = get_upper_0(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -33,30 +33,33 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn deregister_display_reconfiguration(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsEnvironment.deregisterDisplayReconfiguration(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_display_i_ds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_display_i_ds(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsEnvironment.getDisplayIDs()[I")
 }
 
 #[async_recursion(?Send)]
-async fn get_main_display_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_main_display_id(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsEnvironment.getMainDisplayID()I")
 }
 
 #[async_recursion(?Send)]
-async fn init_cocoa(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_cocoa(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsEnvironment.initCocoa()V")
 }
 
 #[async_recursion(?Send)]
 async fn register_display_reconfiguration(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsEnvironment.registerDisplayReconfiguration()J")
 }
@@ -71,7 +74,7 @@ mod tests {
     )]
     async fn test_deregister_display_reconfiguration() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = deregister_display_reconfiguration(thread, Arguments::default()).await;
+        let _ = deregister_display_reconfiguration(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -80,7 +83,7 @@ mod tests {
     )]
     async fn test_get_display_i_ds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_display_i_ds(thread, Arguments::default()).await;
+        let _ = get_display_i_ds(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -89,14 +92,14 @@ mod tests {
     )]
     async fn test_get_main_display_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_main_display_id(thread, Arguments::default()).await;
+        let _ = get_main_display_id(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.awt.CGraphicsEnvironment.initCocoa()V")]
     async fn test_init_cocoa() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_cocoa(thread, Arguments::default()).await;
+        let _ = init_cocoa(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -105,6 +108,6 @@ mod tests {
     )]
     async fn test_register_display_reconfiguration() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = register_display_reconfiguration(thread, Arguments::default()).await;
+        let _ = register_display_reconfiguration(thread, Parameters::default()).await;
     }
 }

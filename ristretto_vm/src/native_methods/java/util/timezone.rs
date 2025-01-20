@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -27,7 +27,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn get_system_gmt_offset_id(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.util.TimeZone.getSystemGMTOffsetID()Ljava/lang/String;")
 }
@@ -35,7 +35,7 @@ async fn get_system_gmt_offset_id(
 #[async_recursion(?Send)]
 async fn get_system_time_zone_id(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.util.TimeZone.getSystemTimeZoneID(Ljava/lang/String;)Ljava/lang/String;")
 }
@@ -50,7 +50,7 @@ mod tests {
     )]
     async fn test_get_system_gmt_offset_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_gmt_offset_id(thread, Arguments::default()).await;
+        let _ = get_system_gmt_offset_id(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -59,6 +59,6 @@ mod tests {
     )]
     async fn test_get_system_time_zone_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_time_zone_id(thread, Arguments::default()).await;
+        let _ = get_system_time_zone_id(thread, Parameters::default()).await;
     }
 }

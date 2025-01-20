@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn transform(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn transform(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.loops.TransformHelper.Transform(Lsun/java2d/loops/MaskBlit;Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;Ljava/awt/geom/AffineTransform;IIIIIIIII[III)V");
 }
 
@@ -28,6 +28,6 @@ mod tests {
     )]
     async fn test_transform() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = transform(thread, Arguments::default()).await;
+        let _ = transform(thread, Parameters::default()).await;
     }
 }

@@ -1,6 +1,6 @@
-use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -32,7 +32,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_caller_class_1(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_caller_class_1(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
     let Some(frame) = frames.last() else {
         return Ok(Some(Value::Object(None)));
@@ -46,16 +46,19 @@ async fn get_caller_class_1(thread: Arc<Thread>, _arguments: Arguments) -> Resul
 }
 
 #[async_recursion(?Send)]
-async fn get_caller_class_2(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_caller_class_2(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.reflect.Reflection.getCallerClass(I)Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
 async fn get_class_access_flags(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+    let object = parameters.pop_object()?;
     let class_name: String = object.value("name")?.try_into()?;
     let class = thread.class(&class_name).await?;
     let class_file = class.class_file();
@@ -72,8 +75,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_caller_class_1_null() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let arguments = Arguments::default();
-        let result = get_caller_class_1(thread, arguments).await?;
+        let parameters = Parameters::default();
+        let result = get_caller_class_1(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -84,8 +87,8 @@ mod tests {
     )]
     async fn test_get_caller_class_2() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let arguments = Arguments::default();
-        let _ = get_caller_class_2(thread, arguments).await;
+        let parameters = Parameters::default();
+        let _ = get_caller_class_2(thread, parameters).await;
     }
 
     #[tokio::test]
@@ -93,8 +96,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.String").await?;
         let class_object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![class_object]);
-        let result = get_class_access_flags(thread, arguments).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_class_access_flags(thread, parameters).await?;
         let access_flags: i32 = result.expect("access_flags").try_into()?;
         assert_eq!(access_flags, 49);
         Ok(())

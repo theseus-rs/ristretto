@@ -1,6 +1,6 @@
-use crate::arguments::Arguments;
 use crate::native_methods::jdk;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -346,39 +346,42 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn address_size(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::address_size_0(thread, arguments).await
+async fn address_size(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::address_size_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn allocate_instance(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::allocate_instance(thread, arguments).await
+async fn allocate_instance(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::allocate_instance(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn allocate_memory(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::allocate_memory_0(thread, arguments).await
+async fn allocate_memory(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::allocate_memory_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn array_base_offset(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::array_base_offset_0(thread, arguments).await
+async fn array_base_offset(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::array_base_offset_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn array_index_scale(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::array_index_scale_0(thread, arguments).await
+async fn array_index_scale(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::array_index_scale_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn compare_and_swap_int(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::compare_and_set_int(thread, arguments).await
+async fn compare_and_swap_int(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::compare_and_set_int(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 async fn compare_and_swap_long(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.compareAndSwapLong(Ljava/lang/Object;JJJ)Z")
 }
@@ -386,405 +389,420 @@ async fn compare_and_swap_long(
 #[async_recursion(?Send)]
 async fn compare_and_swap_object(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::compare_and_set_reference(thread, arguments).await
+    jdk::internal::misc::r#unsafe::compare_and_set_reference(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn copy_memory(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::copy_memory_0(thread, arguments).await
+async fn copy_memory(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::copy_memory_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 async fn define_anonymous_class(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::define_anonymous_class_0(thread, arguments).await
+    jdk::internal::misc::r#unsafe::define_anonymous_class_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn define_class(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::define_class_0(thread, arguments).await
+async fn define_class(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::define_class_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
 async fn ensure_class_initialized(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::ensure_class_initialized_0(thread, arguments).await
+    jdk::internal::misc::r#unsafe::ensure_class_initialized_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn free_memory(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::free_memory_0(thread, arguments).await
+async fn free_memory(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::free_memory_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn full_fence(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::full_fence(thread, arguments).await
+async fn full_fence(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::full_fence(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_address(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_address(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.getAddress(J)J")
 }
 
 #[async_recursion(?Send)]
-async fn get_boolean(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_boolean(thread, arguments).await
+async fn get_boolean(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_boolean(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_boolean_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_boolean_volatile(thread, arguments).await
+async fn get_boolean_volatile(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_boolean_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_byte_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_byte_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.getByte(J)B")
 }
 
 #[async_recursion(?Send)]
-async fn get_byte_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_byte(thread, arguments).await
+async fn get_byte_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_byte(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_byte_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_byte_volatile(thread, arguments).await
+async fn get_byte_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_byte_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_char_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_char_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.getChar(J)C")
 }
 
 #[async_recursion(?Send)]
-async fn get_char_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_char(thread, arguments).await
+async fn get_char_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_char(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_char_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_char_volatile(thread, arguments).await
+async fn get_char_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_char_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_double_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_double_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.getDouble(J)D")
 }
 
 #[async_recursion(?Send)]
-async fn get_double_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_double(thread, arguments).await
+async fn get_double_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_double(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_double_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_double_volatile(thread, arguments).await
+async fn get_double_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_double_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_float_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_float_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.getFloat(J)F")
 }
 
 #[async_recursion(?Send)]
-async fn get_float_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_float(thread, arguments).await
+async fn get_float_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_float(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_float_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_float_volatile(thread, arguments).await
+async fn get_float_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_float_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_int_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_int_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.getInt(J)I")
 }
 
 #[async_recursion(?Send)]
-async fn get_int_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_int(thread, arguments).await
+async fn get_int_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_int(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_int_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_int_volatile(thread, arguments).await
+async fn get_int_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_int_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_load_average(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_load_average_0(thread, arguments).await
+async fn get_load_average(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_load_average_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_long_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_long_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.getLong(J)J")
 }
 
 #[async_recursion(?Send)]
-async fn get_long_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_long(thread, arguments).await
+async fn get_long_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_long(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_long_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_long_volatile(thread, arguments).await
+async fn get_long_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_long_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_object(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_reference(thread, arguments).await
+async fn get_object(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_reference(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_object_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_reference_volatile(thread, arguments).await
+async fn get_object_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_reference_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_short_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_short_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.getShort(J)S")
 }
 
 #[async_recursion(?Send)]
-async fn get_short_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_short(thread, arguments).await
+async fn get_short_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_short(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn get_short_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::get_short_volatile(thread, arguments).await
+async fn get_short_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_short_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn load_fence(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::load_fence(thread, arguments).await
+async fn load_fence(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::load_fence(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn monitor_enter(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn monitor_enter(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.monitorEnter(Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
-async fn monitor_exit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn monitor_exit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.monitorExit(Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
-async fn object_field_offset(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::object_field_offset_0(thread, arguments).await
+async fn object_field_offset(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::object_field_offset_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn page_size(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::page_size(thread, arguments).await
+async fn page_size(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::page_size(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn park(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::park(thread, arguments).await
+async fn park(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::park(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_address(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_address(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putAddress(JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_boolean(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_boolean(thread, arguments).await
+async fn put_boolean(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_boolean(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_boolean_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_boolean_volatile(thread, arguments).await
+async fn put_boolean_volatile(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_boolean_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_byte_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_byte_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putByte(JB)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_byte_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_byte(thread, arguments).await
+async fn put_byte_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_byte(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_byte_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_byte_volatile(thread, arguments).await
+async fn put_byte_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_byte_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_char_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_char_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putChar(JC)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_char_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_char(thread, arguments).await
+async fn put_char_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_char(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_char_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_char_volatile(thread, arguments).await
+async fn put_char_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_char_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_double_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_double_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putDouble(JD)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_double_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_double(thread, arguments).await
+async fn put_double_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_double(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_double_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_double_volatile(thread, arguments).await
+async fn put_double_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_double_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_float_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_float_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putFloat(JF)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_float_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_float(thread, arguments).await
+async fn put_float_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_float(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_float_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_float_volatile(thread, arguments).await
+async fn put_float_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_float_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_int_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_int_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putInt(JI)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_int_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_int(thread, arguments).await
+async fn put_int_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_int(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_int_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_int_volatile(thread, arguments).await
+async fn put_int_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_int_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_long_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_long_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putLong(JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_long_2(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_long(thread, arguments).await
+async fn put_long_2(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_long(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_long_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_long_volatile(thread, arguments).await
+async fn put_long_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_long_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_object(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_reference(thread, arguments).await
+async fn put_object(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_reference(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_object_volatile(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::put_reference_volatile(thread, arguments).await
+async fn put_object_volatile(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_reference_volatile(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn put_ordered_int(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_ordered_int(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putOrderedInt(Ljava/lang/Object;JI)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_ordered_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_ordered_long(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putOrderedLong(Ljava/lang/Object;JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_ordered_object(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_ordered_object(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putOrderedObject(Ljava/lang/Object;JLjava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_short_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_short_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putShort(JS)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_short_2(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_short_2(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putShort(Ljava/lang/Object;JS)V")
 }
 
 #[async_recursion(?Send)]
-async fn put_short_volatile(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn put_short_volatile(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.putShortVolatile(Ljava/lang/Object;JS)V")
 }
 
 #[async_recursion(?Send)]
-async fn reallocate_memory(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::reallocate_memory_0(thread, arguments).await
+async fn reallocate_memory(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::reallocate_memory_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::register_natives(thread, arguments).await
+async fn register_natives(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::register_natives(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn set_memory(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::set_memory_0(thread, arguments).await
+async fn set_memory(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::set_memory_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn should_be_initialized(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::should_be_initialized_0(thread, arguments).await
+async fn should_be_initialized(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::should_be_initialized_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn static_field_base(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::static_field_base_0(thread, arguments).await
+async fn static_field_base(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::static_field_base_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn static_field_offset(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::static_field_offset_0(thread, arguments).await
+async fn static_field_offset(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::static_field_offset_0(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn store_fence(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::store_fence(thread, arguments).await
+async fn store_fence(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::store_fence(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn throw_exception(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::throw_exception(thread, arguments).await
+async fn throw_exception(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::throw_exception(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn try_monitor_enter(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn try_monitor_enter(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Unsafe.tryMonitorEnter(Ljava/lang/Object;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn unpark(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::unpark(thread, arguments).await
+async fn unpark(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::unpark(thread, parameters).await
 }
 
 #[cfg(test)]
@@ -797,63 +815,63 @@ mod tests {
     )]
     async fn test_compare_and_swap_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compare_and_swap_long(thread, Arguments::default()).await;
+        let _ = compare_and_swap_long(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getAddress(J)J")]
     async fn test_get_address() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_address(thread, Arguments::default()).await;
+        let _ = get_address(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getByte(J)B")]
     async fn test_get_byte_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_byte_1(thread, Arguments::default()).await;
+        let _ = get_byte_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getChar(J)C")]
     async fn test_get_char_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_char_1(thread, Arguments::default()).await;
+        let _ = get_char_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getDouble(J)D")]
     async fn test_get_double_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_double_1(thread, Arguments::default()).await;
+        let _ = get_double_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getFloat(J)F")]
     async fn test_get_float_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_float_1(thread, Arguments::default()).await;
+        let _ = get_float_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getInt(J)I")]
     async fn test_get_int_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_int_1(thread, Arguments::default()).await;
+        let _ = get_int_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getLong(J)J")]
     async fn test_get_long_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_long_1(thread, Arguments::default()).await;
+        let _ = get_long_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getShort(J)S")]
     async fn test_get_short_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_short_1(thread, Arguments::default()).await;
+        let _ = get_short_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -862,7 +880,7 @@ mod tests {
     )]
     async fn test_monitor_enter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = monitor_enter(thread, Arguments::default()).await;
+        let _ = monitor_enter(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -871,56 +889,56 @@ mod tests {
     )]
     async fn test_monitor_exit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = monitor_exit(thread, Arguments::default()).await;
+        let _ = monitor_exit(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putAddress(JJ)V")]
     async fn test_put_address() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_address(thread, Arguments::default()).await;
+        let _ = put_address(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putByte(JB)V")]
     async fn test_put_byte_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_byte_1(thread, Arguments::default()).await;
+        let _ = put_byte_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putChar(JC)V")]
     async fn test_put_char_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_char_1(thread, Arguments::default()).await;
+        let _ = put_char_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putDouble(JD)V")]
     async fn test_put_double_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_double_1(thread, Arguments::default()).await;
+        let _ = put_double_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putFloat(JF)V")]
     async fn test_put_float_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_float_1(thread, Arguments::default()).await;
+        let _ = put_float_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putInt(JI)V")]
     async fn test_put_int_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_int_1(thread, Arguments::default()).await;
+        let _ = put_int_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putLong(JJ)V")]
     async fn test_put_long_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_long_1(thread, Arguments::default()).await;
+        let _ = put_long_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -929,7 +947,7 @@ mod tests {
     )]
     async fn test_put_ordered_int() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_ordered_int(thread, Arguments::default()).await;
+        let _ = put_ordered_int(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -938,7 +956,7 @@ mod tests {
     )]
     async fn test_put_ordered_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_ordered_long(thread, Arguments::default()).await;
+        let _ = put_ordered_long(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -947,14 +965,14 @@ mod tests {
     )]
     async fn test_put_ordered_object() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_ordered_object(thread, Arguments::default()).await;
+        let _ = put_ordered_object(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putShort(JS)V")]
     async fn test_put_short_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_short_1(thread, Arguments::default()).await;
+        let _ = put_short_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -963,7 +981,7 @@ mod tests {
     )]
     async fn test_put_short_2() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_short_2(thread, Arguments::default()).await;
+        let _ = put_short_2(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -972,7 +990,7 @@ mod tests {
     )]
     async fn test_put_short_volatile() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_short_volatile(thread, Arguments::default()).await;
+        let _ = put_short_volatile(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -981,6 +999,6 @@ mod tests {
     )]
     async fn test_try_monitor_enter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = try_monitor_enter(thread, Arguments::default()).await;
+        let _ = try_monitor_enter(thread, Parameters::default()).await;
     }
 }

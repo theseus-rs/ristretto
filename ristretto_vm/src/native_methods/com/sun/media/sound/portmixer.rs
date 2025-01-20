@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -53,14 +53,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn n_close(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_close(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nClose(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn n_control_get_float_value(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nControlGetFloatValue(J)F")
 }
@@ -68,7 +68,7 @@ async fn n_control_get_float_value(
 #[async_recursion(?Send)]
 async fn n_control_get_int_value(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nControlGetIntValue(J)I")
 }
@@ -76,7 +76,7 @@ async fn n_control_get_int_value(
 #[async_recursion(?Send)]
 async fn n_control_set_float_value(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nControlSetFloatValue(JF)V")
 }
@@ -84,33 +84,33 @@ async fn n_control_set_float_value(
 #[async_recursion(?Send)]
 async fn n_control_set_int_value(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nControlSetIntValue(JI)V")
 }
 
 #[async_recursion(?Send)]
-async fn n_get_controls(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_get_controls(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nGetControls(JILjava/util/Vector;)V")
 }
 
 #[async_recursion(?Send)]
-async fn n_get_port_count(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_get_port_count(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nGetPortCount(J)I")
 }
 
 #[async_recursion(?Send)]
-async fn n_get_port_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_get_port_name(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nGetPortName(JI)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn n_get_port_type(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_get_port_type(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nGetPortType(JI)I")
 }
 
 #[async_recursion(?Send)]
-async fn n_open(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_open(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nOpen(I)J")
 }
 
@@ -122,7 +122,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: com.sun.media.sound.PortMixer.nClose(J)V")]
     async fn test_n_close() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_close(thread, Arguments::default()).await;
+        let _ = n_close(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -131,7 +131,7 @@ mod tests {
     )]
     async fn test_n_control_get_float_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_control_get_float_value(thread, Arguments::default()).await;
+        let _ = n_control_get_float_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -140,7 +140,7 @@ mod tests {
     )]
     async fn test_n_control_get_int_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_control_get_int_value(thread, Arguments::default()).await;
+        let _ = n_control_get_int_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -149,7 +149,7 @@ mod tests {
     )]
     async fn test_n_control_set_float_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_control_set_float_value(thread, Arguments::default()).await;
+        let _ = n_control_set_float_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -158,7 +158,7 @@ mod tests {
     )]
     async fn test_n_control_set_int_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_control_set_int_value(thread, Arguments::default()).await;
+        let _ = n_control_set_int_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -167,7 +167,7 @@ mod tests {
     )]
     async fn test_n_get_controls() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_controls(thread, Arguments::default()).await;
+        let _ = n_get_controls(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -176,7 +176,7 @@ mod tests {
     )]
     async fn test_n_get_port_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_port_count(thread, Arguments::default()).await;
+        let _ = n_get_port_count(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -185,7 +185,7 @@ mod tests {
     )]
     async fn test_n_get_port_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_port_name(thread, Arguments::default()).await;
+        let _ = n_get_port_name(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -194,13 +194,13 @@ mod tests {
     )]
     async fn test_n_get_port_type() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_port_type(thread, Arguments::default()).await;
+        let _ = n_get_port_type(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: com.sun.media.sound.PortMixer.nOpen(I)J")]
     async fn test_n_open() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_open(thread, Arguments::default()).await;
+        let _ = n_open(thread, Parameters::default()).await;
     }
 }

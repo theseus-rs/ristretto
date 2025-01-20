@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -28,20 +28,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn create_native_drag_source(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDragSourceContextPeer.createNativeDragSource(Ljava/awt/Component;JLjava/awt/datatransfer/Transferable;Ljava/awt/event/InputEvent;IIIIJLsun/lwawt/macosx/CImage;III[JLjava/util/Map;)J")
 }
 
 #[async_recursion(?Send)]
-async fn do_dragging(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn do_dragging(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDragSourceContextPeer.doDragging(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn release_native_drag_source(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDragSourceContextPeer.releaseNativeDragSource(J)V")
 }
@@ -56,7 +56,7 @@ mod tests {
     )]
     async fn test_create_native_drag_source() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_native_drag_source(thread, Arguments::default()).await;
+        let _ = create_native_drag_source(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -65,7 +65,7 @@ mod tests {
     )]
     async fn test_do_dragging() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = do_dragging(thread, Arguments::default()).await;
+        let _ = do_dragging(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -74,6 +74,6 @@ mod tests {
     )]
     async fn test_release_native_drag_source() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = release_native_drag_source(thread, Arguments::default()).await;
+        let _ = release_native_drag_source(thread, Parameters::default()).await;
     }
 }

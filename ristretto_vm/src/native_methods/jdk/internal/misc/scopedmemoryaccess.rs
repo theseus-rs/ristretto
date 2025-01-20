@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_18, JAVA_21};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -32,12 +32,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn close_scope_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn close_scope_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/misc/ScopedMemoryAccess$Scope;Ljdk/internal/misc/ScopedMemoryAccess$Scope$ScopedAccessError;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
@@ -51,13 +51,13 @@ mod tests {
     )]
     async fn test_close_scope_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_scope_0(thread, Arguments::default()).await;
+        let _ = close_scope_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let value = register_natives(thread, Arguments::default()).await?;
+        let value = register_natives(thread, Parameters::default()).await?;
         assert_eq!(value, None);
         Ok(())
     }

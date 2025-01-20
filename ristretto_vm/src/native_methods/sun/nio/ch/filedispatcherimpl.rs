@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_19, JAVA_20};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -119,104 +119,104 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn can_transfer_to_from_overlapped_map_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.canTransferToFromOverlappedMap0()Z");
 }
 
 #[async_recursion(?Send)]
-async fn close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.close0(Ljava/io/FileDescriptor;)V");
 }
 
 #[async_recursion(?Send)]
-async fn close_int_fd(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn close_int_fd(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.closeIntFD(I)V");
 }
 
 #[async_recursion(?Send)]
-async fn dup_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn dup_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.dup0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V");
 }
 
 #[cfg(target_os = "macos")]
 #[async_recursion(?Send)]
-async fn force_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn force_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.force0(Ljava/io/FileDescriptor;Z)I");
 }
 
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn lock_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn lock_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I");
 }
 
 #[async_recursion(?Send)]
-async fn pre_close_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn pre_close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.preClose0(Ljava/io/FileDescriptor;)V");
 }
 
 #[async_recursion(?Send)]
-async fn pread_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn pread_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I");
 }
 
 #[async_recursion(?Send)]
-async fn pwrite_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn pwrite_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.pwrite0(Ljava/io/FileDescriptor;JIJ)I");
 }
 
 #[async_recursion(?Send)]
-async fn read_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I");
 }
 
 #[async_recursion(?Send)]
-async fn readv_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn readv_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.readv0(Ljava/io/FileDescriptor;JI)J");
 }
 
 #[async_recursion(?Send)]
-async fn release_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn release_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V");
 }
 
 #[async_recursion(?Send)]
-async fn seek_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn seek_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J");
 }
 
 #[async_recursion(?Send)]
-async fn set_direct_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_direct_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;)I");
 }
 
 #[async_recursion(?Send)]
-async fn size_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn size_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J");
 }
 
 #[async_recursion(?Send)]
-async fn transfer_to_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn transfer_to_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.transferTo0(Ljava/io/FileDescriptor;JJLjava/io/FileDescriptor;Z)J");
 }
 
 #[async_recursion(?Send)]
-async fn truncate_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn truncate_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I");
 }
 
 #[async_recursion(?Send)]
-async fn write_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn write_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.write0(Ljava/io/FileDescriptor;JI)I");
 }
 
 #[async_recursion(?Send)]
-async fn writev_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn writev_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JI)J");
 }
 
@@ -230,7 +230,7 @@ mod tests {
     )]
     async fn test_can_transfer_to_from_overlapped_map_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = can_transfer_to_from_overlapped_map_0(thread, Arguments::default()).await;
+        let _ = can_transfer_to_from_overlapped_map_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -239,14 +239,14 @@ mod tests {
     )]
     async fn test_close_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_0(thread, Arguments::default()).await;
+        let _ = close_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.FileDispatcherImpl.closeIntFD(I)V")]
     async fn test_close_int_fd() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_int_fd(thread, Arguments::default()).await;
+        let _ = close_int_fd(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -255,7 +255,7 @@ mod tests {
     )]
     async fn test_dup_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dup_0(thread, Arguments::default()).await;
+        let _ = dup_0(thread, Parameters::default()).await;
     }
 
     #[cfg(target_os = "macos")]
@@ -265,13 +265,13 @@ mod tests {
     )]
     async fn test_force_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = force_0(thread, Arguments::default()).await;
+        let _ = force_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init(thread, Arguments::default()).await?;
+        let result = init(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -282,7 +282,7 @@ mod tests {
     )]
     async fn test_lock_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = lock_0(thread, Arguments::default()).await;
+        let _ = lock_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -291,7 +291,7 @@ mod tests {
     )]
     async fn test_pre_close_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pre_close_0(thread, Arguments::default()).await;
+        let _ = pre_close_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -300,7 +300,7 @@ mod tests {
     )]
     async fn test_pread_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pread_0(thread, Arguments::default()).await;
+        let _ = pread_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -309,7 +309,7 @@ mod tests {
     )]
     async fn test_pwrite_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pwrite_0(thread, Arguments::default()).await;
+        let _ = pwrite_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -318,7 +318,7 @@ mod tests {
     )]
     async fn test_read_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = read_0(thread, Arguments::default()).await;
+        let _ = read_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -327,7 +327,7 @@ mod tests {
     )]
     async fn test_readv_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = readv_0(thread, Arguments::default()).await;
+        let _ = readv_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -336,7 +336,7 @@ mod tests {
     )]
     async fn test_release_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = release_0(thread, Arguments::default()).await;
+        let _ = release_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -345,7 +345,7 @@ mod tests {
     )]
     async fn test_seek_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = seek_0(thread, Arguments::default()).await;
+        let _ = seek_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -354,7 +354,7 @@ mod tests {
     )]
     async fn test_set_direct_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_direct_0(thread, Arguments::default()).await;
+        let _ = set_direct_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -363,7 +363,7 @@ mod tests {
     )]
     async fn test_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = size_0(thread, Arguments::default()).await;
+        let _ = size_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -372,7 +372,7 @@ mod tests {
     )]
     async fn test_transfer_to_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = transfer_to_0(thread, Arguments::default()).await;
+        let _ = transfer_to_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -381,7 +381,7 @@ mod tests {
     )]
     async fn test_truncate_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = truncate_0(thread, Arguments::default()).await;
+        let _ = truncate_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -390,7 +390,7 @@ mod tests {
     )]
     async fn test_write_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = write_0(thread, Arguments::default()).await;
+        let _ = write_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -399,6 +399,6 @@ mod tests {
     )]
     async fn test_writev_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = writev_0(thread, Arguments::default()).await;
+        let _ = writev_0(thread, Parameters::default()).await;
     }
 }

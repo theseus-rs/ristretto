@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -18,27 +18,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueueArrayWrapper.init()I");
 }
 
 #[async_recursion(?Send)]
-async fn init_struct_sizes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_struct_sizes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueueArrayWrapper.initStructSizes()V");
 }
 
 #[async_recursion(?Send)]
-async fn interrupt(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn interrupt(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueueArrayWrapper.interrupt(I)V");
 }
 
 #[async_recursion(?Send)]
-async fn kevent_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn kevent_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueueArrayWrapper.kevent0(IJIJ)I");
 }
 
 #[async_recursion(?Send)]
-async fn register_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueueArrayWrapper.register0(IIII)V");
 }
 
@@ -50,7 +50,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueueArrayWrapper.init()I")]
     async fn test_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init(thread, Arguments::default()).await;
+        let _ = init(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -59,21 +59,21 @@ mod tests {
     )]
     async fn test_init_struct_sizes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_struct_sizes(thread, Arguments::default()).await;
+        let _ = init_struct_sizes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueueArrayWrapper.interrupt(I)V")]
     async fn test_interrupt() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = interrupt(thread, Arguments::default()).await;
+        let _ = interrupt(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueueArrayWrapper.kevent0(IJIJ)I")]
     async fn test_kevent_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = kevent_0(thread, Arguments::default()).await;
+        let _ = kevent_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -82,6 +82,6 @@ mod tests {
     )]
     async fn test_register_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = register_0(thread, Arguments::default()).await;
+        let _ = register_0(thread, Parameters::default()).await;
     }
 }

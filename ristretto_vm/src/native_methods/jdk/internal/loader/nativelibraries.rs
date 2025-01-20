@@ -1,6 +1,6 @@
-use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_18, JAVA_19};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -45,13 +45,16 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn find_entry_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn find_entry_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.loader.NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
-async fn find_builtin_lib(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let object = arguments.pop_object()?;
+async fn find_builtin_lib(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let object = parameters.pop_object()?;
     let vm = thread.vm()?;
     let library_file_name: String = object.try_into()?;
     let library_path = vm
@@ -66,15 +69,15 @@ async fn find_builtin_lib(thread: Arc<Thread>, mut arguments: Arguments) -> Resu
 }
 
 #[async_recursion(?Send)]
-async fn load(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn load(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(Some(Value::Int(1)))
 }
 
 #[async_recursion(?Send)]
-async fn unload(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let _handle = arguments.pop_long()?;
-    let _is_builtin = arguments.pop_int()? != 0;
-    let _name: String = arguments.pop_object()?.try_into()?;
+async fn unload(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let _handle = parameters.pop_long()?;
+    let _is_builtin = parameters.pop_int()? != 0;
+    let _name: String = parameters.pop_object()?.try_into()?;
     Ok(None)
 }
 
@@ -88,13 +91,13 @@ mod tests {
     )]
     async fn test_find_entry_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = find_entry_0(thread, Arguments::default()).await;
+        let _ = find_entry_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_load() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = load(thread, Arguments::default()).await?;
+        let result = load(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -103,8 +106,8 @@ mod tests {
     async fn test_unload() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let name = "foo".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![name, Value::Int(1), Value::Long(2)]);
-        let result = unload(thread, arguments).await?;
+        let parameters = Parameters::new(vec![name, Value::Int(1), Value::Long(2)]);
+        let result = unload(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
     }

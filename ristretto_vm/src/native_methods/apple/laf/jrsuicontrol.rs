@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -67,25 +67,28 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn dispose_cf_dictionary(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.disposeCFDictionary(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_cf_dictionary(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_cf_dictionary(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.getCFDictionary(Z)J")
 }
 
 #[async_recursion(?Send)]
-async fn get_native_hit_part(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_native_hit_part(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.getNativeHitPart(JJJDDDDDD)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_native_part_bounds(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.getNativePartBounds([DJJJDDDDI)V")
 }
@@ -93,46 +96,52 @@ async fn get_native_part_bounds(
 #[async_recursion(?Send)]
 async fn get_native_scroll_bar_offset_change(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.getNativeScrollBarOffsetChange(JJJDDDDIII)D")
 }
 
 #[async_recursion(?Send)]
-async fn get_ptr_of_buffer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_ptr_of_buffer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.getPtrOfBuffer(Ljava/nio/ByteBuffer;)J")
 }
 
 #[async_recursion(?Send)]
-async fn init_native_jrsui(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_native_jrsui(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.initNativeJRSUI()I")
 }
 
 #[async_recursion(?Send)]
-async fn paint_changes_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn paint_changes_image(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.paintChangesImage([IIIJJJDDDDJ)I")
 }
 
 #[async_recursion(?Send)]
 async fn paint_changes_to_cg_context(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.paintChangesToCGContext(JJJJDDDDJ)I")
 }
 
 #[async_recursion(?Send)]
-async fn paint_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn paint_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.paintImage([IIIJJJDDDD)I")
 }
 
 #[async_recursion(?Send)]
-async fn paint_to_cg_context(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn paint_to_cg_context(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.paintToCGContext(JJJJDDDD)I")
 }
 
 #[async_recursion(?Send)]
-async fn sync_changes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn sync_changes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.syncChanges(JJ)I")
 }
 
@@ -146,14 +155,14 @@ mod tests {
     )]
     async fn test_dispose_cf_dictionary() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dispose_cf_dictionary(thread, Arguments::default()).await;
+        let _ = dispose_cf_dictionary(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: apple.laf.JRSUIControl.getCFDictionary(Z)J")]
     async fn test_get_cf_dictionary() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_cf_dictionary(thread, Arguments::default()).await;
+        let _ = get_cf_dictionary(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -162,7 +171,7 @@ mod tests {
     )]
     async fn test_get_native_hit_part() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_hit_part(thread, Arguments::default()).await;
+        let _ = get_native_hit_part(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -171,7 +180,7 @@ mod tests {
     )]
     async fn test_get_native_part_bounds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_part_bounds(thread, Arguments::default()).await;
+        let _ = get_native_part_bounds(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -180,7 +189,7 @@ mod tests {
     )]
     async fn test_get_native_scroll_bar_offset_change() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_scroll_bar_offset_change(thread, Arguments::default()).await;
+        let _ = get_native_scroll_bar_offset_change(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -189,14 +198,14 @@ mod tests {
     )]
     async fn test_get_ptr_of_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_ptr_of_buffer(thread, Arguments::default()).await;
+        let _ = get_ptr_of_buffer(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: apple.laf.JRSUIControl.initNativeJRSUI()I")]
     async fn test_init_native_jrsui() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_native_jrsui(thread, Arguments::default()).await;
+        let _ = init_native_jrsui(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -205,7 +214,7 @@ mod tests {
     )]
     async fn test_paint_changes_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = paint_changes_image(thread, Arguments::default()).await;
+        let _ = paint_changes_image(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -214,7 +223,7 @@ mod tests {
     )]
     async fn test_paint_changes_to_cg_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = paint_changes_to_cg_context(thread, Arguments::default()).await;
+        let _ = paint_changes_to_cg_context(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -223,7 +232,7 @@ mod tests {
     )]
     async fn test_paint_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = paint_image(thread, Arguments::default()).await;
+        let _ = paint_image(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -232,13 +241,13 @@ mod tests {
     )]
     async fn test_paint_to_cg_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = paint_to_cg_context(thread, Arguments::default()).await;
+        let _ = paint_to_cg_context(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: apple.laf.JRSUIControl.syncChanges(JJ)I")]
     async fn test_sync_changes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = sync_changes(thread, Arguments::default()).await;
+        let _ = sync_changes(thread, Parameters::default()).await;
     }
 }

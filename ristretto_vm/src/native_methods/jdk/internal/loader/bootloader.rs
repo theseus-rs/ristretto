@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -33,7 +33,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn get_system_package_location(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.loader.BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String;")
 }
@@ -41,7 +41,7 @@ async fn get_system_package_location(
 #[async_recursion(?Send)]
 async fn get_system_package_names(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.loader.BootLoader.getSystemPackageNames()[Ljava/lang/String;")
 }
@@ -49,9 +49,9 @@ async fn get_system_package_names(
 #[async_recursion(?Send)]
 async fn set_boot_loader_unnamed_module_0(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _object = arguments.pop_reference()?;
+    let _object = parameters.pop_reference()?;
     Ok(None)
 }
 
@@ -65,7 +65,7 @@ mod tests {
     )]
     async fn test_get_system_package_location() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_package_location(thread, Arguments::default()).await;
+        let _ = get_system_package_location(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -74,14 +74,14 @@ mod tests {
     )]
     async fn test_get_system_package_names() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_package_names(thread, Arguments::default()).await;
+        let _ = get_system_package_names(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_set_boot_loader_unnamed_module_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Object(None)]);
-        let result = set_boot_loader_unnamed_module_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Object(None)]);
+        let result = set_boot_loader_unnamed_module_0(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
     }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -56,45 +56,48 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_all_flag_names(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_all_flag_names(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.Flag.getAllFlagNames()[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_flags(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_flags(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.Flag.getFlags([Ljava/lang/String;[Lcom/sun/management/internal/Flag;I)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_internal_flag_count(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.Flag.getInternalFlagCount()I")
 }
 
 #[async_recursion(?Send)]
-async fn initialize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn initialize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.Flag.initialize()V")
 }
 
 #[async_recursion(?Send)]
-async fn set_boolean_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_boolean_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.Flag.setBooleanValue(Ljava/lang/String;Z)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_double_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_double_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.Flag.setDoubleValue(Ljava/lang/String;D)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_long_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_long_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.Flag.setLongValue(Ljava/lang/String;J)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_string_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_string_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V")
 }
 
@@ -108,7 +111,7 @@ mod tests {
     )]
     async fn test_get_all_flag_names() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_all_flag_names(thread, Arguments::default()).await;
+        let _ = get_all_flag_names(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -117,7 +120,7 @@ mod tests {
     )]
     async fn test_get_flags() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_flags(thread, Arguments::default()).await;
+        let _ = get_flags(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -126,7 +129,7 @@ mod tests {
     )]
     async fn test_get_internal_flag_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_internal_flag_count(thread, Arguments::default()).await;
+        let _ = get_internal_flag_count(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -135,7 +138,7 @@ mod tests {
     )]
     async fn test_initialize() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = initialize(thread, Arguments::default()).await;
+        let _ = initialize(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -144,7 +147,7 @@ mod tests {
     )]
     async fn test_set_boolean_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_boolean_value(thread, Arguments::default()).await;
+        let _ = set_boolean_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -153,7 +156,7 @@ mod tests {
     )]
     async fn test_set_double_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_double_value(thread, Arguments::default()).await;
+        let _ = set_double_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -162,7 +165,7 @@ mod tests {
     )]
     async fn test_set_long_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_long_value(thread, Arguments::default()).await;
+        let _ = set_long_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -171,6 +174,6 @@ mod tests {
     )]
     async fn test_set_string_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_string_value(thread, Arguments::default()).await;
+        let _ = set_string_value(thread, Parameters::default()).await;
     }
 }

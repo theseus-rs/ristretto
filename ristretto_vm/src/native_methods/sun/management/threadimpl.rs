@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_21};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -119,14 +119,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn dump_threads_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn dump_threads_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.dumpThreads0([JZZI)[Ljava/lang/management/ThreadInfo;")
 }
 
 #[async_recursion(?Send)]
 async fn find_deadlocked_threads_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.findDeadlockedThreads0()[Ljava/lang/Thread;")
 }
@@ -134,7 +134,7 @@ async fn find_deadlocked_threads_0(
 #[async_recursion(?Send)]
 async fn find_monitor_deadlocked_threads_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.findMonitorDeadlockedThreads0()[Ljava/lang/Thread;")
 }
@@ -142,7 +142,7 @@ async fn find_monitor_deadlocked_threads_0(
 #[async_recursion(?Send)]
 async fn get_thread_allocated_memory_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.getThreadAllocatedMemory0(J)J")
 }
@@ -150,20 +150,20 @@ async fn get_thread_allocated_memory_0(
 #[async_recursion(?Send)]
 async fn get_thread_allocated_memory_1(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.getThreadAllocatedMemory1([J[J)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_thread_info_1(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_thread_info_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.getThreadInfo1([JI[Ljava/lang/management/ThreadInfo;)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_thread_total_cpu_time_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.getThreadTotalCpuTime0(J)J")
 }
@@ -171,7 +171,7 @@ async fn get_thread_total_cpu_time_0(
 #[async_recursion(?Send)]
 async fn get_thread_total_cpu_time_1(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.getThreadTotalCpuTime1([J[J)V")
 }
@@ -179,7 +179,7 @@ async fn get_thread_total_cpu_time_1(
 #[async_recursion(?Send)]
 async fn get_thread_user_cpu_time_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.getThreadUserCpuTime0(J)J")
 }
@@ -187,20 +187,20 @@ async fn get_thread_user_cpu_time_0(
 #[async_recursion(?Send)]
 async fn get_thread_user_cpu_time_1(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.getThreadUserCpuTime1([J[J)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_threads(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.getThreads()[Ljava/lang/Thread;")
 }
 
 #[async_recursion(?Send)]
 async fn get_total_thread_allocated_memory(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.getTotalThreadAllocatedMemory()J")
 }
@@ -208,7 +208,7 @@ async fn get_total_thread_allocated_memory(
 #[async_recursion(?Send)]
 async fn reset_contention_times_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.resetContentionTimes0(J)V")
 }
@@ -216,7 +216,7 @@ async fn reset_contention_times_0(
 #[async_recursion(?Send)]
 async fn reset_peak_thread_count_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.resetPeakThreadCount0()V")
 }
@@ -224,7 +224,7 @@ async fn reset_peak_thread_count_0(
 #[async_recursion(?Send)]
 async fn set_thread_allocated_memory_enabled_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.setThreadAllocatedMemoryEnabled0(Z)V")
 }
@@ -232,7 +232,7 @@ async fn set_thread_allocated_memory_enabled_0(
 #[async_recursion(?Send)]
 async fn set_thread_contention_monitoring_enabled_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.setThreadContentionMonitoringEnabled0(Z)V")
 }
@@ -240,7 +240,7 @@ async fn set_thread_contention_monitoring_enabled_0(
 #[async_recursion(?Send)]
 async fn set_thread_cpu_time_enabled_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.ThreadImpl.setThreadCpuTimeEnabled0(Z)V")
 }
@@ -255,7 +255,7 @@ mod tests {
     )]
     async fn test_dump_threads_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dump_threads_0(thread, Arguments::default()).await;
+        let _ = dump_threads_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -264,7 +264,7 @@ mod tests {
     )]
     async fn test_find_deadlocked_threads_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = find_deadlocked_threads_0(thread, Arguments::default()).await;
+        let _ = find_deadlocked_threads_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -273,7 +273,7 @@ mod tests {
     )]
     async fn test_find_monitor_deadlocked_threads_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = find_monitor_deadlocked_threads_0(thread, Arguments::default()).await;
+        let _ = find_monitor_deadlocked_threads_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -282,7 +282,7 @@ mod tests {
     )]
     async fn test_get_thread_allocated_memory_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_allocated_memory_0(thread, Arguments::default()).await;
+        let _ = get_thread_allocated_memory_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -291,7 +291,7 @@ mod tests {
     )]
     async fn test_get_thread_allocated_memory_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_allocated_memory_1(thread, Arguments::default()).await;
+        let _ = get_thread_allocated_memory_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -300,7 +300,7 @@ mod tests {
     )]
     async fn test_get_thread_info_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_info_1(thread, Arguments::default()).await;
+        let _ = get_thread_info_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -309,7 +309,7 @@ mod tests {
     )]
     async fn test_get_thread_total_cpu_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_total_cpu_time_0(thread, Arguments::default()).await;
+        let _ = get_thread_total_cpu_time_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -318,7 +318,7 @@ mod tests {
     )]
     async fn test_get_thread_total_cpu_time_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_total_cpu_time_1(thread, Arguments::default()).await;
+        let _ = get_thread_total_cpu_time_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -327,7 +327,7 @@ mod tests {
     )]
     async fn test_get_thread_user_cpu_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_user_cpu_time_0(thread, Arguments::default()).await;
+        let _ = get_thread_user_cpu_time_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -336,7 +336,7 @@ mod tests {
     )]
     async fn test_get_thread_user_cpu_time_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_user_cpu_time_1(thread, Arguments::default()).await;
+        let _ = get_thread_user_cpu_time_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -345,7 +345,7 @@ mod tests {
     )]
     async fn test_get_threads() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_threads(thread, Arguments::default()).await;
+        let _ = get_threads(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -354,7 +354,7 @@ mod tests {
     )]
     async fn test_get_total_thread_allocated_memory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_total_thread_allocated_memory(thread, Arguments::default()).await;
+        let _ = get_total_thread_allocated_memory(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -363,7 +363,7 @@ mod tests {
     )]
     async fn test_reset_contention_times_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = reset_contention_times_0(thread, Arguments::default()).await;
+        let _ = reset_contention_times_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -372,7 +372,7 @@ mod tests {
     )]
     async fn test_reset_peak_thread_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = reset_peak_thread_count_0(thread, Arguments::default()).await;
+        let _ = reset_peak_thread_count_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -381,7 +381,7 @@ mod tests {
     )]
     async fn test_set_thread_allocated_memory_enabled_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_thread_allocated_memory_enabled_0(thread, Arguments::default()).await;
+        let _ = set_thread_allocated_memory_enabled_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -390,7 +390,7 @@ mod tests {
     )]
     async fn test_set_thread_contention_monitoring_enabled_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_thread_contention_monitoring_enabled_0(thread, Arguments::default()).await;
+        let _ = set_thread_contention_monitoring_enabled_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -399,6 +399,6 @@ mod tests {
     )]
     async fn test_set_thread_cpu_time_enabled_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_thread_cpu_time_enabled_0(thread, Arguments::default()).await;
+        let _ = set_thread_cpu_time_enabled_0(thread, Parameters::default()).await;
     }
 }

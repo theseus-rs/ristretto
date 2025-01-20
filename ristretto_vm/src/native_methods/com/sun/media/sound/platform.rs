@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -32,7 +32,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn n_get_extra_libraries(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.Platform.nGetExtraLibraries()Ljava/lang/String;")
 }
@@ -40,18 +40,18 @@ async fn n_get_extra_libraries(
 #[async_recursion(?Send)]
 async fn n_get_library_for_feature(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.Platform.nGetLibraryForFeature(I)I")
 }
 
 #[async_recursion(?Send)]
-async fn n_is_big_endian(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_is_big_endian(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.Platform.nIsBigEndian()Z")
 }
 
 #[async_recursion(?Send)]
-async fn n_is_signed_8(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_is_signed_8(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.Platform.nIsSigned8()Z")
 }
 
@@ -65,7 +65,7 @@ mod tests {
     )]
     async fn test_n_get_extra_libraries() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_extra_libraries(thread, Arguments::default()).await;
+        let _ = n_get_extra_libraries(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -74,20 +74,20 @@ mod tests {
     )]
     async fn test_n_get_library_for_feature() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_library_for_feature(thread, Arguments::default()).await;
+        let _ = n_get_library_for_feature(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: com.sun.media.sound.Platform.nIsBigEndian()Z")]
     async fn test_n_is_big_endian() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_is_big_endian(thread, Arguments::default()).await;
+        let _ = n_is_big_endian(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: com.sun.media.sound.Platform.nIsSigned8()Z")]
     async fn test_n_is_signed_8() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_is_signed_8(thread, Arguments::default()).await;
+        let _ = n_is_signed_8(thread, Parameters::default()).await;
     }
 }

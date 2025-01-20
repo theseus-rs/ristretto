@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -27,7 +27,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn get_vm_temporary_directory(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.VMSupport.getVMTemporaryDirectory()Ljava/lang/String;")
 }
@@ -35,7 +35,7 @@ async fn get_vm_temporary_directory(
 #[async_recursion(?Send)]
 async fn init_agent_properties(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;")
 }
@@ -50,7 +50,7 @@ mod tests {
     )]
     async fn test_get_vm_temporary_directory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_vm_temporary_directory(thread, Arguments::default()).await;
+        let _ = get_vm_temporary_directory(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -59,6 +59,6 @@ mod tests {
     )]
     async fn test_init_agent_properties() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_agent_properties(thread, Arguments::default()).await;
+        let _ = init_agent_properties(thread, Parameters::default()).await;
     }
 }

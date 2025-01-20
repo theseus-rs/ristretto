@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn draw_poly(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn draw_poly(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.OGLRenderer.drawPoly([I[IIZII)V");
 }
 
@@ -28,6 +28,6 @@ mod tests {
     )]
     async fn test_draw_poly() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = draw_poly(thread, Arguments::default()).await;
+        let _ = draw_poly(thread, Parameters::default()).await;
     }
 }

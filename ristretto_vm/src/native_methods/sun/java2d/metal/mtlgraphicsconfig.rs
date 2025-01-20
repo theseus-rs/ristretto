@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_21};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -40,14 +40,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_mtl_config_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_mtl_config_info(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
 async fn is_metal_framework_available(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLGraphicsConfig.isMetalFrameworkAvailable()Z")
 }
@@ -55,7 +58,7 @@ async fn is_metal_framework_available(
 #[async_recursion(?Send)]
 async fn native_get_max_texture_size(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLGraphicsConfig.nativeGetMaxTextureSize()I")
 }
@@ -63,7 +66,7 @@ async fn native_get_max_texture_size(
 #[async_recursion(?Send)]
 async fn try_load_metal_library(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z")
 }
@@ -78,7 +81,7 @@ mod tests {
     )]
     async fn test_get_mtl_config_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_mtl_config_info(thread, Arguments::default()).await;
+        let _ = get_mtl_config_info(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -87,7 +90,7 @@ mod tests {
     )]
     async fn test_is_metal_framework_available() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_metal_framework_available(thread, Arguments::default()).await;
+        let _ = is_metal_framework_available(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -96,7 +99,7 @@ mod tests {
     )]
     async fn test_native_get_max_texture_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_max_texture_size(thread, Arguments::default()).await;
+        let _ = native_get_max_texture_size(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -105,6 +108,6 @@ mod tests {
     )]
     async fn test_try_load_metal_library() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = try_load_metal_library(thread, Arguments::default()).await;
+        let _ = try_load_metal_library(thread, Parameters::default()).await;
     }
 }

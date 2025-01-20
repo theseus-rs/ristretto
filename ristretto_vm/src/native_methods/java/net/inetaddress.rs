@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_18, JAVA_19};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,17 +21,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn is_ipv_4_available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_ipv_4_available(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.InetAddress.isIPv4Available()Z")
 }
 
 #[async_recursion(?Send)]
-async fn is_ipv_6_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_ipv_6_supported(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.InetAddress.isIPv6Supported()Z")
 }
 
@@ -42,7 +48,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init(thread, Arguments::default()).await?;
+        let result = init(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -51,13 +57,13 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.net.InetAddress.isIPv4Available()Z")]
     async fn test_is_ipv_4_available() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_ipv_4_available(thread, Arguments::default()).await;
+        let _ = is_ipv_4_available(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.net.InetAddress.isIPv6Supported()Z")]
     async fn test_is_ipv_6_supported() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_ipv_6_supported(thread, Arguments::default()).await;
+        let _ = is_ipv_6_supported(thread, Parameters::default()).await;
     }
 }

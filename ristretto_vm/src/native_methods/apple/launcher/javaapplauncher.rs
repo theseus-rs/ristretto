@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -27,7 +27,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_convert_and_release(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.launcher.JavaAppLauncher.nativeConvertAndRelease(J)Ljava/lang/Object;")
 }
@@ -35,7 +35,7 @@ async fn native_convert_and_release(
 #[async_recursion(?Send)]
 async fn native_invoke_non_public(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.launcher.JavaAppLauncher.nativeInvokeNonPublic(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V")
 }
@@ -50,7 +50,7 @@ mod tests {
     )]
     async fn test_native_convert_and_release() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_convert_and_release(thread, Arguments::default()).await;
+        let _ = native_convert_and_release(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -59,6 +59,6 @@ mod tests {
     )]
     async fn test_native_invoke_non_public() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_invoke_non_public(thread, Arguments::default()).await;
+        let _ = native_invoke_non_public(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,14 +20,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn initialize(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn initialize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn latest_user_defined_loader_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.misc.VM.latestUserDefinedLoader0()Ljava/lang/ClassLoader;")
 }
@@ -39,7 +39,7 @@ mod tests {
     #[tokio::test]
     async fn test_initialize() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = initialize(thread, Arguments::default()).await?;
+        let result = initialize(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -50,6 +50,6 @@ mod tests {
     )]
     async fn test_latest_user_defined_loader_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = latest_user_defined_loader_0(thread, Arguments::default()).await;
+        let _ = latest_user_defined_loader_0(thread, Parameters::default()).await;
     }
 }

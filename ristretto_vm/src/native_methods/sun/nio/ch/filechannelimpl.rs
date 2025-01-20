@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -57,43 +57,43 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn allocation_granularity_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileChannelImpl.allocationGranularity0()J");
 }
 
 #[async_recursion(?Send)]
-async fn map_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn map_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileChannelImpl.map0(IJJ)J");
 }
 
 #[async_recursion(?Send)]
 async fn max_direct_transfer_size_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileChannelImpl.maxDirectTransferSize0()I");
 }
 
 #[async_recursion(?Send)]
-async fn transfer_from_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn transfer_from_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileChannelImpl.transferFrom0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;JJ)J");
 }
 
 #[async_recursion(?Send)]
-async fn transfer_to_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn transfer_to_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileChannelImpl.transferTo0(Ljava/io/FileDescriptor;JJLjava/io/FileDescriptor;)J");
 }
 
 #[async_recursion(?Send)]
-async fn unmap_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn unmap_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.FileChannelImpl.unmap0(JJ)I");
 }
 
@@ -104,7 +104,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -115,14 +115,14 @@ mod tests {
     )]
     async fn test_allocation_granularity_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = allocation_granularity_0(thread, Arguments::default()).await;
+        let _ = allocation_granularity_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.FileChannelImpl.map0(IJJ)J")]
     async fn test_map_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = map_0(thread, Arguments::default()).await;
+        let _ = map_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -131,7 +131,7 @@ mod tests {
     )]
     async fn test_max_direct_transfer_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = max_direct_transfer_size_0(thread, Arguments::default()).await;
+        let _ = max_direct_transfer_size_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -140,7 +140,7 @@ mod tests {
     )]
     async fn test_transfer_from_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = transfer_from_0(thread, Arguments::default()).await;
+        let _ = transfer_from_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -149,13 +149,13 @@ mod tests {
     )]
     async fn test_transfer_to_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = transfer_to_0(thread, Arguments::default()).await;
+        let _ = transfer_to_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.FileChannelImpl.unmap0(JJ)I")]
     async fn test_unmap_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unmap_0(thread, Arguments::default()).await;
+        let _ = unmap_0(thread, Parameters::default()).await;
     }
 }

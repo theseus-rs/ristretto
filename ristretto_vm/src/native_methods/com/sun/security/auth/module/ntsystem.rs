@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,14 +20,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_current(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_current(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.security.auth.module.NTSystem.getCurrent(Z)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_impersonation_token_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.security.auth.module.NTSystem.getImpersonationToken0()J")
 }
@@ -42,7 +42,7 @@ mod tests {
     )]
     async fn test_get_current() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_current(thread, Arguments::default()).await;
+        let _ = get_current(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -51,6 +51,6 @@ mod tests {
     )]
     async fn test_get_impersonation_token_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_impersonation_token_0(thread, Arguments::default()).await;
+        let _ = get_impersonation_token_0(thread, Parameters::default()).await;
     }
 }

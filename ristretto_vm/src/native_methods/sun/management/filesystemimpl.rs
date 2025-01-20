@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn is_access_user_only_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.FileSystemImpl.isAccessUserOnly0(Ljava/lang/String;)Z")
 }
@@ -36,6 +36,6 @@ mod tests {
     )]
     async fn test_is_access_user_only_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_access_user_only_0(thread, Arguments::default()).await;
+        let _ = is_access_user_only_0(thread, Parameters::default()).await;
     }
 }

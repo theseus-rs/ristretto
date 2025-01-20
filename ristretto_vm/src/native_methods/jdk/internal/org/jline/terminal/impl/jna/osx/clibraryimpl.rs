@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_21, JAVA_22};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -37,32 +37,32 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn ioctl_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn ioctl_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ioctl0(IJLjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$winsize;)V")
 }
 
 #[async_recursion(?Send)]
-async fn isatty(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn isatty(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.isatty(I)I")
 }
 
 #[async_recursion(?Send)]
-async fn tcgetattr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn tcgetattr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcgetattr(ILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V")
 }
 
 #[async_recursion(?Send)]
-async fn tcsetattr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn tcsetattr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcsetattr(IILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V")
 }
 
 #[async_recursion(?Send)]
-async fn ttyname_r(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn ttyname_r(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ttyname_r(I[BI)V")
 }
 
@@ -76,7 +76,7 @@ mod tests {
     )]
     async fn test_ioctl_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ioctl_0(thread, Arguments::default()).await;
+        let _ = ioctl_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -85,7 +85,7 @@ mod tests {
     )]
     async fn test_isatty() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = isatty(thread, Arguments::default()).await;
+        let _ = isatty(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -94,7 +94,7 @@ mod tests {
     )]
     async fn test_tcgetattr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = tcgetattr(thread, Arguments::default()).await;
+        let _ = tcgetattr(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -103,7 +103,7 @@ mod tests {
     )]
     async fn test_tcsetattr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = tcsetattr(thread, Arguments::default()).await;
+        let _ = tcsetattr(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -112,6 +112,6 @@ mod tests {
     )]
     async fn test_ttyname_r() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ttyname_r(thread, Arguments::default()).await;
+        let _ = ttyname_r(thread, Parameters::default()).await;
     }
 }

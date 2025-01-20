@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -45,7 +45,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_disable_sudden_termination(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMiscHandlers.nativeDisableSuddenTermination()V")
 }
@@ -53,7 +53,7 @@ async fn native_disable_sudden_termination(
 #[async_recursion(?Send)]
 async fn native_enable_sudden_termination(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMiscHandlers.nativeEnableSuddenTermination()V")
 }
@@ -61,7 +61,7 @@ async fn native_enable_sudden_termination(
 #[async_recursion(?Send)]
 async fn native_open_help_viewer(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMiscHandlers.nativeOpenHelpViewer()V")
 }
@@ -69,7 +69,7 @@ async fn native_open_help_viewer(
 #[async_recursion(?Send)]
 async fn native_request_activation(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMiscHandlers.nativeRequestActivation(Z)V")
 }
@@ -77,7 +77,7 @@ async fn native_request_activation(
 #[async_recursion(?Send)]
 async fn native_request_user_attention(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMiscHandlers.nativeRequestUserAttention(Z)V")
 }
@@ -92,7 +92,7 @@ mod tests {
     )]
     async fn test_native_disable_sudden_termination() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_disable_sudden_termination(thread, Arguments::default()).await;
+        let _ = native_disable_sudden_termination(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -101,7 +101,7 @@ mod tests {
     )]
     async fn test_native_enable_sudden_termination() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_enable_sudden_termination(thread, Arguments::default()).await;
+        let _ = native_enable_sudden_termination(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -110,7 +110,7 @@ mod tests {
     )]
     async fn test_native_open_help_viewer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_open_help_viewer(thread, Arguments::default()).await;
+        let _ = native_open_help_viewer(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -119,7 +119,7 @@ mod tests {
     )]
     async fn test_native_request_activation() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_request_activation(thread, Arguments::default()).await;
+        let _ = native_request_activation(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -128,6 +128,6 @@ mod tests {
     )]
     async fn test_native_request_user_attention() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_request_user_attention(thread, Arguments::default()).await;
+        let _ = native_request_user_attention(thread, Parameters::default()).await;
     }
 }

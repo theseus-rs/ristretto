@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -39,38 +39,47 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_add_separator(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenu.nativeAddSeparator(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_create_menu(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_create_menu(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenu.nativeCreateMenu(JZI)J")
 }
 
 #[async_recursion(?Send)]
 async fn native_create_sub_menu(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenu.nativeCreateSubMenu(J)J")
 }
 
 #[async_recursion(?Send)]
-async fn native_delete_item(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_delete_item(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenu.nativeDeleteItem(JI)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_get_ns_menu(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_get_ns_menu(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenu.nativeGetNSMenu(J)J")
 }
 
 #[async_recursion(?Send)]
 async fn native_set_menu_title(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenu.nativeSetMenuTitle(JLjava/lang/String;)V")
 }
@@ -83,14 +92,14 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CMenu.nativeAddSeparator(J)V")]
     async fn test_native_add_separator() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_add_separator(thread, Arguments::default()).await;
+        let _ = native_add_separator(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CMenu.nativeCreateMenu(JZI)J")]
     async fn test_native_create_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_menu(thread, Arguments::default()).await;
+        let _ = native_create_menu(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -99,21 +108,21 @@ mod tests {
     )]
     async fn test_native_create_sub_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_sub_menu(thread, Arguments::default()).await;
+        let _ = native_create_sub_menu(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CMenu.nativeDeleteItem(JI)V")]
     async fn test_native_delete_item() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_delete_item(thread, Arguments::default()).await;
+        let _ = native_delete_item(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CMenu.nativeGetNSMenu(J)J")]
     async fn test_native_get_ns_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_ns_menu(thread, Arguments::default()).await;
+        let _ = native_get_ns_menu(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -122,6 +131,6 @@ mod tests {
     )]
     async fn test_native_set_menu_title() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_menu_title(thread, Arguments::default()).await;
+        let _ = native_set_menu_title(thread, Parameters::default()).await;
     }
 }

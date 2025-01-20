@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -37,47 +37,53 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn close(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn close(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_close(J)V");
 }
 
 #[async_recursion(?Send)]
-async fn get_bounds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_bounds(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_getBounds(J)Ljava/awt/Rectangle;");
 }
 
 #[async_recursion(?Send)]
-async fn get_image_file_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_image_file_name(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_getImageFileName(J)Ljava/lang/String;");
 }
 
 #[async_recursion(?Send)]
-async fn get_image_jar_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_image_jar_name(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_getImageJarName(J)Ljava/lang/String;");
 }
 
 #[async_recursion(?Send)]
-async fn get_instance(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_instance(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_getInstance()J");
 }
 
 #[async_recursion(?Send)]
-async fn get_scale_factor(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_scale_factor(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_getScaleFactor(J)F");
 }
 
 #[async_recursion(?Send)]
-async fn is_visible(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_visible(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_isVisible(J)Z");
 }
 
 #[async_recursion(?Send)]
-async fn set_image_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_image_data(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_setImageData(J[B)Z");
 }
 
 #[async_recursion(?Send)]
-async fn update(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_update(J[IIIIII)V");
 }
 
@@ -89,7 +95,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.awt.SplashScreen::_close(J)V")]
     async fn test_close() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close(thread, Arguments::default()).await;
+        let _ = close(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -98,7 +104,7 @@ mod tests {
     )]
     async fn test_get_bounds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_bounds(thread, Arguments::default()).await;
+        let _ = get_bounds(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -107,7 +113,7 @@ mod tests {
     )]
     async fn test_get_image_file_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_image_file_name(thread, Arguments::default()).await;
+        let _ = get_image_file_name(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -116,41 +122,41 @@ mod tests {
     )]
     async fn test_get_image_jar_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_image_jar_name(thread, Arguments::default()).await;
+        let _ = get_image_jar_name(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.awt.SplashScreen::_getInstance()J")]
     async fn test_get_instance() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_instance(thread, Arguments::default()).await;
+        let _ = get_instance(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.awt.SplashScreen::_getScaleFactor(J)F")]
     async fn test_get_scale_factor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_scale_factor(thread, Arguments::default()).await;
+        let _ = get_scale_factor(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.awt.SplashScreen::_isVisible(J)Z")]
     async fn test_is_visible() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_visible(thread, Arguments::default()).await;
+        let _ = is_visible(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.awt.SplashScreen::_setImageData(J[B)Z")]
     async fn test_set_image_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_image_data(thread, Arguments::default()).await;
+        let _ = set_image_data(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.awt.SplashScreen::_update(J[IIIIII)V")]
     async fn test_update() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = update(thread, Arguments::default()).await;
+        let _ = update(thread, Parameters::default()).await;
     }
 }

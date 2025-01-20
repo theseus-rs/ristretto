@@ -6,9 +6,6 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 /// Errors that can occur when loading classes
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    /// The arguments stack underflow
-    #[error("Arguments stack underflow")]
-    ArgumentsUnderflow,
     /// An error occurred while loading a class file
     #[error(transparent)]
     ClassFileError(#[from] ristretto_classfile::Error),
@@ -51,6 +48,9 @@ pub enum Error {
     /// The operand stack underflow
     #[error("Operand stack underflow")]
     OperandStackUnderflow,
+    /// The parameters stack underflow
+    #[error("Parameters stack underflow")]
+    ParametersUnderflow,
     /// An error occurred while attempting to parse an integer
     #[error(transparent)]
     ParseIntError(#[from] std::num::ParseIntError),
