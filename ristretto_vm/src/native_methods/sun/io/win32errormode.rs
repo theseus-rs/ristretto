@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,8 +14,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn set_error_mode(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let _error_mode = arguments.pop_long()?;
+async fn set_error_mode(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let _error_mode = parameters.pop_long()?;
     Ok(Some(Value::Long(0)))
 }
 
@@ -26,8 +26,8 @@ mod tests {
     #[tokio::test]
     async fn test_set_error_mode() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let arguments = Arguments::new(vec![Value::Long(0)]);
-        let result = set_error_mode(thread, arguments).await?;
+        let parameters = Parameters::new(vec![Value::Long(0)]);
+        let result = set_error_mode(thread, parameters).await?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }

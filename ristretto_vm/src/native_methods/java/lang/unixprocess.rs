@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -27,24 +27,24 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn destroy_process(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn destroy_process(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.UNIXProcess.destroyProcess(IZ)V")
 }
 
 #[async_recursion(?Send)]
-async fn fork_and_exec(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn fork_and_exec(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.UNIXProcess.forkAndExec(I[B[B[BI[BI[B[IZ)I")
 }
 
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.UNIXProcess.init()V")
 }
 
 #[async_recursion(?Send)]
 async fn wait_for_process_exit(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.UNIXProcess.waitForProcessExit(I)I")
 }
@@ -57,7 +57,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.lang.UNIXProcess.destroyProcess(IZ)V")]
     async fn test_destroy_process() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = destroy_process(thread, Arguments::default()).await;
+        let _ = destroy_process(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -66,20 +66,20 @@ mod tests {
     )]
     async fn test_fork_and_exec() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fork_and_exec(thread, Arguments::default()).await;
+        let _ = fork_and_exec(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.lang.UNIXProcess.init()V")]
     async fn test_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init(thread, Arguments::default()).await;
+        let _ = init(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.lang.UNIXProcess.waitForProcessExit(I)I")]
     async fn test_wait_for_process_exit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = wait_for_process_exit(thread, Arguments::default()).await;
+        let _ = wait_for_process_exit(thread, Parameters::default()).await;
     }
 }

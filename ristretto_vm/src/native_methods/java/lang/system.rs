@@ -1,8 +1,8 @@
-use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::java::lang::object::object_hash_code;
 use crate::native_methods::properties;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
@@ -93,14 +93,14 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq>(
 }
 
 #[async_recursion(?Send)]
-async fn arraycopy(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let length = arguments.pop_int()?;
-    let destination_position = arguments.pop_int()?;
-    let Some(destination) = arguments.pop_reference()? else {
+async fn arraycopy(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let length = parameters.pop_int()?;
+    let destination_position = parameters.pop_int()?;
+    let Some(destination) = parameters.pop_reference()? else {
         return Err(InternalError("destination must be an object".to_string()));
     };
-    let source_position = arguments.pop_int()?;
-    let Some(source) = arguments.pop_reference()? else {
+    let source_position = parameters.pop_int()?;
+    let Some(source) = parameters.pop_reference()? else {
         return Err(InternalError("source must be an object".to_string()));
     };
 
@@ -193,13 +193,16 @@ async fn arraycopy(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opt
 #[async_recursion(?Send)]
 async fn allow_security_manager(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
 
 #[async_recursion(?Send)]
-async fn current_time_millis(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn current_time_millis(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     let now = SystemTime::now();
     let duration = now
         .duration_since(UNIX_EPOCH)
@@ -211,7 +214,7 @@ async fn current_time_millis(_thread: Arc<Thread>, _arguments: Arguments) -> Res
 #[async_recursion(?Send)]
 async fn get_security_manager(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     // The SecurityManager is not supported in Ristretto.
     //
@@ -226,9 +229,9 @@ async fn get_security_manager(
 #[async_recursion(?Send)]
 async fn identity_hash_code(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let hash_code = match arguments.pop_reference()? {
+    let hash_code = match parameters.pop_reference()? {
         Some(object) => object_hash_code(&object),
         None => 0,
     };
@@ -237,8 +240,8 @@ async fn identity_hash_code(
 
 /// Mechanism for initializing properties for Java versions <= 11
 #[async_recursion(?Send)]
-async fn init_properties(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let properties = arguments.pop()?;
+async fn init_properties(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let properties = parameters.pop()?;
     let vm = thread.vm()?;
     let properties_class = thread.class("java.util.Properties").await?;
     let set_property_method = properties_class.try_get_method(
@@ -250,18 +253,21 @@ async fn init_properties(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
     for (key, value) in system_properties.iter() {
         let key = key.to_object(&vm).await?;
         let value = value.clone();
-        let arguments = vec![properties.clone(), key, value];
+        let parameters = vec![properties.clone(), key, value];
         thread
-            .execute(&properties_class, &set_property_method, arguments)
+            .execute(&properties_class, &set_property_method, parameters)
             .await?;
     }
     Ok(Some(properties))
 }
 
 #[async_recursion(?Send)]
-async fn map_library_name(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
-        return Err(InternalError("argument must be an object".to_string()));
+async fn map_library_name(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let Some(Reference::Object(object)) = parameters.pop_reference()? else {
+        return Err(InternalError("parameter must be an object".to_string()));
     };
     let library_name: String = object.try_into()?;
     let library_file_name = match OS {
@@ -275,7 +281,7 @@ async fn map_library_name(thread: Arc<Thread>, mut arguments: Arguments) -> Resu
 }
 
 #[async_recursion(?Send)]
-async fn nano_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn nano_time(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let now = SystemTime::now();
     let duration = now
         .duration_since(UNIX_EPOCH)
@@ -285,7 +291,7 @@ async fn nano_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_natives(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     if vm.java_major_version() <= JAVA_8 {
         vm.invoke(
@@ -386,8 +392,8 @@ async fn java_lang_ref_access_class(
 }
 
 #[async_recursion(?Send)]
-async fn set_in_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let input_stream = arguments.pop_reference()?;
+async fn set_in_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let input_stream = parameters.pop_reference()?;
     let system = thread.class("java.lang.System").await?;
     let in_field = system.static_field("in")?;
     in_field.unsafe_set_value(Value::Object(input_stream))?;
@@ -395,8 +401,8 @@ async fn set_in_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Optio
 }
 
 #[async_recursion(?Send)]
-async fn set_out_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let print_stream = arguments.pop_reference()?;
+async fn set_out_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let print_stream = parameters.pop_reference()?;
     let system = thread.class("java.lang.System").await?;
     let out_field = system.static_field("out")?;
     out_field.unsafe_set_value(Value::Object(print_stream))?;
@@ -404,8 +410,8 @@ async fn set_out_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 }
 
 #[async_recursion(?Send)]
-async fn set_err_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let print_stream = arguments.pop_reference()?;
+async fn set_err_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let print_stream = parameters.pop_reference()?;
     let system = thread.class("java.lang.System").await?;
     let err_field = system.static_field("err")?;
     err_field.unsafe_set_value(Value::Object(print_stream))?;
@@ -415,7 +421,7 @@ async fn set_err_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 #[async_recursion(?Send)]
 async fn set_security_manager(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     // The SecurityManager is not supported in Ristretto.
     Err(InternalError(
@@ -430,7 +436,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_security_manager() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_security_manager(thread, Arguments::default()).await?;
+        let result = get_security_manager(thread, Parameters::default()).await?;
         assert_eq!(Some(Value::Object(None)), result);
         Ok(())
     }
@@ -438,7 +444,7 @@ mod tests {
     #[tokio::test]
     async fn test_nano_time() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = nano_time(thread, Arguments::default()).await?;
+        let result = nano_time(thread, Parameters::default()).await?;
         let time = result.unwrap_or(Value::Long(0)).to_long()?;
         assert!(time > 0);
         Ok(())
@@ -447,7 +453,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_security_manager() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = set_security_manager(thread, Arguments::default()).await;
+        let result = set_security_manager(thread, Parameters::default()).await;
         assert!(result.is_err());
         Ok(())
     }

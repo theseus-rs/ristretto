@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,7 +14,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn is_ipv_6_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_ipv_6_supported(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.InetAddressImplFactory.isIPv6Supported()Z")
 }
 
@@ -28,6 +31,6 @@ mod tests {
     )]
     async fn test_is_ipv_6_supported() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_ipv_6_supported(thread, Arguments::default()).await;
+        let _ = is_ipv_6_supported(thread, Parameters::default()).await;
     }
 }

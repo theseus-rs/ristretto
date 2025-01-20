@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -37,38 +37,41 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn clear_window(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn clear_window(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLSurfaceData.clearWindow()");
 }
 
 #[async_recursion(?Send)]
 async fn create_cgl_context_on_surface(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLSurfaceData.createCGLContextOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)J");
 }
 
 #[async_recursion(?Send)]
-async fn destroy_cgl_context(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn destroy_cgl_context(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLSurfaceData.destroyCGLContext(J)V");
 }
 
 #[async_recursion(?Send)]
-async fn init_ops(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ops(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V");
 }
 
 #[async_recursion(?Send)]
 async fn make_cgl_context_current_on_surface(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLSurfaceData.makeCGLContextCurrentOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)Z");
 }
 
 #[async_recursion(?Send)]
-async fn validate(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn validate(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLSurfaceData.validate(IIIIZ)V");
 }
 
@@ -82,7 +85,7 @@ mod tests {
     )]
     async fn test_clear_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = clear_window(thread, Arguments::default()).await;
+        let _ = clear_window(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -91,7 +94,7 @@ mod tests {
     )]
     async fn test_create_cgl_context_on_surface() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_cgl_context_on_surface(thread, Arguments::default()).await;
+        let _ = create_cgl_context_on_surface(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -100,7 +103,7 @@ mod tests {
     )]
     async fn test_destroy_cgl_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = destroy_cgl_context(thread, Arguments::default()).await;
+        let _ = destroy_cgl_context(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -109,7 +112,7 @@ mod tests {
     )]
     async fn test_init_ops() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_ops(thread, Arguments::default()).await;
+        let _ = init_ops(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -118,7 +121,7 @@ mod tests {
     )]
     async fn test_make_cgl_context_current_on_surface() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = make_cgl_context_current_on_surface(thread, Arguments::default()).await;
+        let _ = make_cgl_context_current_on_surface(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -127,6 +130,6 @@ mod tests {
     )]
     async fn test_validate() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = validate(thread, Arguments::default()).await;
+        let _ = validate(thread, Parameters::default()).await;
     }
 }

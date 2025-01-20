@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,14 +20,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn count_glyphs(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn count_glyphs(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.CCharToGlyphMapper.countGlyphs(J)I")
 }
 
 #[async_recursion(?Send)]
 async fn native_chars_to_glyphs(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CCharToGlyphMapper.nativeCharsToGlyphs(JI[C[I)V")
 }
@@ -40,7 +40,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.font.CCharToGlyphMapper.countGlyphs(J)I")]
     async fn test_count_glyphs() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = count_glyphs(thread, Arguments::default()).await;
+        let _ = count_glyphs(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -49,6 +49,6 @@ mod tests {
     )]
     async fn test_native_chars_to_glyphs() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_chars_to_glyphs(thread, Arguments::default()).await;
+        let _ = native_chars_to_glyphs(thread, Parameters::default()).await;
     }
 }

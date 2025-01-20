@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -51,24 +51,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn menu_closed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn menu_closed(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.menuClosed(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn menu_item_selected(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn menu_item_selected(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.menuItemSelected(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn menu_opened(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn menu_opened(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.menuOpened(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn selected_cells_changed(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.selectedCellsChanged(J)V")
 }
@@ -76,49 +79,55 @@ async fn selected_cells_changed(
 #[async_recursion(?Send)]
 async fn selected_text_changed(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.selectedTextChanged(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn selection_changed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn selection_changed(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.selectionChanged(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn table_content_cache_clear(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.tableContentCacheClear(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn title_changed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn title_changed(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.titleChanged(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn tree_node_collapsed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn tree_node_collapsed(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.treeNodeCollapsed(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn tree_node_expanded(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn tree_node_expanded(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.treeNodeExpanded(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn unregister_from_cocoa_ax_system(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.unregisterFromCocoaAXSystem(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn value_changed(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn value_changed(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.valueChanged(J)V")
 }
 
@@ -130,7 +139,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CAccessible.menuClosed(J)V")]
     async fn test_menu_closed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = menu_closed(thread, Arguments::default()).await;
+        let _ = menu_closed(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -139,14 +148,14 @@ mod tests {
     )]
     async fn test_menu_item_selected() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = menu_item_selected(thread, Arguments::default()).await;
+        let _ = menu_item_selected(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CAccessible.menuOpened(J)V")]
     async fn test_menu_opened() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = menu_opened(thread, Arguments::default()).await;
+        let _ = menu_opened(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -155,7 +164,7 @@ mod tests {
     )]
     async fn test_selected_cells_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = selected_cells_changed(thread, Arguments::default()).await;
+        let _ = selected_cells_changed(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -164,7 +173,7 @@ mod tests {
     )]
     async fn test_selected_text_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = selected_text_changed(thread, Arguments::default()).await;
+        let _ = selected_text_changed(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -173,7 +182,7 @@ mod tests {
     )]
     async fn test_selection_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = selection_changed(thread, Arguments::default()).await;
+        let _ = selection_changed(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -182,14 +191,14 @@ mod tests {
     )]
     async fn test_table_content_cache_clear() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = table_content_cache_clear(thread, Arguments::default()).await;
+        let _ = table_content_cache_clear(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CAccessible.titleChanged(J)V")]
     async fn test_title_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = title_changed(thread, Arguments::default()).await;
+        let _ = title_changed(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -198,7 +207,7 @@ mod tests {
     )]
     async fn test_tree_node_collapsed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = tree_node_collapsed(thread, Arguments::default()).await;
+        let _ = tree_node_collapsed(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -207,7 +216,7 @@ mod tests {
     )]
     async fn test_tree_node_expanded() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = tree_node_expanded(thread, Arguments::default()).await;
+        let _ = tree_node_expanded(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -216,13 +225,13 @@ mod tests {
     )]
     async fn test_unregister_from_cocoa_ax_system() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unregister_from_cocoa_ax_system(thread, Arguments::default()).await;
+        let _ = unregister_from_cocoa_ax_system(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CAccessible.valueChanged(J)V")]
     async fn test_value_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = value_changed(thread, Arguments::default()).await;
+        let _ = value_changed(thread, Parameters::default()).await;
     }
 }

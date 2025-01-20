@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -48,43 +48,52 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn clear_surface_pixels(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.OSXOffScreenSurfaceData.clearSurfacePixels(IIZ)Z")
 }
 
 #[async_recursion(?Send)]
-async fn get_surface_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_surface_data(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.OSXOffScreenSurfaceData.getSurfaceData(Ljava/awt/image/BufferedImage;)Lsun/java2d/SurfaceData;")
 }
 
 #[async_recursion(?Send)]
-async fn init_custom_raster(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_custom_raster(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.OSXOffScreenSurfaceData.initCustomRaster(Ljava/nio/IntBuffer;IILjava/nio/ByteBuffer;Ljava/lang/Object;Ljava/nio/ByteBuffer;)V")
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn init_raster(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_raster(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.OSXOffScreenSurfaceData.initRaster(Ljava/lang/Object;IIIIILjava/awt/image/IndexColorModel;ILjava/nio/ByteBuffer;Ljava/lang/Object;Ljava/nio/ByteBuffer;)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_surface_data(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_surface_data(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.OSXOffScreenSurfaceData.setSurfaceData(Ljava/awt/image/BufferedImage;Lsun/java2d/SurfaceData;)V")
 }
 
 #[async_recursion(?Send)]
-async fn sync_to_java_pixels(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn sync_to_java_pixels(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.OSXOffScreenSurfaceData.syncToJavaPixels()V")
 }
 
 #[async_recursion(?Send)]
-async fn xor_surface_pixels(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn xor_surface_pixels(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.OSXOffScreenSurfaceData.xorSurfacePixels(Lsun/java2d/SurfaceData;IIIII)Z")
 }
 
@@ -98,7 +107,7 @@ mod tests {
     )]
     async fn test_clear_surface_pixels() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = clear_surface_pixels(thread, Arguments::default()).await;
+        let _ = clear_surface_pixels(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -107,7 +116,7 @@ mod tests {
     )]
     async fn test_get_surface_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_surface_data(thread, Arguments::default()).await;
+        let _ = get_surface_data(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -116,13 +125,13 @@ mod tests {
     )]
     async fn test_init_custom_raster() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_custom_raster(thread, Arguments::default()).await;
+        let _ = init_custom_raster(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -133,7 +142,7 @@ mod tests {
     )]
     async fn test_init_raster() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_raster(thread, Arguments::default()).await;
+        let _ = init_raster(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -142,7 +151,7 @@ mod tests {
     )]
     async fn test_set_surface_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_surface_data(thread, Arguments::default()).await;
+        let _ = set_surface_data(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -151,7 +160,7 @@ mod tests {
     )]
     async fn test_sync_to_java_pixels() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = sync_to_java_pixels(thread, Arguments::default()).await;
+        let _ = sync_to_java_pixels(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -160,6 +169,6 @@ mod tests {
     )]
     async fn test_xor_surface_pixels() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = xor_surface_pixels(thread, Arguments::default()).await;
+        let _ = xor_surface_pixels(thread, Parameters::default()).await;
     }
 }

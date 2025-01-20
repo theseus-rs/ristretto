@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_21};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -94,7 +94,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn append_to_class_loader_search_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.appendToClassLoaderSearch0(JLjava/lang/String;Z)V")
 }
@@ -102,7 +102,7 @@ async fn append_to_class_loader_search_0(
 #[async_recursion(?Send)]
 async fn get_all_loaded_classes_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.getAllLoadedClasses0(J)[Ljava/lang/Class;")
 }
@@ -110,20 +110,20 @@ async fn get_all_loaded_classes_0(
 #[async_recursion(?Send)]
 async fn get_initiated_classes_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.getInitiatedClasses0(JLjava/lang/ClassLoader;)[Ljava/lang/Class;")
 }
 
 #[async_recursion(?Send)]
-async fn get_object_size_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_object_size_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.getObjectSize0(JLjava/lang/Object;)J")
 }
 
 #[async_recursion(?Send)]
 async fn is_modifiable_class_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.isModifiableClass0(JLjava/lang/Class;)Z")
 }
@@ -131,30 +131,33 @@ async fn is_modifiable_class_0(
 #[async_recursion(?Send)]
 async fn is_retransform_classes_supported_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.isRetransformClassesSupported0(J)Z")
 }
 
 #[async_recursion(?Send)]
-async fn jar_file(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn jar_file(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.jarFile(J)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn load_agent_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn load_agent_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.loadAgent0(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
-async fn redefine_classes_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn redefine_classes_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.redefineClasses0(J[Ljava/lang/instrument/ClassDefinition;)V")
 }
 
 #[async_recursion(?Send)]
 async fn retransform_classes_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.retransformClasses0(J[Ljava/lang/Class;)V")
 }
@@ -162,7 +165,7 @@ async fn retransform_classes_0(
 #[async_recursion(?Send)]
 async fn set_has_retransformable_transformers(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.setHasRetransformableTransformers(JZ)V")
 }
@@ -170,7 +173,7 @@ async fn set_has_retransformable_transformers(
 #[async_recursion(?Send)]
 async fn set_has_transformers(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.setHasTransformers(JZ)V")
 }
@@ -178,7 +181,7 @@ async fn set_has_transformers(
 #[async_recursion(?Send)]
 async fn set_native_method_prefixes(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.setNativeMethodPrefixes(J[Ljava/lang/String;Z)V")
 }
@@ -193,7 +196,7 @@ mod tests {
     )]
     async fn test_load_agent_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = load_agent_0(thread, Arguments::default()).await;
+        let _ = load_agent_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -202,7 +205,7 @@ mod tests {
     )]
     async fn test_set_has_transformers() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_has_transformers(thread, Arguments::default()).await;
+        let _ = set_has_transformers(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -211,7 +214,7 @@ mod tests {
     )]
     async fn test_jar_file() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = jar_file(thread, Arguments::default()).await;
+        let _ = jar_file(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -220,7 +223,7 @@ mod tests {
     )]
     async fn test_append_to_class_loader_search_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = append_to_class_loader_search_0(thread, Arguments::default()).await;
+        let _ = append_to_class_loader_search_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -229,7 +232,7 @@ mod tests {
     )]
     async fn test_get_all_loaded_classes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_all_loaded_classes_0(thread, Arguments::default()).await;
+        let _ = get_all_loaded_classes_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -238,7 +241,7 @@ mod tests {
     )]
     async fn test_get_initiated_classes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_initiated_classes_0(thread, Arguments::default()).await;
+        let _ = get_initiated_classes_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -247,7 +250,7 @@ mod tests {
     )]
     async fn test_get_object_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_object_size_0(thread, Arguments::default()).await;
+        let _ = get_object_size_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -256,7 +259,7 @@ mod tests {
     )]
     async fn test_is_modifiable_class_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_modifiable_class_0(thread, Arguments::default()).await;
+        let _ = is_modifiable_class_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -265,7 +268,7 @@ mod tests {
     )]
     async fn test_is_retransform_classes_supported_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_retransform_classes_supported_0(thread, Arguments::default()).await;
+        let _ = is_retransform_classes_supported_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -274,7 +277,7 @@ mod tests {
     )]
     async fn test_redefine_classes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = redefine_classes_0(thread, Arguments::default()).await;
+        let _ = redefine_classes_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -283,7 +286,7 @@ mod tests {
     )]
     async fn test_retransform_classes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = retransform_classes_0(thread, Arguments::default()).await;
+        let _ = retransform_classes_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -292,7 +295,7 @@ mod tests {
     )]
     async fn test_set_has_retransformable_transformers() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_has_retransformable_transformers(thread, Arguments::default()).await;
+        let _ = set_has_retransformable_transformers(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -301,6 +304,6 @@ mod tests {
     )]
     async fn test_set_native_method_prefixes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_native_method_prefixes(thread, Arguments::default()).await;
+        let _ = set_native_method_prefixes(thread, Parameters::default()).await;
     }
 }

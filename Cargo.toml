@@ -40,7 +40,7 @@ getrandom = "0.2.15"
 handlebars = "6.2.0"
 home = "0.5.11"
 indoc = "2.0.5"
-indexmap = "2.7.0"
+indexmap = "2.7.1"
 os_info = "3.9.2"
 rand = "0.8.4"
 reqwest = { version = "0.12.12", default-features = false }

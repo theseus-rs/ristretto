@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -45,7 +45,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_get_class_value(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetClassValue(ILjava/lang/String;)Ljava/lang/Object;")
 }
@@ -53,7 +53,7 @@ async fn native_get_class_value(
 #[async_recursion(?Send)]
 async fn native_get_color_for_state(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetColorForState(III)I")
 }
@@ -61,7 +61,7 @@ async fn native_get_color_for_state(
 #[async_recursion(?Send)]
 async fn native_get_pango_font_name(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetPangoFontName(I)Ljava/lang/String;")
 }
@@ -69,7 +69,7 @@ async fn native_get_pango_font_name(
 #[async_recursion(?Send)]
 async fn native_get_x_thickness(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetXThickness(I)I")
 }
@@ -77,7 +77,7 @@ async fn native_get_x_thickness(
 #[async_recursion(?Send)]
 async fn native_get_y_thickness(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetYThickness(I)I")
 }
@@ -92,7 +92,7 @@ mod tests {
     )]
     async fn test_native_get_class_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_class_value(thread, Arguments::default()).await;
+        let _ = native_get_class_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -101,7 +101,7 @@ mod tests {
     )]
     async fn test_native_get_color_for_state() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_color_for_state(thread, Arguments::default()).await;
+        let _ = native_get_color_for_state(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -110,7 +110,7 @@ mod tests {
     )]
     async fn test_native_get_pango_font_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_pango_font_name(thread, Arguments::default()).await;
+        let _ = native_get_pango_font_name(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -119,7 +119,7 @@ mod tests {
     )]
     async fn test_native_get_x_thickness() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_x_thickness(thread, Arguments::default()).await;
+        let _ = native_get_x_thickness(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -128,6 +128,6 @@ mod tests {
     )]
     async fn test_native_get_y_thickness() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_y_thickness(thread, Arguments::default()).await;
+        let _ = native_get_y_thickness(thread, Parameters::default()).await;
     }
 }

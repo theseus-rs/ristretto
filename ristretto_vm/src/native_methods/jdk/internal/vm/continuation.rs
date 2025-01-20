@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_20};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -32,32 +32,32 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn do_yield(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn do_yield(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.doYield()I")
 }
 
 #[async_recursion(?Send)]
-async fn enter_special(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn enter_special(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.enterSpecial(Ljdk/internal/vm/Continuation;ZZ)V")
 }
 
 #[async_recursion(?Send)]
-async fn is_pinned_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_pinned_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.isPinned0(Ljdk/internal/vm/ContinuationScope;)I")
 }
 
 #[async_recursion(?Send)]
-async fn pin(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn pin(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.pin()V")
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn unpin(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn unpin(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.unpin()V")
 }
 
@@ -69,7 +69,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: jdk.internal.vm.Continuation.doYield()I")]
     async fn test_do_yield() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = do_yield(thread, Arguments::default()).await;
+        let _ = do_yield(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -78,7 +78,7 @@ mod tests {
     )]
     async fn test_enter_special() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = enter_special(thread, Arguments::default()).await;
+        let _ = enter_special(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -87,20 +87,20 @@ mod tests {
     )]
     async fn test_is_pinned_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_pinned_0(thread, Arguments::default()).await;
+        let _ = is_pinned_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.internal.vm.Continuation.pin()V")]
     async fn test_pin() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pin(thread, Arguments::default()).await;
+        let _ = pin(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Arguments::default()).await?;
+        let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -109,6 +109,6 @@ mod tests {
     #[should_panic(expected = "not yet implemented: jdk.internal.vm.Continuation.unpin()V")]
     async fn test_unpin() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unpin(thread, Arguments::default()).await;
+        let _ = unpin(thread, Parameters::default()).await;
     }
 }

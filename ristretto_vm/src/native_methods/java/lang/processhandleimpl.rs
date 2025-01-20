@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -33,10 +33,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn destroy_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let force = arguments.pop_int()? != 0;
-    let _start_time = arguments.pop_long()?;
-    let pid = arguments.pop_long()?;
+async fn destroy_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let force = parameters.pop_int()? != 0;
+    let _start_time = parameters.pop_long()?;
+    let pid = parameters.pop_long()?;
     let pid = usize::try_from(pid)?;
     let pid = Pid::from(pid);
     let mut system = System::new_all();
@@ -53,7 +53,7 @@ async fn destroy_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opt
 }
 
 #[async_recursion(?Send)]
-async fn get_current_pid_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_current_pid_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let pid = i64::from(process::id());
     Ok(Some(Value::Long(pid)))
 }
@@ -62,18 +62,18 @@ async fn get_current_pid_0(_thread: Arc<Thread>, _arguments: Arguments) -> Resul
 #[async_recursion(?Send)]
 async fn get_process_pids_0(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let Some(Reference::LongArray(start_times)) = arguments.pop_reference()? else {
+    let Some(Reference::LongArray(start_times)) = parameters.pop_reference()? else {
         return Ok(Some(Value::Int(-1)));
     };
-    let Some(Reference::LongArray(ppids)) = arguments.pop_reference()? else {
+    let Some(Reference::LongArray(ppids)) = parameters.pop_reference()? else {
         return Ok(Some(Value::Int(-1)));
     };
-    let Some(Reference::LongArray(pids)) = arguments.pop_reference()? else {
+    let Some(Reference::LongArray(pids)) = parameters.pop_reference()? else {
         return Ok(Some(Value::Int(-1)));
     };
-    let pid = arguments.pop_long()?;
+    let pid = parameters.pop_long()?;
     let mut system = System::new_all();
 
     let processes_length = if pid == 0 {
@@ -122,13 +122,13 @@ async fn get_process_pids_0(
 }
 
 #[async_recursion(?Send)]
-async fn init_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_native(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn is_alive_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let pid = arguments.pop_long()?;
+async fn is_alive_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let pid = parameters.pop_long()?;
     let pid = usize::try_from(pid)?;
     let pid = Pid::from(pid);
     let mut system = System::new_all();
@@ -146,9 +146,9 @@ async fn is_alive_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Op
 }
 
 #[async_recursion(?Send)]
-async fn parent_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let _start_time = arguments.pop_long()?;
-    let pid = arguments.pop_long()?;
+async fn parent_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let _start_time = parameters.pop_long()?;
+    let pid = parameters.pop_long()?;
     let pid = usize::try_from(pid)?;
     let pid = Pid::from(pid);
     let mut system = System::new_all();
@@ -169,10 +169,10 @@ async fn parent_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 #[async_recursion(?Send)]
 async fn wait_for_process_exit_0(
     _thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _start_time = arguments.pop_long()?;
-    let pid = arguments.pop_long()?;
+    let _start_time = parameters.pop_long()?;
+    let pid = parameters.pop_long()?;
     let pid = usize::try_from(pid)?;
     let pid = Pid::from(pid);
     let mut system = System::new_all();
@@ -195,7 +195,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_current_pid_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_current_pid_0(thread, Arguments::default()).await?;
+        let result = get_current_pid_0(thread, Parameters::default()).await?;
         let pid = i64::from(process::id());
         assert_eq!(result, Some(Value::Long(pid)));
         Ok(())
@@ -204,7 +204,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_native() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_native(thread, Arguments::default()).await?;
+        let result = init_native(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -213,7 +213,7 @@ mod tests {
     async fn test_is_alive_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let pid = Value::Long(i64::from(process::id()));
-        let result = is_alive_0(thread, Arguments::new(vec![pid])).await?;
+        let result = is_alive_0(thread, Parameters::new(vec![pid])).await?;
         let run_time = result.unwrap_or(Value::Long(0)).to_long()?;
         assert!(run_time > 0);
         Ok(())

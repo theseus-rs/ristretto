@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -25,12 +25,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn native_blit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_blit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11PMBlitLoops.nativeBlit(JJJLsun/java2d/pipe/Region;IIIIII)V");
 }
 
 #[async_recursion(?Send)]
-async fn update_bitmask(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn update_bitmask(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11PMBlitLoops.updateBitmask(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V");
 }
 
@@ -44,7 +44,7 @@ mod tests {
     )]
     async fn test_native_blit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_blit(thread, Arguments::default()).await;
+        let _ = native_blit(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -53,6 +53,6 @@ mod tests {
     )]
     async fn test_update_bitmask() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = update_bitmask(thread, Arguments::default()).await;
+        let _ = update_bitmask(thread, Parameters::default()).await;
     }
 }

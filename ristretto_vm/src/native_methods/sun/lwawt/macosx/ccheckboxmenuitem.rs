@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -22,13 +22,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_set_is_checkbox(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CCheckboxMenuItem.nativeSetIsCheckbox(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_set_state(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_set_state(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CCheckboxMenuItem.nativeSetState(JZ)V")
 }
 
@@ -42,7 +42,7 @@ mod tests {
     )]
     async fn test_native_set_is_checkbox() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_is_checkbox(thread, Arguments::default()).await;
+        let _ = native_set_is_checkbox(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -51,6 +51,6 @@ mod tests {
     )]
     async fn test_native_set_state() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_state(thread, Arguments::default()).await;
+        let _ = native_set_state(thread, Parameters::default()).await;
     }
 }

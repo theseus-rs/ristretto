@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_20};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -41,27 +41,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn dup_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn dup_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramDispatcher.dup0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V");
 }
 
 #[async_recursion(?Send)]
-async fn read_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramDispatcher.read0(Ljava/io/FileDescriptor;JI)I");
 }
 
 #[async_recursion(?Send)]
-async fn readv_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn readv_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramDispatcher.readv0(Ljava/io/FileDescriptor;JI)J");
 }
 
 #[async_recursion(?Send)]
-async fn write_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn write_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramDispatcher.write0(Ljava/io/FileDescriptor;JI)I");
 }
 
 #[async_recursion(?Send)]
-async fn writev_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn writev_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramDispatcher.writev0(Ljava/io/FileDescriptor;JI)J");
 }
 
@@ -75,7 +75,7 @@ mod tests {
     )]
     async fn test_dup_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dup_0(thread, Arguments::default()).await;
+        let _ = dup_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -84,7 +84,7 @@ mod tests {
     )]
     async fn test_read_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = read_0(thread, Arguments::default()).await;
+        let _ = read_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -93,7 +93,7 @@ mod tests {
     )]
     async fn test_readv_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = readv_0(thread, Arguments::default()).await;
+        let _ = readv_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -102,13 +102,13 @@ mod tests {
     )]
     async fn test_write_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = write_0(thread, Arguments::default()).await;
+        let _ = write_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.DatagramDispatcher.writev0")]
     async fn test_writev_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = writev_0(thread, Arguments::default()).await;
+        let _ = writev_0(thread, Parameters::default()).await;
     }
 }

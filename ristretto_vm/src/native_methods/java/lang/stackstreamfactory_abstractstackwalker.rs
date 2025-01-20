@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_18, JAVA_21};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -49,17 +49,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn call_stack_walk(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn call_stack_walk(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.StackStreamFactory$AbstractStackWalker.callStackWalk()Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn fetch_stack_frames(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn fetch_stack_frames(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.StackStreamFactory$AbstractStackWalker.fetchStackFrames()I")
 }
 
 #[async_recursion(?Send)]
-async fn set_continuation(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_continuation(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.StackStreamFactory$AbstractStackWalker.setContinuation()V")
 }
 
@@ -73,7 +76,7 @@ mod tests {
     )]
     async fn test_call_stack_walk() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = call_stack_walk(thread, Arguments::default()).await;
+        let _ = call_stack_walk(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -82,7 +85,7 @@ mod tests {
     )]
     async fn test_fetch_stack_frames() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fetch_stack_frames(thread, Arguments::default()).await;
+        let _ = fetch_stack_frames(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -91,6 +94,6 @@ mod tests {
     )]
     async fn test_set_continuation() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_continuation(thread, Arguments::default()).await;
+        let _ = set_continuation(thread, Parameters::default()).await;
     }
 }

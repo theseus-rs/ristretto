@@ -35,7 +35,6 @@
 // #![deny(clippy::pedantic)]
 #![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
-mod arguments;
 mod configuration;
 mod error;
 mod frame;
@@ -45,6 +44,7 @@ mod java_object;
 mod local_variables;
 mod native_methods;
 mod operand_stack;
+mod parameters;
 mod rust_value;
 #[cfg(test)]
 pub(crate) mod test;

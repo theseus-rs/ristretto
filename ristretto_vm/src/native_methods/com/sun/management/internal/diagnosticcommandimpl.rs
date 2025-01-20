@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -39,7 +39,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn execute_diagnostic_command(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.DiagnosticCommandImpl.executeDiagnosticCommand(Ljava/lang/String;)Ljava/lang/String;")
 }
@@ -47,7 +47,7 @@ async fn execute_diagnostic_command(
 #[async_recursion(?Send)]
 async fn get_diagnostic_command_info(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.DiagnosticCommandImpl.getDiagnosticCommandInfo([Ljava/lang/String;)[Lcom/sun/management/internal/DiagnosticCommandInfo;")
 }
@@ -55,7 +55,7 @@ async fn get_diagnostic_command_info(
 #[async_recursion(?Send)]
 async fn get_diagnostic_commands(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.DiagnosticCommandImpl.getDiagnosticCommands()[Ljava/lang/String;")
 }
@@ -63,7 +63,7 @@ async fn get_diagnostic_commands(
 #[async_recursion(?Send)]
 async fn set_notification_enabled(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.DiagnosticCommandImpl.setNotificationEnabled(Z)V")
 }
@@ -78,7 +78,7 @@ mod tests {
     )]
     async fn test_execute_diagnostic_command() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = execute_diagnostic_command(thread, Arguments::default()).await;
+        let _ = execute_diagnostic_command(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -87,7 +87,7 @@ mod tests {
     )]
     async fn test_get_diagnostic_command_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_diagnostic_command_info(thread, Arguments::default()).await;
+        let _ = get_diagnostic_command_info(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -96,7 +96,7 @@ mod tests {
     )]
     async fn test_get_diagnostic_commands() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_diagnostic_commands(thread, Arguments::default()).await;
+        let _ = get_diagnostic_commands(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -105,6 +105,6 @@ mod tests {
     )]
     async fn test_set_notification_enabled() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_notification_enabled(thread, Arguments::default()).await;
+        let _ = set_notification_enabled(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -136,7 +136,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_finish_painting(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativeFinishPainting([III)I")
 }
@@ -144,7 +144,7 @@ async fn native_finish_painting(
 #[async_recursion(?Send)]
 async fn native_set_range_value(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativeSetRangeValue(IDDDD)V")
 }
@@ -152,7 +152,7 @@ async fn native_set_range_value(
 #[async_recursion(?Send)]
 async fn native_start_painting(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativeStartPainting(II)V")
 }
@@ -160,46 +160,52 @@ async fn native_start_painting(
 #[async_recursion(?Send)]
 async fn native_get_gtk_setting(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativeGetGTKSetting(I)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn native_paint_arrow(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_paint_arrow(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintArrow(IIILjava/lang/String;IIIII)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_paint_background(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintBackground(IIIIII)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_paint_box(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_paint_box(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintBox(IIILjava/lang/String;IIIIII)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_paint_box_gap(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintBoxGap(IIILjava/lang/String;IIIIIII)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_paint_check(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_paint_check(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintCheck(IILjava/lang/String;IIII)V")
 }
 
 #[async_recursion(?Send)]
 async fn native_paint_expander(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintExpander(IILjava/lang/String;IIIII)V")
 }
@@ -207,7 +213,7 @@ async fn native_paint_expander(
 #[async_recursion(?Send)]
 async fn native_paint_extension(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintExtension(IIILjava/lang/String;IIIII)V")
 }
@@ -215,48 +221,72 @@ async fn native_paint_extension(
 #[async_recursion(?Send)]
 async fn native_paint_flat_box(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintFlatBox(IIILjava/lang/String;IIIIZ)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_paint_focus(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_paint_focus(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintFocus(IILjava/lang/String;IIII)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_paint_handle(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_paint_handle(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintHandle(IIILjava/lang/String;IIIII)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_paint_hline(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_paint_hline(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintHline(IILjava/lang/String;IIII)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_paint_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_paint_option(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintOption(IILjava/lang/String;IIII)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_paint_shadow(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_paint_shadow(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintShadow(IIILjava/lang/String;IIIIII)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_paint_slider(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_paint_slider(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintSlider(IIILjava/lang/String;IIIIIZ)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_paint_vline(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_paint_vline(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintVline(IILjava/lang/String;IIII)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_switch_theme(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_switch_theme(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativeSwitchTheme()V")
 }
 
@@ -270,7 +300,7 @@ mod tests {
     )]
     async fn test_native_finish_painting() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_finish_painting(thread, Arguments::default()).await;
+        let _ = native_finish_painting(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -279,7 +309,7 @@ mod tests {
     )]
     async fn test_native_set_range_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_range_value(thread, Arguments::default()).await;
+        let _ = native_set_range_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -288,7 +318,7 @@ mod tests {
     )]
     async fn test_native_start_painting() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_start_painting(thread, Arguments::default()).await;
+        let _ = native_start_painting(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -297,7 +327,7 @@ mod tests {
     )]
     async fn test_native_get_gtk_setting() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_gtk_setting(thread, Arguments::default()).await;
+        let _ = native_get_gtk_setting(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -306,7 +336,7 @@ mod tests {
     )]
     async fn test_native_paint_arrow() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_arrow(thread, Arguments::default()).await;
+        let _ = native_paint_arrow(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -315,7 +345,7 @@ mod tests {
     )]
     async fn test_native_paint_background() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_background(thread, Arguments::default()).await;
+        let _ = native_paint_background(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -324,7 +354,7 @@ mod tests {
     )]
     async fn test_native_paint_box() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_box(thread, Arguments::default()).await;
+        let _ = native_paint_box(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -333,7 +363,7 @@ mod tests {
     )]
     async fn test_native_paint_box_gap() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_box_gap(thread, Arguments::default()).await;
+        let _ = native_paint_box_gap(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -342,7 +372,7 @@ mod tests {
     )]
     async fn test_native_paint_check() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_check(thread, Arguments::default()).await;
+        let _ = native_paint_check(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -351,7 +381,7 @@ mod tests {
     )]
     async fn test_native_paint_expander() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_expander(thread, Arguments::default()).await;
+        let _ = native_paint_expander(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -360,7 +390,7 @@ mod tests {
     )]
     async fn test_native_paint_extension() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_extension(thread, Arguments::default()).await;
+        let _ = native_paint_extension(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -369,7 +399,7 @@ mod tests {
     )]
     async fn test_native_paint_flat_box() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_flat_box(thread, Arguments::default()).await;
+        let _ = native_paint_flat_box(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -378,7 +408,7 @@ mod tests {
     )]
     async fn test_native_paint_focus() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_focus(thread, Arguments::default()).await;
+        let _ = native_paint_focus(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -387,7 +417,7 @@ mod tests {
     )]
     async fn test_native_paint_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_handle(thread, Arguments::default()).await;
+        let _ = native_paint_handle(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -396,7 +426,7 @@ mod tests {
     )]
     async fn test_native_paint_hline() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_hline(thread, Arguments::default()).await;
+        let _ = native_paint_hline(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -405,7 +435,7 @@ mod tests {
     )]
     async fn test_native_paint_option() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_option(thread, Arguments::default()).await;
+        let _ = native_paint_option(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -414,7 +444,7 @@ mod tests {
     )]
     async fn test_native_paint_shadow() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_shadow(thread, Arguments::default()).await;
+        let _ = native_paint_shadow(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -423,7 +453,7 @@ mod tests {
     )]
     async fn test_native_paint_slider() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_slider(thread, Arguments::default()).await;
+        let _ = native_paint_slider(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -432,7 +462,7 @@ mod tests {
     )]
     async fn test_native_paint_vline() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_paint_vline(thread, Arguments::default()).await;
+        let _ = native_paint_vline(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -441,6 +471,6 @@ mod tests {
     )]
     async fn test_native_switch_theme() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_switch_theme(thread, Arguments::default()).await;
+        let _ = native_switch_theme(thread, Parameters::default()).await;
     }
 }

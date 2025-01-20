@@ -1,6 +1,6 @@
-use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
@@ -33,14 +33,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn are_nest_mates(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn are_nest_mates(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.reflect.Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z")
 }
 
 #[async_recursion(?Send)]
 pub(crate) async fn get_caller_class(
     thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
     for frame in frames.iter().rev() {
@@ -62,9 +62,9 @@ pub(crate) async fn get_caller_class(
 #[async_recursion(?Send)]
 async fn get_class_access_flags(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = arguments.pop_reference()? else {
+    let Some(Reference::Object(object)) = parameters.pop_reference()? else {
         return Err(InternalError(
             "getClassAccessFlags: no arguments".to_string(),
         ));
@@ -88,7 +88,7 @@ mod tests {
     )]
     async fn test_are_nest_mates() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = are_nest_mates(thread, Arguments::default()).await;
+        let _ = are_nest_mates(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -96,8 +96,8 @@ mod tests {
         let (vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.String").await?;
         let class_object = class.to_object(&vm).await?;
-        let arguments = Arguments::new(vec![class_object]);
-        let result = get_class_access_flags(thread, arguments).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_class_access_flags(thread, parameters).await?;
         let access_flags: i32 = result.expect("access_flags").try_into()?;
         assert_eq!(access_flags, 49);
         Ok(())

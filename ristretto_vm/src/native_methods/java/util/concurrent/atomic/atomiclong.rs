@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -15,7 +15,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn vm_supports_cs_8(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn vm_supports_cs_8(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // See "Atomic accesses to read-only memory" in `core::sync::atomic` for more information.
     let atomic_8_bytes = matches!(
         ARCH,
@@ -39,7 +39,7 @@ mod tests {
     #[tokio::test]
     async fn test_vm_supports_cs_8() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let value = vm_supports_cs_8(thread, Arguments::default()).await?;
+        let value = vm_supports_cs_8(thread, Parameters::default()).await?;
         assert_eq!(value, Some(Value::from(true)));
         Ok(())
     }

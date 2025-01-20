@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn max_object_inspection_age(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Long(0)))
 }
@@ -33,7 +33,7 @@ mod tests {
     #[tokio::test]
     async fn test_max_object_inspection_age() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = max_object_inspection_age(thread, Arguments::default()).await?;
+        let result = max_object_inspection_age(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }

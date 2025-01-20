@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn derive_key(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn derive_key(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.security.ec.ECDHKeyAgreement.deriveKey([B[B[B)[B")
 }
 
@@ -28,6 +28,6 @@ mod tests {
     )]
     async fn test_derive_key() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = derive_key(thread, Arguments::default()).await;
+        let _ = derive_key(thread, Parameters::default()).await;
     }
 }

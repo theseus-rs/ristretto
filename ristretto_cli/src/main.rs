@@ -42,8 +42,8 @@ struct Cli {
     #[arg(short = 'D', help = "Define a system property")]
     properties: Option<Vec<String>>,
 
-    #[arg(help = "Additional arguments to pass to the main class")]
-    arguments: Option<Vec<String>>,
+    #[arg(help = "Additional parameters to pass to the main class")]
+    parameters: Option<Vec<String>>,
 
     #[arg(
         long = "enable-preview",
@@ -128,9 +128,9 @@ async fn common_main(cli: Cli) -> Result<()> {
             return process_error(error);
         }
     };
-    let arguments = cli.arguments.unwrap_or_default();
+    let parameters = cli.parameters.unwrap_or_default();
 
-    match vm.invoke_main(arguments).await {
+    match vm.invoke_main(parameters).await {
         Ok(_) => Ok(()),
         Err(error) => process_error(error),
     }
@@ -209,9 +209,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_common_main_no_arguments_error() -> Result<()> {
-        let arguments: Vec<String> = Vec::new();
-        let cli = Cli::parse_from(arguments);
+    async fn test_common_main_no_parameters_error() -> Result<()> {
+        let parameters: Vec<String> = Vec::new();
+        let cli = Cli::parse_from(parameters);
         let result = common_main(cli).await;
         assert!(result.is_err());
         Ok(())

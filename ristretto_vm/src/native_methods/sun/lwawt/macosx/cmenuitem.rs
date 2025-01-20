@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -28,27 +28,33 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn native_create(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_create(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuItem.nativeCreate(JZ)J")
 }
 
 #[async_recursion(?Send)]
-async fn native_set_enabled(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_set_enabled(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuItem.nativeSetEnabled(JZ)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_set_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_set_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuItem.nativeSetImage(JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_set_label(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_set_label(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuItem.nativeSetLabel(JLjava/lang/String;CII)V")
 }
 
 #[async_recursion(?Send)]
-async fn native_set_tooltip(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_set_tooltip(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuItem.nativeSetTooltip(JLjava/lang/String;)V")
 }
 
@@ -60,7 +66,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CMenuItem.nativeCreate(JZ)J")]
     async fn test_native_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create(thread, Arguments::default()).await;
+        let _ = native_create(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -69,7 +75,7 @@ mod tests {
     )]
     async fn test_native_set_enabled() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_enabled(thread, Arguments::default()).await;
+        let _ = native_set_enabled(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -78,7 +84,7 @@ mod tests {
     )]
     async fn test_native_set_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_image(thread, Arguments::default()).await;
+        let _ = native_set_image(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -87,7 +93,7 @@ mod tests {
     )]
     async fn test_native_set_label() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_label(thread, Arguments::default()).await;
+        let _ = native_set_label(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -96,6 +102,6 @@ mod tests {
     )]
     async fn test_native_set_tooltip() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_tooltip(thread, Arguments::default()).await;
+        let _ = native_set_tooltip(thread, Parameters::default()).await;
     }
 }

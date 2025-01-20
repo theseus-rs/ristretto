@@ -1,7 +1,7 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{
     MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_20, JAVA_21,
 };
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -121,20 +121,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn get_ip_dont_fragment_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.getIpDontFragment0(I)Z")
 }
 
 #[async_recursion(?Send)]
-async fn get_so_peer_cred_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_so_peer_cred_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.getSoPeerCred0(I)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_tcp_keep_alive_intvl_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.getTcpKeepAliveIntvl0(I)I")
 }
@@ -142,7 +145,7 @@ async fn get_tcp_keep_alive_intvl_0(
 #[async_recursion(?Send)]
 async fn get_tcp_keep_alive_probes_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.getTcpKeepAliveProbes0(I)I")
 }
@@ -150,7 +153,7 @@ async fn get_tcp_keep_alive_probes_0(
 #[async_recursion(?Send)]
 async fn get_tcp_keep_alive_time_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.getTcpKeepAliveTime0(I)I")
 }
@@ -158,7 +161,7 @@ async fn get_tcp_keep_alive_time_0(
 #[async_recursion(?Send)]
 async fn get_tcpkeep_alive_probes_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.getTcpkeepAliveProbes0(I)I")
 }
@@ -166,7 +169,7 @@ async fn get_tcpkeep_alive_probes_0(
 #[async_recursion(?Send)]
 async fn ip_dont_fragment_supported_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.ipDontFragmentSupported0()Z")
 }
@@ -174,7 +177,7 @@ async fn ip_dont_fragment_supported_0(
 #[async_recursion(?Send)]
 async fn keep_alive_options_supported_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.keepAliveOptionsSupported0()Z")
 }
@@ -182,7 +185,7 @@ async fn keep_alive_options_supported_0(
 #[async_recursion(?Send)]
 async fn set_ip_dont_fragment_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.setIpDontFragment0(IZ)V")
 }
@@ -190,7 +193,7 @@ async fn set_ip_dont_fragment_0(
 #[async_recursion(?Send)]
 async fn set_tcp_keep_alive_intvl_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.setTcpKeepAliveIntvl0(II)V")
 }
@@ -198,7 +201,7 @@ async fn set_tcp_keep_alive_intvl_0(
 #[async_recursion(?Send)]
 async fn set_tcp_keep_alive_probes_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.setTcpKeepAliveProbes0(II)V")
 }
@@ -206,7 +209,7 @@ async fn set_tcp_keep_alive_probes_0(
 #[async_recursion(?Send)]
 async fn set_tcp_keep_alive_time_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.setTcpKeepAliveTime0(II)V")
 }
@@ -214,7 +217,7 @@ async fn set_tcp_keep_alive_time_0(
 #[async_recursion(?Send)]
 async fn set_tcpkeep_alive_probes_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.setTcpkeepAliveProbes0(II)V")
 }
@@ -229,7 +232,7 @@ mod tests {
     )]
     async fn test_get_ip_dont_fragment_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_ip_dont_fragment_0(thread, Arguments::default()).await;
+        let _ = get_ip_dont_fragment_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -238,7 +241,7 @@ mod tests {
     )]
     async fn test_get_so_peer_cred_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_so_peer_cred_0(thread, Arguments::default()).await;
+        let _ = get_so_peer_cred_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -247,7 +250,7 @@ mod tests {
     )]
     async fn test_get_tcp_keep_alive_intvl_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_tcp_keep_alive_intvl_0(thread, Arguments::default()).await;
+        let _ = get_tcp_keep_alive_intvl_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -256,7 +259,7 @@ mod tests {
     )]
     async fn test_get_tcp_keep_alive_probes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_tcp_keep_alive_probes_0(thread, Arguments::default()).await;
+        let _ = get_tcp_keep_alive_probes_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -265,7 +268,7 @@ mod tests {
     )]
     async fn test_get_tcp_keep_alive_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_tcp_keep_alive_time_0(thread, Arguments::default()).await;
+        let _ = get_tcp_keep_alive_time_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -274,7 +277,7 @@ mod tests {
     )]
     async fn test_get_tcpkeep_alive_probes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_tcpkeep_alive_probes_0(thread, Arguments::default()).await;
+        let _ = get_tcpkeep_alive_probes_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -283,7 +286,7 @@ mod tests {
     )]
     async fn test_ip_dont_fragment_supported_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ip_dont_fragment_supported_0(thread, Arguments::default()).await;
+        let _ = ip_dont_fragment_supported_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -292,7 +295,7 @@ mod tests {
     )]
     async fn test_keep_alive_options_supported_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = keep_alive_options_supported_0(thread, Arguments::default()).await;
+        let _ = keep_alive_options_supported_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -301,7 +304,7 @@ mod tests {
     )]
     async fn test_set_ip_dont_fragment_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_ip_dont_fragment_0(thread, Arguments::default()).await;
+        let _ = set_ip_dont_fragment_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -310,7 +313,7 @@ mod tests {
     )]
     async fn test_set_tcp_keep_alive_intvl_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_tcp_keep_alive_intvl_0(thread, Arguments::default()).await;
+        let _ = set_tcp_keep_alive_intvl_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -319,7 +322,7 @@ mod tests {
     )]
     async fn test_set_tcp_keep_alive_probes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_tcp_keep_alive_probes_0(thread, Arguments::default()).await;
+        let _ = set_tcp_keep_alive_probes_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -328,7 +331,7 @@ mod tests {
     )]
     async fn test_set_tcp_keep_alive_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_tcp_keep_alive_time_0(thread, Arguments::default()).await;
+        let _ = set_tcp_keep_alive_time_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -337,6 +340,6 @@ mod tests {
     )]
     async fn test_set_tcpkeep_alive_probes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_tcpkeep_alive_probes_0(thread, Arguments::default()).await;
+        let _ = set_tcpkeep_alive_probes_0(thread, Parameters::default()).await;
     }
 }

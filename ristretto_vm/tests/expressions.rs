@@ -14,8 +14,8 @@ async fn test_expressions_main_method() -> Result<()> {
         .main_class("Expressions")
         .build()?;
     let vm = VM::new(configuration).await?;
-    let arguments: Vec<&str> = Vec::new();
-    let result = vm.invoke_main(arguments).await?;
+    let parameters: Vec<&str> = Vec::new();
+    let result = vm.invoke_main(parameters).await?;
     assert!(result.is_none());
     Ok(())
 }

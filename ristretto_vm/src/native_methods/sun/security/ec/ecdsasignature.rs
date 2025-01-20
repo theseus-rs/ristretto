@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,14 +20,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn sign_digest(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn sign_digest(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.security.ec.ECDSASignature.signDigest([B[B[B[BI)[B")
 }
 
 #[async_recursion(?Send)]
 async fn verify_signed_digest(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.ec.ECDSASignature.verifySignedDigest([B[B[B[B)Z")
 }
@@ -42,7 +42,7 @@ mod tests {
     )]
     async fn test_sign_digest() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = sign_digest(thread, Arguments::default()).await;
+        let _ = sign_digest(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -51,6 +51,6 @@ mod tests {
     )]
     async fn test_verify_signed_digest() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = verify_signed_digest(thread, Arguments::default()).await;
+        let _ = verify_signed_digest(thread, Parameters::default()).await;
     }
 }

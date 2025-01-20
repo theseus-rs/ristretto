@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -22,13 +22,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_create_component(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformComponent.nativeCreateComponent(J)J")
 }
 
 #[async_recursion(?Send)]
-async fn native_set_bounds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_set_bounds(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformComponent.nativeSetBounds(JIIII)V")
 }
 
@@ -42,7 +42,7 @@ mod tests {
     )]
     async fn test_native_create_component() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_component(thread, Arguments::default()).await;
+        let _ = native_create_component(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -51,6 +51,6 @@ mod tests {
     )]
     async fn test_native_set_bounds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_bounds(thread, Arguments::default()).await;
+        let _ = native_set_bounds(thread, Parameters::default()).await;
     }
 }

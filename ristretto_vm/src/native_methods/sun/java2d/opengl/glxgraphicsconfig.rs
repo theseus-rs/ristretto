@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,20 +21,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_glx_config_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_glx_config_info(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.GLXGraphicsConfig.getGLXConfigInfo(II)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_ogl_capabilities(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.GLXGraphicsConfig.getOGLCapabilities(J)I")
 }
 
 #[async_recursion(?Send)]
-async fn init_config(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_config(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.GLXGraphicsConfig.initConfig(JJ)V")
 }
 
@@ -48,7 +51,7 @@ mod tests {
     )]
     async fn test_get_glx_config_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glx_config_info(thread, Arguments::default()).await;
+        let _ = get_glx_config_info(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -57,7 +60,7 @@ mod tests {
     )]
     async fn test_get_ogl_capabilities() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_ogl_capabilities(thread, Arguments::default()).await;
+        let _ = get_ogl_capabilities(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -66,6 +69,6 @@ mod tests {
     )]
     async fn test_init_config() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_config(thread, Arguments::default()).await;
+        let _ = init_config(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -80,64 +80,64 @@ fn get_class_name(value: Value) -> Result<String> {
 }
 
 #[async_recursion(?Send)]
-async fn get(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.get(Ljava/lang/Object;I)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn get_boolean(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_boolean(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getBoolean(Ljava/lang/Object;I)Z")
 }
 
 #[async_recursion(?Send)]
-async fn get_byte(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_byte(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getByte(Ljava/lang/Object;I)B")
 }
 
 #[async_recursion(?Send)]
-async fn get_char(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_char(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getChar(Ljava/lang/Object;I)C")
 }
 
 #[async_recursion(?Send)]
-async fn get_double(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_double(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getDouble(Ljava/lang/Object;I)D")
 }
 
 #[async_recursion(?Send)]
-async fn get_float(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_float(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getFloat(Ljava/lang/Object;I)F")
 }
 
 #[async_recursion(?Send)]
-async fn get_int(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_int(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getInt(Ljava/lang/Object;I)I")
 }
 
 #[async_recursion(?Send)]
-async fn get_length(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_length(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getLength(Ljava/lang/Object;)I")
 }
 
 #[async_recursion(?Send)]
-async fn get_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_long(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getLong(Ljava/lang/Object;I)J")
 }
 
 #[async_recursion(?Send)]
-async fn get_short(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_short(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getShort(Ljava/lang/Object;I)S")
 }
 
 #[async_recursion(?Send)]
-async fn multi_new_array(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn multi_new_array(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.multiNewArray(Ljava/lang/Class;[I)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn new_array(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let length = usize::try_from(arguments.pop_int()?)?;
-    let class_name = get_class_name(arguments.pop()?)?;
+async fn new_array(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let length = usize::try_from(parameters.pop_int()?)?;
+    let class_name = get_class_name(parameters.pop()?)?;
 
     let array = match class_name.as_str() {
         "boolean" | "byte" => Reference::from(vec![0i8; length]),
@@ -159,47 +159,47 @@ async fn new_array(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opti
 }
 
 #[async_recursion(?Send)]
-async fn set(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.set(Ljava/lang/Object;ILjava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_boolean(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_boolean(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setBoolean(Ljava/lang/Object;IZ)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_byte(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_byte(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setByte(Ljava/lang/Object;IB)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_char(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_char(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setChar(Ljava/lang/Object;IC)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_double(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_double(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setDouble(Ljava/lang/Object;ID)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_float(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_float(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setFloat(Ljava/lang/Object;IF)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_int(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_int(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setInt(Ljava/lang/Object;II)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_long(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_long(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setLong(Ljava/lang/Object;IJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_short(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_short(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setShort(Ljava/lang/Object;IS)V")
 }
 
@@ -213,7 +213,7 @@ mod tests {
     )]
     async fn test_get() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get(thread, Arguments::default()).await;
+        let _ = get(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -222,7 +222,7 @@ mod tests {
     )]
     async fn test_get_boolean() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_boolean(thread, Arguments::default()).await;
+        let _ = get_boolean(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -231,7 +231,7 @@ mod tests {
     )]
     async fn test_get_byte() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_byte(thread, Arguments::default()).await;
+        let _ = get_byte(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -240,7 +240,7 @@ mod tests {
     )]
     async fn test_get_char() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_char(thread, Arguments::default()).await;
+        let _ = get_char(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -249,7 +249,7 @@ mod tests {
     )]
     async fn test_get_double() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_double(thread, Arguments::default()).await;
+        let _ = get_double(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -258,7 +258,7 @@ mod tests {
     )]
     async fn test_get_float() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_float(thread, Arguments::default()).await;
+        let _ = get_float(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -267,7 +267,7 @@ mod tests {
     )]
     async fn test_get_int() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_int(thread, Arguments::default()).await;
+        let _ = get_int(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -276,7 +276,7 @@ mod tests {
     )]
     async fn test_get_length() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_length(thread, Arguments::default()).await;
+        let _ = get_length(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -285,7 +285,7 @@ mod tests {
     )]
     async fn test_get_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_long(thread, Arguments::default()).await;
+        let _ = get_long(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -294,7 +294,7 @@ mod tests {
     )]
     async fn test_get_short() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_short(thread, Arguments::default()).await;
+        let _ = get_short(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -303,7 +303,7 @@ mod tests {
     )]
     async fn test_multi_new_array() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = multi_new_array(thread, Arguments::default()).await;
+        let _ = multi_new_array(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -312,7 +312,7 @@ mod tests {
     )]
     async fn test_set() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set(thread, Arguments::default()).await;
+        let _ = set(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -321,7 +321,7 @@ mod tests {
     )]
     async fn test_set_boolean() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_boolean(thread, Arguments::default()).await;
+        let _ = set_boolean(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -330,7 +330,7 @@ mod tests {
     )]
     async fn test_set_byte() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_byte(thread, Arguments::default()).await;
+        let _ = set_byte(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -339,7 +339,7 @@ mod tests {
     )]
     async fn test_set_char() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_char(thread, Arguments::default()).await;
+        let _ = set_char(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -348,7 +348,7 @@ mod tests {
     )]
     async fn test_set_double() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_double(thread, Arguments::default()).await;
+        let _ = set_double(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -357,7 +357,7 @@ mod tests {
     )]
     async fn test_set_float() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_float(thread, Arguments::default()).await;
+        let _ = set_float(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -366,6 +366,6 @@ mod tests {
     )]
     async fn test_set_int() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_int(thread, Arguments::default()).await;
+        let _ = set_int(thread, Parameters::default()).await;
     }
 }

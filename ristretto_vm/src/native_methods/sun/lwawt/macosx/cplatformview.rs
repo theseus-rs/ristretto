@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -43,14 +43,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn native_create_view(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_create_view(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformView.nativeCreateView(IIIIJ)J")
 }
 
 #[async_recursion(?Send)]
 async fn native_get_location_on_screen(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformView.nativeGetLocationOnScreen(J)Ljava/awt/geom/Rectangle2D;")
 }
@@ -58,7 +61,7 @@ async fn native_get_location_on_screen(
 #[async_recursion(?Send)]
 async fn native_get_ns_view_display_id(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformView.nativeGetNSViewDisplayID(J)I")
 }
@@ -66,7 +69,7 @@ async fn native_get_ns_view_display_id(
 #[async_recursion(?Send)]
 async fn native_is_view_under_mouse(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformView.nativeIsViewUnderMouse(J)Z")
 }
@@ -74,7 +77,7 @@ async fn native_is_view_under_mouse(
 #[async_recursion(?Send)]
 async fn native_set_auto_resizable(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformView.nativeSetAutoResizable(JZ)V")
 }
@@ -89,7 +92,7 @@ mod tests {
     )]
     async fn test_native_create_view() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_view(thread, Arguments::default()).await;
+        let _ = native_create_view(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -98,7 +101,7 @@ mod tests {
     )]
     async fn test_native_get_location_on_screen() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_location_on_screen(thread, Arguments::default()).await;
+        let _ = native_get_location_on_screen(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -107,7 +110,7 @@ mod tests {
     )]
     async fn test_native_get_ns_view_display_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_ns_view_display_id(thread, Arguments::default()).await;
+        let _ = native_get_ns_view_display_id(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -116,7 +119,7 @@ mod tests {
     )]
     async fn test_native_is_view_under_mouse() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_is_view_under_mouse(thread, Arguments::default()).await;
+        let _ = native_is_view_under_mouse(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -125,6 +128,6 @@ mod tests {
     )]
     async fn test_native_set_auto_resizable() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_auto_resizable(thread, Arguments::default()).await;
+        let _ = native_set_auto_resizable(thread, Parameters::default()).await;
     }
 }

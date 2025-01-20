@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -27,7 +27,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_create_popup_menu(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPopupMenu.nativeCreatePopupMenu()J")
 }
@@ -35,7 +35,7 @@ async fn native_create_popup_menu(
 #[async_recursion(?Send)]
 async fn native_show_popup_menu(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPopupMenu.nativeShowPopupMenu(JII)J")
 }
@@ -50,7 +50,7 @@ mod tests {
     )]
     async fn test_native_create_popup_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_popup_menu(thread, Arguments::default()).await;
+        let _ = native_create_popup_menu(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -59,6 +59,6 @@ mod tests {
     )]
     async fn test_native_show_popup_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_show_popup_menu(thread, Arguments::default()).await;
+        let _ = native_show_popup_menu(thread, Parameters::default()).await;
     }
 }

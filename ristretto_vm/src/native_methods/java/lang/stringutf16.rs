@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn is_big_endian(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_big_endian(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(Some(Value::from(true)))
 }
 
@@ -25,7 +25,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_big_endian() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let value = is_big_endian(thread, Arguments::default()).await?;
+        let value = is_big_endian(thread, Parameters::default()).await?;
         assert_eq!(value, Some(Value::from(true)));
         Ok(())
     }

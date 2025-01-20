@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -39,35 +39,41 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn create_context_from(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn create_context_from(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.applescript.AppleScriptEngine.createContextFrom(Ljava/lang/Object;)J")
 }
 
 #[async_recursion(?Send)]
-async fn create_object_from(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn create_object_from(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.applescript.AppleScriptEngine.createObjectFrom(J)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn dispose_context(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn dispose_context(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("apple.applescript.AppleScriptEngine.disposeContext(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn eval_script(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn eval_script(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("apple.applescript.AppleScriptEngine.evalScript(Ljava/lang/String;J)J")
 }
 
 #[async_recursion(?Send)]
 async fn eval_script_from_url(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.applescript.AppleScriptEngine.evalScriptFromURL(Ljava/lang/String;J)J")
 }
 
 #[async_recursion(?Send)]
-async fn init_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_native(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
@@ -81,7 +87,7 @@ mod tests {
     )]
     async fn test_create_context_from() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_context_from(thread, Arguments::default()).await;
+        let _ = create_context_from(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -90,7 +96,7 @@ mod tests {
     )]
     async fn test_create_object_from() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_object_from(thread, Arguments::default()).await;
+        let _ = create_object_from(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -99,7 +105,7 @@ mod tests {
     )]
     async fn test_dispose_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dispose_context(thread, Arguments::default()).await;
+        let _ = dispose_context(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -108,7 +114,7 @@ mod tests {
     )]
     async fn test_eval_script() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = eval_script(thread, Arguments::default()).await;
+        let _ = eval_script(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -117,13 +123,13 @@ mod tests {
     )]
     async fn test_eval_script_from_url() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = eval_script_from_url(thread, Arguments::default()).await;
+        let _ = eval_script_from_url(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_native() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_native(thread, Arguments::default()).await?;
+        let result = init_native(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
     }

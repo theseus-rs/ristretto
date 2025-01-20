@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -80,14 +80,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn native_get_bounds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_get_bounds(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;")
 }
 
 #[async_recursion(?Send)]
 async fn native_get_display_mode(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetDisplayMode(I)Ljava/awt/DisplayMode;")
 }
@@ -95,7 +95,7 @@ async fn native_get_display_mode(
 #[async_recursion(?Send)]
 async fn native_get_display_modes(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetDisplayModes(I)[Ljava/awt/DisplayMode;")
 }
@@ -103,7 +103,7 @@ async fn native_get_display_modes(
 #[async_recursion(?Send)]
 async fn native_get_scale_factor(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetScaleFactor(I)D")
 }
@@ -111,7 +111,7 @@ async fn native_get_scale_factor(
 #[async_recursion(?Send)]
 async fn native_get_screen_insets(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetScreenInsets(I)Ljava/awt/Insets;")
 }
@@ -119,7 +119,7 @@ async fn native_get_screen_insets(
 #[async_recursion(?Send)]
 async fn native_get_x_resolution(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetXResolution(I)D")
 }
@@ -127,7 +127,7 @@ async fn native_get_x_resolution(
 #[async_recursion(?Send)]
 async fn native_get_y_resolution(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetYResolution(I)D")
 }
@@ -135,7 +135,7 @@ async fn native_get_y_resolution(
 #[async_recursion(?Send)]
 async fn native_reset_display_mode(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeResetDisplayMode()V")
 }
@@ -143,7 +143,7 @@ async fn native_reset_display_mode(
 #[async_recursion(?Send)]
 async fn native_set_display_mode(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeSetDisplayMode(IIIII)V")
 }
@@ -158,7 +158,7 @@ mod tests {
     )]
     async fn test_native_get_bounds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_bounds(thread, Arguments::default()).await;
+        let _ = native_get_bounds(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -167,7 +167,7 @@ mod tests {
     )]
     async fn test_native_get_display_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_display_mode(thread, Arguments::default()).await;
+        let _ = native_get_display_mode(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -176,7 +176,7 @@ mod tests {
     )]
     async fn test_native_get_display_modes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_display_modes(thread, Arguments::default()).await;
+        let _ = native_get_display_modes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -185,7 +185,7 @@ mod tests {
     )]
     async fn test_native_get_scale_factor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_scale_factor(thread, Arguments::default()).await;
+        let _ = native_get_scale_factor(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -194,7 +194,7 @@ mod tests {
     )]
     async fn test_native_get_screen_insets() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_screen_insets(thread, Arguments::default()).await;
+        let _ = native_get_screen_insets(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -203,7 +203,7 @@ mod tests {
     )]
     async fn test_native_get_x_resolution() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_x_resolution(thread, Arguments::default()).await;
+        let _ = native_get_x_resolution(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -212,7 +212,7 @@ mod tests {
     )]
     async fn test_native_get_y_resolution() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_y_resolution(thread, Arguments::default()).await;
+        let _ = native_get_y_resolution(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -221,7 +221,7 @@ mod tests {
     )]
     async fn test_native_reset_display_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_reset_display_mode(thread, Arguments::default()).await;
+        let _ = native_reset_display_mode(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -230,6 +230,6 @@ mod tests {
     )]
     async fn test_native_set_display_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_display_mode(thread, Arguments::default()).await;
+        let _ = native_set_display_mode(thread, Parameters::default()).await;
     }
 }

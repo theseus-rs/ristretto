@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,14 +20,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn n_get_num_devices(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_get_num_devices(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixerProvider.nGetNumDevices()I")
 }
 
 #[async_recursion(?Send)]
 async fn n_new_port_mixer_info(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixerProvider.nNewPortMixerInfo(I)Lcom/sun/media/sound/PortMixerProvider$PortMixerInfo;")
 }
@@ -42,7 +42,7 @@ mod tests {
     )]
     async fn test_n_get_num_devices() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_num_devices(thread, Arguments::default()).await;
+        let _ = n_get_num_devices(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -51,6 +51,6 @@ mod tests {
     )]
     async fn test_n_new_port_mixer_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_new_port_mixer_info(thread, Arguments::default()).await;
+        let _ = n_new_port_mixer_info(thread, Parameters::default()).await;
     }
 }

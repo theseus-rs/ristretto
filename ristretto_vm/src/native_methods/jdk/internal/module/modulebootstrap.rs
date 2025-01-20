@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn boot(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn boot(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // TODO: remove this method once the module system is implemented
     Ok(Some(Value::Object(None)))
 }
@@ -26,7 +26,7 @@ mod tests {
     #[tokio::test]
     async fn test_boot() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = boot(thread, Arguments::default()).await?;
+        let result = boot(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }

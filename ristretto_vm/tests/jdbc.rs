@@ -17,8 +17,8 @@ async fn test_jdbc() -> ristretto_vm::Result<()> {
         .main_class("JDBC")
         .build()?;
     let _vm = VM::new(configuration).await?;
-    let _arguments: Vec<&str> = Vec::new();
+    let _parameters: Vec<&str> = Vec::new();
     // Temporarily disable this test because it requires the invokedynamic instruction.
-    // let result = vm.invoke_main(arguments).await?;
+    // let result = vm.invoke_main(parameters).await?;
     Ok(())
 }

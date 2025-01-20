@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_19, JAVA_20, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -110,61 +110,67 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn color_convert(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn color_convert(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.cmm.lcms.LCMS.colorConvert(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V")
 }
 
 #[async_recursion(?Send)]
 async fn create_native_transform(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.cmm.lcms.LCMS.createNativeTransform([JIIILjava/lang/Object;)J")
 }
 
 #[async_recursion(?Send)]
-async fn free_transform(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn free_transform(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.cmm.lcms.LCMS.freeTransform(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_profile_data_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.cmm.lcms.LCMS.getProfileDataNative(J[B)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_profile_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_profile_id(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.cmm.lcms.LCMS.getProfileID(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;")
 }
 
 #[async_recursion(?Send)]
 async fn get_profile_size_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.cmm.lcms.LCMS.getProfileSizeNative(J)I")
 }
 
 #[async_recursion(?Send)]
-async fn get_tag_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_tag_native(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.cmm.lcms.LCMS.getTagNative(JI)[B")
 }
 
 #[async_recursion(?Send)]
-async fn init_lcms(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_lcms(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.cmm.lcms.LCMS.initLCMS(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V")
 }
 
 #[async_recursion(?Send)]
-async fn load_profile_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn load_profile_native(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.cmm.lcms.LCMS.loadProfileNative([BLjava/lang/Object;)J")
 }
 
 #[async_recursion(?Send)]
-async fn set_tag_data_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_tag_data_native(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.cmm.lcms.LCMS.setTagDataNative(JI[B)V")
 }
 
@@ -178,7 +184,7 @@ mod tests {
     )]
     async fn test_color_convert() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = color_convert(thread, Arguments::default()).await;
+        let _ = color_convert(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -187,14 +193,14 @@ mod tests {
     )]
     async fn test_create_native_transform() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_native_transform(thread, Arguments::default()).await;
+        let _ = create_native_transform(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.freeTransform(J)V")]
     async fn test_free_transform() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = free_transform(thread, Arguments::default()).await;
+        let _ = free_transform(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -203,7 +209,7 @@ mod tests {
     )]
     async fn test_get_profile_data_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_profile_data_native(thread, Arguments::default()).await;
+        let _ = get_profile_data_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -212,7 +218,7 @@ mod tests {
     )]
     async fn test_get_profile_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_profile_id(thread, Arguments::default()).await;
+        let _ = get_profile_id(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -221,14 +227,14 @@ mod tests {
     )]
     async fn test_get_profile_size_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_profile_size_native(thread, Arguments::default()).await;
+        let _ = get_profile_size_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.java2d.cmm.lcms.LCMS.getTagNative(JI)[B")]
     async fn test_get_tag_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_tag_native(thread, Arguments::default()).await;
+        let _ = get_tag_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -237,7 +243,7 @@ mod tests {
     )]
     async fn test_init_lcms() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_lcms(thread, Arguments::default()).await;
+        let _ = init_lcms(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -246,7 +252,7 @@ mod tests {
     )]
     async fn test_load_profile_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = load_profile_native(thread, Arguments::default()).await;
+        let _ = load_profile_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -255,6 +261,6 @@ mod tests {
     )]
     async fn test_set_tag_data_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_tag_data_native(thread, Arguments::default()).await;
+        let _ = set_tag_data_native(thread, Parameters::default()).await;
     }
 }

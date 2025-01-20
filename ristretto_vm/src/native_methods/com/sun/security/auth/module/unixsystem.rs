@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_unix_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_unix_info(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.security.auth.module.UnixSystem.getUnixInfo()V")
 }
 
@@ -28,6 +28,6 @@ mod tests {
     )]
     async fn test_get_unix_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_unix_info(thread, Arguments::default()).await;
+        let _ = get_unix_info(thread, Parameters::default()).await;
     }
 }

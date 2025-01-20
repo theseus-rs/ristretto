@@ -1,4 +1,4 @@
-use crate::arguments::Arguments;
+use crate::parameters::Parameters;
 use crate::rust_value::{process_values, RustValue};
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::{Frame, Result, VM};
@@ -243,7 +243,7 @@ impl Thread {
     }
 
     /// Add a new frame to the thread and invoke the method. To invoke a method on an object
-    /// reference, the object reference must be the first argument in the arguments vector.
+    /// reference, the object reference must be the first parameter in the parameters vector.
     ///
     /// # Errors
     /// if the method cannot be invoked.
@@ -251,13 +251,13 @@ impl Thread {
         &self,
         class: &Arc<Class>,
         method: &Arc<Method>,
-        arguments: Vec<impl RustValue>,
+        parameters: Vec<impl RustValue>,
     ) -> Result<Option<Value>> {
         let class_name = class.name();
         let method_name = method.name();
         let method_descriptor = method.descriptor();
         let vm = self.vm()?;
-        let arguments = process_values(&vm, arguments).await?;
+        let parameters = process_values(&vm, parameters).await?;
 
         if event_enabled!(Level::DEBUG) {
             let access_flags = method.access_flags();
@@ -268,11 +268,11 @@ impl Thread {
         let rust_method = method_registry.method(class_name, method_name, method_descriptor);
 
         let (result, frame_added) = if let Some(rust_method) = rust_method {
-            let arguments = Arguments::new(arguments);
+            let parameters = Parameters::new(parameters);
             let Some(thread) = self.thread.upgrade() else {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
-            let result = rust_method(thread, arguments).await;
+            let result = rust_method(thread, parameters).await;
             (result, false)
         } else if method.is_native() {
             return Err(MethodNotFound {
@@ -282,8 +282,8 @@ impl Thread {
             }
             .into());
         } else {
-            let arguments = Thread::adjust_arguments(arguments);
-            let frame = Arc::new(Frame::new(&self.thread, class, method, arguments));
+            let parameters = Thread::adjust_parameters(parameters);
+            let frame = Arc::new(Frame::new(&self.thread, class, method, parameters));
 
             // Limit the scope of the write lock to just adding the frame to the thread. This
             // is necessary because the thread is re-entrant.
@@ -322,7 +322,7 @@ impl Thread {
     }
 
     /// Add a new frame to the thread and invoke the method. To invoke a method on an object
-    /// reference, the object reference must be the first argument in the arguments vector.
+    /// reference, the object reference must be the first parameter in the parameters vector.
     ///
     /// # Errors
     /// if the method cannot be invoked.
@@ -330,31 +330,31 @@ impl Thread {
         &self,
         class: &Arc<Class>,
         method: &Arc<Method>,
-        arguments: Vec<impl RustValue>,
+        parameters: Vec<impl RustValue>,
     ) -> Result<Value> {
-        let result = self.execute(class, method, arguments).await?;
+        let result = self.execute(class, method, parameters).await?;
         match result {
             Some(value) => Ok(value),
             None => Err(InternalError("No result".to_string())),
         }
     }
 
-    /// The JVM specification requires that Long and Double take two places in the arguments list
-    /// when passed to a method. This method adjusts the arguments list to account for this.
+    /// The JVM specification requires that Long and Double take two places in the parameters list
+    /// when passed to a method. This method adjusts the parameters list to account for this.
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-2.html#jvms-2.6.1>
-    fn adjust_arguments(mut arguments: Vec<Value>) -> Vec<Value> {
-        let mut index = arguments.len();
+    fn adjust_parameters(mut parameters: Vec<Value>) -> Vec<Value> {
+        let mut index = parameters.len();
         while index > 0 {
             index -= 1;
-            match &arguments[index] {
+            match &parameters[index] {
                 Value::Long(_) | Value::Double(_) => {
-                    arguments.insert(index + 1, Value::Unused);
+                    parameters.insert(index + 1, Value::Unused);
                 }
                 _ => {}
             }
         }
-        arguments
+        parameters
     }
 
     /// Create a new VM Object by invoking the constructor of the specified class.
@@ -365,7 +365,7 @@ impl Thread {
         &self,
         class_name: C,
         descriptor: M,
-        arguments: Vec<impl RustValue>,
+        parameters: Vec<impl RustValue>,
     ) -> Result<Value>
     where
         C: AsRef<str>,
@@ -380,16 +380,16 @@ impl Thread {
             )));
         };
 
-        let mut constructor_arguments = Vec::with_capacity(arguments.len() + 1);
+        let mut constructor_parameters = Vec::with_capacity(parameters.len() + 1);
         let object = Value::from(Object::new(class.clone())?);
-        constructor_arguments.insert(0, object.clone());
-        for argument in arguments {
-            let value = argument.to_value();
-            constructor_arguments.push(value);
+        constructor_parameters.insert(0, object.clone());
+        for parameter in parameters {
+            let value = parameter.to_value();
+            constructor_parameters.push(value);
         }
         let vm = self.vm()?;
-        let arguments = process_values(&vm, constructor_arguments).await?;
-        self.execute(&class, &constructor, arguments).await?;
+        let parameters = process_values(&vm, constructor_parameters).await?;
+        self.execute(&class, &constructor, parameters).await?;
         Ok(object)
     }
 }
@@ -457,16 +457,16 @@ mod tests {
     }
 
     #[test]
-    fn test_adjust_arguments() {
-        let arguments = vec![
+    fn test_adjust_parameters() {
+        let parameters = vec![
             Value::Int(1),
             Value::Long(2),
             Value::Float(3.0),
             Value::Double(4.0),
         ];
-        let adjusted_arguments = Thread::adjust_arguments(arguments);
+        let adjusted_parameters = Thread::adjust_parameters(parameters);
         assert_eq!(
-            adjusted_arguments,
+            adjusted_parameters,
             vec![
                 Value::Int(1),
                 Value::Long(2),

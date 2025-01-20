@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -17,12 +17,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn doubles_to_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn doubles_to_bytes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.ObjectOutputStream.doublesToBytes([DI[BII)V")
 }
 
 #[async_recursion(?Send)]
-async fn floats_to_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn floats_to_bytes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.ObjectOutputStream.floatsToBytes([FI[BII)V")
 }
 
@@ -36,7 +36,7 @@ mod tests {
     )]
     async fn test_doubles_to_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = doubles_to_bytes(thread, Arguments::default()).await;
+        let _ = doubles_to_bytes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -45,6 +45,6 @@ mod tests {
     )]
     async fn test_floats_to_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = floats_to_bytes(thread, Arguments::default()).await;
+        let _ = floats_to_bytes(thread, Parameters::default()).await;
     }
 }

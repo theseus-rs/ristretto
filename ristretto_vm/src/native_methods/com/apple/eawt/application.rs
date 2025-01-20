@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_initialize_application_delegate(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -33,7 +33,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_initialize_application_delegate() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_initialize_application_delegate(thread, Arguments::default()).await?;
+        let result = native_initialize_application_delegate(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
     }

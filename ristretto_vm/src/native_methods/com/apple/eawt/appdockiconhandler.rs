@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -48,7 +48,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_get_dock_icon_image(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppDockIconHandler.nativeGetDockIconImage()J")
 }
@@ -56,7 +56,7 @@ async fn native_get_dock_icon_image(
 #[async_recursion(?Send)]
 async fn native_set_dock_icon_badge(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppDockIconHandler.nativeSetDockIconBadge(Ljava/lang/String;)V")
 }
@@ -64,7 +64,7 @@ async fn native_set_dock_icon_badge(
 #[async_recursion(?Send)]
 async fn native_set_dock_icon_image(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppDockIconHandler.nativeSetDockIconImage(J)V")
 }
@@ -72,7 +72,7 @@ async fn native_set_dock_icon_image(
 #[async_recursion(?Send)]
 async fn native_set_dock_icon_progress(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppDockIconHandler.nativeSetDockIconProgress(I)V")
 }
@@ -80,7 +80,7 @@ async fn native_set_dock_icon_progress(
 #[async_recursion(?Send)]
 async fn native_set_dock_menu(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppDockIconHandler.nativeSetDockMenu(J)V")
 }
@@ -95,7 +95,7 @@ mod tests {
     )]
     async fn test_native_get_dock_icon_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_dock_icon_image(thread, Arguments::default()).await;
+        let _ = native_get_dock_icon_image(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -104,7 +104,7 @@ mod tests {
     )]
     async fn test_native_set_dock_icon_badge() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_dock_icon_badge(thread, Arguments::default()).await;
+        let _ = native_set_dock_icon_badge(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -113,7 +113,7 @@ mod tests {
     )]
     async fn test_native_set_dock_icon_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_dock_icon_image(thread, Arguments::default()).await;
+        let _ = native_set_dock_icon_image(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -122,7 +122,7 @@ mod tests {
     )]
     async fn test_native_set_dock_icon_progress() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_dock_icon_progress(thread, Arguments::default()).await;
+        let _ = native_set_dock_icon_progress(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -131,6 +131,6 @@ mod tests {
     )]
     async fn test_native_set_dock_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_dock_menu(thread, Arguments::default()).await;
+        let _ = native_set_dock_menu(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_17};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -42,24 +42,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_host_by_addr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_host_by_addr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.net.Inet6AddressImpl.getHostByAddr([B)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_local_host_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_local_host_name(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.Inet6AddressImpl.getLocalHostName()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn is_reachable_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_reachable_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.net.Inet6AddressImpl.isReachable0([BII[BII)Z")
 }
 
 #[async_recursion(?Send)]
 async fn lookup_all_host_addr(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.net.Inet6AddressImpl.lookupAllHostAddr(Ljava/lang/String;)[Ljava/net/InetAddress;")
 }
@@ -74,7 +77,7 @@ mod tests {
     )]
     async fn test_get_host_by_addr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_host_by_addr(thread, Arguments::default()).await;
+        let _ = get_host_by_addr(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -83,7 +86,7 @@ mod tests {
     )]
     async fn test_get_local_host_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_local_host_name(thread, Arguments::default()).await;
+        let _ = get_local_host_name(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -92,7 +95,7 @@ mod tests {
     )]
     async fn test_is_reachable_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_reachable_0(thread, Arguments::default()).await;
+        let _ = is_reachable_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -101,6 +104,6 @@ mod tests {
     )]
     async fn test_lookup_all_host_addr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = lookup_all_host_addr(thread, Arguments::default()).await;
+        let _ = lookup_all_host_addr(thread, Parameters::default()).await;
     }
 }

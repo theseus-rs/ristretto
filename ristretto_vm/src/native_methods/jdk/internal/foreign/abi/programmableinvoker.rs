@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,17 +21,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn generate_adapter(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn generate_adapter(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J")
 }
 
 #[async_recursion(?Send)]
-async fn invoke_native(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn invoke_native(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.ProgrammableInvoker.invokeNative(JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
@@ -45,7 +45,7 @@ mod tests {
     )]
     async fn test_generate_adapter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = generate_adapter(thread, Arguments::default()).await;
+        let _ = generate_adapter(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -54,13 +54,13 @@ mod tests {
     )]
     async fn test_invoke_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke_native(thread, Arguments::default()).await;
+        let _ = invoke_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Arguments::default()).await?;
+        let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }

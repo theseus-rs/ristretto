@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -19,7 +19,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn enqueue_tile(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn enqueue_tile(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.pipe.BufferedMaskBlit.enqueueTile(JILsun/java2d/SurfaceData;JI[BIIIIIIIII)I");
 }
 
@@ -33,6 +33,6 @@ mod tests {
     )]
     async fn test_enqueue_tile() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = enqueue_tile(thread, Arguments::default()).await;
+        let _ = enqueue_tile(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -14,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn is_preview_enabled(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_preview_enabled(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     let configuration = vm.configuration();
     let preview_features = configuration.preview_features();
@@ -28,7 +28,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_preview_enabled() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let value = is_preview_enabled(thread, Arguments::default()).await?;
+        let value = is_preview_enabled(thread, Parameters::default()).await?;
         assert_eq!(value, Some(Value::from(false)));
         Ok(())
     }

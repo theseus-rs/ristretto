@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_20};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -19,17 +19,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn echo(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn echo(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.Console.echo(Z)Z")
 }
 
 #[async_recursion(?Send)]
-async fn encoding(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn encoding(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.Console.encoding()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn istty(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn istty(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.Console.istty()Z")
 }
 
@@ -41,20 +41,20 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.io.Console.echo(Z)Z")]
     async fn test_echo() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = echo(thread, Arguments::default()).await;
+        let _ = echo(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.io.Console.encoding()Ljava/lang/String;")]
     async fn test_encoding() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = encoding(thread, Arguments::default()).await;
+        let _ = encoding(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.io.Console.istty()Z")]
     async fn test_istty() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = istty(thread, Arguments::default()).await;
+        let _ = istty(thread, Parameters::default()).await;
     }
 }

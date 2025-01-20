@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,17 +21,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn force_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn force_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.nio.MappedByteBuffer.force0(Ljava/io/FileDescriptor;JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn is_loaded_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_loaded_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.nio.MappedByteBuffer.isLoaded0(JJI)Z")
 }
 
 #[async_recursion(?Send)]
-async fn load_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.nio.MappedByteBuffer.load0(JJ)V")
 }
 
@@ -45,20 +45,20 @@ mod tests {
     )]
     async fn test_force_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = force_0(thread, Arguments::default()).await;
+        let _ = force_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.nio.MappedByteBuffer.isLoaded0(JJI)Z")]
     async fn test_is_loaded_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_loaded_0(thread, Arguments::default()).await;
+        let _ = is_loaded_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.nio.MappedByteBuffer.load0(JJ)V")]
     async fn test_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = load_0(thread, Arguments::default()).await;
+        let _ = load_0(thread, Parameters::default()).await;
     }
 }

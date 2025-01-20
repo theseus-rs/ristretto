@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,12 +20,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn socket_write_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn socket_write_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.net.SocketOutputStream.socketWrite0(Ljava/io/FileDescriptor;[BII)V")
 }
 
@@ -36,7 +36,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init(thread, Arguments::default()).await?;
+        let result = init(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -47,6 +47,6 @@ mod tests {
     )]
     async fn test_socket_write_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = socket_write_0(thread, Arguments::default()).await;
+        let _ = socket_write_0(thread, Parameters::default()).await;
     }
 }

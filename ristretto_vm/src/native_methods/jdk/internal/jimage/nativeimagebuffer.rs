@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -19,7 +19,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_native_map(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_native_map(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.jimage.NativeImageBuffer.getNativeMap(Ljava/lang/String;)Ljava/nio/ByteBuffer;")
 }
 
@@ -33,6 +33,6 @@ mod tests {
     )]
     async fn test_get_native_map() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_map(thread, Arguments::default()).await;
+        let _ = get_native_map(thread, Parameters::default()).await;
     }
 }

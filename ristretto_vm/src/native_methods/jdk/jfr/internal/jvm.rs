@@ -1,7 +1,7 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{
     MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_20, JAVA_21, JAVA_22, JAVA_23,
 };
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -388,77 +388,80 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn abort(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn abort(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.abort(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
-async fn add_string_constant(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn add_string_constant(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.addStringConstant(JLjava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn begin_recording(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn begin_recording(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.beginRecording()V")
 }
 
 #[async_recursion(?Send)]
-async fn commit(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn commit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.commit(J)J")
 }
 
 #[async_recursion(?Send)]
-async fn counter_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn counter_time(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.counterTime()J")
 }
 
 #[async_recursion(?Send)]
-async fn create_jfr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn create_jfr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.createJFR(Z)Z")
 }
 
 #[async_recursion(?Send)]
-async fn destroy_jfr(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn destroy_jfr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.destroyJFR()Z")
 }
 
 #[async_recursion(?Send)]
-async fn emit_data_loss(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn emit_data_loss(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.emitDataLoss(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn emit_event(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn emit_event(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.emitEvent(JJJ)Z")
 }
 
 #[async_recursion(?Send)]
 async fn emit_old_object_samples(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.emitOldObjectSamples(JZZ)V")
 }
 
 #[async_recursion(?Send)]
-async fn end_recording(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn end_recording(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.endRecording()V")
 }
 
 #[async_recursion(?Send)]
-async fn exclude(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn exclude(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.exclude(Ljava/lang/Thread;)V")
 }
 
 #[async_recursion(?Send)]
-async fn flush(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn flush(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.flush()")
 }
 
 #[async_recursion(?Send)]
 async fn get_all_event_classes(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getAllEventClasses()Ljava/util/List;")
 }
@@ -466,7 +469,7 @@ async fn get_all_event_classes(
 #[async_recursion(?Send)]
 async fn get_allowed_to_do_event_retransforms(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getAllowedToDoEventRetransforms()Z")
 }
@@ -474,203 +477,212 @@ async fn get_allowed_to_do_event_retransforms(
 #[async_recursion(?Send)]
 async fn get_chunk_start_nanos(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getChunkStartNanos()J")
 }
 
 #[async_recursion(?Send)]
-async fn get_class_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_class_id(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getClassId(Ljava/lang/Class;)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_class_id_non_intrinsic(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getClassIdNonIntrinsic(Ljava/lang/Class;)J")
 }
 
 #[async_recursion(?Send)]
-async fn get_configuration(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_configuration(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getConfiguration(Ljava/lang/Class;)Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn get_dump_path(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_dump_path(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getDumpPath()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_event_writer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_event_writer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getEventWriter()Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn get_handler(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_handler(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getHandler(Ljava/lang/Class;)Ljava/lang")
 }
 
 #[async_recursion(?Send)]
-async fn get_pid(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_pid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getPid()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_stack_trace_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_stack_trace_id(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getStackTraceId(IJ)J")
 }
 
 #[async_recursion(?Send)]
-async fn get_thread_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_thread_id(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getThreadId(Ljava/lang/Thread;)J")
 }
 
 #[async_recursion(?Send)]
-async fn get_ticks_frequency(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_ticks_frequency(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getTicksFrequency()J")
 }
 
 #[async_recursion(?Send)]
 async fn get_time_conversion_factor(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getTimeConversionFactor()D")
 }
 
 #[async_recursion(?Send)]
-async fn get_type_id(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_type_id(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getTypeId(Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_unloaded_event_class_count(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getUnloadedEventClassCount()J")
 }
 
 #[async_recursion(?Send)]
-async fn host_total_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn host_total_memory(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.hostTotalMemory()J")
 }
 
 #[async_recursion(?Send)]
 async fn host_total_swap_memory(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.hostTotalSwapMemory()J")
 }
 
 #[async_recursion(?Send)]
-async fn include(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn include(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.include(Ljava/lang/Thread;)V")
 }
 
 #[async_recursion(?Send)]
-async fn is_available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_available(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.isAvailable()Z")
 }
 
 #[async_recursion(?Send)]
-async fn is_containerized(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_containerized(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.isContainerized()Z")
 }
 
 #[async_recursion(?Send)]
-async fn is_excluded(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_excluded(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.isExcluded(Ljava/lang/Thread;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn is_instrumented(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_instrumented(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.isInstrumented(Ljava/lang/Class;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn is_recording(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_recording(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.isRecording()Z")
 }
 
 #[async_recursion(?Send)]
-async fn log(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn log(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.log(IILjava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
-async fn log_event(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn log_event(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.logEvent(I[Ljava/lang/String;Z)V")
 }
 
 #[async_recursion(?Send)]
-async fn mark_chunk_final(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn mark_chunk_final(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.markChunkFinal()V")
 }
 
 #[async_recursion(?Send)]
-async fn nanos_now(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn nanos_now(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.nanosNow()J")
 }
 
 #[async_recursion(?Send)]
-async fn new_event_writer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn new_event_writer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.newEventWriter()Ljdk/jfr/internal/EventWriter;")
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn register_stack_filter(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.registerStackFilter([Ljava/lang/String;[Ljava/lang/String;)J")
 }
 
 #[async_recursion(?Send)]
-async fn retransform_classes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn retransform_classes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.retransformClasses([Ljava/lang/Class;)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_compressed_integers(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setCompressedIntegers(Z)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_configuration(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_configuration(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setConfiguration(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn set_cutoff(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_cutoff(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setCutoff(JJ)Z")
 }
 
 #[async_recursion(?Send)]
-async fn set_dump_path(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_dump_path(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setDumpPath(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_enabled(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_enabled(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setEnabled(JZ)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_file_notification(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setFileNotification(J)V")
 }
@@ -678,7 +690,7 @@ async fn set_file_notification(
 #[async_recursion(?Send)]
 async fn set_force_instrumentation(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setForceInstrumentation(Z)V")
 }
@@ -686,7 +698,7 @@ async fn set_force_instrumentation(
 #[async_recursion(?Send)]
 async fn set_global_buffer_count(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setGlobalBufferCount(J)V")
 }
@@ -694,25 +706,25 @@ async fn set_global_buffer_count(
 #[async_recursion(?Send)]
 async fn set_global_buffer_size(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setGlobalBufferSize(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_handler(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_handler(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setHandler(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn set_memory_size(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_memory_size(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setMemorySize(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_method_sampling_interval(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setMethodSamplingInterval(JJ)V")
 }
@@ -720,43 +732,46 @@ async fn set_method_sampling_interval(
 #[async_recursion(?Send)]
 async fn set_method_sampling_period(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setMethodSamplingPeriod(JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_miscellaneous(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_miscellaneous(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setMiscellaneous(JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_output(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_output(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setOutput(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_repository_location(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setRepositoryLocation(Ljava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_sample_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_sample_threads(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setSampleThreads(Z)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_stack_depth(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_stack_depth(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setStackDepth(I)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_stack_trace_enabled(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setStackTraceEnabled(JZ)V")
 }
@@ -764,48 +779,57 @@ async fn set_stack_trace_enabled(
 #[async_recursion(?Send)]
 async fn set_thread_buffer_size(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setThreadBufferSize(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_threshold(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_threshold(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setThreshold(JJ)Z")
 }
 
 #[async_recursion(?Send)]
-async fn set_throttle(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_throttle(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setThrottle(JJJ)Z")
 }
 
 #[async_recursion(?Send)]
-async fn should_rotate_disk(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn should_rotate_disk(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.shouldRotateDisk()Z")
 }
 
 #[async_recursion(?Send)]
 async fn store_metadata_descriptor(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.storeMetadataDescriptor([B)V")
 }
 
 #[async_recursion(?Send)]
-async fn subscribe_log_level(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn subscribe_log_level(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.subscribeLogLevel(Ljdk/jfr/internal/LogTag;I)V")
 }
 
 #[async_recursion(?Send)]
-async fn uncaught_exception(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn uncaught_exception(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.uncaughtException(Ljava/lang/Thread;Ljava/lang/Throwable;)V")
 }
 
 #[async_recursion(?Send)]
 async fn unregister_stack_filter(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.unregisterStackFilter(J)V")
 }
@@ -820,7 +844,7 @@ mod tests {
     )]
     async fn test_abort() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = abort(thread, Arguments::default()).await;
+        let _ = abort(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -829,56 +853,56 @@ mod tests {
     )]
     async fn test_add_string_constant() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_string_constant(thread, Arguments::default()).await;
+        let _ = add_string_constant(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.beginRecording()V")]
     async fn test_begin_recording() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = begin_recording(thread, Arguments::default()).await;
+        let _ = begin_recording(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.commit(J)J")]
     async fn test_commit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = commit(thread, Arguments::default()).await;
+        let _ = commit(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.counterTime()J")]
     async fn test_counter_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = counter_time(thread, Arguments::default()).await;
+        let _ = counter_time(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.createJFR(Z)Z")]
     async fn test_create_jfr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_jfr(thread, Arguments::default()).await;
+        let _ = create_jfr(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.destroyJFR()Z")]
     async fn test_destroy_jfr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = destroy_jfr(thread, Arguments::default()).await;
+        let _ = destroy_jfr(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.emitDataLoss(J)V")]
     async fn test_emit_data_loss() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = emit_data_loss(thread, Arguments::default()).await;
+        let _ = emit_data_loss(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.emitEvent(JJJ)Z")]
     async fn test_emit_event() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = emit_event(thread, Arguments::default()).await;
+        let _ = emit_event(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -887,14 +911,14 @@ mod tests {
     )]
     async fn test_emit_old_object_samples() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = emit_old_object_samples(thread, Arguments::default()).await;
+        let _ = emit_old_object_samples(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.endRecording()V")]
     async fn test_end_recording() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = end_recording(thread, Arguments::default()).await;
+        let _ = end_recording(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -903,14 +927,14 @@ mod tests {
     )]
     async fn test_exclude() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = exclude(thread, Arguments::default()).await;
+        let _ = exclude(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.flush()")]
     async fn test_flush() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = flush(thread, Arguments::default()).await;
+        let _ = flush(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -919,7 +943,7 @@ mod tests {
     )]
     async fn test_get_all_event_classes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_all_event_classes(thread, Arguments::default()).await;
+        let _ = get_all_event_classes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -928,14 +952,14 @@ mod tests {
     )]
     async fn test_get_allowed_to_do_event_retransforms() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_allowed_to_do_event_retransforms(thread, Arguments::default()).await;
+        let _ = get_allowed_to_do_event_retransforms(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.getChunkStartNanos()J")]
     async fn test_get_chunk_start_nanos() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_chunk_start_nanos(thread, Arguments::default()).await;
+        let _ = get_chunk_start_nanos(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -944,7 +968,7 @@ mod tests {
     )]
     async fn test_get_class_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_class_id(thread, Arguments::default()).await;
+        let _ = get_class_id(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -953,7 +977,7 @@ mod tests {
     )]
     async fn test_get_class_id_non_intrinsic() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_class_id_non_intrinsic(thread, Arguments::default()).await;
+        let _ = get_class_id_non_intrinsic(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -962,7 +986,7 @@ mod tests {
     )]
     async fn test_get_configuration() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_configuration(thread, Arguments::default()).await;
+        let _ = get_configuration(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -971,7 +995,7 @@ mod tests {
     )]
     async fn test_get_dump_path() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_dump_path(thread, Arguments::default()).await;
+        let _ = get_dump_path(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -980,7 +1004,7 @@ mod tests {
     )]
     async fn test_get_event_writer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_event_writer(thread, Arguments::default()).await;
+        let _ = get_event_writer(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -989,7 +1013,7 @@ mod tests {
     )]
     async fn test_get_handler() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_handler(thread, Arguments::default()).await;
+        let _ = get_handler(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -998,14 +1022,14 @@ mod tests {
     )]
     async fn test_get_pid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_pid(thread, Arguments::default()).await;
+        let _ = get_pid(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.getStackTraceId(IJ)J")]
     async fn test_get_stack_trace_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_stack_trace_id(thread, Arguments::default()).await;
+        let _ = get_stack_trace_id(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1014,14 +1038,14 @@ mod tests {
     )]
     async fn test_get_thread_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_id(thread, Arguments::default()).await;
+        let _ = get_thread_id(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.getTicksFrequency()J")]
     async fn test_get_ticks_frequency() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_ticks_frequency(thread, Arguments::default()).await;
+        let _ = get_ticks_frequency(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1030,7 +1054,7 @@ mod tests {
     )]
     async fn test_get_time_conversion_factor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_time_conversion_factor(thread, Arguments::default()).await;
+        let _ = get_time_conversion_factor(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1039,7 +1063,7 @@ mod tests {
     )]
     async fn test_get_type_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_type_id(thread, Arguments::default()).await;
+        let _ = get_type_id(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1048,21 +1072,21 @@ mod tests {
     )]
     async fn test_get_unloaded_event_class_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_unloaded_event_class_count(thread, Arguments::default()).await;
+        let _ = get_unloaded_event_class_count(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.hostTotalMemory()J")]
     async fn test_host_total_memory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = host_total_memory(thread, Arguments::default()).await;
+        let _ = host_total_memory(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.hostTotalSwapMemory()J")]
     async fn test_host_total_swap_memory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = host_total_swap_memory(thread, Arguments::default()).await;
+        let _ = host_total_swap_memory(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1071,21 +1095,21 @@ mod tests {
     )]
     async fn test_include() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = include(thread, Arguments::default()).await;
+        let _ = include(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.isAvailable()Z")]
     async fn test_is_available() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_available(thread, Arguments::default()).await;
+        let _ = is_available(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.isContainerized()Z")]
     async fn test_is_containerized() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_containerized(thread, Arguments::default()).await;
+        let _ = is_containerized(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1094,7 +1118,7 @@ mod tests {
     )]
     async fn test_is_excluded() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_excluded(thread, Arguments::default()).await;
+        let _ = is_excluded(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1103,14 +1127,14 @@ mod tests {
     )]
     async fn test_is_instrumented() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_instrumented(thread, Arguments::default()).await;
+        let _ = is_instrumented(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.isRecording()Z")]
     async fn test_is_recording() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_recording(thread, Arguments::default()).await;
+        let _ = is_recording(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1119,7 +1143,7 @@ mod tests {
     )]
     async fn test_log() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = log(thread, Arguments::default()).await;
+        let _ = log(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1128,21 +1152,21 @@ mod tests {
     )]
     async fn test_log_event() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = log_event(thread, Arguments::default()).await;
+        let _ = log_event(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.markChunkFinal()V")]
     async fn test_mark_chunk_final() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = mark_chunk_final(thread, Arguments::default()).await;
+        let _ = mark_chunk_final(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.nanosNow()J")]
     async fn test_nanos_now() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = nanos_now(thread, Arguments::default()).await;
+        let _ = nanos_now(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1151,13 +1175,13 @@ mod tests {
     )]
     async fn test_new_event_writer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = new_event_writer(thread, Arguments::default()).await;
+        let _ = new_event_writer(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Arguments::default()).await?;
+        let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1168,7 +1192,7 @@ mod tests {
     )]
     async fn test_register_stack_filter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = register_stack_filter(thread, Arguments::default()).await;
+        let _ = register_stack_filter(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1177,7 +1201,7 @@ mod tests {
     )]
     async fn test_retransform_classes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = retransform_classes(thread, Arguments::default()).await;
+        let _ = retransform_classes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1186,7 +1210,7 @@ mod tests {
     )]
     async fn test_set_compressed_integers() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_compressed_integers(thread, Arguments::default()).await;
+        let _ = set_compressed_integers(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1195,14 +1219,14 @@ mod tests {
     )]
     async fn test_set_configuration() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_configuration(thread, Arguments::default()).await;
+        let _ = set_configuration(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setCutoff(JJ)Z")]
     async fn test_set_cutoff() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_cutoff(thread, Arguments::default()).await;
+        let _ = set_cutoff(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1211,21 +1235,21 @@ mod tests {
     )]
     async fn test_set_dump_path() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_dump_path(thread, Arguments::default()).await;
+        let _ = set_dump_path(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setEnabled(JZ)V")]
     async fn test_set_enabled() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_enabled(thread, Arguments::default()).await;
+        let _ = set_enabled(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setFileNotification(J)V")]
     async fn test_set_file_notification() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_file_notification(thread, Arguments::default()).await;
+        let _ = set_file_notification(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1234,21 +1258,21 @@ mod tests {
     )]
     async fn test_set_force_instrumentation() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_force_instrumentation(thread, Arguments::default()).await;
+        let _ = set_force_instrumentation(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setGlobalBufferCount(J)V")]
     async fn test_set_global_buffer_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_global_buffer_count(thread, Arguments::default()).await;
+        let _ = set_global_buffer_count(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setGlobalBufferSize(J)V")]
     async fn test_set_global_buffer_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_global_buffer_size(thread, Arguments::default()).await;
+        let _ = set_global_buffer_size(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1257,14 +1281,14 @@ mod tests {
     )]
     async fn test_set_handler() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_handler(thread, Arguments::default()).await;
+        let _ = set_handler(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setMemorySize(J)V")]
     async fn test_set_memory_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_memory_size(thread, Arguments::default()).await;
+        let _ = set_memory_size(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1273,7 +1297,7 @@ mod tests {
     )]
     async fn test_set_method_sampling_interval() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_method_sampling_interval(thread, Arguments::default()).await;
+        let _ = set_method_sampling_interval(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1282,14 +1306,14 @@ mod tests {
     )]
     async fn test_set_method_sampling_period() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_method_sampling_period(thread, Arguments::default()).await;
+        let _ = set_method_sampling_period(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setMiscellaneous(JJ)V")]
     async fn test_set_miscellaneous() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_miscellaneous(thread, Arguments::default()).await;
+        let _ = set_miscellaneous(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1298,7 +1322,7 @@ mod tests {
     )]
     async fn test_set_output() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_output(thread, Arguments::default()).await;
+        let _ = set_output(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1307,21 +1331,21 @@ mod tests {
     )]
     async fn test_set_repository_location() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_repository_location(thread, Arguments::default()).await;
+        let _ = set_repository_location(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setSampleThreads(Z)V")]
     async fn test_set_sample_threads() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_sample_threads(thread, Arguments::default()).await;
+        let _ = set_sample_threads(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setStackDepth(I)V")]
     async fn test_set_stack_depth() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_stack_depth(thread, Arguments::default()).await;
+        let _ = set_stack_depth(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1330,35 +1354,35 @@ mod tests {
     )]
     async fn test_set_stack_trace_enabled() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_stack_trace_enabled(thread, Arguments::default()).await;
+        let _ = set_stack_trace_enabled(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setThreadBufferSize(J)V")]
     async fn test_set_thread_buffer_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_thread_buffer_size(thread, Arguments::default()).await;
+        let _ = set_thread_buffer_size(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setThreshold(JJ)Z")]
     async fn test_set_threshold() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_threshold(thread, Arguments::default()).await;
+        let _ = set_threshold(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.setThrottle(JJJ)Z")]
     async fn test_set_throttle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_throttle(thread, Arguments::default()).await;
+        let _ = set_throttle(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.shouldRotateDisk()Z")]
     async fn test_should_rotate_disk() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = should_rotate_disk(thread, Arguments::default()).await;
+        let _ = should_rotate_disk(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1367,7 +1391,7 @@ mod tests {
     )]
     async fn test_store_metadata_descriptor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = store_metadata_descriptor(thread, Arguments::default()).await;
+        let _ = store_metadata_descriptor(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1376,7 +1400,7 @@ mod tests {
     )]
     async fn test_subscribe_log_level() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = subscribe_log_level(thread, Arguments::default()).await;
+        let _ = subscribe_log_level(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1385,7 +1409,7 @@ mod tests {
     )]
     async fn test_uncaught_exception() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = uncaught_exception(thread, Arguments::default()).await;
+        let _ = uncaught_exception(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1394,6 +1418,6 @@ mod tests {
     )]
     async fn test_unregister_stack_filter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unregister_stack_filter(thread, Arguments::default()).await;
+        let _ = unregister_stack_filter(thread, Parameters::default()).await;
     }
 }

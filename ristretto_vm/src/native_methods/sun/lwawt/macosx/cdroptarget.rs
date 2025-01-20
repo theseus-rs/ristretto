@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -37,7 +37,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn create_native_drop_target(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J")
 }
@@ -45,7 +45,7 @@ async fn create_native_drop_target(
 #[async_recursion(?Send)]
 async fn release_native_drop_target(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDropTarget.releaseNativeDropTarget(J)V")
 }
@@ -60,7 +60,7 @@ mod tests {
     )]
     async fn test_create_native_drop_target() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_native_drop_target(thread, Arguments::default()).await;
+        let _ = create_native_drop_target(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -69,6 +69,6 @@ mod tests {
     )]
     async fn test_release_native_drop_target() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = release_native_drop_target(thread, Arguments::default()).await;
+        let _ = release_native_drop_target(thread, Parameters::default()).await;
     }
 }

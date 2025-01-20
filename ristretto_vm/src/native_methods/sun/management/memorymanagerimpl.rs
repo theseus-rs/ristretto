@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -19,7 +19,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_memory_pools_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_memory_pools_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.MemoryManagerImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;")
 }
 
@@ -33,6 +36,6 @@ mod tests {
     )]
     async fn test_get_memory_pools_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_memory_pools_0(thread, Arguments::default()).await;
+        let _ = get_memory_pools_0(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -19,7 +19,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn native_get_bounds(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn native_get_bounds(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsConfig.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;")
 }
 
@@ -33,6 +33,6 @@ mod tests {
     )]
     async fn test_native_get_bounds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_bounds(thread, Arguments::default()).await;
+        let _ = native_get_bounds(thread, Parameters::default()).await;
     }
 }

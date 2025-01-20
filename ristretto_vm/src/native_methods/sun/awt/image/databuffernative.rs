@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -25,12 +25,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_elem(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_elem(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.image.DataBufferNative.getElem(IILsun/java2d/SurfaceData;)I")
 }
 
 #[async_recursion(?Send)]
-async fn set_elem(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_elem(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.image.DataBufferNative.setElem(IIILsun/java2d/SurfaceData;)V")
 }
 
@@ -44,7 +44,7 @@ mod tests {
     )]
     async fn test_get_elem() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_elem(thread, Arguments::default()).await;
+        let _ = get_elem(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -53,6 +53,6 @@ mod tests {
     )]
     async fn test_set_elem() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_elem(thread, Arguments::default()).await;
+        let _ = set_elem(thread, Parameters::default()).await;
     }
 }

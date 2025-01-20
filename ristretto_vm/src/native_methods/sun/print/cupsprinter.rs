@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_19, JAVA_23};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -81,14 +81,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn can_connect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn can_connect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.print.CUPSPrinter.canConnect(Ljava/lang/String;I)Z")
 }
 
 #[async_recursion(?Send)]
 async fn get_cups_default_printer(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.print.CUPSPrinter.getCupsDefaultPrinter()Ljava/lang/String;")
 }
@@ -96,43 +96,43 @@ async fn get_cups_default_printer(
 #[async_recursion(?Send)]
 async fn get_cups_default_printers(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.print.CUPSPrinter.getCupsDefaultPrinters()[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_cups_port(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_cups_port(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.print.CUPSPrinter.getCupsPort()I")
 }
 
 #[async_recursion(?Send)]
-async fn get_cups_server(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_cups_server(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.print.CUPSPrinter.getCupsServer()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_media(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_media(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.print.CUPSPrinter.getMedia(Ljava/lang/String;)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_output_bins(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_output_bins(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.print.CUPSPrinter.getOutputBins(Ljava/lang/String;)[Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_page_sizes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_page_sizes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.print.CUPSPrinter.getPageSizes(Ljava/lang/String;)[F")
 }
 
 #[async_recursion(?Send)]
-async fn get_resolutions(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_resolutions(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.print.CUPSPrinter.getResolutions(Ljava/lang/String;Ljava/util/ArrayList;)V")
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
@@ -146,7 +146,7 @@ mod tests {
     )]
     async fn test_can_connect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = can_connect(thread, Arguments::default()).await;
+        let _ = can_connect(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -155,7 +155,7 @@ mod tests {
     )]
     async fn test_get_cups_default_printer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_cups_default_printer(thread, Arguments::default()).await;
+        let _ = get_cups_default_printer(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -164,14 +164,14 @@ mod tests {
     )]
     async fn test_get_cups_default_printers() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_cups_default_printers(thread, Arguments::default()).await;
+        let _ = get_cups_default_printers(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.print.CUPSPrinter.getCupsPort()I")]
     async fn test_get_cups_port() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_cups_port(thread, Arguments::default()).await;
+        let _ = get_cups_port(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -180,7 +180,7 @@ mod tests {
     )]
     async fn test_get_cups_server() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_cups_server(thread, Arguments::default()).await;
+        let _ = get_cups_server(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -189,7 +189,7 @@ mod tests {
     )]
     async fn test_get_media() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_media(thread, Arguments::default()).await;
+        let _ = get_media(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -198,7 +198,7 @@ mod tests {
     )]
     async fn test_get_output_bins() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_output_bins(thread, Arguments::default()).await;
+        let _ = get_output_bins(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -207,7 +207,7 @@ mod tests {
     )]
     async fn test_get_page_sizes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_page_sizes(thread, Arguments::default()).await;
+        let _ = get_page_sizes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -216,13 +216,13 @@ mod tests {
     )]
     async fn test_get_resolutions() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_resolutions(thread, Arguments::default()).await;
+        let _ = get_resolutions(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }

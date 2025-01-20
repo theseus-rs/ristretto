@@ -218,26 +218,26 @@ async fn invoke_method(
     mut method: Arc<Method>,
     invocation_type: &InvocationType,
 ) -> Result<ExecutionResult> {
-    let parameters = method.parameters().len();
-    let mut arguments = if method.is_static() {
-        Vec::with_capacity(parameters)
+    let parameters_length = method.parameters().len();
+    let mut parameters = if method.is_static() {
+        Vec::with_capacity(parameters_length)
     } else {
         // Add one for the object reference
-        Vec::with_capacity(parameters + 1)
+        Vec::with_capacity(parameters_length + 1)
     };
-    for _ in 0..parameters {
-        arguments.push(stack.pop()?);
+    for _ in 0..parameters_length {
+        parameters.push(stack.pop()?);
     }
     if !method.is_static() {
         let object = stack.pop_object()?;
-        arguments.push(Value::Object(object));
+        parameters.push(Value::Object(object));
     }
-    arguments.reverse();
+    parameters.reverse();
 
     // TODO: evaluate refactoring this
     match invocation_type {
         InvocationType::Interface | InvocationType::Virtual => {
-            let Some(Value::Object(Some(reference))) = arguments.first() else {
+            let Some(Value::Object(Some(reference))) = parameters.first() else {
                 return Err(InternalError("No reference found".to_string()));
             };
             class = match reference {
@@ -273,7 +273,7 @@ async fn invoke_method(
     }
 
     // Execute the method on the current thread
-    let result = thread.execute(&class, &method, arguments).await?;
+    let result = thread.execute(&class, &method, parameters).await?;
     if let Some(result) = result {
         stack.push(result)?;
     }

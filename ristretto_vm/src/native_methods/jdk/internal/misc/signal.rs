@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
@@ -22,8 +22,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn find_signal_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let signal_name: String = arguments.pop_object()?.try_into()?;
+async fn find_signal_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let signal_name: String = parameters.pop_object()?.try_into()?;
 
     // See: https://github.com/torvalds/linux/blob/master/arch/x86/include/uapi/asm/signal.h
     let signal = match signal_name.as_str() {
@@ -66,15 +66,15 @@ async fn find_signal_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result
 }
 
 #[async_recursion(?Send)]
-async fn handle_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let _handler = arguments.pop_long()?;
-    let _signal = arguments.pop_int()?;
+async fn handle_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let _handler = parameters.pop_long()?;
+    let _signal = parameters.pop_int()?;
     // TODO: implement signal handling
     Ok(Some(Value::Long(0)))
 }
 
 #[async_recursion(?Send)]
-async fn raise_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn raise_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Signal.raise0(I)V")
 }
 
@@ -87,8 +87,8 @@ mod tests {
     async fn test_find_signal_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let signal_name = "INT".to_object(&vm).await?;
-        let arguments = Arguments::new(vec![signal_name]);
-        let value = find_signal_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![signal_name]);
+        let value = find_signal_0(thread, parameters).await?;
         assert_eq!(value, Some(Value::Int(2)));
         Ok(())
     }
@@ -98,8 +98,8 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let signal = Value::Int(2);
         let handler = Value::Long(0);
-        let arguments = Arguments::new(vec![signal, handler]);
-        let value = handle_0(thread, arguments).await?;
+        let parameters = Parameters::new(vec![signal, handler]);
+        let value = handle_0(thread, parameters).await?;
         assert_eq!(value, Some(Value::Long(0)));
         Ok(())
     }
@@ -108,6 +108,6 @@ mod tests {
     #[should_panic(expected = "not yet implemented: jdk.internal.misc.Signal.raise0(I)V")]
     async fn test_raise_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = raise_0(thread, Arguments::default()).await;
+        let _ = raise_0(thread, Parameters::default()).await;
     }
 }

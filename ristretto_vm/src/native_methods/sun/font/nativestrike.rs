@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -28,7 +28,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn create_null_scaler_context(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.NativeStrike.createNullScalerContext()J")
 }
@@ -36,13 +36,13 @@ async fn create_null_scaler_context(
 #[async_recursion(?Send)]
 async fn create_scaler_context(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.NativeStrike.createScalerContext([BID)J")
 }
 
 #[async_recursion(?Send)]
-async fn get_max_glyph(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_max_glyph(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.NativeStrike.getMaxGlyph(J)I")
 }
 
@@ -56,7 +56,7 @@ mod tests {
     )]
     async fn test_create_null_scaler_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_null_scaler_context(thread, Arguments::default()).await;
+        let _ = create_null_scaler_context(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -65,13 +65,13 @@ mod tests {
     )]
     async fn test_create_scaler_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_scaler_context(thread, Arguments::default()).await;
+        let _ = create_scaler_context(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.NativeStrike.getMaxGlyph(J)I")]
     async fn test_get_max_glyph() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_max_glyph(thread, Arguments::default()).await;
+        let _ = get_max_glyph(thread, Parameters::default()).await;
     }
 }

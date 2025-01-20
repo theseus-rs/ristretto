@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -40,20 +40,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn get_native_display_name(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.AquaFileView.getNativeDisplayName([BZ)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_native_ls_info(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_native_ls_info(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.apple.laf.AquaFileView.getNativeLSInfo([BZ)I")
 }
 
 #[async_recursion(?Send)]
 async fn get_native_machine_name(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.AquaFileView.getNativeMachineName()Ljava/lang/String;")
 }
@@ -61,7 +64,7 @@ async fn get_native_machine_name(
 #[async_recursion(?Send)]
 async fn get_native_path_for_resolved_alias(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.AquaFileView.getNativePathForResolvedAlias([BZ)Ljava/lang/String;")
 }
@@ -69,7 +72,7 @@ async fn get_native_path_for_resolved_alias(
 #[async_recursion(?Send)]
 async fn get_native_path_to_shared_jdk_bundle(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.AquaFileView.getNativePathToSharedJDKBundle()Ljava/lang/String;")
 }
@@ -84,7 +87,7 @@ mod tests {
     )]
     async fn test_get_native_display_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_display_name(thread, Arguments::default()).await;
+        let _ = get_native_display_name(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -93,7 +96,7 @@ mod tests {
     )]
     async fn test_get_native_ls_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_ls_info(thread, Arguments::default()).await;
+        let _ = get_native_ls_info(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -102,7 +105,7 @@ mod tests {
     )]
     async fn test_get_native_machine_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_machine_name(thread, Arguments::default()).await;
+        let _ = get_native_machine_name(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -111,7 +114,7 @@ mod tests {
     )]
     async fn test_get_native_path_for_resolved_alias() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_path_for_resolved_alias(thread, Arguments::default()).await;
+        let _ = get_native_path_for_resolved_alias(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -120,6 +123,6 @@ mod tests {
     )]
     async fn test_get_native_path_to_shared_jdk_bundle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_path_to_shared_jdk_bundle(thread, Arguments::default()).await;
+        let _ = get_native_path_to_shared_jdk_bundle(thread, Parameters::default()).await;
     }
 }

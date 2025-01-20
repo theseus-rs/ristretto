@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -33,27 +33,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn n_get_description(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_get_description(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.MidiInDeviceProvider.nGetDescription(I)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn n_get_name(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_get_name(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.MidiInDeviceProvider.nGetName(I)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn n_get_num_devices(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_get_num_devices(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.MidiInDeviceProvider.nGetNumDevices()I")
 }
 
 #[async_recursion(?Send)]
-async fn n_get_vendor(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_get_vendor(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.MidiInDeviceProvider.nGetVendor(I)Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn n_get_version(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn n_get_version(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.MidiInDeviceProvider.nGetVersion(I)Ljava/lang/String;")
 }
 
@@ -67,7 +67,7 @@ mod tests {
     )]
     async fn test_n_get_description() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_description(thread, Arguments::default()).await;
+        let _ = n_get_description(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -76,7 +76,7 @@ mod tests {
     )]
     async fn test_n_get_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_name(thread, Arguments::default()).await;
+        let _ = n_get_name(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -85,7 +85,7 @@ mod tests {
     )]
     async fn test_n_get_num_devices() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_num_devices(thread, Arguments::default()).await;
+        let _ = n_get_num_devices(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -94,7 +94,7 @@ mod tests {
     )]
     async fn test_n_get_vendor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_vendor(thread, Arguments::default()).await;
+        let _ = n_get_vendor(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -103,6 +103,6 @@ mod tests {
     )]
     async fn test_n_get_version() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_version(thread, Arguments::default()).await;
+        let _ = n_get_version(thread, Parameters::default()).await;
     }
 }

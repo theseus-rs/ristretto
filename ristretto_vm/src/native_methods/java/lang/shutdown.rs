@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -15,13 +15,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn before_halt(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn before_halt(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn halt_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let code = arguments.pop_int()?;
+async fn halt_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let code = parameters.pop_int()?;
     std::process::exit(code);
 }
 
@@ -32,7 +32,7 @@ mod tests {
     #[tokio::test]
     async fn test_before_halt() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = before_halt(thread, Arguments::default()).await?;
+        let result = before_halt(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
     }

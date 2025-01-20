@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -29,35 +29,35 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn add_subview(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn add_subview(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.addSubview(JJ)V")
 }
 
 #[async_recursion(?Send)]
 async fn remove_from_superview(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.removeFromSuperview(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_frame(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_frame(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.setFrame(JIIII)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_hidden(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_hidden(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.setHidden(JZ)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_tool_tip(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_tool_tip(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.setToolTip(JLjava/lang/String;)V")
 }
 
 #[async_recursion(?Send)]
-async fn window(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn window(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.window(J)J")
 }
 
@@ -71,7 +71,7 @@ mod tests {
     )]
     async fn test_add_subview() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_subview(thread, Arguments::default()).await;
+        let _ = add_subview(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -80,7 +80,7 @@ mod tests {
     )]
     async fn test_remove_from_superview() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = remove_from_superview(thread, Arguments::default()).await;
+        let _ = remove_from_superview(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -89,7 +89,7 @@ mod tests {
     )]
     async fn test_set_frame() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_frame(thread, Arguments::default()).await;
+        let _ = set_frame(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -98,7 +98,7 @@ mod tests {
     )]
     async fn test_set_hidden() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_hidden(thread, Arguments::default()).await;
+        let _ = set_hidden(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -107,13 +107,13 @@ mod tests {
     )]
     async fn test_set_tool_tip() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_tool_tip(thread, Arguments::default()).await;
+        let _ = set_tool_tip(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CWrapper$NSView.window(J)J")]
     async fn test_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = window(thread, Arguments::default()).await;
+        let _ = window(thread, Parameters::default()).await;
     }
 }

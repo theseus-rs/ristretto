@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -31,20 +31,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn get_collection_count(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.GarbageCollectorImpl.getCollectionCount()J")
 }
 
 #[async_recursion(?Send)]
-async fn get_collection_time(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_collection_time(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.GarbageCollectorImpl.getCollectionTime()J")
 }
 
 #[async_recursion(?Send)]
 async fn set_notification_enabled(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.GarbageCollectorImpl.setNotificationEnabled(Lcom/sun/management/GarbageCollectorMXBean;Z)V")
 }
@@ -59,7 +62,7 @@ mod tests {
     )]
     async fn test_get_collection_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_collection_count(thread, Arguments::default()).await;
+        let _ = get_collection_count(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -68,7 +71,7 @@ mod tests {
     )]
     async fn test_get_collection_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_collection_time(thread, Arguments::default()).await;
+        let _ = get_collection_time(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -77,6 +80,6 @@ mod tests {
     )]
     async fn test_set_notification_enabled() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_notification_enabled(thread, Arguments::default()).await;
+        let _ = set_notification_enabled(thread, Parameters::default()).await;
     }
 }

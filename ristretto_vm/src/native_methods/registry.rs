@@ -1,7 +1,7 @@
-use crate::arguments::Arguments;
 #[cfg(target_os = "macos")]
 use crate::native_methods::apple;
 use crate::native_methods::{com, java, jdk, sun};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use ristretto_classloader::Value;
@@ -24,7 +24,7 @@ pub(crate) const JAVA_23: u16 = 23;
 /// being implemented in Java byte code.
 pub type RustMethod = fn(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>>;
 
 #[derive(Debug, Default)]

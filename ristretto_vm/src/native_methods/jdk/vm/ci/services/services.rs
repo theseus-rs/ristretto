@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn read_system_properties_info(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.vm.ci.services.Services.readSystemPropertiesInfo([I)J")
 }
@@ -36,6 +36,6 @@ mod tests {
     )]
     async fn test_read_system_properties_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = read_system_properties_info(thread, Arguments::default()).await;
+        let _ = read_system_properties_info(thread, Parameters::default()).await;
     }
 }

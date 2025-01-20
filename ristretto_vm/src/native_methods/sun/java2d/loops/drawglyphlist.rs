@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -28,7 +28,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn draw_glyph_list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn draw_glyph_list(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.loops.DrawGlyphList.DrawGlyphList(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Lsun/font/GlyphList;)V");
 }
 
@@ -42,6 +42,6 @@ mod tests {
     )]
     async fn test_draw_glyph_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = draw_glyph_list(thread, Arguments::default()).await;
+        let _ = draw_glyph_list(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,12 +20,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn load_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.loader.RawNativeLibraries.load0(Ljdk/internal/loader/RawNativeLibraries$RawNativeLibraryImpl;Ljava/lang/String;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn unload_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn unload_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.loader.RawNativeLibraries.unload0(Ljava/lang/String;J)V")
 }
 
@@ -39,7 +39,7 @@ mod tests {
     )]
     async fn test_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = load_0(thread, Arguments::default()).await;
+        let _ = load_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -48,6 +48,6 @@ mod tests {
     )]
     async fn test_unload_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unload_0(thread, Arguments::default()).await;
+        let _ = unload_0(thread, Parameters::default()).await;
     }
 }

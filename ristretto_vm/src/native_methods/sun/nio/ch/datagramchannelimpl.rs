@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -48,22 +48,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn disconnect_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn disconnect_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramChannelImpl.disconnect0(Ljava/io/FileDescriptor;Z)V");
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn receive_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn receive_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramChannelImpl.receive0(Ljava/io/FileDescriptor;JIZ)I");
 }
 
 #[async_recursion(?Send)]
-async fn send_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn send_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "sun.nio.ch.DatagramChannelImpl.send0(ZLjava/io/FileDescriptor;JILjava/net/InetAddress;I)I"
     );
@@ -79,13 +79,13 @@ mod tests {
     )]
     async fn test_disconnect_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = disconnect_0(thread, Arguments::default()).await;
+        let _ = disconnect_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -96,7 +96,7 @@ mod tests {
     )]
     async fn test_receive_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = receive_0(thread, Arguments::default()).await;
+        let _ = receive_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -105,6 +105,6 @@ mod tests {
     )]
     async fn test_send_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = send_0(thread, Arguments::default()).await;
+        let _ = send_0(thread, Parameters::default()).await;
     }
 }

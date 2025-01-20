@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_17};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -36,7 +36,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn native_activate_default_menu_bar(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMenuBarHandler.nativeActivateDefaultMenuBar(J)V")
 }
@@ -44,7 +44,7 @@ async fn native_activate_default_menu_bar(
 #[async_recursion(?Send)]
 async fn native_set_default_menu_bar(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMenuBarHandler.nativeSetDefaultMenuBar(J)V")
 }
@@ -52,7 +52,7 @@ async fn native_set_default_menu_bar(
 #[async_recursion(?Send)]
 async fn native_set_menu_state(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMenuBarHandler.nativeSetMenuState(IZZ)V")
 }
@@ -67,7 +67,7 @@ mod tests {
     )]
     async fn test_native_activate_default_menu_bar() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_activate_default_menu_bar(thread, Arguments::default()).await;
+        let _ = native_activate_default_menu_bar(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -76,7 +76,7 @@ mod tests {
     )]
     async fn test_native_set_default_menu_bar() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_default_menu_bar(thread, Arguments::default()).await;
+        let _ = native_set_default_menu_bar(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -85,6 +85,6 @@ mod tests {
     )]
     async fn test_native_set_menu_state() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_menu_state(thread, Arguments::default()).await;
+        let _ = native_set_menu_state(thread, Parameters::default()).await;
     }
 }

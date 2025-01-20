@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,14 +20,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.loops.GraphicsPrimitiveMgr.initIDs(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V")
 }
 
 #[async_recursion(?Send)]
 async fn register_native_loops(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.loops.GraphicsPrimitiveMgr.registerNativeLoops()V")
 }
@@ -42,7 +42,7 @@ mod tests {
     )]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_ids(thread, Arguments::default()).await;
+        let _ = init_ids(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -51,6 +51,6 @@ mod tests {
     )]
     async fn test_register_native_loops() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = register_native_loops(thread, Arguments::default()).await;
+        let _ = register_native_loops(thread, Parameters::default()).await;
     }
 }

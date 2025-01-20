@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -23,29 +23,29 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn free_int_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn free_int_memory(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.StrikeCache.freeIntMemory([IJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn free_int_pointer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn free_int_pointer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.StrikeCache.freeIntPointer(I)V")
 }
 
 #[async_recursion(?Send)]
-async fn free_long_memory(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn free_long_memory(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.StrikeCache.freeLongMemory([JJ)V")
 }
 
 #[async_recursion(?Send)]
-async fn free_long_pointer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn free_long_pointer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.StrikeCache.freeLongPointer(J)V")
 }
 
 #[async_recursion(?Send)]
 async fn get_glyph_cache_description(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.StrikeCache.getGlyphCacheDescription([J)V")
 }
@@ -58,28 +58,28 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.font.StrikeCache.freeIntMemory([IJ)V")]
     async fn test_free_int_memory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = free_int_memory(thread, Arguments::default()).await;
+        let _ = free_int_memory(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.StrikeCache.freeIntPointer(I)V")]
     async fn test_free_int_pointer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = free_int_pointer(thread, Arguments::default()).await;
+        let _ = free_int_pointer(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.StrikeCache.freeLongMemory([JJ)V")]
     async fn test_free_long_memory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = free_long_memory(thread, Arguments::default()).await;
+        let _ = free_long_memory(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.StrikeCache.freeLongPointer(J)V")]
     async fn test_free_long_pointer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = free_long_pointer(thread, Arguments::default()).await;
+        let _ = free_long_pointer(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -88,6 +88,6 @@ mod tests {
     )]
     async fn test_get_glyph_cache_description() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_cache_description(thread, Arguments::default()).await;
+        let _ = get_glyph_cache_description(thread, Parameters::default()).await;
     }
 }

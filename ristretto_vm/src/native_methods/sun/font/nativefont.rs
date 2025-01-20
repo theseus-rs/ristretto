@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -30,40 +30,40 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn count_glyphs(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn count_glyphs(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.countGlyphs([BI)I")
 }
 
 #[async_recursion(?Send)]
-async fn font_exists(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn font_exists(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.fontExists([B)Z")
 }
 
 #[async_recursion(?Send)]
-async fn get_font_metrics(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_font_metrics(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.getFontMetrics(J)Lsun/font/StrikeMetrics;")
 }
 
 #[async_recursion(?Send)]
-async fn get_glyph_advance(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_glyph_advance(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.getGlyphAdvance(JI)F")
 }
 
 #[async_recursion(?Send)]
-async fn get_glyph_image(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_glyph_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.getGlyphImage(JI)J")
 }
 
 #[async_recursion(?Send)]
 async fn get_glyph_image_no_default(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.getGlyphImageNoDefault(JI)J")
 }
 
 #[async_recursion(?Send)]
-async fn have_bitmap_fonts(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn have_bitmap_fonts(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.haveBitmapFonts([B)Z")
 }
 
@@ -75,14 +75,14 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.font.NativeFont.countGlyphs([BI)I")]
     async fn test_count_glyphs() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = count_glyphs(thread, Arguments::default()).await;
+        let _ = count_glyphs(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.NativeFont.fontExists([B)Z")]
     async fn test_font_exists() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = font_exists(thread, Arguments::default()).await;
+        let _ = font_exists(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -91,21 +91,21 @@ mod tests {
     )]
     async fn test_get_font_metrics() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_font_metrics(thread, Arguments::default()).await;
+        let _ = get_font_metrics(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.NativeFont.getGlyphAdvance(JI)F")]
     async fn test_get_glyph_advance() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_advance(thread, Arguments::default()).await;
+        let _ = get_glyph_advance(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.NativeFont.getGlyphImage(JI)J")]
     async fn test_get_glyph_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_image(thread, Arguments::default()).await;
+        let _ = get_glyph_image(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -114,13 +114,13 @@ mod tests {
     )]
     async fn test_get_glyph_image_no_default() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_image_no_default(thread, Arguments::default()).await;
+        let _ = get_glyph_image_no_default(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.NativeFont.haveBitmapFonts([B)Z")]
     async fn test_have_bitmap_fonts() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = have_bitmap_fonts(thread, Arguments::default()).await;
+        let _ = have_bitmap_fonts(thread, Parameters::default()).await;
     }
 }

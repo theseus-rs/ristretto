@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,14 +20,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn vm_storage_to_vm_reg(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.invoke.NativeEntryPoint.vmStorageToVMReg(II)J")
 }
@@ -39,7 +39,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Arguments::default()).await?;
+        let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -50,6 +50,6 @@ mod tests {
     )]
     async fn test_vm_storage_to_vm_reg() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = vm_storage_to_vm_reg(thread, Arguments::default()).await;
+        let _ = vm_storage_to_vm_reg(thread, Parameters::default()).await;
     }
 }

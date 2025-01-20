@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -27,7 +27,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn tesselate_fill_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.jules.JulesPathBuf.tesselateFillNative([I[BII[IIIIIII)[I")
 }
@@ -35,7 +35,7 @@ async fn tesselate_fill_native(
 #[async_recursion(?Send)]
 async fn tesselate_stroke_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.jules.JulesPathBuf.tesselateStrokeNative([I[BII[IIDIID[DIDDDDDDDIIII)[I")
 }
@@ -50,7 +50,7 @@ mod tests {
     )]
     async fn test_tesselate_fill_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = tesselate_fill_native(thread, Arguments::default()).await;
+        let _ = tesselate_fill_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -59,6 +59,6 @@ mod tests {
     )]
     async fn test_tesselate_stroke_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = tesselate_stroke_native(thread, Arguments::default()).await;
+        let _ = tesselate_stroke_native(thread, Parameters::default()).await;
     }
 }

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -28,12 +28,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn fallback_domain_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn fallback_domain_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.net.dns.ResolverConfigurationImpl.fallbackDomain0()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn local_domain_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn local_domain_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.net.dns.ResolverConfigurationImpl.localDomain0()Ljava/lang/String;")
 }
 
@@ -47,7 +47,7 @@ mod tests {
     )]
     async fn test_fallback_domain_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fallback_domain_0(thread, Arguments::default()).await;
+        let _ = fallback_domain_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -56,6 +56,6 @@ mod tests {
     )]
     async fn test_local_domain_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = local_domain_0(thread, Arguments::default()).await;
+        let _ = local_domain_0(thread, Parameters::default()).await;
     }
 }

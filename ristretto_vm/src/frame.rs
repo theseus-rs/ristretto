@@ -48,24 +48,24 @@ pub struct Frame {
     thread: Weak<Thread>,
     class: Arc<Class>,
     method: Arc<Method>,
-    arguments: Vec<Value>,
+    parameters: Vec<Value>,
     program_counter: AtomicUsize,
 }
 
 impl Frame {
     /// Create a new frame for the specified class. To invoke a method on an object reference, the
-    /// object reference must be the first argument in the arguments vector.
+    /// object reference must be the first parameter in the parameters vector.
     pub fn new(
         thread: &Weak<Thread>,
         class: &Arc<Class>,
         method: &Arc<Method>,
-        arguments: Vec<Value>,
+        parameters: Vec<Value>,
     ) -> Self {
         Frame {
             thread: thread.clone(),
             class: class.clone(),
             method: method.clone(),
-            arguments,
+            parameters,
             program_counter: AtomicUsize::new(0),
         }
     }
@@ -110,10 +110,10 @@ impl Frame {
     #[async_recursion(?Send)]
     pub async fn execute(&self) -> Result<Option<Value>> {
         let max_locals = self.method.max_locals();
-        // TODO: Implement the local variable from arguments to avoid cloning?
+        // TODO: Implement the local variable from parameters to avoid cloning?
         let locals = &mut LocalVariables::with_max_size(max_locals);
-        for (index, argument) in self.arguments.iter().enumerate() {
-            locals.set(index, argument.clone())?;
+        for (index, parameter) in self.parameters.iter().enumerate() {
+            locals.set(index, parameter.clone())?;
         }
         let max_stack = self.method.max_stack();
         let stack = &mut OperandStack::with_max_size(max_stack);
@@ -451,8 +451,8 @@ mod tests {
     async fn test_execute() -> Result<()> {
         let (thread, class) = get_class("Expressions").await?;
         let method = class.method("add", "(II)I").expect("method not found");
-        let arguments = vec![Value::Int(1), Value::Int(2)];
-        let frame = Frame::new(&Arc::downgrade(&thread), &class, &method, arguments);
+        let parameters = vec![Value::Int(1), Value::Int(2)];
+        let frame = Frame::new(&Arc::downgrade(&thread), &class, &method, parameters);
         let result = frame.execute().await?;
         assert!(matches!(result, Some(Value::Int(3))));
         Ok(())

@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn acquire_default_native_creds(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.krb5.Credentials.acquireDefaultNativeCreds([I)Lsun/security/krb5/Credentials;")
 }
@@ -36,6 +36,6 @@ mod tests {
     )]
     async fn test_acquire_default_native_creds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = acquire_default_native_creds(thread, Arguments::default()).await;
+        let _ = acquire_default_native_creds(thread, Parameters::default()).await;
     }
 }

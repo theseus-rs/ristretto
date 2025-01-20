@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -199,34 +199,40 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn accept(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn accept(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.accept(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I")
 }
 
 #[async_recursion(?Send)]
-async fn available(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn available(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.available(Ljava/io/FileDescriptor;)I")
 }
 
 #[async_recursion(?Send)]
-async fn bind_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.bind0(Ljava/io/FileDescriptor;ZZLjava/net/InetAddress;I)V")
 }
 
 #[async_recursion(?Send)]
-async fn block_or_unblock_4(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn block_or_unblock_4(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.blockOrUnblock4(ZLjava/io/FileDescriptor;III)I")
 }
 
 #[async_recursion(?Send)]
-async fn block_or_unblock_6(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn block_or_unblock_6(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.blockOrUnblock6(ZLjava/io/FileDescriptor;[BI[B)I")
 }
 
 #[async_recursion(?Send)]
 async fn can_ipv6_socket_join_ipv4_group_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.canIPv6SocketJoinIPv4Group0()Z")
 }
@@ -234,7 +240,7 @@ async fn can_ipv6_socket_join_ipv4_group_0(
 #[async_recursion(?Send)]
 async fn can_join_6_with_ipv4_group_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.canJoin6WithIPv4Group0()Z")
 }
@@ -242,172 +248,181 @@ async fn can_join_6_with_ipv4_group_0(
 #[async_recursion(?Send)]
 async fn can_use_ipv6_options_with_ipv4_local_address_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.canUseIPv6OptionsWithIPv4LocalAddress0()Z")
 }
 
 #[async_recursion(?Send)]
-async fn connect_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn connect_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.connect0(ZLjava/io/FileDescriptor;Ljava/net/InetAddress;I)I")
 }
 
 #[async_recursion(?Send)]
-async fn discard_oob(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn discard_oob(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.discardOOB(Ljava/io/FileDescriptor;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn get_int_option_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_int_option_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.getIntOption0(Ljava/io/FileDescriptor;ZII)I")
 }
 
 #[async_recursion(?Send)]
-async fn get_interface_4(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_interface_4(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.getInterface4(Ljava/io/FileDescriptor;)I")
 }
 
 #[async_recursion(?Send)]
-async fn get_interface_6(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_interface_6(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.getInterface6(Ljava/io/FileDescriptor;)I")
 }
 
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn is_exclusive_bind_available(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.isExclusiveBindAvailable()I")
 }
 
 #[async_recursion(?Send)]
-async fn is_ipv6_available_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_ipv6_available_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.isIPv6Available0()Z")
 }
 
 #[async_recursion(?Send)]
 async fn is_reuse_port_available_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.isReusePortAvailable0()Z")
 }
 
 #[async_recursion(?Send)]
-async fn join_or_drop_4(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn join_or_drop_4(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.joinOrDrop4(ZLjava/io/FileDescriptor;III)I")
 }
 
 #[async_recursion(?Send)]
-async fn join_or_drop_6(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn join_or_drop_6(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.joinOrDrop6(ZLjava/io/FileDescriptor;[BI[B)I")
 }
 
 #[async_recursion(?Send)]
-async fn listen(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn listen(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.listen(Ljava/io/FileDescriptor;I)V")
 }
 
 #[async_recursion(?Send)]
-async fn local_inet_address(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn local_inet_address(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.localInetAddress(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;")
 }
 
 #[async_recursion(?Send)]
-async fn local_port(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn local_port(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.localPort(Ljava/io/FileDescriptor;)I")
 }
 
 #[async_recursion(?Send)]
-async fn poll(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn poll(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.poll(Ljava/io/FileDescriptor;IJ)I")
 }
 
 #[async_recursion(?Send)]
-async fn poll_connect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn poll_connect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollConnect(Ljava/io/FileDescriptor;J)Z")
 }
 
 #[async_recursion(?Send)]
-async fn pollconn_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn pollconn_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollconnValue()S")
 }
 
 #[async_recursion(?Send)]
-async fn pollerr_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn pollerr_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollerrValue()S")
 }
 
 #[async_recursion(?Send)]
-async fn pollhup_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn pollhup_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollhupValue()S")
 }
 
 #[async_recursion(?Send)]
-async fn pollin_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn pollin_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollinValue()S")
 }
 
 #[async_recursion(?Send)]
-async fn pollnval_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn pollnval_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollnvalValue()S")
 }
 
 #[async_recursion(?Send)]
-async fn pollout_value(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn pollout_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.polloutValue()S")
 }
 
 #[async_recursion(?Send)]
-async fn remote_inet_address(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn remote_inet_address(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.remoteInetAddress(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;")
 }
 
 #[async_recursion(?Send)]
-async fn remote_port(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn remote_port(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.remotePort(Ljava/io/FileDescriptor;)I")
 }
 
 #[async_recursion(?Send)]
-async fn send_oob(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn send_oob(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.sendOOB(Ljava/io/FileDescriptor;B)I")
 }
 
 #[async_recursion(?Send)]
-async fn set_int_option_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_int_option_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.setIntOption0(Ljava/io/FileDescriptor;ZIIIZ)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_interface_4(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_interface_4(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.setInterface4(Ljava/io/FileDescriptor;I)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_interface_6(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_interface_6(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.setInterface6(Ljava/io/FileDescriptor;I)V")
 }
 
 #[async_recursion(?Send)]
 async fn should_set_both_ipv4_and_ipv6_options_0(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.shouldSetBothIPv4AndIPv6Options0()Z")
 }
 
 #[async_recursion(?Send)]
-async fn shutdown(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn shutdown(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.shutdown(Ljava/io/FileDescriptor;I)V")
 }
 
 #[async_recursion(?Send)]
-async fn socket_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn socket_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.socket0(ZZZZ)I")
 }
 
@@ -421,7 +436,7 @@ mod tests {
     )]
     async fn test_accept() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = accept(thread, Arguments::default()).await;
+        let _ = accept(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -430,7 +445,7 @@ mod tests {
     )]
     async fn test_available() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = available(thread, Arguments::default()).await;
+        let _ = available(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -439,7 +454,7 @@ mod tests {
     )]
     async fn test_bind_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = bind_0(thread, Arguments::default()).await;
+        let _ = bind_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -448,7 +463,7 @@ mod tests {
     )]
     async fn test_block_or_unblock_4() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = block_or_unblock_4(thread, Arguments::default()).await;
+        let _ = block_or_unblock_4(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -457,21 +472,21 @@ mod tests {
     )]
     async fn test_block_or_unblock_6() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = block_or_unblock_6(thread, Arguments::default()).await;
+        let _ = block_or_unblock_6(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.canIPv6SocketJoinIPv4Group0()Z")]
     async fn test_can_ipv6_socket_join_ipv4_group_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = can_ipv6_socket_join_ipv4_group_0(thread, Arguments::default()).await;
+        let _ = can_ipv6_socket_join_ipv4_group_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.canJoin6WithIPv4Group0()Z")]
     async fn test_can_join_6_with_ipv4_group_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = can_join_6_with_ipv4_group_0(thread, Arguments::default()).await;
+        let _ = can_join_6_with_ipv4_group_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -480,7 +495,7 @@ mod tests {
     )]
     async fn test_can_use_ipv6_options_with_ipv4_local_address_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = can_use_ipv6_options_with_ipv4_local_address_0(thread, Arguments::default()).await;
+        let _ = can_use_ipv6_options_with_ipv4_local_address_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -489,7 +504,7 @@ mod tests {
     )]
     async fn test_connect_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = connect_0(thread, Arguments::default()).await;
+        let _ = connect_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -498,7 +513,7 @@ mod tests {
     )]
     async fn test_discard_oob() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = discard_oob(thread, Arguments::default()).await;
+        let _ = discard_oob(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -507,7 +522,7 @@ mod tests {
     )]
     async fn test_get_int_option_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_int_option_0(thread, Arguments::default()).await;
+        let _ = get_int_option_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -516,7 +531,7 @@ mod tests {
     )]
     async fn test_get_interface_4() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_interface_4(thread, Arguments::default()).await;
+        let _ = get_interface_4(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -525,13 +540,13 @@ mod tests {
     )]
     async fn test_get_interface_6() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_interface_6(thread, Arguments::default()).await;
+        let _ = get_interface_6(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Arguments::default()).await?;
+        let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -540,21 +555,21 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.isExclusiveBindAvailable()I")]
     async fn test_is_exclusive_bind_available() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_exclusive_bind_available(thread, Arguments::default()).await;
+        let _ = is_exclusive_bind_available(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.isIPv6Available0()Z")]
     async fn test_is_ipv6_available_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_ipv6_available_0(thread, Arguments::default()).await;
+        let _ = is_ipv6_available_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.isReusePortAvailable0()Z")]
     async fn test_is_reuse_port_available_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_reuse_port_available_0(thread, Arguments::default()).await;
+        let _ = is_reuse_port_available_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -563,7 +578,7 @@ mod tests {
     )]
     async fn test_join_or_drop_4() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = join_or_drop_4(thread, Arguments::default()).await;
+        let _ = join_or_drop_4(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -572,7 +587,7 @@ mod tests {
     )]
     async fn test_join_or_drop_6() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = join_or_drop_6(thread, Arguments::default()).await;
+        let _ = join_or_drop_6(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -581,7 +596,7 @@ mod tests {
     )]
     async fn test_listen() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = listen(thread, Arguments::default()).await;
+        let _ = listen(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -590,7 +605,7 @@ mod tests {
     )]
     async fn test_local_inet_address() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = local_inet_address(thread, Arguments::default()).await;
+        let _ = local_inet_address(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -599,7 +614,7 @@ mod tests {
     )]
     async fn test_local_port() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = local_port(thread, Arguments::default()).await;
+        let _ = local_port(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -608,7 +623,7 @@ mod tests {
     )]
     async fn test_poll() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = poll(thread, Arguments::default()).await;
+        let _ = poll(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -617,49 +632,49 @@ mod tests {
     )]
     async fn test_poll_connect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = poll_connect(thread, Arguments::default()).await;
+        let _ = poll_connect(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.pollconnValue()S")]
     async fn test_pollconn_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pollconn_value(thread, Arguments::default()).await;
+        let _ = pollconn_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.pollerrValue()S")]
     async fn test_pollerr_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pollerr_value(thread, Arguments::default()).await;
+        let _ = pollerr_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.pollhupValue()S")]
     async fn test_pollhup_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pollhup_value(thread, Arguments::default()).await;
+        let _ = pollhup_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.pollinValue()S")]
     async fn test_pollin_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pollin_value(thread, Arguments::default()).await;
+        let _ = pollin_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.pollnvalValue()S")]
     async fn test_pollnval_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pollnval_value(thread, Arguments::default()).await;
+        let _ = pollnval_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.polloutValue()S")]
     async fn test_pollout_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pollout_value(thread, Arguments::default()).await;
+        let _ = pollout_value(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -668,7 +683,7 @@ mod tests {
     )]
     async fn test_remote_inet_address() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = remote_inet_address(thread, Arguments::default()).await;
+        let _ = remote_inet_address(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -677,7 +692,7 @@ mod tests {
     )]
     async fn test_remote_port() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = remote_port(thread, Arguments::default()).await;
+        let _ = remote_port(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -686,7 +701,7 @@ mod tests {
     )]
     async fn test_send_oob() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = send_oob(thread, Arguments::default()).await;
+        let _ = send_oob(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -695,7 +710,7 @@ mod tests {
     )]
     async fn test_set_int_option_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_int_option_0(thread, Arguments::default()).await;
+        let _ = set_int_option_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -704,7 +719,7 @@ mod tests {
     )]
     async fn test_set_interface_4() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_interface_4(thread, Arguments::default()).await;
+        let _ = set_interface_4(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -713,7 +728,7 @@ mod tests {
     )]
     async fn test_set_interface_6() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_interface_6(thread, Arguments::default()).await;
+        let _ = set_interface_6(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -722,7 +737,7 @@ mod tests {
     )]
     async fn test_should_set_both_ipv4_and_ipv6_options_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = should_set_both_ipv4_and_ipv6_options_0(thread, Arguments::default()).await;
+        let _ = should_set_both_ipv4_and_ipv6_options_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -731,13 +746,13 @@ mod tests {
     )]
     async fn test_shutdown() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = shutdown(thread, Arguments::default()).await;
+        let _ = shutdown(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.ch.Net.socket0(ZZZZ)I")]
     async fn test_socket_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = socket_0(thread, Arguments::default()).await;
+        let _ = socket_0(thread, Parameters::default()).await;
     }
 }

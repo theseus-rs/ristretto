@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -69,12 +69,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn flow_supported(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn flow_supported(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.flowSupported()Z")
 }
 
 #[async_recursion(?Send)]
-async fn get_flow_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_flow_option(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "sun.net.ExtendedOptionsImpl.getFlowOption(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V"
     )
@@ -83,7 +83,7 @@ async fn get_flow_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[async_recursion(?Send)]
 async fn get_tcp_keep_alive_intvl(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.getTcpKeepAliveIntvl(Ljava/io/FileDescriptor;)I")
 }
@@ -91,7 +91,7 @@ async fn get_tcp_keep_alive_intvl(
 #[async_recursion(?Send)]
 async fn get_tcp_keep_alive_probes(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.getTcpKeepAliveProbes(Ljava/io/FileDescriptor;)I")
 }
@@ -99,26 +99,26 @@ async fn get_tcp_keep_alive_probes(
 #[async_recursion(?Send)]
 async fn get_tcp_keep_alive_time(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.getTcpKeepAliveTime(Ljava/io/FileDescriptor;)I")
 }
 
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn keep_alive_options_supported(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.keepAliveOptionsSupported()Z")
 }
 
 #[async_recursion(?Send)]
-async fn set_flow_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_flow_option(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "sun.net.ExtendedOptionsImpl.setFlowOption(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V"
     )
@@ -127,7 +127,7 @@ async fn set_flow_option(_thread: Arc<Thread>, _arguments: Arguments) -> Result<
 #[async_recursion(?Send)]
 async fn set_tcp_keep_alive_intvl(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.setTcpKeepAliveIntvl(Ljava/io/FileDescriptor;I)V")
 }
@@ -135,7 +135,7 @@ async fn set_tcp_keep_alive_intvl(
 #[async_recursion(?Send)]
 async fn set_tcp_keep_alive_probes(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.setTcpKeepAliveProbes(Ljava/io/FileDescriptor;I)V")
 }
@@ -143,7 +143,7 @@ async fn set_tcp_keep_alive_probes(
 #[async_recursion(?Send)]
 async fn set_tcp_keep_alive_time(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.setTcpKeepAliveTime(Ljava/io/FileDescriptor;I)V")
 }
@@ -156,7 +156,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.net.ExtendedOptionsImpl.flowSupported()Z")]
     async fn test_flow_supported() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = flow_supported(thread, Arguments::default()).await;
+        let _ = flow_supported(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -165,7 +165,7 @@ mod tests {
     )]
     async fn test_get_flow_option() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_flow_option(thread, Arguments::default()).await;
+        let _ = get_flow_option(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -174,7 +174,7 @@ mod tests {
     )]
     async fn test_get_tcp_keep_alive_intvl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_tcp_keep_alive_intvl(thread, Arguments::default()).await;
+        let _ = get_tcp_keep_alive_intvl(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -183,7 +183,7 @@ mod tests {
     )]
     async fn test_get_tcp_keep_alive_probes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_tcp_keep_alive_probes(thread, Arguments::default()).await;
+        let _ = get_tcp_keep_alive_probes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -192,13 +192,13 @@ mod tests {
     )]
     async fn test_get_tcp_keep_alive_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_tcp_keep_alive_time(thread, Arguments::default()).await;
+        let _ = get_tcp_keep_alive_time(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init(thread, Arguments::default()).await?;
+        let result = init(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -209,7 +209,7 @@ mod tests {
     )]
     async fn test_keep_alive_options_supported() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = keep_alive_options_supported(thread, Arguments::default()).await;
+        let _ = keep_alive_options_supported(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -218,7 +218,7 @@ mod tests {
     )]
     async fn test_set_flow_option() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_flow_option(thread, Arguments::default()).await;
+        let _ = set_flow_option(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -227,7 +227,7 @@ mod tests {
     )]
     async fn test_set_tcp_keep_alive_intvl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_tcp_keep_alive_intvl(thread, Arguments::default()).await;
+        let _ = set_tcp_keep_alive_intvl(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -236,7 +236,7 @@ mod tests {
     )]
     async fn test_set_tcp_keep_alive_probes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_tcp_keep_alive_probes(thread, Arguments::default()).await;
+        let _ = set_tcp_keep_alive_probes(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -245,6 +245,6 @@ mod tests {
     )]
     async fn test_set_tcp_keep_alive_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_tcp_keep_alive_time(thread, Arguments::default()).await;
+        let _ = set_tcp_keep_alive_time(thread, Parameters::default()).await;
     }
 }

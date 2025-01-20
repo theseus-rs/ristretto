@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -41,24 +41,24 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn x_create_gc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_create_gc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.XCreateGC(J)J");
 }
 
 #[async_recursion(?Send)]
-async fn x_reset_clip(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_reset_clip(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.XResetClip(J)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_set_clip(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_set_clip(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.XSetClip(JIIIILsun/java2d/pipe/Region;)V");
 }
 
 #[async_recursion(?Send)]
 async fn x_set_graphics_exposures(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.XSetGraphicsExposures(JZ)V");
 }
@@ -66,23 +66,23 @@ async fn x_set_graphics_exposures(
 #[async_recursion(?Send)]
 async fn flush_native_surface(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.flushNativeSurface()V");
 }
 
 #[async_recursion(?Send)]
-async fn init_ops(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_ops(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.initOps(Lsun/awt/X11ComponentPeer;Lsun/awt/X11GraphicsConfig;I)V");
 }
 
 #[async_recursion(?Send)]
-async fn is_drawable_valid(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_drawable_valid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.isDrawableValid()Z");
 }
 
 #[async_recursion(?Send)]
-async fn set_invalid(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_invalid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.setInvalid()V");
 }
 
@@ -94,14 +94,14 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.java2d.x11.XSurfaceData.XCreateGC(J)J")]
     async fn test_x_create_gc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_create_gc(thread, Arguments::default()).await;
+        let _ = x_create_gc(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.java2d.x11.XSurfaceData.XResetClip(J)V")]
     async fn test_x_reset_clip() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_reset_clip(thread, Arguments::default()).await;
+        let _ = x_reset_clip(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -110,7 +110,7 @@ mod tests {
     )]
     async fn test_x_set_clip() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_set_clip(thread, Arguments::default()).await;
+        let _ = x_set_clip(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -119,7 +119,7 @@ mod tests {
     )]
     async fn test_x_set_graphics_exposures() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_set_graphics_exposures(thread, Arguments::default()).await;
+        let _ = x_set_graphics_exposures(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -128,7 +128,7 @@ mod tests {
     )]
     async fn test_flush_native_surface() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = flush_native_surface(thread, Arguments::default()).await;
+        let _ = flush_native_surface(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -137,7 +137,7 @@ mod tests {
     )]
     async fn test_init_ops() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_ops(thread, Arguments::default()).await;
+        let _ = init_ops(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -146,13 +146,13 @@ mod tests {
     )]
     async fn test_is_drawable_valid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_drawable_valid(thread, Arguments::default()).await;
+        let _ = is_drawable_valid(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.java2d.x11.XSurfaceData.setInvalid()V")]
     async fn test_set_invalid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_invalid(thread, Arguments::default()).await;
+        let _ = set_invalid(thread, Parameters::default()).await;
     }
 }

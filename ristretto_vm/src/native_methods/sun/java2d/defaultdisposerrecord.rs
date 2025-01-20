@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn invoke_native_dispose(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.DefaultDisposerRecord.invokeNativeDispose(JJ)V");
 }
@@ -36,6 +36,6 @@ mod tests {
     )]
     async fn test_invoke_native_dispose() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke_native_dispose(thread, Arguments::default()).await;
+        let _ = invoke_native_dispose(thread, Parameters::default()).await;
     }
 }

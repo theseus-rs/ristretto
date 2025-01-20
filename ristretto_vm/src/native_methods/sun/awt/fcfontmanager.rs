@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn get_font_path_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.FcFontManager.getFontPathNative(ZZ)Ljava/lang/String;")
 }
@@ -36,6 +36,6 @@ mod tests {
     )]
     async fn test_get_font_path_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_font_path_native(thread, Arguments::default()).await;
+        let _ = get_font_path_native(thread, Parameters::default()).await;
     }
 }

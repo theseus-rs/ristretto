@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -37,53 +37,59 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn check_shm_ext(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn check_shm_ext(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.checkShmExt()I")
 }
 
 #[async_recursion(?Send)]
 async fn get_default_screen_num(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.getDefaultScreenNum()I")
 }
 
 #[async_recursion(?Send)]
-async fn get_display_string(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_display_string(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.getDisplayString()Ljava/lang/String;")
 }
 
 #[async_recursion(?Send)]
-async fn get_num_screens(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_num_screens(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.getNumScreens()I")
 }
 
 #[async_recursion(?Send)]
 async fn get_xinerama_center_point(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.getXineramaCenterPoint()Ljava/awt/Point;")
 }
 
 #[async_recursion(?Send)]
-async fn init_display(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_display(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.initDisplay(Z)V")
 }
 
 #[async_recursion(?Send)]
-async fn init_glx(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_glx(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.initGLX()Z")
 }
 
 #[async_recursion(?Send)]
-async fn init_x_render(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init_x_render(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.initXRender(ZZ)Z")
 }
 
 #[async_recursion(?Send)]
-async fn p_running_xinerama(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn p_running_xinerama(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.pRunningXinerama()Z")
 }
 
@@ -95,7 +101,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.checkShmExt()I")]
     async fn test_check_shm_ext() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = check_shm_ext(thread, Arguments::default()).await;
+        let _ = check_shm_ext(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -104,7 +110,7 @@ mod tests {
     )]
     async fn test_get_default_screen_num() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_default_screen_num(thread, Arguments::default()).await;
+        let _ = get_default_screen_num(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -113,7 +119,7 @@ mod tests {
     )]
     async fn test_get_display_string() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_display_string(thread, Arguments::default()).await;
+        let _ = get_display_string(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -122,7 +128,7 @@ mod tests {
     )]
     async fn test_get_num_screens() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_num_screens(thread, Arguments::default()).await;
+        let _ = get_num_screens(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -131,7 +137,7 @@ mod tests {
     )]
     async fn test_get_xinerama_center_point() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_xinerama_center_point(thread, Arguments::default()).await;
+        let _ = get_xinerama_center_point(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -140,14 +146,14 @@ mod tests {
     )]
     async fn test_init_display() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_display(thread, Arguments::default()).await;
+        let _ = init_display(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.initGLX()Z")]
     async fn test_init_glx() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_glx(thread, Arguments::default()).await;
+        let _ = init_glx(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -156,7 +162,7 @@ mod tests {
     )]
     async fn test_init_x_render() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_x_render(thread, Arguments::default()).await;
+        let _ = init_x_render(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -165,6 +171,6 @@ mod tests {
     )]
     async fn test_p_running_xinerama() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = p_running_xinerama(thread, Arguments::default()).await;
+        let _ = p_running_xinerama(thread, Parameters::default()).await;
     }
 }

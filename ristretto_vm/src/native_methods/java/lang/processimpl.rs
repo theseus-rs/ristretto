@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -20,12 +20,12 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn fork_and_exec(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn fork_and_exec(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ProcessImpl.forkAndExec(I[B[B[BI[BI[B[IZ)I")
 }
 
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
@@ -39,13 +39,13 @@ mod tests {
     )]
     async fn test_fork_and_exec() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fork_and_exec(thread, Arguments::default()).await;
+        let _ = fork_and_exec(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init(thread, Arguments::default()).await?;
+        let result = init(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
     }

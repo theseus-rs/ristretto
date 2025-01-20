@@ -1,6 +1,6 @@
-use crate::arguments::Arguments;
 use crate::java_object::JavaObject;
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::JavaError::{ClassFormatError, IndexOutOfBoundsException, NoClassDefFoundError};
 use crate::{Result, VM};
@@ -123,16 +123,16 @@ async fn class_object_from_bytes(
 }
 
 #[async_recursion(?Send)]
-async fn define_class_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
+async fn define_class_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let vm = thread.vm()?;
 
     let class = if vm.java_major_version() <= JAVA_8 {
-        let _protection_domain = arguments.pop_object()?;
-        let length = arguments.pop_int()?;
-        let offset = arguments.pop_int()?;
-        let bytes: Vec<u8> = arguments.pop()?.try_into()?;
+        let _protection_domain = parameters.pop_object()?;
+        let length = parameters.pop_int()?;
+        let offset = parameters.pop_int()?;
+        let bytes: Vec<u8> = parameters.pop()?.try_into()?;
         let class = class_object_from_bytes(&vm, None, &bytes, offset, length).await?;
-        if let Some(expected_class_name) = arguments.pop_reference()? {
+        if let Some(expected_class_name) = parameters.pop_reference()? {
             let expected_class_name: String = expected_class_name.try_into()?;
             let class_name = class.class().name();
             if class_name != expected_class_name {
@@ -141,17 +141,17 @@ async fn define_class_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result
         }
         class
     } else {
-        let _class_data = arguments.pop_reference()?;
-        let _flags = arguments.pop_int()?;
-        let _initialize = arguments.pop_int()? != 0;
-        let _protection_domain = arguments.pop_object()?;
-        let length = arguments.pop_int()?;
-        let offset = arguments.pop_int()?;
-        let bytes: Vec<u8> = arguments.pop()?.try_into()?;
-        let _name: String = arguments.pop()?.try_into()?;
-        let _lookup: Arc<Class> = arguments.pop()?.try_into()?;
+        let _class_data = parameters.pop_reference()?;
+        let _flags = parameters.pop_int()?;
+        let _initialize = parameters.pop_int()? != 0;
+        let _protection_domain = parameters.pop_object()?;
+        let length = parameters.pop_int()?;
+        let offset = parameters.pop_int()?;
+        let bytes: Vec<u8> = parameters.pop()?.try_into()?;
+        let _name: String = parameters.pop()?.try_into()?;
+        let _lookup: Arc<Class> = parameters.pop()?.try_into()?;
         let class = class_object_from_bytes(&vm, None, &bytes, offset, length).await?;
-        let class_loader = arguments.pop()?;
+        let class_loader = parameters.pop()?;
         class.set_value("classLoader", class_loader)?;
         class
     };
@@ -160,17 +160,17 @@ async fn define_class_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result
 }
 
 #[async_recursion(?Send)]
-async fn define_class_1(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let source_file = arguments.pop_reference()?;
-    let _protection_domain = arguments.pop_object()?;
-    let length = arguments.pop_int()?;
-    let offset = arguments.pop_int()?;
-    let bytes: Vec<u8> = arguments.pop()?.try_into()?;
+async fn define_class_1(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let source_file = parameters.pop_reference()?;
+    let _protection_domain = parameters.pop_object()?;
+    let length = parameters.pop_int()?;
+    let offset = parameters.pop_int()?;
+    let bytes: Vec<u8> = parameters.pop()?.try_into()?;
     let vm = thread.vm()?;
     let class = class_object_from_bytes(&vm, source_file, &bytes, offset, length).await?;
 
     if vm.java_major_version() <= JAVA_8 {
-        if let Some(expected_class_name) = arguments.pop_reference()? {
+        if let Some(expected_class_name) = parameters.pop_reference()? {
             let expected_class_name: String = expected_class_name.try_into()?;
             let class_name = class.class().name();
             if class_name != expected_class_name {
@@ -178,7 +178,7 @@ async fn define_class_1(thread: Arc<Thread>, mut arguments: Arguments) -> Result
             }
         }
     } else {
-        let class_loader = arguments.pop()?;
+        let class_loader = parameters.pop()?;
         class.set_value("classLoader", class_loader)?;
     }
 
@@ -186,12 +186,12 @@ async fn define_class_1(thread: Arc<Thread>, mut arguments: Arguments) -> Result
 }
 
 #[async_recursion(?Send)]
-async fn define_class_2(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let source_file = arguments.pop_reference()?;
-    let _protection_domain = arguments.pop_object()?;
-    let length = arguments.pop_int()?;
-    let offset = arguments.pop_int()?;
-    let byte_buffer = arguments.pop_object()?;
+async fn define_class_2(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let source_file = parameters.pop_reference()?;
+    let _protection_domain = parameters.pop_object()?;
+    let length = parameters.pop_int()?;
+    let offset = parameters.pop_int()?;
+    let byte_buffer = parameters.pop_object()?;
     let buffer: Vec<u8> = byte_buffer.value("hb")?.try_into()?;
     let buffer_offset = byte_buffer.value("offset")?.try_into()?;
     let bytes: Vec<u8> = buffer.into_iter().skip(buffer_offset).collect();
@@ -199,7 +199,7 @@ async fn define_class_2(thread: Arc<Thread>, mut arguments: Arguments) -> Result
     let class = class_object_from_bytes(&vm, source_file, &bytes, offset, length).await?;
 
     if vm.java_major_version() <= JAVA_8 {
-        if let Some(expected_class_name) = arguments.pop_reference()? {
+        if let Some(expected_class_name) = parameters.pop_reference()? {
             let expected_class_name: String = expected_class_name.try_into()?;
             let class_name = class.class().name();
             if class_name != expected_class_name {
@@ -207,7 +207,7 @@ async fn define_class_2(thread: Arc<Thread>, mut arguments: Arguments) -> Result
             }
         }
     } else {
-        let class_loader = arguments.pop()?;
+        let class_loader = parameters.pop()?;
         class.set_value("classLoader", class_loader)?;
     }
 
@@ -217,9 +217,9 @@ async fn define_class_2(thread: Arc<Thread>, mut arguments: Arguments) -> Result
 #[async_recursion(?Send)]
 async fn find_bootstrap_class(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let class_name: String = arguments.pop()?.try_into()?;
+    let class_name: String = parameters.pop()?.try_into()?;
     let vm = thread.vm()?;
     let Ok(class) = vm.class(class_name).await else {
         return Ok(Some(Value::Object(None)));
@@ -229,7 +229,7 @@ async fn find_bootstrap_class(
 }
 
 #[async_recursion(?Send)]
-async fn find_builtin_lib(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn find_builtin_lib(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // Ristretto has not built-in libraries; all native methods are implemented in Rust
     Ok(Some(Value::Object(None)))
 }
@@ -237,9 +237,9 @@ async fn find_builtin_lib(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 #[async_recursion(?Send)]
 async fn find_loaded_class_0(
     thread: Arc<Thread>,
-    mut arguments: Arguments,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let class_name: String = arguments.pop()?.try_into()?;
+    let class_name: String = parameters.pop()?.try_into()?;
     let vm = thread.vm()?;
     let Ok(class) = vm.class(class_name).await else {
         return Ok(Some(Value::Object(None)));
@@ -251,25 +251,28 @@ async fn find_loaded_class_0(
 #[async_recursion(?Send)]
 async fn init_system_class_loader(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     // Ristretto initializes the system class loader in the VM
     Ok(Some(Value::Object(None)))
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn resolve_class_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn resolve_class_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // Ristretto resolves classes when they are loaded
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn retrieve_directives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn retrieve_directives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     // TODO: implement the `retrieveDirectives` native method
     Ok(Some(Value::Object(None)))
 }
@@ -281,7 +284,7 @@ mod tests {
     #[tokio::test]
     async fn test_find_builtin_lib() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = find_builtin_lib(thread, Arguments::default()).await?;
+        let result = find_builtin_lib(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -289,7 +292,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_system_class_loader() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_system_class_loader(thread, Arguments::default()).await?;
+        let result = init_system_class_loader(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -297,7 +300,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Arguments::default()).await?;
+        let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -305,7 +308,7 @@ mod tests {
     #[tokio::test]
     async fn test_resolve_class_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = resolve_class_0(thread, Arguments::default()).await?;
+        let result = resolve_class_0(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -313,7 +316,7 @@ mod tests {
     #[tokio::test]
     async fn test_retrieve_directives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = retrieve_directives(thread, Arguments::default()).await?;
+        let result = retrieve_directives(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }

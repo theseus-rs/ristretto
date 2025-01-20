@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -35,14 +35,17 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_kerberos_config(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_kerberos_config(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.krb5.SCDynamicStoreConfig.getKerberosConfig()Ljava/util/Hashtable;")
 }
 
 #[async_recursion(?Send)]
 async fn install_notification_callback(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.krb5.SCDynamicStoreConfig.installNotificationCallback()V")
 }
@@ -57,7 +60,7 @@ mod tests {
     )]
     async fn test_get_kerberos_config() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_kerberos_config(thread, Arguments::default()).await;
+        let _ = get_kerberos_config(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -66,6 +69,6 @@ mod tests {
     )]
     async fn test_install_notification_callback() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = install_notification_callback(thread, Arguments::default()).await;
+        let _ = install_notification_callback(thread, Parameters::default()).await;
     }
 }

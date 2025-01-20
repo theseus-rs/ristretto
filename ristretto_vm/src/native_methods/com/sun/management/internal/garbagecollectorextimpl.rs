@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -21,7 +21,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn set_notification_enabled(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.GarbageCollectorExtImpl.setNotificationEnabled(Lcom/sun/management/GarbageCollectorMXBean;Z)V")
 }
@@ -36,6 +36,6 @@ mod tests {
     )]
     async fn test_set_notification_enabled() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_notification_enabled(thread, Arguments::default()).await;
+        let _ = set_notification_enabled(thread, Parameters::default()).await;
     }
 }

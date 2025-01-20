@@ -1,7 +1,7 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::{
     MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_20, JAVA_21, JAVA_22,
 };
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::JavaError::NullPointerException;
 use crate::Result;
@@ -160,13 +160,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn clear_interrupt_event(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn count_stack_frames(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn count_stack_frames(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
     let frames = i32::try_from(frames.len())?;
     Ok(Some(Value::Int(frames)))
@@ -175,40 +175,43 @@ async fn count_stack_frames(thread: Arc<Thread>, _arguments: Arguments) -> Resul
 #[async_recursion(?Send)]
 async fn current_carrier_thread(
     thread: Arc<Thread>,
-    arguments: Arguments,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
     // TODO: correct this once threading is implemented
-    current_thread(thread, arguments).await
+    current_thread(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn current_thread(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn current_thread(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let thread = thread.java_object().await;
     Ok(Some(thread))
 }
 
 #[async_recursion(?Send)]
-async fn dump_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn dump_threads(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;")
 }
 
 #[async_recursion(?Send)]
 async fn ensure_materialized_for_stack_walk(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
-async fn extent_local_cache(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn extent_local_cache(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Thread.extentLocalCache()[Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
 async fn find_scoped_value_bindings(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Thread.findScopedValueBindings()Ljava/lang/Object;")
 }
@@ -216,7 +219,7 @@ async fn find_scoped_value_bindings(
 #[async_recursion(?Send)]
 async fn get_next_thread_id_offset(
     thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     let thread_id = vm.next_thread_id()?;
@@ -225,27 +228,27 @@ async fn get_next_thread_id_offset(
 }
 
 #[async_recursion(?Send)]
-async fn get_stack_trace_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_stack_trace_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Thread.getStackTrace0()Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn get_threads(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_threads(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Thread.getThreads()[Ljava/lang/Thread;")
 }
 
 #[async_recursion(?Send)]
-async fn holds_lock(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn holds_lock(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Thread.holdsLock(Ljava/lang/Object;)Z")
 }
 
 #[async_recursion(?Send)]
-async fn interrupt_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn interrupt_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Thread.interrupt0()V")
 }
 
 #[async_recursion(?Send)]
-async fn is_alive(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_alive(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let object: Object = thread.java_object().await.try_into()?;
     let eetop = object.value("eetop")?.to_long()?;
     let is_alive = eetop != 0;
@@ -253,46 +256,52 @@ async fn is_alive(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
 }
 
 #[async_recursion(?Send)]
-async fn is_alive_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    is_alive(thread, arguments).await
+async fn is_alive_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    is_alive(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn is_interrupted(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn is_interrupted(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Thread.isInterrupted(Z)Z")
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[async_recursion(?Send)]
-async fn resume_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn resume_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Thread.resume0()V")
 }
 
 #[async_recursion(?Send)]
-async fn scoped_value_cache(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn scoped_value_cache(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Thread.scopedValueCache()[Ljava/lang/Object;")
 }
 
 #[async_recursion(?Send)]
-async fn set_current_thread(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn set_current_thread(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Thread.setCurrentThread(Ljava/lang/Thread;)V")
 }
 
 #[async_recursion(?Send)]
 async fn set_extent_local_cache(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Thread.setExtentLocalCache([Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
-async fn set_native_name(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let Some(Reference::Object(name)) = arguments.pop_reference()? else {
+async fn set_native_name(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let Some(Reference::Object(name)) = parameters.pop_reference()? else {
         return Err(NullPointerException("name cannot be null".to_string()).into());
     };
     let name: String = name.try_into()?;
@@ -301,8 +310,8 @@ async fn set_native_name(thread: Arc<Thread>, mut arguments: Arguments) -> Resul
 }
 
 #[async_recursion(?Send)]
-async fn set_priority_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let _new_priority = arguments.pop_int()?;
+async fn set_priority_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let _new_priority = parameters.pop_int()?;
     // TODO: implement priority if/when tokio supports it
     Ok(None)
 }
@@ -310,14 +319,14 @@ async fn set_priority_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Resul
 #[async_recursion(?Send)]
 async fn set_scoped_value_cache(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Thread.setScopedValueCache([Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
-async fn sleep(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let millis = arguments.pop_long()?;
+async fn sleep(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let millis = parameters.pop_long()?;
     let millis = u64::try_from(millis)?;
     let duration = Duration::from_millis(millis);
     #[cfg(not(target_arch = "wasm32"))]
@@ -328,13 +337,13 @@ async fn sleep(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<
 }
 
 #[async_recursion(?Send)]
-async fn sleep_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    sleep(thread, arguments).await
+async fn sleep_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    sleep(thread, parameters).await
 }
 
 #[async_recursion(?Send)]
-async fn sleep_nanos_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
-    let nanos = arguments.pop_long()?;
+async fn sleep_nanos_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let nanos = parameters.pop_long()?;
     let nanos = u64::try_from(nanos)?;
     let duration = Duration::from_nanos(nanos);
     #[cfg(not(target_arch = "wasm32"))]
@@ -345,7 +354,7 @@ async fn sleep_nanos_0(_thread: Arc<Thread>, mut arguments: Arguments) -> Result
 }
 
 #[async_recursion(?Send)]
-async fn start_0(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn start_0(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let thread_id = i64::try_from(thread.id())?;
     let object: Object = thread.java_object().await.try_into()?;
     object.set_value("eetop", Value::from(thread_id))?;
@@ -353,17 +362,17 @@ async fn start_0(thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 }
 
 #[async_recursion(?Send)]
-async fn stop_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn stop_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Thread.stop0(Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
-async fn suspend_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn suspend_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Thread.suspend0()V")
 }
 
 #[async_recursion(?Send)]
-async fn r#yield(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn r#yield(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     #[cfg(not(target_arch = "wasm32"))]
     tokio::task::yield_now().await;
     #[cfg(target_arch = "wasm32")]
@@ -372,8 +381,8 @@ async fn r#yield(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
 }
 
 #[async_recursion(?Send)]
-async fn yield_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    r#yield(thread, arguments).await
+async fn yield_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    r#yield(thread, parameters).await
 }
 
 #[cfg(test)]
@@ -383,7 +392,7 @@ mod tests {
     #[tokio::test]
     async fn test_clear_interrupt_event() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = clear_interrupt_event(thread, Arguments::default()).await?;
+        let result = clear_interrupt_event(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -391,7 +400,7 @@ mod tests {
     #[tokio::test]
     async fn test_count_stack_frames() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = count_stack_frames(thread, Arguments::default()).await?;
+        let result = count_stack_frames(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -399,7 +408,7 @@ mod tests {
     #[tokio::test]
     async fn test_current_carrier_thread() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = current_carrier_thread(thread, Arguments::default()).await?;
+        let result = current_carrier_thread(thread, Parameters::default()).await?;
         assert!(result.is_some());
         Ok(())
     }
@@ -407,7 +416,7 @@ mod tests {
     #[tokio::test]
     async fn test_current_thread() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = current_thread(thread, Arguments::default()).await?;
+        let result = current_thread(thread, Parameters::default()).await?;
         assert!(result.is_some());
         Ok(())
     }
@@ -418,7 +427,7 @@ mod tests {
     )]
     async fn test_dump_threads() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dump_threads(thread, Arguments::default()).await;
+        let _ = dump_threads(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -427,7 +436,7 @@ mod tests {
     )]
     async fn test_ensure_materialized_for_stack_walk() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ensure_materialized_for_stack_walk(thread, Arguments::default()).await;
+        let _ = ensure_materialized_for_stack_walk(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -436,7 +445,7 @@ mod tests {
     )]
     async fn test_extent_local_cache() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = extent_local_cache(thread, Arguments::default()).await;
+        let _ = extent_local_cache(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -445,13 +454,13 @@ mod tests {
     )]
     async fn test_find_scoped_value_bindings() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = find_scoped_value_bindings(thread, Arguments::default()).await;
+        let _ = find_scoped_value_bindings(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_get_next_thread_id_offset() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_next_thread_id_offset(thread, Arguments::default()).await?;
+        let result = get_next_thread_id_offset(thread, Parameters::default()).await?;
         let thread_id = result.unwrap_or(Value::Long(0)).to_long()?;
         assert!(thread_id > 0);
         Ok(())
@@ -463,7 +472,7 @@ mod tests {
     )]
     async fn test_get_stack_trace_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_stack_trace_0(thread, Arguments::default()).await;
+        let _ = get_stack_trace_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -472,7 +481,7 @@ mod tests {
     )]
     async fn test_get_threads() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_threads(thread, Arguments::default()).await;
+        let _ = get_threads(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -481,27 +490,27 @@ mod tests {
     )]
     async fn test_holds_lock() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = holds_lock(thread, Arguments::default()).await;
+        let _ = holds_lock(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.lang.Thread.interrupt0()V")]
     async fn test_interrupt_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = interrupt_0(thread, Arguments::default()).await;
+        let _ = interrupt_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.lang.Thread.isInterrupted(Z)Z")]
     async fn test_is_interrupted() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_interrupted(thread, Arguments::default()).await;
+        let _ = is_interrupted(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Arguments::default()).await?;
+        let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -510,7 +519,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.lang.Thread.resume0()V")]
     async fn test_resume_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = resume_0(thread, Arguments::default()).await;
+        let _ = resume_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -519,7 +528,7 @@ mod tests {
     )]
     async fn test_scoped_value_cache() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = scoped_value_cache(thread, Arguments::default()).await;
+        let _ = scoped_value_cache(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -528,7 +537,7 @@ mod tests {
     )]
     async fn test_set_current_thread() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_current_thread(thread, Arguments::default()).await;
+        let _ = set_current_thread(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -537,14 +546,14 @@ mod tests {
     )]
     async fn test_set_extent_local_cache() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_extent_local_cache(thread, Arguments::default()).await;
+        let _ = set_extent_local_cache(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_set_priority_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let priority = Value::Int(0);
-        let result = set_priority_0(thread, Arguments::new(vec![priority])).await?;
+        let result = set_priority_0(thread, Parameters::new(vec![priority])).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -555,7 +564,7 @@ mod tests {
     )]
     async fn test_set_scoped_value_cache() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_scoped_value_cache(thread, Arguments::default()).await;
+        let _ = set_scoped_value_cache(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -563,7 +572,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let millis = Value::Long(250);
         let start = std::time::Instant::now();
-        let result = sleep(thread, Arguments::new(vec![millis])).await?;
+        let result = sleep(thread, Parameters::new(vec![millis])).await?;
         let elapsed = start.elapsed();
         assert_eq!(result, None);
         assert!(elapsed.as_millis() > 200);
@@ -575,7 +584,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let millis = Value::Long(250);
         let start = std::time::Instant::now();
-        let result = sleep_0(thread, Arguments::new(vec![millis])).await?;
+        let result = sleep_0(thread, Parameters::new(vec![millis])).await?;
         let elapsed = start.elapsed();
         assert_eq!(result, None);
         assert!(elapsed.as_millis() > 200);
@@ -587,7 +596,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let millis = Value::Long(1000);
         let start = std::time::Instant::now();
-        let result = sleep_nanos_0(thread, Arguments::new(vec![millis])).await?;
+        let result = sleep_nanos_0(thread, Parameters::new(vec![millis])).await?;
         let elapsed = start.elapsed();
         assert_eq!(result, None);
         assert!(elapsed.as_nanos() > 500);
@@ -598,20 +607,20 @@ mod tests {
     #[should_panic(expected = "not yet implemented: java.lang.Thread.stop0(Ljava/lang/Object;)V")]
     async fn test_stop_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = stop_0(thread, Arguments::default()).await;
+        let _ = stop_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.lang.Thread.suspend0()V")]
     async fn test_suspend_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = suspend_0(thread, Arguments::default()).await;
+        let _ = suspend_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     async fn test_yield() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = r#yield(thread, Arguments::default()).await?;
+        let result = r#yield(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -619,7 +628,7 @@ mod tests {
     #[tokio::test]
     async fn test_yield_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = yield_0(thread, Arguments::default()).await?;
+        let result = yield_0(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }

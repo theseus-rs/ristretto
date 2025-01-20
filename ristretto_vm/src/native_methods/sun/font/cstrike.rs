@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -57,7 +57,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn create_native_strike_ptr(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.createNativeStrikePtr(J[D[DII)J")
 }
@@ -65,20 +65,20 @@ async fn create_native_strike_ptr(
 #[async_recursion(?Send)]
 async fn dispose_native_strike_ptr(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.disposeNativeStrikePtr(J)V")
 }
 
 #[async_recursion(?Send)]
-async fn get_font_metrics(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn get_font_metrics(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.getFontMetrics(J)Lsun/font/StrikeMetrics;")
 }
 
 #[async_recursion(?Send)]
 async fn get_glyph_image_ptrs_native(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.getGlyphImagePtrsNative(J[J[II)V")
 }
@@ -86,7 +86,7 @@ async fn get_glyph_image_ptrs_native(
 #[async_recursion(?Send)]
 async fn get_native_glyph_advance(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.getNativeGlyphAdvance(JI)F")
 }
@@ -94,7 +94,7 @@ async fn get_native_glyph_advance(
 #[async_recursion(?Send)]
 async fn get_native_glyph_image_bounds(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.getNativeGlyphImageBounds(JILjava/awt/geom/Rectangle2D$Float;DD)V")
 }
@@ -102,7 +102,7 @@ async fn get_native_glyph_image_bounds(
 #[async_recursion(?Send)]
 async fn get_native_glyph_outline(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.getNativeGlyphOutline(JIDD)Ljava/awt/geom/GeneralPath;")
 }
@@ -117,14 +117,14 @@ mod tests {
     )]
     async fn test_create_native_strike_ptr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_native_strike_ptr(thread, Arguments::default()).await;
+        let _ = create_native_strike_ptr(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.CStrike.disposeNativeStrikePtr(J)V")]
     async fn test_dispose_native_strike_ptr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dispose_native_strike_ptr(thread, Arguments::default()).await;
+        let _ = dispose_native_strike_ptr(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -133,7 +133,7 @@ mod tests {
     )]
     async fn test_get_font_metrics() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_font_metrics(thread, Arguments::default()).await;
+        let _ = get_font_metrics(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -142,14 +142,14 @@ mod tests {
     )]
     async fn test_get_glyph_image_ptrs_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_image_ptrs_native(thread, Arguments::default()).await;
+        let _ = get_glyph_image_ptrs_native(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.font.CStrike.getNativeGlyphAdvance(JI)F")]
     async fn test_get_native_glyph_advance() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_glyph_advance(thread, Arguments::default()).await;
+        let _ = get_native_glyph_advance(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -158,7 +158,7 @@ mod tests {
     )]
     async fn test_get_native_glyph_image_bounds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_glyph_image_bounds(thread, Arguments::default()).await;
+        let _ = get_native_glyph_image_bounds(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -167,6 +167,6 @@ mod tests {
     )]
     async fn test_get_native_glyph_outline() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_native_glyph_outline(thread, Arguments::default()).await;
+        let _ = get_native_glyph_outline(thread, Parameters::default()).await;
     }
 }

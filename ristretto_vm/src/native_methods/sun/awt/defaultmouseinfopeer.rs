@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -27,7 +27,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 #[async_recursion(?Send)]
 async fn fill_point_with_coords(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.DefaultMouseInfoPeer.fillPointWithCoords(Ljava/awt/Point;)I")
 }
@@ -35,7 +35,7 @@ async fn fill_point_with_coords(
 #[async_recursion(?Send)]
 async fn is_window_under_mouse(
     _thread: Arc<Thread>,
-    _arguments: Arguments,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z")
 }
@@ -50,7 +50,7 @@ mod tests {
     )]
     async fn test_fill_point_with_coords() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fill_point_with_coords(thread, Arguments::default()).await;
+        let _ = fill_point_with_coords(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -59,6 +59,6 @@ mod tests {
     )]
     async fn test_is_window_under_mouse() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_window_under_mouse(thread, Arguments::default()).await;
+        let _ = is_window_under_mouse(thread, Parameters::default()).await;
     }
 }

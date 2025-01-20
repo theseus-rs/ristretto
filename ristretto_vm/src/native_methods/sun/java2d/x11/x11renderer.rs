@@ -1,5 +1,5 @@
-use crate::arguments::Arguments;
 use crate::native_methods::registry::MethodRegistry;
+use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
 use async_recursion::async_recursion;
@@ -47,72 +47,72 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn x_do_path(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_do_path(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDoPath(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_draw_arc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_draw_arc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawArc(JJIIIIII)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_draw_line(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_draw_line(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawLine(JJIIII)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_draw_oval(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_draw_oval(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawOval(JJIIII)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_draw_poly(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_draw_poly(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawPoly(JJII[I[IIZ)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_draw_rect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_draw_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawRect(JJIIII)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_draw_round_rect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_draw_round_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawRoundRect(JJIIIIII)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_fill_arc(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_fill_arc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillArc(JJIIIIII)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_fill_oval(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_fill_oval(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillOval(JJIIII)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_fill_poly(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_fill_poly(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillPoly(JJII[I[II)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_fill_rect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_fill_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillRect(JJIIII)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_fill_round_rect(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_fill_round_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillRoundRect(JJIIIIII)V");
 }
 
 #[async_recursion(?Send)]
-async fn x_fill_spans(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn x_fill_spans(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillSpans(JJLsun/java2d/pipe/SpanIterator;JII)V");
 }
 
 #[async_recursion(?Send)]
-async fn dev_copy_area(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+async fn dev_copy_area(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.devCopyArea(JJIIIIII)V");
 }
 
@@ -126,7 +126,7 @@ mod tests {
     )]
     async fn test_x_do_path() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_do_path(thread, Arguments::default()).await;
+        let _ = x_do_path(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -135,21 +135,21 @@ mod tests {
     )]
     async fn test_x_draw_arc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_draw_arc(thread, Arguments::default()).await;
+        let _ = x_draw_arc(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.java2d.x11.X11Renderer.XDrawLine(JJIIII)V")]
     async fn test_x_draw_line() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_draw_line(thread, Arguments::default()).await;
+        let _ = x_draw_line(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.java2d.x11.X11Renderer.XDrawOval(JJIIII)V")]
     async fn test_x_draw_oval() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_draw_oval(thread, Arguments::default()).await;
+        let _ = x_draw_oval(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -158,14 +158,14 @@ mod tests {
     )]
     async fn test_x_draw_poly() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_draw_poly(thread, Arguments::default()).await;
+        let _ = x_draw_poly(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.java2d.x11.X11Renderer.XDrawRect(JJIIII)V")]
     async fn test_x_draw_rect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_draw_rect(thread, Arguments::default()).await;
+        let _ = x_draw_rect(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -174,7 +174,7 @@ mod tests {
     )]
     async fn test_x_draw_round_rect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_draw_round_rect(thread, Arguments::default()).await;
+        let _ = x_draw_round_rect(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -183,14 +183,14 @@ mod tests {
     )]
     async fn test_x_fill_arc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_fill_arc(thread, Arguments::default()).await;
+        let _ = x_fill_arc(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.java2d.x11.X11Renderer.XFillOval(JJIIII)V")]
     async fn test_x_fill_oval() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_fill_oval(thread, Arguments::default()).await;
+        let _ = x_fill_oval(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -199,14 +199,14 @@ mod tests {
     )]
     async fn test_x_fill_poly() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_fill_poly(thread, Arguments::default()).await;
+        let _ = x_fill_poly(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.java2d.x11.X11Renderer.XFillRect(JJIIII)V")]
     async fn test_x_fill_rect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_fill_rect(thread, Arguments::default()).await;
+        let _ = x_fill_rect(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -215,7 +215,7 @@ mod tests {
     )]
     async fn test_x_fill_round_rect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_fill_round_rect(thread, Arguments::default()).await;
+        let _ = x_fill_round_rect(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -224,7 +224,7 @@ mod tests {
     )]
     async fn test_x_fill_spans() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_fill_spans(thread, Arguments::default()).await;
+        let _ = x_fill_spans(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -233,6 +233,6 @@ mod tests {
     )]
     async fn test_dev_copy_area() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dev_copy_area(thread, Arguments::default()).await;
+        let _ = dev_copy_area(thread, Parameters::default()).await;
     }
 }
