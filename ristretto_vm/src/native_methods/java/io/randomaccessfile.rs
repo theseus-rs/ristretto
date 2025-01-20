@@ -114,6 +114,13 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.io.RandomAccessFile.close0()V")]
+    async fn test_close_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = close_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.io.RandomAccessFile.length()J")]
     async fn test_length() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

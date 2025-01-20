@@ -37,8 +37,8 @@ async fn update(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Va
 }
 
 #[async_recursion(?Send)]
-async fn update_byte_buffer(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.util.zip.CRC32.updateByteBuffer(IJII)I")
+async fn update_byte_buffer(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    update_byte_buffer_0(thread.clone(), arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -50,8 +50,8 @@ async fn update_byte_buffer_0(
 }
 
 #[async_recursion(?Send)]
-async fn update_bytes(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.util.zip.CRC32.updateBytes(I[BII)I")
+async fn update_bytes(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    update_bytes_0(thread.clone(), arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -71,7 +71,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.util.zip.CRC32.updateByteBuffer(IJII)I")]
+    #[should_panic(expected = "not yet implemented: java.util.zip.CRC32.updateByteBuffer0(IJII)I")]
     async fn test_update_byte_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = update_byte_buffer(thread, Arguments::default()).await;
@@ -85,9 +85,16 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.util.zip.CRC32.updateBytes(I[BII)I")]
+    #[should_panic(expected = "not yet implemented: java.util.zip.CRC32.updateBytes0(I[BII)I")]
     async fn test_update_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = update_bytes(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.util.zip.CRC32.updateBytes0(I[BII)I")]
+    async fn test_update_bytes_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = update_bytes_0(thread, Arguments::default()).await;
     }
 }
