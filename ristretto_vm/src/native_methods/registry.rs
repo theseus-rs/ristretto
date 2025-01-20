@@ -620,13 +620,7 @@ impl MethodRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_recursion::async_recursion;
     use ristretto_classloader::runtime;
-
-    #[async_recursion(?Send)]
-    async fn test_none(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-        Ok(None)
-    }
 
     #[tokio::test]
     async fn test_register() -> Result<()> {
@@ -634,7 +628,12 @@ mod tests {
         let class_name = "java/lang/Object";
         let method_name = "foo";
         let method_descriptor = "()V";
-        method_registry.register(class_name, method_name, method_descriptor, test_none);
+        method_registry.register(
+            class_name,
+            method_name,
+            method_descriptor,
+            java::lang::strictmath::abs_i,
+        );
         let result = method_registry.method(class_name, method_name, method_descriptor);
         assert!(result.is_some());
         Ok(())

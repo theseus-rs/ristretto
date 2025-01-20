@@ -625,8 +625,10 @@ impl TryInto<Reference> for Value {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Reference> {
-        self.to_reference()?
-            .ok_or(InvalidValueType("Expected a reference value".to_string()))
+        match self {
+            Value::Object(Some(reference)) => Ok(reference),
+            _ => Err(InvalidValueType("Expected a reference value".to_string())),
+        }
     }
 }
 

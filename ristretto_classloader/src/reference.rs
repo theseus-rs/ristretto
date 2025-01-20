@@ -154,7 +154,7 @@ impl Reference {
     pub fn to_object(&self) -> Result<Object> {
         match self {
             Reference::Object(object) => Ok(object.clone()),
-            _ => Err(InvalidValueType("Expected array".to_string())),
+            _ => Err(InvalidValueType("Expected object".to_string())),
         }
     }
 
@@ -491,7 +491,8 @@ impl TryInto<bool> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<bool> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -499,7 +500,8 @@ impl TryInto<char> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<char> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -507,7 +509,8 @@ impl TryInto<i8> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<i8> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -515,7 +518,8 @@ impl TryInto<u8> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<u8> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -523,7 +527,8 @@ impl TryInto<i16> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<i16> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -531,7 +536,8 @@ impl TryInto<u16> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<u16> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -539,7 +545,8 @@ impl TryInto<i32> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<i32> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -547,7 +554,8 @@ impl TryInto<u32> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<u32> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -555,7 +563,8 @@ impl TryInto<i64> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<i64> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -563,7 +572,8 @@ impl TryInto<u64> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<u64> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -571,7 +581,8 @@ impl TryInto<isize> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<isize> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -579,7 +590,8 @@ impl TryInto<usize> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<usize> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -587,7 +599,8 @@ impl TryInto<f32> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<f32> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -595,7 +608,8 @@ impl TryInto<f64> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<f64> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -603,7 +617,10 @@ impl TryInto<Object> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Object> {
-        self.to_object()
+        match self {
+            Reference::Object(object) => Ok(object),
+            _ => Err(InvalidValueType("Expected object".to_string())),
+        }
     }
 }
 
@@ -611,7 +628,8 @@ impl TryInto<String> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<String> {
-        self.to_object()?.try_into()
+        let object: Object = self.try_into()?;
+        object.try_into()
     }
 }
 
@@ -619,7 +637,13 @@ impl TryInto<Arc<Class>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Arc<Class>> {
-        self.class()
+        match self {
+            Reference::Object(object) => {
+                let class: Arc<Class> = object.try_into()?;
+                Ok(class)
+            }
+            _ => self.class(),
+        }
     }
 }
 
@@ -1732,6 +1756,15 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_try_into_object_error() -> Result<()> {
+        let array = vec![42];
+        let reference = Reference::from(array);
+        let result: Result<Object> = reference.try_into();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+        Ok(())
+    }
+
     #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
     async fn test_try_into_string() -> Result<()> {
@@ -1754,6 +1787,15 @@ mod tests {
         let reference = Reference::from(object);
         let value: Arc<Class> = reference.try_into()?;
         assert_eq!("java/lang/Integer", value.name());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_into_class_array() -> Result<()> {
+        let array = vec![42];
+        let reference = Reference::from(array);
+        let value: Arc<Class> = reference.try_into()?;
+        assert_eq!("[I", value.name());
         Ok(())
     }
 }

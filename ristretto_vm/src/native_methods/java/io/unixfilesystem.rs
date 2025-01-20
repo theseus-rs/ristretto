@@ -256,8 +256,8 @@ async fn get_last_modified_time_0(
 }
 
 #[async_recursion(?Send)]
-async fn get_length(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.io.UnixFileSystem.getLength(Ljava/io/File;)J")
+async fn get_length(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_length_0(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -271,8 +271,8 @@ async fn get_name_max_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 }
 
 #[async_recursion(?Send)]
-async fn get_space(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.io.UnixFileSystem.getSpace(Ljava/io/File;I)J")
+async fn get_space(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    get_space_0(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -286,8 +286,8 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 }
 
 #[async_recursion(?Send)]
-async fn list(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.io.UnixFileSystem.list(Ljava/io/File;)[Ljava/lang/String;")
+async fn list(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    list_0(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -302,10 +302,10 @@ async fn rename_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn set_last_modified_time(
-    _thread: Arc<Thread>,
-    _arguments: Arguments,
+    thread: Arc<Thread>,
+    arguments: Arguments,
 ) -> Result<Option<Value>> {
-    todo!("java.io.UnixFileSystem.setLastModifiedTime(Ljava/io/File;J)Z")
+    set_last_modified_time_0(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -317,8 +317,8 @@ async fn set_last_modified_time_0(
 }
 
 #[async_recursion(?Send)]
-async fn set_permission(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.io.UnixFileSystem.setPermission(Ljava/io/File;IZZ)Z")
+async fn set_permission(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    set_permission_0(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -327,8 +327,8 @@ async fn set_permission_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result
 }
 
 #[async_recursion(?Send)]
-async fn set_read_only(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.io.UnixFileSystem.setReadOnly(Ljava/io/File;)Z")
+async fn set_read_only(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    set_read_only_0(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
@@ -432,7 +432,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: java.io.UnixFileSystem.getLength(Ljava/io/File;)J"
+        expected = "not yet implemented: java.io.UnixFileSystem.getLength0(Ljava/io/File;)J"
     )]
     async fn test_get_length() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -459,7 +459,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: java.io.UnixFileSystem.getSpace(Ljava/io/File;I)J"
+        expected = "not yet implemented: java.io.UnixFileSystem.getSpace0(Ljava/io/File;I)J"
     )]
     async fn test_get_space() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -485,7 +485,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: java.io.UnixFileSystem.list(Ljava/io/File;)[Ljava/lang/String;"
+        expected = "not yet implemented: java.io.UnixFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;"
     )]
     async fn test_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -512,7 +512,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: java.io.UnixFileSystem.setLastModifiedTime(Ljava/io/File;J)Z"
+        expected = "not yet implemented: java.io.UnixFileSystem.setLastModifiedTime0(Ljava/io/File;J)Z"
     )]
     async fn test_set_last_modified_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -530,7 +530,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: java.io.UnixFileSystem.setPermission(Ljava/io/File;IZZ)Z"
+        expected = "not yet implemented: java.io.UnixFileSystem.setPermission0(Ljava/io/File;IZZ)Z"
     )]
     async fn test_set_permission() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -548,10 +548,19 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: java.io.UnixFileSystem.setReadOnly(Ljava/io/File;)Z"
+        expected = "not yet implemented: java.io.UnixFileSystem.setReadOnly0(Ljava/io/File;)Z"
     )]
     async fn test_set_read_only() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = set_read_only(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.UnixFileSystem.setReadOnly0(Ljava/io/File;)Z"
+    )]
+    async fn test_set_read_only_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_read_only_0(thread, Arguments::default()).await;
     }
 }

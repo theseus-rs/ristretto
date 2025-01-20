@@ -214,4 +214,13 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = set_dictionary(thread, Arguments::default()).await;
     }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.util.zip.Inflater.setDictionaryBuffer(JJI)V"
+    )]
+    async fn test_set_dictionary_buffer() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_dictionary_buffer(thread, Arguments::default()).await;
+    }
 }

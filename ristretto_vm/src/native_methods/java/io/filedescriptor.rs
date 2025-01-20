@@ -65,13 +65,13 @@ async fn init_ids(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<
 }
 
 #[async_recursion(?Send)]
-async fn sync(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("java.io.FileDescriptor.sync()V")
+async fn sync(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
+    sync_0(thread, arguments).await
 }
 
 #[async_recursion(?Send)]
-async fn sync_0(thread: Arc<Thread>, arguments: Arguments) -> Result<Option<Value>> {
-    sync(thread, arguments).await
+async fn sync_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
+    todo!("java.io.FileDescriptor.sync0()V")
 }
 
 #[cfg(test)]
@@ -116,9 +116,16 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.io.FileDescriptor.sync()V")]
+    #[should_panic(expected = "not yet implemented: java.io.FileDescriptor.sync0()V")]
     async fn test_sync() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = sync(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.io.FileDescriptor.sync0()V")]
+    async fn test_sync_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = sync_0(thread, Arguments::default()).await;
     }
 }

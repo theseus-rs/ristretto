@@ -4,6 +4,7 @@ use crate::native_methods::registry::{
 };
 use crate::thread::Thread;
 use crate::Error::InternalError;
+use crate::JavaError::NullPointerException;
 use crate::Result;
 use async_recursion::async_recursion;
 use bitflags::bitflags;
@@ -456,9 +457,8 @@ async fn rmdir_0(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<V
 #[async_recursion(?Send)]
 async fn stat_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Option<Value>> {
     let vm = thread.vm()?;
-
-    let Some(_attributes) = arguments.pop_reference()? else {
-        return Err(InternalError("attributes is null".to_string()));
+    let Ok(_attributes) = arguments.pop_object() else {
+        return Err(NullPointerException("attributes is null".to_string()).into());
     };
     let _path = arguments.pop_long()?;
     // TODO: Implement the stat0 method
@@ -942,6 +942,19 @@ mod tests {
     async fn test_rmdir_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = rmdir_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_stat_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let unix_file_attributes = thread
+            .object("sun.nio.fs.UnixFileAttributes", "", Vec::<Value>::new())
+            .await?;
+        let arguments = Arguments::new(vec![Value::Long(0), unix_file_attributes]);
+        let result = stat_0(thread, arguments).await?;
+        let result: i32 = result.expect("stat").try_into()?;
+        assert_eq!(result, 0);
+        Ok(())
     }
 
     #[tokio::test]
