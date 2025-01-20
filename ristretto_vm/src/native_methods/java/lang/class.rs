@@ -4,7 +4,7 @@ use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_20,
 use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use crate::Error::InternalError;
-use crate::JavaError::NullPointerException;
+use crate::JavaError::{ClassNotFoundException, NullPointerException};
 use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::attributes::{Attribute, InnerClass};
@@ -236,11 +236,18 @@ async fn for_name_0(thread: Arc<Thread>, mut arguments: Arguments) -> Result<Opt
     let _caller = arguments.pop_reference()?;
     let _class_loader = arguments.pop_reference()?;
     let _initialize = arguments.pop_int()? != 0;
-    let class_name: String = arguments.pop_object()?.try_into()?;
+    let Ok(object) = arguments.pop_object() else {
+        return Err(NullPointerException("className cannot be null".to_string()).into());
+    };
+    let class_name: String = object.try_into()?;
     let vm = thread.vm()?;
-    let class = thread.class(class_name).await?;
+    let class = match thread.class(&class_name).await {
+        Ok(class) => class,
+        Err(_error) => {
+            return Err(ClassNotFoundException(class_name).into());
+        }
+    };
     let class_object = class.to_object(&vm).await?;
-
     Ok(Some(class_object))
 }
 
@@ -281,12 +288,14 @@ async fn get_component_type(
     mut arguments: Arguments,
 ) -> Result<Option<Value>> {
     let object = arguments.pop_object()?;
-    let class = object.class();
-    if class.is_array() {
+    let class_name: String = object.value("name")?.try_into()?;
+    let class = thread.class(&class_name).await?;
+
+    if !class.is_array() {
         return Ok(Some(Value::Object(None)));
     }
 
-    let class_name: String = object.value("name")?.try_into()?;
+    let class_name = class_name.trim_start_matches('[');
     let class = thread.class(class_name).await?;
     let vm = thread.vm()?;
     let class_object = class.to_object(&vm).await?;
@@ -915,6 +924,7 @@ async fn set_signers(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Opti
 mod tests {
     use super::*;
     use crate::Error::JavaError;
+    use ristretto_classfile::Version;
 
     #[tokio::test]
     async fn test_desired_assertion_status_0() -> Result<()> {
@@ -925,12 +935,151 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_for_name_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let object = "java.lang.String".to_object(&vm).await?;
+        let arguments = Arguments::new(vec![
+            object,
+            Value::from(true),
+            Value::Object(None),
+            Value::Object(None),
+        ]);
+        let result = for_name_0(thread, arguments).await?;
+        let class_object: Object = result.expect("class").try_into()?;
+        let class_name: String = class_object.value("name")?.try_into()?;
+        assert_eq!(class_name.as_str(), "java.lang.String");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_npe() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = Value::Object(None);
+        let arguments = Arguments::new(vec![
+            object,
+            Value::from(true),
+            Value::Object(None),
+            Value::Object(None),
+        ]);
+        let result = for_name_0(thread, arguments).await;
+        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_class_not_found() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&vm).await?;
+        let arguments = Arguments::new(vec![
+            object,
+            Value::from(true),
+            Value::Object(None),
+            Value::Object(None),
+        ]);
+        let result = for_name_0(thread, arguments).await;
+        assert!(matches!(result, Err(JavaError(ClassNotFoundException(_)))));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_class_access_flags_raw_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.String").await?;
+        let class_object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![class_object]);
+        let result = get_class_access_flags_raw_0(thread, arguments).await?;
+        let access_flags: i32 = result.expect("access_flags").try_into()?;
+        assert_eq!(access_flags, 49);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_class_file_version_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.Object").await?;
+        let class_object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![class_object]);
+        let result = get_class_file_version_0(thread, arguments).await?;
+        let version: i32 = result.expect("version").try_into()?;
+        assert_eq!(version, i32::from(Version::Java21 { minor: 0 }.major()));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_component_type() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("[int").await?;
+        let class_object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![class_object]);
+        let result = get_component_type(thread, arguments).await?;
+        let class_object: Object = result.expect("class").try_into()?;
+        let class_name: String = class_object.value("name")?.try_into()?;
+        assert_eq!(class_name.as_str(), "int");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_component_type_null() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.String").await?;
+        let class_object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![class_object]);
+        let result = get_component_type(thread, arguments).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
+    }
+
+    #[tokio::test]
     #[should_panic(
         expected = "not yet implemented: java.lang.Class.getConstantPool()Lsun/reflect/ConstantPool;"
     )]
     async fn test_get_constant_pool() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_constant_pool(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_get_declaring_class_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = thread
+            .object(
+                "java.util.HashMap$Node",
+                "ILjava/lang/Object;Ljava/lang/Object;Ljava/util/HashMap$Node;",
+                vec![
+                    Value::Int(0),
+                    Value::Object(None),
+                    Value::Object(None),
+                    Value::Object(None),
+                ],
+            )
+            .await?;
+        let arguments = Arguments::new(vec![object]);
+        let result = get_declaring_class_0(thread, arguments).await?;
+        let class_object: Object = result.expect("class").try_into()?;
+        let class_name: String = class_object.value("name")?.try_into()?;
+        assert_eq!(class_name.as_str(), "java.util.HashMap");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_declaring_class_0_primitive() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("int").await?;
+        let class_object = class.to_object(&vm).await?;
+        let arguments = Arguments::new(vec![class_object]);
+        let result = get_declaring_class_0(thread, arguments).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_declaring_class_0_non_inner() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&vm).await?;
+        let arguments = Arguments::new(vec![object]);
+        let result = get_declaring_class_0(thread, arguments).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
     }
 
     #[tokio::test]

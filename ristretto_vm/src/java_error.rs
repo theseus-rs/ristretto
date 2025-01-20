@@ -20,6 +20,10 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/ClassFormatError.html>
     #[error("{0}")]
     ClassFormatError(String),
+    /// `ClassNotFoundException`
+    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/ClassNotFoundException.html>
+    #[error("{0}")]
+    ClassNotFoundException(String),
     /// `IllegalArgumentException`
     /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/IllegalArgumentException.html>
     #[error("{0}")]
@@ -49,6 +53,7 @@ impl JavaError {
             JavaError::ArithmeticException(_) => "java.lang.ArithmeticException",
             JavaError::ClassCastException { .. } => "java.lang.ClassCastException",
             JavaError::ClassFormatError(_) => "java.lang.ClassFormatError",
+            JavaError::ClassNotFoundException(_) => "java.lang.ClassNotFoundException",
             JavaError::IllegalArgumentException(_) => "java.lang.IllegalArgumentException",
             JavaError::IndexOutOfBoundsException { .. } => "java.lang.IndexOutOfBoundsException",
             JavaError::NoClassDefFoundError(_) => "java.lang.NoClassDefFoundError",
@@ -105,6 +110,13 @@ mod tests {
         let error = JavaError::ClassFormatError("invalid class format".to_string());
         assert_eq!(error.class_name(), "java.lang.ClassFormatError");
         assert_eq!(error.message(), "invalid class format");
+    }
+
+    #[test]
+    fn test_class_not_found_error() {
+        let error = JavaError::ClassNotFoundException("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.ClassNotFoundException");
+        assert_eq!(error.message(), "foo");
     }
 
     #[test]
