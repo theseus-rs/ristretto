@@ -18,8 +18,8 @@ dashmap = { workspace = true }
 dirs = { workspace = true }
 indexmap = { workspace = true }
 os_info = { workspace = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.12.2" }
-ristretto_classloader = { path = "../ristretto_classloader", version = "0.12.2" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.12.3" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.12.3" }
 stacker = { workspace = true }
 sysinfo = { workspace = true }
 sys-locale = { workspace = true }
