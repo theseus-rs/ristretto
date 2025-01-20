@@ -106,7 +106,7 @@ async fn get_tcp_keep_alive_time(
 
 #[async_recursion(?Send)]
 async fn init(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
-    todo!("sun.net.ExtendedOptionsImpl.init()V")
+    Ok(None)
 }
 
 #[async_recursion(?Send)]
@@ -193,5 +193,58 @@ mod tests {
     async fn test_get_tcp_keep_alive_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_tcp_keep_alive_time(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_init() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init(thread, Arguments::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.net.ExtendedOptionsImpl.keepAliveOptionsSupported()Z"
+    )]
+    async fn test_keep_alive_options_supported() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = keep_alive_options_supported(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.net.ExtendedOptionsImpl.setFlowOption(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V"
+    )]
+    async fn test_set_flow_option() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_flow_option(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.net.ExtendedOptionsImpl.setTcpKeepAliveIntvl(Ljava/io/FileDescriptor;I)V"
+    )]
+    async fn test_set_tcp_keep_alive_intvl() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_tcp_keep_alive_intvl(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.net.ExtendedOptionsImpl.setTcpKeepAliveProbes(Ljava/io/FileDescriptor;I)V"
+    )]
+    async fn test_set_tcp_keep_alive_probes() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_tcp_keep_alive_probes(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.net.ExtendedOptionsImpl.setTcpKeepAliveTime(Ljava/io/FileDescriptor;I)V"
+    )]
+    async fn test_set_tcp_keep_alive_time() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_tcp_keep_alive_time(thread, Arguments::default()).await;
     }
 }

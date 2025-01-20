@@ -1193,11 +1193,29 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
+        expected = "not yet implemented: sun.security.pkcs11.wrapper.PKCS11.disconnect()V"
+    )]
+    async fn test_disconnect() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = disconnect(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
         expected = "not yet implemented: sun.security.pkcs11.wrapper.PKCS11.finalizeLibrary()V"
     )]
     async fn test_finalize_library() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = finalize_library(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.security.pkcs11.wrapper.PKCS11.freeMechanism(J)J"
+    )]
+    async fn test_free_mechanism() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_mechanism(thread, Arguments::default()).await;
     }
 
     #[tokio::test]

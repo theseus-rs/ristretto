@@ -542,6 +542,13 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.close0(I)V")]
+    async fn test_close() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = close(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.close0(I)V")]
     async fn test_close_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = close_0(thread, Arguments::default()).await;
@@ -726,6 +733,19 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_getcwd() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = getcwd(thread, Arguments::default()).await?;
+        let bytes: Vec<u8> = result.expect("cwd").try_into()?;
+        let cwd = String::from_utf8_lossy(&bytes);
+        let current_dir_path =
+            std::env::current_dir().map_err(|error| InternalError(format!("getcwd: {error}")))?;
+        let expected = current_dir_path.to_string_lossy();
+        assert_eq!(cwd, expected);
+        Ok(())
+    }
+
+    #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.getgrgid(I)[B")]
     async fn test_getgrgid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -760,6 +780,14 @@ mod tests {
     async fn test_getpwuid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = getpwuid(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_init() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = init(thread, Arguments::default()).await?;
+        assert_eq!(result, Some(Value::Int(0)));
+        Ok(())
     }
 
     #[tokio::test]
@@ -973,7 +1001,7 @@ mod tests {
     #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.write0(IJI)I")]
     async fn test_write() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = write_0(thread, Arguments::default()).await;
+        let _ = write(thread, Arguments::default()).await;
     }
 
     #[tokio::test]

@@ -68,3 +68,52 @@ async fn init_r_texture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<O
 async fn init_texture(_thread: Arc<Thread>, _arguments: Arguments) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLSurfaceData.initTexture(JZII)Z");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.metal.MTLSurfaceData.clearWindow()V")]
+    async fn test_clear_window() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = clear_window(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.metal.MTLSurfaceData.getMTLTexturePointer(J)J")]
+    async fn test_get_mtl_texture_pointer() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_mtl_texture_pointer(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.metal.MTLSurfaceData.initFlipBackbuffer(J)Z")]
+    async fn test_init_flip_backbuffer() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_flip_backbuffer(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "sun.java2d.metal.MTLSurfaceData.initOps(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V"
+    )]
+    async fn test_init_ops() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_ops(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.metal.MTLSurfaceData.initRTexture(JZII)Z")]
+    async fn test_init_r_texture() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_r_texture(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "sun.java2d.metal.MTLSurfaceData.initTexture(JZII)Z")]
+    async fn test_init_texture() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_texture(thread, Arguments::default()).await;
+    }
+}

@@ -80,6 +80,13 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CMenu.nativeAddSeparator(J)V")]
+    async fn test_native_add_separator() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_add_separator(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CMenu.nativeCreateMenu(JZI)J")]
     async fn test_native_create_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

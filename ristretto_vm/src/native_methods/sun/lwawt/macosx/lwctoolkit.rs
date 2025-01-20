@@ -225,6 +225,24 @@ mod tests {
     }
 
     #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.getMultiClickTime()I"
+    )]
+    async fn test_get_multi_click_time() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_multi_click_time(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.initAppkit(Ljava/lang/ThreadGroup;Z)V"
+    )]
+    async fn test_init_appkit() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = init_appkit(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = init_ids(thread, Arguments::default()).await?;
@@ -280,6 +298,15 @@ mod tests {
     async fn test_native_sync_queue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = native_sync_queue(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.performOnMainThreadAfterDelay(Ljava/lang/Runnable;J)V"
+    )]
+    async fn test_perform_on_main_thread_after_delay() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = perform_on_main_thread_after_delay(thread, Arguments::default()).await;
     }
 
     #[tokio::test]

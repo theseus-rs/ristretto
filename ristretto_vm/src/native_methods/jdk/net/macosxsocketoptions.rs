@@ -321,4 +321,22 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = set_tcp_keep_alive_probes_0(thread, Arguments::default()).await;
     }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.net.MacOSXSocketOptions.setTcpKeepAliveTime0(II)V"
+    )]
+    async fn test_set_tcp_keep_alive_time_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_tcp_keep_alive_time_0(thread, Arguments::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.net.MacOSXSocketOptions.setTcpkeepAliveProbes0(II)V"
+    )]
+    async fn test_set_tcpkeep_alive_probes_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_tcpkeep_alive_probes_0(thread, Arguments::default()).await;
+    }
 }
