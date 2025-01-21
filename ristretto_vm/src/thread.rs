@@ -286,7 +286,8 @@ impl Thread {
             let frame = Arc::new(Frame::new(&self.thread, class, method, parameters));
 
             // Limit the scope of the write lock to just adding the frame to the thread. This
-            // is necessary because the thread is re-entrant.
+            // is necessary because java.lang.Thread (e.g. countStackFrames) needs to be able to
+            // access the thread's frames without causing a deadlock.
             {
                 let mut frames = self.frames.write().await;
                 frames.push(frame.clone());
