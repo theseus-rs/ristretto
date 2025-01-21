@@ -21,7 +21,6 @@ impl LocalVariables {
     ///
     /// # Errors
     /// if the local variable at the given index was not found.
-    #[inline]
     pub fn get(&self, index: usize) -> Result<Value> {
         match self.locals.get(index) {
             Some(value) => Ok(value.clone()),
@@ -34,13 +33,13 @@ impl LocalVariables {
     /// # Errors
     /// if the local variable at the given index was not found or if the value is not an int.
     pub fn get_int(&self, index: usize) -> Result<i32> {
-        let value = self.get(index)?;
-        match value.to_int() {
-            Ok(value) => Ok(value),
-            Err(_error) => Err(InvalidLocalVariable {
+        match self.locals.get(index) {
+            Some(Value::Int(value)) => Ok(*value),
+            Some(value) => Err(InvalidLocalVariable {
                 expected: "int".to_string(),
                 actual: value.to_string(),
             }),
+            None => Err(InvalidLocalVariableIndex(index)),
         }
     }
 
@@ -49,13 +48,13 @@ impl LocalVariables {
     /// # Errors
     /// if the local variable at the given index was not found or if the value is not a long.
     pub fn get_long(&self, index: usize) -> Result<i64> {
-        let value = self.get(index)?;
-        match value.to_long() {
-            Ok(value) => Ok(value),
-            Err(_error) => Err(InvalidLocalVariable {
+        match self.locals.get(index) {
+            Some(Value::Long(value)) => Ok(*value),
+            Some(value) => Err(InvalidLocalVariable {
                 expected: "long".to_string(),
                 actual: value.to_string(),
             }),
+            None => Err(InvalidLocalVariableIndex(index)),
         }
     }
 
@@ -64,13 +63,13 @@ impl LocalVariables {
     /// # Errors
     /// if the local variable at the given index was not found or if the value is not a float.
     pub fn get_float(&self, index: usize) -> Result<f32> {
-        let value = self.get(index)?;
-        match value.to_float() {
-            Ok(value) => Ok(value),
-            Err(_error) => Err(InvalidLocalVariable {
+        match self.locals.get(index) {
+            Some(Value::Float(value)) => Ok(*value),
+            Some(value) => Err(InvalidLocalVariable {
                 expected: "float".to_string(),
                 actual: value.to_string(),
             }),
+            None => Err(InvalidLocalVariableIndex(index)),
         }
     }
 
@@ -79,13 +78,13 @@ impl LocalVariables {
     /// # Errors
     /// if the local variable at the given index was not found or if the value is not a double.
     pub fn get_double(&self, index: usize) -> Result<f64> {
-        let value = self.get(index)?;
-        match value.to_double() {
-            Ok(value) => Ok(value),
-            Err(_error) => Err(InvalidLocalVariable {
+        match self.locals.get(index) {
+            Some(Value::Double(value)) => Ok(*value),
+            Some(value) => Err(InvalidLocalVariable {
                 expected: "double".to_string(),
                 actual: value.to_string(),
             }),
+            None => Err(InvalidLocalVariableIndex(index)),
         }
     }
 
@@ -95,13 +94,13 @@ impl LocalVariables {
     /// if the local variable at the given index was not found or if the value is not a null or
     /// object.
     pub fn get_object(&self, index: usize) -> Result<Option<Reference>> {
-        let value = self.get(index)?;
-        match value.to_reference() {
-            Ok(value) => Ok(value.clone()),
-            Err(_error) => Err(InvalidLocalVariable {
+        match self.locals.get(index) {
+            Some(Value::Object(reference)) => Ok(reference.clone()),
+            Some(value) => Err(InvalidLocalVariable {
                 expected: "object".to_string(),
                 actual: value.to_string(),
             }),
+            None => Err(InvalidLocalVariableIndex(index)),
         }
     }
 
