@@ -350,34 +350,6 @@ async fn get_declared_classes_0(
     Ok(Some(declared_classes))
 }
 
-/// Get the exceptions declared by a method.
-async fn get_exceptions(
-    thread: &Arc<Thread>,
-    class: &Arc<Class>,
-    method: &Arc<Method>,
-) -> Result<Value> {
-    let vm = thread.vm()?;
-    let constant_pool = class.constant_pool();
-    let class_array = thread.class("[Ljava/lang/Class;").await?;
-    let mut exceptions = Vec::new();
-    for attribute in method.attributes() {
-        if let Attribute::Exceptions {
-            exception_indexes, ..
-        } = attribute
-        {
-            for exception_index in exception_indexes {
-                let class_name = constant_pool.try_get_class(*exception_index)?;
-                let exception = thread.class(class_name).await?;
-                let exception = exception.to_object(&vm).await?;
-                exceptions.push(exception);
-            }
-            break;
-        }
-    }
-    let exceptions = Value::try_from((class_array, exceptions))?;
-    Ok(exceptions)
-}
-
 #[async_recursion(?Send)]
 async fn get_declared_constructors_0(
     thread: Arc<Thread>,
@@ -525,7 +497,7 @@ async fn get_declared_methods_0(
     let class_array = thread.class("[Ljava/lang/Class;").await?;
     let mut methods = Vec::new();
     for (slot, method) in class.methods().iter().enumerate() {
-        if method.name() == "<init>" {
+        if method.name() == "<clinit>" || method.name() == "<init>" {
             continue;
         }
 
@@ -655,6 +627,34 @@ async fn get_enclosing_method_0(
     }
 
     Ok(Some(Value::Object(None)))
+}
+
+/// Get the exceptions declared by a method.
+async fn get_exceptions(
+    thread: &Arc<Thread>,
+    class: &Arc<Class>,
+    method: &Arc<Method>,
+) -> Result<Value> {
+    let vm = thread.vm()?;
+    let constant_pool = class.constant_pool();
+    let class_array = thread.class("[Ljava/lang/Class;").await?;
+    let mut exceptions = Vec::new();
+    for attribute in method.attributes() {
+        if let Attribute::Exceptions {
+            exception_indexes, ..
+        } = attribute
+        {
+            for exception_index in exception_indexes {
+                let class_name = constant_pool.try_get_class(*exception_index)?;
+                let exception = thread.class(class_name).await?;
+                let exception = exception.to_object(&vm).await?;
+                exceptions.push(exception);
+            }
+            break;
+        }
+    }
+    let exceptions = Value::try_from((class_array, exceptions))?;
+    Ok(exceptions)
 }
 
 #[async_recursion(?Send)]
@@ -1048,6 +1048,191 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_get_declared_classes_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.String").await?;
+        let class_object = class.to_object(&vm).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_declared_classes_0(thread, parameters).await?;
+        let (class, values) = result.expect("interfaces").try_into()?;
+        assert_eq!(class.name(), "[Ljava/lang/Class;");
+        let mut class_names = Vec::new();
+        for reference in values.into_iter().flatten() {
+            let object: Object = reference.try_into()?;
+            let class_name = object.value("name")?;
+            let class_name: String = class_name.try_into()?;
+            class_names.push(class_name);
+        }
+        assert_eq!(
+            class_names,
+            vec!["java.lang.String$CaseInsensitiveComparator",]
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_declared_constructors_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.Integer").await?;
+        let class_object = class.to_object(&vm).await?;
+        let parameters = Parameters::new(vec![class_object, Value::from(false)]);
+        let result = get_declared_constructors_0(thread, parameters).await?;
+        let (class, values) = result.expect("constructors").try_into()?;
+        assert_eq!(class.name(), "[Ljava/lang/reflect/Constructor;");
+        assert_eq!(2, values.len());
+        // TODO: Enable test assertions when invokedynamic is implemented
+        // let mut signatures = Vec::new();
+        // for reference in values.into_iter().flatten() {
+        //     let constructor = Value::from(reference);
+        //     let result = vm
+        //         .invoke(
+        //             "java.lang.reflect.Constructor",
+        //             "toString",
+        //             "()Ljava/lang/String;",
+        //             vec![constructor],
+        //         )
+        //         .await?;
+        //     let signature: String = result.expect("string").try_into()?;
+        //     signatures.push(signature);
+        // }
+        // signatures.sort()
+        // assert_eq!(
+        //     signatures,
+        //     vec![
+        //         "public java.lang.Integer(int)",
+        //         "public java.lang.Integer(java.lang.String) throws java.lang.NumberFormatException",
+        //     ],
+        // );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_declared_fields_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.Integer").await?;
+        let class_object = class.to_object(&vm).await?;
+        let parameters = Parameters::new(vec![class_object, Value::from(false)]);
+        let result = get_declared_fields_0(thread, parameters).await?;
+        let (class, values) = result.expect("fields").try_into()?;
+        assert_eq!(class.name(), "[Ljava/lang/reflect/Field;");
+        let mut signatures = Vec::new();
+        for reference in values.into_iter().flatten() {
+            let result = vm
+                .invoke(
+                    "java.lang.reflect.Field",
+                    "toString",
+                    "()Ljava/lang/String;",
+                    vec![Value::from(reference.clone())],
+                )
+                .await?;
+            let signature: String = result.expect("string").try_into()?;
+            signatures.push(signature);
+        }
+        signatures.sort();
+        assert_eq!(
+            signatures,
+            vec![
+                "private final int java.lang.Integer.value",
+                "private static final long java.lang.Integer.serialVersionUID",
+                "public static final int java.lang.Integer.BYTES",
+                "public static final int java.lang.Integer.MAX_VALUE",
+                "public static final int java.lang.Integer.MIN_VALUE",
+                "public static final int java.lang.Integer.SIZE",
+                "public static final java.lang.Class java.lang.Integer.TYPE",
+                "static final byte[] java.lang.Integer.DigitOnes",
+                "static final byte[] java.lang.Integer.DigitTens",
+                "static final char[] java.lang.Integer.digits",
+            ]
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_declared_methods_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.Boolean").await?;
+        let class_object = class.to_object(&vm).await?;
+        let parameters = Parameters::new(vec![class_object, Value::from(false)]);
+        let result = get_declared_methods_0(thread, parameters).await?;
+        let (class, values) = result.expect("methods").try_into()?;
+        assert_eq!(class.name(), "[Ljava/lang/reflect/Method;");
+        let mut method_names = Vec::new();
+        for reference in values.into_iter().flatten() {
+            let result = vm
+                .invoke(
+                    "java.lang.reflect.Method",
+                    "getName",
+                    "()Ljava/lang/String;",
+                    vec![Value::from(reference.clone())],
+                )
+                .await?;
+            let method_name: String = result.expect("string").try_into()?;
+            method_names.push(method_name);
+        }
+        method_names.sort();
+        assert_eq!(
+            method_names,
+            vec![
+                "booleanValue",
+                "compare",
+                "compareTo",
+                "compareTo",
+                "describeConstable",
+                "equals",
+                "getBoolean",
+                "hashCode",
+                "hashCode",
+                "logicalAnd",
+                "logicalOr",
+                "logicalXor",
+                "parseBoolean",
+                "toString",
+                "toString",
+                "valueOf",
+                "valueOf",
+            ]
+        );
+        // TODO: Enable test assertions when invokedynamic is implemented
+        // let mut signatures = Vec::new();
+        // for reference in values.into_iter().flatten() {
+        //     let result = vm
+        //         .invoke(
+        //             "java.lang.reflect.Method",
+        //             "toString",
+        //             "()Ljava/lang/String;",
+        //             vec![Value::from(reference.clone())],
+        //         )
+        //         .await?;
+        //     let signature: String = result.expect("string").try_into()?;
+        //     signatures.push(signature);
+        // }
+        // signatures.sort();
+        // assert_eq!(
+        //     signatures,
+        //     vec![
+        //         "public boolean java.lang.Boolean.booleanValue()",
+        //         "public boolean java.lang.Boolean.equals(java.lang.Object)",
+        //         "public int java.lang.Boolean.compareTo(java.lang.Boolean)",
+        //         "public int java.lang.Boolean.compareTo(java.lang.Object)",
+        //         "public int java.lang.Boolean.hashCode()",
+        //         "public java.lang.String java.lang.Boolean.toString()",
+        //         "public java.util.Optional java.lang.Boolean.describeConstable()",
+        //         "public static boolean java.lang.Boolean.getBoolean(java.lang.String)",
+        //         "public static boolean java.lang.Boolean.logicalAnd(boolean,boolean)",
+        //         "public static boolean java.lang.Boolean.logicalOr(boolean,boolean)",
+        //         "public static boolean java.lang.Boolean.logicalXor(boolean,boolean)",
+        //         "public static boolean java.lang.Boolean.parseBoolean(java.lang.String)",
+        //         "public static int java.lang.Boolean.compare(boolean,boolean)",
+        //         "public static int java.lang.Boolean.hashCode(boolean)",
+        //         "public static java.lang.Boolean java.lang.Boolean.valueOf(boolean)",
+        //         "public static java.lang.Boolean java.lang.Boolean.valueOf(java.lang.String)",
+        //         "public static java.lang.String java.lang.Boolean.toString(boolean)",
+        //     ]
+        // );
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_get_declaring_class_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let object = thread
@@ -1111,7 +1296,7 @@ mod tests {
         assert_eq!(class.name(), "[Ljava/lang/Class;");
         let mut class_names = Vec::new();
         for reference in values.into_iter().flatten() {
-            let object = reference.to_object()?;
+            let object: Object = reference.try_into()?;
             let class_name = object.value("name")?;
             let class_name: String = class_name.try_into()?;
             class_names.push(class_name);
