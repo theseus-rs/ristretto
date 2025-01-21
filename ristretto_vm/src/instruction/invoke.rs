@@ -196,16 +196,6 @@ pub(crate) async fn invokeinterface(
     invoke_method(&thread, stack, class, method, &InvocationType::Interface).await
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokedynamic>
-#[inline]
-pub(crate) async fn invokedynamic(
-    _frame: &Frame,
-    _stack: &mut OperandStack,
-    _method_index: u16,
-) -> Result<ExecutionResult> {
-    todo!("invokedynamic")
-}
-
 /// Invoke the method at the specified index
 ///
 /// # Errors
