@@ -45,7 +45,6 @@ pub(crate) async fn class() -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
 pub(crate) async fn frame() -> Result<(Arc<VM>, Arc<Thread>, Frame)> {
     let (vm, thread, class) = class().await?;
     let method = class.try_get_method("test", "()V")?;
-    let parameters = Vec::new();
-    let frame = Frame::new(&Arc::downgrade(&thread), &class, &method, parameters);
+    let frame = Frame::new(&Arc::downgrade(&thread), &class, &method);
     Ok((vm, thread, frame))
 }

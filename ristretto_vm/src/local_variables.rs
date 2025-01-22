@@ -10,11 +10,14 @@ pub struct LocalVariables {
 }
 
 impl LocalVariables {
+    /// Create a new local variables
+    pub fn new(locals: Vec<Value>) -> Self {
+        LocalVariables { locals }
+    }
+
     /// Create a new local variables with a maximum size.
     pub fn with_max_size(max_size: usize) -> Self {
-        LocalVariables {
-            locals: vec![Value::Unused; max_size],
-        }
+        Self::new(vec![Value::Unused; max_size])
     }
 
     /// Get a value from the local variables.
