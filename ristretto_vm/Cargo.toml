@@ -50,3 +50,7 @@ rustls-tls = [
 url = [
     "ristretto_classloader/url",
 ]
+
+[[bench]]
+harness = false
+name = "vm"
