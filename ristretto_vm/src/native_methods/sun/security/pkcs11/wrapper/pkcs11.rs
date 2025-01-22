@@ -13,7 +13,7 @@ const CLASS_NAME: &str = "sun/security/pkcs11/wrapper/PKCS11";
 /// Register all native methods for `sun.security.pkcs11.wrapper.PKCS11`.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(
             CLASS_NAME,
             "C_GCMDecryptInitWithRetry",

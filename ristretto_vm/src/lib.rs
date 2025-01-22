@@ -9,7 +9,7 @@
 //!
 //! Implementation of a [JVM Class Loader](https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html)
 //! that is used to load Java classes. Classes can be loaded from the file system or from a URL;
-//! jar and modules are supported.  A runtime Java class loader can be created from any version of
+//! jar and modules are supported.  A runtime Java class loader can be created from a LTS version of
 //! [AWS Corretto](https://github.com/corretto).  The runtime class loader will download and install
 //! the requested version of Corretto into and create a class loader that can be used to load Java
 //! classes.

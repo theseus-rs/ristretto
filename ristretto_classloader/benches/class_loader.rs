@@ -10,20 +10,20 @@ fn benchmarks(criterion: &mut Criterion) {
 fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
     let runtime = Runtime::new()?;
     let (_java_home, _version, class_loader) =
-        runtime.block_on(async { runtime::version_class_loader("21.0.5.11.1").await })?;
+        runtime.block_on(async { runtime::version_class_loader("21.0.6.7.1").await })?;
     let class_loader = Arc::new(class_loader);
 
     criterion.bench_function("runtime_v8", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                boot_class_loader("8.432.06.1").await.ok();
+                boot_class_loader("8.442.06.1").await.ok();
             });
         });
     });
     criterion.bench_function("runtime_v11", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                boot_class_loader("11.0.25.9.1").await.ok();
+                boot_class_loader("11.0.26.4.1").await.ok();
             });
         });
     });
@@ -37,7 +37,7 @@ fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
     criterion.bench_function("runtime_v21", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                boot_class_loader("21.0.5.11.1").await.ok();
+                boot_class_loader("21.0.6.7.1").await.ok();
             });
         });
     });

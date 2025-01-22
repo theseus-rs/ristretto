@@ -22,17 +22,17 @@ async fn test_helloworld(java_verison: &str) -> Result<()> {
 
 // #[tokio::test]
 // async fn test_helloworld_v8() -> Result<()> {
-//     test_helloworld("8.432.06.1").await
+//     test_helloworld("8.442.06.1").await
 // }
 
 #[tokio::test]
 async fn test_helloworld_v11() -> Result<()> {
-    test_helloworld("11.0.25.9.1").await
+    test_helloworld("11.0.26.4.1").await
 }
 
 #[tokio::test]
 async fn test_helloworld_v17() -> Result<()> {
-    test_helloworld("17.0.12.7.1").await
+    test_helloworld("17.0.14.7.1").await
 }
 
 #[tokio::test]
@@ -52,7 +52,7 @@ async fn test_helloworld_v20() -> Result<()> {
 
 #[tokio::test]
 async fn test_helloworld_v21() -> Result<()> {
-    test_helloworld("21.0.5.11.1").await
+    test_helloworld("21.0.6.7.1").await
 }
 
 #[tokio::test]
@@ -62,5 +62,5 @@ async fn test_helloworld_v22() -> Result<()> {
 
 #[tokio::test]
 async fn test_helloworld_v23() -> Result<()> {
-    test_helloworld("23.0.1.8.1").await
+    test_helloworld("23.0.2.7.1").await
 }
