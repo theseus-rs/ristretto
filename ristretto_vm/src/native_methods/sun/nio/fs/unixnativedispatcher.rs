@@ -1,5 +1,5 @@
 use crate::native_methods::registry::{
-    MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_22, JAVA_8,
+    MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_21, JAVA_22, JAVA_23, JAVA_8,
 };
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -48,9 +48,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         if registry.java_major_version() <= JAVA_19 {
             registry.register(CLASS_NAME, "stat1", "(J)I", stat_1);
         }
-        if registry.java_major_version() <= JAVA_22 {
+
+        if registry.java_major_version() != JAVA_21 && registry.java_major_version() <= JAVA_22 {
             registry.register(CLASS_NAME, "exists0", "(J)Z", exists_0);
         }
+
         registry.register(CLASS_NAME, "close0", "(I)V", close_0);
         registry.register(CLASS_NAME, "getlinelen", "(J)I", getlinelen);
     }
@@ -97,10 +99,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "write0", "(IJI)I", write_0);
     }
 
-    if registry.java_major_version() <= JAVA_22 {
-        registry.register(CLASS_NAME, "access0", "(JI)V", access_0);
-    } else {
+    if registry.java_major_version() == JAVA_21 || registry.java_major_version() >= JAVA_23 {
         registry.register(CLASS_NAME, "access0", "(JI)I", access_0);
+    } else {
+        registry.register(CLASS_NAME, "access0", "(JI)V", access_0);
     }
 
     registry.register(CLASS_NAME, "chmod0", "(JI)V", chmod_0);
