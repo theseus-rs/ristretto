@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_20, JAVA_21};
+use crate::native_methods::registry::{MethodRegistry, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,13 +10,10 @@ const CLASS_NAME: &str = "sun/nio/fs/BsdNativeDispatcher";
 
 /// Register all native methods for `sun.nio.fs.BsdNativeDispatcher`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_20 {
-        registry.register(CLASS_NAME, "clonefile0", "(JJI)I", clonefile_0);
-        registry.register(CLASS_NAME, "setattrlist0", "(JIJJJJ)V", setattrlist_0);
-    }
-
     if registry.java_major_version() >= JAVA_21 {
+        registry.register(CLASS_NAME, "clonefile0", "(JJI)I", clonefile_0);
         registry.register(CLASS_NAME, "fsetattrlist0", "(IIJJJJ)V", fsetattrlist_0);
+        registry.register(CLASS_NAME, "setattrlist0", "(JIJJJJ)V", setattrlist_0);
     }
 
     registry.register(CLASS_NAME, "endfsstat", "(J)V", endfsstat);

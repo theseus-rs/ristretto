@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_20};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -16,7 +16,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "getHandle", "(I)J", get_handle);
     }
 
-    if registry.java_major_version() <= JAVA_20 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(CLASS_NAME, "sync", "()V", sync);
     } else {
         registry.register(CLASS_NAME, "sync0", "()V", sync_0);

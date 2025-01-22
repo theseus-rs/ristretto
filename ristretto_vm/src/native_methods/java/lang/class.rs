@@ -1,5 +1,5 @@
 use crate::java_object::JavaObject;
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_20, JAVA_8};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_8};
 use crate::parameters::Parameters;
 use crate::rust_value::RustValue;
 use crate::thread::Thread;
@@ -81,7 +81,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "isRecord0", "()Z", is_record_0);
     }
 
-    if registry.java_major_version() >= JAVA_20 {
+    if registry.java_major_version() >= JAVA_21 {
         registry.register(
             CLASS_NAME,
             "getClassAccessFlagsRaw0",

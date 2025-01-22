@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_20, JAVA_8};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_8};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -42,6 +42,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
+    if registry.java_major_version() <= JAVA_17 {
+        registry.register(CLASS_NAME, "getMembers", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I", get_members);
+    }
     if registry.java_major_version() >= JAVA_17 {
         registry.register(
             CLASS_NAME,
@@ -49,10 +52,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName;",
             resolve_2,
         );
-    }
-
-    if registry.java_major_version() <= JAVA_20 {
-        registry.register(CLASS_NAME, "getMembers", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I", get_members);
     }
 
     registry.register(

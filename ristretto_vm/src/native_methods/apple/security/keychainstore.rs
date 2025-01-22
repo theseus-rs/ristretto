@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_22};
+use crate::native_methods::registry::{MethodRegistry, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,7 +10,7 @@ const CLASS_NAME: &str = "apple/security/KeychainStore";
 
 /// Register all native methods for `apple.security.KeychainStore`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_22 {
+    if registry.java_major_version() <= JAVA_21 {
         registry.register(CLASS_NAME, "_scanKeychain", "()V", scan_keychain);
     } else {
         registry.register(

@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_20};
+use crate::native_methods::registry::{MethodRegistry, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,7 +10,7 @@ const CLASS_NAME: &str = "sun/nio/ch/DatagramDispatcher";
 
 /// Register all native methods for `sun.nio.ch.DatagramDispatcher`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_20 {
+    if registry.java_major_version() >= JAVA_21 {
         registry.register(
             CLASS_NAME,
             "dup0",

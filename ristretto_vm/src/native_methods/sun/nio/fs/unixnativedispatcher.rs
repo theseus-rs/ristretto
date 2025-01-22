@@ -1,6 +1,4 @@
-use crate::native_methods::registry::{
-    MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_21, JAVA_22, JAVA_23, JAVA_8,
-};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_23, JAVA_8};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::InternalError;
@@ -45,22 +43,19 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     }
 
     if registry.java_major_version() >= JAVA_11 {
-        if registry.java_major_version() <= JAVA_19 {
-            registry.register(CLASS_NAME, "stat1", "(J)I", stat_1);
-        }
-
-        if registry.java_major_version() != JAVA_21 && registry.java_major_version() <= JAVA_22 {
+        if registry.java_major_version() <= JAVA_17 {
             registry.register(CLASS_NAME, "exists0", "(J)Z", exists_0);
+            registry.register(CLASS_NAME, "stat1", "(J)I", stat_1);
         }
 
         registry.register(CLASS_NAME, "close0", "(I)V", close_0);
         registry.register(CLASS_NAME, "getlinelen", "(J)I", getlinelen);
     }
 
+    if registry.java_major_version() == JAVA_17 {
+        registry.register(CLASS_NAME, "futimens", "(IJJ)V", futimens);
+    }
     if registry.java_major_version() >= JAVA_17 {
-        if registry.java_major_version() <= JAVA_18 {
-            registry.register(CLASS_NAME, "futimens", "(IJJ)V", futimens);
-        }
         registry.register(CLASS_NAME, "fgetxattr0", "(IJJI)I", fgetxattr_0);
         registry.register(CLASS_NAME, "flistxattr", "(IJI)I", flistxattr);
         registry.register(CLASS_NAME, "fremovexattr0", "(IJ)V", fremovexattr_0);
@@ -68,7 +63,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "lutimes0", "(JJJ)V", lutimes_0);
     }
 
-    if registry.java_major_version() <= JAVA_18 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(CLASS_NAME, "fchmod", "(II)V", fchmod);
         registry.register(CLASS_NAME, "fchown", "(III)V", fchown);
         registry.register(
@@ -80,10 +75,23 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "futimes", "(IJJ)V", futimes);
         registry.register(CLASS_NAME, "read", "(IJI)I", read);
         registry.register(CLASS_NAME, "readdir", "(J)[B", readdir);
+        registry.register(
+            CLASS_NAME,
+            "stat0",
+            "(JLsun/nio/fs/UnixFileAttributes;)V",
+            stat_0,
+        );
         registry.register(CLASS_NAME, "write", "(IJI)I", write);
+    } else {
+        registry.register(
+            CLASS_NAME,
+            "stat0",
+            "(JLsun/nio/fs/UnixFileAttributes;)I",
+            stat_0,
+        );
     }
 
-    if registry.java_major_version() >= JAVA_19 {
+    if registry.java_major_version() >= JAVA_21 {
         registry.register(CLASS_NAME, "fchmod0", "(II)V", fchmod_0);
         registry.register(CLASS_NAME, "fchown0", "(III)V", fchown_0);
         registry.register(
@@ -141,22 +149,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(CLASS_NAME, "renameat0", "(IJIJ)V", renameat_0);
     registry.register(CLASS_NAME, "rewind", "(J)V", rewind);
     registry.register(CLASS_NAME, "rmdir0", "(J)V", rmdir_0);
-
-    if registry.java_major_version() <= JAVA_19 {
-        registry.register(
-            CLASS_NAME,
-            "stat0",
-            "(JLsun/nio/fs/UnixFileAttributes;)V",
-            stat_0,
-        );
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "stat0",
-            "(JLsun/nio/fs/UnixFileAttributes;)I",
-            stat_0,
-        );
-    }
 
     registry.register(
         CLASS_NAME,
@@ -465,7 +457,7 @@ async fn stat_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Optio
     let _path = parameters.pop_long()?;
     // TODO: Implement the stat0 method
 
-    if vm.java_major_version() <= JAVA_19 {
+    if vm.java_major_version() <= JAVA_17 {
         Ok(None)
     } else {
         Ok(Some(Value::Int(0)))

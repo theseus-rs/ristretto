@@ -1,6 +1,6 @@
 use crate::java_object::JavaObject;
 use crate::native_methods::properties;
-use crate::native_methods::registry::{MethodRegistry, JAVA_19};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::InternalError;
@@ -67,7 +67,7 @@ async fn platform_properties(
     push_property(system_properties, &mut properties, "socksNonProxyHosts")?;
     push_property(system_properties, &mut properties, "socksProxyHost")?;
     push_property(system_properties, &mut properties, "socksProxyPort")?;
-    if java_version >= JAVA_19 {
+    if java_version >= JAVA_21 {
         push_property(system_properties, &mut properties, "stderr.encoding")?;
         push_property(system_properties, &mut properties, "stdout.encoding")?;
     }
@@ -82,7 +82,7 @@ async fn platform_properties(
     )?;
     push_property(system_properties, &mut properties, "sun.jnu.encoding")?;
     push_property(system_properties, &mut properties, "sun.os.patch.level")?;
-    if java_version < JAVA_19 {
+    if java_version <= JAVA_17 {
         push_property(system_properties, &mut properties, "sun.stderr.encoding")?;
         push_property(system_properties, &mut properties, "sun.stdout.encoding")?;
     }

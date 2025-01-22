@@ -13,11 +13,7 @@ use std::sync::Arc;
 pub(crate) const JAVA_8: u16 = 8;
 pub(crate) const JAVA_11: u16 = 11;
 pub(crate) const JAVA_17: u16 = 17;
-pub(crate) const JAVA_18: u16 = 18;
-pub(crate) const JAVA_19: u16 = 19;
-pub(crate) const JAVA_20: u16 = 20;
 pub(crate) const JAVA_21: u16 = 21;
-pub(crate) const JAVA_22: u16 = 22;
 pub(crate) const JAVA_23: u16 = 23;
 
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
@@ -179,11 +175,9 @@ impl MethodRegistry {
             jdk::internal::reflect::constantpool::register(self);
 
             if self.java_major_version <= JAVA_21 {
+                java::lang::stringutf16::register(self);
                 jdk::internal::reflect::nativeconstructoraccessorimpl::register(self);
                 jdk::internal::reflect::nativemethodaccessorimpl::register(self);
-            }
-            if self.java_major_version <= JAVA_22 {
-                java::lang::stringutf16::register(self);
             }
 
             #[cfg(target_os = "macos")]
@@ -208,13 +202,16 @@ impl MethodRegistry {
             {
                 java::net::plaindatagramsocketimpl::register(self);
                 java::net::plainsocketimpl::register(self);
+                sun::nio::fs::unixcopyfile::register(self);
             }
-
+            java::lang::strictmath::register(self);
             java::net::datagrampacket::register(self);
+            java::net::inetaddressimplfactory::register(self);
             java::net::socketinputstream::register(self);
             java::net::socketoutputstream::register(self);
+            sun::nio::ch::filechannelimpl::register(self);
         }
-        if self.java_major_version == JAVA_17 || self.java_major_version == JAVA_18 {
+        if self.java_major_version == JAVA_17 {
             jdk::internal::foreign::abi::programmableinvoker::register(self);
             jdk::internal::foreign::abi::programmableupcallhandler::register(self);
             jdk::internal::invoke::nativeentrypoint::register(self);
@@ -248,50 +245,6 @@ impl MethodRegistry {
             sun::nio::ch::unixdomainsockets::register(self);
         }
 
-        if self.java_major_version <= JAVA_18 {
-            java::net::inetaddressimplfactory::register(self);
-        }
-        if self.java_major_version >= JAVA_18 {
-            java::lang::r#ref::finalizer::register(self);
-            jdk::internal::reflect::directconstructorhandleaccessor_nativeaccessor::register(self);
-            jdk::internal::reflect::directmethodhandleaccessor_nativeaccessor::register(self);
-        }
-
-        if self.java_major_version <= JAVA_19 {
-            #[cfg(not(target_os = "windows"))]
-            {
-                sun::nio::fs::unixcopyfile::register(self);
-            }
-
-            sun::nio::ch::filechannelimpl::register(self);
-        }
-        if self.java_major_version >= JAVA_19 {
-            java::lang::virtualthread::register(self);
-            jdk::internal::foreign::abi::nativeentrypoint::register(self);
-            jdk::internal::foreign::abi::upcalllinker::register(self);
-            jdk::internal::loader::nativelibrary::register(self);
-            jdk::internal::loader::rawnativelibraries::register(self);
-            jdk::internal::misc::previewfeatures::register(self);
-            jdk::internal::vm::continuation::register(self);
-            jdk::internal::vm::continuationsupport::register(self);
-        }
-
-        if self.java_major_version <= JAVA_20 {
-            java::lang::strictmath::register(self);
-        }
-        if self.java_major_version >= JAVA_20 {
-            #[cfg(target_os = "macos")]
-            {
-                sun::nio::fs::bsdfilesystem::register(self);
-            }
-            #[cfg(not(target_os = "windows"))]
-            {
-                sun::nio::ch::unixdispatcher::register(self);
-                sun::nio::ch::unixfiledispatcherimpl::register(self);
-                sun::nio::fs::unixfilesystem::register(self);
-            }
-        }
-
         if self.java_major_version <= JAVA_21 {
             java::awt::button::register(self);
             java::awt::color::register(self);
@@ -303,12 +256,35 @@ impl MethodRegistry {
             java::util::concurrent::atomic::atomiclong::register(self);
         }
         if self.java_major_version >= JAVA_21 {
+            #[cfg(target_os = "macos")]
+            {
+                sun::nio::fs::bsdfilesystem::register(self);
+            }
+
+            #[cfg(not(target_os = "windows"))]
+            {
+                sun::nio::ch::unixdispatcher::register(self);
+                sun::nio::ch::unixfiledispatcherimpl::register(self);
+                sun::nio::fs::unixfilesystem::register(self);
+            }
+
+            java::lang::r#ref::finalizer::register(self);
+            java::lang::virtualthread::register(self);
+            jdk::internal::foreign::abi::nativeentrypoint::register(self);
+            jdk::internal::foreign::abi::upcalllinker::register(self);
             jdk::internal::foreign::abi::fallback::libfallback::register(self);
             jdk::internal::io::jdkconsoleimpl::register(self);
+            jdk::internal::loader::nativelibrary::register(self);
+            jdk::internal::loader::rawnativelibraries::register(self);
+            jdk::internal::misc::previewfeatures::register(self);
+            jdk::internal::reflect::directconstructorhandleaccessor_nativeaccessor::register(self);
+            jdk::internal::reflect::directmethodhandleaccessor_nativeaccessor::register(self);
+            jdk::internal::vm::continuation::register(self);
+            jdk::internal::vm::continuationsupport::register(self);
             jdk::internal::vm::foreignlinkersupport::register(self);
         }
 
-        if self.java_major_version >= JAVA_22 {
+        if self.java_major_version >= JAVA_23 {
             java::lang::stackframeinfo::register(self);
             jdk::vm::ci::services::services::register(self);
         }
@@ -393,7 +369,6 @@ impl MethodRegistry {
             sun::net::dns::resolverconfigurationimpl::register(self);
             sun::net::portconfig::register(self);
             sun::nio::ch::datagramdispatcher::register(self);
-            sun::nio::ch::filedispatcherimpl::register(self);
             sun::nio::ch::inheritedchannel::register(self);
             sun::nio::ch::nativethread::register(self);
             sun::nio::ch::unixasynchronoussocketchannelimpl::register(self);
@@ -559,6 +534,7 @@ impl MethodRegistry {
         sun::net::sdp::sdpsupport::register(self);
         sun::net::spi::defaultproxyselector::register(self);
         sun::nio::ch::datagramchannelimpl::register(self);
+        sun::nio::ch::filedispatcherimpl::register(self);
         sun::nio::ch::filekey::register(self);
         sun::nio::ch::ioutil::register(self);
         sun::nio::ch::net::register(self);
@@ -782,28 +758,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_runtime_v18() -> Result<()> {
-        test_runtime("18.0.2.9.1").await
-    }
-
-    #[tokio::test]
-    async fn test_runtime_v19() -> Result<()> {
-        test_runtime("19.0.2.7.1").await
-    }
-
-    #[tokio::test]
-    async fn test_runtime_v20() -> Result<()> {
-        test_runtime("20.0.2.10.1").await
-    }
-
-    #[tokio::test]
     async fn test_runtime_v21() -> Result<()> {
         test_runtime("21.0.6.7.1").await
-    }
-
-    #[tokio::test]
-    async fn test_runtime_v22() -> Result<()> {
-        test_runtime("22.0.2.9.1").await
     }
 
     #[tokio::test]

@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_18};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,7 +10,7 @@ const CLASS_NAME: &str = "java/lang/ref/Reference";
 
 /// Register all native methods for `java.lang.ref.Reference`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() == JAVA_17 || registry.java_major_version() >= JAVA_18 {
+    if registry.java_major_version() >= JAVA_17 {
         registry.register(CLASS_NAME, "clear0", "()V", clear_0);
         registry.register(
             CLASS_NAME,

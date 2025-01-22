@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -14,15 +14,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "map0", "(IJJ)J", map_0);
     }
 
-    if registry.java_major_version() == JAVA_17 || registry.java_major_version() == JAVA_18 {
+    if registry.java_major_version() == JAVA_17 {
         registry.register(CLASS_NAME, "map0", "(IJJZ)J", map_0);
-    }
-
-    if registry.java_major_version() <= JAVA_18 {
-        registry.register(CLASS_NAME, "initIDs", "()J", init_ids);
-    }
-
-    if registry.java_major_version() >= JAVA_17 && registry.java_major_version() <= JAVA_19 {
         registry.register(
             CLASS_NAME,
             "maxDirectTransferSize0",
@@ -31,7 +24,11 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() >= JAVA_19 {
+    if registry.java_major_version() <= JAVA_17 {
+        registry.register(CLASS_NAME, "initIDs", "()J", init_ids);
+    }
+
+    if registry.java_major_version() >= JAVA_21 {
         registry.register(
             CLASS_NAME,
             "allocationGranularity0",

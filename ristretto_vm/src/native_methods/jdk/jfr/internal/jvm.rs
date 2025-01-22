@@ -1,6 +1,4 @@
-use crate::native_methods::registry::{
-    MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_20, JAVA_21, JAVA_22, JAVA_23,
-};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_23};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -75,7 +73,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "setThrottle", "(JJJ)Z", set_throttle);
     }
 
-    if registry.java_major_version() >= JAVA_11 && registry.java_major_version() <= JAVA_18 {
+    if registry.java_major_version() >= JAVA_11 && registry.java_major_version() <= JAVA_17 {
         registry.register(
             CLASS_NAME,
             "flush",
@@ -101,7 +99,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "emitDataLoss", "(J)V", emit_data_loss);
     }
 
-    if registry.java_major_version() == JAVA_17 || registry.java_major_version() == JAVA_18 {
+    if registry.java_major_version() == JAVA_17 {
         registry.register(
             CLASS_NAME,
             "getHandler",
@@ -116,7 +114,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() == JAVA_17 || registry.java_major_version() >= JAVA_19 {
+    if registry.java_major_version() >= JAVA_17 {
         registry.register(
             CLASS_NAME,
             "setMethodSamplingPeriod",
@@ -125,44 +123,33 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() == JAVA_18 {
+    if registry.java_major_version() >= JAVA_21 {
+        registry.register(CLASS_NAME, "commit", "(J)J", commit);
+        registry.register(CLASS_NAME, "emitDataLoss", "(J)V", emit_data_loss);
         registry.register(
             CLASS_NAME,
-            "setMethodSamplingInterval",
-            "(JJ)V",
-            set_method_sampling_interval,
+            "flush",
+            "(Ljdk/jfr/internal/event/EventWriter;II)V",
+            flush,
         );
-    }
-
-    if registry.java_major_version() >= JAVA_18 {
+        registry.register(
+            CLASS_NAME,
+            "getConfiguration",
+            "(Ljava/lang/Class;)Ljava/lang/Object;",
+            get_configuration,
+        );
         registry.register(
             CLASS_NAME,
             "getDumpPath",
             "()Ljava/lang/String;",
             get_dump_path,
         );
+        registry.register(CLASS_NAME, "hostTotalMemory", "()J", host_total_memory);
         registry.register(
             CLASS_NAME,
             "setDumpPath",
             "(Ljava/lang/String;)V",
             set_dump_path,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_19 {
-        if registry.java_major_version() <= JAVA_20 {
-            registry.register(
-                CLASS_NAME,
-                "flush",
-                "(Ljdk/jfr/internal/event/EventWriter;II)Z",
-                flush,
-            );
-        }
-        registry.register(
-            CLASS_NAME,
-            "getConfiguration",
-            "(Ljava/lang/Class;)Ljava/lang/Object;",
-            get_configuration,
         );
         registry.register(
             CLASS_NAME,
@@ -204,28 +191,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() >= JAVA_20 {
-        registry.register(CLASS_NAME, "hostTotalMemory", "()J", host_total_memory);
-    }
-
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(CLASS_NAME, "commit", "(J)J", commit);
-        registry.register(CLASS_NAME, "emitDataLoss", "(J)V", emit_data_loss);
-        registry.register(
-            CLASS_NAME,
-            "flush",
-            "(Ljdk/jfr/internal/event/EventWriter;II)V",
-            flush,
-        );
-    }
-
     if registry.java_major_version() <= JAVA_21 {
         registry.register(CLASS_NAME, "getStackTraceId", "(I)J", get_stack_trace_id);
     } else {
         registry.register(CLASS_NAME, "getStackTraceId", "(IJ)J", get_stack_trace_id);
     }
 
-    if registry.java_major_version() >= JAVA_22 {
+    if registry.java_major_version() >= JAVA_23 {
         registry.register(
             CLASS_NAME,
             "registerStackFilter",

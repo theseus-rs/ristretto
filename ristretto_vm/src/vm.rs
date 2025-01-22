@@ -18,7 +18,7 @@ use tokio::sync::RwLock;
 use tracing::debug;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_19: Version = Version::Java19 { minor: 0 };
+const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Java Virtual Machine
 #[derive(Debug)]
@@ -293,7 +293,7 @@ impl VM {
         let java_version = self.java_class_file_version();
 
         // The internal structure of Thread changed in Java 19
-        let new_thread = if java_version < &JAVA_19 {
+        let new_thread = if java_version <= &JAVA_17 {
             let thread_class = self.class("java.lang.Thread").await?;
             let new_thread = Object::new(thread_class)?;
             new_thread.set_value("daemon", Value::Int(0))?;

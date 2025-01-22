@@ -1,6 +1,4 @@
-use crate::native_methods::registry::{
-    MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_20, JAVA_21,
-};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -12,51 +10,7 @@ const CLASS_NAME: &str = "jdk/net/MacOSXSocketOptions";
 
 /// Register all native methods for `jdk.net.MacOSXSocketOptions`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(CLASS_NAME, "getSoPeerCred0", "(I)J", get_so_peer_cred_0);
-    }
-
-    if registry.java_major_version() == JAVA_19 {
-        registry.register(
-            CLASS_NAME,
-            "getIpDontFragment0",
-            "(I)Z",
-            get_ip_dont_fragment_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setIpDontFragment0",
-            "(IZ)V",
-            set_ip_dont_fragment_0,
-        );
-    }
-    if registry.java_major_version() >= JAVA_19 {
-        registry.register(
-            CLASS_NAME,
-            "ipDontFragmentSupported0",
-            "()Z",
-            ip_dont_fragment_supported_0,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_20 {
-        registry.register(
-            CLASS_NAME,
-            "getIpDontFragment0",
-            "(IZ)Z",
-            get_ip_dont_fragment_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setIpDontFragment0",
-            "(IZZ)V",
-            set_ip_dont_fragment_0,
-        );
-    }
-
-    if registry.java_major_version() <= JAVA_11
-        || (registry.java_major_version() >= JAVA_18 && registry.java_major_version() <= JAVA_20)
-    {
+    if registry.java_major_version() <= JAVA_11 {
         registry.register(
             CLASS_NAME,
             "getTcpkeepAliveProbes0",
@@ -71,7 +25,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() == JAVA_17 || registry.java_major_version() >= JAVA_21 {
+    if registry.java_major_version() >= JAVA_17 {
+        registry.register(CLASS_NAME, "getSoPeerCred0", "(I)J", get_so_peer_cred_0);
         registry.register(
             CLASS_NAME,
             "getTcpKeepAliveProbes0",
@@ -83,6 +38,27 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "setTcpKeepAliveProbes0",
             "(II)V",
             set_tcp_keep_alive_probes_0,
+        );
+    }
+
+    if registry.java_major_version() >= JAVA_21 {
+        registry.register(
+            CLASS_NAME,
+            "getIpDontFragment0",
+            "(IZ)Z",
+            get_ip_dont_fragment_0,
+        );
+        registry.register(
+            CLASS_NAME,
+            "ipDontFragmentSupported0",
+            "()Z",
+            ip_dont_fragment_supported_0,
+        );
+        registry.register(
+            CLASS_NAME,
+            "setIpDontFragment0",
+            "(IZZ)V",
+            set_ip_dont_fragment_0,
         );
     }
 

@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_19, JAVA_20, JAVA_8};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_8};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -49,43 +49,31 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     if registry.java_major_version() <= JAVA_17 {
         registry.register(
             CLASS_NAME,
-            "initLCMS",
-            "(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V",
-            init_lcms,
+            "createNativeTransform",
+            "([JIIZIZLjava/lang/Object;)J",
+            create_native_transform,
         );
-    } else if registry.java_major_version() <= JAVA_19 {
-        registry.register(
-            CLASS_NAME,
-            "colorConvert",
-            "(JIIIIIIZZLjava/lang/Object;Ljava/lang/Object;II)V",
-            color_convert,
-        );
-    }
-
-    if registry.java_major_version() <= JAVA_19 {
         registry.register(
             CLASS_NAME,
             "getProfileID",
             "(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;",
             get_profile_id,
         );
-    } else {
+        registry.register(
+            CLASS_NAME,
+            "initLCMS",
+            "(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V",
+            init_lcms,
+        );
+    }
+
+    if registry.java_major_version() >= JAVA_21 {
         registry.register(
             CLASS_NAME,
             "colorConvert",
             "(JIIIIIILjava/lang/Object;Ljava/lang/Object;II)V",
             color_convert,
         );
-    }
-
-    if registry.java_major_version() <= JAVA_20 {
-        registry.register(
-            CLASS_NAME,
-            "createNativeTransform",
-            "([JIIZIZLjava/lang/Object;)J",
-            create_native_transform,
-        );
-    } else {
         registry.register(
             CLASS_NAME,
             "createNativeTransform",

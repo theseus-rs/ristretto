@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_20, JAVA_22};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_21, JAVA_23};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,7 +10,7 @@ const CLASS_NAME: &str = "java/lang/VirtualThread";
 
 /// Register all native methods for `java.lang.VirtualThread`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_20 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(
             CLASS_NAME,
             "notifyJvmtiMountBegin",
@@ -46,7 +46,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             notify_jvmti_unmount,
         );
     }
-    if registry.java_major_version() >= JAVA_20 {
+    if registry.java_major_version() >= JAVA_21 {
         registry.register(
             CLASS_NAME,
             "notifyJvmtiHideFrames",
@@ -55,7 +55,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() >= JAVA_22 {
+    if registry.java_major_version() >= JAVA_23 {
         registry.register(
             CLASS_NAME,
             "notifyJvmtiDisableSuspend",

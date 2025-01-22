@@ -36,28 +36,8 @@ async fn test_helloworld_v17() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_helloworld_v18() -> Result<()> {
-    test_helloworld("18.0.2.9.1").await
-}
-
-#[tokio::test]
-async fn test_helloworld_v19() -> Result<()> {
-    test_helloworld("19.0.2.7.1").await
-}
-
-#[tokio::test]
-async fn test_helloworld_v20() -> Result<()> {
-    test_helloworld("20.0.2.10.1").await
-}
-
-#[tokio::test]
 async fn test_helloworld_v21() -> Result<()> {
     test_helloworld("21.0.6.7.1").await
-}
-
-#[tokio::test]
-async fn test_helloworld_v22() -> Result<()> {
-    test_helloworld("22.0.2.9.1").await
 }
 
 #[tokio::test]

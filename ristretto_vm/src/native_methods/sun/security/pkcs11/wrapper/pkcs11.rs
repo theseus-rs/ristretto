@@ -1,6 +1,4 @@
-use crate::native_methods::registry::{
-    MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_21, JAVA_22,
-};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -37,19 +35,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() >= JAVA_18 {
-        registry.register(CLASS_NAME, "C_SessionCancel", "(JJ)V", c_session_cancel);
-        registry.register(
-            CLASS_NAME,
-            "connect",
-            "(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;",
-            connect,
-        );
-    }
-    if registry.java_major_version() <= JAVA_18 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(CLASS_NAME, "disconnect", "()V", disconnect);
     } else {
         registry.register(CLASS_NAME, "disconnect", "(J)V", disconnect);
+    }
+
+    if registry.java_major_version() <= JAVA_21 {
+        registry.register(CLASS_NAME, "freeMechanism", "(J)J", free_mechanism);
     }
 
     if registry.java_major_version() >= JAVA_21 {
@@ -65,10 +58,13 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
             c_gcm_encrypt_init_with_retry,
         );
-    }
-
-    if registry.java_major_version() <= JAVA_22 {
-        registry.register(CLASS_NAME, "freeMechanism", "(J)J", free_mechanism);
+        registry.register(CLASS_NAME, "C_SessionCancel", "(JJ)V", c_session_cancel);
+        registry.register(
+            CLASS_NAME,
+            "connect",
+            "(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;",
+            connect,
+        );
     }
 
     registry.register(CLASS_NAME, "C_CloseSession", "(J)V", c_close_session);
