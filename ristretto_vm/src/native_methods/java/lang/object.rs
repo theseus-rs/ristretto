@@ -1,5 +1,5 @@
 use crate::java_object::JavaObject;
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_18};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::InternalError;
@@ -17,7 +17,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
     }
 
-    if registry.java_major_version() <= JAVA_18 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(CLASS_NAME, "wait", "(J)V", wait);
     } else {
         registry.register(CLASS_NAME, "wait0", "(J)V", wait_0);

@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_18};
+use crate::native_methods::registry::{MethodRegistry, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,7 +10,7 @@ const CLASS_NAME: &str = "sun/java2d/metal/MTLLayer";
 
 /// Register all native methods for `sun.java2d.metal.MTLLayer`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_18 {
+    if registry.java_major_version() >= JAVA_21 {
         registry.register(CLASS_NAME, "nativeSetOpaque", "(JZ)V", native_set_opaque);
     }
 

@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_18};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,7 +10,7 @@ const CLASS_NAME: &str = "sun/nio/ch/NativeThread";
 
 /// Register all native methods for `sun.nio.ch.NativeThread`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_18 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(CLASS_NAME, "current", "()J", current);
         registry.register(CLASS_NAME, "signal", "(J)V", signal);
     } else {

@@ -1,6 +1,4 @@
-use crate::native_methods::registry::{
-    MethodRegistry, JAVA_11, JAVA_17, JAVA_18, JAVA_19, JAVA_20, JAVA_21, JAVA_22,
-};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_23};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::JavaError::NullPointerException;
@@ -20,7 +18,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "isInterrupted", "(Z)Z", is_interrupted);
     }
 
-    if registry.java_major_version() <= JAVA_11 || registry.java_major_version() == JAVA_18 {
+    if registry.java_major_version() <= JAVA_11 {
         registry.register(CLASS_NAME, "isAlive", "()Z", is_alive);
     }
 
@@ -33,69 +31,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() <= JAVA_18 {
+    if registry.java_major_version() <= JAVA_17 {
+        registry.register(CLASS_NAME, "resume0", "()V", resume_0);
         registry.register(CLASS_NAME, "sleep", "(J)V", sleep);
+        registry.register(CLASS_NAME, "stop0", "(Ljava/lang/Object;)V", stop_0);
+        registry.register(CLASS_NAME, "suspend0", "()V", suspend_0);
         registry.register(CLASS_NAME, "yield", "()V", r#yield);
     }
 
-    if registry.java_major_version() <= JAVA_19 {
-        registry.register(CLASS_NAME, "resume0", "()V", resume_0);
-        registry.register(CLASS_NAME, "stop0", "(Ljava/lang/Object;)V", stop_0);
-        registry.register(CLASS_NAME, "suspend0", "()V", suspend_0);
+    if registry.java_major_version() == JAVA_21 {
+        registry.register(CLASS_NAME, "sleep0", "(J)V", sleep_0);
     }
-    if registry.java_major_version() == JAVA_19 {
-        registry.register(
-            CLASS_NAME,
-            "extentLocalCache",
-            "()[Ljava/lang/Object;",
-            extent_local_cache,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setExtentLocalCache",
-            "([Ljava/lang/Object;)V",
-            set_extent_local_cache,
-        );
-    }
-    if registry.java_major_version() >= JAVA_19 {
+
+    if registry.java_major_version() >= JAVA_21 {
         registry.register(
             CLASS_NAME,
             "currentCarrierThread",
             "()Ljava/lang/Thread;",
             current_carrier_thread,
         );
-        registry.register(
-            CLASS_NAME,
-            "getNextThreadIdOffset",
-            "()J",
-            get_next_thread_id_offset,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getStackTrace0",
-            "()Ljava/lang/Object;",
-            get_stack_trace_0,
-        );
-
-        if registry.java_major_version() <= JAVA_20 {
-            registry.register(CLASS_NAME, "isAlive0", "()Z", is_alive_0);
-        }
-
-        registry.register(
-            CLASS_NAME,
-            "setCurrentThread",
-            "(Ljava/lang/Thread;)V",
-            set_current_thread,
-        );
-
-        if registry.java_major_version() <= JAVA_21 {
-            registry.register(CLASS_NAME, "sleep0", "(J)V", sleep_0);
-        }
-
-        registry.register(CLASS_NAME, "yield0", "()V", yield_0);
-    }
-
-    if registry.java_major_version() >= JAVA_20 {
         registry.register(
             CLASS_NAME,
             "ensureMaterializedForStackWalk",
@@ -110,6 +64,25 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
         registry.register(
             CLASS_NAME,
+            "getNextThreadIdOffset",
+            "()J",
+            get_next_thread_id_offset,
+        );
+        registry.register(
+            CLASS_NAME,
+            "getStackTrace0",
+            "()Ljava/lang/Object;",
+            get_stack_trace_0,
+        );
+
+        registry.register(
+            CLASS_NAME,
+            "setCurrentThread",
+            "(Ljava/lang/Thread;)V",
+            set_current_thread,
+        );
+        registry.register(
+            CLASS_NAME,
             "scopedValueCache",
             "()[Ljava/lang/Object;",
             scoped_value_cache,
@@ -120,9 +93,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             "([Ljava/lang/Object;)V",
             set_scoped_value_cache,
         );
+        registry.register(CLASS_NAME, "yield0", "()V", yield_0);
     }
 
-    if registry.java_major_version() >= JAVA_22 {
+    if registry.java_major_version() >= JAVA_23 {
         registry.register(CLASS_NAME, "sleepNanos0", "(J)V", sleep_nanos_0);
     }
 
@@ -201,14 +175,6 @@ async fn ensure_materialized_for_stack_walk(
 }
 
 #[async_recursion(?Send)]
-async fn extent_local_cache(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.extentLocalCache()[Ljava/lang/Object;")
-}
-
-#[async_recursion(?Send)]
 async fn find_scoped_value_bindings(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -256,11 +222,6 @@ async fn is_alive(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option
 }
 
 #[async_recursion(?Send)]
-async fn is_alive_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
-    is_alive(thread, parameters).await
-}
-
-#[async_recursion(?Send)]
 async fn is_interrupted(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Thread.isInterrupted(Z)Z")
 }
@@ -289,14 +250,6 @@ async fn set_current_thread(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Thread.setCurrentThread(Ljava/lang/Thread;)V")
-}
-
-#[async_recursion(?Send)]
-async fn set_extent_local_cache(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.setExtentLocalCache([Ljava/lang/Object;)V")
 }
 
 #[async_recursion(?Send)]
@@ -441,15 +394,6 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: java.lang.Thread.extentLocalCache()[Ljava/lang/Object;"
-    )]
-    async fn test_extent_local_cache() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = extent_local_cache(thread, Parameters::default()).await;
-    }
-
-    #[tokio::test]
-    #[should_panic(
         expected = "not yet implemented: java.lang.Thread.findScopedValueBindings()Ljava/lang/Object;"
     )]
     async fn test_find_scoped_value_bindings() {
@@ -538,15 +482,6 @@ mod tests {
     async fn test_set_current_thread() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = set_current_thread(thread, Parameters::default()).await;
-    }
-
-    #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Thread.setExtentLocalCache([Ljava/lang/Object;)V"
-    )]
-    async fn test_set_extent_local_cache() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_extent_local_cache(thread, Parameters::default()).await;
     }
 
     #[tokio::test]

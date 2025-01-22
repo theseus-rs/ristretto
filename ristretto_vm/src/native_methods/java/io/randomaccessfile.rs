@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_18, JAVA_8};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_8};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -14,7 +14,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "close0", "()V", close_0);
     }
 
-    if registry.java_major_version() <= JAVA_18 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(CLASS_NAME, "length", "()J", length);
         registry.register(CLASS_NAME, "readBytes", "([BII)I", read_bytes);
         registry.register(CLASS_NAME, "setLength", "(J)V", set_length);

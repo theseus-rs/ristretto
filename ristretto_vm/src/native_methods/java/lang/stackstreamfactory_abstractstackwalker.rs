@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_18, JAVA_21};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,7 +10,7 @@ const CLASS_NAME: &str = "java/lang/StackStreamFactory$AbstractStackWalker";
 
 /// Register all native methods for `java.lang.StackStreamFactory$AbstractStackWalker`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_18 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(
             CLASS_NAME,
             "callStackWalk",

@@ -164,11 +164,7 @@ async fn test_native_classes() -> Result<()> {
     // write_classes("8.442.06.1").await?;
     // write_classes("11.0.26.4.1").await?;
     // write_classes("17.0.14.7.1").await?;
-    // write_classes("18.0.2.9.1").await?;
-    // write_classes("19.0.2.7.1").await?;
-    // write_classes("20.0.2.10.1").await?;
     // write_classes("21.0.6.7.1").await?;
-    // write_classes("22.0.2.9.1").await?;
     // write_classes("23.0.2.7.1").await?;
     Ok(())
 }
@@ -179,11 +175,7 @@ async fn test_native_methods() -> Result<()> {
     // write_native("8.442.06.1").await?;
     // write_native("11.0.26.4.1").await?;
     // write_native("17.0.14.7.1").await?;
-    // write_native("18.0.2.9.1").await?;
-    // write_native("19.0.2.7.1").await?;
-    // write_native("20.0.2.10.1").await?;
     // write_native("21.0.6.7.1").await?;
-    // write_native("22.0.2.9.1").await?;
     // write_native("23.0.2.7.1").await?;
     Ok(())
 }

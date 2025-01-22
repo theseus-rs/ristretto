@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_19, JAVA_20};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,7 +10,7 @@ const CLASS_NAME: &str = "sun/nio/ch/FileDispatcherImpl";
 
 /// Register all native methods for `sun.nio.ch.FileDispatcherImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 && registry.java_major_version() <= JAVA_19 {
+    if registry.java_major_version() >= JAVA_11 && registry.java_major_version() <= JAVA_17 {
         registry.register(
             CLASS_NAME,
             "setDirect0",
@@ -19,21 +19,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() <= JAVA_19 {
-        if registry.java_major_version() >= JAVA_17 {
-            registry.register(
-                CLASS_NAME,
-                "canTransferToFromOverlappedMap0",
-                "()Z",
-                can_transfer_to_from_overlapped_map_0,
-            );
-            registry.register(
-                CLASS_NAME,
-                "dup0",
-                "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V",
-                dup_0,
-            );
-        }
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(CLASS_NAME, "close0", "(Ljava/io/FileDescriptor;)V", close_0);
         registry.register(CLASS_NAME, "closeIntFD", "(I)V", close_int_fd);
         registry.register(CLASS_NAME, "init", "()V", init);
@@ -96,7 +82,22 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() >= JAVA_20 {
+    if registry.java_major_version() == JAVA_17 {
+        registry.register(
+            CLASS_NAME,
+            "canTransferToFromOverlappedMap0",
+            "()Z",
+            can_transfer_to_from_overlapped_map_0,
+        );
+        registry.register(
+            CLASS_NAME,
+            "dup0",
+            "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V",
+            dup_0,
+        );
+    }
+
+    if registry.java_major_version() >= JAVA_21 {
         registry.register(
             CLASS_NAME,
             "transferTo0",
@@ -108,10 +109,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     #[cfg(target_os = "macos")]
     {
         registry.register(
-            crate::native_methods::sun::nio::ch::filedispatcherimpl::CLASS_NAME,
+            CLASS_NAME,
             "force0",
             "(Ljava/io/FileDescriptor;Z)I",
-            crate::native_methods::sun::nio::ch::filedispatcherimpl::force_0,
+            force_0,
         );
     }
 }

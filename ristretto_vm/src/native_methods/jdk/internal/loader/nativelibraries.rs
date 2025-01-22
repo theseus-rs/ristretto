@@ -1,5 +1,5 @@
 use crate::java_object::JavaObject;
-use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_18, JAVA_19};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -11,7 +11,7 @@ const CLASS_NAME: &str = "jdk/internal/loader/NativeLibraries";
 
 /// Register all native methods for `jdk.internal.loader.NativeLibraries`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() == JAVA_17 || registry.java_major_version() == JAVA_18 {
+    if registry.java_major_version() == JAVA_17 {
         registry.register(
             CLASS_NAME,
             "findEntry0",
@@ -26,7 +26,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
         registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;ZZJ)V", unload);
     }
-    if registry.java_major_version() >= JAVA_19 {
+    if registry.java_major_version() >= JAVA_21 {
         registry.register(
             CLASS_NAME,
             "load",

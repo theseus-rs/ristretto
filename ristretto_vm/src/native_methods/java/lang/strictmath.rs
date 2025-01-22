@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_20, JAVA_8};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_8};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 #[cfg(target_arch = "wasm32")]
@@ -26,7 +26,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "pow", "(DD)D", pow);
     }
 
-    if use_optimizations || registry.java_major_version() <= JAVA_20 {
+    if use_optimizations || registry.java_major_version() <= JAVA_17 {
         registry.register(CLASS_NAME, "IEEEremainder", "(DD)D", ieee_remainder);
         registry.register(CLASS_NAME, "acos", "(D)D", acos);
         registry.register(CLASS_NAME, "asin", "(D)D", asin);

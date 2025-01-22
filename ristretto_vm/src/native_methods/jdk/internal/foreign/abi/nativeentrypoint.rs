@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_19, JAVA_20, JAVA_21};
+use crate::native_methods::registry::{MethodRegistry, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,12 +10,6 @@ const CLASS_NAME: &str = "jdk/internal/foreign/abi/NativeEntryPoint";
 
 /// Register all native methods for `jdk.internal.foreign.abi.NativeEntryPoint`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() == JAVA_19 {
-        registry.register(CLASS_NAME, "makeDowncallStub", "(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;Z)J", make_downcall_stub);
-    }
-    if registry.java_major_version() == JAVA_20 {
-        registry.register(CLASS_NAME, "makeDowncallStub", "(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;ZI)J", make_downcall_stub);
-    }
     if registry.java_major_version() >= JAVA_21 {
         registry.register(CLASS_NAME, "makeDowncallStub", "(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;ZIZ)J", make_downcall_stub);
     }

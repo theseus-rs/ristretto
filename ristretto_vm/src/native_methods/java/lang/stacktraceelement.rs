@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_18};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::InternalError;
@@ -11,7 +11,7 @@ const CLASS_NAME: &str = "java/lang/StackTraceElement";
 
 /// Register all native methods for `java.lang.StackTraceElement`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_18 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(
             CLASS_NAME,
             "initStackTraceElements",

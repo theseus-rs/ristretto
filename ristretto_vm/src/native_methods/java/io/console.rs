@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_20};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,7 +10,7 @@ const CLASS_NAME: &str = "java/io/Console";
 
 /// Register all native methods for `java.io.Console`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_20 {
+    if registry.java_major_version() <= JAVA_17 {
         registry.register(CLASS_NAME, "echo", "(Z)Z", echo);
     }
 
