@@ -48,24 +48,17 @@ pub struct Frame {
     thread: Weak<Thread>,
     class: Arc<Class>,
     method: Arc<Method>,
-    parameters: Vec<Value>,
     program_counter: AtomicUsize,
 }
 
 impl Frame {
     /// Create a new frame for the specified class. To invoke a method on an object reference, the
     /// object reference must be the first parameter in the parameters vector.
-    pub fn new(
-        thread: &Weak<Thread>,
-        class: &Arc<Class>,
-        method: &Arc<Method>,
-        parameters: Vec<Value>,
-    ) -> Self {
+    pub fn new(thread: &Weak<Thread>, class: &Arc<Class>, method: &Arc<Method>) -> Self {
         Frame {
             thread: thread.clone(),
             class: class.clone(),
             method: method.clone(),
-            parameters,
             program_counter: AtomicUsize::new(0),
         }
     }
@@ -108,13 +101,10 @@ impl Frame {
     /// * if the program counter is invalid
     /// * if an invalid instruction is encountered
     #[async_recursion(?Send)]
-    pub async fn execute(&self) -> Result<Option<Value>> {
+    pub async fn execute(&self, mut parameters: Vec<Value>) -> Result<Option<Value>> {
         let max_locals = self.method.max_locals();
-        // TODO: Implement the local variable from parameters to avoid cloning?
-        let locals = &mut LocalVariables::with_max_size(max_locals);
-        for (index, parameter) in self.parameters.iter().enumerate() {
-            locals.set(index, parameter.clone())?;
-        }
+        Frame::adjust_parameters(&mut parameters, max_locals);
+        let locals = &mut LocalVariables::new(parameters);
         let max_stack = self.method.max_stack();
         let stack = &mut OperandStack::with_max_size(max_stack);
         let code = self.method.code();
@@ -148,6 +138,26 @@ impl Frame {
                         .store(handler_program_counter, Ordering::Relaxed);
                 }
             }
+        }
+    }
+
+    /// The JVM specification requires that Long and Double take two places in the parameters list
+    /// when passed to a method. This method adjusts the parameters list to account for this.
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-2.html#jvms-2.6.1>
+    fn adjust_parameters(parameters: &mut Vec<Value>, max_size: usize) {
+        let mut index = parameters.len();
+        while index > 0 {
+            index -= 1;
+            match &parameters[index] {
+                Value::Long(_) | Value::Double(_) => {
+                    parameters.insert(index + 1, Value::Unused);
+                }
+                _ => {}
+            }
+        }
+        if parameters.len() < max_size {
+            parameters.resize(max_size, Value::Unused);
         }
     }
 
@@ -452,9 +462,33 @@ mod tests {
         let (thread, class) = get_class("Expressions").await?;
         let method = class.method("add", "(II)I").expect("method not found");
         let parameters = vec![Value::Int(1), Value::Int(2)];
-        let frame = Frame::new(&Arc::downgrade(&thread), &class, &method, parameters);
-        let result = frame.execute().await?;
+        let frame = Frame::new(&Arc::downgrade(&thread), &class, &method);
+        let result = frame.execute(parameters).await?;
         assert!(matches!(result, Some(Value::Int(3))));
         Ok(())
+    }
+
+    #[test]
+    fn test_adjust_parameters() {
+        let mut parameters = vec![
+            Value::Int(1),
+            Value::Long(2),
+            Value::Float(3.0),
+            Value::Double(4.0),
+        ];
+        Frame::adjust_parameters(&mut parameters, 8);
+        assert_eq!(
+            parameters,
+            vec![
+                Value::Int(1),
+                Value::Long(2),
+                Value::Unused,
+                Value::Float(3.0),
+                Value::Double(4.0),
+                Value::Unused,
+                Value::Unused,
+                Value::Unused,
+            ]
+        );
     }
 }

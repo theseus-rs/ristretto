@@ -282,8 +282,7 @@ impl Thread {
             }
             .into());
         } else {
-            let parameters = Thread::adjust_parameters(parameters);
-            let frame = Arc::new(Frame::new(&self.thread, class, method, parameters));
+            let frame = Arc::new(Frame::new(&self.thread, class, method));
 
             // Limit the scope of the write lock to just adding the frame to the thread. This
             // is necessary because java.lang.Thread (e.g. countStackFrames) needs to be able to
@@ -292,7 +291,7 @@ impl Thread {
                 let mut frames = self.frames.write().await;
                 frames.push(frame.clone());
             }
-            let result = frame.execute().await;
+            let result = frame.execute(parameters).await;
             (result, true)
         };
 
@@ -340,24 +339,6 @@ impl Thread {
         }
     }
 
-    /// The JVM specification requires that Long and Double take two places in the parameters list
-    /// when passed to a method. This method adjusts the parameters list to account for this.
-    ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-2.html#jvms-2.6.1>
-    fn adjust_parameters(mut parameters: Vec<Value>) -> Vec<Value> {
-        let mut index = parameters.len();
-        while index > 0 {
-            index -= 1;
-            match &parameters[index] {
-                Value::Long(_) | Value::Double(_) => {
-                    parameters.insert(index + 1, Value::Unused);
-                }
-                _ => {}
-            }
-        }
-        parameters
-    }
-
     /// Create a new VM Object by invoking the constructor of the specified class.
     ///
     /// # Errors
@@ -399,7 +380,7 @@ impl Thread {
 mod tests {
     use super::*;
     use crate::ConfigurationBuilder;
-    use ristretto_classloader::{ClassPath, Value};
+    use ristretto_classloader::ClassPath;
     use std::path::PathBuf;
 
     fn classes_jar_path() -> PathBuf {
@@ -455,28 +436,6 @@ mod tests {
         assert_eq!("java/lang/Object", object.name());
         assert!(object.parent()?.is_none());
         Ok(())
-    }
-
-    #[test]
-    fn test_adjust_parameters() {
-        let parameters = vec![
-            Value::Int(1),
-            Value::Long(2),
-            Value::Float(3.0),
-            Value::Double(4.0),
-        ];
-        let adjusted_parameters = Thread::adjust_parameters(parameters);
-        assert_eq!(
-            adjusted_parameters,
-            vec![
-                Value::Int(1),
-                Value::Long(2),
-                Value::Unused,
-                Value::Float(3.0),
-                Value::Double(4.0),
-                Value::Unused,
-            ]
-        );
     }
 
     #[tokio::test]
