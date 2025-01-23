@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - correct exception byte to instruction offset conversion error
-- remove unncessary parameter cloning
+- remove unnecessary parameter cloning
 - remove unnecessary clone from LocalVariables
 - correct bug in java.lang.Class.getDeclaredMethods0() where class constructors were incorrectly returned
 
