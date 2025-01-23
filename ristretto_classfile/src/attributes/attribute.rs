@@ -309,7 +309,7 @@ impl Attribute {
                         .iter()
                         .filter(|(&k, _)| k <= exception.range_pc.end)
                         .max_by_key(|(&k, _)| k)
-                        .map(|(_, &v)| v + 1)
+                        .map(|(_, &v)| v)
                         .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
                     exception.handler_pc = *byte_to_instruction_map
                         .get(&exception.handler_pc)
@@ -730,7 +730,7 @@ impl Attribute {
                         .iter()
                         .filter(|(&k, _)| k <= exception.range_pc.end)
                         .max_by_key(|(&k, _)| k)
-                        .map(|(_, &v)| v + 1)
+                        .map(|(_, &v)| v)
                         .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
                     exception.handler_pc = *instruction_to_byte_map
                         .get(&exception.handler_pc)
@@ -1278,19 +1278,20 @@ mod test {
             name_index: 1,
             max_stack: 2,
             max_locals: 3,
-            code: vec![Instruction::Iconst_1],
+            code: vec![Instruction::Iconst_1, Instruction::Return],
             exception_table: vec![exception_table_entry],
             attributes: vec![constant.clone(), line_number_table.clone()],
         };
         let expected_bytes = [
-            0, 1, 0, 0, 0, 41, 0, 2, 0, 3, 0, 0, 0, 1, 4, 0, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 2, 0, 2,
-            0, 0, 0, 2, 0, 42, 0, 3, 0, 0, 0, 6, 0, 1, 0, 0, 0, 1,
+            0, 1, 0, 0, 0, 42, 0, 2, 0, 3, 0, 0, 0, 2, 4, 177, 0, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 2,
+            0, 2, 0, 0, 0, 2, 0, 42, 0, 3, 0, 0, 0, 6, 0, 1, 0, 0, 0, 1,
         ];
         let expected = indoc! {"
             Code:
               stack=2, locals=3
                  0: iconst_1
-              [ExceptionTableEntry { range_pc: 0..1, handler_pc: 0, catch_type: 4 }]
+                 1: return
+              [ExceptionTableEntry { range_pc: 0..2, handler_pc: 0, catch_type: 4 }]
               ConstantValue { name_index: 2, constant_value_index: 42 }
               LineNumberTable:
                 line 1: 0
