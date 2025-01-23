@@ -1,6 +1,6 @@
 [workspace]
 changelog_path = "./CHANGELOG.md"
-git_release_enable = true
+git_release_enable = false
 git_release_body = """
 {{ changelog }}
 {% if remote.contributors %}
