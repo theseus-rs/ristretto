@@ -27,6 +27,11 @@ pub fn test_expressions() -> Result<()> {
 }
 
 #[test]
+pub fn test_jdbc() -> Result<()> {
+    test_class(include_bytes!("../../classes/JDBC.class"))
+}
+
+#[test]
 pub fn test_minimum() -> Result<()> {
     test_class(include_bytes!("../../classes/Minimum.class"))
 }

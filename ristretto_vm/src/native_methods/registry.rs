@@ -735,10 +735,8 @@ mod tests {
                 extra_methods.join("\n"),
             ));
         };
-        if !errors.is_empty() {
-            eprintln!("{}", errors.join("\n"));
-            assert!(errors.is_empty());
-        }
+        let errors = errors.join("\n");
+        assert_eq!("", errors);
         Ok(())
     }
 
