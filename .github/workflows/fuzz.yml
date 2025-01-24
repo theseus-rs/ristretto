@@ -16,7 +16,7 @@ permissions:
 jobs:
   fuzz:
     name: ${{ matrix.target }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     env:
       RUSTUP_TOOLCHAIN: nightly
     strategy:

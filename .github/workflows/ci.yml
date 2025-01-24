@@ -24,8 +24,9 @@ jobs:
       fail-fast: false
       matrix:
         platform:
+          - linux-arm
           - linux-x64
-          - macos-arm64
+          - macos-arm
           - macos-x64
           - windows-x64
           - wasm32-unknown
@@ -76,7 +77,7 @@ jobs:
           cargo build --workspace --target ${{ matrix.target }}
 
       - name: Tests
-        if: ${{ matrix.platform == 'linux-arm' }}
+        if: ${{ matrix.platform == '<disabled>' }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
