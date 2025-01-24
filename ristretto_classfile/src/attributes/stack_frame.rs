@@ -58,6 +58,23 @@ impl StackFrame {
         }
     }
 
+    /// Get the offset delta.
+    #[must_use]
+    pub fn offset_delta(&self) -> u16 {
+        match self {
+            StackFrame::SameFrame { frame_type } => u16::from(*frame_type),
+            StackFrame::SameLocals1StackItemFrame { frame_type, .. } => {
+                let frame_type = u16::from(*frame_type);
+                frame_type.saturating_sub(64)
+            }
+            StackFrame::AppendFrame { offset_delta, .. }
+            | StackFrame::ChopFrame { offset_delta, .. }
+            | StackFrame::FullFrame { offset_delta, .. }
+            | StackFrame::SameFrameExtended { offset_delta, .. }
+            | StackFrame::SameLocals1StackItemFrameExtended { offset_delta, .. } => *offset_delta,
+        }
+    }
+
     /// Deserialize the stack frame from bytes.
     ///
     /// # Errors
@@ -326,13 +343,14 @@ mod test {
 
     #[test]
     fn test_same_frame() -> Result<()> {
-        let frame_type = 0;
-        let stack_frame = StackFrame::SameFrame { frame_type: 0 };
-        let expected_bytes = [0];
+        let frame_type = 42;
+        let stack_frame = StackFrame::SameFrame { frame_type: 42 };
+        let expected_bytes = [42];
 
         assert_eq!(frame_type, stack_frame.frame_type());
+        assert_eq!(42, stack_frame.offset_delta());
         assert_eq!(
-            indoc! {"frame_type = 0 /* same */"},
+            indoc! {"frame_type = 42 /* same */"},
             stack_frame.to_string()
         );
         test_stack_frame(&stack_frame, &expected_bytes)
@@ -340,17 +358,18 @@ mod test {
 
     #[test]
     fn test_same_locales_1_stack_item_frame() -> Result<()> {
-        let frame_type = 64;
+        let frame_type = 65;
         let stack_frame = StackFrame::SameLocals1StackItemFrame {
             frame_type,
             stack: vec![VerificationType::Null],
         };
-        let expected_bytes = [64, 5];
+        let expected_bytes = [65, 5];
 
         assert_eq!(frame_type, stack_frame.frame_type());
+        assert_eq!(1, stack_frame.offset_delta());
         assert_eq!(
             indoc! {"
-            frame_type = 64 /* same_locals_1_stack_item */
+            frame_type = 65 /* same_locals_1_stack_item */
               stack = [ null ]"},
             stack_frame.to_string()
         );
@@ -368,6 +387,7 @@ mod test {
         let expected_bytes = [247, 0, 42, 5];
 
         assert_eq!(frame_type, stack_frame.frame_type());
+        assert_eq!(42, stack_frame.offset_delta());
         assert_eq!(
             indoc! {"
             frame_type = 247 /* same_locals_1_stack_item_frame_extended */
@@ -388,6 +408,7 @@ mod test {
         let expected_bytes = [248, 0, 42];
 
         assert_eq!(frame_type, stack_frame.frame_type());
+        assert_eq!(42, stack_frame.offset_delta());
         assert_eq!(
             indoc! {"
             frame_type = 248 /* chop */
@@ -407,6 +428,7 @@ mod test {
         let expected_bytes = [251, 0, 42];
 
         assert_eq!(frame_type, stack_frame.frame_type());
+        assert_eq!(42, stack_frame.offset_delta());
         assert_eq!(
             indoc! {"
             frame_type = 251 /* same_frame_extended */
@@ -427,6 +449,7 @@ mod test {
         let expected_bytes = [252, 0, 42, 5];
 
         assert_eq!(frame_type, stack_frame.frame_type());
+        assert_eq!(42, stack_frame.offset_delta());
         assert_eq!(
             indoc! {"
             frame_type = 252 /* append */
@@ -449,6 +472,7 @@ mod test {
         let expected_bytes = [255, 0, 42, 0, 1, 5, 0, 1, 1];
 
         assert_eq!(frame_type, stack_frame.frame_type());
+        assert_eq!(42, stack_frame.offset_delta());
         assert_eq!(
             indoc! {"\
             frame_type = 255 /* full_frame */
