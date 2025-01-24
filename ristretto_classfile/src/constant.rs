@@ -18,43 +18,60 @@ const VERSION_55_0: Version = Version::Java11 { minor: 0 };
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4>
 #[derive(Clone, Debug, PartialEq)]
 pub enum Constant {
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.7>
     Utf8(String),
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.4>
     Integer(i32),
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.4>
     Float(f32),
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.5>
     Long(i64),
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.5>
     Double(f64),
-    Class(u16),  // Name index (Utf8)
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.1>
+    Class(u16), // Name index (Utf8)
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.3>
     String(u16), // String index (Utf8)
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2>
     FieldRef {
         class_index: u16,
         name_and_type_index: u16,
     },
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2>
     MethodRef {
         class_index: u16,
         name_and_type_index: u16,
     },
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2>
     InterfaceMethodRef {
         class_index: u16,
         name_and_type_index: u16,
     },
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.6>
     NameAndType {
         name_index: u16,
         descriptor_index: u16,
     },
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.8>
     MethodHandle {
         reference_kind: ReferenceKind,
         reference_index: u16,
     },
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.9>
     MethodType(u16), // Descriptor index (NameAndType)
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.10>
     Dynamic {
         bootstrap_method_attr_index: u16,
         name_and_type_index: u16,
     },
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.10>
     InvokeDynamic {
         bootstrap_method_attr_index: u16,
         name_and_type_index: u16,
     },
-    Module(u16),  // Name index (Utf8)
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.11>
+    Module(u16), // Name index (Utf8)
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.12>
     Package(u16), // Name index (Utf8)
 }
 

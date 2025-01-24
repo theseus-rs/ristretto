@@ -38,8 +38,8 @@ impl ConstantPool {
     /// # Errors
     /// If there are more than 65,534 constants in the pool.
     pub fn add(&mut self, constant: Constant) -> Result<u16> {
-        // Logically the index is self.len() + 1.  However, since the constant pool is one based and
-        // a placeholder is added as the first entry, we can just use the length of the constants
+        // Logically the index is self.len() + 1.  However, since the constant pool is one based a
+        // placeholder is added as the first entry, we can just use the length of the constants
         // vector to obtain the new index value.
         let index = u16::try_from(self.constants.len())?;
         self.push(constant);
@@ -676,12 +676,17 @@ impl Default for ConstantPool {
     }
 }
 
-/// All 8 byte constants (long and double) take up two entries in the constant pool; a placeholder
+/// All 8 byte constants (double and long) take up two entries in the constant pool; a placeholder
 /// is used to facilitate efficient indexed access of constants in the pool. See the JVM spec for:
 /// <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.5>
 #[derive(Clone, Debug, PartialEq)]
 enum ConstantEntry {
     Constant(Constant),
+    /// The constant pool is one based; a placeholder is added at position 0 to facilitate one based
+    /// indexing without needing to calculate an offset.  The JVM specification also expects 8 byte
+    /// constants (e.g double and long) to take two places in the constant pool. This implementation
+    /// only uses one position for 8 byte constants and uses the placeholder as a way to correctly
+    /// offset the constant pool index.  
     Placeholder,
 }
 
