@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_vm` - [0.13.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.12.3...ristretto_vm-v0.13.0) - 2025-01-24
+
+### Fixed
+- correct exception byte to instruction offset conversion error
+- remove unncessary parameter cloning
+- remove unnecessary clone from LocalVariables
+- correct bug in java.lang.Class.getDeclaredMethods0() where class constructors were incorrectly returned
+
+### Other
+- add vm benchmarks
+- update VM to support LTS and latest Java versions only
+- update java runtime versions
+- move invokedynamic into separate module
+
+## `ristretto_cli` - [0.13.0](https://github.com/theseus-rs/ristretto/compare/ristretto-v0.12.3...ristretto-v0.13.0) - 2025-01-24
+
+### Added
+- add Java 25 class file support
+
+### Fixed
+- correct StackFrame offset delta byte to instruction mapping
+- correct exception byte to instruction offset conversion error
+- remove unncessary parameter cloning
+- remove unnecessary clone from LocalVariables
+- correct bug in java.lang.Class.getDeclaredMethods0() where class constructors were incorrectly returned
+
+### Other
+- update Cargo.toml dependencies
+- add enum documentation
+- add vm benchmarks
+- update VM to support LTS and latest Java versions only
+- update java runtime versions
+- move invokedynamic into separate module
+
+## `ristretto_classfile` - [0.13.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.12.3...ristretto_classfile-v0.13.0) - 2025-01-24
+
+### Added
+- add Java 25 class file support
+
+### Fixed
+- correct StackFrame offset delta byte to instruction mapping
+- correct exception byte to instruction offset conversion error
+
+### Other
+- add enum documentation
+
+## `ristretto_classloader` - [0.13.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.12.3...ristretto_classloader-v0.13.0) - 2025-01-24
+
+### Other
+- add vm benchmarks
+- update VM to support LTS and latest Java versions only
+- update java runtime versions
+
 ## `ristretto` - [v0.12.3](https://github.com/theseus-rs/ristretto/compare/v0.12.2...v0.12.3) - 2025-01-20
 
 ### Build
