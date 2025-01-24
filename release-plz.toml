@@ -14,9 +14,9 @@ changelog_include = [
     "ristretto_vm",
 ]
 git_release_enable = true
-git_release_name = "ristretto-v{{ version }}"
+git_release_name = "v{{ version }}"
 git_tag_enable = true
-git_tag_name = "ristretto-v{{ version }}"
+git_tag_name = "v{{ version }}"
 git_release_body = """
 {{ changelog }}
 {% if remote.contributors %}
