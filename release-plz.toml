@@ -1,6 +1,22 @@
 [workspace]
 changelog_path = "./CHANGELOG.md"
 git_release_enable = false
+git_tag_enable = false
+pr_name = "ristretto-v{{ version }}"
+release_always = false
+
+[[package]]
+name = "ristretto_cli"
+changelog_update = true
+changelog_include = [
+    "ristretto_classfile",
+    "ristretto_classloader",
+    "ristretto_vm",
+]
+git_release_enable = true
+git_release_name = "ristretto-v{{ version }}"
+git_tag_enable = true
+git_tag_name = "ristretto-v{{ version }}"
 git_release_body = """
 {{ changelog }}
 {% if remote.contributors %}
