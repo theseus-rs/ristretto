@@ -95,6 +95,11 @@ async fn test_lombok() -> Result<(), Box<dyn Error>> {
 }
 
 #[tokio::test]
+async fn test_h2() -> Result<(), Box<dyn Error>> {
+    verify_jar("https://repo1.maven.org/maven2/com/h2database/h2/2.3.232/h2-2.3.232.jar").await
+}
+
+#[tokio::test]
 async fn test_mariadb() -> Result<(), Box<dyn Error>> {
     verify_jar("https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/3.4.0/mariadb-java-client-3.4.0.jar").await
 }

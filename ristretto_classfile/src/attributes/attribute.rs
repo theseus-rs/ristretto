@@ -17,6 +17,7 @@ use crate::mutf8;
 use crate::version::Version;
 use crate::Error::InvalidInstructionOffset;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::collections::HashMap;
 use std::fmt;
 use std::io::{Cursor, Read};
 
@@ -316,30 +317,11 @@ impl Attribute {
                         .ok_or(InvalidInstructionOffset(u32::from(exception.handler_pc)))?;
                     exception_table.push(exception);
                 }
-                let attributes_count = bytes.read_u16::<BigEndian>()?;
-                let mut attributes = Vec::with_capacity(attributes_count as usize);
-                for _ in 0..attributes_count {
-                    let attribute = Attribute::from_bytes(constant_pool, bytes)?;
-                    match attribute {
-                        Attribute::LineNumberTable {
-                            name_index,
-                            mut line_numbers,
-                        } => {
-                            for line_number in &mut line_numbers {
-                                line_number.start_pc =
-                                    *byte_to_instruction_map.get(&line_number.start_pc).ok_or(
-                                        InvalidInstructionOffset(u32::from(line_number.start_pc)),
-                                    )?;
-                            }
-                            let attribute = Attribute::LineNumberTable {
-                                name_index,
-                                line_numbers,
-                            };
-                            attributes.push(attribute);
-                        }
-                        _ => attributes.push(attribute),
-                    }
-                }
+                let attributes = Self::from_bytes_code_attributes(
+                    constant_pool,
+                    bytes,
+                    &byte_to_instruction_map,
+                )?;
                 Attribute::Code {
                     name_index,
                     max_stack,
@@ -687,6 +669,96 @@ impl Attribute {
         Ok(attribute)
     }
 
+    fn from_bytes_code_attributes(
+        constant_pool: &ConstantPool,
+        bytes: &mut Cursor<Vec<u8>>,
+        byte_to_instruction_map: &HashMap<u16, u16>,
+    ) -> Result<Vec<Attribute>> {
+        let attributes_count = bytes.read_u16::<BigEndian>()?;
+        let mut attributes = Vec::with_capacity(attributes_count as usize);
+        for _ in 0..attributes_count {
+            let attribute = Attribute::from_bytes(constant_pool, bytes)?;
+            match attribute {
+                Attribute::LineNumberTable {
+                    name_index,
+                    mut line_numbers,
+                } => {
+                    for line_number in &mut line_numbers {
+                        line_number.start_pc = *byte_to_instruction_map
+                            .get(&line_number.start_pc)
+                            .ok_or(InvalidInstructionOffset(u32::from(line_number.start_pc)))?;
+                    }
+                    let attribute = Attribute::LineNumberTable {
+                        name_index,
+                        line_numbers,
+                    };
+                    attributes.push(attribute);
+                }
+                Attribute::StackMapTable {
+                    name_index,
+                    mut frames,
+                } => {
+                    let mut first_frame = true;
+                    let mut last_byte_offset: u16 = 0;
+                    let mut last_instruction_offset: u16 = 0;
+                    for frame in &mut frames {
+                        let offset_delta = frame.offset_delta();
+                        let byte_offset = if first_frame {
+                            offset_delta
+                        } else {
+                            last_byte_offset
+                                .saturating_add(offset_delta)
+                                .saturating_add(1)
+                        };
+
+                        let instruction_offset = *byte_to_instruction_map
+                            .get(&byte_offset)
+                            .ok_or(InvalidInstructionOffset(u32::from(byte_offset)))?;
+                        // Calculate the instruction delta offset from the last instruction offset
+                        // subtracting 1 to account for the current instruction.
+                        let instruction_delta_offset = if first_frame {
+                            first_frame = false;
+                            instruction_offset
+                        } else {
+                            instruction_offset
+                                .saturating_sub(last_instruction_offset)
+                                .saturating_sub(1)
+                        };
+
+                        match frame {
+                            StackFrame::SameFrame { frame_type } => {
+                                // SameFrame uses the offset as the frame type
+                                *frame_type = u8::try_from(instruction_delta_offset)?;
+                            }
+                            StackFrame::SameLocals1StackItemFrame { frame_type, .. } => {
+                                // SameLocals1StackItemFrame requires that the 64 is added to the
+                                // delta offset as it is used as the frame type.
+                                let instruction_delta_offset =
+                                    instruction_delta_offset.saturating_add(64);
+                                *frame_type = u8::try_from(instruction_delta_offset)?;
+                            }
+                            StackFrame::AppendFrame { offset_delta, .. }
+                            | StackFrame::ChopFrame { offset_delta, .. }
+                            | StackFrame::FullFrame { offset_delta, .. }
+                            | StackFrame::SameFrameExtended { offset_delta, .. }
+                            | StackFrame::SameLocals1StackItemFrameExtended {
+                                offset_delta, ..
+                            } => {
+                                *offset_delta = instruction_delta_offset;
+                            }
+                        }
+                        last_byte_offset = byte_offset;
+                        last_instruction_offset = instruction_offset;
+                    }
+                    let attribute = Attribute::StackMapTable { name_index, frames };
+                    attributes.push(attribute);
+                }
+                _ => attributes.push(attribute),
+            }
+        }
+        Ok(attributes)
+    }
+
     /// Serialize the Attribute to bytes.
     ///
     /// # Errors
@@ -738,34 +810,7 @@ impl Attribute {
                     exception.to_bytes(&mut bytes)?;
                 }
 
-                let attributes_length = u16::try_from(attributes.len())?;
-                bytes.write_u16::<BigEndian>(attributes_length)?;
-                for attribute in attributes {
-                    match attribute {
-                        Attribute::LineNumberTable {
-                            name_index,
-                            line_numbers,
-                        } => {
-                            let mut new_line_numbers = Vec::new();
-                            for line_number in line_numbers {
-                                let start_pc =
-                                    *instruction_to_byte_map.get(&line_number.start_pc).ok_or(
-                                        InvalidInstructionOffset(u32::from(line_number.start_pc)),
-                                    )?;
-                                new_line_numbers.push(LineNumber {
-                                    start_pc,
-                                    line_number: line_number.line_number,
-                                });
-                            }
-                            let attribute = Attribute::LineNumberTable {
-                                name_index: *name_index,
-                                line_numbers: new_line_numbers,
-                            };
-                            attribute.to_bytes(&mut bytes)?;
-                        }
-                        _ => attribute.to_bytes(&mut bytes)?,
-                    }
-                }
+                Self::to_bytes_code_attributes(attributes, &mut bytes, &instruction_to_byte_map)?;
                 (name_index, bytes)
             }
             Attribute::StackMapTable { name_index, frames } => {
@@ -1077,6 +1122,142 @@ impl Attribute {
         let info_length = u32::try_from(info.len())?;
         bytes.write_u32::<BigEndian>(info_length)?;
         bytes.extend_from_slice(info.as_slice());
+        Ok(())
+    }
+
+    #[expect(clippy::too_many_lines)]
+    fn to_bytes_code_attributes(
+        attributes: &Vec<Attribute>,
+        bytes: &mut Vec<u8>,
+        instruction_to_byte_map: &HashMap<u16, u16>,
+    ) -> Result<()> {
+        let attributes_length = u16::try_from(attributes.len())?;
+        bytes.write_u16::<BigEndian>(attributes_length)?;
+        for attribute in attributes {
+            match attribute {
+                Attribute::LineNumberTable {
+                    name_index,
+                    line_numbers,
+                } => {
+                    let mut new_line_numbers = Vec::new();
+                    for line_number in line_numbers {
+                        let start_pc = *instruction_to_byte_map
+                            .get(&line_number.start_pc)
+                            .ok_or(InvalidInstructionOffset(u32::from(line_number.start_pc)))?;
+                        new_line_numbers.push(LineNumber {
+                            start_pc,
+                            line_number: line_number.line_number,
+                        });
+                    }
+                    let attribute = Attribute::LineNumberTable {
+                        name_index: *name_index,
+                        line_numbers: new_line_numbers,
+                    };
+                    attribute.to_bytes(bytes)?;
+                }
+                Attribute::StackMapTable { name_index, frames } => {
+                    let mut first_frame = true;
+                    let mut last_byte_offset: u16 = 0;
+                    let mut last_instruction_offset: u16 = 0;
+                    let mut new_frames = Vec::new();
+                    for frame in frames {
+                        let offset_delta = frame.offset_delta();
+                        let instruction_offset = if first_frame {
+                            offset_delta
+                        } else {
+                            last_instruction_offset
+                                .saturating_add(offset_delta)
+                                .saturating_add(1)
+                        };
+
+                        let byte_offset = *instruction_to_byte_map
+                            .get(&instruction_offset)
+                            .ok_or(InvalidInstructionOffset(u32::from(instruction_offset)))?;
+                        // Calculate the byte delta offset from the last instruction offset
+                        // subtracting 1 to account for the current instruction.
+                        let byte_delta_offset = if last_byte_offset == 0 {
+                            first_frame = false;
+                            byte_offset
+                        } else {
+                            byte_offset
+                                .saturating_sub(last_byte_offset)
+                                .saturating_sub(1)
+                        };
+
+                        match frame {
+                            StackFrame::SameFrame { .. } => {
+                                // SameFrame uses the offset as the frame type
+                                new_frames.push(StackFrame::SameFrame {
+                                    frame_type: u8::try_from(byte_delta_offset)?,
+                                });
+                            }
+                            StackFrame::SameLocals1StackItemFrame { stack, .. } => {
+                                // SameLocals1StackItemFrame requires that the 64 is added to the
+                                // delta offset as it is used as the frame type.
+                                let byte_delta_offset = byte_delta_offset.saturating_add(64);
+                                new_frames.push(StackFrame::SameLocals1StackItemFrame {
+                                    frame_type: u8::try_from(byte_delta_offset)?,
+                                    stack: stack.clone(),
+                                });
+                            }
+                            StackFrame::AppendFrame {
+                                frame_type, locals, ..
+                            } => {
+                                new_frames.push(StackFrame::AppendFrame {
+                                    frame_type: *frame_type,
+                                    offset_delta: byte_delta_offset,
+                                    locals: locals.clone(),
+                                });
+                            }
+                            StackFrame::ChopFrame { frame_type, .. } => {
+                                new_frames.push(StackFrame::ChopFrame {
+                                    frame_type: *frame_type,
+                                    offset_delta: byte_delta_offset,
+                                });
+                            }
+                            StackFrame::FullFrame {
+                                frame_type,
+                                locals,
+                                stack,
+                                ..
+                            } => {
+                                new_frames.push(StackFrame::FullFrame {
+                                    frame_type: *frame_type,
+                                    offset_delta: byte_delta_offset,
+                                    locals: locals.clone(),
+                                    stack: stack.clone(),
+                                });
+                            }
+                            StackFrame::SameFrameExtended { frame_type, .. } => {
+                                new_frames.push(StackFrame::SameFrameExtended {
+                                    frame_type: *frame_type,
+                                    offset_delta: byte_delta_offset,
+                                });
+                            }
+                            StackFrame::SameLocals1StackItemFrameExtended {
+                                frame_type,
+                                stack,
+                                ..
+                            } => {
+                                new_frames.push(StackFrame::SameLocals1StackItemFrameExtended {
+                                    frame_type: *frame_type,
+                                    offset_delta: byte_delta_offset,
+                                    stack: stack.clone(),
+                                });
+                            }
+                        }
+                        last_byte_offset = byte_offset;
+                        last_instruction_offset = instruction_offset;
+                    }
+                    let attribute = Attribute::StackMapTable {
+                        name_index: *name_index,
+                        frames: new_frames,
+                    };
+                    attribute.to_bytes(bytes)?;
+                }
+                _ => attribute.to_bytes(bytes)?,
+            }
+        }
         Ok(())
     }
 }
