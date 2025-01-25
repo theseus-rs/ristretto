@@ -17,15 +17,6 @@ git_release_enable = true
 git_release_name = "v{{ version }}"
 git_tag_enable = true
 git_tag_name = "v{{ version }}"
-git_release_body = """
-{{ changelog }}
-{% if remote.contributors %}
-### Contributors
-{% for contributor in remote.contributors %}
-* @{{ contributor.username }}
-{% endfor %}
-{% endif %}
-"""
 
 [changelog]
 body = """
