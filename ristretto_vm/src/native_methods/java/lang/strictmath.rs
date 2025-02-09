@@ -1223,8 +1223,8 @@ pub(crate) async fn random(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     };
     #[cfg(not(target_arch = "wasm32"))]
     let result = {
-        let mut rng = rand::thread_rng();
-        rng.gen_range(0.0f64..1.0f64)
+        let mut rng = rand::rng();
+        rng.random_range(0.0f64..1.0f64)
     };
     Ok(Some(Value::Double(result)))
 }
