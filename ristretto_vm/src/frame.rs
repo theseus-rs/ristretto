@@ -129,7 +129,7 @@ impl Frame {
                     self.program_counter
                         .store(program_counter, Ordering::Relaxed);
                 }
-                Ok(Return(value)) => return Ok(value.clone()),
+                Ok(Return(value)) => return Ok(value),
                 Err(error) => {
                     let vm = self.thread()?.vm()?;
                     let throwable = convert_error_to_throwable(vm, error).await?;
