@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::native_methods::registry::{MethodRegistry, JAVA_21, JAVA_8};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -32,12 +32,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    registry.register(
-        CLASS_NAME,
-        "getClassContext",
-        "()[Ljava/lang/Class;",
-        get_class_context,
-    );
+    if registry.java_major_version() <= JAVA_21 {
+        registry.register(
+            CLASS_NAME,
+            "getClassContext",
+            "()[Ljava/lang/Class;",
+            get_class_context,
+        );
+    }
 }
 
 #[async_recursion(?Send)]

@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_21, JAVA_23};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_21, JAVA_24};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -46,7 +46,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             notify_jvmti_unmount,
         );
     }
-    if registry.java_major_version() >= JAVA_21 {
+    if registry.java_major_version() == JAVA_21 {
         registry.register(
             CLASS_NAME,
             "notifyJvmtiHideFrames",
@@ -55,12 +55,24 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() >= JAVA_23 {
+    if registry.java_major_version() >= JAVA_24 {
         registry.register(
             CLASS_NAME,
             "notifyJvmtiDisableSuspend",
             "(Z)V",
             notify_jvmti_disable_suspend,
+        );
+        registry.register(
+            CLASS_NAME,
+            "postPinnedEvent",
+            "(Ljava/lang/String;)V",
+            post_pinned_event,
+        );
+        registry.register(
+            CLASS_NAME,
+            "takeVirtualThreadListToUnblock",
+            "()Ljava/lang/VirtualThread;",
+            take_virtual_thread_list_to_unblock,
         );
     }
 
@@ -145,8 +157,21 @@ async fn notify_jvmti_unmount_end(
 }
 
 #[async_recursion(?Send)]
+async fn post_pinned_event(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+    todo!("java.lang.VirtualThread.postPinnedEvent(Ljava/lang/String;)V")
+}
+
+#[async_recursion(?Send)]
 async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
+}
+
+#[async_recursion(?Send)]
+async fn take_virtual_thread_list_to_unblock(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("java.lang.VirtualThread.takeVirtualThreadListToUnblock()Ljava/lang/VirtualThread;")
 }
 
 #[cfg(test)]
@@ -238,10 +263,28 @@ mod tests {
     }
 
     #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.VirtualThread.postPinnedEvent(Ljava/lang/String;)V"
+    )]
+    async fn test_post_pinned_event() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = post_pinned_event(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.VirtualThread.takeVirtualThreadListToUnblock()Ljava/lang/VirtualThread;"
+    )]
+    async fn test_take_virtual_thread_list_to_unblock() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = take_virtual_thread_list_to_unblock(thread, Parameters::default()).await;
     }
 }

@@ -1,4 +1,4 @@
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_24};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,6 +10,21 @@ const CLASS_NAME: &str = "sun/nio/ch/UnixFileDispatcherImpl";
 
 /// Register all native methods for `sun.nio.ch.UnixFileDispatcherImpl`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
+    if registry.java_major_version() >= JAVA_24 {
+        registry.register(
+            CLASS_NAME,
+            "available0",
+            "(Ljava/io/FileDescriptor;)I",
+            available_0,
+        );
+        registry.register(
+            CLASS_NAME,
+            "isOther0",
+            "(Ljava/io/FileDescriptor;)Z",
+            is_other_0,
+        );
+    }
+
     registry.register(
         CLASS_NAME,
         "allocationGranularity0",
@@ -93,6 +108,11 @@ async fn allocation_granularity_0(
 }
 
 #[async_recursion(?Send)]
+async fn available_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+    todo!("sun.nio.ch.UnixFileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I")
+}
+
+#[async_recursion(?Send)]
 async fn close_int_fd(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.closeIntFD(I)V")
 }
@@ -100,6 +120,11 @@ async fn close_int_fd(_thread: Arc<Thread>, _parameters: Parameters) -> Result<O
 #[async_recursion(?Send)]
 async fn force_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.force0(Ljava/io/FileDescriptor;Z)I")
+}
+
+#[async_recursion(?Send)]
+async fn is_other_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+    todo!("sun.nio.ch.UnixFileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -187,6 +212,15 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
+        expected = "not yet implemented: sun.nio.ch.UnixFileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I"
+    )]
+    async fn test_available_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = available_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
         expected = "not yet implemented: sun.nio.ch.UnixFileDispatcherImpl.closeIntFD(I)V"
     )]
     async fn test_close_int_fd() {
@@ -201,6 +235,15 @@ mod tests {
     async fn test_force_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = force_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.nio.ch.UnixFileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z"
+    )]
+    async fn test_is_other_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_other_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]

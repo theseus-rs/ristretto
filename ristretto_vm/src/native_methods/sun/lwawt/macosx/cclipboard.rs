@@ -1,4 +1,4 @@
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_24};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,6 +10,10 @@ const CLASS_NAME: &str = "sun/lwawt/macosx/CClipboard";
 
 /// Register all native methods for `sun.lwawt.macosx.CClipboard`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
+    if registry.java_major_version() >= JAVA_24 {
+        registry.register(CLASS_NAME, "writeFileObjects", "([B)V", write_file_objects);
+    }
+
     registry.register(
         CLASS_NAME,
         "checkPasteboardWithoutNotification",
@@ -66,6 +70,14 @@ async fn set_data(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Optio
     todo!("sun.lwawt.macosx.CClipboard.setData([BJ)V")
 }
 
+#[async_recursion(?Send)]
+async fn write_file_objects(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.lwawt.macosx.CClipboard.writeFileObjects([B)V")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,5 +123,14 @@ mod tests {
     async fn test_set_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = set_data(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.lwawt.macosx.CClipboard.writeFileObjects([B)V"
+    )]
+    async fn test_write_file_objects() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = write_file_objects(thread, Parameters::default()).await;
     }
 }

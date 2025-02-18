@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_17};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -14,7 +14,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "echo", "(Z)Z", echo);
     }
 
-    registry.register(CLASS_NAME, "encoding", "()Ljava/lang/String;", encoding);
+    if registry.java_major_version() <= JAVA_21 {
+        registry.register(CLASS_NAME, "encoding", "()Ljava/lang/String;", encoding);
+    }
+
     registry.register(CLASS_NAME, "istty", "()Z", istty);
 }
 

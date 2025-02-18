@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_23};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_24};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::JavaError::NullPointerException;
@@ -96,7 +96,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "yield0", "()V", yield_0);
     }
 
-    if registry.java_major_version() >= JAVA_23 {
+    if registry.java_major_version() >= JAVA_24 {
         registry.register(CLASS_NAME, "sleepNanos0", "(J)V", sleep_nanos_0);
     }
 

@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_23, JAVA_8};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_24, JAVA_8};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Error::InternalError;
@@ -60,7 +60,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "flistxattr", "(IJI)I", flistxattr);
         registry.register(CLASS_NAME, "fremovexattr0", "(IJ)V", fremovexattr_0);
         registry.register(CLASS_NAME, "fsetxattr0", "(IJJI)V", fsetxattr_0);
-        registry.register(CLASS_NAME, "lutimes0", "(JJJ)V", lutimes_0);
+        if registry.java_major_version() <= JAVA_21 {
+            registry.register(CLASS_NAME, "lutimes0", "(JJJ)V", lutimes_0);
+        }
     }
 
     if registry.java_major_version() <= JAVA_17 {
@@ -91,7 +93,14 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
+    if registry.java_major_version() <= JAVA_21 {
+        registry.register(CLASS_NAME, "utimes0", "(JJJ)V", utimes_0);
+    }
+    if registry.java_major_version() == JAVA_21 {
+        registry.register(CLASS_NAME, "futimes0", "(IJJ)V", futimes_0);
+    }
     if registry.java_major_version() >= JAVA_21 {
+        registry.register(CLASS_NAME, "access0", "(JI)I", access_0);
         registry.register(CLASS_NAME, "fchmod0", "(II)V", fchmod_0);
         registry.register(CLASS_NAME, "fchown0", "(III)V", fchown_0);
         registry.register(
@@ -101,16 +110,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             fstat_0,
         );
         registry.register(CLASS_NAME, "futimens0", "(IJJ)V", futimens_0);
-        registry.register(CLASS_NAME, "futimes0", "(IJJ)V", futimes_0);
         registry.register(CLASS_NAME, "read0", "(IJI)I", read_0);
         registry.register(CLASS_NAME, "readdir0", "(J)[B", readdir_0);
         registry.register(CLASS_NAME, "write0", "(IJI)I", write_0);
-    }
-
-    if registry.java_major_version() == JAVA_21 || registry.java_major_version() >= JAVA_23 {
-        registry.register(CLASS_NAME, "access0", "(JI)I", access_0);
     } else {
         registry.register(CLASS_NAME, "access0", "(JI)V", access_0);
+    }
+
+    if registry.java_major_version() >= JAVA_24 {
+        registry.register(CLASS_NAME, "utimensat0", "(IJJJI)V", utimensat_0);
     }
 
     registry.register(CLASS_NAME, "chmod0", "(JI)V", chmod_0);
@@ -160,7 +168,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(CLASS_NAME, "symlink0", "(JJ)V", symlink_0);
     registry.register(CLASS_NAME, "unlink0", "(J)V", unlink_0);
     registry.register(CLASS_NAME, "unlinkat0", "(IJI)V", unlinkat_0);
-    registry.register(CLASS_NAME, "utimes0", "(JJJ)V", utimes_0);
 }
 
 #[async_recursion(?Send)]
@@ -497,6 +504,11 @@ async fn unlinkat_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Opt
 #[async_recursion(?Send)]
 async fn utimes_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.fs.UnixNativeDispatcher.utimes0(JJJ)V");
+}
+
+#[async_recursion(?Send)]
+async fn utimensat_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+    todo!("sun.nio.fs.UnixNativeDispatcher.utimensat0(IJJJI)V");
 }
 
 #[async_recursion(?Send)]
@@ -1002,6 +1014,15 @@ mod tests {
     async fn test_utimes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = utimes_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.utimensat0(IJJJI)V"
+    )]
+    async fn test_utimensat_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = utimensat_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]

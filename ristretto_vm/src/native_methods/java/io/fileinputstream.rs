@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_8};
+use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_24, JAVA_8};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -15,6 +15,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     } else if registry.java_major_version() >= JAVA_17 {
         registry.register(CLASS_NAME, "length0", "()J", length_0);
         registry.register(CLASS_NAME, "position0", "()J", position_0);
+    }
+
+    if registry.java_major_version() >= JAVA_24 {
+        registry.register(
+            CLASS_NAME,
+            "isRegularFile0",
+            "(Ljava/io/FileDescriptor;)Z",
+            is_regular_file_0,
+        );
     }
 
     registry.register(CLASS_NAME, "available0", "()I", available_0);
@@ -38,6 +47,11 @@ async fn close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option
 #[async_recursion(?Send)]
 async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
+}
+
+#[async_recursion(?Send)]
+async fn is_regular_file_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+    todo!("java.io.FileInputStream.isRegularFile0(Ljava/io/FileDescriptor;)Z")
 }
 
 #[async_recursion(?Send)]
@@ -94,6 +108,15 @@ mod tests {
         let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.io.FileInputStream.isRegularFile0(Ljava/io/FileDescriptor;)Z"
+    )]
+    async fn test_is_regular_file_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_regular_file_0(thread, Parameters::default()).await;
     }
 
     #[tokio::test]

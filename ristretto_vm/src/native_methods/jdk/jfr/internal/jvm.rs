@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_23};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_24};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -197,7 +197,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "getStackTraceId", "(IJ)J", get_stack_trace_id);
     }
 
-    if registry.java_major_version() >= JAVA_23 {
+    if registry.java_major_version() >= JAVA_24 {
         registry.register(
             CLASS_NAME,
             "registerStackFilter",
@@ -213,7 +213,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    if registry.java_major_version() >= JAVA_23 {
+    if registry.java_major_version() >= JAVA_24 {
         registry.register(
             CLASS_NAME,
             "hostTotalSwapMemory",

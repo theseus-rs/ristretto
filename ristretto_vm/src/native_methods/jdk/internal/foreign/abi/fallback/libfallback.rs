@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_21, JAVA_23};
+use crate::native_methods::registry::{MethodRegistry, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -13,21 +13,18 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     if registry.java_major_version() <= JAVA_21 {
         registry.register(CLASS_NAME, "doDowncall", "(JJJJJI)V", do_downcall);
     } else {
+        registry.register(CLASS_NAME, "alignof_double", "()I", alignof_double);
+        registry.register(CLASS_NAME, "alignof_long_long", "()I", alignof_long_long);
         registry.register(
             CLASS_NAME,
             "doDowncall",
-            "(JJJJJI[Ljava/lang/Object;I)V",
+            "(JJJJLjava/lang/Object;JI[Ljava/lang/Object;I)V",
             do_downcall,
         );
         registry.register(CLASS_NAME, "ffi_sizeof_int", "()I", ffi_sizeof_int);
         registry.register(CLASS_NAME, "ffi_sizeof_long", "()I", ffi_sizeof_long);
         registry.register(CLASS_NAME, "ffi_sizeof_short", "()I", ffi_sizeof_short);
         registry.register(CLASS_NAME, "ffi_sizeof_wchar", "()I", ffi_sizeof_wchar);
-    }
-
-    if registry.java_major_version() >= JAVA_23 {
-        registry.register(CLASS_NAME, "alignof_double", "()I", alignof_double);
-        registry.register(CLASS_NAME, "alignof_long_long", "()I", alignof_long_long);
     }
 
     registry.register(
