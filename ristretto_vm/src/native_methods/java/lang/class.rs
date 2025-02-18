@@ -497,7 +497,8 @@ async fn get_declared_methods_0(
     let class_array = thread.class("[Ljava/lang/Class;").await?;
     let mut methods = Vec::new();
     for (slot, method) in class.methods().iter().enumerate() {
-        if method.name() == "<clinit>" || method.name() == "<init>" {
+        let method_name = method.name();
+        if ["<clinit>", "<init>"].contains(&method_name) {
             continue;
         }
 
@@ -506,7 +507,7 @@ async fn get_declared_methods_0(
             continue;
         }
 
-        let method_name = method.name().to_value();
+        let method_name = method_name.to_object(&vm).await?;
         let mut parameters = Vec::new();
         for parameter in method.parameters() {
             let class_name = parameter.class_name();

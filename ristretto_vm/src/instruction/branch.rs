@@ -4,7 +4,6 @@ use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::Result;
 use indexmap::IndexMap;
-use ristretto_classloader::Reference;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_cond>
 #[inline]
@@ -131,19 +130,11 @@ pub(crate) fn if_icmple(stack: &mut OperandStack, address: u16) -> Result<Execut
 pub(crate) fn if_acmpeq(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_object()?;
     let value1 = stack.pop_object()?;
-
-    if value1 != value2 {
-        return Ok(Continue);
+    if value1 == value2 {
+        Ok(ContinueAtPosition(usize::from(address)))
+    } else {
+        Ok(Continue)
     }
-
-    // Special case for `java.lang.Class` objects
-    if let (Some(Reference::Object(value1)), Some(Reference::Object(value2))) = (value1, value2) {
-        if value1.class().name() == "java/lang/Class" && !value1.eq(&value2) {
-            return Ok(Continue);
-        }
-    }
-
-    Ok(ContinueAtPosition(usize::from(address)))
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_acmp_cond>
@@ -151,19 +142,11 @@ pub(crate) fn if_acmpeq(stack: &mut OperandStack, address: u16) -> Result<Execut
 pub(crate) fn if_acmpne(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_object()?;
     let value1 = stack.pop_object()?;
-
-    if value1 == value2 {
-        return Ok(Continue);
+    if value1 != value2 {
+        Ok(ContinueAtPosition(usize::from(address)))
+    } else {
+        Ok(Continue)
     }
-
-    // Special case for `java.lang.Class` objects.
-    if let (Some(Reference::Object(value1)), Some(Reference::Object(value2))) = (value1, value2) {
-        if value1.class().name() == "java/lang/Class" && value1.eq(&value2) {
-            return Ok(Continue);
-        }
-    }
-
-    Ok(ContinueAtPosition(usize::from(address)))
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.goto>
