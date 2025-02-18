@@ -531,14 +531,10 @@ pub(crate) async fn compare_and_set_reference(
     let expected = parameters.pop()?;
     let offset = parameters.pop_long()?;
     let offset = usize::try_from(offset)?;
-    let Some(object) = parameters.pop_reference()? else {
-        return Err(InternalError(
-            "compareAndSetReference: Invalid reference".to_string(),
-        ));
-    };
+    let reference: Reference = parameters.pop()?.try_into()?;
 
     // TODO: the compare and set operation should be atomic
-    let result = match object {
+    let result = match reference {
         Reference::Array(_class, array) => {
             let Some(reference) = array.get(offset)? else {
                 return Err(InternalError(

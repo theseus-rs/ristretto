@@ -217,6 +217,10 @@ impl JavaObject for String {
 }
 
 async fn to_class_object(vm: &VM, class: &Arc<Class>) -> Result<Value> {
+    if let Some(object) = class.object()? {
+        return Ok(Value::from(object));
+    }
+
     let java_lang_class = vm.class("java.lang.Class").await?;
     let object = Object::new(java_lang_class)?;
     let class_name = class.name().replace('/', ".");
@@ -226,6 +230,7 @@ async fn to_class_object(vm: &VM, class: &Arc<Class>) -> Result<Value> {
     // to support custom class loaders
     let class_loader_field = object.field("classLoader")?;
     class_loader_field.unsafe_set_value(Value::Object(None))?;
+    class.set_object(Some(object.clone()))?;
     let value = Value::from(object);
     Ok(value)
 }
