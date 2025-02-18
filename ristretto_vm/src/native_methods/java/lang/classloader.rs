@@ -116,7 +116,7 @@ async fn class_object_from_bytes(
         // TODO: implement setting the source file
     }
 
-    let class = Arc::new(Class::from(class_file)?);
+    let class = Class::from(class_file)?;
     let class = class.to_object(vm).await?;
     let class: Object = class.try_into()?;
     Ok(class)

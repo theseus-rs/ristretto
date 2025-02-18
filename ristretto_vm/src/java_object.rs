@@ -421,7 +421,7 @@ mod tests {
     #[tokio::test]
     async fn test_class_to_object() -> Result<()> {
         let vm = VM::default().await?;
-        let original_value = Arc::new(Class::new_named("[I")?);
+        let original_value = Class::new_named("[I")?;
         let value: Value = original_value.to_object(&vm).await?;
         let value: Arc<Class> = value.try_into()?;
         assert_eq!("java/lang/Class", value.name());

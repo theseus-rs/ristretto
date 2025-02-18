@@ -1,7 +1,6 @@
 use crate::java_object::JavaObject;
 use crate::{Result, Value, VM};
 use ristretto_classloader::{Class, Object, Reference};
-use std::sync::Arc;
 
 const STRING_PREFIX: &str = "str:";
 
@@ -100,7 +99,6 @@ impl RustValue for &str {
         let Ok(class) = Class::new_named(&class_name) else {
             return Value::Object(None);
         };
-        let class = Arc::new(class);
         let Ok(object) = Object::new(class) else {
             return Value::Object(None);
         };

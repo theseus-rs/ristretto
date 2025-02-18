@@ -53,8 +53,7 @@ impl Reference {
                 this_class: class_index,
                 ..Default::default()
             };
-            let class = Class::from(class_file)?;
-            Arc::new(class)
+            Class::from(class_file)?
         };
         Ok(class)
     }
@@ -664,16 +663,14 @@ mod tests {
         let bytes = include_bytes!("../../classes/Minimum.class").to_vec();
         let mut cursor = Cursor::new(bytes);
         let class_file = ClassFile::from_bytes(&mut cursor)?;
-        let class = Arc::new(Class::from(class_file)?);
-        Ok(class)
+        Class::from(class_file)
     }
 
     fn simple_class() -> Result<Arc<Class>> {
         let bytes = include_bytes!("../../classes/Simple.class").to_vec();
         let mut cursor = Cursor::new(bytes);
         let class_file = ClassFile::from_bytes(&mut cursor)?;
-        let class = Arc::new(Class::from(class_file)?);
-        Ok(class)
+        Class::from(class_file)
     }
 
     #[test]
@@ -852,7 +849,7 @@ mod tests {
 
     #[test]
     fn test_display_reference_array() -> Result<()> {
-        let class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let class = Class::new_named("[Ljava/lang/Object;")?;
         let reference = Reference::Array(class, ConcurrentVec::from(vec![None]));
         assert_eq!(reference.class_name(), "[Ljava/lang/Object;");
         assert_eq!(reference.class()?.name(), "[Ljava/lang/Object;");
@@ -862,7 +859,7 @@ mod tests {
 
     #[test]
     fn test_to_class_vec() -> Result<()> {
-        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let original_value = vec![None];
         let reference = Reference::from((original_class.clone(), original_value.clone()));
         let (class, value) = reference.to_class_vec()?;
@@ -1408,7 +1405,7 @@ mod tests {
 
     #[test]
     fn test_from_class_vec() -> Result<()> {
-        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let original_value = vec![None];
         let reference = Reference::from((original_class.clone(), original_value.clone()));
         assert!(matches!(reference, Reference::Array(_, _)));
@@ -1417,7 +1414,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_from_class_vec() -> Result<()> {
-        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let class_name = "java/lang/Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
@@ -1431,7 +1428,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_from_class_vec_error() -> Result<()> {
-        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let value = Value::from(42);
         let original_value = vec![value];
         let reference = Reference::try_from((original_class.clone(), original_value.clone()));
@@ -1576,7 +1573,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_class_vec() -> Result<()> {
-        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class.clone())?;

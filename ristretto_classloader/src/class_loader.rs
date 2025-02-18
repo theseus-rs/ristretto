@@ -95,7 +95,7 @@ impl ClassLoader {
                 if let Some(class) = classes.get(class_name) {
                     return Ok((class.clone(), true));
                 }
-                let class = Arc::new(Class::from(class_file)?);
+                let class = Class::from(class_file)?;
                 classes.insert(class_name.to_string(), class.clone());
                 return Ok((class, false));
             }
