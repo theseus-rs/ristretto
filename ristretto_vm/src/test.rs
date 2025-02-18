@@ -38,7 +38,7 @@ pub(crate) async fn class() -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
         ..Default::default()
     };
     let class = Class::from(class_file)?;
-    Ok((vm, thread, Arc::new(class)))
+    Ok((vm, thread, class))
 }
 
 /// Get a test frame for testing.

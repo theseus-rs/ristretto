@@ -139,7 +139,7 @@ impl Thread {
                     ]
                     .contains(&class_name)
                 {
-                    let array_class = Arc::new(Class::new_named(class_name)?);
+                    let array_class = Class::new_named(class_name)?;
                     // Register the array class so that it will be available for future lookups.
                     self.register_class(array_class.clone()).await?;
                     array_class

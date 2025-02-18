@@ -1005,7 +1005,7 @@ mod tests {
 
     #[test]
     fn test_from_class_vec() -> Result<()> {
-        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let original_value = vec![None];
         let value = Value::from((original_class.clone(), original_value.clone()));
         assert!(matches!(value, Value::Object(Some(Reference::Array(_, _)))));
@@ -1014,7 +1014,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_from_class_vec() -> Result<()> {
-        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
@@ -1028,7 +1028,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_from_class_vec_error() -> Result<()> {
-        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let value = Value::from(42);
         let original_value = vec![value];
         let value = Value::try_from((original_class.clone(), original_value.clone()));
@@ -1038,7 +1038,7 @@ mod tests {
 
     #[test]
     fn test_from_object() -> Result<()> {
-        let class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let class = Class::new_named("[Ljava/lang/Object;")?;
         let object = Object::new(class)?;
         let value = Value::from(object);
         assert!(matches!(value, Value::Object(Some(Reference::Object(_)))));
@@ -1047,7 +1047,7 @@ mod tests {
 
     #[test]
     fn test_from_reference() -> Result<()> {
-        let class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let class = Class::new_named("[Ljava/lang/Object;")?;
         let object = Object::new(class)?;
         let reference = Reference::from(object);
         let value = Value::from(reference);
@@ -1183,7 +1183,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_class_vec() -> Result<()> {
-        let original_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let class_name = "java/lang/Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class.clone())?;

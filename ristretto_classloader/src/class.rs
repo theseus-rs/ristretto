@@ -26,7 +26,7 @@ impl Class {
     ///
     /// # Errors
     /// if the class name cannot be added to the constant pool
-    pub fn new_named<S: AsRef<str>>(name: S) -> Result<Self> {
+    pub fn new_named<S: AsRef<str>>(name: S) -> Result<Arc<Self>> {
         let name = name.as_ref().to_string();
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class(name.clone())?;
@@ -36,7 +36,7 @@ impl Class {
             ..Default::default()
         };
         let methods = HashMap::new();
-        Ok(Self {
+        let class = Arc::new(Self {
             name,
             source_file: None,
             class_file,
@@ -44,14 +44,15 @@ impl Class {
             interfaces: Arc::new(RwLock::new(Vec::new())),
             fields: IndexMap::new(),
             methods,
-        })
+        });
+        Ok(class)
     }
 
     /// Create a new class from the given class file.
     ///
     /// # Errors
     /// if the class file cannot be read.
-    pub fn from(class_file: ClassFile) -> Result<Self> {
+    pub fn from(class_file: ClassFile) -> Result<Arc<Self>> {
         let name = class_file.class_name()?.clone();
         let mut source_file = None;
 
@@ -81,7 +82,7 @@ impl Class {
             methods.insert(method_identifier, Arc::new(method));
         }
 
-        Ok(Self {
+        let class = Arc::new(Self {
             name,
             source_file,
             class_file,
@@ -89,7 +90,8 @@ impl Class {
             interfaces: Arc::new(RwLock::new(Vec::new())),
             fields,
             methods,
-        })
+        });
+        Ok(class)
     }
 
     /// Get the class name.
@@ -492,7 +494,7 @@ mod tests {
         class_loader.load("java.io.Serializable").await
     }
 
-    fn simple_class() -> Result<Class> {
+    fn simple_class() -> Result<Arc<Class>> {
         let bytes = include_bytes!("../../classes/Simple.class").to_vec();
         let mut cursor = Cursor::new(bytes);
         let class_file = ClassFile::from_bytes(&mut cursor)?;
@@ -681,6 +683,7 @@ mod tests {
     #[test]
     fn test_constant_pool_mut() -> Result<()> {
         let mut class = Class::new_named("[Z")?;
+        let class = Arc::get_mut(&mut class).expect("class");
         let constant_pool = class.constant_pool_mut();
         let index = constant_pool.add_string("foo")?;
         assert!(index > 0);
@@ -892,7 +895,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_object_array_not_is_assignable_from_object() -> Result<()> {
-        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let object_array_class = Class::new_named("[Ljava/lang/Object;")?;
         let object_class = object_class().await?;
         assert!(!object_array_class.is_assignable_from(&object_class)?);
         Ok(())
@@ -901,14 +904,14 @@ mod tests {
     #[tokio::test]
     async fn test_object_is_assignable_from_int_array() -> Result<()> {
         let object_class = object_class().await?;
-        let int_array_class = Arc::new(Class::new_named("[I")?);
+        let int_array_class = Class::new_named("[I")?;
         assert!(object_class.is_assignable_from(&int_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_int_array_is_assignable_from_int_array() -> Result<()> {
-        let int_array_class = Arc::new(Class::new_named("[I")?);
+        let int_array_class = Class::new_named("[I")?;
         assert!(int_array_class.is_assignable_from(&int_array_class)?);
         Ok(())
     }
@@ -916,54 +919,54 @@ mod tests {
     #[tokio::test]
     async fn test_object_is_assignable_from_object_array() -> Result<()> {
         let object_class = object_class().await?;
-        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let object_array_class = Class::new_named("[Ljava/lang/Object;")?;
         assert!(object_class.is_assignable_from(&object_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_object_array_is_assignable_from_object_array() -> Result<()> {
-        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let object_array_class = Class::new_named("[Ljava/lang/Object;")?;
         assert!(object_array_class.is_assignable_from(&object_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_object_array_not_is_assignable_from_int_array() -> Result<()> {
-        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
-        let int_array_class = Arc::new(Class::new_named("[I")?);
+        let object_array_class = Class::new_named("[Ljava/lang/Object;")?;
+        let int_array_class = Class::new_named("[I")?;
         assert!(!object_array_class.is_assignable_from(&int_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_int_array_not_is_assignable_from_object_array() -> Result<()> {
-        let int_array_class = Arc::new(Class::new_named("[I")?);
-        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let int_array_class = Class::new_named("[I")?;
+        let object_array_class = Class::new_named("[Ljava/lang/Object;")?;
         assert!(!int_array_class.is_assignable_from(&object_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_object_array_is_assignable_from_string_array() -> Result<()> {
-        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
-        let string_array_class = Arc::new(Class::new_named("[Ljava/lang/String;")?);
+        let object_array_class = Class::new_named("[Ljava/lang/Object;")?;
+        let string_array_class = Class::new_named("[Ljava/lang/String;")?;
         assert!(object_array_class.is_assignable_from(&string_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_string_array_not_is_assignable_from_object_array() -> Result<()> {
-        let string_array_class = Arc::new(Class::new_named("[Ljava/lang/String;")?);
-        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let string_array_class = Class::new_named("[Ljava/lang/String;")?;
+        let object_array_class = Class::new_named("[Ljava/lang/Object;")?;
         assert!(!string_array_class.is_assignable_from(&object_array_class)?);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_object_array_is_assignable_from_multiple_dimension_object_array() -> Result<()> {
-        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
-        let two_dimension_object_array_class = Arc::new(Class::new_named("[[Ljava/lang/Object;")?);
+        let object_array_class = Class::new_named("[Ljava/lang/Object;")?;
+        let two_dimension_object_array_class = Class::new_named("[[Ljava/lang/Object;")?;
         assert!(object_array_class.is_assignable_from(&two_dimension_object_array_class)?);
         Ok(())
     }
@@ -971,8 +974,8 @@ mod tests {
     #[tokio::test]
     async fn test_multiple_dimension_object_array_not_is_assignable_from_object_array() -> Result<()>
     {
-        let two_dimension_object_array_class = Arc::new(Class::new_named("[[Ljava/lang/Object;")?);
-        let object_array_class = Arc::new(Class::new_named("[Ljava/lang/Object;")?);
+        let two_dimension_object_array_class = Class::new_named("[[Ljava/lang/Object;")?;
+        let object_array_class = Class::new_named("[Ljava/lang/Object;")?;
         assert!(!two_dimension_object_array_class.is_assignable_from(&object_array_class)?);
         Ok(())
     }
