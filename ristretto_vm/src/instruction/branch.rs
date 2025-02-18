@@ -4,6 +4,7 @@ use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::Result;
 use indexmap::IndexMap;
+use ristretto_classloader::Reference;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_cond>
 #[inline]
@@ -130,10 +131,19 @@ pub(crate) fn if_icmple(stack: &mut OperandStack, address: u16) -> Result<Execut
 pub(crate) fn if_acmpeq(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_object()?;
     let value1 = stack.pop_object()?;
-    if value1 == value2 {
-        return Ok(ContinueAtPosition(usize::from(address)));
+
+    if value1 != value2 {
+        return Ok(Continue);
     }
-    Ok(Continue)
+
+    // Special case for `java.lang.Class` objects
+    if let (Some(Reference::Object(value1)), Some(Reference::Object(value2))) = (value1, value2) {
+        if value1.class().name() == "java/lang/Class" && !value1.eq(&value2) {
+            return Ok(Continue);
+        }
+    }
+
+    Ok(ContinueAtPosition(usize::from(address)))
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_acmp_cond>
@@ -141,10 +151,19 @@ pub(crate) fn if_acmpeq(stack: &mut OperandStack, address: u16) -> Result<Execut
 pub(crate) fn if_acmpne(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_object()?;
     let value1 = stack.pop_object()?;
-    if value1 != value2 {
-        return Ok(ContinueAtPosition(usize::from(address)));
+
+    if value1 == value2 {
+        return Ok(Continue);
     }
-    Ok(Continue)
+
+    // Special case for `java.lang.Class` objects.
+    if let (Some(Reference::Object(value1)), Some(Reference::Object(value2))) = (value1, value2) {
+        if value1.class().name() == "java/lang/Class" && value1.eq(&value2) {
+            return Ok(Continue);
+        }
+    }
+
+    Ok(ContinueAtPosition(usize::from(address)))
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.goto>
@@ -257,6 +276,8 @@ pub(crate) fn ifnonnull(stack: &mut OperandStack, address: u16) -> Result<Execut
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::java_object::JavaObject;
+    use crate::VM;
     use ristretto_classloader::{ConcurrentVec, Reference};
 
     #[test]
@@ -581,6 +602,37 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_if_acmpeq_class_equal() -> Result<()> {
+        let vm = VM::default().await?;
+        let class = vm.class("java.lang.String").await?;
+        let class1 = class.to_object(&vm).await?;
+        let class2 = class.to_object(&vm).await?;
+
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_object(Some(class1.try_into()?))?;
+        stack.push_object(Some(class2.try_into()?))?;
+        let result = if_acmpeq(stack, 3)?;
+        assert_eq!(ContinueAtPosition(3), result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_if_acmpeq_class_not_equal() -> Result<()> {
+        let vm = VM::default().await?;
+        let class1 = vm.class("java.lang.Object").await?;
+        let class1 = class1.to_object(&vm).await?;
+        let class2 = vm.class("java.lang.String").await?;
+        let class2 = class2.to_object(&vm).await?;
+
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_object(Some(class1.try_into()?))?;
+        stack.push_object(Some(class2.try_into()?))?;
+        let result = if_acmpeq(stack, 3)?;
+        assert_eq!(Continue, result);
+        Ok(())
+    }
+
     #[test]
     fn test_if_acmpne_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
@@ -610,6 +662,37 @@ mod test {
         stack.push_object(None)?;
         let result = if_acmpne(stack, 3)?;
         assert_eq!(Continue, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_if_acmpne_class_equal() -> Result<()> {
+        let vm = VM::default().await?;
+        let class = vm.class("java.lang.String").await?;
+        let class1 = class.to_object(&vm).await?;
+        let class2 = class.to_object(&vm).await?;
+
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_object(Some(class1.try_into()?))?;
+        stack.push_object(Some(class2.try_into()?))?;
+        let result = if_acmpne(stack, 3)?;
+        assert_eq!(Continue, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_if_acmpne_class_not_equal() -> Result<()> {
+        let vm = VM::default().await?;
+        let class1 = vm.class("java.lang.Object").await?;
+        let class1 = class1.to_object(&vm).await?;
+        let class2 = vm.class("java.lang.String").await?;
+        let class2 = class2.to_object(&vm).await?;
+
+        let stack = &mut OperandStack::with_max_size(2);
+        stack.push_object(Some(class1.try_into()?))?;
+        stack.push_object(Some(class2.try_into()?))?;
+        let result = if_acmpne(stack, 3)?;
+        assert_eq!(ContinueAtPosition(3), result);
         Ok(())
     }
 
