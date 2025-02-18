@@ -1,4 +1,4 @@
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,8 +10,12 @@ const CLASS_NAME: &str = "sun/nio/ch/FileKey";
 
 /// Register all native methods for `sun.nio.ch.FileKey`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "init", "(Ljava/io/FileDescriptor;)V", init);
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
+    if registry.java_major_version() <= JAVA_21 {
+        registry.register(CLASS_NAME, "init", "(Ljava/io/FileDescriptor;)V", init);
+        registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
+    } else {
+        registry.register(CLASS_NAME, "init", "(Ljava/io/FileDescriptor;[J)V", init);
+    }
 }
 
 #[async_recursion(?Send)]

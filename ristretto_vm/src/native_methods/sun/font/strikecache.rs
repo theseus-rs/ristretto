@@ -1,4 +1,4 @@
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_21, JAVA_24};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,16 +10,28 @@ const CLASS_NAME: &str = "sun/font/StrikeCache";
 
 /// Register all native methods for `sun.font.StrikeCache`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
+    if registry.java_major_version() <= JAVA_21 {
+        registry.register(
+            CLASS_NAME,
+            "getGlyphCacheDescription",
+            "([J)V",
+            get_glyph_cache_description,
+        );
+    }
+
+    if registry.java_major_version() >= JAVA_24 {
+        registry.register(
+            CLASS_NAME,
+            "getInvisibleGlyphPtr",
+            "()J",
+            get_invisible_glyph_ptr,
+        );
+    }
+
     registry.register(CLASS_NAME, "freeIntMemory", "([IJ)V", free_int_memory);
     registry.register(CLASS_NAME, "freeIntPointer", "(I)V", free_int_pointer);
     registry.register(CLASS_NAME, "freeLongMemory", "([JJ)V", free_long_memory);
     registry.register(CLASS_NAME, "freeLongPointer", "(J)V", free_long_pointer);
-    registry.register(
-        CLASS_NAME,
-        "getGlyphCacheDescription",
-        "([J)V",
-        get_glyph_cache_description,
-    );
 }
 
 #[async_recursion(?Send)]
@@ -48,6 +60,14 @@ async fn get_glyph_cache_description(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.StrikeCache.getGlyphCacheDescription([J)V")
+}
+
+#[async_recursion(?Send)]
+async fn get_invisible_glyph_ptr(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.font.StrikeCache.getInvisibleGlyphPtr()J")
 }
 
 #[cfg(test)]
@@ -89,5 +109,12 @@ mod tests {
     async fn test_get_glyph_cache_description() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_glyph_cache_description(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: sun.font.StrikeCache.getInvisibleGlyphPtr()J")]
+    async fn test_get_invisible_glyph_ptr() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_invisible_glyph_ptr(thread, Parameters::default()).await;
     }
 }

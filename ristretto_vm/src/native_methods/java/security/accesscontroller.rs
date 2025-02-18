@@ -1,4 +1,4 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11};
+use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_21};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -30,7 +30,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             do_privileged_3,
         );
         registry.register(CLASS_NAME, "doPrivileged", "(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;", do_privileged_4);
-    } else {
+    } else if registry.java_major_version() <= JAVA_21 {
         registry.register(
             CLASS_NAME,
             "ensureMaterializedForStackWalk",
@@ -45,18 +45,20 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         );
     }
 
-    registry.register(
-        CLASS_NAME,
-        "getInheritedAccessControlContext",
-        "()Ljava/security/AccessControlContext;",
-        get_inherited_access_control_context,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getStackAccessControlContext",
-        "()Ljava/security/AccessControlContext;",
-        get_stack_access_control_context,
-    );
+    if registry.java_major_version() <= JAVA_21 {
+        registry.register(
+            CLASS_NAME,
+            "getInheritedAccessControlContext",
+            "()Ljava/security/AccessControlContext;",
+            get_inherited_access_control_context,
+        );
+        registry.register(
+            CLASS_NAME,
+            "getStackAccessControlContext",
+            "()Ljava/security/AccessControlContext;",
+            get_stack_access_control_context,
+        );
+    }
 }
 
 #[async_recursion(?Send)]

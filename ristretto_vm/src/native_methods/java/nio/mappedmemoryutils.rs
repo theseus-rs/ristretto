@@ -1,4 +1,4 @@
-use crate::native_methods::registry::MethodRegistry;
+use crate::native_methods::registry::{MethodRegistry, JAVA_24};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::Result;
@@ -10,6 +10,10 @@ const CLASS_NAME: &str = "java/nio/MappedMemoryUtils";
 
 /// Register all native methods for `java.nio.MappedMemoryUtils`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
+    if registry.java_major_version() >= JAVA_24 {
+        registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
+    }
+
     registry.register(
         CLASS_NAME,
         "force0",
@@ -34,6 +38,11 @@ async fn is_loaded_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Op
 #[async_recursion(?Send)]
 async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.nio.MappedMemoryUtils.load0(JJ)V")
+}
+
+#[async_recursion(?Send)]
+async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+    Ok(None)
 }
 
 #[async_recursion(?Send)]
@@ -66,6 +75,14 @@ mod tests {
     async fn test_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = load_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = register_natives(thread, Parameters::default()).await?;
+        assert!(result.is_none());
+        Ok(())
     }
 
     #[tokio::test]

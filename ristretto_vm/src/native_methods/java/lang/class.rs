@@ -81,6 +81,21 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
         registry.register(CLASS_NAME, "isRecord0", "()Z", is_record_0);
     }
 
+    if registry.java_major_version() <= JAVA_21 {
+        registry.register(
+            CLASS_NAME,
+            "getSigners",
+            "()[Ljava/lang/Object;",
+            get_signers,
+        );
+        registry.register(
+            CLASS_NAME,
+            "setSigners",
+            "([Ljava/lang/Object;)V",
+            set_signers,
+        );
+    }
+
     if registry.java_major_version() >= JAVA_21 {
         registry.register(
             CLASS_NAME,
@@ -178,12 +193,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     );
     registry.register(
         CLASS_NAME,
-        "getSigners",
-        "()[Ljava/lang/Object;",
-        get_signers,
-    );
-    registry.register(
-        CLASS_NAME,
         "getSuperclass",
         "()Ljava/lang/Class;",
         get_superclass,
@@ -204,12 +213,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(CLASS_NAME, "isInterface", "()Z", is_interface);
     registry.register(CLASS_NAME, "isPrimitive", "()Z", is_primitive);
     registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-    registry.register(
-        CLASS_NAME,
-        "setSigners",
-        "([Ljava/lang/Object;)V",
-        set_signers,
-    );
 }
 
 async fn get_class(thread: &Thread, object: &Object) -> Result<Arc<Class>> {

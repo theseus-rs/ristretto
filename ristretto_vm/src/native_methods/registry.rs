@@ -14,7 +14,7 @@ pub(crate) const JAVA_8: u16 = 8;
 pub(crate) const JAVA_11: u16 = 11;
 pub(crate) const JAVA_17: u16 = 17;
 pub(crate) const JAVA_21: u16 = 21;
-pub(crate) const JAVA_23: u16 = 23;
+pub(crate) const JAVA_24: u16 = 24;
 
 /// A Rust method is a method that is implemented in Rust and is called from Java code instead of
 /// being implemented in Java byte code.
@@ -284,7 +284,7 @@ impl MethodRegistry {
             jdk::internal::vm::foreignlinkersupport::register(self);
         }
 
-        if self.java_major_version >= JAVA_23 {
+        if self.java_major_version >= JAVA_24 {
             java::lang::stackframeinfo::register(self);
             jdk::vm::ci::services::services::register(self);
         }
@@ -761,7 +761,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_runtime_v23() -> Result<()> {
-        test_runtime("23.0.2.7.1").await
+    async fn test_runtime_v24() -> Result<()> {
+        test_runtime("24.0.0.36.1").await
     }
 }

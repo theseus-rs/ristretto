@@ -36,6 +36,6 @@ async fn test_get_runtime_v21() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_get_runtime_v23() -> Result<()> {
-    test_runtime("23.0.2.7.1", "java.lang.Object").await
+async fn test_get_runtime_v24() -> Result<()> {
+    test_runtime("24.0.0.36.1", "java.lang.Object").await
 }

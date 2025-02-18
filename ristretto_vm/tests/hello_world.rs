@@ -41,6 +41,6 @@ async fn test_helloworld_v21() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_helloworld_v23() -> Result<()> {
-    test_helloworld("23.0.2.7.1").await
+async fn test_helloworld_v24() -> Result<()> {
+    test_helloworld("24.0.0.36.1").await
 }
