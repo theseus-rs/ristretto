@@ -1,5 +1,5 @@
 use crate::Error::{FieldNotFound, MethodNotFound, PoisonedLock};
-use crate::{Field, Method, Result};
+use crate::{Field, Method, Object, Result};
 use indexmap::IndexMap;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
@@ -19,6 +19,7 @@ pub struct Class {
     interfaces: Arc<RwLock<Vec<Arc<Class>>>>,
     fields: IndexMap<String, Arc<Field>>,
     methods: HashMap<String, Arc<Method>>,
+    object: Arc<RwLock<Option<Object>>>,
 }
 
 impl Class {
@@ -44,6 +45,7 @@ impl Class {
             interfaces: Arc::new(RwLock::new(Vec::new())),
             fields: IndexMap::new(),
             methods,
+            object: Arc::new(RwLock::new(None)),
         });
         Ok(class)
     }
@@ -90,6 +92,7 @@ impl Class {
             interfaces: Arc::new(RwLock::new(Vec::new())),
             fields,
             methods,
+            object: Arc::new(RwLock::new(None)),
         });
         Ok(class)
     }
@@ -396,6 +399,32 @@ impl Class {
             });
         };
         Ok(method)
+    }
+
+    /// Get the object for the class.
+    ///
+    /// # Errors
+    pub fn object(&self) -> Result<Option<Object>> {
+        let object_guard = self
+            .object
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        match object_guard.as_ref() {
+            Some(object) => Ok(Some(object.clone())),
+            None => Ok(None),
+        }
+    }
+
+    /// Set the object for the class.
+    ///
+    /// # Errors
+    pub fn set_object(&self, object: Option<Object>) -> Result<()> {
+        let mut object_guard = self
+            .object
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        *object_guard = object;
+        Ok(())
     }
 
     /// Determine if this class is assignable from the given class.
