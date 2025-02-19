@@ -28,12 +28,12 @@ tracing = { workspace = true }
 whoami = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { workspace = true, features = ["js"] }
+getrandom = { workspace = true, features = ["wasm_js"] }
 tokio = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+getrandom = { workspace = true }
 home = { workspace = true }
-rand = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]

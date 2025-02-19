@@ -66,7 +66,19 @@ jobs:
           toolchain: stable
 
       - name: Build
-        if: ${{ matrix.platform != 'macos-arm' }}
+        if: ${{ matrix.platform == 'wasm32-unknown' }}
+        env:
+          CARGO_TERM_COLOR: always
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RUST_BACKTRACE: 1
+          RUSTFLAGS: --cfg getrandom_backend="wasm_js"
+          RUST_LOG: info
+        run: |
+          rustup target install ${{ matrix.target }}
+          cargo build --workspace --target ${{ matrix.target }}
+
+      - name: Build
+        if: ${{ matrix.platform != 'macos-arm' && matrix.platform != 'wasm32-unknown' }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

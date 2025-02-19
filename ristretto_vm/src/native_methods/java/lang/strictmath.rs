@@ -1,13 +1,10 @@
 use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_8};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-#[cfg(target_arch = "wasm32")]
 use crate::Error::InternalError;
 use crate::JavaError::{ArithmeticException, IllegalArgumentException};
 use crate::Result;
 use async_recursion::async_recursion;
-#[cfg(not(target_arch = "wasm32"))]
-use rand::Rng;
 use ristretto_classloader::Value;
 use std::ops::Rem;
 use std::sync::Arc;
@@ -1214,18 +1211,8 @@ pub(crate) async fn pow(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
 
 #[async_recursion(?Send)]
 pub(crate) async fn random(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    #[cfg(target_arch = "wasm32")]
-    let result = {
-        let mut buf = [0u8; 8];
-        getrandom::getrandom(&mut buf).map_err(|error| InternalError(error.to_string()))?;
-        let random_u64 = u64::from_ne_bytes(buf);
-        (random_u64 as f64) / (u64::MAX as f64)
-    };
-    #[cfg(not(target_arch = "wasm32"))]
-    let result = {
-        let mut rng = rand::rng();
-        rng.random_range(0.0f64..1.0f64)
-    };
+    let random = getrandom::u64().map_err(|error| InternalError(error.to_string()))?;
+    let result = (random as f64) / (u64::MAX as f64);
     Ok(Some(Value::Double(result)))
 }
 
