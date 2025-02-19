@@ -1,12 +1,47 @@
 use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_8};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
+use crate::Error::InternalError;
 use crate::Result;
 use async_recursion::async_recursion;
+use bitflags::bitflags;
 use ristretto_classloader::{Class, Object, Value};
 use std::sync::Arc;
 
 const CLASS_NAME: &str = "java/lang/invoke/MethodHandleNatives";
+
+bitflags! {
+    /// Method name flags.
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct MemberNameFlags: i32 {
+        /// method (not constructor)
+        const IS_METHOD = 0x0001_0000;
+        /// constructor
+        const IS_CONSTRUCTOR = 0x0002_0000;
+        /// field
+        const IS_FIELD = 0x0004_0000;
+        /// nested type
+        const IS_TYPE = 0x0008_0000;
+        /// @CallerSensitive annotation detected
+        const CALLER_SENSITIVE = 0x001_00000;
+        /// trusted final field
+        const TRUSTED_FINAL = 0x002_00000;
+        /// refKind
+        const REFERENCE_KIND_SHIFT = 24;
+        /// 0x0F00_0000 >> REFERENCE_KIND_SHIFT
+        const REFERENCE_KIND_MASK = 0x0F00_0000 >> 24;
+    }
+}
+
+bitflags! {
+    /// Lookup mode flags.
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct LookupModeFlags: i32 {
+        const MODULE = 16;
+        const UNCONDITIONAL = 32;
+        const TRUSTED = -1;
+    }
+}
 
 /// Register all native methods for `java.lang.invoke.MethodHandleNatives`.
 pub(crate) fn register(registry: &mut MethodRegistry) {
@@ -178,45 +213,65 @@ async fn resolve(
     member_self: Object,
     _caller: Option<Arc<Class>>,
     _lookup_mode: i32,
-    _speculative_resolve: bool,
+    speculative_resolve: bool,
 ) -> Result<Option<Value>> {
     let class_object: Object = member_self.value("clazz")?.try_into()?;
-    let class_name: String = class_object.value("name")?.try_into()?;
-    let class = thread.class(class_name).await?;
-    let name: String = member_self.value("name")?.try_into()?;
+    let name = member_self.value("name")?;
+    let flags = member_self.value("flags")?.to_int()?;
+    let member_name_flags = MemberNameFlags::from_bits_truncate(flags);
 
-    let method_type = member_self.value("type")?;
-    let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
-    let method_type_descriptor_method =
-        method_type_class.try_get_method("toMethodDescriptorString", "()Ljava/lang/String;")?;
-    let descriptor: String = thread
-        .try_execute(
-            &method_type_class,
-            &method_type_descriptor_method,
-            vec![method_type],
+    let (method_name, method_descriptor, method_parameters) = if member_name_flags
+        .contains(MemberNameFlags::IS_METHOD)
+        || member_name_flags.contains(MemberNameFlags::IS_CONSTRUCTOR)
+    {
+        let method_type = member_self.value("type")?;
+        let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
+        let ptypes_method = method_type_class.try_get_method("ptypes", "()[Ljava/lang/Class;")?;
+        let parameter_types = thread
+            .try_execute(
+                &method_type_class,
+                &ptypes_method,
+                vec![method_type.clone()],
+            )
+            .await?;
+        (
+            "getMethod",
+            "(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;",
+            vec![Value::from(class_object), name, parameter_types],
         )
-        .await?
-        .try_into()?;
+    } else if member_name_flags.contains(MemberNameFlags::IS_FIELD) {
+        (
+            "getField",
+            "(Ljava/lang/String;)Ljava/lang/reflect/Field;",
+            vec![Value::from(class_object)],
+        )
+    } else {
+        return Err(InternalError(format!(
+            "Unsupported member name flag: {member_name_flags:?}"
+        )));
+    };
 
-    // Lookup modes:
-    // LM_MODULE = 16;
-    // LM_UNCONDITIONAL = 32;
-    // LM_TRUSTED = -1;
-
-    let method = class.try_get_method(name, descriptor)?;
-    let access_flags = i32::from(method.access_flags().bits());
-    let flags: i32 = member_self.value("flags")?.try_into()?;
-    let flags = flags | access_flags;
-    member_self.set_value("flags", Value::from(flags))?;
-
-    let resolved_method_name_class = thread.class("java.lang.invoke.ResolvedMethodName").await?;
-    let resolved_method_name = Object::new(resolved_method_name_class)?;
-    // TODO: the ResolvedMethodName class appears to be a holder for the JVM-internal class and
-    // method references.  This should evaluated to determine if it is necessary to implement.
-    member_self.set_value("method", Value::from(resolved_method_name))?;
-
-    let member_self = Value::from(member_self);
-    Ok(Some(member_self))
+    let class = thread.class("java.lang.Class").await?;
+    let get_method = class.try_get_method(method_name, method_descriptor)?;
+    match thread
+        .try_execute(&class, &get_method, method_parameters)
+        .await
+    {
+        Ok(object) => {
+            let object: Object = object.try_into()?;
+            let modifiers: i32 = object.value("modifiers")?.to_int()?;
+            let flags = flags | modifiers;
+            member_self.set_value("flags", Value::from(flags))?;
+            Ok(Some(member_self.into()))
+        }
+        Err(error) => {
+            if speculative_resolve {
+                Ok(None)
+            } else {
+                Err(error)
+            }
+        }
+    }
 }
 
 #[async_recursion(?Send)]
