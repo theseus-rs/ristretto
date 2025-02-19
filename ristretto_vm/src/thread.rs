@@ -159,6 +159,7 @@ impl Thread {
         }
         Ok(class)
     }
+
     /// Prepare class initialization.
     ///
     /// # Errors
@@ -374,6 +375,34 @@ impl Thread {
         self.execute(&class, &constructor, parameters).await?;
         Ok(object)
     }
+
+    /// Print the stack trace. Used for debugging.
+    pub(crate) async fn print_stack_trace(&self) {
+        let name = self.name().await;
+        eprintln!("Thread: {name}");
+        let frames = self.frames.read().await;
+        for frame in frames.iter().rev() {
+            let class = frame.class();
+            let class_name = class.name();
+            let mut source = class.source_file().unwrap_or_default().to_string();
+            let method = frame.method();
+            let method_name = method.name();
+            let program_counter = frame.program_counter();
+            let line_number = method.line_number(program_counter);
+            if line_number > 0 {
+                if source.is_empty() {
+                    source = format!("{line_number}");
+                } else {
+                    source = format!("{source}:{line_number}");
+                }
+            }
+            if source.is_empty() {
+                eprintln!("    at {class_name}.{method_name}");
+            } else {
+                eprintln!("    at {class_name}.{method_name}({source})");
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -445,6 +474,14 @@ mod tests {
         let object = thread.object("java/lang/Integer", "I", vec![42]).await?;
         let value: i32 = object.try_into()?;
         assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_print_stack_trace() -> Result<()> {
+        let vm = test_vm().await?;
+        let thread = vm.new_thread()?;
+        thread.print_stack_trace().await;
         Ok(())
     }
 }
