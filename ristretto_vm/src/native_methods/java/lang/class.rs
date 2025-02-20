@@ -238,7 +238,7 @@ async fn for_name_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<O
     // TODO: Add support for unused parameters
     let _caller = parameters.pop_reference()?;
     let _class_loader = parameters.pop_reference()?;
-    let _initialize = parameters.pop_int()? != 0;
+    let _initialize = parameters.pop_bool()?;
     let Ok(object) = parameters.pop_object() else {
         return Err(NullPointerException("className cannot be null".to_string()).into());
     };
@@ -358,7 +358,7 @@ async fn get_declared_constructors_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let public_only = parameters.pop_int()? != 0;
+    let public_only = parameters.pop_bool()?;
     let object = parameters.pop_object()?;
     let vm = thread.vm()?;
     let class = get_class(&thread, &object).await?;
@@ -421,7 +421,7 @@ async fn get_declared_fields_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let public_only = parameters.pop_int()? != 0;
+    let public_only = parameters.pop_bool()?;
     let object = parameters.pop_object()?;
     let vm = thread.vm()?;
     let class = get_class(&thread, &object).await?;
@@ -491,7 +491,7 @@ async fn get_declared_methods_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let public_only = parameters.pop_int()? != 0;
+    let public_only = parameters.pop_bool()?;
     let object = parameters.pop_object()?;
     let vm = thread.vm()?;
     let class = get_class(&thread, &object).await?;

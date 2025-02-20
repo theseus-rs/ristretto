@@ -44,7 +44,7 @@ async fn write(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<V
 
 #[async_recursion(?Send)]
 async fn write_bytes(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
-    let _append = parameters.pop_int()? != 0;
+    let _append = parameters.pop_bool()?;
     let length = usize::try_from(parameters.pop_int()?)?;
     let offset = usize::try_from(parameters.pop_int()?)?;
     let bytes: Vec<u8> = parameters.pop()?.try_into()?;

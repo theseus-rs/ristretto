@@ -34,7 +34,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn destroy_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
-    let force = parameters.pop_int()? != 0;
+    let force = parameters.pop_bool()?;
     let _start_time = parameters.pop_long()?;
     let pid = parameters.pop_long()?;
     let pid = usize::try_from(pid)?;

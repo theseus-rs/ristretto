@@ -76,7 +76,7 @@ async fn load(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Va
 #[async_recursion(?Send)]
 async fn unload(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let _handle = parameters.pop_long()?;
-    let _is_builtin = parameters.pop_int()? != 0;
+    let _is_builtin = parameters.pop_bool()?;
     let _name: String = parameters.pop_object()?.try_into()?;
     Ok(None)
 }
