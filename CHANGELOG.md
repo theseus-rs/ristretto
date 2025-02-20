@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_vm` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.13.0...ristretto_vm-v0.13.1) - 2025-02-20
+
+### Added
+- update to Rust 2024 edition
+- add bool support to parameters
+- add Java 24 support
+
+### Fixed
+- update java.lang.invoke.MethodHandleNatives.resolve() to support fields
+- make class object singleton
+- correct if_acmpeq and if_acmpne instructions when comparing class references
+- remove unnecessary clone in values returned from frame
+
+### Other
+- add internal thread print_stack_trace() function for debugging
+- update to getrandom=0.3.1
+- refactor Class constructor functions to return Arc<Class>
+- update dependencies
+
+## `ristretto_cli` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/v0.13.0...v0.13.1) - 2025-02-20
+
+### Added
+- update to Rust 2024 edition
+- add Java 24 support
+- add bool support to parameters
+
+### Fixed
+- make class object singleton
+- update java.lang.invoke.MethodHandleNatives.resolve() to support fields
+- correct if_acmpeq and if_acmpne instructions when comparing class references
+- remove unnecessary clone in values returned from frame
+
+### Other
+- refactor Class constructor functions to return Arc<Class>
+- add internal thread print_stack_trace() function for debugging
+- update to getrandom=0.3.1
+- update dependencies
+
+## `ristretto_classfile` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.13.0...ristretto_classfile-v0.13.1) - 2025-02-20
+
+### Added
+- update to Rust 2024 edition
+
+## `ristretto_classloader` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.13.0...ristretto_classloader-v0.13.1) - 2025-02-20
+
+### Added
+- update to Rust 2024 edition
+- add Java 24 support
+
+### Fixed
+- make class object singleton
+
+### Other
+- refactor Class constructor functions to return Arc<Class>
+
 ##
 `ristretto_vm` - [0.13.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.12.3...ristretto_vm-v0.13.0) - 2025-01-24
 
