@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_21};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -43,7 +43,9 @@ async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Optio
 
 #[async_recursion(?Send)]
 async fn ioctl_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ioctl0(IJLjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$winsize;)V")
+    todo!(
+        "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ioctl0(IJLjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$winsize;)V"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -53,12 +55,16 @@ async fn isatty(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn tcgetattr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcgetattr(ILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V")
+    todo!(
+        "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcgetattr(ILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn tcsetattr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcsetattr(IILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V")
+    todo!(
+        "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcsetattr(IILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
+    )
 }
 
 #[async_recursion(?Send)]

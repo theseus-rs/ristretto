@@ -1,11 +1,11 @@
-use crate::java_object::JavaObject;
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_8};
-use crate::parameters::Parameters;
-use crate::rust_value::RustValue;
-use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::JavaError::{ClassNotFoundException, NullPointerException};
 use crate::Result;
+use crate::java_object::JavaObject;
+use crate::native_methods::registry::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodRegistry};
+use crate::parameters::Parameters;
+use crate::rust_value::RustValue;
+use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::attributes::{Attribute, InnerClass};
 use ristretto_classfile::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};

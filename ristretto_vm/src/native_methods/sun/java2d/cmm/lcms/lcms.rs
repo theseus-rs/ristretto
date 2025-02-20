@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_8};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -99,7 +99,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn color_convert(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.java2d.cmm.lcms.LCMS.colorConvert(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V")
+    todo!(
+        "sun.java2d.cmm.lcms.LCMS.colorConvert(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -125,7 +127,9 @@ async fn get_profile_data_native(
 
 #[async_recursion(?Send)]
 async fn get_profile_id(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.java2d.cmm.lcms.LCMS.getProfileID(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;")
+    todo!(
+        "sun.java2d.cmm.lcms.LCMS.getProfileID(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;"
+    )
 }
 
 #[async_recursion(?Send)]

@@ -1,9 +1,9 @@
+use crate::Error::{InternalError, InvalidStackValue};
+use crate::JavaError::{ArrayIndexOutOfBoundsException, ClassCastException, NullPointerException};
 use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue, Frame};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use crate::Error::{InternalError, InvalidStackValue};
-use crate::JavaError::{ArrayIndexOutOfBoundsException, ClassCastException, NullPointerException};
 use crate::{Result, Value};
 use ristretto_classloader::{Class, Object, Reference};
 use std::sync::Arc;
@@ -302,9 +302,9 @@ fn is_instance_of(object: &Reference, class: &Arc<Class>) -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::java_object::JavaObject;
     use crate::Error::{InvalidOperand, JavaError};
     use crate::JavaError::NullPointerException;
+    use crate::java_object::JavaObject;
     use ristretto_classloader::ConcurrentVec;
     use std::sync::Arc;
 

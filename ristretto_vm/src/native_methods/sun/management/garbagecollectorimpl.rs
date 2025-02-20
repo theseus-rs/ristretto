@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -49,7 +49,9 @@ async fn set_notification_enabled(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.GarbageCollectorImpl.setNotificationEnabled(Lcom/sun/management/GarbageCollectorMXBean;Z)V")
+    todo!(
+        "sun.management.GarbageCollectorImpl.setNotificationEnabled(Lcom/sun/management/GarbageCollectorMXBean;Z)V"
+    )
 }
 
 #[cfg(test)]

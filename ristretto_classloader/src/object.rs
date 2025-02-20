@@ -1,7 +1,7 @@
 use crate::Error::{FieldNotFound, InvalidValueType, ParseError};
 use crate::Reference::{ByteArray, CharArray};
 use crate::{Class, Field, Reference, Result, Value};
-use ristretto_classfile::{mutf8, FieldAccessFlags, Version};
+use ristretto_classfile::{FieldAccessFlags, Version, mutf8};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
@@ -507,7 +507,7 @@ impl TryInto<Arc<Class>> for Object {
 mod tests {
     use super::*;
     use crate::Reference::IntArray;
-    use crate::{runtime, ConcurrentVec};
+    use crate::{ConcurrentVec, runtime};
 
     async fn java8_string_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) =

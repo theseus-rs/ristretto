@@ -1,7 +1,7 @@
+use crate::Result;
 use crate::native_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -47,7 +47,9 @@ async fn native_get_class_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetClassValue(ILjava/lang/String;)Ljava/lang/Object;")
+    todo!(
+        "com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetClassValue(ILjava/lang/String;)Ljava/lang/Object;"
+    )
 }
 
 #[async_recursion(?Send)]

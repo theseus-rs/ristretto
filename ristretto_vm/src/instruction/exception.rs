@@ -1,6 +1,6 @@
+use crate::Error::{InternalError, JavaError, Throwable};
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
-use crate::Error::{InternalError, JavaError, Throwable};
 use crate::{Error, Result, VM};
 use ristretto_classloader::{Object, Reference};
 use std::sync::Arc;
@@ -88,8 +88,8 @@ pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Res
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::java_object::JavaObject;
     use crate::VM;
+    use crate::java_object::JavaObject;
 
     #[tokio::test]
     async fn test_process_throwable() -> Result<()> {

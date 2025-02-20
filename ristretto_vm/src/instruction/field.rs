@@ -1,8 +1,8 @@
+use crate::Error::InvalidStackValue;
+use crate::Result;
 use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
-use crate::Error::InvalidStackValue;
-use crate::Result;
 use ristretto_classloader::{Class, Reference, Value};
 use std::sync::Arc;
 
@@ -61,10 +61,10 @@ pub(crate) fn putfield(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::VM;
     use crate::frame::Frame;
     use crate::instruction::{dup, new};
     use crate::thread::Thread;
-    use crate::VM;
     use ristretto_classloader::Value;
     use std::sync::Arc;
 

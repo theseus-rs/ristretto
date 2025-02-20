@@ -73,4 +73,4 @@ pub use field_type::FieldType;
 pub use method::Method;
 pub use method_access_flags::MethodAccessFlags;
 pub use reference_kind::ReferenceKind;
-pub use version::{Version, JAVA_PREVIEW_MINOR_VERSION};
+pub use version::{JAVA_PREVIEW_MINOR_VERSION, Version};

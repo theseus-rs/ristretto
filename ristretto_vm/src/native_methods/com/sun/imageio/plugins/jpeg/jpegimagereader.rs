@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -69,12 +69,16 @@ async fn init_jpeg_image_reader(
 
 #[async_recursion(?Send)]
 async fn init_reader_i_ds(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.initReaderIDs(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V")
+    todo!(
+        "com.sun.imageio.plugins.jpeg.JPEGImageReader.initReaderIDs(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn read_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("com.sun.imageio.plugins.jpeg.JPEGImageReader.readImage(IJ[BI[I[IIIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;IIZ)Z")
+    todo!(
+        "com.sun.imageio.plugins.jpeg.JPEGImageReader.readImage(IJ[BI[I[IIIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;IIZ)Z"
+    )
 }
 
 #[async_recursion(?Send)]

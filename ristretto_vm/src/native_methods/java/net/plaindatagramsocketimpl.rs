@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -141,7 +141,9 @@ async fn join(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Va
 
 #[async_recursion(?Send)]
 async fn leave(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.net.PlainDatagramSocketImpl.leave(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V")
+    todo!(
+        "java.net.PlainDatagramSocketImpl.leave(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V"
+    )
 }
 
 #[async_recursion(?Send)]

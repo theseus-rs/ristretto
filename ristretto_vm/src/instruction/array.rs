@@ -1,11 +1,11 @@
-use crate::frame::ExecutionResult::Continue;
-use crate::frame::{ExecutionResult, Frame};
-use crate::operand_stack::OperandStack;
 use crate::Error::InvalidStackValue;
 use crate::JavaError::NullPointerException;
 use crate::Result;
-use ristretto_classfile::attributes::ArrayType;
+use crate::frame::ExecutionResult::Continue;
+use crate::frame::{ExecutionResult, Frame};
+use crate::operand_stack::OperandStack;
 use ristretto_classfile::BaseType;
+use ristretto_classfile::attributes::ArrayType;
 use ristretto_classloader::{ConcurrentVec, Reference};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.newarray>
@@ -65,7 +65,7 @@ pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
             return Err(InvalidStackValue {
                 expected: "array".to_string(),
                 actual: object.to_string(),
-            })
+            });
         }
     };
     stack.push_int(i32::try_from(length)?)?;
@@ -127,9 +127,9 @@ pub(crate) async fn multianewarray(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Error::JavaError;
     use crate::frame::ExecutionResult::Continue;
     use crate::java_object::JavaObject;
-    use crate::Error::JavaError;
     use ristretto_classfile::attributes::ArrayType;
     use ristretto_classloader::Value;
     use std::sync::Arc;

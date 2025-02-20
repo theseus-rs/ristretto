@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_8};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -34,12 +34,16 @@ async fn get_system_proxies(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.net.spi.DefaultProxySelector.getSystemProxies(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;")
+    todo!(
+        "sun.net.spi.DefaultProxySelector.getSystemProxies(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_system_proxy(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.net.spi.DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;")
+    todo!(
+        "sun.net.spi.DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;"
+    )
 }
 
 #[async_recursion(?Send)]

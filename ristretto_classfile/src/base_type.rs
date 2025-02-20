@@ -1,5 +1,5 @@
-use crate::error::Result;
 use crate::Error::InvalidBaseTypeCode;
+use crate::error::Result;
 use std::fmt;
 
 /// Implementation of `BaseType`.

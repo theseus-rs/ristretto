@@ -1,13 +1,13 @@
-use crate::attributes::Attribute;
-use crate::class_file::ClassFile;
-use crate::constant::Constant;
-use crate::reference_kind::ReferenceKind;
-use crate::version::Version;
 use crate::Error::{
     BootstrapMethodsNotDefined, InvalidBootstrapMethodIndex, InvalidVersionConstant,
 };
 use crate::Error::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
 use crate::Result;
+use crate::attributes::Attribute;
+use crate::class_file::ClassFile;
+use crate::constant::Constant;
+use crate::reference_kind::ReferenceKind;
+use crate::version::Version;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
 const JAVA_9: Version = Version::Java9 { minor: 0 };

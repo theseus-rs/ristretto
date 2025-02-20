@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -66,7 +66,9 @@ async fn native_show_notification(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CTrayIcon.nativeShowNotification(JLjava/lang/String;Ljava/lang/String;J)V")
+    todo!(
+        "sun.lwawt.macosx.CTrayIcon.nativeShowNotification(JLjava/lang/String;Ljava/lang/String;J)V"
+    )
 }
 
 #[async_recursion(?Send)]

@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_11, JAVA_17, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -203,7 +203,9 @@ async fn size_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn transfer_to_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.FileDispatcherImpl.transferTo0(Ljava/io/FileDescriptor;JJLjava/io/FileDescriptor;Z)J");
+    todo!(
+        "sun.nio.ch.FileDispatcherImpl.transferTo0(Ljava/io/FileDescriptor;JJLjava/io/FileDescriptor;Z)J"
+    );
 }
 
 #[async_recursion(?Send)]

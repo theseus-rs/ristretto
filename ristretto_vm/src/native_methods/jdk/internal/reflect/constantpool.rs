@@ -1,7 +1,7 @@
+use crate::Result;
 use crate::native_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -126,7 +126,9 @@ async fn get_class_at_if_loaded_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.reflect.ConstantPool.getClassAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/Class;")
+    todo!(
+        "jdk.internal.reflect.ConstantPool.getClassAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/Class;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -144,7 +146,9 @@ async fn get_double_at_0(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
 
 #[async_recursion(?Send)]
 async fn get_field_at_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.internal.reflect.ConstantPool.getFieldAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;")
+    todo!(
+        "jdk.internal.reflect.ConstantPool.getFieldAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -152,7 +156,9 @@ async fn get_field_at_if_loaded_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.reflect.ConstantPool.getFieldAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;")
+    todo!(
+        "jdk.internal.reflect.ConstantPool.getFieldAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -175,12 +181,16 @@ async fn get_member_ref_info_at_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.reflect.ConstantPool.getMemberRefInfoAt0(Ljava/lang/Object;I)[Ljava/lang/String;")
+    todo!(
+        "jdk.internal.reflect.ConstantPool.getMemberRefInfoAt0(Ljava/lang/Object;I)[Ljava/lang/String;"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_method_at_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.internal.reflect.ConstantPool.getMethodAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;")
+    todo!(
+        "jdk.internal.reflect.ConstantPool.getMethodAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -188,7 +198,9 @@ async fn get_method_at_if_loaded_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.reflect.ConstantPool.getMethodAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;")
+    todo!(
+        "jdk.internal.reflect.ConstantPool.getMethodAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -204,7 +216,9 @@ async fn get_name_and_type_ref_info_at_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.reflect.ConstantPool.getNameAndTypeRefInfoAt0(Ljava/lang/Object;I)[Ljava/lang/String;")
+    todo!(
+        "jdk.internal.reflect.ConstantPool.getNameAndTypeRefInfoAt0(Ljava/lang/Object;I)[Ljava/lang/String;"
+    )
 }
 
 #[async_recursion(?Send)]

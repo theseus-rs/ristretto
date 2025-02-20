@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -117,7 +117,9 @@ async fn canonicalize_with_prefix_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.io.WinNTFileSystem.canonicalizeWithPrefix0(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;")
+    todo!(
+        "java.io.WinNTFileSystem.canonicalizeWithPrefix0(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"
+    )
 }
 
 #[async_recursion(?Send)]

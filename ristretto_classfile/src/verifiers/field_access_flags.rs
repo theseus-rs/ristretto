@@ -1,9 +1,9 @@
+use crate::Error::InvalidFieldAccessFlags;
+use crate::Result;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
 use crate::field::Field;
 use crate::field_access_flags::FieldAccessFlags;
-use crate::Error::InvalidFieldAccessFlags;
-use crate::Result;
 
 /// Verify the field `FieldAccessFlags`.
 pub fn verify(class_file: &ClassFile, field: &Field) -> Result<()> {

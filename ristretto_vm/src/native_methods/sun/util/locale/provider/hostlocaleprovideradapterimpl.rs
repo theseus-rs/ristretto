@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_17};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -174,7 +174,9 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 
 #[async_recursion(?Send)]
 async fn get_am_pm_strings(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getAmPmStrings(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getAmPmStrings(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -182,17 +184,23 @@ async fn get_calendar_display_strings(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;II)[Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;II)[Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_calendar_id(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_calendar_int(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarInt(Ljava/lang/String;I)I")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCalendarInt(Ljava/lang/String;I)I"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -200,7 +208,9 @@ async fn get_currency_symbol(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCurrencySymbol(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getCurrencySymbol(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -208,7 +218,9 @@ async fn get_date_time_pattern_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDateTimePatternNative(IILjava/lang/String;)Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDateTimePatternNative(IILjava/lang/String;)Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -216,7 +228,9 @@ async fn get_decimal_separator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDecimalSeparator(Ljava/lang/String;C)C")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDecimalSeparator(Ljava/lang/String;C)C"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -224,7 +238,9 @@ async fn get_default_locale(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDefaultLocale(I)Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDefaultLocale(I)Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -232,12 +248,16 @@ async fn get_display_string(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDisplayString(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getDisplayString(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_eras(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getEras(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getEras(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -245,7 +265,9 @@ async fn get_exponent_separator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getExponentSeparator(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getExponentSeparator(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -253,12 +275,16 @@ async fn get_grouping_separator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getGroupingSeparator(Ljava/lang/String;C)C")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getGroupingSeparator(Ljava/lang/String;C)C"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_infinity(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getInfinity(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getInfinity(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -266,7 +292,9 @@ async fn get_international_currency_symbol(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getInternationalCurrencySymbol(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getInternationalCurrencySymbol(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -281,17 +309,23 @@ async fn get_monetary_decimal_separator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getMonetaryDecimalSeparator(Ljava/lang/String;C)C")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getMonetaryDecimalSeparator(Ljava/lang/String;C)C"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_months(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getMonths(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getMonths(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_nan(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getNaN(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getNaN(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -299,7 +333,9 @@ async fn get_number_pattern_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getNumberPatternNative(ILjava/lang/String;)Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getNumberPatternNative(ILjava/lang/String;)Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -314,7 +350,9 @@ async fn get_percent(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Op
 
 #[async_recursion(?Send)]
 async fn get_short_months(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getShortMonths(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getShortMonths(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -322,7 +360,9 @@ async fn get_short_weekdays(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getShortWeekdays(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getShortWeekdays(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -330,12 +370,16 @@ async fn get_time_zone_display_string(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getTimeZoneDisplayString(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getTimeZoneDisplayString(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn get_weekdays(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.util.locale.provider.HostLocaleProviderAdapterImpl.getWeekdays(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String")
+    todo!(
+        "sun.util.locale.provider.HostLocaleProviderAdapterImpl.getWeekdays(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String"
+    )
 }
 
 #[async_recursion(?Send)]

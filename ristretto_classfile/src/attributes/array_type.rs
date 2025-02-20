@@ -1,5 +1,5 @@
-use crate::error::Result;
 use crate::Error::InvalidArrayTypeCode;
+use crate::error::Result;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;

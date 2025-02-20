@@ -1,9 +1,9 @@
-use crate::frame::ExecutionResult;
-use crate::frame::ExecutionResult::Continue;
-use crate::operand_stack::OperandStack;
 use crate::Error::InvalidStackValue;
 use crate::JavaError::{ArrayIndexOutOfBoundsException, NullPointerException};
 use crate::Result;
+use crate::frame::ExecutionResult;
+use crate::frame::ExecutionResult::Continue;
+use crate::operand_stack::OperandStack;
 use ristretto_classloader::Reference;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.saload>

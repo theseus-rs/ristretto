@@ -1,9 +1,9 @@
+use crate::Result;
 #[cfg(target_os = "macos")]
 use crate::native_methods::apple;
 use crate::native_methods::{com, java, jdk, sun};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use ristretto_classloader::Value;
 use std::collections::HashMap;
 use std::future::Future;

@@ -1,5 +1,5 @@
-use crate::reference::Reference;
 use crate::Error::InvalidValueType;
+use crate::reference::Reference;
 use crate::{Class, Object, Result};
 use std::fmt;
 use std::fmt::Display;
@@ -653,7 +653,7 @@ impl TryInto<Arc<Class>> for Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{runtime, Class, Object};
+    use crate::{Class, Object, runtime};
     use std::sync::Arc;
 
     async fn load_class(class: &str) -> Result<Arc<Class>> {

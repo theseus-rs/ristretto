@@ -1,9 +1,9 @@
+use crate::Error::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
+use crate::Result;
 use crate::class_file::ClassFile;
 use crate::constant::Constant;
 use crate::method::Method;
 use crate::verifiers::method_access_flags;
-use crate::Error::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
-use crate::Result;
 
 /// Verify the `ClassFile` methods.
 pub fn verify(class_file: &ClassFile) -> Result<()> {

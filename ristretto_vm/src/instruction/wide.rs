@@ -1,6 +1,6 @@
-use crate::frame::ExecutionResult;
 use crate::Error::InvalidOperand;
 use crate::Result;
+use crate::frame::ExecutionResult;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide>
 #[inline]

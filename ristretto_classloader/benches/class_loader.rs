@@ -1,5 +1,5 @@
-use criterion::{criterion_group, criterion_main, Criterion};
-use ristretto_classloader::{runtime, ClassLoader, Result};
+use criterion::{Criterion, criterion_group, criterion_main};
+use ristretto_classloader::{ClassLoader, Result, runtime};
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 

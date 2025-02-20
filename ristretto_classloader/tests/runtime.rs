@@ -1,4 +1,4 @@
-use ristretto_classloader::{runtime, Result};
+use ristretto_classloader::{Result, runtime};
 
 async fn test_runtime(version: &str, class_name: &str) -> Result<()> {
     let (_java_home, java_version, class_loader) = runtime::version_class_loader(version).await?;

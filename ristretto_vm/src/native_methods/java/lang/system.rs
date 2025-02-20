@@ -1,11 +1,11 @@
+use crate::Error::InternalError;
+use crate::Result;
 use crate::java_object::JavaObject;
 use crate::native_methods::java::lang::object::object_hash_code;
 use crate::native_methods::properties;
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_8};
+use crate::native_methods::registry::{JAVA_8, JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Error::InternalError;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classfile::attributes::{Attribute, Instruction};
 use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, MethodAccessFlags};
@@ -184,7 +184,7 @@ async fn arraycopy(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<O
         _ => {
             return Err(InternalError(
                 "source and destination must be arrays of the same type".to_string(),
-            ))
+            ));
         }
     };
     Ok(None)

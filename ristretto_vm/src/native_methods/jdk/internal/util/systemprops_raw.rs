@@ -1,10 +1,10 @@
-use crate::java_object::JavaObject;
-use crate::native_methods::properties;
-use crate::native_methods::registry::{MethodRegistry, JAVA_17, JAVA_21};
-use crate::parameters::Parameters;
-use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
+use crate::java_object::JavaObject;
+use crate::native_methods::properties;
+use crate::native_methods::registry::{JAVA_17, JAVA_21, MethodRegistry};
+use crate::parameters::Parameters;
+use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classloader::{ConcurrentVec, Reference, Value};
 use std::collections::HashMap;

@@ -1,6 +1,6 @@
+use crate::Error::InvalidTargetTypeCode;
 use crate::attributes::LocalVariableTarget;
 use crate::error::Result;
-use crate::Error::InvalidTargetTypeCode;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
@@ -311,10 +311,7 @@ impl fmt::Display for TargetType {
             TargetType::Offset {
                 target_type,
                 offset,
-            } => write!(
-                f,
-                "Offset[target_type={target_type}, offset={offset}]",
-            ),
+            } => write!(f, "Offset[target_type={target_type}, offset={offset}]",),
             TargetType::TypeArgument {
                 target_type,
                 offset,
@@ -441,7 +438,10 @@ mod test {
             local_variable_targets,
         };
 
-        assert_eq!("LocalVar[target_type=64, local_variable_targets=[LocalVariableTarget { start_pc: 1, length: 2, index: 3 }]]", target_type.to_string());
+        assert_eq!(
+            "LocalVar[target_type=64, local_variable_targets=[LocalVariableTarget { start_pc: 1, length: 2, index: 3 }]]",
+            target_type.to_string()
+        );
         test_array_type(&target_type, &[64, 0, 1, 0, 1, 0, 2, 0, 3])
     }
 

@@ -1,7 +1,7 @@
-use crate::constant::Constant;
-use crate::error::Result;
 use crate::Error::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
 use crate::ReferenceKind;
+use crate::constant::Constant;
+use crate::error::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
 use std::{fmt, io};
@@ -763,8 +763,8 @@ impl fmt::Display for ConstantPool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::constant::Constant;
     use crate::Error::IoError;
+    use crate::constant::Constant;
     use std::fmt::Debug;
 
     #[test]

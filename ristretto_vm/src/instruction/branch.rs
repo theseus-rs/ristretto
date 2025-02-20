@@ -1,8 +1,8 @@
+use crate::Result;
 use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::{Continue, ContinueAtPosition, Return};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use crate::Result;
 use indexmap::IndexMap;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.if_cond>
@@ -259,8 +259,8 @@ pub(crate) fn ifnonnull(stack: &mut OperandStack, address: u16) -> Result<Execut
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::java_object::JavaObject;
     use crate::VM;
+    use crate::java_object::JavaObject;
     use ristretto_classloader::{ConcurrentVec, Reference};
 
     #[test]

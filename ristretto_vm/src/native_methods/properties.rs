@@ -1,6 +1,6 @@
+use crate::Error::InternalError;
 use crate::java_object::JavaObject;
 use crate::thread::Thread;
-use crate::Error::InternalError;
 use crate::{Result, VM};
 use ristretto_classloader::Value;
 use std::collections::HashMap;
