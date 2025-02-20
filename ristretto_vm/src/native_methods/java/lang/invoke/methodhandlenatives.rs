@@ -289,7 +289,7 @@ async fn resolve_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Op
 
 #[async_recursion(?Send)]
 async fn resolve_1(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
-    let speculative_resolve = parameters.pop_int()? != 0;
+    let speculative_resolve = parameters.pop_bool()?;
     let caller = match parameters.pop_object() {
         Ok(caller) => {
             let caller: Arc<Class> = caller.try_into()?;
@@ -303,7 +303,7 @@ async fn resolve_1(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Op
 
 #[async_recursion(?Send)]
 async fn resolve_2(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
-    let speculative_resolve = parameters.pop_int()? != 0;
+    let speculative_resolve = parameters.pop_bool()?;
     let lookup_mode = parameters.pop_int()?;
     let caller = match parameters.pop_object() {
         Ok(caller) => {

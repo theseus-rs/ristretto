@@ -143,7 +143,7 @@ async fn define_class_0(thread: Arc<Thread>, mut parameters: Parameters) -> Resu
     } else {
         let _class_data = parameters.pop_reference()?;
         let _flags = parameters.pop_int()?;
-        let _initialize = parameters.pop_int()? != 0;
+        let _initialize = parameters.pop_bool()?;
         let _protection_domain = parameters.pop_object()?;
         let length = parameters.pop_int()?;
         let offset = parameters.pop_int()?;

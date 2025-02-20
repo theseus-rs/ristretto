@@ -1010,7 +1010,7 @@ pub(crate) async fn put_boolean_volatile(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = parameters.pop_int()? != 0;
+    let x = parameters.pop_bool()?;
     let offset = usize::try_from(parameters.pop_long()?)?;
     let Value::Object(ref mut object) = parameters.pop()? else {
         return Err(InternalError("putBoolean: Invalid reference".to_string()));

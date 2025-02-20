@@ -21,6 +21,11 @@ impl Parameters {
         self.parameters.push(value);
     }
 
+    /// Push a bool value onto the parameters.
+    pub fn push_bool(&mut self, value: bool) {
+        self.push(Value::from(value));
+    }
+
     /// Push an int value onto the parameters.
     pub fn push_int(&mut self, value: i32) {
         self.push(Value::Int(value));
@@ -53,6 +58,12 @@ impl Parameters {
             return Err(ParametersUnderflow);
         };
         Ok(value)
+    }
+
+    /// Pop a bool from the parameters.
+    pub fn pop_bool(&mut self) -> Result<bool> {
+        let bool_value: bool = self.pop()?.try_into()?;
+        Ok(bool_value)
     }
 
     /// Pop an int from the parameters.
@@ -171,6 +182,14 @@ mod tests {
 
         assert_eq!(parameters.pop()?, Value::Int(2));
         assert_eq!(parameters.pop()?, Value::Int(1));
+        Ok(())
+    }
+
+    #[test]
+    fn test_pop_bool() -> Result<()> {
+        let mut parameters = Parameters::default();
+        parameters.push_bool(true);
+        assert!(parameters.pop_bool()?);
         Ok(())
     }
 
