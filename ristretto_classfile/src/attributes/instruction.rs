@@ -1,8 +1,8 @@
+use crate::ConstantPool;
+use crate::Error::InvalidWideInstruction;
 use crate::attributes::ArrayType;
 use crate::error::Error::InvalidInstruction;
 use crate::error::Result;
-use crate::ConstantPool;
-use crate::Error::InvalidWideInstruction;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use indexmap::IndexMap;
 use std::fmt;

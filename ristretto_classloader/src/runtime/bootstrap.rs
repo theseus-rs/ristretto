@@ -76,7 +76,10 @@ pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Cla
     #[cfg(target_arch = "wasm32")]
     let home_dir = current_dir;
     #[cfg(not(target_arch = "wasm32"))]
-    let home_dir = home::home_dir().unwrap_or(current_dir);
+    let home_dir = {
+        #[expect(deprecated)]
+        env::home_dir().unwrap_or(current_dir)
+    };
 
     let base_path = home_dir.join(".ristretto");
     let mut installation_dir = base_path.join(version);

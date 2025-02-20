@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use ristretto_classfile::Error;
 use ristretto_classloader::ClassPath;
 use ristretto_vm::{ConfigurationBuilder, Result, VM};

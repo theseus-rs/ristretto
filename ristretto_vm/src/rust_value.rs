@@ -1,5 +1,5 @@
 use crate::java_object::JavaObject;
-use crate::{Result, Value, VM};
+use crate::{Result, VM, Value};
 use ristretto_classloader::{Class, Object, Reference};
 
 const STRING_PREFIX: &str = "str:";

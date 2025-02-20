@@ -1,6 +1,6 @@
+use crate::Result;
 use crate::class_path_entry::directory::Directory;
 use crate::class_path_entry::jar::Jar;
-use crate::Result;
 use ristretto_classfile::ClassFile;
 use std::fmt::Debug;
 use std::path::PathBuf;

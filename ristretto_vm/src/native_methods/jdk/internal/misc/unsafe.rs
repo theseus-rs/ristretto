@@ -1,8 +1,8 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17};
-use crate::parameters::Parameters;
-use crate::thread::Thread;
 use crate::Error::{InternalError, InvalidOperand};
 use crate::Result;
+use crate::native_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
+use crate::parameters::Parameters;
+use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::BaseType;
 use ristretto_classloader::{Reference, Value};
@@ -429,7 +429,9 @@ pub(crate) async fn compare_and_exchange_object(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.compareAndExchangeObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+    todo!(
+        "jdk.internal.misc.Unsafe.compareAndExchangeObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -437,7 +439,9 @@ pub(crate) async fn compare_and_exchange_reference(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.compareAndExchangeReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+    todo!(
+        "jdk.internal.misc.Unsafe.compareAndExchangeReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -614,7 +618,9 @@ pub(crate) async fn define_anonymous_class_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.defineAnonymousClass0(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;")
+    todo!(
+        "jdk.internal.misc.Unsafe.defineAnonymousClass0(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -622,7 +628,9 @@ pub(crate) async fn define_class_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.defineClass0(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;")
+    todo!(
+        "jdk.internal.misc.Unsafe.defineClass0(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;"
+    )
 }
 
 #[async_recursion(?Send)]

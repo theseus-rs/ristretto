@@ -1,9 +1,9 @@
+use crate::Error::InternalError;
+use crate::Result;
 use crate::java_object::JavaObject;
 use crate::native_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Error::InternalError;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;

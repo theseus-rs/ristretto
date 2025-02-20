@@ -1,6 +1,6 @@
-use crate::attributes::Instruction;
 use crate::Error::InvalidInstructionOffset;
 use crate::Result;
+use crate::attributes::Instruction;
 use std::collections::HashMap;
 use std::io::Cursor;
 
@@ -23,29 +23,29 @@ pub(crate) fn instructions_from_bytes(
 
     for (index, instruction) in instructions.iter_mut().enumerate() {
         match instruction {
-            Instruction::Ifeq(ref mut offset)
-            | Instruction::Ifne(ref mut offset)
-            | Instruction::Iflt(ref mut offset)
-            | Instruction::Ifge(ref mut offset)
-            | Instruction::Ifgt(ref mut offset)
-            | Instruction::Ifle(ref mut offset)
-            | Instruction::If_icmpeq(ref mut offset)
-            | Instruction::If_icmpne(ref mut offset)
-            | Instruction::If_icmplt(ref mut offset)
-            | Instruction::If_icmpge(ref mut offset)
-            | Instruction::If_icmpgt(ref mut offset)
-            | Instruction::If_icmple(ref mut offset)
-            | Instruction::If_acmpeq(ref mut offset)
-            | Instruction::If_acmpne(ref mut offset)
-            | Instruction::Goto(ref mut offset)
-            | Instruction::Jsr(ref mut offset)
-            | Instruction::Ifnull(ref mut offset)
-            | Instruction::Ifnonnull(ref mut offset) => {
+            Instruction::Ifeq(offset)
+            | Instruction::Ifne(offset)
+            | Instruction::Iflt(offset)
+            | Instruction::Ifge(offset)
+            | Instruction::Ifgt(offset)
+            | Instruction::Ifle(offset)
+            | Instruction::If_icmpeq(offset)
+            | Instruction::If_icmpne(offset)
+            | Instruction::If_icmplt(offset)
+            | Instruction::If_icmpge(offset)
+            | Instruction::If_icmpgt(offset)
+            | Instruction::If_icmple(offset)
+            | Instruction::If_acmpeq(offset)
+            | Instruction::If_acmpne(offset)
+            | Instruction::Goto(offset)
+            | Instruction::Jsr(offset)
+            | Instruction::Ifnull(offset)
+            | Instruction::Ifnonnull(offset) => {
                 *offset = *byte_to_instruction_map
                     .get(offset)
                     .ok_or(InvalidInstructionOffset(u32::from(*offset)))?;
             }
-            Instruction::Goto_w(ref mut offset) | Instruction::Jsr_w(ref mut offset) => {
+            Instruction::Goto_w(offset) | Instruction::Jsr_w(offset) => {
                 // Note the map may need to be updated to use 32-bit offsets if/when the JVM spec
                 // is updated to support 32-bit offsets for goto_w and jsr_w.
                 // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.goto_w
@@ -57,9 +57,7 @@ pub(crate) fn instructions_from_bytes(
                 );
             }
             Instruction::Tableswitch {
-                ref mut default,
-                ref mut offsets,
-                ..
+                default, offsets, ..
             } => {
                 let position = instruction_to_byte_map
                     .get(&u16::try_from(index)?)
@@ -81,10 +79,7 @@ pub(crate) fn instructions_from_bytes(
                     *offset = i32::from(instruction_offset);
                 }
             }
-            Instruction::Lookupswitch {
-                ref mut default,
-                ref mut pairs,
-            } => {
+            Instruction::Lookupswitch { default, pairs } => {
                 let position = instruction_to_byte_map
                     .get(&u16::try_from(index)?)
                     .expect("instruction byte");
@@ -129,29 +124,29 @@ pub(crate) fn instructions_to_bytes(
     let mut instructions = instructions.to_owned();
     for (index, instruction) in instructions.iter_mut().enumerate() {
         match instruction {
-            Instruction::Ifeq(ref mut offset)
-            | Instruction::Ifne(ref mut offset)
-            | Instruction::Iflt(ref mut offset)
-            | Instruction::Ifge(ref mut offset)
-            | Instruction::Ifgt(ref mut offset)
-            | Instruction::Ifle(ref mut offset)
-            | Instruction::If_icmpeq(ref mut offset)
-            | Instruction::If_icmpne(ref mut offset)
-            | Instruction::If_icmplt(ref mut offset)
-            | Instruction::If_icmpge(ref mut offset)
-            | Instruction::If_icmpgt(ref mut offset)
-            | Instruction::If_icmple(ref mut offset)
-            | Instruction::If_acmpeq(ref mut offset)
-            | Instruction::If_acmpne(ref mut offset)
-            | Instruction::Goto(ref mut offset)
-            | Instruction::Jsr(ref mut offset)
-            | Instruction::Ifnull(ref mut offset)
-            | Instruction::Ifnonnull(ref mut offset) => {
+            Instruction::Ifeq(offset)
+            | Instruction::Ifne(offset)
+            | Instruction::Iflt(offset)
+            | Instruction::Ifge(offset)
+            | Instruction::Ifgt(offset)
+            | Instruction::Ifle(offset)
+            | Instruction::If_icmpeq(offset)
+            | Instruction::If_icmpne(offset)
+            | Instruction::If_icmplt(offset)
+            | Instruction::If_icmpge(offset)
+            | Instruction::If_icmpgt(offset)
+            | Instruction::If_icmple(offset)
+            | Instruction::If_acmpeq(offset)
+            | Instruction::If_acmpne(offset)
+            | Instruction::Goto(offset)
+            | Instruction::Jsr(offset)
+            | Instruction::Ifnull(offset)
+            | Instruction::Ifnonnull(offset) => {
                 *offset = *instruction_to_byte_map
                     .get(offset)
                     .ok_or(InvalidInstructionOffset(u32::from(*offset)))?;
             }
-            Instruction::Goto_w(ref mut offset) | Instruction::Jsr_w(ref mut offset) => {
+            Instruction::Goto_w(offset) | Instruction::Jsr_w(offset) => {
                 // Note the map may need to be updated to use 32-bit offsets if/when the JVM spec
                 // is updated to support 32-bit offsets for goto_w and jsr_w.
                 // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.goto_w
@@ -163,9 +158,7 @@ pub(crate) fn instructions_to_bytes(
                 );
             }
             Instruction::Tableswitch {
-                ref mut default,
-                ref mut offsets,
-                ..
+                default, offsets, ..
             } => {
                 let position = u32::try_from(index)?;
                 let position_byte = i32::from(
@@ -187,10 +180,7 @@ pub(crate) fn instructions_to_bytes(
                     *offset = i32::from(*offset_byte) - position_byte;
                 }
             }
-            Instruction::Lookupswitch {
-                ref mut default,
-                ref mut pairs,
-            } => {
+            Instruction::Lookupswitch { default, pairs } => {
                 let position = u32::try_from(index)?;
                 let position_byte = i32::from(
                     *instruction_to_byte_map

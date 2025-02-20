@@ -1,7 +1,7 @@
 use crate::runtime::models::Release;
 use crate::{Error, Result};
-use reqwest::header;
 use reqwest::Client;
+use reqwest::header;
 use std::env;
 use std::env::consts;
 use std::sync::LazyLock;

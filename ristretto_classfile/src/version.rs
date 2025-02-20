@@ -348,10 +348,12 @@ mod test {
     #[test]
     fn test_is_preview() {
         assert!(!Version::Java11 { minor: 0 }.is_preview());
-        assert!(Version::Java21 {
-            minor: JAVA_PREVIEW_MINOR_VERSION
-        }
-        .is_preview());
+        assert!(
+            Version::Java21 {
+                minor: JAVA_PREVIEW_MINOR_VERSION
+            }
+            .is_preview()
+        );
     }
 
     #[test]

@@ -41,7 +41,7 @@ pub(crate) use monitor::*;
 pub(crate) use nop::*;
 pub(crate) use object::*;
 pub(crate) use push::*;
-pub(crate) use r#static::*;
 pub(crate) use short::*;
 pub(crate) use stack::*;
+pub(crate) use r#static::*;
 pub(crate) use wide::*;

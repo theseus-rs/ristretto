@@ -1,7 +1,7 @@
+use crate::Result;
 use crate::native_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -50,7 +50,9 @@ async fn init_jpeg_image_writer(
 
 #[async_recursion(?Send)]
 async fn init_writer_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("com.sun.imageio.plugins.jpeg.JPEGImageWriter.initWriterIDs(Ljava/lang/Class;Ljava/lang/Class;)V")
+    todo!(
+        "com.sun.imageio.plugins.jpeg.JPEGImageWriter.initWriterIDs(Ljava/lang/Class;Ljava/lang/Class;)V"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -65,12 +67,16 @@ async fn set_dest(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Optio
 
 #[async_recursion(?Send)]
 async fn write_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("com.sun.imageio.plugins.jpeg.JPEGImageWriter.writeImage(J[BIII[IIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;Z[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;ZZZI[I[I[I[I[IZI)Z")
+    todo!(
+        "com.sun.imageio.plugins.jpeg.JPEGImageWriter.writeImage(J[BIII[IIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;Z[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;ZZZI[I[I[I[I[IZI)Z"
+    )
 }
 
 #[async_recursion(?Send)]
 async fn write_tables(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("com.sun.imageio.plugins.jpeg.JPEGImageWriter.writeTables(J[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;)V")
+    todo!(
+        "com.sun.imageio.plugins.jpeg.JPEGImageWriter.writeTables(J[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;)V"
+    )
 }
 
 #[cfg(test)]

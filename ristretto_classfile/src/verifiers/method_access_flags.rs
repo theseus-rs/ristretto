@@ -1,10 +1,10 @@
+use crate::Error::InvalidMethodAccessFlags;
+use crate::Result;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
 use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
 use crate::version::Version;
-use crate::Error::InvalidMethodAccessFlags;
-use crate::Result;
 
 const VERSION_52_0: Version = Version::Java8 { minor: 0 };
 

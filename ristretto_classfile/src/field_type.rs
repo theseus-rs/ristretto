@@ -1,6 +1,6 @@
+use crate::Error::{InvalidFieldTypeCode, InvalidFieldTypeDescriptor};
 use crate::base_type::BaseType;
 use crate::error::Result;
-use crate::Error::{InvalidFieldTypeCode, InvalidFieldTypeDescriptor};
 use std::{fmt, io};
 
 /// Implementation of `FieldType`.

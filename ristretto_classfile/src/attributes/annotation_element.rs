@@ -214,7 +214,10 @@ impl fmt::Display for AnnotationElement {
             AnnotationElement::Enum {
                 type_name_index,
                 const_name_index,
-            } => write!(f, "Enum {{ type_name_index: {type_name_index}, const_name_index: {const_name_index} }}"),
+            } => write!(
+                f,
+                "Enum {{ type_name_index: {type_name_index}, const_name_index: {const_name_index} }}"
+            ),
             AnnotationElement::Class { class_info_index } => {
                 write!(f, "Class {{ class_info_index: {class_info_index} }}")
             }
@@ -393,7 +396,10 @@ mod test {
         let element = AnnotationElement::Annotation { annotation };
         let expected_bytes = [64, 0, 3, 0, 1, 0, 1, 66, 0, 42];
 
-        assert_eq!("Annotation { annotation: Annotation { type_index: 3, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] } }", element.to_string());
+        assert_eq!(
+            "Annotation { annotation: Annotation { type_index: 3, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] } }",
+            element.to_string()
+        );
         test_element(&element, &expected_bytes, b'@')
     }
 
@@ -413,7 +419,10 @@ mod test {
         let element = AnnotationElement::Array { values };
         let expected_bytes = [91, 0, 1, 64, 0, 3, 0, 1, 0, 1, 66, 0, 42];
 
-        assert_eq!("Array { values: [Annotation { annotation: Annotation { type_index: 3, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] } }] }", element.to_string());
+        assert_eq!(
+            "Array { values: [Annotation { annotation: Annotation { type_index: 3, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] } }] }",
+            element.to_string()
+        );
         test_element(&element, &expected_bytes, b'[')
     }
 }

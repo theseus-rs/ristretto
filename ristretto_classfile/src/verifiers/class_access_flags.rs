@@ -1,7 +1,7 @@
-use crate::class_access_flags::ClassAccessFlags;
-use crate::class_file::ClassFile;
 use crate::Error::InvalidClassAccessFlags;
 use crate::Result;
+use crate::class_access_flags::ClassAccessFlags;
+use crate::class_file::ClassFile;
 
 /// Verify the `ClassFile` `ClassAccessFlags`.
 pub fn verify(class_file: &ClassFile) -> Result<()> {

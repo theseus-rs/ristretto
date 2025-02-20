@@ -1,5 +1,5 @@
-use crate::concurrent_vec::ConcurrentVec;
 use crate::Error::InvalidValueType;
+use crate::concurrent_vec::ConcurrentVec;
 use crate::{Class, Object, Result, Value};
 use ristretto_classfile::{ClassFile, ConstantPool};
 use std::fmt;
@@ -649,7 +649,7 @@ impl TryInto<Arc<Class>> for Reference {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{runtime, Class, Result, Value};
+    use crate::{Class, Result, Value, runtime};
     use ristretto_classfile::ClassFile;
     use std::io::Cursor;
     use std::sync::Arc;

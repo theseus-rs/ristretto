@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_21};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::hash::{DefaultHasher, Hash, Hasher};
@@ -72,7 +72,9 @@ async fn define_archived_modules(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V")
+    todo!(
+        "jdk.internal.misc.CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V"
+    )
 }
 
 #[async_recursion(?Send)]

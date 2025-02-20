@@ -1,3 +1,4 @@
+use crate::Error::{InternalError, InvalidProgramCounter};
 use crate::frame::ExecutionResult::{Continue, ContinueAtPosition, Return};
 use crate::instruction::{
     aaload, aastore, aconst_null, aload, aload_0, aload_1, aload_2, aload_3, aload_w, anewarray,
@@ -5,7 +6,7 @@ use crate::instruction::{
     bastore, bipush, breakpoint, caload, castore, checkcast, convert_error_to_throwable, d2f, d2i,
     d2l, dadd, daload, dastore, dcmpg, dcmpl, dconst_0, dconst_1, ddiv, dload, dload_0, dload_1,
     dload_2, dload_3, dload_w, dmul, dneg, drem, dreturn, dstore, dstore_0, dstore_1, dstore_2,
-    dstore_3, dstore_w, dsub, dup, dup2, dup2_x1, dup2_x2, dup_x1, dup_x2, f2d, f2i, f2l, fadd,
+    dstore_3, dstore_w, dsub, dup, dup_x1, dup_x2, dup2, dup2_x1, dup2_x2, f2d, f2i, f2l, fadd,
     faload, fastore, fcmpg, fcmpl, fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1,
     fload_2, fload_3, fload_w, fmul, fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2,
     fstore_3, fstore_w, fsub, getfield, getstatic, goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s,
@@ -15,14 +16,13 @@ use crate::instruction::{
     iload_1, iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, instanceof, invokedynamic,
     invokeinterface, invokespecial, invokestatic, invokevirtual, ior, irem, ireturn, ishl, ishr,
     istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr, ixor, jsr, jsr_w, l2d,
-    l2f, l2i, ladd, laload, land, lastore, lcmp, lconst_0, lconst_1, ldc, ldc2_w, ldc_w, ldiv,
+    l2f, l2i, ladd, laload, land, lastore, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w, ldiv,
     lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lookupswitch, lor, lrem,
     lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr,
     lxor, monitorenter, monitorexit, multianewarray, new, newarray, nop, pop, pop2,
-    process_throwable, putfield, putstatic, r#return, ret, ret_w, saload, sastore, sipush, swap,
+    process_throwable, putfield, putstatic, ret, ret_w, r#return, saload, sastore, sipush, swap,
     tableswitch, wide,
 };
-use crate::Error::{InternalError, InvalidProgramCounter};
 use crate::{LocalVariables, OperandStack, Result, Thread};
 use async_recursion::async_recursion;
 use byte_unit::{Byte, UnitType};
@@ -30,7 +30,7 @@ use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::{Class, Method, Value};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
-use tracing::{debug, event_enabled, Level};
+use tracing::{Level, debug, event_enabled};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum ExecutionResult {
@@ -438,9 +438,9 @@ impl Frame {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::VM;
     use crate::configuration::ConfigurationBuilder;
     use crate::thread::Thread;
-    use crate::VM;
     use ristretto_classloader::ClassPath;
     use std::path::PathBuf;
 

@@ -1,8 +1,8 @@
+use crate::Error::InternalError;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
-use crate::Error::InternalError;
 use crate::{Error, Result};
 use ristretto_classfile::Constant;
 use ristretto_classfile::Error::InvalidConstantPoolIndexType;

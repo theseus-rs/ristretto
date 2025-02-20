@@ -1,9 +1,9 @@
+use crate::Error::{InvalidConstant, InvalidConstantIndex};
+use crate::Result;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::java_object::JavaObject;
 use crate::operand_stack::OperandStack;
-use crate::Error::{InvalidConstant, InvalidConstantIndex};
-use crate::Result;
 use ristretto_classfile::Constant;
 use ristretto_classloader::Value;
 
@@ -47,7 +47,7 @@ pub(crate) fn ldc2_w(
             return Err(InvalidConstant {
                 expected: "long|double".to_string(),
                 actual: format!("{constant:?}"),
-            })
+            });
         }
     };
     stack.push(value)?;
@@ -88,7 +88,7 @@ async fn load_constant(
             return Err(InvalidConstant {
                 expected: "integer|float|string|class".to_string(),
                 actual: format!("{constant:?}"),
-            })
+            });
         }
     };
     stack.push(value)?;

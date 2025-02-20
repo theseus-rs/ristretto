@@ -497,7 +497,7 @@ impl Display for Class {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{runtime, Error, Result};
+    use crate::{Error, Result, runtime};
     use std::io::Cursor;
 
     async fn object_class() -> Result<Arc<Class>> {

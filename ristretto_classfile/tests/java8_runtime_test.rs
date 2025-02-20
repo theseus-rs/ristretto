@@ -1,6 +1,6 @@
 mod utilities;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use flate2::read::GzDecoder;
 use reqwest::Client;
 use std::io::Read;

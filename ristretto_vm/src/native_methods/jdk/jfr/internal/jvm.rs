@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_17, JAVA_21, JAVA_24};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_11, JAVA_17, JAVA_21, JAVA_24, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -633,7 +633,9 @@ async fn set_compressed_integers(
 
 #[async_recursion(?Send)]
 async fn set_configuration(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.jfr.internal.JVM.setConfiguration(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z")
+    todo!(
+        "jdk.jfr.internal.JVM.setConfiguration(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -685,7 +687,9 @@ async fn set_global_buffer_size(
 
 #[async_recursion(?Send)]
 async fn set_handler(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.jfr.internal.JVM.setHandler(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z")
+    todo!(
+        "jdk.jfr.internal.JVM.setHandler(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z"
+    )
 }
 
 #[async_recursion(?Send)]

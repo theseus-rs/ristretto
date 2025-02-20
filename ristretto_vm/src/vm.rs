@@ -1,14 +1,14 @@
+use crate::Error::InternalError;
 use crate::java_object::JavaObject;
 use crate::native_methods::MethodRegistry;
 use crate::rust_value::RustValue;
 use crate::thread::Thread;
-use crate::Error::InternalError;
 use crate::{Configuration, ConfigurationBuilder, Result};
 use dashmap::DashMap;
-use ristretto_classfile::{Version, JAVA_PREVIEW_MINOR_VERSION};
+use ristretto_classfile::{JAVA_PREVIEW_MINOR_VERSION, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
-    runtime, Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Object, Reference, Value,
+    Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Object, Reference, Value, runtime,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -489,11 +489,12 @@ mod tests {
     #[tokio::test]
     async fn test_vm_new() -> Result<()> {
         let vm = test_vm().await?;
-        assert!(vm
-            .configuration
-            .class_path()
-            .to_string()
-            .contains("classes.jar"));
+        assert!(
+            vm.configuration
+                .class_path()
+                .to_string()
+                .contains("classes.jar")
+        );
         assert_eq!(DEFAULT_JAVA_VERSION, vm.java_version());
         assert!(vm.main_class().is_none());
         Ok(())

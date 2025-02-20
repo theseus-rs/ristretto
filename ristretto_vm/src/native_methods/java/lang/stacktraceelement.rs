@@ -1,8 +1,8 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_17};
-use crate::parameters::Parameters;
-use crate::thread::Thread;
 use crate::Error::InternalError;
 use crate::Result;
+use crate::native_methods::registry::{JAVA_17, MethodRegistry};
+use crate::parameters::Parameters;
+use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;
@@ -40,7 +40,9 @@ async fn init_stack_trace_element(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V")
+    todo!(
+        "java.lang.StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V"
+    )
 }
 
 #[async_recursion(?Send)]

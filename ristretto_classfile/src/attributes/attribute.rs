@@ -1,3 +1,4 @@
+use crate::Error::InvalidInstructionOffset;
 use crate::attributes::bootstrap_method::BootstrapMethod;
 use crate::attributes::inner_class::InnerClass;
 use crate::attributes::line_number::LineNumber;
@@ -15,7 +16,6 @@ use crate::error::Error::{InvalidAttributeLength, InvalidAttributeNameIndex};
 use crate::error::Result;
 use crate::mutf8;
 use crate::version::Version;
-use crate::Error::InvalidInstructionOffset;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::collections::HashMap;
 use std::fmt;
@@ -332,8 +332,8 @@ impl Attribute {
                         )))?;
                     exception.range_pc.end = byte_to_instruction_map
                         .iter()
-                        .filter(|(&k, _)| k <= exception.range_pc.end)
-                        .max_by_key(|(&k, _)| k)
+                        .filter(|&(&k, _)| k <= exception.range_pc.end)
+                        .max_by_key(|&(&k, _)| k)
                         .map(|(_, &v)| v)
                         .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
                     exception.handler_pc = *byte_to_instruction_map
@@ -824,8 +824,8 @@ impl Attribute {
                         )))?;
                     exception.range_pc.end = instruction_to_byte_map
                         .iter()
-                        .filter(|(&k, _)| k <= exception.range_pc.end)
-                        .max_by_key(|(&k, _)| k)
+                        .filter(|&(&k, _)| k <= exception.range_pc.end)
+                        .max_by_key(|&(&k, _)| k)
                         .map(|(_, &v)| v)
                         .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
                     exception.handler_pc = *instruction_to_byte_map
@@ -1345,8 +1345,8 @@ impl fmt::Display for Attribute {
                         .ok_or(fmt::Error)?;
                     exception.range_pc.end = instruction_to_byte_map
                         .iter()
-                        .filter(|(&k, _)| k <= exception.range_pc.end)
-                        .max_by_key(|(&k, _)| k)
+                        .filter(|&(&k, _)| k <= exception.range_pc.end)
+                        .max_by_key(|&(&k, _)| k)
                         .map(|(_, &v)| v + 1)
                         .ok_or(fmt::Error)?;
                     exception.handler_pc = *instruction_to_byte_map

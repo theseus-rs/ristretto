@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
 
-use ristretto_classloader::{runtime, Result};
+use ristretto_classloader::{Result, runtime};
 
 /// Example that loads a class from the Java runtime.
 #[tokio::main(flavor = "current_thread")]

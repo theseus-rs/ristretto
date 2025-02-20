@@ -1,7 +1,7 @@
+use crate::Result;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
-use crate::Result;
 use ristretto_classfile::FieldType;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.getstatic>
@@ -61,10 +61,10 @@ pub(crate) async fn putstatic(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::VM;
     use crate::frame::Frame;
     use crate::operand_stack::OperandStack;
     use crate::thread::Thread;
-    use crate::VM;
     use ristretto_classloader::Value;
     use std::sync::Arc;
 

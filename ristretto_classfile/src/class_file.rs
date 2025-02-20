@@ -218,9 +218,9 @@ impl fmt::Display for ClassFile {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::error::Result;
     use crate::Constant;
     use crate::Error::{InvalidConstantPoolIndexType, IoError};
+    use crate::error::Result;
     use indoc::indoc;
 
     #[test]

@@ -1,13 +1,13 @@
-use crate::parameters::Parameters;
-use crate::rust_value::{process_values, RustValue};
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
+use crate::parameters::Parameters;
+use crate::rust_value::{RustValue, process_values};
 use crate::{Frame, Result, VM};
 use async_recursion::async_recursion;
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Value};
 use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
-use tracing::{debug, event_enabled, Level};
+use tracing::{Level, debug, event_enabled};
 
 /// A thread is a single sequential flow of control within a program. It has its own call stack
 /// and program counter.

@@ -1,6 +1,6 @@
 use crate::Error::InternalError;
 use crate::{Result, VM};
-use ristretto_classfile::{mutf8, Version};
+use ristretto_classfile::{Version, mutf8};
 use ristretto_classloader::{Class, ConcurrentVec, Object, Reference, Value};
 use std::sync::Arc;
 

@@ -1,6 +1,6 @@
-use crate::class_path_entry::ClassPathEntry;
 use crate::Error::ClassNotFound;
 use crate::Result;
+use crate::class_path_entry::ClassPathEntry;
 use ristretto_classfile::ClassFile;
 use std::fmt::Display;
 use tracing::{info, instrument};
@@ -192,7 +192,9 @@ mod tests {
 
         #[cfg(feature = "url")]
         {
-            assert!(class_names.contains(&"org/springframework/boot/SpringApplication".to_string()));
+            assert!(
+                class_names.contains(&"org/springframework/boot/SpringApplication".to_string())
+            );
         }
         Ok(())
     }

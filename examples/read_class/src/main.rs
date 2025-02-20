@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use ristretto_classfile::ClassFile;
 use std::env;
 use std::fs;

@@ -1,6 +1,6 @@
-use crate::class_path_entry::manifest::Manifest;
 use crate::Error::{ArchiveError, ClassNotFound, FileNotFound, ParseError};
 use crate::Result;
+use crate::class_path_entry::manifest::Manifest;
 use reqwest::Client;
 use ristretto_classfile::ClassFile;
 use std::fmt::Debug;
@@ -288,8 +288,8 @@ impl Clone for Jar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::class_path_entry::manifest::{MAIN_CLASS, MANIFEST_VERSION};
     use crate::Error::ClassFileError;
+    use crate::class_path_entry::manifest::{MAIN_CLASS, MANIFEST_VERSION};
     use std::io::Write;
     use std::path::PathBuf;
     use zip::write::SimpleFileOptions;

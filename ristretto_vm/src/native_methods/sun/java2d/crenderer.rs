@@ -1,7 +1,7 @@
+use crate::Result;
 use crate::native_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -68,7 +68,9 @@ async fn do_arc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<
 
 #[async_recursion(?Send)]
 async fn do_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.java2d.CRenderer.doImage(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V");
+    todo!(
+        "sun.java2d.CRenderer.doImage(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V"
+    );
 }
 
 #[async_recursion(?Send)]
@@ -98,7 +100,9 @@ async fn do_round_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<
 
 #[async_recursion(?Send)]
 async fn do_shape(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.java2d.CRenderer.doShape(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V");
+    todo!(
+        "sun.java2d.CRenderer.doShape(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V"
+    );
 }
 
 #[async_recursion(?Send)]

@@ -1,7 +1,7 @@
+use crate::Result;
 use crate::native_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::Value;
 use std::sync::Arc;
@@ -65,7 +65,9 @@ async fn get_all_flag_names(
 
 #[async_recursion(?Send)]
 async fn get_flags(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.Flag.getFlags([Ljava/lang/String;[Lcom/sun/management/internal/Flag;I)I")
+    todo!(
+        "com.sun.management.internal.Flag.getFlags([Ljava/lang/String;[Lcom/sun/management/internal/Flag;I)I"
+    )
 }
 
 #[async_recursion(?Send)]

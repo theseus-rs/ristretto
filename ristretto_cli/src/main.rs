@@ -5,7 +5,7 @@ mod version;
 
 use clap::{ArgGroup, Parser};
 use ristretto_vm::Error::{InternalError, Throwable};
-use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Reference, Result, Value, VM};
+use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Reference, Result, VM, Value};
 use std::env;
 use std::env::consts::{ARCH, OS};
 use std::path::PathBuf;

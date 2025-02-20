@@ -71,7 +71,7 @@ mod value;
 pub use class::Class;
 pub use class_loader::ClassLoader;
 pub use class_path::ClassPath;
-pub use class_path_entry::{manifest, ClassPathEntry, Manifest};
+pub use class_path_entry::{ClassPathEntry, Manifest, manifest};
 pub use concurrent_vec::ConcurrentVec;
 pub use error::{Error, Result};
 pub use field::Field;

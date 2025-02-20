@@ -705,15 +705,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbf6a919d6cf397374f7dfeeea91d974c7c0a7221d0d0f4f20d859d329e53fcc"
 
 [[package]]
-name = "home"
-version = "0.5.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "589533453244b0995c858700322199b2becb13b627df2851f64a2775d024abcf"
-dependencies = [
- "windows-sys 0.59.0",
-]
-
-[[package]]
 name = "http"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1634,7 +1625,6 @@ version = "0.13.0"
 dependencies = [
  "criterion",
  "flate2",
- "home",
  "indexmap",
  "indoc",
  "reqwest",
@@ -1673,7 +1663,6 @@ dependencies = [
  "dashmap",
  "dirs",
  "getrandom 0.3.1",
- "home",
  "indexmap",
  "os_info",
  "ristretto_classfile",

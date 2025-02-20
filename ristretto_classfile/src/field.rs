@@ -1,9 +1,9 @@
+use crate::FieldType;
 use crate::attributes::Attribute;
 use crate::constant_pool::ConstantPool;
 use crate::display::indent_lines;
 use crate::error::Result;
 use crate::field_access_flags::FieldAccessFlags;
-use crate::FieldType;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
@@ -85,9 +85,9 @@ impl fmt::Display for Field {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::BaseType;
     use crate::attributes::Attribute;
     use crate::field_access_flags::FieldAccessFlags;
-    use crate::BaseType;
     use indoc::indoc;
 
     #[test]

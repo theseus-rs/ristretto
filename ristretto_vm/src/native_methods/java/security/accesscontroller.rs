@@ -1,7 +1,7 @@
-use crate::native_methods::registry::{MethodRegistry, JAVA_11, JAVA_21};
+use crate::Result;
+use crate::native_methods::registry::{JAVA_11, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::Result;
 use async_recursion::async_recursion;
 use ristretto_classloader::{Class, Value};
 use std::sync::Arc;
@@ -116,7 +116,9 @@ async fn get_inherited_access_control_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.security.AccessController.getInheritedAccessControlContext()Ljava/security/AccessControlContext;")
+    todo!(
+        "java.security.AccessController.getInheritedAccessControlContext()Ljava/security/AccessControlContext;"
+    )
 }
 
 #[async_recursion(?Send)]
@@ -124,7 +126,9 @@ async fn get_protection_domain(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.security.AccessController.getProtectionDomain(Ljava/lang/Class;)Ljava/security/ProtectionDomain;")
+    todo!(
+        "java.security.AccessController.getProtectionDomain(Ljava/lang/Class;)Ljava/security/ProtectionDomain;"
+    )
 }
 
 #[async_recursion(?Send)]
