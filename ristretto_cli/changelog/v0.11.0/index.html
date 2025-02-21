@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" id="oranda" class="dark">
+  <head>
+    <title>ristretto</title>
+    
+      <meta property="og:url" content="https://theseus-rs.github.io/ristretto/ristretto_cli/" />
+    
+    
+      <link rel="icon" href="/ristretto/ristretto_cli/favicon.ico" />
+    
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+      <meta name="description" content="A Java Virtual Machine (JVM) CLI." />
+      <meta property="og:description" content="A Java Virtual Machine (JVM) CLI." />
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ristretto" />
+    
+    
+    
+    <meta http-equiv="Permissions-Policy" content="interest-cohort=()" />
+    <link rel="stylesheet" href="/ristretto/ristretto_cli/oranda-v0.6.1.css" />
+    
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-body">
+        
+          <div class="repo_banner">
+            <a href="https://github.com/theseus-rs/ristretto">
+              <div class="github-icon" aria-hidden="true"></div>
+              Check out our GitHub!
+            </a>
+          </div>
+        
+
+        <main>
+          <header>
+            
+            <h1 class="title">ristretto</h1>
+            
+  <nav class="nav">
+    <ul>
+      <li><a href="/ristretto/ristretto_cli/">Home</a></li>
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/artifacts/">Install</a></li>
+      
+
+      
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/changelog/">Changelog</a></li>
+      
+    </ul>
+  </nav>
+
+          </header>
+
+          
+  <div>
+    <h1>v0.11.0</h1>
+    <div class="releases-body">
+      
+      
+      <section class="release ">
+  
+  <div class="release-info">
+    <span class="flex items-center gap-2">
+      <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>
+      v0.11.0
+    </span>
+    <span class="flex items-center gap-2">
+      
+        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'><path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>
+        Nov 13 2024 at 21:28 UTC
+      
+    </span>
+  </div>
+  <div class="release-body">
+    <h2>💥 Breaking changes</h2>
+<ul>
+<li>refactor VM.load_class() -&gt; Thread.class() and VM.new_object() -&gt; VM.object() (#116)</li>
+<li>implement TryInto for Value, Reference and Object (#105)</li>
+</ul>
+<h2>✨ Enhancements</h2>
+<ul>
+<li>add string support to RustValue (#115)</li>
+<li>add VM.new_object() (#114)</li>
+<li>update class loader to support primitive classes (#109)</li>
+<li>add JavaObject trait (#106)</li>
+<li>implement TryInto for Value, Reference and Object (#105)</li>
+</ul>
+<h2>🐞 Bug fixes</h2>
+<ul>
+<li>add Class.getDeclaringClass0()java/lang/Class, Class.getSigners()Ljava/lang/Object;, Class.isHidden()Z, Class.setSigners(Ljava/lang/Object;)V (#113)</li>
+<li>add Class.getClassAccessFlagsRaw0()I, Class.getClassFileVersion0()I and Class.getPermittedSubclasses0()[Ljava/lang/Class; (#112)</li>
+<li>add Class.isInterface()Z (#111)</li>
+<li>update Unsafe.compareAndSetReference() to support Objects (#110)</li>
+<li>implement jdk.internal.misc.VM.initializeFromArchive(Ljava/lang/Class;)V, jdk.internal.misc.Unsafe.addressSize0()I, jdk.internal.misc.Unsafe.isBigEndian0()Z, jdk.internal.misc.Unsafe.unalignedAccess0()Z (#104)</li>
+<li>correct is_assignable_from, checkcast and instanceof array handling (#103)</li>
+<li>add awt native initIDs() methods (#101)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>refactor invoke (#118)</li>
+<li>delegate VM.object() -&gt; Thread.object() (#117)</li>
+<li>refactor VM.load_class() -&gt; Thread.class() and VM.new_object() -&gt; VM.object() (#116)</li>
+<li>improve object debug output (#108)</li>
+<li>update parent reference (#107)</li>
+<li>remove explicit use of box pin (#102)</li>
+</ul>
+
+  </div>
+</section>
+    </div>
+  </div>
+
+        </main>
+      </div>
+
+      <footer>
+        
+          <a href="https://github.com/theseus-rs/ristretto"><div class="github-icon" aria-hidden="true"></div></a>
+        
+        <span>
+          ristretto, Apache-2.0 OR MIT
+        </span>
+      </footer>
+    </div>
+
+    
+    
+
+    
+  </body>
+</html>
