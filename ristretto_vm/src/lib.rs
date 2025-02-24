@@ -55,6 +55,7 @@ pub use configuration::{Configuration, ConfigurationBuilder};
 pub use error::{Error, Result};
 pub(crate) use frame::Frame;
 pub use java_error::JavaError;
+pub use java_object::JavaObject;
 pub(crate) use local_variables::LocalVariables;
 pub(crate) use operand_stack::OperandStack;
 pub use ristretto_classloader::{Class, ClassPath, DEFAULT_JAVA_VERSION, Reference, Value};

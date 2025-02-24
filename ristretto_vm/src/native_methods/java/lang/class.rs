@@ -697,7 +697,6 @@ async fn get_modifiers(thread: Arc<Thread>, mut parameters: Parameters) -> Resul
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags.bits();
     let excluded_flags = (ClassAccessFlags::ANNOTATION
-        | ClassAccessFlags::ENUM
         | ClassAccessFlags::MODULE
         | ClassAccessFlags::SUPER
         | ClassAccessFlags::SYNTHETIC)

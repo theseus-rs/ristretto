@@ -10,6 +10,7 @@ const JAVA_17: Version = Version::Java17 { minor: 0 };
 /// Trait for converting a Rust value to a Java object.  Converts to objects of the primitive
 /// wrapper, classes, and strings.
 pub trait JavaObject {
+    #[expect(async_fn_in_trait)]
     async fn to_object(&self, vm: &VM) -> Result<Value>;
 }
 
