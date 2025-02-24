@@ -819,7 +819,7 @@ async fn get_superclass(thread: Arc<Thread>, mut parameters: Parameters) -> Resu
     let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     if class.is_primitive() || class.is_interface() {
-        return Ok(None);
+        return Ok(Some(Value::Object(None)));
     }
 
     match class.parent()? {
@@ -830,7 +830,7 @@ async fn get_superclass(thread: Arc<Thread>, mut parameters: Parameters) -> Resu
             let class = class.to_object(&vm).await?;
             Ok(Some(class))
         }
-        None => Ok(None),
+        None => Ok(Some(Value::Object(None))),
     }
 }
 
@@ -1475,7 +1475,7 @@ mod tests {
         let object = class.to_object(&vm).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_superclass(thread, parameters).await?;
-        assert_eq!(None, result);
+        assert_eq!(Some(Value::Object(None)), result);
         Ok(())
     }
 
@@ -1486,7 +1486,7 @@ mod tests {
         let object = class.to_object(&vm).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_superclass(thread, parameters).await?;
-        assert_eq!(None, result);
+        assert_eq!(Some(Value::Object(None)), result);
         Ok(())
     }
 
@@ -1497,7 +1497,7 @@ mod tests {
         let object = class.to_object(&vm).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_superclass(thread, parameters).await?;
-        assert_eq!(None, result);
+        assert_eq!(Some(Value::Object(None)), result);
         Ok(())
     }
 
