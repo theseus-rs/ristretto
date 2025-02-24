@@ -817,7 +817,11 @@ async fn get_simple_binary_name_0(
 #[async_recursion(?Send)]
 async fn get_superclass(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
-    let class = object.class();
+    let class = get_class(&thread, &object).await?;
+    if class.is_primitive() || class.is_interface() {
+        return Ok(None);
+    }
+
     match class.parent()? {
         Some(parent) => {
             let class_name = parent.name();
@@ -1461,6 +1465,39 @@ mod tests {
         let result_object: Object = result.try_into()?;
         let class_name: String = result_object.value("name")?.try_into()?;
         assert_eq!(class_name, "java.lang.Object");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_superclass_primitive() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("int").await?;
+        let object = class.to_object(&vm).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_superclass(thread, parameters).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_superclass_void() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("void").await?;
+        let object = class.to_object(&vm).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_superclass(thread, parameters).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_superclass_interface() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.io.Serializable").await?;
+        let object = class.to_object(&vm).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = get_superclass(thread, parameters).await?;
+        assert_eq!(None, result);
         Ok(())
     }
 
