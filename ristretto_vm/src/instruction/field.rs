@@ -1,9 +1,8 @@
-use crate::Error::InvalidStackValue;
 use crate::Result;
 use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
-use ristretto_classloader::{Class, Reference, Value};
+use ristretto_classloader::{Class, Object};
 use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.getfield>
@@ -13,23 +12,15 @@ pub(crate) fn getfield(
     class: &Arc<Class>,
     index: u16,
 ) -> Result<ExecutionResult> {
-    let value = stack.pop()?;
-    match value {
-        Value::Object(Some(Reference::Object(object))) => {
-            let constant_pool = class.constant_pool();
-            let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
-            let (name_index, _descriptor_index) =
-                constant_pool.try_get_name_and_type(*name_and_type_index)?;
-            let field_name = constant_pool.try_get_utf8(*name_index)?;
-            let value = object.value(field_name)?;
-            stack.push(value)?;
-            Ok(Continue)
-        }
-        _ => Err(InvalidStackValue {
-            expected: "object".to_string(),
-            actual: value.to_string(),
-        }),
-    }
+    let object: Object = stack.pop()?.try_into()?;
+    let constant_pool = class.constant_pool();
+    let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
+    let (name_index, _descriptor_index) =
+        constant_pool.try_get_name_and_type(*name_and_type_index)?;
+    let field_name = constant_pool.try_get_utf8(*name_index)?;
+    let value = object.value(field_name)?;
+    stack.push(value)?;
+    Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.putfield>
@@ -40,22 +31,14 @@ pub(crate) fn putfield(
     index: u16,
 ) -> Result<ExecutionResult> {
     let value = stack.pop()?;
-    let mut object_value = stack.pop()?;
-    match object_value {
-        Value::Object(Some(Reference::Object(ref mut object))) => {
-            let constant_pool = class.constant_pool();
-            let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
-            let (name_index, _descriptor_index) =
-                constant_pool.try_get_name_and_type(*name_and_type_index)?;
-            let field_name = constant_pool.try_get_utf8(*name_index)?;
-            object.set_value(field_name, value)?;
-            Ok(Continue)
-        }
-        _ => Err(InvalidStackValue {
-            expected: "object".to_string(),
-            actual: object_value.to_string(),
-        }),
-    }
+    let object: Object = stack.pop()?.try_into()?;
+    let constant_pool = class.constant_pool();
+    let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
+    let (name_index, _descriptor_index) =
+        constant_pool.try_get_name_and_type(*name_and_type_index)?;
+    let field_name = constant_pool.try_get_utf8(*name_index)?;
+    object.set_value(field_name, value)?;
+    Ok(Continue)
 }
 
 #[cfg(test)]
@@ -131,11 +114,7 @@ mod test {
         let class = frame.class();
         stack.push_object(None)?;
         let result = getfield(stack, class, 0);
-        assert!(matches!(result, Err(InvalidStackValue {
-            expected,
-            actual
-        }) if expected == "object" && actual == "Object(null)"));
-
+        assert!(result.is_err());
         Ok(())
     }
 
@@ -168,11 +147,7 @@ mod test {
         stack.push_object(None)?;
         stack.push_int(42)?;
         let result = putfield(stack, class, 0);
-        assert!(matches!(result, Err(InvalidStackValue {
-            expected,
-            actual
-        }) if expected == "object" && actual == "Object(null)"));
-
+        assert!(result.is_err());
         Ok(())
     }
 }
