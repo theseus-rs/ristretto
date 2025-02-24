@@ -1659,6 +1659,7 @@ dependencies = [
  "async-recursion",
  "bitflags",
  "byte-unit",
+ "byteorder",
  "criterion",
  "dashmap",
  "dirs",
