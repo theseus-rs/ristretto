@@ -7,6 +7,7 @@ use crate::parameters::Parameters;
 use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use byteorder::{BigEndian, WriteBytesExt};
 use ristretto_classfile::attributes::{Attribute, InnerClass};
 use ristretto_classfile::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
@@ -765,18 +766,51 @@ async fn get_protection_domain_0(
 
 #[async_recursion(?Send)]
 async fn get_raw_annotations(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getRawAnnotations()[B")
+    let object = parameters.pop_object()?;
+    let class = get_class(&thread, &object).await?;
+    let class_file = class.class_file();
+    let mut bytes = Vec::new();
+    for attribute in &class_file.attributes {
+        if let Attribute::RuntimeVisibleAnnotations { annotations, .. } = attribute {
+            let annotations_length = u16::try_from(annotations.len())?;
+            bytes
+                .write_u16::<BigEndian>(annotations_length)
+                .map_err(|error| InternalError(error.to_string()))?;
+            for line_number in annotations {
+                line_number.to_bytes(&mut bytes)?;
+            }
+        }
+    }
+    Ok(Some(Value::from(bytes)))
 }
 
 #[async_recursion(?Send)]
 async fn get_raw_type_annotations(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getRawTypeAnnotations()[B")
+    let object = parameters.pop_object()?;
+    let class = get_class(&thread, &object).await?;
+    let class_file = class.class_file();
+    let mut bytes = Vec::new();
+    for attribute in &class_file.attributes {
+        if let Attribute::RuntimeVisibleTypeAnnotations {
+            type_annotations, ..
+        } = attribute
+        {
+            let annotations_length = u16::try_from(type_annotations.len())?;
+            bytes
+                .write_u16::<BigEndian>(annotations_length)
+                .map_err(|error| InternalError(error.to_string()))?;
+            for line_number in type_annotations {
+                line_number.to_bytes(&mut bytes)?;
+            }
+        }
+    }
+    Ok(Some(Value::from(bytes)))
 }
 
 #[async_recursion(?Send)]
@@ -1393,17 +1427,31 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Class.getRawAnnotations()[B")]
-    async fn test_get_raw_annotations() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_raw_annotations(thread, Parameters::default()).await;
+    async fn test_get_raw_annotations() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let class = vm.class("java.lang.String").await?;
+        let class_object = class.to_object(&vm).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let value = get_raw_annotations(thread, parameters)
+            .await?
+            .expect("bytes");
+        let bytes: Vec<u8> = value.try_into()?;
+        assert!(bytes.is_empty());
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Class.getRawTypeAnnotations()[B")]
-    async fn test_get_raw_type_annotations() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_raw_type_annotations(thread, Parameters::default()).await;
+    async fn test_get_raw_type_annotations() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let class = vm.class("java.lang.String").await?;
+        let class_object = class.to_object(&vm).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let value = get_raw_type_annotations(thread, parameters)
+            .await?
+            .expect("bytes");
+        let bytes: Vec<u8> = value.try_into()?;
+        assert!(bytes.is_empty());
+        Ok(())
     }
 
     #[tokio::test]
