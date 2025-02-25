@@ -783,12 +783,11 @@ async fn get_raw_annotations(
     for attribute in &class_file.attributes {
         if let Attribute::RuntimeVisibleAnnotations { annotations, .. } = attribute {
             let annotations_length = u16::try_from(annotations.len())?;
-            bytes
-                .write_u16::<BigEndian>(annotations_length)
-                .map_err(|error| InternalError(error.to_string()))?;
-            for line_number in annotations {
-                line_number.to_bytes(&mut bytes)?;
+            bytes.write_u16::<BigEndian>(annotations_length)?;
+            for annotation in annotations {
+                annotation.to_bytes(&mut bytes)?;
             }
+            break;
         }
     }
     Ok(Some(Value::from(bytes)))
@@ -809,12 +808,11 @@ async fn get_raw_type_annotations(
         } = attribute
         {
             let annotations_length = u16::try_from(type_annotations.len())?;
-            bytes
-                .write_u16::<BigEndian>(annotations_length)
-                .map_err(|error| InternalError(error.to_string()))?;
-            for line_number in type_annotations {
-                line_number.to_bytes(&mut bytes)?;
+            bytes.write_u16::<BigEndian>(annotations_length)?;
+            for type_annotation in type_annotations {
+                type_annotation.to_bytes(&mut bytes)?;
             }
+            break;
         }
     }
     Ok(Some(Value::from(bytes)))

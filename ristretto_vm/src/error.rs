@@ -67,3 +67,22 @@ pub enum Error {
     #[error("Unsupported class file version: {0}")]
     UnsupportedClassFileVersion(u16),
 }
+
+/// Convert [`std::io::Error` errors](std::io::Error) to [`InternalError`](Error::InternalError)
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Self {
+        Error::InternalError(error.to_string())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_io_error() {
+        let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let error = Error::from(io_error);
+        assert_eq!(error.to_string(), "Internal error: file not found");
+    }
+}
