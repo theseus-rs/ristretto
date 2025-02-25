@@ -216,7 +216,7 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
 }
 
-async fn get_class(thread: &Thread, object: &Object) -> Result<Arc<Class>> {
+pub async fn get_class(thread: &Thread, object: &Object) -> Result<Arc<Class>> {
     let class = object.class();
     if class.name() == "java/lang/Class" {
         let class_name: String = object.value("name")?.try_into()?;
@@ -308,8 +308,15 @@ async fn get_component_type(
 }
 
 #[async_recursion(?Send)]
-async fn get_constant_pool(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getConstantPool()Lsun/reflect/ConstantPool;")
+async fn get_constant_pool(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let class_object = parameters.pop()?;
+    let class = thread.class("jdk.internal.reflect.ConstantPool").await?;
+    let constant_pool = Object::new(class)?;
+    constant_pool.set_value("constantPoolOop", class_object)?;
+    Ok(Some(Value::from(constant_pool)))
 }
 
 #[async_recursion(?Send)]
@@ -1080,12 +1087,19 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Class.getConstantPool()Lsun/reflect/ConstantPool;"
-    )]
-    async fn test_get_constant_pool() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_constant_pool(thread, Parameters::default()).await;
+    async fn test_get_constant_pool() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let class = vm.class("java.lang.String").await?;
+        let class_object = class.to_object(&vm).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let constant_pool: Object = get_constant_pool(thread, parameters)
+            .await?
+            .expect("constant pool")
+            .try_into()?;
+        let class_object: Object = constant_pool.value("constantPoolOop")?.try_into()?;
+        let class_name: String = class_object.value("name")?.try_into()?;
+        assert_eq!(class_name, "java.lang.String");
+        Ok(())
     }
 
     #[tokio::test]
