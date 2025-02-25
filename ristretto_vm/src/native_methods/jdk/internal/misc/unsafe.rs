@@ -4,8 +4,10 @@ use crate::native_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use byteorder::{BigEndian, ReadBytesExt};
 use ristretto_classfile::BaseType;
 use ristretto_classloader::{Reference, Value};
+use std::io::Cursor;
 use std::sync::Arc;
 
 const CLASS_NAME: &str = "jdk/internal/misc/Unsafe";
@@ -679,7 +681,7 @@ fn get_reference_type(
             BaseType::Long => Value::Long(offset),
             BaseType::Double | BaseType::Float => {
                 return Err(InternalError(
-                    "getReferenceType: Invalid reference".to_string(),
+                    "getReferenceType: Invalid offset".to_string(),
                 ));
             }
         };
@@ -687,17 +689,46 @@ fn get_reference_type(
     };
 
     let offset = usize::try_from(offset)?;
-    let value = match reference {
-        Reference::ByteArray(array) => {
-            let Some(byte) = array.get(offset)? else {
+    let value = match &reference {
+        Reference::ByteArray(_) => {
+            let bytes: Vec<u8> = reference.try_into()?;
+            let mut bytes = Cursor::new(bytes);
+            let position = u64::try_from(offset)?;
+            bytes.set_position(position);
+            let Some(base_type) = base_type else {
                 return Err(InternalError(
-                    "getReferenceType: Invalid byte reference index".to_string(),
+                    "getReferenceType: Invalid base type".to_string(),
                 ));
             };
-            if matches!(base_type, Some(BaseType::Long)) {
-                Value::Long(i64::from(byte))
-            } else {
-                Value::Int(i32::from(byte))
+            match base_type {
+                BaseType::Boolean | BaseType::Byte => {
+                    let value = bytes.read_u8()?;
+                    Value::Int(i32::from(value))
+                }
+                BaseType::Char => {
+                    let value = bytes.read_u16::<BigEndian>()?;
+                    Value::Int(i32::from(value))
+                }
+                BaseType::Int => {
+                    let value = bytes.read_i32::<BigEndian>()?;
+                    Value::Int(value)
+                }
+                BaseType::Short => {
+                    let value = bytes.read_i16::<BigEndian>()?;
+                    Value::Int(i32::from(value))
+                }
+                BaseType::Long => {
+                    let value = bytes.read_i64::<BigEndian>()?;
+                    Value::Long(value)
+                }
+                BaseType::Float => {
+                    let value = bytes.read_f32::<BigEndian>()?;
+                    Value::Float(value)
+                }
+                BaseType::Double => {
+                    let value = bytes.read_f64::<BigEndian>()?;
+                    Value::Double(value)
+                }
             }
         }
         Reference::CharArray(array) => {
@@ -706,11 +737,7 @@ fn get_reference_type(
                     "getReferenceType: Invalid char reference index".to_string(),
                 ));
             };
-            if matches!(base_type, Some(BaseType::Long)) {
-                Value::Long(i64::from(char))
-            } else {
-                Value::Int(i32::from(char))
-            }
+            Value::Int(i32::from(char))
         }
         Reference::ShortArray(array) => {
             let Some(short) = array.get(offset)? else {
@@ -718,11 +745,7 @@ fn get_reference_type(
                     "getReferenceType: Invalid short reference index".to_string(),
                 ));
             };
-            if matches!(base_type, Some(BaseType::Long)) {
-                Value::Long(i64::from(short))
-            } else {
-                Value::Int(i32::from(short))
-            }
+            Value::Int(i32::from(short))
         }
         Reference::IntArray(array) => {
             let Some(int) = array.get(offset)? else {
@@ -730,11 +753,7 @@ fn get_reference_type(
                     "getReferenceType: Invalid int reference index".to_string(),
                 ));
             };
-            if matches!(base_type, Some(BaseType::Long)) {
-                Value::Long(i64::from(int))
-            } else {
-                Value::Int(int)
-            }
+            Value::Int(int)
         }
         Reference::LongArray(array) => {
             let Some(long) = array.get(offset)? else {

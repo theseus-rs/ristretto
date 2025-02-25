@@ -938,8 +938,8 @@ impl Attribute {
                 let mut bytes = Vec::new();
                 let annotations_length = u16::try_from(annotations.len())?;
                 bytes.write_u16::<BigEndian>(annotations_length)?;
-                for line_number in annotations {
-                    line_number.to_bytes(&mut bytes)?;
+                for annotation in annotations {
+                    annotation.to_bytes(&mut bytes)?;
                 }
                 (name_index, bytes)
             }
@@ -950,8 +950,8 @@ impl Attribute {
                 let mut bytes = Vec::new();
                 let annotations_length = u16::try_from(annotations.len())?;
                 bytes.write_u16::<BigEndian>(annotations_length)?;
-                for line_number in annotations {
-                    line_number.to_bytes(&mut bytes)?;
+                for annotation in annotations {
+                    annotation.to_bytes(&mut bytes)?;
                 }
                 (name_index, bytes)
             }
@@ -986,8 +986,8 @@ impl Attribute {
                 let mut bytes = Vec::new();
                 let type_annotations_length = u16::try_from(type_annotations.len())?;
                 bytes.write_u16::<BigEndian>(type_annotations_length)?;
-                for parameter_annotation in type_annotations {
-                    parameter_annotation.to_bytes(&mut bytes)?;
+                for type_annotation in type_annotations {
+                    type_annotation.to_bytes(&mut bytes)?;
                 }
                 (name_index, bytes)
             }
@@ -998,8 +998,8 @@ impl Attribute {
                 let mut bytes = Vec::new();
                 let type_annotations_length = u16::try_from(type_annotations.len())?;
                 bytes.write_u16::<BigEndian>(type_annotations_length)?;
-                for parameter_annotation in type_annotations {
-                    parameter_annotation.to_bytes(&mut bytes)?;
+                for type_annotation in type_annotations {
+                    type_annotation.to_bytes(&mut bytes)?;
                 }
                 (name_index, bytes)
             }
