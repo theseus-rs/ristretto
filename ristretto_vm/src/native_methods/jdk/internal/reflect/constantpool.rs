@@ -120,7 +120,10 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn get_class_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_class_at_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object: Object = parameters.pop()?.try_into()?;
     let class = class::get_class(&thread, &object).await?;
@@ -133,7 +136,7 @@ async fn get_class_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Resu
 }
 
 #[async_recursion(?Send)]
-async fn get_class_at_if_loaded_0(
+pub(crate) async fn get_class_at_if_loaded_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -172,7 +175,10 @@ async fn get_class_ref_index_at_0(
 }
 
 #[async_recursion(?Send)]
-async fn get_double_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_double_at_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object: Object = parameters.pop()?.try_into()?;
     let class = class::get_class(&thread, &object).await?;
@@ -182,7 +188,10 @@ async fn get_double_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Res
 }
 
 #[async_recursion(?Send)]
-async fn get_field_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_field_at_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object: Object = parameters.pop()?.try_into()?;
     let class = class::get_class(&thread, &object).await?;
@@ -208,7 +217,7 @@ async fn get_field_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Resu
 }
 
 #[async_recursion(?Send)]
-async fn get_field_at_if_loaded_0(
+pub(crate) async fn get_field_at_if_loaded_0(
     thread: Arc<Thread>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -216,7 +225,10 @@ async fn get_field_at_if_loaded_0(
 }
 
 #[async_recursion(?Send)]
-async fn get_float_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_float_at_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object: Object = parameters.pop()?.try_into()?;
     let class = class::get_class(&thread, &object).await?;
@@ -226,7 +238,10 @@ async fn get_float_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Resu
 }
 
 #[async_recursion(?Send)]
-async fn get_int_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_int_at_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object: Object = parameters.pop()?.try_into()?;
     let class = class::get_class(&thread, &object).await?;
@@ -236,7 +251,10 @@ async fn get_int_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result
 }
 
 #[async_recursion(?Send)]
-async fn get_long_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_long_at_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object: Object = parameters.pop()?.try_into()?;
     let class = class::get_class(&thread, &object).await?;
@@ -246,7 +264,7 @@ async fn get_long_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Resul
 }
 
 #[async_recursion(?Send)]
-async fn get_member_ref_info_at_0(
+pub(crate) async fn get_member_ref_info_at_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -288,7 +306,10 @@ async fn get_member_ref_info_at_0(
 }
 
 #[async_recursion(?Send)]
-async fn get_method_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_method_at_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object: Object = parameters.pop()?.try_into()?;
     let class = class::get_class(&thread, &object).await?;
@@ -337,7 +358,7 @@ async fn get_method_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Res
 }
 
 #[async_recursion(?Send)]
-async fn get_method_at_if_loaded_0(
+pub(crate) async fn get_method_at_if_loaded_0(
     thread: Arc<Thread>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -433,7 +454,10 @@ async fn get_name_and_type_ref_info_at_0(
 }
 
 #[async_recursion(?Send)]
-async fn get_size_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_size_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let object: Object = parameters.pop()?.try_into()?;
     let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
@@ -442,7 +466,10 @@ async fn get_size_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<O
 }
 
 #[async_recursion(?Send)]
-async fn get_string_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_string_at_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object: Object = parameters.pop()?.try_into()?;
     let class = class::get_class(&thread, &object).await?;
@@ -473,7 +500,10 @@ async fn get_tag_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result
 }
 
 #[async_recursion(?Send)]
-async fn get_utf_8_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_utf_8_at_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object: Object = parameters.pop()?.try_into()?;
     let class = class::get_class(&thread, &object).await?;
@@ -485,7 +515,7 @@ async fn get_utf_8_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Resu
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::VM;
     use ristretto_classfile::attributes::{Attribute, Instruction};
@@ -495,7 +525,7 @@ mod tests {
     };
     use ristretto_classloader::Class;
 
-    async fn test_object() -> Result<(Arc<VM>, Arc<Thread>, Value)> {
+    pub(crate) async fn test_object() -> Result<(Arc<VM>, Arc<Thread>, Value)> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
         let mut constant_pool = ConstantPool::default();
         let super_class = constant_pool.add_class("java/lang/Object")?;
