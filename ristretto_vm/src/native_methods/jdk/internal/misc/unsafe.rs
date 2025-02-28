@@ -964,8 +964,7 @@ pub(crate) async fn is_big_endian_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let big_endian = cfg!(target_endian = "big");
-    Ok(Some(Value::from(big_endian)))
+    Ok(Some(Value::from(true)))
 }
 
 #[async_recursion(?Send)]
@@ -1265,9 +1264,16 @@ pub(crate) async fn reallocate_memory_0(
 
 #[async_recursion(?Send)]
 pub(crate) async fn register_natives(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let vm = thread.vm()?;
+    if vm.java_major_version() >= 17 {
+        // Set the endianness to big endian
+        let class = thread.class("jdk.internal.misc.UnsafeConstants").await?;
+        let big_endian = class.static_field("BIG_ENDIAN")?;
+        big_endian.set_value(Value::from(true))?;
+    }
     Ok(None)
 }
 
@@ -1510,8 +1516,7 @@ mod tests {
     async fn test_is_big_endian_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = is_big_endian_0(thread, Parameters::default()).await?;
-        let big_endian = cfg!(target_endian = "big");
-        assert_eq!(result, Some(Value::from(big_endian)));
+        assert_eq!(result, Some(Value::from(true)));
         Ok(())
     }
 

@@ -758,8 +758,8 @@ async fn reallocate_memory(thread: Arc<Thread>, parameters: Parameters) -> Resul
 }
 
 #[async_recursion(?Send)]
-async fn register_natives(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::register_natives(thread, parameters).await
+async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+    Ok(None)
 }
 
 #[async_recursion(?Send)]

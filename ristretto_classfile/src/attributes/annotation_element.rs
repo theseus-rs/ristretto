@@ -138,6 +138,7 @@ impl AnnotationElement {
     /// # Errors
     /// If there are more than 65,534 values in the array.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
+        bytes.write_u8(self.tag())?;
         match self {
             AnnotationElement::Byte { const_value_index }
             | AnnotationElement::Char { const_value_index }
@@ -148,27 +149,22 @@ impl AnnotationElement {
             | AnnotationElement::Short { const_value_index }
             | AnnotationElement::Boolean { const_value_index }
             | AnnotationElement::String { const_value_index } => {
-                bytes.write_u8(self.tag())?;
                 bytes.write_u16::<BigEndian>(*const_value_index)?;
             }
             AnnotationElement::Enum {
                 type_name_index,
                 const_name_index,
             } => {
-                bytes.write_u8(self.tag())?;
                 bytes.write_u16::<BigEndian>(*type_name_index)?;
                 bytes.write_u16::<BigEndian>(*const_name_index)?;
             }
             AnnotationElement::Class { class_info_index } => {
-                bytes.write_u8(self.tag())?;
                 bytes.write_u16::<BigEndian>(*class_info_index)?;
             }
             AnnotationElement::Annotation { annotation } => {
-                bytes.write_u8(self.tag())?;
                 annotation.to_bytes(bytes)?;
             }
             AnnotationElement::Array { values } => {
-                bytes.write_u8(self.tag())?;
                 let values_length = u16::try_from(values.len())?;
                 bytes.write_u16::<BigEndian>(values_length)?;
                 for value in values {
