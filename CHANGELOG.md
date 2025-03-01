@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/v0.13.1...v0.14.0) - 2025-03-01
+
+### Added
+- implement jdk.internal.reflect.ConstantPool
+- add java.lang.Class reflection annotations for fields, constructors and methods
+- add java.lang.Class reflection signatures for fields, constructors and methods
+- implement sun.reflect.ConstantPool
+- implement jdk.internal.reflect.ConstantPool
+- implement java.lang.Class.getConstantPool()
+- implement java.lang.Class getRawAnnotations()[B and getRawTypeAnnotations()[B
+
+### Fixed
+- correct jdk.internal.misc.Unsafe get_reference_type() byte array types
+- udpate java.lang.Class.getSuperclass() to return null
+- correct class annotation modifier
+- correct java.lang.Class.getModifiers() to return ENUM flag
+- correct bugs in java.lang.Class.getSuperclass()
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_vm` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.13.1...ristretto_vm-v0.14.0) - 2025-03-01
+
+### Added
+- add java.lang.Class reflection signatures for fields, constructors and methods
+- add java.lang.Class reflection annotations for fields, constructors and methods
+- implement sun.reflect.ConstantPool
+- implement jdk.internal.reflect.ConstantPool
+- implement jdk.internal.reflect.ConstantPool
+- implement java.lang.Class.getConstantPool()
+- implement java.lang.Class getRawAnnotations()[B and getRawTypeAnnotations()[B
+
+### Fixed
+- correct class annotation modifier
+- correct jdk.internal.misc.Unsafe get_reference_type() byte array types
+- correct java.lang.Class.getModifiers() to return ENUM flag
+- udpate java.lang.Class.getSuperclass() to return null
+- correct bugs in java.lang.Class.getSuperclass()
+
+## `ristretto_classloader` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.13.1...ristretto_classloader-v0.14.0) - 2025-03-01
+
+### Added
+- add java.lang.Class reflection annotations for fields, constructors and methods
+
+## `ristretto_classfile` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.13.1...ristretto_classfile-v0.14.0) - 2025-03-01
+
+### Added
+- implement jdk.internal.reflect.ConstantPool
+
+### Fixed
+- correct jdk.internal.misc.Unsafe get_reference_type() byte array types
+- udpate java.lang.Class.getSuperclass() to return null
+
 ## `ristretto_vm` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.13.0...ristretto_vm-v0.13.1) - 2025-02-20
 
 ### Added
