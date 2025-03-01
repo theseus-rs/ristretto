@@ -704,11 +704,8 @@ async fn get_modifiers(thread: Arc<Thread>, mut parameters: Parameters) -> Resul
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags.bits();
-    let excluded_flags = (ClassAccessFlags::ANNOTATION
-        | ClassAccessFlags::MODULE
-        | ClassAccessFlags::SUPER
-        | ClassAccessFlags::SYNTHETIC)
-        .bits();
+    let excluded_flags =
+        (ClassAccessFlags::MODULE | ClassAccessFlags::SUPER | ClassAccessFlags::SYNTHETIC).bits();
     let excluded_flags_mask = !excluded_flags;
     let modifiers = i32::from(access_flags & excluded_flags_mask);
 
