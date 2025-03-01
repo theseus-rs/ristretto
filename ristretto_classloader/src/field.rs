@@ -10,6 +10,7 @@ pub struct Field {
     field_type: FieldType,
     name: String,
     value: Arc<RwLock<Value>>,
+    attributes: Vec<Attribute>,
 }
 
 impl Field {
@@ -20,12 +21,14 @@ impl Field {
         field_type: FieldType,
         name: String,
         value: Value,
+        attributes: Vec<Attribute>,
     ) -> Self {
         Self {
             access_flags,
             field_type,
             name,
             value: Arc::new(RwLock::new(value)),
+            attributes,
         }
     }
 
@@ -70,6 +73,7 @@ impl Field {
             field_type,
             name,
             value: Arc::new(RwLock::new(value)),
+            attributes: definition.attributes.clone(),
         })
     }
 
@@ -181,6 +185,12 @@ impl Field {
         Ok(())
     }
 
+    /// Get the attributes.
+    #[must_use]
+    pub fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
+    }
+
     /// Deep clone the field.
     ///
     /// # Errors
@@ -192,6 +202,7 @@ impl Field {
             field_type: self.field_type.clone(),
             name: self.name.clone(),
             value: Arc::new(RwLock::new(value)),
+            attributes: self.attributes.clone(),
         })
     }
 }
@@ -269,11 +280,13 @@ mod tests {
             FieldType::Base(BaseType::Int),
             "test".to_string(),
             Value::Int(42),
+            vec![],
         );
         assert_eq!(field.access_flags(), &FieldAccessFlags::PUBLIC);
         assert_eq!(field.field_type(), &FieldType::Base(BaseType::Int));
         assert_eq!(field.name(), "test");
         assert_eq!(field.value()?, Value::Int(42));
+        assert!(field.attributes.is_empty());
         Ok(())
     }
 
@@ -284,6 +297,7 @@ mod tests {
             FieldType::Base(BaseType::Int),
             "test".to_string(),
             Value::Int(42),
+            vec![],
         );
         assert_eq!(Value::Int(42), field.value()?);
         Ok(())
@@ -296,6 +310,7 @@ mod tests {
             FieldType::Base(BaseType::Boolean),
             "test".to_string(),
             Value::from(false),
+            vec![],
         );
         field.set_value(Value::from(true))?;
         assert_eq!(Value::from(true), field.value()?);
@@ -309,6 +324,7 @@ mod tests {
             FieldType::Base(BaseType::Byte),
             "test".to_string(),
             Value::Int(0),
+            vec![],
         );
         field.set_value(Value::Int(1))?;
         assert_eq!(Value::Int(1), field.value()?);
@@ -322,6 +338,7 @@ mod tests {
             FieldType::Base(BaseType::Char),
             "test".to_string(),
             Value::Int(0),
+            vec![],
         );
         field.set_value(Value::Int(1))?;
         assert_eq!(Value::Int(1), field.value()?);
@@ -335,6 +352,7 @@ mod tests {
             FieldType::Base(BaseType::Double),
             "test".to_string(),
             Value::Double(0.0),
+            vec![],
         );
         field.set_value(Value::Double(1.0))?;
         assert_eq!(Value::Double(1.0), field.value()?);
@@ -348,6 +366,7 @@ mod tests {
             FieldType::Base(BaseType::Float),
             "test".to_string(),
             Value::Float(0.0),
+            vec![],
         );
         field.set_value(Value::Float(1.0))?;
         assert_eq!(Value::Float(1.0), field.value()?);
@@ -361,6 +380,7 @@ mod tests {
             FieldType::Base(BaseType::Int),
             "test".to_string(),
             Value::Int(0),
+            vec![],
         );
         field.set_value(Value::Int(1))?;
         assert_eq!(Value::Int(1), field.value()?);
@@ -374,6 +394,7 @@ mod tests {
             FieldType::Base(BaseType::Long),
             "test".to_string(),
             Value::Long(0),
+            vec![],
         );
         field.set_value(Value::Long(1))?;
         assert_eq!(Value::Long(1), field.value()?);
@@ -387,6 +408,7 @@ mod tests {
             FieldType::Object("java/lang/Object".to_string()),
             "test".to_string(),
             Value::Object(None),
+            vec![],
         );
         field.set_value(Value::Object(None))?;
         assert_eq!(Value::Object(None), field.value()?);
@@ -401,6 +423,7 @@ mod tests {
             FieldType::Array(Box::new(FieldType::Base(BaseType::Int))),
             "test".to_string(),
             value,
+            vec![],
         );
         field.set_value(Value::Object(None))?;
         assert_eq!(Value::Object(None), field.value()?);
@@ -414,6 +437,7 @@ mod tests {
             FieldType::Base(BaseType::Short),
             "test".to_string(),
             Value::Int(0),
+            vec![],
         );
         field.set_value(Value::Int(1))?;
         assert_eq!(Value::Int(1), field.value()?);
@@ -427,6 +451,7 @@ mod tests {
             FieldType::Base(BaseType::Int),
             "test".to_string(),
             Value::Int(0),
+            vec![],
         );
         let result = field.set_value(Value::Double(1.0));
         assert!(result.is_err());
@@ -439,6 +464,7 @@ mod tests {
             FieldType::Base(BaseType::Int),
             "test".to_string(),
             Value::Int(1),
+            vec![],
         );
         field.unsafe_set_value(Value::Int(2))?;
         assert_eq!(Value::Int(2), field.value()?);
@@ -452,6 +478,7 @@ mod tests {
             FieldType::Base(BaseType::Int),
             "test".to_string(),
             Value::Int(1),
+            vec![],
         );
         let clone = field.clone();
         assert_eq!(Value::Int(1), field.value()?);
@@ -470,6 +497,7 @@ mod tests {
             FieldType::Base(BaseType::Int),
             "test".to_string(),
             Value::Int(1),
+            vec![],
         );
         let clone = field.deep_clone()?;
         assert_eq!(Value::Int(1), field.value()?);
@@ -488,12 +516,14 @@ mod tests {
             FieldType::Base(BaseType::Int),
             "test".to_string(),
             Value::Int(1),
+            vec![],
         );
         let other = Field::new(
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Int),
             "test".to_string(),
             Value::Int(1),
+            vec![],
         );
         assert_eq!(field, other);
     }
@@ -505,12 +535,14 @@ mod tests {
             FieldType::Base(BaseType::Int),
             "test".to_string(),
             Value::Int(1),
+            vec![],
         );
         let other = Field::new(
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Int),
             "test".to_string(),
             Value::Int(2),
+            vec![],
         );
         assert_ne!(field, other);
     }

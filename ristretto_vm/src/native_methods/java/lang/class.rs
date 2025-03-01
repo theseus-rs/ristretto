@@ -396,10 +396,29 @@ async fn get_declared_constructors_0(
         let slot = Value::Int(i32::try_from(slot)?);
         // TODO: Add support for generic signature
         let signature = Value::Object(None);
-        // TODO: Add support for annotations
-        let annotations = Value::from(Vec::<i8>::new());
-        // TODO: Add support for parameter_annotations
-        let parameter_annotations = Value::from(Vec::<i8>::new());
+
+        let mut method_annotations = Vec::new();
+        let mut method_parameter_annotations = Vec::new();
+        for attribute in method.attributes() {
+            match attribute {
+                Attribute::RuntimeVisibleAnnotations { annotations, .. } => {
+                    for annotation in annotations {
+                        annotation.to_bytes(&mut method_annotations)?;
+                    }
+                }
+                Attribute::RuntimeVisibleParameterAnnotations {
+                    parameter_annotations,
+                    ..
+                } => {
+                    for parameter_annotation in parameter_annotations {
+                        parameter_annotation.to_bytes(&mut method_parameter_annotations)?;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let annotations = Value::from(method_annotations);
+        let parameter_annotations = Value::from(method_parameter_annotations);
 
         let constructor = thread
             .object(
@@ -452,8 +471,17 @@ async fn get_declared_fields_0(
         let field_name = field.name().to_value();
         // TODO: Add support for generic signature
         let signature = Value::Object(None);
-        // TODO: Add support for annotations
-        let annotations = Value::from(Vec::<i8>::new());
+
+        let mut field_annotations = Vec::new();
+        for attribute in field.attributes() {
+            if let Attribute::RuntimeVisibleAnnotations { annotations, .. } = attribute {
+                for annotation in annotations {
+                    annotation.to_bytes(&mut field_annotations)?;
+                }
+            }
+        }
+        let annotations = Value::from(field_annotations);
+
         let (descriptor, parameters) = if vm.java_major_version() <= JAVA_11 {
             (
                 "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IILjava/lang/String;[B",
@@ -539,12 +567,34 @@ async fn get_declared_methods_0(
         let slot = Value::Int(i32::try_from(slot)?);
         // TODO: Add support for generic signature
         let signature = Value::Object(None);
-        // TODO: Add support for annotations
-        let annotations = Value::from(Vec::<i8>::new());
-        // TODO: Add support for parameter_annotations
-        let parameter_annotations = Value::from(Vec::<i8>::new());
-        // TODO: Add support for annotationDefault
-        let annotation_default = Value::from(Vec::<i8>::new());
+
+        let mut method_annotations = Vec::new();
+        let mut method_parameter_annotations = Vec::new();
+        let mut method_annotation_default = Vec::new();
+        for attribute in method.attributes() {
+            match attribute {
+                Attribute::RuntimeVisibleAnnotations { annotations, .. } => {
+                    for annotation in annotations {
+                        annotation.to_bytes(&mut method_annotations)?;
+                    }
+                }
+                Attribute::RuntimeVisibleParameterAnnotations {
+                    parameter_annotations,
+                    ..
+                } => {
+                    for parameter_annotation in parameter_annotations {
+                        parameter_annotation.to_bytes(&mut method_parameter_annotations)?;
+                    }
+                }
+                Attribute::AnnotationDefault { element, .. } => {
+                    element.to_bytes(&mut method_annotation_default)?;
+                }
+                _ => {}
+            }
+        }
+        let annotations = Value::from(method_annotations);
+        let parameter_annotations = Value::from(method_parameter_annotations);
+        let annotation_default = Value::from(method_annotation_default);
 
         let method = thread
             .object(
