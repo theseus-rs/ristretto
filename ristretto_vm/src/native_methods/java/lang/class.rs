@@ -394,13 +394,20 @@ async fn get_declared_constructors_0(
         let checked_exceptions = get_exceptions(&thread, &class, method).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
         let slot = Value::Int(i32::try_from(slot)?);
-        // TODO: Add support for generic signature
-        let signature = Value::Object(None);
 
+        let mut method_signature = Value::Object(None);
         let mut method_annotations = Vec::new();
         let mut method_parameter_annotations = Vec::new();
         for attribute in method.attributes() {
             match attribute {
+                Attribute::Signature {
+                    signature_index, ..
+                } => {
+                    let class_file = class.class_file();
+                    let constant_pool = &class_file.constant_pool;
+                    let signature = constant_pool.try_get_utf8(*signature_index)?;
+                    method_signature = signature.to_object(&vm).await?;
+                }
                 Attribute::RuntimeVisibleAnnotations { annotations, .. } => {
                     for annotation in annotations {
                         annotation.to_bytes(&mut method_annotations)?;
@@ -430,7 +437,7 @@ async fn get_declared_constructors_0(
                     checked_exceptions,
                     modifiers,
                     slot,
-                    signature,
+                    method_signature,
                     annotations,
                     parameter_annotations,
                 ],
@@ -469,15 +476,25 @@ async fn get_declared_fields_0(
         let slot = &class.field_offset(field_name)?;
         let slot = Value::Int(i32::try_from(*slot)?);
         let field_name = field.name().to_value();
-        // TODO: Add support for generic signature
-        let signature = Value::Object(None);
 
+        let mut field_signature = Value::Object(None);
         let mut field_annotations = Vec::new();
         for attribute in field.attributes() {
-            if let Attribute::RuntimeVisibleAnnotations { annotations, .. } = attribute {
-                for annotation in annotations {
-                    annotation.to_bytes(&mut field_annotations)?;
+            match attribute {
+                Attribute::Signature {
+                    signature_index, ..
+                } => {
+                    let class_file = class.class_file();
+                    let constant_pool = &class_file.constant_pool;
+                    let signature = constant_pool.try_get_utf8(*signature_index)?;
+                    field_signature = signature.to_object(&vm).await?;
                 }
+                Attribute::RuntimeVisibleAnnotations { annotations, .. } => {
+                    for annotation in annotations {
+                        annotation.to_bytes(&mut field_annotations)?;
+                    }
+                }
+                _ => {}
             }
         }
         let annotations = Value::from(field_annotations);
@@ -491,7 +508,7 @@ async fn get_declared_fields_0(
                     field_type,
                     modifiers,
                     slot,
-                    signature,
+                    field_signature,
                     annotations,
                 ],
             )
@@ -507,7 +524,7 @@ async fn get_declared_fields_0(
                     modifiers,
                     Value::from(trusted_final),
                     slot,
-                    signature,
+                    field_signature,
                     annotations,
                 ],
             )
@@ -565,14 +582,20 @@ async fn get_declared_methods_0(
         let checked_exceptions = get_exceptions(&thread, &class, method).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
         let slot = Value::Int(i32::try_from(slot)?);
-        // TODO: Add support for generic signature
-        let signature = Value::Object(None);
-
+        let mut method_signature = Value::Object(None);
         let mut method_annotations = Vec::new();
         let mut method_parameter_annotations = Vec::new();
         let mut method_annotation_default = Vec::new();
         for attribute in method.attributes() {
             match attribute {
+                Attribute::Signature {
+                    signature_index, ..
+                } => {
+                    let class_file = class.class_file();
+                    let constant_pool = &class_file.constant_pool;
+                    let signature = constant_pool.try_get_utf8(*signature_index)?;
+                    method_signature = signature.to_object(&vm).await?;
+                }
                 Attribute::RuntimeVisibleAnnotations { annotations, .. } => {
                     for annotation in annotations {
                         annotation.to_bytes(&mut method_annotations)?;
@@ -608,7 +631,7 @@ async fn get_declared_methods_0(
                     checked_exceptions,
                     modifiers,
                     slot,
-                    signature,
+                    method_signature,
                     annotations,
                     parameter_annotations,
                     annotation_default,
