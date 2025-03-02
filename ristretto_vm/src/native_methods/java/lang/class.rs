@@ -396,8 +396,8 @@ async fn get_declared_constructors_0(
         let slot = Value::Int(i32::try_from(slot)?);
 
         let mut method_signature = Value::Object(None);
-        let mut method_annotations = Vec::new();
-        let mut method_parameter_annotations = Vec::new();
+        let mut annotations = Value::Object(None);
+        let mut parameter_annotations = Value::Object(None);
         for attribute in method.attributes() {
             match attribute {
                 Attribute::Signature {
@@ -408,24 +408,29 @@ async fn get_declared_constructors_0(
                     let signature = constant_pool.try_get_utf8(*signature_index)?;
                     method_signature = signature.to_object(&vm).await?;
                 }
-                Attribute::RuntimeVisibleAnnotations { annotations, .. } => {
-                    for annotation in annotations {
-                        annotation.to_bytes(&mut method_annotations)?;
-                    }
-                }
-                Attribute::RuntimeVisibleParameterAnnotations {
-                    parameter_annotations,
+                Attribute::RuntimeVisibleAnnotations {
+                    annotations: runtime_annotations,
                     ..
                 } => {
-                    for parameter_annotation in parameter_annotations {
+                    let mut method_annotations = Vec::new();
+                    for annotation in runtime_annotations {
+                        annotation.to_bytes(&mut method_annotations)?;
+                    }
+                    annotations = Value::from(method_annotations);
+                }
+                Attribute::RuntimeVisibleParameterAnnotations {
+                    parameter_annotations: runtime_parameter_annotations,
+                    ..
+                } => {
+                    let mut method_parameter_annotations = Vec::new();
+                    for parameter_annotation in runtime_parameter_annotations {
                         parameter_annotation.to_bytes(&mut method_parameter_annotations)?;
                     }
+                    parameter_annotations = Value::from(method_parameter_annotations);
                 }
                 _ => {}
             }
         }
-        let annotations = Value::from(method_annotations);
-        let parameter_annotations = Value::from(method_parameter_annotations);
 
         let constructor = thread
             .object(
@@ -478,7 +483,7 @@ async fn get_declared_fields_0(
         let field_name = field.name().to_value();
 
         let mut field_signature = Value::Object(None);
-        let mut field_annotations = Vec::new();
+        let mut annotations = Value::Object(None);
         for attribute in field.attributes() {
             match attribute {
                 Attribute::Signature {
@@ -489,15 +494,19 @@ async fn get_declared_fields_0(
                     let signature = constant_pool.try_get_utf8(*signature_index)?;
                     field_signature = signature.to_object(&vm).await?;
                 }
-                Attribute::RuntimeVisibleAnnotations { annotations, .. } => {
-                    for annotation in annotations {
+                Attribute::RuntimeVisibleAnnotations {
+                    annotations: runtime_annotations,
+                    ..
+                } => {
+                    let mut field_annotations = Vec::new();
+                    for annotation in runtime_annotations {
                         annotation.to_bytes(&mut field_annotations)?;
                     }
+                    annotations = Value::from(field_annotations);
                 }
                 _ => {}
             }
         }
-        let annotations = Value::from(field_annotations);
 
         let (descriptor, parameters) = if vm.java_major_version() <= JAVA_11 {
             (
@@ -583,9 +592,9 @@ async fn get_declared_methods_0(
         let modifiers = Value::Int(i32::from(access_flags.bits()));
         let slot = Value::Int(i32::try_from(slot)?);
         let mut method_signature = Value::Object(None);
-        let mut method_annotations = Vec::new();
-        let mut method_parameter_annotations = Vec::new();
-        let mut method_annotation_default = Vec::new();
+        let mut annotations = Value::Object(None);
+        let mut parameter_annotations = Value::Object(None);
+        let mut annotation_default = Value::Object(None);
         for attribute in method.attributes() {
             match attribute {
                 Attribute::Signature {
@@ -596,28 +605,34 @@ async fn get_declared_methods_0(
                     let signature = constant_pool.try_get_utf8(*signature_index)?;
                     method_signature = signature.to_object(&vm).await?;
                 }
-                Attribute::RuntimeVisibleAnnotations { annotations, .. } => {
-                    for annotation in annotations {
-                        annotation.to_bytes(&mut method_annotations)?;
-                    }
-                }
-                Attribute::RuntimeVisibleParameterAnnotations {
-                    parameter_annotations,
+                Attribute::RuntimeVisibleAnnotations {
+                    annotations: runtime_annotations,
                     ..
                 } => {
-                    for parameter_annotation in parameter_annotations {
+                    let mut method_annotations = Vec::new();
+                    for annotation in runtime_annotations {
+                        annotation.to_bytes(&mut method_annotations)?;
+                    }
+                    annotations = Value::from(method_annotations)
+                }
+                Attribute::RuntimeVisibleParameterAnnotations {
+                    parameter_annotations: runtime_parameter_annotations,
+                    ..
+                } => {
+                    let mut method_parameter_annotations = Vec::new();
+                    for parameter_annotation in runtime_parameter_annotations {
                         parameter_annotation.to_bytes(&mut method_parameter_annotations)?;
                     }
+                    parameter_annotations = Value::from(method_parameter_annotations);
                 }
                 Attribute::AnnotationDefault { element, .. } => {
+                    let mut method_annotation_default = Vec::new();
                     element.to_bytes(&mut method_annotation_default)?;
+                    annotation_default = Value::from(method_annotation_default)
                 }
                 _ => {}
             }
         }
-        let annotations = Value::from(method_annotations);
-        let parameter_annotations = Value::from(method_parameter_annotations);
-        let annotation_default = Value::from(method_annotation_default);
 
         let method = thread
             .object(
