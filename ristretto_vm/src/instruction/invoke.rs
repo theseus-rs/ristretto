@@ -88,7 +88,17 @@ pub(crate) async fn invokespecial(
 ) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
-    let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(method_index)?;
+    let (class_index, name_and_type_index) = match constant_pool.try_get(method_index)? {
+        Constant::MethodRef {
+            class_index,
+            name_and_type_index,
+        }
+        | Constant::InterfaceMethodRef {
+            class_index,
+            name_and_type_index,
+        } => (class_index, name_and_type_index),
+        _ => return Err(InvalidConstantPoolIndexType(method_index).into()),
+    };
     let class_name = constant_pool.try_get_class(*class_index)?;
     let class = thread.class(class_name).await?;
     let (name_index, descriptor_index) =
