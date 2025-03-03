@@ -413,6 +413,8 @@ async fn get_declared_constructors_0(
                     ..
                 } => {
                     let mut method_annotations = Vec::new();
+                    method_annotations
+                        .write_u16::<BigEndian>(u16::try_from(runtime_annotations.len())?)?;
                     for annotation in runtime_annotations {
                         annotation.to_bytes(&mut method_annotations)?;
                     }
@@ -423,6 +425,9 @@ async fn get_declared_constructors_0(
                     ..
                 } => {
                     let mut method_parameter_annotations = Vec::new();
+                    method_parameter_annotations.write_u16::<BigEndian>(u16::try_from(
+                        runtime_parameter_annotations.len(),
+                    )?)?;
                     for parameter_annotation in runtime_parameter_annotations {
                         parameter_annotation.to_bytes(&mut method_parameter_annotations)?;
                     }
@@ -499,6 +504,8 @@ async fn get_declared_fields_0(
                     ..
                 } => {
                     let mut field_annotations = Vec::new();
+                    field_annotations
+                        .write_u16::<BigEndian>(u16::try_from(runtime_annotations.len())?)?;
                     for annotation in runtime_annotations {
                         annotation.to_bytes(&mut field_annotations)?;
                     }
@@ -610,6 +617,8 @@ async fn get_declared_methods_0(
                     ..
                 } => {
                     let mut method_annotations = Vec::new();
+                    method_annotations
+                        .write_u16::<BigEndian>(u16::try_from(runtime_annotations.len())?)?;
                     for annotation in runtime_annotations {
                         annotation.to_bytes(&mut method_annotations)?;
                     }
@@ -620,6 +629,9 @@ async fn get_declared_methods_0(
                     ..
                 } => {
                     let mut method_parameter_annotations = Vec::new();
+                    method_parameter_annotations.write_u16::<BigEndian>(u16::try_from(
+                        runtime_parameter_annotations.len(),
+                    )?)?;
                     for parameter_annotation in runtime_parameter_annotations {
                         parameter_annotation.to_bytes(&mut method_parameter_annotations)?;
                     }
