@@ -518,6 +518,7 @@ pub(crate) async fn get_utf_8_at_0(
 pub(crate) mod tests {
     use super::*;
     use crate::VM;
+    use crate::native_methods::registry::RustMethod;
     use ristretto_classfile::attributes::{Attribute, Instruction};
     use ristretto_classfile::{
         BaseType, ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, FieldType,
@@ -614,11 +615,29 @@ pub(crate) mod tests {
         Ok((vm, thread, Value::from(object)))
     }
 
-    #[tokio::test]
-    async fn test_get_class_at_0() -> Result<()> {
+    pub(crate) async fn get_class_at_test(get_class_at: RustMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(8)]);
-        let result = get_class_at_0(thread, parameters).await?.expect("value");
+        let result = get_class_at(thread, parameters).await?.expect("value");
+        let object: Object = result.try_into()?;
+        let class_name: String = object.value("name")?.try_into()?;
+        assert_eq!("TestClass", class_name);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_class_at_0() -> Result<()> {
+        get_class_at_test(get_class_at_0).await
+    }
+
+    pub(crate) async fn get_class_at_if_loaded_test(
+        get_class_at_if_loaded: RustMethod,
+    ) -> Result<()> {
+        let (_vm, thread, object) = test_object().await?;
+        let parameters = Parameters::new(vec![object, Value::Int(8)]);
+        let result = get_class_at_if_loaded(thread, parameters)
+            .await?
+            .expect("value");
         let object: Object = result.try_into()?;
         let class_name: String = object.value("name")?.try_into()?;
         assert_eq!("TestClass", class_name);
@@ -627,15 +646,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_get_class_at_if_loaded_0() -> Result<()> {
-        let (_vm, thread, object) = test_object().await?;
-        let parameters = Parameters::new(vec![object, Value::Int(8)]);
-        let result = get_class_at_if_loaded_0(thread, parameters)
-            .await?
-            .expect("value");
-        let object: Object = result.try_into()?;
-        let class_name: String = object.value("name")?.try_into()?;
-        assert_eq!("TestClass", class_name);
-        Ok(())
+        get_class_at_if_loaded_test(get_class_at_if_loaded_0).await
     }
 
     #[tokio::test]
@@ -662,21 +673,24 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_get_double_at_0() -> Result<()> {
+    pub(crate) async fn get_double_at_test(get_double_at: RustMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(13)]);
-        let result = get_double_at_0(thread, parameters).await?.expect("value");
+        let result = get_double_at(thread, parameters).await?.expect("value");
         let value: f64 = result.try_into()?;
         assert_eq!(4.0f64, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_get_field_at_0() -> Result<()> {
+    async fn test_get_double_at_0() -> Result<()> {
+        get_double_at_test(get_double_at_0).await
+    }
+
+    pub(crate) async fn get_field_at_test(get_field_at: RustMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
-        let result = get_field_at_0(thread, parameters).await?.expect("value");
+        let result = get_field_at(thread, parameters).await?.expect("value");
         let object: Object = result.try_into()?;
         let class = object.class();
         assert_eq!("java/lang/reflect/Field", class.name());
@@ -686,10 +700,16 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_field_at_if_loaded_0() -> Result<()> {
+    async fn test_get_field_at_0() -> Result<()> {
+        get_field_at_test(get_field_at_0).await
+    }
+
+    pub(crate) async fn get_field_at_if_loaded_test(
+        get_field_at_if_loaded: RustMethod,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
-        let result = get_field_at_if_loaded_0(thread, parameters)
+        let result = get_field_at_if_loaded(thread, parameters)
             .await?
             .expect("value");
         let object: Object = result.try_into()?;
@@ -701,40 +721,58 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_float_at_0() -> Result<()> {
+    async fn test_get_field_at_if_loaded_0() -> Result<()> {
+        get_field_at_if_loaded_test(get_field_at_if_loaded_0).await
+    }
+
+    pub(crate) async fn get_float_at_test(get_float_at: RustMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(12)]);
-        let result = get_float_at_0(thread, parameters).await?.expect("value");
+        let result = get_float_at(thread, parameters).await?.expect("value");
         let value: f32 = result.try_into()?;
         assert_eq!(3.0f32, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_get_int_at_0() -> Result<()> {
+    async fn test_get_float_at_0() -> Result<()> {
+        get_float_at_test(get_float_at_0).await
+    }
+
+    pub(crate) async fn get_int_at_test(get_int_at: RustMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(9)]);
-        let result = get_int_at_0(thread, parameters).await?.expect("value");
+        let result = get_int_at(thread, parameters).await?.expect("value");
         let value: i32 = result.try_into()?;
         assert_eq!(1, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_get_long_at_0() -> Result<()> {
+    async fn test_get_int_at_0() -> Result<()> {
+        get_int_at_test(get_int_at_0).await
+    }
+
+    pub(crate) async fn get_long_at_test(get_long_at: RustMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(10)]);
-        let result = get_long_at_0(thread, parameters).await?.expect("value");
+        let result = get_long_at(thread, parameters).await?.expect("value");
         let value: i64 = result.try_into()?;
         assert_eq!(2, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_get_member_ref_info_at_0_field() -> Result<()> {
+    async fn test_get_long_at_0() -> Result<()> {
+        get_long_at_test(get_long_at_0).await
+    }
+
+    pub(crate) async fn get_member_ref_info_at_field_test(
+        get_member_ref_info_at: RustMethod,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
-        let result = get_member_ref_info_at_0(thread, parameters)
+        let result = get_member_ref_info_at(thread, parameters)
             .await?
             .expect("value");
         let (class, values) = result.try_into()?;
@@ -765,10 +803,16 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_member_ref_info_at_0_method() -> Result<()> {
+    async fn test_get_member_ref_info_at_0_field() -> Result<()> {
+        get_member_ref_info_at_field_test(get_member_ref_info_at_0).await
+    }
+
+    pub(crate) async fn get_member_ref_info_at_method_test(
+        get_member_ref_info_at: RustMethod,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
-        let result = get_member_ref_info_at_0(thread, parameters)
+        let result = get_member_ref_info_at(thread, parameters)
             .await?
             .expect("value");
         let (class, values) = result.try_into()?;
@@ -799,34 +843,48 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_method_at_0_constructor() -> Result<()> {
+    async fn test_get_member_ref_info_at_0_method() -> Result<()> {
+        get_member_ref_info_at_method_test(get_member_ref_info_at_0).await
+    }
+
+    pub(crate) async fn get_method_at_constructor_test(get_method_at: RustMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
-        let result = get_method_at_0(thread, parameters).await?.expect("value");
+        let result = get_method_at(thread, parameters).await?.expect("value");
         let object: Object = result.try_into()?;
         let class = object.class();
         assert_eq!("java/lang/reflect/Constructor", class.name());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_method_at_0_constructor() -> Result<()> {
+        get_method_at_constructor_test(get_method_at_0).await
+    }
+
+    pub(crate) async fn get_method_at_method_test(get_method_at: RustMethod) -> Result<()> {
+        let (_vm, thread, object) = test_object().await?;
+        let parameters = Parameters::new(vec![object, Value::Int(25)]);
+        let result = get_method_at(thread, parameters).await?.expect("value");
+        let object: Object = result.try_into()?;
+        let class = object.class();
+        assert_eq!("java/lang/reflect/Method", class.name());
+        let method_name: String = object.value("name")?.try_into()?;
+        assert_eq!("main", method_name);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_get_method_at_0_method() -> Result<()> {
-        let (_vm, thread, object) = test_object().await?;
-        let parameters = Parameters::new(vec![object, Value::Int(25)]);
-        let result = get_method_at_0(thread, parameters).await?.expect("value");
-        let object: Object = result.try_into()?;
-        let class = object.class();
-        assert_eq!("java/lang/reflect/Method", class.name());
-        let method_name: String = object.value("name")?.try_into()?;
-        assert_eq!("main", method_name);
-        Ok(())
+        get_method_at_method_test(get_method_at_0).await
     }
 
-    #[tokio::test]
-    async fn test_get_method_at_if_loaded_0_constructor() -> Result<()> {
+    pub(crate) async fn get_method_at_if_loaded_constructor_test(
+        get_method_at_if_loaded: RustMethod,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
-        let result = get_method_at_if_loaded_0(thread, parameters)
+        let result = get_method_at_if_loaded(thread, parameters)
             .await?
             .expect("value");
         let object: Object = result.try_into()?;
@@ -836,10 +894,16 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_method_at_if_loaded_0_method() -> Result<()> {
+    async fn test_get_method_at_if_loaded_0_constructor() -> Result<()> {
+        get_method_at_if_loaded_constructor_test(get_method_at_if_loaded_0).await
+    }
+
+    pub(crate) async fn get_method_at_if_loaded_method_test(
+        get_method_at_if_loaded: RustMethod,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(25)]);
-        let result = get_method_at_if_loaded_0(thread, parameters)
+        let result = get_method_at_if_loaded(thread, parameters)
             .await?
             .expect("value");
         let object: Object = result.try_into()?;
@@ -848,6 +912,11 @@ pub(crate) mod tests {
         let method_name: String = object.value("name")?.try_into()?;
         assert_eq!("main", method_name);
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_method_at_if_loaded_0_method() -> Result<()> {
+        get_method_at_if_loaded_method_test(get_method_at_if_loaded_0).await
     }
 
     #[tokio::test]
@@ -928,24 +997,32 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_get_size_0() -> Result<()> {
+    pub(crate) async fn get_size_test(get_size: RustMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object]);
-        let result = get_size_0(thread, parameters).await?.expect("value");
+        let result = get_size(thread, parameters).await?.expect("value");
         let class_index: u16 = result.try_into()?;
         assert_eq!(25, class_index);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_get_string_at_0() -> Result<()> {
+    async fn test_get_size_0() -> Result<()> {
+        get_size_test(get_size_0).await
+    }
+
+    pub(crate) async fn get_string_at_test(get_string_at: RustMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(16)]);
-        let result = get_string_at_0(thread, parameters).await?.expect("value");
+        let result = get_string_at(thread, parameters).await?.expect("value");
         let value: String = result.try_into()?;
         assert_eq!("foo", value);
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_string_at_0() -> Result<()> {
+        get_string_at_test(get_string_at_0).await
     }
 
     #[tokio::test]
@@ -961,13 +1038,17 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_get_utf_8_at_0() -> Result<()> {
+    pub(crate) async fn get_utf_8_at_test(get_utf_8_at: RustMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(15)]);
-        let result = get_utf_8_at_0(thread, parameters).await?.expect("value");
+        let result = get_utf_8_at(thread, parameters).await?.expect("value");
         let value: String = result.try_into()?;
         assert_eq!("foo", value);
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_utf_8_at_0() -> Result<()> {
+        get_utf_8_at_test(get_utf_8_at_0).await
     }
 }

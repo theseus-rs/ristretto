@@ -441,6 +441,15 @@ impl TryInto<Vec<f64>> for Value {
     }
 }
 
+impl TryInto<Vec<Value>> for Value {
+    type Error = crate::Error;
+
+    fn try_into(self) -> Result<Vec<Value>> {
+        let reference: Reference = self.try_into()?;
+        reference.try_into()
+    }
+}
+
 impl TryInto<(Arc<Class>, Vec<Option<Reference>>)> for Value {
     type Error = crate::Error;
 
@@ -1178,6 +1187,21 @@ mod tests {
         let value = Value::from(original_value.clone());
         let value: Vec<f64> = value.try_into()?;
         assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_into_vec_value() -> Result<()> {
+        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+        let class_name = "java/lang/Integer";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class.clone())?;
+        object.set_value("value", Value::Int(42))?;
+        let value = Value::from(object);
+        let original_values = vec![value];
+        let value = Value::try_from((original_class.clone(), original_values.clone()))?;
+        let values: Vec<Value> = value.try_into()?;
+        assert_eq!(original_values, values);
         Ok(())
     }
 
