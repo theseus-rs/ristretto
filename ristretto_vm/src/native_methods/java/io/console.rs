@@ -3,6 +3,7 @@ use crate::native_methods::registry::{JAVA_17, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use console::Term;
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
@@ -28,12 +29,14 @@ async fn echo(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Va
 
 #[async_recursion(?Send)]
 async fn encoding(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.io.Console.encoding()Ljava/lang/String;")
+    Ok(Some(Value::Object(None)))
 }
 
 #[async_recursion(?Send)]
 async fn istty(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.io.Console.istty()Z")
+    let terminal = Term::stdout();
+    let is_terminal = terminal.is_term();
+    Ok(Some(Value::from(is_terminal)))
 }
 
 #[cfg(test)]
@@ -48,16 +51,22 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.io.Console.encoding()Ljava/lang/String;")]
-    async fn test_encoding() {
+    async fn test_encoding() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = encoding(thread, Parameters::default()).await;
+        let value = encoding(thread, Parameters::default())
+            .await?
+            .expect("encoding")
+            .to_reference()?;
+        assert!(value.is_none());
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.io.Console.istty()Z")]
-    async fn test_istty() {
+    async fn test_istty() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = istty(thread, Parameters::default()).await;
+        let result = istty(thread, Parameters::default()).await?.expect("istty");
+        let is_tty: bool = result.try_into()?;
+        assert!(!is_tty);
+        Ok(())
     }
 }
