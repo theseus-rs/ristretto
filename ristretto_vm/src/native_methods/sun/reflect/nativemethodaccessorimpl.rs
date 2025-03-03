@@ -1,4 +1,5 @@
 use crate::Result;
+use crate::native_methods::jdk;
 use crate::native_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -19,10 +20,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn invoke_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!(
-        "sun.reflect.NativeMethodAccessorImpl.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+async fn invoke_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::reflect::nativemethodaccessorimpl::invoke_0(thread, parameters).await
 }
 
 #[cfg(test)]
@@ -30,11 +29,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.reflect.NativeMethodAccessorImpl.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_invoke_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke_0(thread, Parameters::default()).await;
+    async fn test_invoke_0() -> Result<()> {
+        jdk::internal::reflect::nativemethodaccessorimpl::tests::invoke_test(invoke_0).await
     }
 }

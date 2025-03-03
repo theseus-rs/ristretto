@@ -1,4 +1,5 @@
 use crate::Result;
+use crate::native_methods::jdk;
 use crate::native_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -19,10 +20,8 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
 }
 
 #[async_recursion(?Send)]
-async fn new_instance_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!(
-        "sun.reflect.NativeConstructorAccessorImpl.newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+async fn new_instance_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    jdk::internal::reflect::nativeconstructoraccessorimpl::new_instance_0(thread, parameters).await
 }
 
 #[cfg(test)]
@@ -30,11 +29,10 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.reflect.NativeConstructorAccessorImpl.newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_new_instance_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = new_instance_0(thread, Parameters::default()).await;
+    async fn test_new_instance_0() -> Result<()> {
+        jdk::internal::reflect::nativeconstructoraccessorimpl::tests::new_instance_test(
+            new_instance_0,
+        )
+        .await
     }
 }
