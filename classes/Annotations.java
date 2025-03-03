@@ -1,3 +1,4 @@
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -11,18 +12,22 @@ public class Annotations {
     public boolean instanceField;
 
     @Deprecated(since = "4")
-    public static void staticMethod() {
+    public Annotations() {
     }
 
     @Deprecated(since = "5")
+    public static void staticMethod() {
+    }
+
+    @Deprecated(since = "6")
     public void instanceMethod() {
     }
 
-    public void parameterMethod(@Deprecated(since = "6") int parameter) {
+    public void parameterMethod(@Deprecated(since = "7") int parameter) {
     }
 
     public static void main(String ... args) throws Throwable {
-        Class cls = Annotations.class;
+        Class<Annotations> cls = Annotations.class;
         System.out.println("class: " + cls.getAnnotation(Deprecated.class));
 
         Field staticField = cls.getField("STATIC_FIELD");
@@ -30,6 +35,9 @@ public class Annotations {
 
         Field instanceField = cls.getField("instanceField");
         System.out.println("instance field: " + instanceField.getAnnotation(Deprecated.class));
+
+        Constructor<Annotations> constructor = cls.getConstructor();
+        System.out.println("constructor: " + constructor.getAnnotation(Deprecated.class));
 
         Method staticMethod = cls.getMethod("staticMethod");
         System.out.println("static method: " + staticMethod.getAnnotation(Deprecated.class));
@@ -42,3 +50,4 @@ public class Annotations {
         System.out.println("parameter: " + parameter.getAnnotation(Deprecated.class));
     }
 }
+
