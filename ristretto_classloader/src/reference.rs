@@ -23,17 +23,17 @@ pub enum Reference {
 impl Reference {
     /// Get the class name of the reference
     #[must_use]
-    pub fn class_name(&self) -> String {
+    pub fn class_name(&self) -> &str {
         match self {
-            Reference::ByteArray(_) => "[B".to_string(),
-            Reference::CharArray(_) => "[C".to_string(),
-            Reference::ShortArray(_) => "[S".to_string(),
-            Reference::IntArray(_) => "[I".to_string(),
-            Reference::LongArray(_) => "[J".to_string(),
-            Reference::FloatArray(_) => "[F".to_string(),
-            Reference::DoubleArray(_) => "[D".to_string(),
-            Reference::Array(class, _) => class.name().to_string(),
-            Reference::Object(value) => value.class().name().to_string(),
+            Reference::ByteArray(_) => "[B",
+            Reference::CharArray(_) => "[C",
+            Reference::ShortArray(_) => "[S",
+            Reference::IntArray(_) => "[I",
+            Reference::LongArray(_) => "[J",
+            Reference::FloatArray(_) => "[F",
+            Reference::DoubleArray(_) => "[D",
+            Reference::Array(class, _) => class.name(),
+            Reference::Object(value) => value.class().name(),
         }
     }
 
@@ -42,18 +42,20 @@ impl Reference {
     /// # Errors
     /// if the class cannot be created
     pub fn class(&self) -> Result<Arc<Class>> {
-        let class = if let Reference::Object(value) = self {
-            value.class().clone()
-        } else {
-            let class_name = self.class_name();
-            let mut constant_pool = ConstantPool::default();
-            let class_index = constant_pool.add_class(class_name.as_str())?;
-            let class_file = ClassFile {
-                constant_pool,
-                this_class: class_index,
-                ..Default::default()
-            };
-            Class::from(class_file)?
+        let class = match self {
+            Reference::Array(class, _) => class.clone(),
+            Reference::Object(value) => value.class().clone(),
+            _ => {
+                let class_name = self.class_name();
+                let mut constant_pool = ConstantPool::default();
+                let class_index = constant_pool.add_class(class_name)?;
+                let class_file = ClassFile {
+                    constant_pool,
+                    this_class: class_index,
+                    ..Default::default()
+                };
+                Class::from(class_file)?
+            }
         };
         Ok(class)
     }
