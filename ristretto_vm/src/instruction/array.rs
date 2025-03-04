@@ -100,7 +100,7 @@ pub(crate) async fn multianewarray(
             BaseType::Int => Reference::from(vec![0i32; count]),
             BaseType::Long => Reference::from(vec![0i64; count]),
         };
-        type_class_name = array.class_name();
+        type_class_name = array.class_name().to_string();
         array
     } else {
         type_class_name = format!("[L{type_class_name};");

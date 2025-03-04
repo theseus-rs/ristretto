@@ -247,7 +247,7 @@ async fn invoke_method(
                     // Primitive types do not have a class associated with them so the class must be
                     // created from the class name.
                     let class_name = reference.class_name();
-                    thread.class(&class_name).await?
+                    thread.class(class_name).await?
                 }
             };
             let method_name = method.name();
