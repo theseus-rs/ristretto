@@ -218,21 +218,11 @@ async fn invoke_method(
     mut method: Arc<Method>,
     invocation_type: &InvocationType,
 ) -> Result<ExecutionResult> {
-    let parameters_length = method.parameters().len();
-    let mut parameters = if method.is_static() {
-        Vec::with_capacity(parameters_length)
+    let parameters = if method.is_static() {
+        stack.drain_last(method.parameters().len())
     } else {
-        // Add one for the object reference
-        Vec::with_capacity(parameters_length + 1)
+        stack.drain_last(method.parameters().len() + 1)
     };
-    for _ in 0..parameters_length {
-        parameters.push(stack.pop()?);
-    }
-    if !method.is_static() {
-        let object = stack.pop_object()?;
-        parameters.push(Value::Object(object));
-    }
-    parameters.reverse();
 
     // TODO: evaluate refactoring this
     match invocation_type {

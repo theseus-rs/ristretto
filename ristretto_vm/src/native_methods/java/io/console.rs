@@ -63,10 +63,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_istty() -> Result<()> {
+        // This test is mainly for coverage as the test is using the same state to verify the result
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = istty(thread, Parameters::default()).await?.expect("istty");
         let is_tty: bool = result.try_into()?;
-        assert!(!is_tty);
+        let terminal = Term::stdout();
+        let expected_is_terminal = terminal.is_term();
+        assert_eq!(expected_is_terminal, is_tty);
         Ok(())
     }
 }

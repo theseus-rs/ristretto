@@ -19,6 +19,12 @@ impl OperandStack {
         }
     }
 
+    /// Drain the last `n` values from the operand stack.
+    pub fn drain_last(&mut self, n: usize) -> Vec<Value> {
+        let split_idx = self.stack.len() - n;
+        self.stack.split_off(split_idx)
+    }
+
     /// Push a value onto the operand stack.
     #[inline]
     pub fn push(&mut self, value: Value) -> Result<()> {
@@ -167,6 +173,20 @@ mod tests {
     use super::*;
     use crate::operand_stack::OperandStack;
     use ristretto_classloader::{ConcurrentVec, Reference};
+
+    #[test]
+    fn test_drain_last() -> Result<()> {
+        let mut stack = OperandStack::with_max_size(4);
+        stack.push_int(1)?;
+        stack.push_int(2)?;
+        stack.push_int(3)?;
+        stack.push_int(4)?;
+        let values = stack.drain_last(2);
+        assert_eq!(values.len(), 2);
+        assert_eq!(values[0], Value::Int(3));
+        assert_eq!(values[1], Value::Int(4));
+        Ok(())
+    }
 
     #[test]
     fn test_can_push_and_pop_values() -> Result<()> {
