@@ -6,7 +6,7 @@ use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 use ristretto_classfile::BaseType;
 use ristretto_classfile::attributes::ArrayType;
-use ristretto_classloader::{ConcurrentVec, Reference};
+use ristretto_classloader::Reference;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.newarray>
 #[inline]
@@ -43,7 +43,7 @@ pub(crate) async fn anewarray(
     let class = thread.class(array_class_name.as_str()).await?;
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
-    let array = Reference::Array(class, ConcurrentVec::from(vec![None; count]));
+    let array = Reference::from((class, vec![None; count]));
     stack.push_object(Some(array))?;
     Ok(Continue)
 }
@@ -105,7 +105,7 @@ pub(crate) async fn multianewarray(
     } else {
         type_class_name = format!("[L{type_class_name};");
         let type_class = thread.class(type_class_name.as_str()).await?;
-        Reference::Array(type_class, ConcurrentVec::from(vec![None; count]))
+        Reference::from((type_class, vec![None; count]))
     };
 
     for _ in 1..dimensions {
@@ -117,7 +117,7 @@ pub(crate) async fn multianewarray(
         for _ in 0..count {
             array_values.push(Some(array.clone()));
         }
-        array = Reference::Array(type_class, ConcurrentVec::from(array_values));
+        array = Reference::from((type_class, array_values));
     }
 
     stack.push_object(Some(array))?;

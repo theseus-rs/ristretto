@@ -6,7 +6,7 @@ use crate::native_methods::registry::{JAVA_17, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
-use ristretto_classloader::{ConcurrentVec, Reference, Value};
+use ristretto_classloader::{Reference, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -90,8 +90,8 @@ async fn platform_properties(
     push_property(system_properties, &mut properties, "user.home")?;
     push_property(system_properties, &mut properties, "user.name")?;
 
-    let properties = ConcurrentVec::from(properties);
-    let result = Value::Object(Some(Reference::Array(string_array_class, properties)));
+    let properties = properties;
+    let result = Value::from((string_array_class, properties));
     Ok(Some(result))
 }
 
@@ -149,7 +149,6 @@ async fn vm_properties(thread: Arc<Thread>, _parameters: Parameters) -> Result<O
     }
 
     let string_array_class = thread.class("[Ljava/lang/String;").await?;
-    let properties = ConcurrentVec::from(properties);
-    let result = Value::Object(Some(Reference::Array(string_array_class, properties)));
+    let result = Value::from((string_array_class, properties));
     Ok(Some(result))
 }

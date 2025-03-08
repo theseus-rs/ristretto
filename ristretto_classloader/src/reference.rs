@@ -174,16 +174,15 @@ impl Reference {
             Reference::DoubleArray(value) => Reference::DoubleArray(value.deep_clone()?),
             Reference::Array(class, value) => {
                 let values = value.to_vec()?;
-                let array: ConcurrentVec<Option<Reference>> =
-                    ConcurrentVec::with_capacity(values.len());
+                let mut cloned_values = Vec::with_capacity(values.len());
                 for value in values {
                     if let Some(reference) = value {
-                        array.push(Some(reference.deep_clone()?))?;
+                        cloned_values.push(Value::from(reference.deep_clone()?));
                     } else {
-                        array.push(None)?;
+                        cloned_values.push(Value::Object(None));
                     }
                 }
-                Reference::Array(class.clone(), array)
+                Reference::try_from((class.clone(), cloned_values))?
             }
             Reference::Object(value) => Reference::Object(value.deep_clone()?),
         };
@@ -871,7 +870,7 @@ mod tests {
     #[test]
     fn test_display_reference_array() -> Result<()> {
         let class = Class::new_named("[Ljava/lang/Object;")?;
-        let reference = Reference::Array(class, ConcurrentVec::from(vec![None]));
+        let reference = Reference::from((class, vec![None]));
         assert_eq!(reference.class_name(), "[Ljava/lang/Object;");
         assert_eq!(reference.class()?.name(), "[Ljava/lang/Object;");
         assert_eq!(reference.to_string(), "java/lang/Object[1]");
@@ -1125,7 +1124,7 @@ mod tests {
     #[test]
     fn test_clone_reference_array() -> Result<()> {
         let class = minimum_class()?;
-        let reference = Reference::Array(class.clone(), ConcurrentVec::from(vec![None]));
+        let reference = Reference::from((class.clone(), vec![None]));
         let clone = reference.clone();
         assert_eq!(reference, clone);
 
@@ -1140,7 +1139,7 @@ mod tests {
     #[test]
     fn test_deep_clone_reference_array() -> Result<()> {
         let class = minimum_class()?;
-        let reference = Reference::Array(class.clone(), ConcurrentVec::from(vec![None]));
+        let reference = Reference::from((class.clone(), vec![None]));
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
 
@@ -1191,8 +1190,8 @@ mod tests {
     #[test]
     fn test_array_eq() -> Result<()> {
         let class = minimum_class()?;
-        let ref1 = Reference::Array(class.clone(), ConcurrentVec::from(vec![]));
-        let ref2 = Reference::Array(class, ConcurrentVec::from(vec![]));
+        let ref1 = Reference::from((class.clone(), vec![]));
+        let ref2 = Reference::from((class, vec![]));
         assert_eq!(ref1, ref2);
         Ok(())
     }
@@ -1200,9 +1199,9 @@ mod tests {
     #[test]
     fn test_array_eq_class_ne() -> Result<()> {
         let minimum_class = minimum_class()?;
-        let ref1 = Reference::Array(minimum_class, ConcurrentVec::from(vec![]));
+        let ref1 = Reference::from((minimum_class, vec![]));
         let simple_class = simple_class()?;
-        let ref2 = Reference::Array(simple_class, ConcurrentVec::from(vec![]));
+        let ref2 = Reference::from((simple_class, vec![]));
         assert_ne!(ref1, ref2);
         Ok(())
     }
@@ -1210,8 +1209,8 @@ mod tests {
     #[test]
     fn test_array_eq_value_ne() -> Result<()> {
         let minimum_class = minimum_class()?;
-        let ref1 = Reference::Array(minimum_class.clone(), ConcurrentVec::from(vec![]));
-        let ref2 = Reference::Array(minimum_class, ConcurrentVec::from(vec![None]));
+        let ref1 = Reference::from((minimum_class.clone(), vec![]));
+        let ref2 = Reference::from((minimum_class, vec![None]));
         assert_ne!(ref1, ref2);
         Ok(())
     }

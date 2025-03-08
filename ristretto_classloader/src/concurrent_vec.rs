@@ -13,13 +13,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Create a new concurrent vector.
     #[must_use]
     pub fn new() -> Self {
-        Self::with_capacity(0)
-    }
-
-    /// Create a new concurrent vector with the defined capacity.
-    #[must_use]
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self::from(Vec::with_capacity(capacity))
+        Self::from(Vec::new())
     }
 
     /// Create a new concurrent vector from a vector.
@@ -288,15 +282,6 @@ mod tests {
         assert!(!vec.is_empty()?);
         vec.push(3)?;
         assert!(!vec.is_empty()?);
-        Ok(())
-    }
-
-    #[test]
-    fn test_capacity() -> Result<()> {
-        let vec: ConcurrentVec<u8> = ConcurrentVec::new();
-        assert_eq!(vec.capacity()?, 0);
-        let vec: ConcurrentVec<u8> = ConcurrentVec::with_capacity(10);
-        assert_eq!(vec.capacity()?, 10);
         Ok(())
     }
 

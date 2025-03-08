@@ -3,7 +3,7 @@ use crate::native_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
-use ristretto_classloader::{ConcurrentVec, Object, Reference, Value};
+use ristretto_classloader::{Object, Reference, Value};
 use std::sync::Arc;
 
 const CLASS_NAME: &str = "java/lang/reflect/Array";
@@ -150,7 +150,7 @@ async fn new_array(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Op
         _ => {
             let class_name = format!("[L{class_name};");
             let class = thread.class(&class_name).await?;
-            Reference::Array(class, ConcurrentVec::from(vec![None; length]))
+            Reference::from((class, vec![None; length]))
         }
     };
 

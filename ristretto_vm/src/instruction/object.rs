@@ -455,7 +455,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![42i32]);
-        let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
+        let array = Reference::from((class, vec![Some(object.clone())]));
         stack.push_object(Some(array))?;
         stack.push_int(0)?;
         let result = aaload(stack)?;
@@ -487,7 +487,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![42i32]);
-        let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
+        let array = Reference::from((class, vec![Some(object.clone())]));
         stack.push_object(Some(array))?;
         stack.push_int(2)?;
         let result = aaload(stack);
@@ -515,7 +515,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(3);
         let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![3i32]);
-        let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object)]));
+        let array = Reference::from((class, vec![Some(object)]));
         stack.push_object(Some(array))?;
         stack.push_int(0)?;
         stack.push_object(Some(Reference::from(vec![3i32])))?;
@@ -548,7 +548,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(3);
         let class = thread.class("java/lang/Object").await?;
         let object = Reference::from(vec![3i32]);
-        let array = Reference::Array(class, ConcurrentVec::from(vec![Some(object.clone())]));
+        let array = Reference::from((class, vec![Some(object.clone())]));
         stack.push_object(Some(array))?;
         stack.push_int(2)?;
         stack.push_object(Some(object))?;

@@ -172,7 +172,7 @@ impl Display for OperandStack {
 mod tests {
     use super::*;
     use crate::operand_stack::OperandStack;
-    use ristretto_classloader::{ConcurrentVec, Reference};
+    use ristretto_classloader::Reference;
 
     #[test]
     fn test_drain_last() -> Result<()> {
@@ -294,7 +294,7 @@ mod tests {
     #[test]
     fn test_pop_object() -> Result<()> {
         let mut stack = OperandStack::with_max_size(2);
-        let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i8]);
         stack.push_object(None)?;
         stack.push_object(Some(object.clone()))?;
         assert_eq!(stack.pop_object()?, Some(object));
