@@ -8,7 +8,7 @@ use dashmap::DashMap;
 use ristretto_classfile::{JAVA_PREVIEW_MINOR_VERSION, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
-    Class, ClassLoader, ClassPath, ClassPathEntry, ConcurrentVec, Object, Reference, Value, runtime,
+    Class, ClassLoader, ClassPath, ClassPathEntry, Object, Reference, Value, runtime,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -370,19 +370,12 @@ impl VM {
         let mut string_parameters = Vec::new();
         for parameter in parameters {
             let parameter = parameter.as_ref();
-            let Value::Object(value) = parameter.to_object(self).await? else {
-                return Err(InternalError(format!(
-                    "Failed to create string for parameter {parameter}"
-                )));
-            };
+            let value = parameter.to_object(self).await?;
             string_parameters.push(value);
         }
 
         let string_array_class = self.class("[Ljava/lang/String;").await?;
-        let string_parameter = Value::Object(Some(Reference::Array(
-            string_array_class,
-            ConcurrentVec::from(string_parameters),
-        )));
+        let string_parameter = Value::try_from((string_array_class, string_parameters))?;
 
         self.invoke(
             main_class_name,

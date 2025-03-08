@@ -506,8 +506,7 @@ impl TryInto<Arc<Class>> for Object {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Reference::IntArray;
-    use crate::{ConcurrentVec, runtime};
+    use crate::runtime;
 
     async fn java8_string_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) =
@@ -940,7 +939,7 @@ mod tests {
     async fn test_try_into_string_java8_invalid_byte_array_value() -> Result<()> {
         let class = java8_string_class().await?;
         let object = Object::new(class)?;
-        let string_value = Value::Object(Some(IntArray(ConcurrentVec::from(vec![]))));
+        let string_value = Value::from(Vec::<i32>::new());
         object.set_value("value", string_value)?;
         let result: Result<String> = object.try_into();
         assert!(matches!(result, Err(InvalidValueType(_))));
@@ -981,7 +980,7 @@ mod tests {
     async fn test_try_into_string_invalid_char_array_value() -> Result<()> {
         let class = string_class().await?;
         let object = Object::new(class)?;
-        let string_value = Value::Object(Some(IntArray(ConcurrentVec::from(vec![]))));
+        let string_value = Value::from(Vec::<i32>::new());
         object.set_value("value", string_value)?;
         let result: Result<String> = object.try_into();
         assert!(matches!(result, Err(InvalidValueType(_))));

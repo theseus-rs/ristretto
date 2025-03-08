@@ -6,7 +6,7 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use bitflags::bitflags;
-use ristretto_classloader::{ConcurrentVec, Reference, Value};
+use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;
 
 const CLASS_NAME: &str = "sun/nio/fs/UnixNativeDispatcher";
@@ -316,9 +316,8 @@ async fn getcwd(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<
         .to_vec()
         .iter()
         .map(|&b| b as i8)
-        .collect();
-    let current_dir_vec = ConcurrentVec::from(current_dir);
-    let current_dir_bytes = Reference::ByteArray(current_dir_vec);
+        .collect::<Vec<i8>>();
+    let current_dir_bytes = Reference::from(current_dir);
     Ok(Some(Value::Object(Some(current_dir_bytes))))
 }
 

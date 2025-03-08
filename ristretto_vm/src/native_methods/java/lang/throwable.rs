@@ -5,7 +5,7 @@ use crate::native_methods::registry::{JAVA_8, JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
-use ristretto_classloader::{ConcurrentVec, Object, Reference, Value};
+use ristretto_classloader::{Object, Reference, Value};
 use std::sync::Arc;
 
 const CLASS_NAME: &str = "java/lang/Throwable";
@@ -48,7 +48,7 @@ async fn fill_in_stack_trace(
 
     let vm = thread.vm()?;
     let stack_element_class = thread.class("java/lang/StackTraceElement").await?;
-    let stack_elements = ConcurrentVec::new();
+    let mut stack_elements = Vec::new();
     for frame in thread.frames().await?.iter().rev() {
         let class = frame.class();
         let class_name = class.name();
@@ -72,17 +72,14 @@ async fn fill_in_stack_trace(
         let line_number = method.line_number(program_counter);
         stack_element_object.set_value("lineNumber", Value::Int(i32::try_from(line_number)?))?;
 
-        stack_elements.push(Some(Reference::Object(stack_element_object)))?;
+        stack_elements.push(Value::from(stack_element_object));
     }
 
-    let depth = i32::try_from(stack_elements.len()?)?;
+    let depth = i32::try_from(stack_elements.len())?;
     let stack_element_array_class = thread
         .class(format!("[L{stack_element_class};").as_str())
         .await?;
-    let stack_trace = Value::Object(Some(Reference::Array(
-        stack_element_array_class,
-        stack_elements,
-    )));
+    let stack_trace = Value::try_from((stack_element_array_class, stack_elements))?;
     throwable.set_value("backtrace", stack_trace)?;
 
     if vm.java_major_version() >= JAVA_11 {

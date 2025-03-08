@@ -170,7 +170,7 @@ impl Display for Parameters {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ristretto_classloader::{ConcurrentVec, Reference};
+    use ristretto_classloader::Reference;
 
     #[test]
     fn test_can_push_and_pop_values() -> Result<()> {
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_pop_reference() -> Result<()> {
         let mut parameters = Parameters::default();
-        let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i8]);
         parameters.push_reference(None);
         parameters.push_reference(Some(object.clone()));
         assert_eq!(parameters.pop_reference()?, Some(object));
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn test_pop_object() -> Result<()> {
         let mut parameters = Parameters::default();
-        let object = Reference::ByteArray(ConcurrentVec::from(vec![42]));
+        let object = Reference::from(vec![42i8]);
         parameters.push_reference(None);
         parameters.push_reference(Some(object.clone()));
         assert_eq!(parameters.pop_reference()?, Some(object));

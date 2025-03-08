@@ -6,7 +6,7 @@ use crate::thread::Thread;
 use crate::{JavaObject, Result};
 use async_recursion::async_recursion;
 use ristretto_classfile::Constant;
-use ristretto_classloader::{ConcurrentVec, Method, Object, Reference, Value};
+use ristretto_classloader::{Method, Object, Reference, Value};
 use std::sync::Arc;
 
 const CLASS_NAME: &str = "jdk/internal/reflect/ConstantPool";
@@ -300,8 +300,8 @@ pub(crate) async fn get_member_ref_info_at_0(
     let descriptor = constant_pool.try_get_utf8(*type_index)?;
     let descriptor = descriptor.to_object(&vm).await?.to_reference()?;
     let string_class = thread.class("java/lang/String").await?;
-    let string_array = ConcurrentVec::from(vec![class_name, name, descriptor]);
-    let results = Reference::Array(string_class, string_array);
+    let string_array = vec![class_name, name, descriptor];
+    let results = Reference::from((string_class, string_array));
     Ok(Some(Value::from(results)))
 }
 
@@ -448,8 +448,8 @@ async fn get_name_and_type_ref_info_at_0(
     let descriptor = constant_pool.try_get_utf8(*type_index)?;
     let descriptor = descriptor.to_object(&vm).await?.to_reference()?;
     let string_class = thread.class("java/lang/String").await?;
-    let string_array = ConcurrentVec::from(vec![name, descriptor]);
-    let results = Reference::Array(string_class, string_array);
+    let string_array = vec![name, descriptor];
+    let results = Reference::from((string_class, string_array));
     Ok(Some(Value::from(results)))
 }
 

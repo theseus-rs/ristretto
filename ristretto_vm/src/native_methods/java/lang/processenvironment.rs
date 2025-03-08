@@ -4,7 +4,7 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::mutf8;
-use ristretto_classloader::{ConcurrentVec, Reference, Value};
+use ristretto_classloader::{Reference, Value};
 use std::sync::Arc;
 
 const CLASS_NAME: &str = "java/lang/ProcessEnvironment";
@@ -25,6 +25,6 @@ async fn environ(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<
     }
     let vm = thread.vm()?;
     let class = vm.class("[[B").await?;
-    let result = Reference::Array(class, ConcurrentVec::from(values));
+    let result = Reference::from((class, values));
     Ok(Some(Value::Object(Some(result))))
 }
