@@ -3,9 +3,11 @@ use crate::parameters::Parameters;
 use crate::rust_value::{RustValue, process_values};
 use crate::{Frame, Result, VM};
 use async_recursion::async_recursion;
+use byte_unit::{Byte, UnitType};
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Value};
 use std::sync::{Arc, Weak};
+use sysinfo::{Pid, ProcessRefreshKind, RefreshKind, System};
 use tokio::sync::RwLock;
 use tracing::{Level, debug, event_enabled};
 
@@ -262,7 +264,19 @@ impl Thread {
 
         if event_enabled!(Level::DEBUG) {
             let access_flags = method.access_flags();
-            debug!("execute: {class_name}.{method_name}{method_descriptor} {access_flags}");
+            let system = System::new_with_specifics(
+                RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
+            );
+
+            let pid = std::process::id() as usize;
+            let memory = if let Some(process) = system.process(Pid::from(pid)) {
+                let memory = process.memory();
+                let memory = Byte::from_u64(memory).get_appropriate_unit(UnitType::Decimal);
+                format!(" ({memory:#.3})")
+            } else {
+                String::new()
+            };
+            debug!("execute{memory}: {class_name}.{method_name}{method_descriptor} {access_flags}");
         }
 
         let method_registry = vm.method_registry();
