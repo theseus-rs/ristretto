@@ -282,9 +282,9 @@ async fn sleep(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Optio
     let millis = parameters.pop_long()?;
     let millis = u64::try_from(millis)?;
     let duration = Duration::from_millis(millis);
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     tokio::time::sleep(duration).await;
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     std::thread::sleep(duration);
     Ok(None)
 }
@@ -299,9 +299,9 @@ async fn sleep_nanos_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Resu
     let nanos = parameters.pop_long()?;
     let nanos = u64::try_from(nanos)?;
     let duration = Duration::from_nanos(nanos);
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     tokio::time::sleep(duration).await;
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     std::thread::sleep(duration);
     Ok(None)
 }
@@ -326,9 +326,9 @@ async fn suspend_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Opti
 
 #[async_recursion(?Send)]
 async fn r#yield(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     tokio::task::yield_now().await;
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     std::thread::yield_now();
     Ok(None)
 }
