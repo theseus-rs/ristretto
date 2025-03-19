@@ -25,20 +25,20 @@ tracing = { workspace = true }
 walkdir = { workspace = true }
 zip = { workspace = true }
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
+[target.'cfg(target_family = "wasm")'.dependencies]
 tokio = { workspace = true }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
 tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
 criterion = { workspace = true }
 indoc = { workspace = true }
 
-[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+[target.'cfg(target_family = "wasm")'.dev-dependencies]
 tokio = { workspace = true }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]

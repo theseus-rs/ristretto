@@ -29,11 +29,11 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 whoami = { workspace = true }
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
+[target.'cfg(target_family = "wasm")'.dependencies]
 getrandom = { workspace = true, features = ["wasm_js"] }
 tokio = { workspace = true }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
 getrandom = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
 

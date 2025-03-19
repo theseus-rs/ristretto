@@ -58,7 +58,7 @@ struct Cli {
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(target_family = "wasm")]
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     logging::initialize();
@@ -69,7 +69,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 #[tokio::main]
 async fn main() -> Result<()> {
     logging::initialize();

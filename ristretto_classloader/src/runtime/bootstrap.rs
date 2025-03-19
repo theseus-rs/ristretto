@@ -32,17 +32,17 @@ pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, 
     // property (e.g. 21.0.5).
     let java_version = if version_file.exists() {
         let version_file = java_home.join("version.txt");
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(target_family = "wasm")]
         let java_version = std::fs::read_to_string(version_file)?;
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(not(target_family = "wasm"))]
         let java_version = tokio::fs::read_to_string(version_file).await?;
         java_version.trim().to_string()
     } else {
         let release_file = java_home.join("release");
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(target_family = "wasm")]
         let release = std::fs::read_to_string(release_file)?;
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(not(target_family = "wasm"))]
         let release = tokio::fs::read_to_string(release_file).await?;
 
         let Some(java_version_line) = release
@@ -73,9 +73,9 @@ pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, 
 pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, ClassLoader)> {
     let current_dir = env::current_dir().unwrap_or_default();
 
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     let home_dir = current_dir;
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     let home_dir = {
         #[expect(deprecated)]
         env::home_dir().unwrap_or(current_dir)
@@ -138,9 +138,9 @@ async fn extract_archive(
     archive: &Vec<u8>,
     out_dir: &PathBuf,
 ) -> Result<PathBuf> {
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     std::fs::create_dir_all(out_dir)?;
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     tokio::fs::create_dir_all(out_dir).await?;
 
     let Some(extension) = file_name.split('.').last() else {
@@ -165,7 +165,7 @@ async fn extract_archive(
         tar.unpack(extract_dir.clone())?;
     };
 
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     let runtime_dir = {
         let mut entries = std::fs::read_dir(&extract_dir)?;
         let Some(runtime_dir) = entries.next() else {
@@ -175,7 +175,7 @@ async fn extract_archive(
         };
         runtime_dir?
     };
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     let runtime_dir = {
         let mut entries = tokio::fs::read_dir(&extract_dir).await?;
         let Some(runtime_dir) = entries.next_entry().await? else {
@@ -192,9 +192,9 @@ async fn extract_archive(
     // Rename the runtime directory to the installation directory. Another process may have
     // already installed the runtime, so we need to check if the installation directory exists.
     // If it does, we can ignore the error.
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     let rename_result = std::fs::rename(runtime_dir.clone(), installation_dir.clone());
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     let rename_result = tokio::fs::rename(runtime_dir.clone(), installation_dir.clone()).await;
 
     if let Err(error) = rename_result {
@@ -208,9 +208,9 @@ async fn extract_archive(
         }
     }
 
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     std::fs::remove_dir_all(&extract_dir)?;
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     tokio::fs::remove_dir_all(&extract_dir).await?;
 
     debug!(
