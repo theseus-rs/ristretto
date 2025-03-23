@@ -47,14 +47,14 @@ stacker = "0.1.20"
 sysinfo = "0.33.1"
 sys-locale = "0.3.2"
 tar = "0.4.44"
-tempfile = "3.19.0"
+tempfile = "3.19.1"
 thiserror = "2.0.12"
 tokio = { version = "1.44.1", default-features = false, features = ["macros", "rt", "sync"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 walkdir = "2.5.0"
 whoami = "1.5.2"
-zip = { version = "2.4.1", default-features = false, features = ["deflate"] }
+zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
 
 [workspace.metadata.release]
 shared-version = true
