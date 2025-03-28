@@ -35,8 +35,7 @@ async fn available_processors(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let sys = System::new_all();
-    let cpus = sys.physical_core_count().unwrap_or(1);
+    let cpus = System::physical_core_count().unwrap_or(1);
     let cpus = i32::try_from(cpus)?;
     Ok(Some(Value::Int(cpus)))
 }
