@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/v0.14.0...v0.15.0) - 2025-03-29
+
+### Added
+- add memory usage in debug output
+- optimize obtaining invoke parameters from the stack
+
+### Fixed
+- remove unnecessary Reference.class_name() string
+
+### Other
+- correct wasm build configuration
+- update Cargo.toml dependencies
+- encapsulate use of ConcurrentVec
+- correct sysinfo physical_core_count() call
+
+## `ristretto_vm` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.14.0...ristretto_vm-v0.15.0) - 2025-03-29
+
+### Added
+- add memory usage in debug output
+- optimize obtaining invoke parameters from the stack
+
+### Fixed
+- remove unnecessary Reference.class_name() string
+
+### Other
+- correct sysinfo physical_core_count() call
+- correct wasm build configuration
+- encapsulate use of ConcurrentVec
+
+## `ristretto_classloader` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.14.0...ristretto_classloader-v0.15.0) - 2025-03-29
+
+### Fixed
+- remove unnecessary Reference.class_name() string
+
+### Other
+- correct wasm build configuration
+- encapsulate use of ConcurrentVec
+
+## `ristretto_classfile` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.14.0...ristretto_classfile-v0.15.0) - 2025-03-29
+
+### Other
+- update Cargo.toml dependencies
+
 ## `ristretto_cli` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/v0.13.1...v0.14.0) - 2025-03-04
 
 ### Added
