@@ -2,9 +2,11 @@ use crate::Error::SerdeError;
 use crate::Result;
 use indexmap::IndexMap;
 use serde::de::{self, Visitor};
+use serde::ser::Error;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::fmt::Display;
+use std::fmt::Write as _;
 use std::str::FromStr;
 
 pub const MANIFEST_VERSION: &str = "Manifest-Version";
@@ -48,14 +50,14 @@ impl Serialize for Manifest {
 
         // Serialize main attributes
         for (key, value) in &self.attributes {
-            result.push_str(&format!("{key}: {value}\n"));
+            writeln!(result, "{key}: {value}").map_err(Error::custom)?;
         }
 
         // Serialize sections
         for (section, attributes) in &self.sections {
-            result.push_str(&format!("\nName: {section}\n"));
+            writeln!(result, "\nName: {section}").map_err(Error::custom)?;
             for (key, value) in attributes {
-                result.push_str(&format!("{key}: {value}\n"));
+                writeln!(result, "{key}: {value}").map_err(Error::custom)?;
             }
         }
 

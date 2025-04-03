@@ -167,7 +167,7 @@ fn verify_constant_indexes(class_file: &ClassFile) -> Result<()> {
                     _ => return Err(InvalidConstantPoolIndexType(index)),
                 }
             }
-            _ => continue,
+            _ => {}
         }
     }
 

@@ -53,7 +53,7 @@ pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, 
         };
         java_version_line
             .split('=')
-            .last()
+            .next_back()
             .unwrap_or_default()
             .replace('"', "")
     };
@@ -143,7 +143,7 @@ async fn extract_archive(
     #[cfg(not(target_family = "wasm"))]
     tokio::fs::create_dir_all(out_dir).await?;
 
-    let Some(extension) = file_name.split('.').last() else {
+    let Some(extension) = file_name.split('.').next_back() else {
         return Err(Error::ArchiveError(
             "No extension found in file name".to_string(),
         ));
@@ -163,7 +163,7 @@ async fn extract_archive(
         let decoder = GzDecoder::new(archive);
         let mut tar = Archive::new(decoder);
         tar.unpack(extract_dir.clone())?;
-    };
+    }
 
     #[cfg(target_family = "wasm")]
     let runtime_dir = {

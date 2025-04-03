@@ -106,7 +106,7 @@ impl Class {
     /// Get the raw component name for an array class.
     #[must_use]
     pub fn array_component_type(&self) -> &str {
-        let mut component_type = self.name.split('[').last().unwrap_or_default();
+        let mut component_type = self.name.split('[').next_back().unwrap_or_default();
         if component_type.ends_with(';') {
             component_type = component_type
                 .strip_prefix('L')
