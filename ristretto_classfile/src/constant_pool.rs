@@ -51,10 +51,7 @@ impl ConstantPool {
     /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
     #[must_use]
     pub fn get(&self, index: u16) -> Option<&Constant> {
-        match self.try_get(index) {
-            Ok(constant) => Some(constant),
-            Err(_) => None,
-        }
+        self.try_get(index).ok()
     }
 
     /// Get a constant from the pool by index; indexes are 1-based.
@@ -753,7 +750,7 @@ impl fmt::Display for ConstantPool {
                     let (name, value) = value.split_once(' ').unwrap_or_default();
                     writeln!(f, "{:>5} = {name:<18} {value}", format!("#{index}"))?;
                 }
-                ConstantEntry::Placeholder => continue,
+                ConstantEntry::Placeholder => {}
             }
         }
         Ok(())

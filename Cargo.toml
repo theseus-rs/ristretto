@@ -21,7 +21,7 @@ edition = "2024"
 keywords = ["java", "jvm"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/theseus-rs/ristretto"
-rust-version = "1.85.0"
+rust-version = "1.86.0"
 version = "0.14.0"
 
 [workspace.dependencies]

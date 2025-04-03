@@ -16,7 +16,7 @@ pub fn verify(class_file: &ClassFile) -> Result<()> {
     if access_flags.contains(ClassAccessFlags::INTERFACE) {
         if !access_flags.contains(ClassAccessFlags::ABSTRACT) {
             let full_class_name = class_file.class_name()?;
-            let class_name = full_class_name.split('/').last().unwrap_or_default();
+            let class_name = full_class_name.split('/').next_back().unwrap_or_default();
             if class_name != "package-info" {
                 return Err(InvalidClassAccessFlags(access_flags.bits()));
             }
