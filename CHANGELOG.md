@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/v0.15.0...v0.16.0) - 2025-04-04
+
+### Added
+- add MaxLocals trait for calculating method max_locals values
+
+### Other
+- update Cargo.lock dependencies
+- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(&ConstantPool) to more accurately calcalate the maximum stack size
+
+## `ristretto_vm` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.15.0...ristretto_vm-v0.16.0) - 2025-04-04
+
+### Other
+- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(&ConstantPool) to more accurately calcalate the maximum stack size
+
+## `ristretto_classloader` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.15.0...ristretto_classloader-v0.16.0) - 2025-04-04
+
+### Other
+- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(&ConstantPool) to more accurately calcalate the maximum stack size
+
+## `ristretto_classfile` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.15.0...ristretto_classfile-v0.16.0) - 2025-04-04
+
+### Added
+- add MaxLocals trait for calculating method max_locals values
+
+### Other
+- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(&ConstantPool) to more accurately calcalate the maximum stack size
+
 ## `ristretto_cli` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/v0.14.0...v0.15.0) - 2025-04-04
 
 ### Added
