@@ -1,4 +1,4 @@
-<p align="center"><img width="250" height="250" src="images/logo.jpeg"></p>
+<p align="center"><img width="250" height="250" src="images/logo.svg"></p>
 
 # Ristretto
 
