@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of `InnerClass`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.6>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.6>
 #[derive(Clone, Debug, PartialEq)]
 pub struct InnerClass {
     pub class_info_index: u16,

@@ -5,7 +5,7 @@ use crate::{Error, Result, VM};
 use ristretto_classloader::{Object, Reference};
 use std::sync::Arc;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.athrow>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.athrow>
 #[inline]
 pub(crate) async fn athrow(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let Some(Reference::Object(throwable)) = stack.pop_object()? else {
@@ -18,8 +18,8 @@ pub(crate) async fn athrow(stack: &mut OperandStack) -> Result<ExecutionResult> 
 /// Process the throwable and return the next instruction to execute; if there is no exception
 /// handler, the exception is returned as an error.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.3>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.athrow>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.athrow>
 pub(crate) async fn process_throwable(
     frame: &Frame,
     stack: &mut OperandStack,
@@ -41,8 +41,8 @@ pub(crate) async fn process_throwable(
 
         // If the catch_type is 0, the exception handler matches any exception.
         // This is used to implement finally blocks.
-        // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.3
-        // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-3.html#jvms-3.13
+        // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3
+        // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-3.html#jvms-3.13
         let matching_exception_handler = if exception_table_entry.catch_type == 0 {
             true
         } else {

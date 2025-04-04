@@ -7,7 +7,7 @@ use std::io::Cursor;
 
 /// Implementation of `AnnotationElement`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.16>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.16>
 #[derive(Clone, Debug, PartialEq)]
 pub enum AnnotationElement {
     Byte {

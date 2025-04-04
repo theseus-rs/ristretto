@@ -177,7 +177,7 @@ impl Method {
     /// Parse the method descriptor. The descriptor is a string representing the method signature.
     /// The descriptor has the following format:
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.3.3>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.3.3>
     ///
     /// # Errors
     /// if the descriptor cannot be parsed

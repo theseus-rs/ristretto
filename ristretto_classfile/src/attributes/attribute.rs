@@ -34,15 +34,15 @@ const VERSION_61_0: Version = Version::Java17 { minor: 0 };
 
 /// Attribute.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7>
 #[derive(Clone, Debug, PartialEq)]
 pub enum Attribute {
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.2>
     ConstantValue {
         name_index: u16,
         constant_value_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.3>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3>
     Code {
         name_index: u16,
         max_stack: u16,
@@ -51,107 +51,107 @@ pub enum Attribute {
         exception_table: Vec<ExceptionTableEntry>,
         attributes: Vec<Attribute>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.4>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.4>
     StackMapTable {
         name_index: u16,
         frames: Vec<StackFrame>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.5>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.5>
     Exceptions {
         name_index: u16,
         exception_indexes: Vec<u16>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.6>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.6>
     InnerClasses {
         name_index: u16,
         classes: Vec<InnerClass>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.7>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.7>
     EnclosingMethod {
         name_index: u16,
         class_index: u16,
         method_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.8>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.8>
     Synthetic { name_index: u16 },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.9>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.9>
     Signature {
         name_index: u16,
         signature_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.10>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.10>
     SourceFile {
         name_index: u16,
         source_file_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.11>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.11>
     SourceDebugExtension {
         name_index: u16,
         debug_extension: String,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.12>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.12>
     LineNumberTable {
         name_index: u16,
         line_numbers: Vec<LineNumber>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.13>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.13>
     LocalVariableTable {
         name_index: u16,
         variables: Vec<LocalVariableTable>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.14>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.14>
     LocalVariableTypeTable {
         name_index: u16,
         variable_types: Vec<LocalVariableTypeTable>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.15>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.15>
     Deprecated { name_index: u16 },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.16>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.16>
     RuntimeVisibleAnnotations {
         name_index: u16,
         annotations: Vec<Annotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.17>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.17>
     RuntimeInvisibleAnnotations {
         name_index: u16,
         annotations: Vec<Annotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.18>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.18>
     RuntimeVisibleParameterAnnotations {
         name_index: u16,
         parameter_annotations: Vec<ParameterAnnotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.19>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.19>
     RuntimeInvisibleParameterAnnotations {
         name_index: u16,
         parameter_annotations: Vec<ParameterAnnotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.20>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.20>
     RuntimeVisibleTypeAnnotations {
         name_index: u16,
         type_annotations: Vec<TypeAnnotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.21>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.21>
     RuntimeInvisibleTypeAnnotations {
         name_index: u16,
         type_annotations: Vec<TypeAnnotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.22>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.22>
     AnnotationDefault {
         name_index: u16,
         element: AnnotationElement,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.23>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.23>
     BootstrapMethods {
         name_index: u16,
         methods: Vec<BootstrapMethod>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.24>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.24>
     MethodParameters {
         name_index: u16,
         parameters: Vec<MethodParameter>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.25>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.25>
     Module {
         name_index: u16,
         module_name_index: u16,
@@ -163,32 +163,32 @@ pub enum Attribute {
         uses: Vec<u16>,
         provides: Vec<Provides>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.26>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.26>
     ModulePackages {
         name_index: u16,
         package_indexes: Vec<u16>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.27>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.27>
     ModuleMainClass {
         name_index: u16,
         main_class_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.28>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.28>
     NestHost {
         name_index: u16,
         host_class_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.29>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.29>
     NestMembers {
         name_index: u16,
         class_indexes: Vec<u16>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.30>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.30>
     Record {
         name_index: u16,
         records: Vec<Record>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.31>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.31>
     PermittedSubclasses {
         name_index: u16,
         class_indexes: Vec<u16>,

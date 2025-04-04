@@ -7,7 +7,7 @@
 //!
 //! ## Getting Started
 //!
-//! Implementation of the [JVM Class File Format](https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html) that
+//! Implementation of the [JVM Class File Format](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html) that
 //! is used to read, write and verify Java classes.
 //!
 //! Supports reading and writing class files for any version of Java version up to 25. Verification

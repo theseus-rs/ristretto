@@ -8,7 +8,7 @@ pub const JAVA_PREVIEW_MINOR_VERSION: u16 = 65535;
 
 /// Implementation of Version based on `ClassFile` format for major/minor versions.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.1>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1>
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum Version {
     Java1_0_2 { minor: u16 },

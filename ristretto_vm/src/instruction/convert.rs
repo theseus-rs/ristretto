@@ -3,7 +3,7 @@ use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2l>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2l>
 #[inline]
 pub(crate) fn i2l(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
@@ -11,7 +11,7 @@ pub(crate) fn i2l(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2f>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2f>
 #[inline]
 pub(crate) fn i2f(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
@@ -20,7 +20,7 @@ pub(crate) fn i2f(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2d>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2d>
 #[inline]
 pub(crate) fn i2d(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
@@ -28,7 +28,7 @@ pub(crate) fn i2d(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.l2i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.l2i>
 #[inline]
 pub(crate) fn l2i(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
@@ -37,7 +37,7 @@ pub(crate) fn l2i(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.l2f>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.l2f>
 #[inline]
 pub(crate) fn l2f(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
@@ -46,7 +46,7 @@ pub(crate) fn l2f(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.l2d>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.l2d>
 #[inline]
 pub(crate) fn l2d(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
@@ -55,7 +55,7 @@ pub(crate) fn l2d(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.f2i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.f2i>
 #[inline]
 pub(crate) fn f2i(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
@@ -64,7 +64,7 @@ pub(crate) fn f2i(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.f2l>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.f2l>
 #[inline]
 pub(crate) fn f2l(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
@@ -73,7 +73,7 @@ pub(crate) fn f2l(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.f2d>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.f2d>
 #[inline]
 pub(crate) fn f2d(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
@@ -81,7 +81,7 @@ pub(crate) fn f2d(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.d2i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.d2i>
 #[inline]
 pub(crate) fn d2i(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
@@ -90,7 +90,7 @@ pub(crate) fn d2i(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.d2l>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.d2l>
 #[inline]
 pub(crate) fn d2l(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
@@ -99,7 +99,7 @@ pub(crate) fn d2l(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.d2f>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.d2f>
 #[inline]
 pub(crate) fn d2f(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_double()?;
@@ -108,7 +108,7 @@ pub(crate) fn d2f(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2b>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2b>
 #[inline]
 pub(crate) fn i2b(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
@@ -118,7 +118,7 @@ pub(crate) fn i2b(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2c>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2c>
 #[inline]
 pub(crate) fn i2c(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
@@ -129,7 +129,7 @@ pub(crate) fn i2c(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.i2s>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2s>
 #[inline]
 pub(crate) fn i2s(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;

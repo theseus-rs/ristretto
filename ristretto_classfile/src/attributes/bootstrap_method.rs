@@ -5,7 +5,7 @@ use std::io::Cursor;
 
 /// Implementation of `BootstrapMethod`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.23>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.23>
 #[derive(Clone, Debug, PartialEq)]
 pub struct BootstrapMethod {
     pub bootstrap_method_ref: u16,

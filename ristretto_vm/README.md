@@ -10,7 +10,7 @@
 
 ## Getting Started
 
-Implementation of a [JVM](https://docs.oracle.com/javase/specs/jvms/se23/html/index.html).
+Implementation of a [JVM](https://docs.oracle.com/javase/specs/jvms/se24/html/index.html).
 
 ## Safety
 

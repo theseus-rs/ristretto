@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of `ArrayType`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.newarray>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.newarray>
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArrayType {
     Boolean,

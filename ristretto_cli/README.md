@@ -9,7 +9,7 @@
 
 ## Getting Started
 
-Command line interface for the Ristretto [JVM](https://docs.oracle.com/javase/specs/jvms/se23/html/index.html).
+Command line interface for the Ristretto [JVM](https://docs.oracle.com/javase/specs/jvms/se24/html/index.html).
 
 # Examples
 

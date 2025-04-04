@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of `Opens`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.25>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.25>
 #[derive(Clone, Debug, PartialEq)]
 pub struct Opens {
     pub index: u16,

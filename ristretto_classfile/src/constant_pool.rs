@@ -8,7 +8,7 @@ use std::{fmt, io};
 
 /// Constant pool.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4>
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConstantPool {
     constants: Vec<ConstantEntry>,
@@ -48,7 +48,7 @@ impl ConstantPool {
 
     /// Get a constant from the pool by index; indexes are 1-based.
     /// Returns None if the index is out of bounds.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
     #[must_use]
     pub fn get(&self, index: u16) -> Option<&Constant> {
         self.try_get(index).ok()
@@ -56,7 +56,7 @@ impl ConstantPool {
 
     /// Get a constant from the pool by index; indexes are 1-based.
     /// Returns an error if the index is out of bounds.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds.
@@ -133,7 +133,7 @@ impl ConstantPool {
 
     /// Get a UTF-8 constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a UTF-8 constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.7>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.7>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a UTF-8 constant.
@@ -154,7 +154,7 @@ impl ConstantPool {
 
     /// Get an integer constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not an integer constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.4>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not an integer constant.
@@ -175,7 +175,7 @@ impl ConstantPool {
 
     /// Get a float constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a float constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.4>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a float constant.
@@ -196,7 +196,7 @@ impl ConstantPool {
 
     /// Get a long constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a long constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.5>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a long constant.
@@ -217,7 +217,7 @@ impl ConstantPool {
 
     /// Get a double constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a double constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.5>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a double constant.
@@ -239,7 +239,7 @@ impl ConstantPool {
 
     /// Get a class constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a class constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.1>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.1>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a class constant.
@@ -261,7 +261,7 @@ impl ConstantPool {
 
     /// Get a string constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a string constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.3>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.3>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a string constant.
@@ -291,7 +291,7 @@ impl ConstantPool {
 
     /// Get a field constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a field constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a field constant.
@@ -324,7 +324,7 @@ impl ConstantPool {
 
     /// Get a method constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a method constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a method constant.
@@ -357,7 +357,7 @@ impl ConstantPool {
 
     /// Get an interface method constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not an interface method constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not an interface method
@@ -387,7 +387,7 @@ impl ConstantPool {
 
     /// Get a name and type constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a name and type constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a name and type
@@ -419,7 +419,7 @@ impl ConstantPool {
 
     /// Get a method handle constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a method handle constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.8>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.8>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a method handle
@@ -445,7 +445,7 @@ impl ConstantPool {
 
     /// Get a method type constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a method type constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.9>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.9>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a method type
@@ -476,7 +476,7 @@ impl ConstantPool {
 
     /// Get a dynamic constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a dynamic constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.10>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a dynamic constant.
@@ -509,7 +509,7 @@ impl ConstantPool {
 
     /// Get an invoke dynamic constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not an invoke dynamic constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.10>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not an invoke
@@ -535,7 +535,7 @@ impl ConstantPool {
 
     /// Get a module constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a module constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.11>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.11>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a module constant.
@@ -557,7 +557,7 @@ impl ConstantPool {
 
     /// Get a package constant from the pool by index; indexes are 1-based.
     /// Returns an error if the constant is not a package constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.12>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.12>
     ///
     /// # Errors
     /// Returns an error if the index is out of bounds or the constant is not a package constant.
@@ -675,7 +675,7 @@ impl Default for ConstantPool {
 
 /// All 8 byte constants (double and long) take up two entries in the constant pool; a placeholder
 /// is used to facilitate efficient indexed access of constants in the pool. See the JVM spec for:
-/// <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.5>
+/// <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
 #[derive(Clone, Debug, PartialEq)]
 enum ConstantEntry {
     Constant(Constant),

@@ -121,7 +121,7 @@ impl Field {
         //     return Err(IllegalAccessError(error));
         // }
         // Check that the value permissible for the field type
-        // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.putstatic
+        // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.putstatic
         match self.field_type {
             FieldType::Base(
                 BaseType::Boolean

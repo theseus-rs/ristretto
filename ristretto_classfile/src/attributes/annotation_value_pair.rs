@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of an annotation value pair.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.16>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.16>
 #[derive(Clone, Debug, PartialEq)]
 pub struct AnnotationValuePair {
     pub name_index: u16,

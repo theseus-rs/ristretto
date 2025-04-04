@@ -9,7 +9,7 @@ use std::io::Cursor;
 
 /// Method.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.6>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.6>
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Method {
     pub access_flags: MethodAccessFlags,

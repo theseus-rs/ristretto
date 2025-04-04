@@ -42,7 +42,7 @@ pub(crate) enum ExecutionResult {
 /// A frame stores data and partial results, performs dynamic linking, returns method values, and
 /// dispatches exceptions.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-2.html#jvms-2.6>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6>
 #[derive(Debug)]
 pub struct Frame {
     thread: Weak<Thread>,
@@ -144,7 +144,7 @@ impl Frame {
     /// The JVM specification requires that Long and Double take two places in the parameters list
     /// when passed to a method. This method adjusts the parameters list to account for this.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-2.html#jvms-2.6.1>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6.1>
     fn adjust_parameters(parameters: &mut Vec<Value>, max_size: usize) {
         let mut index = parameters.len();
         while index > 0 {

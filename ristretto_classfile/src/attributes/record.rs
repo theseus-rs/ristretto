@@ -7,7 +7,7 @@ use std::io::Cursor;
 
 /// Implementation of `Record`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.30>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.30>
 #[derive(Clone, Debug, PartialEq)]
 pub struct Record {
     pub name_index: u16,

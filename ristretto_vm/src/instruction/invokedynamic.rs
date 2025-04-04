@@ -1,7 +1,7 @@
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokedynamic>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.invokedynamic>
 #[inline]
 pub(crate) async fn invokedynamic(
     _frame: &Frame,

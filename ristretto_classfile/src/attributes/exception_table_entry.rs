@@ -9,7 +9,7 @@ use std::ops::Range;
 /// This implementation differs from the specification.  The program counter offsets represent
 /// an index into the logical code instructions instead of the physical byte offsets.   
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.3>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3>
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExceptionTableEntry {
     pub range_pc: Range<u16>,
