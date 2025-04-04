@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
 
-use ristretto_classfile::attributes::{Attribute, Instruction, LineNumber, MaxStack};
+use ristretto_classfile::attributes::{Attribute, Instruction, LineNumber, MaxLocals, MaxStack};
 use ristretto_classfile::{
     ClassAccessFlags, ClassFile, ConstantPool, MethodAccessFlags, Result, Version,
 };
@@ -49,10 +49,11 @@ fn main() -> Result<()> {
         Instruction::Return,
     ];
     let init_max_stack = init_method_code.max_stack(&constant_pool)?;
+    let init_max_locals = init_method_code.max_locals(&constant_pool, *descriptor_index)?;
     init_method.attributes.push(Attribute::Code {
         name_index: code_index,
         max_stack: init_max_stack,
-        max_locals: 1,
+        max_locals: init_max_locals,
         code: init_method_code,
         exception_table: Vec::new(),
         attributes: Vec::new(),
@@ -72,10 +73,11 @@ fn main() -> Result<()> {
         Instruction::Return,
     ];
     let main_max_stack = main_method_code.max_stack(&constant_pool)?;
+    let main_max_locals = main_method_code.max_locals(&constant_pool, main_descriptor_index)?;
     main_method.attributes.push(Attribute::Code {
         name_index: code_index,
         max_stack: main_max_stack,
-        max_locals: 1,
+        max_locals: main_max_locals,
         code: main_method_code,
         exception_table: Vec::new(),
         attributes: Vec::new(),
