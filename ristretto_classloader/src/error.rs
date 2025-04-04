@@ -25,9 +25,6 @@ pub enum Error {
     /// Illegal access attempt
     #[error("Illegal access: {0}")]
     IllegalAccessError(String),
-    /// An error occurred while parsing a method descriptor
-    #[error("Invalid method descriptor: {0}")]
-    InvalidMethodDescriptor(String),
     /// Invalid value type
     #[error("Invalid value type: {0}")]
     InvalidValueType(String),
