@@ -13,7 +13,7 @@ pub fn verify(class_file: &ClassFile) -> Result<()> {
         verify_descriptor_index(class_file, method)?;
 
         // TODO: verify instructions match method return type:
-        // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ireturn
+        // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ireturn
 
         // TODO: verify attributes
     }

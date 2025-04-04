@@ -7,7 +7,7 @@ use std::io::Cursor;
 bitflags! {
     /// Exports flags.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.25>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.25>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ExportsFlags: u16 {
         /// Indicates that this export was not explicitly or implicitly declared in the source of

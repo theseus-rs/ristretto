@@ -7,7 +7,7 @@ use tokio::sync::RwLock;
 
 /// Implementation of a Java class loader.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-5.html>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html>
 #[derive(Debug)]
 pub struct ClassLoader {
     name: String,

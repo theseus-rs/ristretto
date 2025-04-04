@@ -5,7 +5,7 @@ use std::io::Cursor;
 
 /// Implementation of `TargetPath`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.20.2>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.20.2>
 #[derive(Clone, Debug, PartialEq)]
 pub struct TargetPath {
     pub type_path_kind: u8,

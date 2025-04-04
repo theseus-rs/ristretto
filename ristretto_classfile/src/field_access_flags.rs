@@ -7,7 +7,7 @@ use std::io::Cursor;
 bitflags! {
     /// Field access flags.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.5:~:text=field_info%20structure%20are%20as%20follows%3A-,access_flags,-The%20value%20of%20the%20access_flags>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.5:~:text=field_info%20structure%20are%20as%20follows%3A-,access_flags,-The%20value%20of%20the%20access_flags>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct FieldAccessFlags: u16 {
         /// Declared public; may be accessed from outside its package.

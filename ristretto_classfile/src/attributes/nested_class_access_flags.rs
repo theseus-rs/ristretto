@@ -7,7 +7,7 @@ use std::io::Cursor;
 bitflags! {
     /// Nest class access flags.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.6-300-D.1-D.1>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.6-300-D.1-D.1>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct NestedClassAccessFlags: u16 {
         /// Declared public; may be accessed from outside its package.

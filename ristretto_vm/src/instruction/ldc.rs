@@ -7,7 +7,7 @@ use crate::operand_stack::OperandStack;
 use ristretto_classfile::Constant;
 use ristretto_classloader::Value;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ldc>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ldc>
 #[inline]
 pub(crate) async fn ldc(
     frame: &Frame,
@@ -18,7 +18,7 @@ pub(crate) async fn ldc(
     load_constant(frame, stack, index).await
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ldc_w>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ldc_w>
 #[inline]
 pub(crate) async fn ldc_w(
     frame: &Frame,
@@ -28,7 +28,7 @@ pub(crate) async fn ldc_w(
     load_constant(frame, stack, index).await
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.ldc2_w>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ldc2_w>
 #[inline]
 pub(crate) fn ldc2_w(
     frame: &Frame,

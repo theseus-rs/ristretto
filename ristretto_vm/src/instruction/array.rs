@@ -8,7 +8,7 @@ use ristretto_classfile::BaseType;
 use ristretto_classfile::attributes::ArrayType;
 use ristretto_classloader::Reference;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.newarray>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.newarray>
 #[inline]
 pub(crate) fn newarray(
     stack: &mut OperandStack,
@@ -29,7 +29,7 @@ pub(crate) fn newarray(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.anewarray>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.anewarray>
 #[inline]
 pub(crate) async fn anewarray(
     frame: &Frame,
@@ -48,7 +48,7 @@ pub(crate) async fn anewarray(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.arraylength>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.arraylength>
 #[inline]
 pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let length = match stack.pop_object()? {
@@ -72,7 +72,7 @@ pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.multianewarray>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.multianewarray>
 #[inline]
 pub(crate) async fn multianewarray(
     frame: &Frame,

@@ -7,7 +7,7 @@ use std::io::Cursor;
 bitflags! {
     /// Requires flags.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.25>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.25>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct RequiresFlags: u16 {
         /// Indicates that any module which depends on the current module, implicitly declares a

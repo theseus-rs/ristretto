@@ -18,7 +18,7 @@ enum InvocationType {
     Virtual,
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokevirtual>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.invokevirtual>
 #[inline]
 pub(crate) async fn invokevirtual(
     frame: &Frame,
@@ -79,7 +79,7 @@ fn try_get_virtual_method<S: AsRef<str>>(
     Ok(method)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokespecial>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.invokespecial>
 #[inline]
 pub(crate) async fn invokespecial(
     frame: &Frame,
@@ -151,7 +151,7 @@ fn try_get_special_method<S: AsRef<str>>(
     Ok((class, method))
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokestatic>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.invokestatic>
 #[inline]
 pub(crate) async fn invokestatic(
     frame: &Frame,
@@ -183,7 +183,7 @@ pub(crate) async fn invokestatic(
     invoke_method(&thread, stack, class, method, &InvocationType::Static).await
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.invokeinterface>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.invokeinterface>
 #[inline]
 pub(crate) async fn invokeinterface(
     frame: &Frame,

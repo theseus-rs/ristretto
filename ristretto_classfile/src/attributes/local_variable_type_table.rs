@@ -5,7 +5,7 @@ use std::io::Cursor;
 
 /// Implementation of `LocalVariableTypeTable`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.14>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.14>
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalVariableTypeTable {
     pub start_pc: u16,

@@ -8,14 +8,14 @@ use crate::{Result, Value};
 use ristretto_classloader::{Class, Object, Reference};
 use std::sync::Arc;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aconst_null>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aconst_null>
 #[inline]
 pub(crate) fn aconst_null(stack: &mut OperandStack) -> Result<ExecutionResult> {
     stack.push_object(None)?;
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aload>
 #[inline]
 pub(crate) fn aload(
     locals: &LocalVariables,
@@ -27,8 +27,8 @@ pub(crate) fn aload(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aload>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
 pub(crate) fn aload_w(
     locals: &LocalVariables,
@@ -40,7 +40,7 @@ pub(crate) fn aload_w(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
 pub(crate) fn aload_0(
     locals: &LocalVariables,
@@ -51,7 +51,7 @@ pub(crate) fn aload_0(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
 pub(crate) fn aload_1(
     locals: &LocalVariables,
@@ -62,7 +62,7 @@ pub(crate) fn aload_1(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
 pub(crate) fn aload_2(
     locals: &LocalVariables,
@@ -73,7 +73,7 @@ pub(crate) fn aload_2(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aload_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aload_n>
 #[inline]
 pub(crate) fn aload_3(
     locals: &LocalVariables,
@@ -84,7 +84,7 @@ pub(crate) fn aload_3(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.astore>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.astore>
 #[inline]
 pub(crate) fn astore(
     locals: &mut LocalVariables,
@@ -96,8 +96,8 @@ pub(crate) fn astore(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.astore>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.wide>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.astore>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
 pub(crate) fn astore_w(
     locals: &mut LocalVariables,
@@ -109,7 +109,7 @@ pub(crate) fn astore_w(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.astore_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.astore_n>
 #[inline]
 pub(crate) fn astore_0(
     locals: &mut LocalVariables,
@@ -120,7 +120,7 @@ pub(crate) fn astore_0(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.astore_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.astore_n>
 #[inline]
 pub(crate) fn astore_1(
     locals: &mut LocalVariables,
@@ -131,7 +131,7 @@ pub(crate) fn astore_1(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.astore_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.astore_n>
 #[inline]
 pub(crate) fn astore_2(
     locals: &mut LocalVariables,
@@ -142,7 +142,7 @@ pub(crate) fn astore_2(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.astore_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.astore_n>
 #[inline]
 pub(crate) fn astore_3(
     locals: &mut LocalVariables,
@@ -153,7 +153,7 @@ pub(crate) fn astore_3(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aaload>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aaload>
 #[inline]
 pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
@@ -175,7 +175,7 @@ pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     }
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aastore>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aastore>
 #[inline]
 pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
@@ -189,7 +189,7 @@ pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
                 return Err(ArrayIndexOutOfBoundsException { index, length }.into());
             };
             // TODO: validate object type is compatible with array type
-            // See: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.aastore
+            // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aastore
             array.set(index, value)?;
             Ok(Continue)
         }
@@ -200,14 +200,14 @@ pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     }
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.areturn>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.areturn>
 #[inline]
 pub(crate) fn areturn(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     Ok(Return(Some(Value::Object(value))))
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.new>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.new>
 #[inline]
 pub(crate) async fn new(
     frame: &Frame,
@@ -224,7 +224,7 @@ pub(crate) async fn new(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.checkcast>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.checkcast>
 #[inline]
 pub(crate) async fn checkcast(
     frame: &Frame,
@@ -255,7 +255,7 @@ pub(crate) async fn checkcast(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html#jvms-6.5.instanceof>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.instanceof>
 #[inline]
 pub(crate) async fn instanceof(
     frame: &Frame,

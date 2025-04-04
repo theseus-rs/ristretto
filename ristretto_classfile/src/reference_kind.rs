@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 /// Implementation of the `ReferenceKind`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-5.html#jvms-5.4.3.5>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html#jvms-5.4.3.5>
 #[derive(Clone, Debug, PartialEq)]
 pub enum ReferenceKind {
     GetField,

@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/crates/l/ristretto_classfile)](https://github.com/theseus-rs/ristretto#license)
 [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
 
-[JVM](https://docs.oracle.com/javase/specs/jvms/se23/html/) implementation with deterministic memory deallocation.
+[JVM](https://docs.oracle.com/javase/specs/jvms/se24/html/) implementation with deterministic memory deallocation.
 
 ## Getting Started
 
