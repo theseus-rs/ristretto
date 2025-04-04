@@ -43,15 +43,20 @@ fn main() -> Result<()> {
         descriptor_index: *descriptor_index,
         attributes: Vec::new(),
     };
+    let init_method_code = vec![
+        Instruction::Aload_0,
+        Instruction::Invokespecial(object_init),
+        Instruction::Return,
+    ];
+    let init_max_stack: u16 = init_method_code
+        .iter()
+        .map(Instruction::stack_utilization)
+        .sum();
     init_method.attributes.push(Attribute::Code {
         name_index: code_index,
-        max_stack: 1,
+        max_stack: init_max_stack,
         max_locals: 1,
-        code: vec![
-            Instruction::Aload_0,
-            Instruction::Invokespecial(object_init),
-            Instruction::Return,
-        ],
+        code: init_method_code,
         exception_table: Vec::new(),
         attributes: Vec::new(),
     });
@@ -63,16 +68,21 @@ fn main() -> Result<()> {
         descriptor_index: main_descriptor_index,
         attributes: Vec::new(),
     };
+    let main_method_code = vec![
+        Instruction::Getstatic(println_field),
+        Instruction::Ldc(u8::try_from(hello_world_string)?),
+        Instruction::Invokevirtual(println_method),
+        Instruction::Return,
+    ];
+    let main_max_stack: u16 = main_method_code
+        .iter()
+        .map(Instruction::stack_utilization)
+        .sum();
     main_method.attributes.push(Attribute::Code {
         name_index: code_index,
-        max_stack: 2,
+        max_stack: main_max_stack,
         max_locals: 1,
-        code: vec![
-            Instruction::Getstatic(println_field),
-            Instruction::Ldc(u8::try_from(hello_world_string)?),
-            Instruction::Invokevirtual(println_method),
-            Instruction::Return,
-        ],
+        code: main_method_code,
         exception_table: Vec::new(),
         attributes: Vec::new(),
     });
