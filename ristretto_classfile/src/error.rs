@@ -61,6 +61,9 @@ pub enum Error {
     /// Invalid method access flags
     #[error("Invalid method access flags: {0}")]
     InvalidMethodAccessFlags(u16),
+    /// An error occurred while parsing a method descriptor
+    #[error("Invalid method descriptor: {0}")]
+    InvalidMethodDescriptor(String),
     /// Error when creating a reference kind
     #[error("Invalid reference kind: {0}")]
     InvalidReferenceKind(u8),

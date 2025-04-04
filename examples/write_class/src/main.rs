@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
 
-use ristretto_classfile::attributes::{Attribute, Instruction, LineNumber};
+use ristretto_classfile::attributes::{Attribute, Instruction, LineNumber, MaxStack};
 use ristretto_classfile::{
     ClassAccessFlags, ClassFile, ConstantPool, MethodAccessFlags, Result, Version,
 };
@@ -48,10 +48,7 @@ fn main() -> Result<()> {
         Instruction::Invokespecial(object_init),
         Instruction::Return,
     ];
-    let init_max_stack: u16 = init_method_code
-        .iter()
-        .map(Instruction::stack_utilization)
-        .sum();
+    let init_max_stack = init_method_code.max_stack(&constant_pool)?;
     init_method.attributes.push(Attribute::Code {
         name_index: code_index,
         max_stack: init_max_stack,
@@ -74,10 +71,7 @@ fn main() -> Result<()> {
         Instruction::Invokevirtual(println_method),
         Instruction::Return,
     ];
-    let main_max_stack: u16 = main_method_code
-        .iter()
-        .map(Instruction::stack_utilization)
-        .sum();
+    let main_max_stack = main_method_code.max_stack(&constant_pool)?;
     main_method.attributes.push(Attribute::Code {
         name_index: code_index,
         max_stack: main_max_stack,

@@ -1,7 +1,6 @@
-use crate::Error::InvalidMethodDescriptor;
 use crate::Result;
 use ristretto_classfile::attributes::{Attribute, ExceptionTableEntry, Instruction, LineNumber};
-use ristretto_classfile::{BaseType, ClassFile, FieldType, MethodAccessFlags};
+use ristretto_classfile::{ClassFile, FieldType, MethodAccessFlags};
 use std::fmt::Display;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -62,7 +61,7 @@ impl Method {
             _ => (0, 0, Vec::new(), Vec::new(), Vec::new()),
         };
 
-        let (parameters, return_type) = Method::parse_descriptor(descriptor.as_ref())?;
+        let (parameters, return_type) = FieldType::parse_method_descriptor(descriptor.as_ref())?;
         Ok(Self {
             access_flags: definition.access_flags,
             name: name.to_string(),
@@ -173,75 +172,6 @@ impl Method {
     pub fn attributes(&self) -> &Vec<Attribute> {
         &self.attributes
     }
-
-    /// Parse the method descriptor. The descriptor is a string representing the method signature.
-    /// The descriptor has the following format:
-    ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.3.3>
-    ///
-    /// # Errors
-    /// if the descriptor cannot be parsed
-    pub fn parse_descriptor(descriptor: &str) -> Result<(Vec<FieldType>, Option<FieldType>)> {
-        let mut chars = descriptor.chars().peekable();
-        let mut parameters = Vec::new();
-        let mut return_type = None;
-
-        if chars.next() != Some('(') {
-            return Err(InvalidMethodDescriptor(descriptor.to_string()));
-        }
-
-        while let Some(&ch) = chars.peek() {
-            if ch == ')' {
-                chars.next();
-                break;
-            }
-            parameters.push(Self::parse_field_type(descriptor, &mut chars)?);
-        }
-
-        match chars.next() {
-            Some('V') => {}
-            Some(ch) => {
-                return_type = Some(Self::parse_field_type(
-                    descriptor,
-                    &mut std::iter::once(ch).chain(chars),
-                )?);
-            }
-            None => return Err(InvalidMethodDescriptor(descriptor.to_string())),
-        }
-
-        Ok((parameters, return_type))
-    }
-
-    /// Parse the field type.
-    ///
-    /// # Errors
-    /// if the field type cannot be parsed
-    fn parse_field_type<I>(descriptor: &str, chars: &mut I) -> Result<FieldType>
-    where
-        I: Iterator<Item = char>,
-    {
-        match chars.next() {
-            Some('L') => {
-                let mut class_name = String::new();
-                for ch in chars.by_ref() {
-                    if ch == ';' {
-                        break;
-                    }
-                    class_name.push(ch);
-                }
-                Ok(FieldType::Object(class_name))
-            }
-            Some('[') => {
-                let component_type = Self::parse_field_type(descriptor, chars)?;
-                Ok(FieldType::Array(Box::new(component_type)))
-            }
-            Some(value) => {
-                let base_type = BaseType::parse(value)?;
-                Ok(FieldType::Base(base_type))
-            }
-            None => Err(InvalidMethodDescriptor(descriptor.to_string())),
-        }
-    }
 }
 
 impl Display for Method {
@@ -301,103 +231,6 @@ mod tests {
         assert!(method.code.is_empty());
         assert_eq!(method.line_number(0), 0);
         Ok(())
-    }
-
-    #[test]
-    fn test_parse_descriptor() -> Result<()> {
-        let (parameters, return_type) = Method::parse_descriptor("()V")?;
-        assert!(parameters.is_empty());
-        assert_eq!(return_type, None);
-
-        let (parameters, return_type) = Method::parse_descriptor("()I")?;
-        assert!(parameters.is_empty());
-        assert_eq!(return_type, Some(FieldType::Base(BaseType::Int)));
-
-        let (parameters, return_type) = Method::parse_descriptor("(I)V")?;
-        assert_eq!(parameters, vec![FieldType::Base(BaseType::Int)]);
-        assert_eq!(return_type, None);
-
-        let (parameters, return_type) = Method::parse_descriptor("(Ljava.lang.String;)V")?;
-        assert_eq!(
-            parameters,
-            vec![FieldType::Object("java.lang.String".to_string())]
-        );
-        assert_eq!(return_type, None);
-
-        let (parameters, return_type) = Method::parse_descriptor("(Ljava.lang.String;I)V")?;
-        assert_eq!(
-            parameters,
-            vec![
-                FieldType::Object("java.lang.String".to_string()),
-                FieldType::Base(BaseType::Int)
-            ]
-        );
-        assert_eq!(return_type, None);
-
-        let (parameters, return_type) = Method::parse_descriptor("(Ljava.lang.String;I)I")?;
-        assert_eq!(
-            parameters,
-            vec![
-                FieldType::Object("java.lang.String".to_string()),
-                FieldType::Base(BaseType::Int)
-            ]
-        );
-        assert_eq!(return_type, Some(FieldType::Base(BaseType::Int)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_parse_descriptor_invalid() {
-        let descriptor = String::new();
-        assert!(matches!(
-            Method::parse_descriptor(&descriptor),
-            Err(InvalidMethodDescriptor(_))
-        ));
-
-        let descriptor = "()";
-        assert!(matches!(
-            Method::parse_descriptor(descriptor),
-            Err(InvalidMethodDescriptor(_))
-        ));
-    }
-
-    #[test]
-    fn test_parse_field_type() -> Result<()> {
-        assert_eq!(
-            Method::parse_field_type("", &mut "I".chars())?,
-            FieldType::Base(BaseType::Int)
-        );
-        assert_eq!(
-            Method::parse_field_type("", &mut "J".chars())?,
-            FieldType::Base(BaseType::Long)
-        );
-        assert_eq!(
-            Method::parse_field_type("", &mut "S".chars())?,
-            FieldType::Base(BaseType::Short)
-        );
-        assert_eq!(
-            Method::parse_field_type("", &mut "Z".chars())?,
-            FieldType::Base(BaseType::Boolean)
-        );
-        assert_eq!(
-            Method::parse_field_type("", &mut "Ljava.lang.String;".chars())?,
-            FieldType::Object("java.lang.String".to_string())
-        );
-        assert_eq!(
-            Method::parse_field_type("", &mut "[Ljava.lang.String;".chars())?,
-            FieldType::Array(Box::new(FieldType::Object("java.lang.String".to_string())))
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn test_parse_field_type_invalid() {
-        let descriptor = String::new();
-        assert!(matches!(
-            Method::parse_field_type(&descriptor, &mut descriptor.chars()),
-            Err(InvalidMethodDescriptor(_))
-        ));
     }
 
     #[test]

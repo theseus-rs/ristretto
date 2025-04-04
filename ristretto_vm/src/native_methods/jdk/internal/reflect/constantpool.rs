@@ -5,8 +5,8 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
 use async_recursion::async_recursion;
-use ristretto_classfile::Constant;
-use ristretto_classloader::{Method, Object, Reference, Value};
+use ristretto_classfile::{Constant, FieldType};
+use ristretto_classloader::{Object, Reference, Value};
 use std::sync::Arc;
 
 const CLASS_NAME: &str = "jdk/internal/reflect/ConstantPool";
@@ -325,7 +325,7 @@ pub(crate) async fn get_method_at_0(
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
 
     let mut parameters_classes = Vec::new();
-    let (parameter_types, _return_type) = Method::parse_descriptor(method_descriptor)?;
+    let (parameter_types, _return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
     for parameter_type in parameter_types {
         let parameter_type = parameter_type.class_name();
         let parameter_type = thread.class(&parameter_type).await?;
