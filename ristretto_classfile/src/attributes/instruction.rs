@@ -937,6 +937,83 @@ impl Instruction {
         Ok(delta)
     }
 
+    /// Return the locals index the instruction references. This is useful for calculating the
+    /// maximum locals size required for a method.
+    ///
+    /// # Errors
+    /// * if a data type cannot be converted
+    pub fn locals_index(&self) -> Result<Option<u16>> {
+        let index = match self {
+            Instruction::Iload(index)
+            | Instruction::Lload(index)
+            | Instruction::Fload(index)
+            | Instruction::Dload(index)
+            | Instruction::Aload(index)
+            | Instruction::Istore(index)
+            | Instruction::Lstore(index)
+            | Instruction::Fstore(index)
+            | Instruction::Dstore(index)
+            | Instruction::Astore(index)
+            | Instruction::Iinc(index, ..)
+            | Instruction::Ret(index) => Some(u16::from(*index)),
+            Instruction::Iload_0
+            | Instruction::Lload_0
+            | Instruction::Fload_0
+            | Instruction::Dload_0
+            | Instruction::Aload_0
+            | Instruction::Istore_0
+            | Instruction::Lstore_0
+            | Instruction::Fstore_0
+            | Instruction::Dstore_0
+            | Instruction::Astore_0 => Some(0),
+            Instruction::Iload_1
+            | Instruction::Lload_1
+            | Instruction::Fload_1
+            | Instruction::Dload_1
+            | Instruction::Aload_1
+            | Instruction::Istore_1
+            | Instruction::Lstore_1
+            | Instruction::Fstore_1
+            | Instruction::Dstore_1
+            | Instruction::Astore_1 => Some(1),
+            Instruction::Iload_2
+            | Instruction::Lload_2
+            | Instruction::Fload_2
+            | Instruction::Dload_2
+            | Instruction::Aload_2
+            | Instruction::Istore_2
+            | Instruction::Lstore_2
+            | Instruction::Fstore_2
+            | Instruction::Dstore_2
+            | Instruction::Astore_2 => Some(2),
+            Instruction::Iload_3
+            | Instruction::Lload_3
+            | Instruction::Fload_3
+            | Instruction::Dload_3
+            | Instruction::Aload_3
+            | Instruction::Istore_3
+            | Instruction::Lstore_3
+            | Instruction::Fstore_3
+            | Instruction::Dstore_3
+            | Instruction::Astore_3 => Some(3),
+            // Wide instructions
+            Instruction::Iload_w(index)
+            | Instruction::Lload_w(index)
+            | Instruction::Fload_w(index)
+            | Instruction::Dload_w(index)
+            | Instruction::Aload_w(index)
+            | Instruction::Istore_w(index)
+            | Instruction::Lstore_w(index)
+            | Instruction::Fstore_w(index)
+            | Instruction::Dstore_w(index)
+            | Instruction::Astore_w(index)
+            | Instruction::Iinc_w(index, ..)
+            | Instruction::Ret_w(index) => Some(*index),
+            _ => None,
+        };
+        Ok(index)
+    }
+
     /// Deserialize the `Instruction` from bytes.
     ///
     /// # Errors
@@ -1765,6 +1842,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1780,6 +1858,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1795,6 +1874,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1810,6 +1890,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1825,6 +1906,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1840,6 +1922,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1855,6 +1938,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1870,6 +1954,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1885,6 +1970,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1900,6 +1986,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1915,6 +2002,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1930,6 +2018,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1945,6 +2034,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1960,6 +2050,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1975,6 +2066,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -1990,6 +2082,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2005,6 +2098,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2020,6 +2114,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2037,6 +2132,7 @@ mod test {
             Instruction::Ldc(u8::try_from(index)?).to_formatted_string(&constant_pool)?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2054,6 +2150,7 @@ mod test {
             Instruction::Ldc_w(index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2071,6 +2168,7 @@ mod test {
             Instruction::Ldc2_w(index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2086,6 +2184,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2101,6 +2200,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2116,6 +2216,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2131,6 +2232,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2146,6 +2248,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2161,6 +2264,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(0), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2176,6 +2280,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(1), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2191,6 +2296,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(2), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2206,6 +2312,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(3), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2221,6 +2328,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(0), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2236,6 +2344,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(1), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2251,6 +2360,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(2), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2266,6 +2376,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(3), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2281,6 +2392,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(0), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2296,6 +2408,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(1), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2311,6 +2424,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(2), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2326,6 +2440,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(3), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2341,6 +2456,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(0), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2356,6 +2472,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(1), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2371,6 +2488,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(2), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2386,6 +2504,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(3), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2401,6 +2520,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(0), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2416,6 +2536,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(1), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2431,6 +2552,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(2), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2446,6 +2568,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(3), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2461,6 +2584,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2476,6 +2600,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2491,6 +2616,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2506,6 +2632,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2521,6 +2648,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2536,6 +2664,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2551,6 +2680,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2566,6 +2696,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2581,6 +2712,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2596,6 +2728,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2611,6 +2744,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2626,6 +2760,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2641,6 +2776,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2656,6 +2792,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(0), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2671,6 +2808,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(1), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2686,6 +2824,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(2), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2701,6 +2840,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(3), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2716,6 +2856,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(0), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2731,6 +2872,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(1), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2746,6 +2888,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(2), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2761,6 +2904,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(3), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2776,6 +2920,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(0), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2791,6 +2936,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(1), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2806,6 +2952,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(2), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2821,6 +2968,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(3), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2836,6 +2984,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(0), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2851,6 +3000,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(1), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2866,6 +3016,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(2), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2881,6 +3032,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(3), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2896,6 +3048,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(0), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2911,6 +3064,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(1), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2926,6 +3080,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(2), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2941,6 +3096,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(3), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2956,6 +3112,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2971,6 +3128,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -2986,6 +3144,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3001,6 +3160,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3016,6 +3176,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3031,6 +3192,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3046,6 +3208,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3061,6 +3224,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3076,6 +3240,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3091,6 +3256,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3106,6 +3272,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3121,6 +3288,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3136,6 +3304,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3151,6 +3320,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3166,6 +3336,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3181,6 +3352,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3196,6 +3368,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3211,6 +3384,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3226,6 +3400,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3241,6 +3416,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3256,6 +3432,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3271,6 +3448,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3286,6 +3464,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3301,6 +3480,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3316,6 +3496,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3331,6 +3512,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3346,6 +3528,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3361,6 +3544,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3376,6 +3560,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3391,6 +3576,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3406,6 +3592,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3421,6 +3608,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3436,6 +3624,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3451,6 +3640,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3466,6 +3656,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3481,6 +3672,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3496,6 +3688,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3511,6 +3704,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3526,6 +3720,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3541,6 +3736,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3556,6 +3752,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3571,6 +3768,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3586,6 +3784,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3601,6 +3800,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3616,6 +3816,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3631,6 +3832,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3646,6 +3848,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3661,6 +3864,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3676,6 +3880,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3691,6 +3896,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3706,6 +3912,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3721,6 +3928,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3736,6 +3944,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3751,6 +3960,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3766,6 +3976,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3781,6 +3992,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3796,6 +4008,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3811,6 +4024,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3826,6 +4040,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3841,6 +4056,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3856,6 +4072,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3871,6 +4088,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3886,6 +4104,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3901,6 +4120,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3916,6 +4136,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3931,6 +4152,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3946,6 +4168,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3961,6 +4184,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3976,6 +4200,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -3991,6 +4216,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4006,6 +4232,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4021,6 +4248,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4036,6 +4264,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4051,6 +4280,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4066,6 +4296,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4081,6 +4312,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4096,6 +4328,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4111,6 +4344,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4126,6 +4360,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4141,6 +4376,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4156,6 +4392,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4171,6 +4408,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4186,6 +4424,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4201,6 +4440,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4216,6 +4456,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4231,6 +4472,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4246,6 +4488,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4261,6 +4504,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4276,6 +4520,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4291,6 +4536,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4306,6 +4552,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4334,6 +4581,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4359,6 +4607,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4374,6 +4623,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4389,6 +4639,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4404,6 +4655,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4419,6 +4671,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4434,6 +4687,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4449,6 +4703,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4467,6 +4722,7 @@ mod test {
             Instruction::Getstatic(field_index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4485,6 +4741,7 @@ mod test {
             Instruction::Putstatic(field_index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4503,6 +4760,7 @@ mod test {
             Instruction::Getfield(field_index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4521,6 +4779,7 @@ mod test {
             Instruction::Putfield(field_index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(-2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4539,6 +4798,7 @@ mod test {
             Instruction::Invokevirtual(method_index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(-3, instruction.stack_delta(&constant_pool)?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4557,6 +4817,7 @@ mod test {
             Instruction::Invokespecial(method_index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(-3, instruction.stack_delta(&constant_pool)?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4575,6 +4836,7 @@ mod test {
             Instruction::Invokestatic(method_index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(-2, instruction.stack_delta(&constant_pool)?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4593,6 +4855,7 @@ mod test {
             Instruction::Invokeinterface(method_index, 1).to_formatted_string(&constant_pool)?
         );
         assert_eq!(-3, instruction.stack_delta(&constant_pool)?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4621,6 +4884,7 @@ mod test {
             Instruction::Invokedynamic(method_index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(-2, instruction.stack_delta(&constant_pool)?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4658,6 +4922,7 @@ mod test {
             Instruction::New(class_index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4673,6 +4938,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4690,6 +4956,7 @@ mod test {
             Instruction::Anewarray(class_index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4705,6 +4972,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4720,6 +4988,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4737,6 +5006,7 @@ mod test {
             Instruction::Checkcast(index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4754,6 +5024,7 @@ mod test {
             Instruction::Instanceof(index).to_formatted_string(&constant_pool)?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4769,6 +5040,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4784,6 +5056,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4812,6 +5085,7 @@ mod test {
             Instruction::Multianewarray(class_index, 3).to_formatted_string(&constant_pool)?
         );
         assert_eq!(-2, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4827,6 +5101,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4842,6 +5117,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4857,6 +5133,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4872,6 +5149,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4887,6 +5165,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4902,6 +5181,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4917,6 +5197,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(None, instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
 
@@ -4935,6 +5216,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -4951,6 +5233,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -4967,6 +5250,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -4983,6 +5267,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -4999,6 +5284,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -5015,6 +5301,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -5031,6 +5318,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -5047,6 +5335,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -5063,6 +5352,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -5079,6 +5369,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -5095,6 +5386,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
@@ -5111,6 +5403,7 @@ mod test {
             instruction.to_formatted_string(&ConstantPool::new())?
         );
         assert_eq!(0, instruction.stack_delta(&ConstantPool::new())?);
+        assert_eq!(Some(42), instruction.locals_index()?);
         test_instruction(&instruction, &expected_bytes, wide_code)
     }
 
