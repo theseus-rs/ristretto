@@ -40,12 +40,18 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - Url class loading from jars and modules
 - Reading, writing, verifying classes
 - Verification of class files is supported, but is still a work in progress.
+- Just-In-Time (JIT) compilation for functions that exclusively use primitive type byte code
 
 ### Limitations
 
 #### Instructions
 
 The Invokedynamic instruction is not implemented.
+
+#### Just-In-Time (JIT) Compilation
+
+The JIT compiler only supports functions that use primitive type byte codes. The JIT compiler is not implemented for
+functions that use array, reference/object byte codes or call other functions.
 
 #### Threading
 
@@ -74,10 +80,6 @@ been deprecated; see: [JEP 411](https://openjdk.org/jeps/411)
 
 Support for finalizers is not implemented and there are no plans to implement it. Finalizers have been deprecated; see:
 [JEP 421](https://openjdk.java.net/jeps/421)
-
-## Safety
-
-These crates use `#![forbid(unsafe_code)]` to ensure everything is implemented in 100% safe Rust.
 
 ## License
 

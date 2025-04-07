@@ -1,0 +1,627 @@
+use crate::Error::{InternalError, UnsupportedTargetISA, UnsupportedType};
+use crate::function::Function;
+use crate::instruction::{
+    bipush, breakpoint, d2f, d2i, d2l, dadd, dconst_0, dconst_1, ddiv, dload, dload_0, dload_1,
+    dload_2, dload_3, dload_w, dmul, dneg, drem, dreturn, dstore, dstore_0, dstore_1, dstore_2,
+    dstore_3, dstore_w, dsub, dup, dup_x1, dup_x2, dup2, dup2_x1, dup2_x2, f2d, f2i, f2l, fadd,
+    fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1, fload_2, fload_3, fload_w, fmul,
+    fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2, fstore_3, fstore_w, fsub, i2b, i2c,
+    i2d, i2f, i2l, i2s, iadd, iand, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5,
+    iconst_m1, idiv, iinc, iinc_w, iload, iload_0, iload_1, iload_2, iload_3, iload_w, impdep1,
+    impdep2, imul, ineg, ior, irem, ireturn, ishl, ishr, istore, istore_0, istore_1, istore_2,
+    istore_3, istore_w, isub, iushr, ixor, l2d, l2f, l2i, ladd, land, lconst_0, lconst_1, ldc,
+    ldc_w, ldc2_w, ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lor, lrem,
+    lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr,
+    lxor, monitorenter, monitorexit, nop, pop, pop2, r#return, sipush, swap, wide,
+};
+use crate::{JitValue, Result};
+use cranelift::codegen::ir::UserFuncName;
+use cranelift::codegen::isa::Builder;
+use cranelift::codegen::settings::Flags;
+use cranelift::module::{Linkage, Module, default_libcall_names};
+use cranelift::prelude::*;
+use ristretto_classfile::attributes::{Attribute, Instruction};
+use ristretto_classfile::{BaseType, ConstantPool, FieldType, Method};
+use std::fmt::Debug;
+use std::mem;
+
+/// Java Virtual Machine (JVM) bytecode to native code compiler.
+pub struct Compiler {
+    isa_builder: Builder,
+}
+
+impl Compiler {
+    /// Creates a new instance of the compiler for the host machine.
+    ///
+    /// # Errors
+    /// * If the target ISA is not supported
+    /// * If the target ISA cannot be created
+    pub fn new() -> Result<Self> {
+        let isa_builder = cranelift::native::builder().map_err(UnsupportedTargetISA)?;
+        let compiler = Compiler { isa_builder };
+        Ok(compiler)
+    }
+
+    /// Compiles the given bytecode into native code.
+    ///
+    /// # Errors
+    /// if the Java byte code cannot be compiled to native code
+    #[cfg(target_family = "wasm")]
+    pub fn compile(&self, _constant_pool: &ConstantPool, _method: &Method) -> Result<Function> {
+        Err(crate::Error::InternalError("Not implemented".to_string()))
+    }
+
+    /// Compiles the given bytecode into native code.
+    ///
+    /// # Errors
+    /// if the Java byte code cannot be compiled to native code
+    #[cfg(not(target_family = "wasm"))]
+    pub fn compile(&self, constant_pool: &ConstantPool, method: &Method) -> Result<Function> {
+        let name = constant_pool.try_get_utf8(method.name_index)?;
+        let descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
+        let Some((max_stack, max_locals, instructions)) =
+            method.attributes.iter().find_map(|attribute| {
+                if let Attribute::Code {
+                    max_stack,
+                    max_locals,
+                    code,
+                    ..
+                } = attribute
+                {
+                    let max_stack = usize::from(*max_stack);
+                    let max_locals = usize::from(*max_locals);
+                    Some((max_stack, max_locals, code))
+                } else {
+                    None
+                }
+            })
+        else {
+            return Err(InternalError("No Code attribute found".to_string()));
+        };
+
+        let target_isa = self.isa_builder.finish(Flags::new(settings::builder()))?;
+        let jit_builder = cranelift::jit::JITBuilder::with_isa(target_isa, default_libcall_names());
+        let mut module = cranelift::jit::JITModule::new(jit_builder);
+        let signature = Self::signature(&mut module);
+        let function = module.declare_function(name, Linkage::Local, &signature)?;
+        let mut module_context = module.make_context();
+        module_context.func.signature = signature;
+        module_context.func.name = UserFuncName::user(0, function.as_u32());
+
+        let mut function_context = FunctionBuilderContext::new();
+        let mut function_builder =
+            FunctionBuilder::new(&mut module_context.func, &mut function_context);
+
+        let block = function_builder.create_block();
+        function_builder.switch_to_block(block);
+        function_builder.append_block_params_for_function_params(block);
+
+        let (arguments_pointer, _arguments_length_pointer, return_pointer) =
+            Self::function_pointers(&mut function_builder, block)?;
+
+        let mut locals = Self::locals(
+            descriptor,
+            max_locals,
+            &mut function_builder,
+            arguments_pointer,
+        )?;
+        let mut stack = Vec::with_capacity(max_stack);
+
+        for instruction in instructions {
+            Self::process_instruction(
+                constant_pool,
+                &mut function_builder,
+                &mut locals,
+                &mut stack,
+                return_pointer,
+                instruction,
+            )?;
+        }
+
+        function_builder.seal_all_blocks();
+        function_builder.finalize();
+
+        module.define_function(function, &mut module_context)?;
+        module.clear_context(&mut module_context);
+        module.finalize_definitions()?;
+
+        let code = module.get_finalized_function(function);
+        let function = unsafe {
+            let function: fn(*const JitValue, usize, *mut JitValue) = mem::transmute(code);
+            Function::new(function)
+        };
+        Ok(function)
+    }
+
+    /// Creates a new signature from the method descriptor.
+    #[cfg(not(target_family = "wasm"))]
+    fn signature(module: &mut cranelift::jit::JITModule) -> Signature {
+        let mut signature = module.make_signature();
+        let arguments_type = module.target_config().pointer_type();
+        signature.params.push(AbiParam::new(arguments_type)); // pointer to array
+        signature.params.push(AbiParam::new(types::I64)); // length of array
+        let return_type = module.target_config().pointer_type();
+        signature.params.push(AbiParam::new(return_type));
+        signature
+    }
+
+    /// Retrieves the function pointers from the function builder.
+    ///
+    /// # Errors
+    /// If the function pointers cannot be retrieved
+    fn function_pointers(
+        function_builder: &mut FunctionBuilder,
+        block: Block,
+    ) -> Result<(Value, Value, Value)> {
+        let mut params = function_builder.block_params(block).to_vec();
+        let Some(return_pointer) = params.pop() else {
+            return Err(InternalError("undefined return pointer".to_string()));
+        };
+        let Some(arguments_length) = params.pop() else {
+            return Err(InternalError(
+                "undefined arguments length pointer".to_string(),
+            ));
+        };
+        let Some(arguments_pointer) = params.pop() else {
+            return Err(InternalError("undefined arguments pointer".to_string()));
+        };
+        if !params.is_empty() {
+            return Err(InternalError("unexpected function parameters".to_string()));
+        }
+        Ok((arguments_pointer, arguments_length, return_pointer))
+    }
+
+    /// Creates a new locals array for the function.
+    ///
+    /// # Errors
+    /// If the locals array cannot be created
+    fn locals(
+        descriptor: &str,
+        max_locals: usize,
+        function_builder: &mut FunctionBuilder,
+        arguments_pointer: Value,
+    ) -> Result<Vec<Value>> {
+        let size_of = i64::try_from(size_of::<JitValue>())
+            .map_err(|error| InternalError(format!("{error:?}")))?;
+        let struct_size = function_builder.ins().iconst(types::I64, size_of);
+
+        let mut locals = Vec::with_capacity(max_locals);
+        let (parameter_types, _return_type) = FieldType::parse_method_descriptor(descriptor)?;
+        for (index, parameter_type) in parameter_types.iter().enumerate() {
+            let index =
+                i64::try_from(index).map_err(|error| InternalError(format!("{error:?}")))?;
+            let index = function_builder.ins().iconst(types::I64, index);
+            let offset = function_builder.ins().imul(index, struct_size);
+            let address = function_builder.ins().iadd(arguments_pointer, offset);
+
+            // Ignore the discriminant
+            let native_type = Self::native_type(parameter_type)?;
+            let value = function_builder
+                .ins()
+                .load(native_type, MemFlags::trusted(), address, 8);
+            locals.push(value);
+        }
+
+        let value = function_builder.ins().iconst(types::I32, 0);
+        while locals.len() < max_locals {
+            locals.push(value);
+        }
+
+        Ok(locals)
+    }
+
+    /// Creates a new native type from the given field type.
+    ///
+    /// # Errors
+    /// If the field type is not supported
+    fn native_type(field_type: &FieldType) -> Result<Type> {
+        match field_type {
+            FieldType::Base(
+                BaseType::Boolean
+                | BaseType::Byte
+                | BaseType::Char
+                | BaseType::Int
+                | BaseType::Short,
+            ) => Ok(types::I32),
+            FieldType::Base(BaseType::Double) => Ok(types::F64),
+            FieldType::Base(BaseType::Float) => Ok(types::F32),
+            FieldType::Base(BaseType::Long) => Ok(types::I64),
+            _ => Err(UnsupportedType(field_type.to_string())),
+        }
+    }
+
+    #[expect(clippy::too_many_lines)]
+    fn process_instruction(
+        constant_pool: &ConstantPool,
+        function_builder: &mut FunctionBuilder,
+        locals: &mut [Value],
+        stack: &mut Vec<Value>,
+        return_pointer: Value,
+        instruction: &Instruction,
+    ) -> Result<()> {
+        match instruction {
+            Instruction::Nop => nop(),
+            // Instruction::Aconst_null => aconst_null(stack),
+            Instruction::Iconst_m1 => iconst_m1(function_builder, stack),
+            Instruction::Iconst_0 => iconst_0(function_builder, stack),
+            Instruction::Iconst_1 => iconst_1(function_builder, stack),
+            Instruction::Iconst_2 => iconst_2(function_builder, stack),
+            Instruction::Iconst_3 => iconst_3(function_builder, stack),
+            Instruction::Iconst_4 => iconst_4(function_builder, stack),
+            Instruction::Iconst_5 => iconst_5(function_builder, stack),
+            Instruction::Lconst_0 => lconst_0(function_builder, stack),
+            Instruction::Lconst_1 => lconst_1(function_builder, stack),
+            Instruction::Fconst_0 => fconst_0(function_builder, stack),
+            Instruction::Fconst_1 => fconst_1(function_builder, stack),
+            Instruction::Fconst_2 => fconst_2(function_builder, stack),
+            Instruction::Dconst_0 => dconst_0(function_builder, stack),
+            Instruction::Dconst_1 => dconst_1(function_builder, stack),
+            Instruction::Bipush(value) => bipush(function_builder, stack, *value),
+            Instruction::Sipush(value) => sipush(function_builder, stack, *value),
+            Instruction::Ldc(index) => ldc(constant_pool, function_builder, stack, *index)?,
+            Instruction::Ldc_w(index) => {
+                ldc_w(constant_pool, function_builder, stack, *index)?;
+            }
+            Instruction::Ldc2_w(index) => {
+                ldc2_w(constant_pool, function_builder, stack, *index)?;
+            }
+            Instruction::Iload(index) => iload(locals, stack, *index)?,
+            Instruction::Lload(index) => lload(locals, stack, *index)?,
+            Instruction::Fload(index) => fload(locals, stack, *index)?,
+            Instruction::Dload(index) => dload(locals, stack, *index)?,
+            // Instruction::Aload(index) => aload(locals, stack, *index),
+            Instruction::Iload_0 => iload_0(locals, stack)?,
+            Instruction::Iload_1 => iload_1(locals, stack)?,
+            Instruction::Iload_2 => iload_2(locals, stack)?,
+            Instruction::Iload_3 => iload_3(locals, stack)?,
+            Instruction::Lload_0 => lload_0(locals, stack)?,
+            Instruction::Lload_1 => lload_1(locals, stack)?,
+            Instruction::Lload_2 => lload_2(locals, stack)?,
+            Instruction::Lload_3 => lload_3(locals, stack)?,
+            Instruction::Fload_0 => fload_0(locals, stack)?,
+            Instruction::Fload_1 => fload_1(locals, stack)?,
+            Instruction::Fload_2 => fload_2(locals, stack)?,
+            Instruction::Fload_3 => fload_3(locals, stack)?,
+            Instruction::Dload_0 => dload_0(locals, stack)?,
+            Instruction::Dload_1 => dload_1(locals, stack)?,
+            Instruction::Dload_2 => dload_2(locals, stack)?,
+            Instruction::Dload_3 => dload_3(locals, stack)?,
+            // Instruction::Aload_0 => aload_0(locals, stack),
+            // Instruction::Aload_1 => aload_1(locals, stack),
+            // Instruction::Aload_2 => aload_2(locals, stack),
+            // Instruction::Aload_3 => aload_3(locals, stack),
+            // Instruction::Iaload => iaload(stack),
+            // Instruction::Laload => laload(stack),
+            // Instruction::Faload => faload(stack),
+            // Instruction::Daload => daload(stack),
+            // Instruction::Aaload => aaload(stack),
+            // Instruction::Baload => baload(stack),
+            // Instruction::Caload => caload(stack),
+            // Instruction::Saload => saload(stack),
+            Instruction::Istore(index) => istore(locals, stack, *index)?,
+            Instruction::Lstore(index) => lstore(locals, stack, *index)?,
+            Instruction::Fstore(index) => fstore(locals, stack, *index)?,
+            Instruction::Dstore(index) => dstore(locals, stack, *index)?,
+            // Instruction::Astore(index) => astore(locals, stack, *index)?,
+            Instruction::Istore_0 => istore_0(locals, stack)?,
+            Instruction::Istore_1 => istore_1(locals, stack)?,
+            Instruction::Istore_2 => istore_2(locals, stack)?,
+            Instruction::Istore_3 => istore_3(locals, stack)?,
+            Instruction::Lstore_0 => lstore_0(locals, stack)?,
+            Instruction::Lstore_1 => lstore_1(locals, stack)?,
+            Instruction::Lstore_2 => lstore_2(locals, stack)?,
+            Instruction::Lstore_3 => lstore_3(locals, stack)?,
+            Instruction::Fstore_0 => fstore_0(locals, stack)?,
+            Instruction::Fstore_1 => fstore_1(locals, stack)?,
+            Instruction::Fstore_2 => fstore_2(locals, stack)?,
+            Instruction::Fstore_3 => fstore_3(locals, stack)?,
+            Instruction::Dstore_0 => dstore_0(locals, stack)?,
+            Instruction::Dstore_1 => dstore_1(locals, stack)?,
+            Instruction::Dstore_2 => dstore_2(locals, stack)?,
+            Instruction::Dstore_3 => dstore_3(locals, stack)?,
+            // Instruction::Astore_0 => astore_0(locals, stack),
+            // Instruction::Astore_1 => astore_1(locals, stack),
+            // Instruction::Astore_2 => astore_2(locals, stack),
+            // Instruction::Astore_3 => astore_3(locals, stack),
+            // Instruction::Iastore => iastore(stack),
+            // Instruction::Lastore => lastore(stack),
+            // Instruction::Fastore => fastore(stack),
+            // Instruction::Dastore => dastore(stack),
+            // Instruction::Aastore => aastore(stack),
+            // Instruction::Bastore => bastore(stack),
+            // Instruction::Castore => castore(stack),
+            // Instruction::Sastore => sastore(stack),
+            Instruction::Pop => pop(stack)?,
+            Instruction::Pop2 => pop2(function_builder, stack)?,
+            Instruction::Dup => dup(stack)?,
+            Instruction::Dup_x1 => dup_x1(stack)?,
+            Instruction::Dup_x2 => dup_x2(function_builder, stack)?,
+            Instruction::Dup2 => dup2(function_builder, stack)?,
+            Instruction::Dup2_x1 => dup2_x1(function_builder, stack)?,
+            Instruction::Dup2_x2 => dup2_x2(function_builder, stack)?,
+            Instruction::Swap => swap(stack)?,
+            Instruction::Iadd => iadd(function_builder, stack)?,
+            Instruction::Ladd => ladd(function_builder, stack)?,
+            Instruction::Fadd => fadd(function_builder, stack)?,
+            Instruction::Dadd => dadd(function_builder, stack)?,
+            Instruction::Isub => isub(function_builder, stack)?,
+            Instruction::Lsub => lsub(function_builder, stack)?,
+            Instruction::Fsub => fsub(function_builder, stack)?,
+            Instruction::Dsub => dsub(function_builder, stack)?,
+            Instruction::Imul => imul(function_builder, stack)?,
+            Instruction::Lmul => lmul(function_builder, stack)?,
+            Instruction::Fmul => fmul(function_builder, stack)?,
+            Instruction::Dmul => dmul(function_builder, stack)?,
+            Instruction::Idiv => idiv(function_builder, stack)?,
+            Instruction::Ldiv => ldiv(function_builder, stack)?,
+            Instruction::Fdiv => fdiv(function_builder, stack)?,
+            Instruction::Ddiv => ddiv(function_builder, stack)?,
+            Instruction::Irem => irem(function_builder, stack)?,
+            Instruction::Lrem => lrem(function_builder, stack)?,
+            Instruction::Frem => frem(function_builder, stack)?,
+            Instruction::Drem => drem(function_builder, stack)?,
+            Instruction::Ineg => ineg(function_builder, stack)?,
+            Instruction::Lneg => lneg(function_builder, stack)?,
+            Instruction::Fneg => fneg(function_builder, stack)?,
+            Instruction::Dneg => dneg(function_builder, stack)?,
+            Instruction::Ishl => ishl(function_builder, stack)?,
+            Instruction::Lshl => lshl(function_builder, stack)?,
+            Instruction::Ishr => ishr(function_builder, stack)?,
+            Instruction::Lshr => lshr(function_builder, stack)?,
+            Instruction::Iushr => iushr(function_builder, stack)?,
+            Instruction::Lushr => lushr(function_builder, stack)?,
+            Instruction::Iand => iand(function_builder, stack)?,
+            Instruction::Land => land(function_builder, stack)?,
+            Instruction::Ior => ior(function_builder, stack)?,
+            Instruction::Lor => lor(function_builder, stack)?,
+            Instruction::Ixor => ixor(function_builder, stack)?,
+            Instruction::Lxor => lxor(function_builder, stack)?,
+            Instruction::Iinc(index, constant) => {
+                iinc(function_builder, locals, *index, *constant)?;
+            }
+            Instruction::I2l => i2l(function_builder, stack)?,
+            Instruction::I2f => i2f(function_builder, stack)?,
+            Instruction::I2d => i2d(function_builder, stack)?,
+            Instruction::L2i => l2i(function_builder, stack)?,
+            Instruction::L2f => l2f(function_builder, stack)?,
+            Instruction::L2d => l2d(function_builder, stack)?,
+            Instruction::F2i => f2i(function_builder, stack)?,
+            Instruction::F2l => f2l(function_builder, stack)?,
+            Instruction::F2d => f2d(function_builder, stack)?,
+            Instruction::D2i => d2i(function_builder, stack)?,
+            Instruction::D2l => d2l(function_builder, stack)?,
+            Instruction::D2f => d2f(function_builder, stack)?,
+            Instruction::I2b => i2b(function_builder, stack)?,
+            Instruction::I2c => i2c(function_builder, stack)?,
+            Instruction::I2s => i2s(function_builder, stack)?,
+            // Instruction::Lcmp => lcmp(function_builder, stack)?,
+            // Instruction::Fcmpl => fcmpl(function_builder, stack)?,
+            // Instruction::Fcmpg => fcmpg(function_builder, stack)?,
+            // Instruction::Dcmpl => dcmpl(function_builder, stack)?,
+            // Instruction::Dcmpg => dcmpg(function_builder, stack)?,
+            // Instruction::Ifeq(address) => ifeq(stack, *address),
+            // Instruction::Ifne(address) => ifne(stack, *address),
+            // Instruction::Iflt(address) => iflt(stack, *address),
+            // Instruction::Ifge(address) => ifge(stack, *address),
+            // Instruction::Ifgt(address) => ifgt(stack, *address),
+            // Instruction::Ifle(address) => ifle(stack, *address),
+            // Instruction::If_icmpeq(address) => if_icmpeq(stack, *address),
+            // Instruction::If_icmpne(address) => if_icmpne(stack, *address),
+            // Instruction::If_icmplt(address) => if_icmplt(stack, *address),
+            // Instruction::If_icmpge(address) => if_icmpge(stack, *address),
+            // Instruction::If_icmpgt(address) => if_icmpgt(stack, *address),
+            // Instruction::If_icmple(address) => if_icmple(stack, *address),
+            // Instruction::If_acmpeq(address) => if_acmpeq(stack, *address),
+            // Instruction::If_acmpne(address) => if_acmpne(stack, *address),
+            // Instruction::Goto(address) => goto(*address),
+            // Instruction::Jsr(address) => jsr(stack, *address),
+            // Instruction::Ret(index) => ret(locals, *index),
+            // Instruction::Tableswitch {
+            //     default,
+            //     low,
+            //     high,
+            //     offsets,
+            // } => {
+            //     let program_counter = self.program_counter.load(Ordering::Relaxed);
+            //     tableswitch(stack, program_counter, *default, *low, *high, offsets)
+            // }
+            // Instruction::Lookupswitch { default, pairs } => {
+            //     let program_counter = self.program_counter.load(Ordering::Relaxed);
+            //     lookupswitch(stack, program_counter, *default, pairs)
+            // }
+            Instruction::Ireturn => ireturn(function_builder, stack, return_pointer)?,
+            Instruction::Lreturn => lreturn(function_builder, stack, return_pointer)?,
+            Instruction::Freturn => freturn(function_builder, stack, return_pointer)?,
+            Instruction::Dreturn => dreturn(function_builder, stack, return_pointer)?,
+            // Instruction::Areturn => areturn(stack),
+            Instruction::Return => r#return(function_builder, return_pointer),
+            // Instruction::Getstatic(index) => getstatic(self, stack, *index).await,
+            // Instruction::Putstatic(index) => putstatic(self, stack, *index).await,
+            // Instruction::Getfield(index) => getfield(stack, &self.class, *index),
+            // Instruction::Putfield(index) => putfield(stack, &self.class, *index),
+            // Instruction::Invokevirtual(index) => invokevirtual(self, stack, *index).await,
+            // Instruction::Invokespecial(index) => invokespecial(self, stack, *index).await,
+            // Instruction::Invokestatic(index) => invokestatic(self, stack, *index).await,
+            // Instruction::Invokeinterface(index, count) => {
+            //     invokeinterface(self, stack, *index, *count).await
+            // }
+            // Instruction::Invokedynamic(index) => invokedynamic(self, stack, *index).await,
+            // Instruction::New(index) => new(self, stack, *index).await,
+            // Instruction::Newarray(array_type) => newarray(stack, array_type),
+            // Instruction::Anewarray(index) => anewarray(self, stack, *index).await,
+            // Instruction::Arraylength => arraylength(stack),
+            // Instruction::Athrow => athrow(stack).await,
+            // Instruction::Checkcast(class_index) => checkcast(self, stack, *class_index).await,
+            // Instruction::Instanceof(class_index) => instanceof(self, stack, *class_index).await,
+            Instruction::Monitorenter => monitorenter(function_builder, stack),
+            Instruction::Monitorexit => monitorexit(function_builder, stack),
+            Instruction::Wide => wide()?,
+            // Instruction::Multianewarray(index, dimensions) => {
+            //     multianewarray(self, stack, *index, *dimensions).await
+            // }
+            // Instruction::Ifnull(address) => ifnull(stack, *address),
+            // Instruction::Ifnonnull(address) => ifnonnull(stack, *address),
+            // Instruction::Goto_w(address) => goto_w(*address),
+            // Instruction::Jsr_w(address) => jsr_w(stack, *address),
+            Instruction::Breakpoint => breakpoint(function_builder, stack),
+            Instruction::Impdep1 => impdep1(function_builder, stack),
+            Instruction::Impdep2 => impdep2(function_builder, stack),
+            // Wide instructions
+            Instruction::Iload_w(index) => iload_w(locals, stack, *index)?,
+            Instruction::Lload_w(index) => lload_w(locals, stack, *index)?,
+            Instruction::Fload_w(index) => fload_w(locals, stack, *index)?,
+            Instruction::Dload_w(index) => dload_w(locals, stack, *index)?,
+            // Instruction::Aload_w(index) => aload_w(locals, stack, *index),
+            Instruction::Istore_w(index) => istore_w(locals, stack, *index)?,
+            Instruction::Lstore_w(index) => lstore_w(locals, stack, *index)?,
+            Instruction::Fstore_w(index) => fstore_w(locals, stack, *index)?,
+            Instruction::Dstore_w(index) => dstore_w(locals, stack, *index)?,
+            // Instruction::Astore_w(index) => astore_w(locals, stack, *index),
+            Instruction::Iinc_w(index, constant) => {
+                iinc_w(function_builder, locals, *index, *constant)?;
+            }
+            // Instruction::Ret_w(index) => ret_w(locals, *index),
+            _ => {
+                return Err(InternalError(format!(
+                    "Unsupported instruction: {instruction:?}"
+                )));
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Debug for Compiler {
+    /// Formats the compiler for debugging.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Compiler")
+            .field("isa_builder", &self.isa_builder.triple())
+            .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compiler_debug() -> Result<()> {
+        let compiler = Compiler::new()?;
+        let debug_string = format!("{compiler:?}");
+        assert!(debug_string.contains("Compiler"));
+        assert!(debug_string.contains("isa_builder"));
+        Ok(())
+    }
+
+    fn jit_module() -> Result<cranelift::jit::JITModule> {
+        let isa_builder = cranelift::native::builder().map_err(UnsupportedTargetISA)?;
+        let target_isa = isa_builder.finish(Flags::new(settings::builder()))?;
+        let jit_builder = cranelift::jit::JITBuilder::with_isa(target_isa, default_libcall_names());
+        let module = cranelift::jit::JITModule::new(jit_builder);
+        Ok(module)
+    }
+
+    #[test]
+    fn test_make_signature_no_parameters_no_return() -> Result<()> {
+        let mut module = jit_module()?;
+        let signature = Compiler::signature(&mut module);
+        assert_eq!(signature.params.len(), 3);
+        assert_eq!(signature.returns, vec![]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_native_type_int() -> Result<()> {
+        for base_type in [
+            BaseType::Boolean,
+            BaseType::Byte,
+            BaseType::Char,
+            BaseType::Int,
+            BaseType::Short,
+        ] {
+            assert_eq!(
+                Compiler::native_type(&FieldType::Base(base_type))?,
+                types::I32
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_native_type_double() -> Result<()> {
+        assert_eq!(
+            Compiler::native_type(&FieldType::Base(BaseType::Double))?,
+            types::F64
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_native_type_float() -> Result<()> {
+        assert_eq!(
+            Compiler::native_type(&FieldType::Base(BaseType::Float))?,
+            types::F32
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_native_type_long() -> Result<()> {
+        assert_eq!(
+            Compiler::native_type(&FieldType::Base(BaseType::Long))?,
+            types::I64
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_native_type_object() {
+        let class_name = "java/lang/Object".to_string();
+        let result = Compiler::native_type(&FieldType::Object(class_name));
+        assert!(matches!(result, Err(UnsupportedType(_))));
+    }
+
+    #[test]
+    fn test_native_type_array_int() {
+        for base_type in [
+            BaseType::Boolean,
+            BaseType::Byte,
+            BaseType::Char,
+            BaseType::Int,
+            BaseType::Short,
+        ] {
+            let field_type = FieldType::Base(base_type);
+            let result = Compiler::native_type(&FieldType::Array(Box::new(field_type)));
+            assert!(matches!(result, Err(UnsupportedType(_))));
+        }
+    }
+
+    #[test]
+    fn test_native_type_array_double() {
+        let field_type = FieldType::Base(BaseType::Double);
+        let result = Compiler::native_type(&FieldType::Array(Box::new(field_type)));
+        assert!(matches!(result, Err(UnsupportedType(_))));
+    }
+
+    #[test]
+    fn test_native_type_array_float() {
+        let field_type = FieldType::Base(BaseType::Float);
+        let result = Compiler::native_type(&FieldType::Array(Box::new(field_type)));
+        assert!(matches!(result, Err(UnsupportedType(_))));
+    }
+
+    #[test]
+    fn test_native_type_array_long() {
+        let field_type = FieldType::Base(BaseType::Long);
+        let result = Compiler::native_type(&FieldType::Array(Box::new(field_type)));
+        assert!(matches!(result, Err(UnsupportedType(_))));
+    }
+
+    #[test]
+    fn test_native_type_array_object() {
+        let class_name = "java/lang/Object".to_string();
+        let field_type = FieldType::Object(class_name);
+        let result = Compiler::native_type(&FieldType::Array(Box::new(field_type)));
+        assert!(matches!(result, Err(UnsupportedType(_))));
+    }
+}

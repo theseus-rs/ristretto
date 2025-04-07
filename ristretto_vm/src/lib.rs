@@ -41,6 +41,7 @@ mod frame;
 mod instruction;
 mod java_error;
 mod java_object;
+mod jit;
 mod local_variables;
 mod native_methods;
 mod operand_stack;

@@ -593,12 +593,10 @@ mod tests {
         let class_name = "java/lang/Object";
         let method_name = "foo";
         let method_descriptor = "()V";
-        method_registry.register(
-            class_name,
-            method_name,
-            method_descriptor,
-            java::lang::strictmath::sqrt,
-        );
+        let method = |_, _| -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>> {
+            Box::pin(async move { Ok(Some(Value::from(true))) })
+        };
+        method_registry.register(class_name, method_name, method_descriptor, method);
         let result = method_registry.method(class_name, method_name, method_descriptor);
         assert!(result.is_some());
         Ok(())

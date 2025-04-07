@@ -5,7 +5,7 @@ use std::fmt::Display;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Method {
-    access_flags: MethodAccessFlags,
+    definition: ristretto_classfile::Method,
     name: String,
     descriptor: String,
     parameters: Vec<FieldType>,
@@ -15,7 +15,6 @@ pub struct Method {
     code: Vec<Instruction>,
     line_numbers: Vec<LineNumber>,
     exception_table: Vec<ExceptionTableEntry>,
-    attributes: Vec<Attribute>,
 }
 
 impl Method {
@@ -63,7 +62,7 @@ impl Method {
 
         let (parameters, return_type) = FieldType::parse_method_descriptor(descriptor.as_ref())?;
         Ok(Self {
-            access_flags: definition.access_flags,
+            definition: definition.clone(),
             name: name.to_string(),
             descriptor: descriptor.to_string(),
             parameters,
@@ -73,26 +72,35 @@ impl Method {
             code,
             line_numbers,
             exception_table,
-            attributes: definition.attributes.clone(),
         })
+    }
+
+    /// Get the method definition.
+    #[must_use]
+    pub fn definition(&self) -> &ristretto_classfile::Method {
+        &self.definition
     }
 
     /// Get the method access flags.
     #[must_use]
     pub fn access_flags(&self) -> &MethodAccessFlags {
-        &self.access_flags
+        &self.definition.access_flags
     }
 
     /// Check if the method is native.
     #[must_use]
     pub fn is_native(&self) -> bool {
-        self.access_flags.contains(MethodAccessFlags::NATIVE)
+        self.definition
+            .access_flags
+            .contains(MethodAccessFlags::NATIVE)
     }
 
     /// Check if the method is static.
     #[must_use]
     pub fn is_static(&self) -> bool {
-        self.access_flags.contains(MethodAccessFlags::STATIC)
+        self.definition
+            .access_flags
+            .contains(MethodAccessFlags::STATIC)
     }
 
     /// Get the method name.
@@ -170,7 +178,7 @@ impl Method {
     /// Get the attributes.
     #[must_use]
     pub fn attributes(&self) -> &Vec<Attribute> {
-        &self.attributes
+        &self.definition.attributes
     }
 }
 
@@ -236,7 +244,7 @@ mod tests {
     #[test]
     fn test_to_string() {
         let method = Method {
-            access_flags: MethodAccessFlags::empty(),
+            definition: ristretto_classfile::Method::default(),
             name: "test".to_string(),
             descriptor: "()V".to_string(),
             parameters: Vec::new(),
@@ -246,7 +254,6 @@ mod tests {
             code: Vec::new(),
             line_numbers: Vec::new(),
             exception_table: Vec::new(),
-            attributes: Vec::new(),
         };
         assert_eq!("test() -> void", method.to_string());
     }

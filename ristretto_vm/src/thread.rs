@@ -1,7 +1,7 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::parameters::Parameters;
 use crate::rust_value::{RustValue, process_values};
-use crate::{Frame, Result, VM};
+use crate::{Frame, Result, VM, jit};
 use async_recursion::async_recursion;
 use byte_unit::{Byte, UnitType};
 use ristretto_classloader::Error::MethodNotFound;
@@ -261,8 +261,23 @@ impl Thread {
         let method_descriptor = method.descriptor();
         let vm = self.vm()?;
         let parameters = process_values(&vm, parameters).await?;
+        let method_registry = vm.method_registry();
+        let rust_method = method_registry.method(class_name, method_name, method_descriptor);
+        // If the method is not found in the registry, try to JIT compile it.
+        let jit_method = if rust_method.is_none() {
+            jit::compile(&vm, class, method)
+        } else {
+            None
+        };
 
         if event_enabled!(Level::DEBUG) {
+            let execution_type = if rust_method.is_some() {
+                "rust"
+            } else if jit_method.is_some() {
+                "jit"
+            } else {
+                "int"
+            };
             let access_flags = method.access_flags();
             let system = System::new_with_specifics(
                 RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
@@ -272,22 +287,22 @@ impl Thread {
             let memory = if let Some(process) = system.process(Pid::from(pid)) {
                 let memory = process.memory();
                 let memory = Byte::from_u64(memory).get_appropriate_unit(UnitType::Decimal);
-                format!(" ({memory:#.3})")
+                format!(" ({execution_type}; {memory:#.3})")
             } else {
-                String::new()
+                format!("({execution_type})")
             };
             debug!("execute{memory}: {class_name}.{method_name}{method_descriptor} {access_flags}");
         }
 
-        let method_registry = vm.method_registry();
-        let rust_method = method_registry.method(class_name, method_name, method_descriptor);
-
         let (result, frame_added) = if let Some(rust_method) = rust_method {
-            let parameters = Parameters::new(parameters);
             let Some(thread) = self.thread.upgrade() else {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
+            let parameters = Parameters::new(parameters);
             let result = rust_method(thread, parameters).await;
+            (result, false)
+        } else if let Some(jit_method) = jit_method {
+            let result = jit::execute(jit_method, method, parameters);
             (result, false)
         } else if method.is_native() {
             return Err(MethodNotFound {

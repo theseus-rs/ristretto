@@ -3,6 +3,7 @@ default-members = [
     "ristretto_classfile",
     "ristretto_classloader",
     "ristretto_cli",
+    "ristretto_jit",
     "ristretto_vm",
 ]
 members = [
@@ -10,6 +11,7 @@ members = [
     "ristretto_classfile",
     "ristretto_classloader",
     "ristretto_cli",
+    "ristretto_jit",
     "ristretto_vm",
 ]
 resolver = "3"
@@ -32,6 +34,7 @@ byteorder = "1.5.0"
 byte-unit = "5.1.6"
 clap = "4.5.35"
 console = "0.15.11"
+cranelift = "0.118.0"
 criterion = { version = "0.5.1", default-features = false }
 dashmap = "6.1.0"
 dirs = "6.0.0"
