@@ -5,7 +5,6 @@ pub(crate) mod compiler;
 pub(crate) mod double;
 pub(crate) mod float;
 pub(crate) mod invoke;
-pub(crate) mod math;
 pub(crate) mod module;
 pub(crate) mod nullpointerexception;
 pub(crate) mod object;

@@ -26,16 +26,14 @@ pub type RustMethod = fn(
 #[derive(Debug, Default)]
 pub struct MethodRegistry {
     java_major_version: u16,
-    use_optimizations: bool,
     methods: HashMap<String, RustMethod>,
 }
 
 impl MethodRegistry {
     /// Create a new registry.
-    pub fn new(java_major_version: u16, use_optimizations: bool) -> Self {
+    pub fn new(java_major_version: u16) -> Self {
         MethodRegistry {
             java_major_version,
-            use_optimizations,
             methods: HashMap::new(),
         }
     }
@@ -543,15 +541,6 @@ impl MethodRegistry {
         sun::security::krb5::credentials::register(self);
         sun::security::krb5::scdynamicstoreconfig::register(self);
         sun::security::smartcardio::pcsc::register(self);
-
-        if self.use_optimizations {
-            java::lang::math::register(self);
-        }
-    }
-
-    /// Determine if optimizations should be used.
-    pub fn use_optimizations(&self) -> bool {
-        self.use_optimizations
     }
 
     /// Get the java version.
@@ -608,7 +597,7 @@ mod tests {
             class_name,
             method_name,
             method_descriptor,
-            java::lang::strictmath::abs_i,
+            java::lang::strictmath::sqrt,
         );
         let result = method_registry.method(class_name, method_name, method_descriptor);
         assert!(result.is_some());
@@ -617,7 +606,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_method() -> Result<()> {
-        let mut method_registry = MethodRegistry::new(JAVA_21, true);
+        let mut method_registry = MethodRegistry::new(JAVA_21);
         method_registry.initialize();
         let result = method_registry.method("java/lang/Object", "hashCode", "()I");
         assert!(result.is_some());
@@ -626,7 +615,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_method_not_found() -> Result<()> {
-        let mut method_registry = MethodRegistry::new(JAVA_21, true);
+        let mut method_registry = MethodRegistry::new(JAVA_21);
         method_registry.initialize();
         let result = method_registry.method("foo", "hashCode", "()I");
         assert!(result.is_none());
@@ -660,11 +649,11 @@ mod tests {
         Ok(native_methods)
     }
 
-    /// Get all the non-optimization methods for a given Java version.
+    /// Get all the methods for a given Java version.
     async fn get_registry_methods(version: &str) -> Result<Vec<String>> {
         let version_major = version.split_once('.').unwrap_or_default().0;
         let java_major_version: u16 = version_major.parse()?;
-        let mut method_registry = MethodRegistry::new(java_major_version, false);
+        let mut method_registry = MethodRegistry::new(java_major_version);
         method_registry.initialize();
         let mut registry_methods = method_registry
             .methods()

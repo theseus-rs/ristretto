@@ -120,10 +120,7 @@ impl VM {
             None
         };
 
-        // TODO: set use_optimizations based on the environment (e.g. -Xdebug / -Xint).
-        // The bespoke method optimizations should likely be removed if/when a JIT is implemented.
-        let use_optimizations = true;
-        let mut method_registry = MethodRegistry::new(java_major_version, use_optimizations);
+        let mut method_registry = MethodRegistry::new(java_major_version);
         method_registry.initialize();
 
         let vm = Arc::new_cyclic(|vm| VM {
