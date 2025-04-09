@@ -28,18 +28,6 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
     registry.register(CLASS_NAME, "hashCode", "()I", hash_code);
     registry.register(CLASS_NAME, "notify", "()V", notify);
     registry.register(CLASS_NAME, "notifyAll", "()V", notify_all);
-
-    if registry.use_optimizations() {
-        registry.register(CLASS_NAME, "<init>", "()V", init);
-    }
-}
-
-#[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    // This is a no-op method to optimize Object initialization since it is called frequently.
-    // This prevents the need to create a new frame and allocate memory unnecessarily for the call
-    // to the constructor for every object.
-    Ok(None)
 }
 
 #[async_recursion(?Send)]
