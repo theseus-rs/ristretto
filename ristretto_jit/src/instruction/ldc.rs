@@ -1,4 +1,4 @@
-use crate::Error::{InternalError, InvalidConstant, InvalidConstantIndex};
+use crate::Error::{InvalidConstant, InvalidConstantIndex, UnsupportedType};
 use crate::Result;
 use cranelift::codegen::ir::Value;
 use cranelift::prelude::{FunctionBuilder, InstBuilder, types};
@@ -50,13 +50,13 @@ fn load_constant(
         }
         Constant::String(utf8_index) => {
             let _utf8_value = constant_pool.try_get_utf8(*utf8_index)?;
-            return Err(InternalError(
+            return Err(UnsupportedType(
                 "loading string constants not supported".to_string(),
             ));
         }
         Constant::Class(class_index) => {
             let _class_name = constant_pool.try_get_utf8(*class_index)?;
-            return Err(InternalError(
+            return Err(UnsupportedType(
                 "loading class constants not supported".to_string(),
             ));
         }

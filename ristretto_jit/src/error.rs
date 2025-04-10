@@ -1,3 +1,5 @@
+use ristretto_classfile::attributes::Instruction;
+
 /// Ristretto JIT result type
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
@@ -31,8 +33,11 @@ pub enum Error {
     /// The operand stack underflow
     #[error("Operand stack underflow")]
     OperandStackUnderflow,
+    /// The instruction is not supported by the JIT compiler
+    #[error("Unsupported instruction: {0}")]
+    UnsupportedInstruction(Instruction),
     /// The target Instruction Set Architecture (ISA) is not supported
-    #[error("Internal error: {0}")]
+    #[error("Unsupported target ISA: {0}")]
     UnsupportedTargetISA(&'static str),
     /// JIT compilation is not supported for the type
     #[error("Unsupported type: {0}")]

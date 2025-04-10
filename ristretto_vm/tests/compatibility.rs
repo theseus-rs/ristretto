@@ -74,7 +74,7 @@ fn initialize_tracing() -> Result<()> {
         .from_env_lossy()
         .add_directive("cranelift=warn".parse().expect("directive"))
         .add_directive("ristretto_classloader=warn".parse().expect("directive"))
-        .add_directive("ristretto_vm=warn".parse().expect("directive"));
+        .add_directive("ristretto_vm=error".parse().expect("directive"));
     tracing_subscriber::fmt()
         .with_env_filter(filter)
         .fmt_fields(fmt::format::DefaultFields::new())

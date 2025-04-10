@@ -1897,12 +1897,10 @@ version = "0.17.0"
 dependencies = [
  "clap",
  "os_info",
- "ristretto_classloader",
  "ristretto_vm",
  "tokio",
  "tracing",
  "tracing-subscriber",
- "walkdir",
 ]
 
 [[package]]
@@ -1938,6 +1936,8 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "tracing-subscriber",
+ "walkdir",
  "whoami",
 ]
 

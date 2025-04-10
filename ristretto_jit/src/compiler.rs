@@ -1,4 +1,4 @@
-use crate::Error::{InternalError, UnsupportedTargetISA, UnsupportedType};
+use crate::Error::{InternalError, UnsupportedInstruction, UnsupportedTargetISA, UnsupportedType};
 use crate::function::Function;
 use crate::instruction::{
     bipush, breakpoint, d2f, d2i, d2l, dadd, dconst_0, dconst_1, ddiv, dload, dload_0, dload_1,
@@ -490,9 +490,7 @@ impl Compiler {
             }
             // Instruction::Ret_w(index) => ret_w(locals, *index),
             _ => {
-                return Err(InternalError(format!(
-                    "Unsupported instruction: {instruction:?}"
-                )));
+                return Err(UnsupportedInstruction(instruction.clone()));
             }
         }
         Ok(())
