@@ -14,6 +14,7 @@ pub struct Configuration {
     java_home: Option<PathBuf>,
     java_version: Option<String>,
     system_properties: HashMap<String, String>,
+    interpreted: bool,
     preview_features: bool,
 }
 
@@ -55,6 +56,12 @@ impl Configuration {
         &self.system_properties
     }
 
+    /// Get the interpreted flag
+    #[must_use]
+    pub fn interpreted(&self) -> bool {
+        self.interpreted
+    }
+
     /// Get the preview features flag
     #[must_use]
     pub fn preview_features(&self) -> bool {
@@ -71,6 +78,7 @@ pub struct ConfigurationBuilder {
     java_home: Option<PathBuf>,
     java_version: Option<String>,
     system_properties: HashMap<String, String>,
+    interpreted: bool,
     preview_features: bool,
 }
 
@@ -86,6 +94,7 @@ impl ConfigurationBuilder {
             java_home: None,
             java_version: None,
             system_properties: HashMap::new(),
+            interpreted: false,
             preview_features: false,
         }
     }
@@ -145,6 +154,13 @@ impl ConfigurationBuilder {
         self
     }
 
+    /// Enable interpreted mode
+    #[must_use]
+    pub fn interpreted(mut self) -> Self {
+        self.interpreted = true;
+        self
+    }
+
     /// Enable preview features
     #[must_use]
     pub fn preview_features(mut self) -> Self {
@@ -184,6 +200,7 @@ impl ConfigurationBuilder {
             java_home,
             java_version,
             system_properties: self.system_properties,
+            interpreted: self.interpreted,
             preview_features: self.preview_features,
         })
     }
@@ -214,6 +231,7 @@ mod tests {
         assert_eq!(Some(&"Foo".to_string()), configuration.main_class());
         assert_eq!(Some(&PathBuf::from("test.jar")), configuration.jar());
         assert_eq!(Some(&"21".to_string()), configuration.java_version());
+        assert!(!configuration.interpreted());
         assert!(configuration.preview_features());
         Ok(())
     }

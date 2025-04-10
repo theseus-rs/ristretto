@@ -12,6 +12,9 @@ pub enum Error {
     /// An error occurred while loading a class
     #[error(transparent)]
     ClassLoaderError(#[from] ristretto_classloader::Error),
+    /// An error occurred while compiling
+    #[error(transparent)]
+    JitError(#[from] ristretto_jit::Error),
     /// Configuration error
     #[error("Configuration error: {0}")]
     ConfigurationError(String),

@@ -1,0 +1,21 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "JVM JIT Compiler"
+edition.workspace = true
+keywords = ["java", "jvm", "jit"]
+license.workspace = true
+name = "ristretto_jit"
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.16.0" }
+thiserror = { workspace = true }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+cranelift = { workspace = true, features = ["module", "native"] }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+cranelift = { workspace = true, features = ["jit", "module", "native"] }

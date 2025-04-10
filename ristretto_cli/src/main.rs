@@ -45,6 +45,9 @@ struct Cli {
     #[arg(help = "Additional parameters to pass to the main class")]
     parameters: Option<Vec<String>>,
 
+    #[arg(long = "int", help = "Disable JIT compilation")]
+    interpreted: bool,
+
     #[arg(
         long = "enable-preview",
         help = "Allow classes to depend on preview features of this release"
@@ -115,6 +118,10 @@ async fn common_main(cli: Cli) -> Result<()> {
             )))?;
             configuration_builder = configuration_builder.add_system_property(key, value);
         }
+    }
+
+    if cli.interpreted {
+        configuration_builder = configuration_builder.interpreted();
     }
 
     if cli.enable_preview {

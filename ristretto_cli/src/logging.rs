@@ -10,8 +10,10 @@ pub(crate) fn initialize() {
         .with_timer(fmt::time::uptime())
         .compact();
 
+    let filter = EnvFilter::from_env("JAVA_LOG").add_directive("cranelift=warn".parse().unwrap());
+
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_env("JAVA_LOG"))
+        .with_env_filter(filter)
         .fmt_fields(fmt::format::DefaultFields::new())
         .event_format(format)
         .init();

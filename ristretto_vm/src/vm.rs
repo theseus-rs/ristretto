@@ -10,6 +10,7 @@ use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
     Class, ClassLoader, ClassPath, ClassPathEntry, Object, Reference, Value, runtime,
 };
+use ristretto_jit::Compiler;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -34,6 +35,7 @@ pub struct VM {
     method_registry: MethodRegistry,
     next_thread_id: AtomicU64,
     threads: DashMap<u64, Arc<Thread>>,
+    compiler: Compiler,
 }
 
 /// VM
@@ -123,6 +125,8 @@ impl VM {
         let mut method_registry = MethodRegistry::new(java_major_version);
         method_registry.initialize();
 
+        let compiler = Compiler::new()?;
+
         let vm = Arc::new_cyclic(|vm| VM {
             vm: vm.clone(),
             configuration,
@@ -135,6 +139,7 @@ impl VM {
             method_registry,
             next_thread_id: AtomicU64::new(1),
             threads: DashMap::new(),
+            compiler,
         });
         vm.initialize().await?;
         Ok(vm)
@@ -220,6 +225,11 @@ impl VM {
             .iter()
             .map(|entry| entry.value().clone())
             .collect()
+    }
+
+    /// Get the JIT Compiler
+    pub(crate) fn compiler(&self) -> &Compiler {
+        &self.compiler
     }
 
     /// Create a new thread

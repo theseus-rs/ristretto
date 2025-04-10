@@ -28,32 +28,6 @@ pub(crate) async fn ldc_w(
     load_constant(frame, stack, index).await
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ldc2_w>
-#[inline]
-pub(crate) fn ldc2_w(
-    frame: &Frame,
-    stack: &mut OperandStack,
-    index: u16,
-) -> Result<ExecutionResult> {
-    let constant_pool = frame.class().constant_pool();
-    let constant = constant_pool
-        .get(index)
-        .ok_or_else(|| InvalidConstantIndex(index))?;
-
-    let value = match constant {
-        Constant::Long(value) => Value::Long(*value),
-        Constant::Double(value) => Value::Double(*value),
-        constant => {
-            return Err(InvalidConstant {
-                expected: "long|double".to_string(),
-                actual: format!("{constant:?}"),
-            });
-        }
-    };
-    stack.push(value)?;
-    Ok(Continue)
-}
-
 /// Load the constant at the specified index onto the stack
 ///
 /// # Errors
@@ -87,6 +61,32 @@ async fn load_constant(
         constant => {
             return Err(InvalidConstant {
                 expected: "integer|float|string|class".to_string(),
+                actual: format!("{constant:?}"),
+            });
+        }
+    };
+    stack.push(value)?;
+    Ok(Continue)
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ldc2_w>
+#[inline]
+pub(crate) fn ldc2_w(
+    frame: &Frame,
+    stack: &mut OperandStack,
+    index: u16,
+) -> Result<ExecutionResult> {
+    let constant_pool = frame.class().constant_pool();
+    let constant = constant_pool
+        .get(index)
+        .ok_or_else(|| InvalidConstantIndex(index))?;
+
+    let value = match constant {
+        Constant::Long(value) => Value::Long(*value),
+        Constant::Double(value) => Value::Double(*value),
+        constant => {
+            return Err(InvalidConstant {
+                expected: "long|double".to_string(),
                 actual: format!("{constant:?}"),
             });
         }

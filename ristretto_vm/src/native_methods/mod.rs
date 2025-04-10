@@ -6,4 +6,4 @@ mod properties;
 mod registry;
 mod sun;
 
-pub use registry::MethodRegistry;
+pub(crate) use registry::MethodRegistry;
