@@ -5,7 +5,6 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classloader::{Object, Value};
-use std::io::Write;
 use std::sync::Arc;
 
 const CLASS_NAME: &str = "java/io/FileOutputStream";
@@ -43,7 +42,7 @@ async fn write(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<V
 }
 
 #[async_recursion(?Send)]
-async fn write_bytes(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+async fn write_bytes(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let _append = parameters.pop_bool()?;
     let length = usize::try_from(parameters.pop_int()?)?;
     let offset = usize::try_from(parameters.pop_int()?)?;
@@ -54,8 +53,10 @@ async fn write_bytes(_thread: Arc<Thread>, mut parameters: Parameters) -> Result
 
     match handle {
         1 => {
-            let stdout = std::io::stdout();
-            let mut stdout = stdout.lock();
+            let vm = thread.vm()?;
+            let configuration = vm.configuration();
+            let stdout_lock = configuration.stdout();
+            let mut stdout = stdout_lock.lock().await;
             stdout
                 .write_all(&bytes[offset..offset + length])
                 .map_err(|error| InternalError(error.to_string()))?;
@@ -64,8 +65,10 @@ async fn write_bytes(_thread: Arc<Thread>, mut parameters: Parameters) -> Result
                 .map_err(|error| InternalError(error.to_string()))?;
         }
         2 => {
-            let stderr = std::io::stderr();
-            let mut stderr = stderr.lock();
+            let vm = thread.vm()?;
+            let configuration = vm.configuration();
+            let stderr_lock = configuration.stderr();
+            let mut stderr = stderr_lock.lock().await;
             stderr
                 .write_all(&bytes[offset..offset + length])
                 .map_err(|error| InternalError(error.to_string()))?;

@@ -35,6 +35,10 @@ tokio = { workspace = true }
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
+[dev-dependencies]
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.17.0" }
+walkdir = { workspace = true }
+
 [features]
 default = ["rustls-tls"]
 native-tls = [
