@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other
 - remove custom method optimizations
 
-## `ristretto_jit` - [0.17.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.16.0...ristretto_jit-v0.17.0) - 2025-04-10
+## `ristretto_jit` - [0.17.0](https://github.com/theseus-rs/ristretto/releases/tag/ristretto_jit-v0.17.0) - 2025-04-10
 
 ### Added
 - add initial jit compilier
