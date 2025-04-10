@@ -64,7 +64,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(target_family = "wasm")]
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
-    logging::initialize();
+    logging::initialize()?;
     let cli = Cli::parse();
     if common_main(cli).await.is_err() {
         std::process::exit(1);
@@ -75,7 +75,7 @@ async fn main() -> Result<()> {
 #[cfg(not(target_family = "wasm"))]
 #[tokio::main]
 async fn main() -> Result<()> {
-    logging::initialize();
+    logging::initialize()?;
     let cli = Cli::parse();
     if common_main(cli).await.is_err() {
         std::process::exit(1);

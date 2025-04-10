@@ -2,11 +2,14 @@ use crate::Error::InternalError;
 use crate::Result;
 use ristretto_classloader::{ClassPath, DEFAULT_JAVA_VERSION};
 use std::collections::HashMap;
+use std::fmt::Debug;
+use std::io::{Write, stderr, stdout};
 use std::path::PathBuf;
 use std::string::ToString;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 /// Configuration
-#[derive(Debug, PartialEq)]
 pub struct Configuration {
     class_path: ClassPath,
     main_class: Option<String>,
@@ -16,6 +19,8 @@ pub struct Configuration {
     system_properties: HashMap<String, String>,
     interpreted: bool,
     preview_features: bool,
+    stdout: Arc<Mutex<dyn Write + Send + Sync>>,
+    stderr: Arc<Mutex<dyn Write + Send + Sync>>,
 }
 
 /// Configuration
@@ -67,10 +72,36 @@ impl Configuration {
     pub fn preview_features(&self) -> bool {
         self.preview_features
     }
+
+    /// Get the standard output stream
+    #[must_use]
+    pub fn stdout(&self) -> Arc<Mutex<dyn Write>> {
+        self.stdout.clone()
+    }
+
+    /// Get the standard error stream
+    #[must_use]
+    pub fn stderr(&self) -> Arc<Mutex<dyn Write>> {
+        self.stderr.clone()
+    }
+}
+
+impl Debug for Configuration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Configuration")
+            .field("class_path", &self.class_path)
+            .field("main_class", &self.main_class)
+            .field("jar", &self.jar)
+            .field("java_home", &self.java_home)
+            .field("java_version", &self.java_version)
+            .field("system_properties", &self.system_properties)
+            .field("interpreted", &self.interpreted)
+            .field("preview_features", &self.preview_features)
+            .finish()
+    }
 }
 
 /// Configuration builder
-#[derive(Debug)]
 pub struct ConfigurationBuilder {
     class_path: Option<ClassPath>,
     main_class: Option<String>,
@@ -80,6 +111,8 @@ pub struct ConfigurationBuilder {
     system_properties: HashMap<String, String>,
     interpreted: bool,
     preview_features: bool,
+    stdout: Arc<Mutex<dyn Write + Send + Sync>>,
+    stderr: Arc<Mutex<dyn Write + Send + Sync>>,
 }
 
 /// Configuration builder
@@ -96,6 +129,8 @@ impl ConfigurationBuilder {
             system_properties: HashMap::new(),
             interpreted: false,
             preview_features: false,
+            stdout: Arc::new(Mutex::new(stdout())),
+            stderr: Arc::new(Mutex::new(stderr())),
         }
     }
 
@@ -168,6 +203,20 @@ impl ConfigurationBuilder {
         self
     }
 
+    /// Set the standard output stream
+    #[must_use]
+    pub fn stdout(mut self, stdout: Arc<Mutex<dyn Write + Send + Sync>>) -> Self {
+        self.stdout = stdout;
+        self
+    }
+
+    /// Set the standard error stream
+    #[must_use]
+    pub fn stderr(mut self, stderr: Arc<Mutex<dyn Write + Send + Sync>>) -> Self {
+        self.stderr = stderr;
+        self
+    }
+
     /// Build the configuration
     ///
     /// # Errors
@@ -202,7 +251,26 @@ impl ConfigurationBuilder {
             system_properties: self.system_properties,
             interpreted: self.interpreted,
             preview_features: self.preview_features,
+            stdout: self.stdout,
+            stderr: self.stderr,
         })
+    }
+}
+
+/// Debug implementation for ConfigurationBuilder
+impl Debug for ConfigurationBuilder {
+    /// Format the configuration builder
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ConfigurationBuilder")
+            .field("class_path", &self.class_path)
+            .field("main_class", &self.main_class)
+            .field("jar", &self.jar)
+            .field("java_home", &self.java_home)
+            .field("java_version", &self.java_version)
+            .field("system_properties", &self.system_properties)
+            .field("interpreted", &self.interpreted)
+            .field("preview_features", &self.preview_features)
+            .finish()
     }
 }
 
