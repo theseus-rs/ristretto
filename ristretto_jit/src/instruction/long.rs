@@ -200,7 +200,8 @@ pub(crate) fn lneg(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value
 pub(crate) fn lshl(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) -> Result<()> {
     let value2 = stack.pop().ok_or(OperandStackUnderflow)?;
     let value1 = stack.pop().ok_or(OperandStackUnderflow)?;
-    let mask = function_builder.ins().iconst(types::I32, 0x3f);
+    let value2 = function_builder.ins().sextend(types::I64, value2);
+    let mask = function_builder.ins().iconst(types::I64, 0x3f);
     let value2 = function_builder.ins().band(value2, mask);
     let value = function_builder.ins().ishl(value1, value2);
     stack.push(value);
@@ -211,7 +212,8 @@ pub(crate) fn lshl(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value
 pub(crate) fn lshr(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) -> Result<()> {
     let value2 = stack.pop().ok_or(OperandStackUnderflow)?;
     let value1 = stack.pop().ok_or(OperandStackUnderflow)?;
-    let mask = function_builder.ins().iconst(types::I32, 0x3f);
+    let value2 = function_builder.ins().sextend(types::I64, value2);
+    let mask = function_builder.ins().iconst(types::I64, 0x3f);
     let value2 = function_builder.ins().band(value2, mask);
     let value = function_builder.ins().sshr(value1, value2);
     stack.push(value);
@@ -222,7 +224,8 @@ pub(crate) fn lshr(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value
 pub(crate) fn lushr(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) -> Result<()> {
     let value2 = stack.pop().ok_or(OperandStackUnderflow)?;
     let value1 = stack.pop().ok_or(OperandStackUnderflow)?;
-    let mask = function_builder.ins().iconst(types::I32, 0x3f);
+    let value2 = function_builder.ins().sextend(types::I64, value2);
+    let mask = function_builder.ins().iconst(types::I64, 0x3f);
     let value2 = function_builder.ins().band(value2, mask);
     let value = function_builder.ins().ushr(value1, value2);
     stack.push(value);
