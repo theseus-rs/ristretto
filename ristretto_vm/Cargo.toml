@@ -40,6 +40,10 @@ tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
 criterion = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+walkdir = { workspace = true }
 
 [features]
 default = ["rustls-tls"]

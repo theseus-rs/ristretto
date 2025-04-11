@@ -1,11 +1,12 @@
-use crate::Error::InternalError;
+use crate::Error::{InternalError, JitError};
 use crate::{Result, VM};
 use dashmap::DashMap;
 use ristretto_classfile::MethodAccessFlags;
 use ristretto_classloader::{Class, Method, Value};
+use ristretto_jit::Error::{UnsupportedInstruction, UnsupportedTargetISA, UnsupportedType};
 use ristretto_jit::Function;
 use std::sync::{Arc, LazyLock};
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 /// The function cache is a thread-safe map that stores compiled functions.
 static FUNCTION_CACHE: LazyLock<DashMap<String, Option<Arc<Function>>>> =
@@ -14,9 +15,13 @@ static FUNCTION_CACHE: LazyLock<DashMap<String, Option<Arc<Function>>>> =
 /// Attempt to JIT compile a method.
 ///
 /// This function will only compile the method if the VM is not in interpreted mode.
-pub(crate) fn compile(vm: &Arc<VM>, class: &Arc<Class>, method: &Method) -> Option<Arc<Function>> {
+pub(crate) fn compile(
+    vm: &Arc<VM>,
+    class: &Arc<Class>,
+    method: &Method,
+) -> Result<Option<Arc<Function>>> {
     if vm.configuration().interpreted() {
-        return None;
+        return Ok(None);
     }
 
     let definition = method.definition();
@@ -27,7 +32,7 @@ pub(crate) fn compile(vm: &Arc<VM>, class: &Arc<Class>, method: &Method) -> Opti
 
     if let Some(function) = FUNCTION_CACHE.get(&fully_qualified_method_name) {
         debug!("Using cached function for {fully_qualified_method_name}");
-        return function.clone();
+        return Ok(function.clone());
     }
 
     let compiler = vm.compiler();
@@ -38,12 +43,32 @@ pub(crate) fn compile(vm: &Arc<VM>, class: &Arc<Class>, method: &Method) -> Opti
             let function = Arc::new(function);
             info!("Compiled {fully_qualified_method_name}");
             FUNCTION_CACHE.insert(fully_qualified_method_name, Some(function.clone()));
-            Some(function)
+            Ok(Some(function))
+        }
+        Err(UnsupportedInstruction(instruction)) => {
+            debug!("Unsupported instruction: {instruction:?}");
+            FUNCTION_CACHE.insert(fully_qualified_method_name, None);
+            Ok(None)
+        }
+        Err(UnsupportedTargetISA(message)) => {
+            debug!("Unsupported target ISA: {message}");
+            FUNCTION_CACHE.insert(fully_qualified_method_name, None);
+            Ok(None)
+        }
+        Err(UnsupportedType(vm_type)) => {
+            debug!("Unsupported type: {vm_type}");
+            FUNCTION_CACHE.insert(fully_qualified_method_name, None);
+            Ok(None)
         }
         Err(error) => {
-            debug!("Unable to compile method: {fully_qualified_method_name}: {error:?}");
-            FUNCTION_CACHE.insert(fully_qualified_method_name, None);
-            None
+            error!(
+                "Error compiling instructions for {fully_qualified_method_name}:\n\
+                Constant Pool\n\
+                {constant_pool}\n\
+                Method:\n\
+                {method:?}"
+            );
+            Err(JitError(error))
         }
     }
 }
