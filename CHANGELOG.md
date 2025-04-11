@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/v0.17.0...v0.18.0) - 2025-04-11
+
+### Fixed
+- improve jit error handling
+- correct long and double jit locals
+
+### Other
+- add java compatibility tests
+
+## `ristretto_vm` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.17.0...ristretto_vm-v0.18.0) - 2025-04-11
+
+### Fixed
+- improve jit error handling
+- correct long and double jit locals
+
+### Other
+- add java compatibility tests
+
+## `ristretto_jit` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.17.0...ristretto_jit-v0.18.0) - 2025-04-11
+
+### Fixed
+- improve jit error handling
+- correct long and double jit locals
+
 ## `ristretto_cli` - [0.17.0](https://github.com/theseus-rs/ristretto/compare/v0.16.0...v0.17.0) - 2025-04-10
 
 ### Added
