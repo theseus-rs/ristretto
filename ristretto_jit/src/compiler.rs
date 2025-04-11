@@ -200,6 +200,14 @@ impl Compiler {
                 .ins()
                 .load(native_type, MemFlags::trusted(), address, 8);
             locals.push(value);
+            if let FieldType::Base(BaseType::Long | BaseType::Double) = parameter_type {
+                // The JVM specification requires that Long and Double take two places in the
+                // locals list when passed to a method. This method adjusts the locals list
+                // to account for this.
+                //
+                // See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6.1>
+                locals.push(function_builder.ins().iconst(types::I32, 0));
+            }
         }
 
         let value = function_builder.ins().iconst(types::I32, 0);

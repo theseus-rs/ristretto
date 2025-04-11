@@ -141,8 +141,8 @@ impl Frame {
         }
     }
 
-    /// The JVM specification requires that Long and Double take two places in the parameters list
-    /// when passed to a method. This method adjusts the parameters list to account for this.
+    /// The JVM specification requires that Long and Double take two places in the locals list
+    /// when passed to a method. This method adjusts the locals list to account for this.
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6.1>
     fn adjust_parameters(parameters: &mut Vec<Value>, max_size: usize) {
