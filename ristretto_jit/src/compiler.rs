@@ -9,10 +9,10 @@ use crate::instruction::{
     i2d, i2f, i2l, i2s, iadd, iand, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5,
     iconst_m1, idiv, iinc, iinc_w, iload, iload_0, iload_1, iload_2, iload_3, iload_w, impdep1,
     impdep2, imul, ineg, ior, irem, ireturn, ishl, ishr, istore, istore_0, istore_1, istore_2,
-    istore_3, istore_w, isub, iushr, ixor, l2d, l2f, l2i, ladd, land, lconst_0, lconst_1, ldc,
-    ldc_w, ldc2_w, ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lor, lrem,
-    lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr,
-    lxor, monitorenter, monitorexit, nop, pop, pop2, r#return, sipush, swap, wide,
+    istore_3, istore_w, isub, iushr, ixor, l2d, l2f, l2i, ladd, land, lcmp, lconst_0, lconst_1,
+    ldc, ldc_w, ldc2_w, ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lor,
+    lrem, lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub,
+    lushr, lxor, monitorenter, monitorexit, nop, pop, pop2, r#return, sipush, swap, wide,
 };
 use crate::{JitValue, Result};
 use cranelift::codegen::ir::UserFuncName;
@@ -402,7 +402,7 @@ impl Compiler {
             Instruction::I2b => i2b(function_builder, stack)?,
             Instruction::I2c => i2c(function_builder, stack)?,
             Instruction::I2s => i2s(function_builder, stack)?,
-            // Instruction::Lcmp => lcmp(function_builder, stack)?,
+            Instruction::Lcmp => lcmp(function_builder, stack)?,
             // Instruction::Fcmpl => fcmpl(function_builder, stack)?,
             // Instruction::Fcmpg => fcmpg(function_builder, stack)?,
             // Instruction::Dcmpl => dcmpl(function_builder, stack)?,

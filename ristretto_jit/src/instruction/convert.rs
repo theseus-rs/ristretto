@@ -44,7 +44,6 @@ pub(crate) fn l2f(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.l2d>
-#[inline]
 pub(crate) fn l2d(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) -> Result<()> {
     let value = stack.pop().ok_or(OperandStackUnderflow)?;
     let value = function_builder.ins().fcvt_from_sint(types::F64, value);
