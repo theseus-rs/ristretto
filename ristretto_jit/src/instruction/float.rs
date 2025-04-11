@@ -1,7 +1,7 @@
 use crate::Error::{InvalidLocalVariableIndex, OperandStackUnderflow};
 use crate::{Result, jit_value};
 use cranelift::frontend::FunctionBuilder;
-use cranelift::prelude::{InstBuilder, MemFlags, Value, types};
+use cranelift::prelude::{InstBuilder, IntCC, MemFlags, Value, types};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fconst_f>
 pub(crate) fn fconst_0(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) {
@@ -194,6 +194,122 @@ pub(crate) fn frem(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value
 pub(crate) fn fneg(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) -> Result<()> {
     let value = stack.pop().ok_or(OperandStackUnderflow)?;
     let value = function_builder.ins().fneg(value);
+    stack.push(value);
+    Ok(())
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fcmpl>
+pub(crate) fn fcmpl(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) -> Result<()> {
+    let value2 = stack.pop().ok_or(OperandStackUnderflow)?;
+    let value1 = stack.pop().ok_or(OperandStackUnderflow)?;
+
+    let equal_block = function_builder.create_block();
+    let else_block = function_builder.create_block();
+    let greater_than_block = function_builder.create_block();
+    let less_than_block = function_builder.create_block();
+    let merge_block = function_builder.create_block();
+
+    function_builder.append_block_param(merge_block, types::I32);
+
+    // TODO: Handle f32::is_nan(value1) || f32::is_nan(value2)
+
+    let condition_value = function_builder.ins().icmp(IntCC::Equal, value1, value2);
+    function_builder
+        .ins()
+        .brif(condition_value, equal_block, &[], else_block, &[]);
+
+    function_builder.switch_to_block(equal_block);
+    function_builder.seal_block(equal_block);
+    let equal_return = function_builder.ins().iconst(types::I32, 0);
+    function_builder.ins().jump(merge_block, &[equal_return]);
+
+    function_builder.switch_to_block(else_block);
+    function_builder.seal_block(else_block);
+    let condition_value = function_builder
+        .ins()
+        .icmp(IntCC::SignedGreaterThan, value1, value2);
+    function_builder.ins().brif(
+        condition_value,
+        greater_than_block,
+        &[],
+        less_than_block,
+        &[],
+    );
+
+    function_builder.switch_to_block(greater_than_block);
+    function_builder.seal_block(greater_than_block);
+    let greater_than_return = function_builder.ins().iconst(types::I32, 1);
+    function_builder
+        .ins()
+        .jump(merge_block, &[greater_than_return]);
+
+    function_builder.switch_to_block(less_than_block);
+    function_builder.seal_block(less_than_block);
+    let less_than_return = function_builder.ins().iconst(types::I32, -1);
+    function_builder
+        .ins()
+        .jump(merge_block, &[less_than_return]);
+
+    function_builder.switch_to_block(merge_block);
+    function_builder.seal_block(merge_block);
+    let value = function_builder.block_params(merge_block)[0];
+    stack.push(value);
+    Ok(())
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fcmpg>
+pub(crate) fn fcmpg(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) -> Result<()> {
+    let value2 = stack.pop().ok_or(OperandStackUnderflow)?;
+    let value1 = stack.pop().ok_or(OperandStackUnderflow)?;
+
+    let equal_block = function_builder.create_block();
+    let else_block = function_builder.create_block();
+    let greater_than_block = function_builder.create_block();
+    let less_than_block = function_builder.create_block();
+    let merge_block = function_builder.create_block();
+
+    function_builder.append_block_param(merge_block, types::I32);
+
+    let condition_value = function_builder.ins().icmp(IntCC::Equal, value1, value2);
+    function_builder
+        .ins()
+        .brif(condition_value, equal_block, &[], else_block, &[]);
+
+    function_builder.switch_to_block(equal_block);
+    function_builder.seal_block(equal_block);
+    let equal_return = function_builder.ins().iconst(types::I32, 0);
+    function_builder.ins().jump(merge_block, &[equal_return]);
+
+    function_builder.switch_to_block(else_block);
+    function_builder.seal_block(else_block);
+    let condition_value = function_builder
+        .ins()
+        .icmp(IntCC::SignedGreaterThan, value1, value2);
+    function_builder.ins().brif(
+        condition_value,
+        greater_than_block,
+        &[],
+        less_than_block,
+        &[],
+    );
+
+    function_builder.switch_to_block(greater_than_block);
+    function_builder.seal_block(greater_than_block);
+    let greater_than_return = function_builder.ins().iconst(types::I32, 1);
+    function_builder
+        .ins()
+        .jump(merge_block, &[greater_than_return]);
+
+    function_builder.switch_to_block(less_than_block);
+    function_builder.seal_block(less_than_block);
+    let less_than_return = function_builder.ins().iconst(types::I32, -1);
+    function_builder
+        .ins()
+        .jump(merge_block, &[less_than_return]);
+
+    function_builder.switch_to_block(merge_block);
+    function_builder.seal_block(merge_block);
+    let value = function_builder.block_params(merge_block)[0];
     stack.push(value);
     Ok(())
 }
