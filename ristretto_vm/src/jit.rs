@@ -3,7 +3,9 @@ use crate::{Result, VM};
 use dashmap::DashMap;
 use ristretto_classfile::MethodAccessFlags;
 use ristretto_classloader::{Class, Method, Value};
-use ristretto_jit::Error::{UnsupportedInstruction, UnsupportedTargetISA, UnsupportedType};
+use ristretto_jit::Error::{
+    UnsupportedInstruction, UnsupportedMethod, UnsupportedTargetISA, UnsupportedType,
+};
 use ristretto_jit::Function;
 use std::sync::{Arc, LazyLock};
 use tracing::{debug, error, info};
@@ -50,6 +52,11 @@ pub(crate) fn compile(
             FUNCTION_CACHE.insert(fully_qualified_method_name, None);
             Ok(None)
         }
+        Err(UnsupportedMethod(message)) => {
+            debug!("Unsupported method: {message}");
+            FUNCTION_CACHE.insert(fully_qualified_method_name, None);
+            Ok(None)
+        }
         Err(UnsupportedTargetISA(message)) => {
             debug!("Unsupported target ISA: {message}");
             FUNCTION_CACHE.insert(fully_qualified_method_name, None);
@@ -63,7 +70,9 @@ pub(crate) fn compile(
         Err(error) => {
             error!(
                 "Error compiling instructions for {fully_qualified_method_name}:\n\
-                Constant Pool\n\
+                Error:\n\
+                {error:?}\n\
+                Constant Pool:\n\
                 {constant_pool}\n\
                 Method:\n\
                 {method:?}"

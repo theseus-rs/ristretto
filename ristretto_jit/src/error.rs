@@ -36,6 +36,9 @@ pub enum Error {
     /// The instruction is not supported by the JIT compiler
     #[error("Unsupported instruction: {0}")]
     UnsupportedInstruction(Instruction),
+    /// The JIT compiler does not support the given method
+    #[error("Unsupported method: {0}")]
+    UnsupportedMethod(String),
     /// The target Instruction Set Architecture (ISA) is not supported
     #[error("Unsupported target ISA: {0}")]
     UnsupportedTargetISA(&'static str),

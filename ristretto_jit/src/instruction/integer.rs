@@ -1,7 +1,7 @@
 use crate::Error::{InvalidLocalVariableIndex, OperandStackUnderflow};
 use crate::{Result, jit_value};
 use cranelift::codegen::ir::Value;
-use cranelift::prelude::{FunctionBuilder, InstBuilder, MemFlags, types};
+use cranelift::prelude::{EntityRef, FunctionBuilder, InstBuilder, MemFlags, Variable, types};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
 pub(crate) fn iconst_m1(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) {
@@ -46,118 +46,178 @@ pub(crate) fn iconst_5(function_builder: &mut FunctionBuilder, stack: &mut Vec<V
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload>
-pub(crate) fn iload(locals: &mut [Value], stack: &mut Vec<Value>, index: u8) -> Result<()> {
+pub(crate) fn iload(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+    index: u8,
+) -> Result<()> {
     let index = usize::from(index);
-    let value = locals.get(index).ok_or(InvalidLocalVariableIndex(index))?;
-    stack.push(*value);
+    let variable = Variable::new(index);
+    let Ok(value) = function_builder.try_use_var(variable) else {
+        return Err(InvalidLocalVariableIndex(index));
+    };
+    stack.push(value);
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload>
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
-pub(crate) fn iload_w(locals: &mut [Value], stack: &mut Vec<Value>, index: u16) -> Result<()> {
+pub(crate) fn iload_w(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+    index: u16,
+) -> Result<()> {
     let index = usize::from(index);
-    let value = locals.get(index).ok_or(InvalidLocalVariableIndex(index))?;
-    stack.push(*value);
+    let variable = Variable::new(index);
+    let Ok(value) = function_builder.try_use_var(variable) else {
+        return Err(InvalidLocalVariableIndex(index));
+    };
+    stack.push(value);
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload_n>
-pub(crate) fn iload_0(locals: &mut [Value], stack: &mut Vec<Value>) -> Result<()> {
+pub(crate) fn iload_0(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+) -> Result<()> {
     let index = 0;
-    let value = locals.get(index).ok_or(InvalidLocalVariableIndex(index))?;
-    stack.push(*value);
+    let variable = Variable::new(index);
+    let Ok(value) = function_builder.try_use_var(variable) else {
+        return Err(InvalidLocalVariableIndex(index));
+    };
+    stack.push(value);
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload_n>
-pub(crate) fn iload_1(locals: &mut [Value], stack: &mut Vec<Value>) -> Result<()> {
+pub(crate) fn iload_1(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+) -> Result<()> {
     let index = 1;
-    let value = locals.get(index).ok_or(InvalidLocalVariableIndex(index))?;
-    stack.push(*value);
+    let variable = Variable::new(index);
+    let Ok(value) = function_builder.try_use_var(variable) else {
+        return Err(InvalidLocalVariableIndex(index));
+    };
+    stack.push(value);
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload_n>
-pub(crate) fn iload_2(locals: &mut [Value], stack: &mut Vec<Value>) -> Result<()> {
+pub(crate) fn iload_2(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+) -> Result<()> {
     let index = 2;
-    let value = locals.get(index).ok_or(InvalidLocalVariableIndex(index))?;
-    stack.push(*value);
+    let variable = Variable::new(index);
+    let Ok(value) = function_builder.try_use_var(variable) else {
+        return Err(InvalidLocalVariableIndex(index));
+    };
+    stack.push(value);
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload_n>
-pub(crate) fn iload_3(locals: &mut [Value], stack: &mut Vec<Value>) -> Result<()> {
+pub(crate) fn iload_3(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+) -> Result<()> {
     let index = 3;
-    let value = locals.get(index).ok_or(InvalidLocalVariableIndex(index))?;
-    stack.push(*value);
+    let variable = Variable::new(index);
+    let Ok(value) = function_builder.try_use_var(variable) else {
+        return Err(InvalidLocalVariableIndex(index));
+    };
+    stack.push(value);
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore>
-pub(crate) fn istore(locals: &mut [Value], stack: &mut Vec<Value>, index: u8) -> Result<()> {
+pub(crate) fn istore(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+    index: u8,
+) -> Result<()> {
     let value = stack.pop().ok_or(OperandStackUnderflow)?;
     let index = usize::from(index);
-    if index >= locals.len() {
-        return Err(InvalidLocalVariableIndex(index));
+    let variable = Variable::new(index);
+    if function_builder.try_def_var(variable, value).is_err() {
+        function_builder.declare_var(variable, types::I32);
+        function_builder.def_var(variable, value);
     }
-    locals[index] = value;
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore>
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
-pub(crate) fn istore_w(locals: &mut [Value], stack: &mut Vec<Value>, index: u16) -> Result<()> {
+pub(crate) fn istore_w(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+    index: u16,
+) -> Result<()> {
     let value = stack.pop().ok_or(OperandStackUnderflow)?;
     let index = usize::from(index);
-    if index >= locals.len() {
-        return Err(InvalidLocalVariableIndex(index));
+    let variable = Variable::new(index);
+    if function_builder.try_def_var(variable, value).is_err() {
+        function_builder.declare_var(variable, types::I32);
+        function_builder.def_var(variable, value);
     }
-    locals[index] = value;
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore_n>
-pub(crate) fn istore_0(locals: &mut [Value], stack: &mut Vec<Value>) -> Result<()> {
+pub(crate) fn istore_0(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+) -> Result<()> {
     let value = stack.pop().ok_or(OperandStackUnderflow)?;
-    let index = 0;
-    if index >= locals.len() {
-        return Err(InvalidLocalVariableIndex(index));
+    let variable = Variable::new(0);
+    if function_builder.try_def_var(variable, value).is_err() {
+        function_builder.declare_var(variable, types::I32);
+        function_builder.def_var(variable, value);
     }
-    locals[index] = value;
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore_n>
-pub(crate) fn istore_1(locals: &mut [Value], stack: &mut Vec<Value>) -> Result<()> {
+pub(crate) fn istore_1(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+) -> Result<()> {
     let value = stack.pop().ok_or(OperandStackUnderflow)?;
-    let index = 1;
-    if index >= locals.len() {
-        return Err(InvalidLocalVariableIndex(index));
+    let variable = Variable::new(1);
+    if function_builder.try_def_var(variable, value).is_err() {
+        function_builder.declare_var(variable, types::I32);
+        function_builder.def_var(variable, value);
     }
-    locals[index] = value;
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore_n>
-pub(crate) fn istore_2(locals: &mut [Value], stack: &mut Vec<Value>) -> Result<()> {
+pub(crate) fn istore_2(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+) -> Result<()> {
     let value = stack.pop().ok_or(OperandStackUnderflow)?;
-    let index = 2;
-    if index >= locals.len() {
-        return Err(InvalidLocalVariableIndex(index));
+    let variable = Variable::new(2);
+    if function_builder.try_def_var(variable, value).is_err() {
+        function_builder.declare_var(variable, types::I32);
+        function_builder.def_var(variable, value);
     }
-    locals[index] = value;
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore_n>
-pub(crate) fn istore_3(locals: &mut [Value], stack: &mut Vec<Value>) -> Result<()> {
+pub(crate) fn istore_3(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut Vec<Value>,
+) -> Result<()> {
     let value = stack.pop().ok_or(OperandStackUnderflow)?;
-    let index = 2;
-    if index >= locals.len() {
-        return Err(InvalidLocalVariableIndex(index));
+    let variable = Variable::new(3);
+    if function_builder.try_def_var(variable, value).is_err() {
+        function_builder.declare_var(variable, types::I32);
+        function_builder.def_var(variable, value);
     }
-    locals[index] = value;
     Ok(())
 }
 
@@ -287,20 +347,15 @@ pub(crate) fn ixor(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iinc>
-pub(crate) fn iinc(
-    function_builder: &mut FunctionBuilder,
-    locals: &mut [Value],
-    index: u8,
-    constant: i8,
-) -> Result<()> {
+pub(crate) fn iinc(function_builder: &mut FunctionBuilder, index: u8, constant: i8) -> Result<()> {
     let index = usize::from(index);
     let constant = i64::from(constant);
-    let value = locals.get(index).ok_or(InvalidLocalVariableIndex(index))?;
-    let value = function_builder.ins().iadd_imm(*value, constant);
-    if index >= locals.len() {
+    let variable = Variable::new(index);
+    let Ok(value) = function_builder.try_use_var(variable) else {
         return Err(InvalidLocalVariableIndex(index));
-    }
-    locals[index] = value;
+    };
+    let value = function_builder.ins().iadd_imm(value, constant);
+    function_builder.def_var(variable, value);
     Ok(())
 }
 
@@ -308,18 +363,17 @@ pub(crate) fn iinc(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
 pub(crate) fn iinc_w(
     function_builder: &mut FunctionBuilder,
-    locals: &mut [Value],
     index: u16,
     constant: i16,
 ) -> Result<()> {
     let index = usize::from(index);
     let constant = i64::from(constant);
-    let value = locals.get(index).ok_or(InvalidLocalVariableIndex(index))?;
-    let value = function_builder.ins().iadd_imm(*value, constant);
-    if index >= locals.len() {
+    let variable = Variable::new(index);
+    let Ok(value) = function_builder.try_use_var(variable) else {
         return Err(InvalidLocalVariableIndex(index));
-    }
-    locals[index] = value;
+    };
+    let value = function_builder.ins().iadd_imm(value, constant);
+    function_builder.def_var(variable, value);
     Ok(())
 }
 

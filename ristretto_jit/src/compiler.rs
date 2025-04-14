@@ -1,4 +1,6 @@
-use crate::Error::{InternalError, UnsupportedInstruction, UnsupportedTargetISA, UnsupportedType};
+use crate::Error::{
+    InternalError, UnsupportedInstruction, UnsupportedMethod, UnsupportedTargetISA, UnsupportedType,
+};
 use crate::function::Function;
 use crate::instruction::{
     bipush, breakpoint, d2f, d2i, d2l, dadd, dcmpg, dcmpl, dconst_0, dconst_1, ddiv, dload,
@@ -22,7 +24,7 @@ use cranelift::codegen::settings::Flags;
 use cranelift::module::{Linkage, Module, default_libcall_names};
 use cranelift::prelude::*;
 use ristretto_classfile::attributes::{Attribute, Instruction};
-use ristretto_classfile::{BaseType, ConstantPool, FieldType, Method};
+use ristretto_classfile::{BaseType, ConstantPool, FieldType, Method, MethodAccessFlags};
 use std::fmt::Debug;
 use std::mem;
 
@@ -60,23 +62,22 @@ impl Compiler {
     pub fn compile(&self, constant_pool: &ConstantPool, method: &Method) -> Result<Function> {
         let name = constant_pool.try_get_utf8(method.name_index)?;
         let descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
-        let Some((max_stack, max_locals, instructions)) =
-            method.attributes.iter().find_map(|attribute| {
-                if let Attribute::Code {
-                    max_stack,
-                    max_locals,
-                    code,
-                    ..
-                } = attribute
-                {
-                    let max_stack = usize::from(*max_stack);
-                    let max_locals = usize::from(*max_locals);
-                    Some((max_stack, max_locals, code))
-                } else {
-                    None
-                }
-            })
-        else {
+        if !method.access_flags.contains(MethodAccessFlags::STATIC) {
+            return Err(UnsupportedMethod(format!(
+                "Unable to compile non-static method: {name}{descriptor}"
+            )));
+        }
+        let Some((max_stack, instructions)) = method.attributes.iter().find_map(|attribute| {
+            if let Attribute::Code {
+                max_stack, code, ..
+            } = attribute
+            {
+                let max_stack = usize::from(*max_stack);
+                Some((max_stack, code))
+            } else {
+                None
+            }
+        }) else {
             return Err(InternalError("No Code attribute found".to_string()));
         };
 
@@ -100,19 +101,13 @@ impl Compiler {
         let (arguments_pointer, _arguments_length_pointer, return_pointer) =
             Self::function_pointers(&mut function_builder, block)?;
 
-        let mut locals = Self::locals(
-            descriptor,
-            max_locals,
-            &mut function_builder,
-            arguments_pointer,
-        )?;
+        Self::locals(descriptor, &mut function_builder, arguments_pointer)?;
         let mut stack = Vec::with_capacity(max_stack);
 
         for instruction in instructions {
             Self::process_instruction(
                 constant_pool,
                 &mut function_builder,
-                &mut locals,
                 &mut stack,
                 return_pointer,
                 instruction,
@@ -178,15 +173,14 @@ impl Compiler {
     /// If the locals array cannot be created
     fn locals(
         descriptor: &str,
-        max_locals: usize,
         function_builder: &mut FunctionBuilder,
         arguments_pointer: Value,
-    ) -> Result<Vec<Value>> {
+    ) -> Result<()> {
         let size_of = i64::try_from(size_of::<JitValue>())
             .map_err(|error| InternalError(format!("{error:?}")))?;
         let struct_size = function_builder.ins().iconst(types::I64, size_of);
 
-        let mut locals = Vec::with_capacity(max_locals);
+        let mut variable_index = 0;
         let (parameter_types, _return_type) = FieldType::parse_method_descriptor(descriptor)?;
         for (index, parameter_type) in parameter_types.iter().enumerate() {
             let index =
@@ -196,27 +190,28 @@ impl Compiler {
             let address = function_builder.ins().iadd(arguments_pointer, offset);
 
             // Ignore the discriminant
+            let variable = Variable::new(variable_index);
+            variable_index = variable_index
+                .checked_add(1)
+                .ok_or_else(|| InternalError("variable index overflow".to_string()))?;
             let native_type = Self::native_type(parameter_type)?;
+            function_builder.declare_var(variable, native_type);
             let value = function_builder
                 .ins()
                 .load(native_type, MemFlags::trusted(), address, 8);
-            locals.push(value);
+            function_builder.def_var(variable, value);
             if let FieldType::Base(BaseType::Long | BaseType::Double) = parameter_type {
                 // The JVM specification requires that Long and Double take two places in the
-                // locals list when passed to a method. This method adjusts the locals list
+                // locals list when passed to a method. This method adjusts the variables index
                 // to account for this.
                 //
                 // See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6.1>
-                locals.push(function_builder.ins().iconst(types::I32, 0));
+                variable_index = variable_index
+                    .checked_add(1)
+                    .ok_or_else(|| InternalError("variable index overflow".to_string()))?;
             }
         }
-
-        let value = function_builder.ins().iconst(types::I32, 0);
-        while locals.len() < max_locals {
-            locals.push(value);
-        }
-
-        Ok(locals)
+        Ok(())
     }
 
     /// Creates a new native type from the given field type.
@@ -243,7 +238,6 @@ impl Compiler {
     fn process_instruction(
         constant_pool: &ConstantPool,
         function_builder: &mut FunctionBuilder,
-        locals: &mut [Value],
         stack: &mut Vec<Value>,
         return_pointer: Value,
         instruction: &Instruction,
@@ -274,27 +268,27 @@ impl Compiler {
             Instruction::Ldc2_w(index) => {
                 ldc2_w(constant_pool, function_builder, stack, *index)?;
             }
-            Instruction::Iload(index) => iload(locals, stack, *index)?,
-            Instruction::Lload(index) => lload(locals, stack, *index)?,
-            Instruction::Fload(index) => fload(locals, stack, *index)?,
-            Instruction::Dload(index) => dload(locals, stack, *index)?,
+            Instruction::Iload(index) => iload(function_builder, stack, *index)?,
+            Instruction::Lload(index) => lload(function_builder, stack, *index)?,
+            Instruction::Fload(index) => fload(function_builder, stack, *index)?,
+            Instruction::Dload(index) => dload(function_builder, stack, *index)?,
             // Instruction::Aload(index) => aload(locals, stack, *index),
-            Instruction::Iload_0 => iload_0(locals, stack)?,
-            Instruction::Iload_1 => iload_1(locals, stack)?,
-            Instruction::Iload_2 => iload_2(locals, stack)?,
-            Instruction::Iload_3 => iload_3(locals, stack)?,
-            Instruction::Lload_0 => lload_0(locals, stack)?,
-            Instruction::Lload_1 => lload_1(locals, stack)?,
-            Instruction::Lload_2 => lload_2(locals, stack)?,
-            Instruction::Lload_3 => lload_3(locals, stack)?,
-            Instruction::Fload_0 => fload_0(locals, stack)?,
-            Instruction::Fload_1 => fload_1(locals, stack)?,
-            Instruction::Fload_2 => fload_2(locals, stack)?,
-            Instruction::Fload_3 => fload_3(locals, stack)?,
-            Instruction::Dload_0 => dload_0(locals, stack)?,
-            Instruction::Dload_1 => dload_1(locals, stack)?,
-            Instruction::Dload_2 => dload_2(locals, stack)?,
-            Instruction::Dload_3 => dload_3(locals, stack)?,
+            Instruction::Iload_0 => iload_0(function_builder, stack)?,
+            Instruction::Iload_1 => iload_1(function_builder, stack)?,
+            Instruction::Iload_2 => iload_2(function_builder, stack)?,
+            Instruction::Iload_3 => iload_3(function_builder, stack)?,
+            Instruction::Lload_0 => lload_0(function_builder, stack)?,
+            Instruction::Lload_1 => lload_1(function_builder, stack)?,
+            Instruction::Lload_2 => lload_2(function_builder, stack)?,
+            Instruction::Lload_3 => lload_3(function_builder, stack)?,
+            Instruction::Fload_0 => fload_0(function_builder, stack)?,
+            Instruction::Fload_1 => fload_1(function_builder, stack)?,
+            Instruction::Fload_2 => fload_2(function_builder, stack)?,
+            Instruction::Fload_3 => fload_3(function_builder, stack)?,
+            Instruction::Dload_0 => dload_0(function_builder, stack)?,
+            Instruction::Dload_1 => dload_1(function_builder, stack)?,
+            Instruction::Dload_2 => dload_2(function_builder, stack)?,
+            Instruction::Dload_3 => dload_3(function_builder, stack)?,
             // Instruction::Aload_0 => aload_0(locals, stack),
             // Instruction::Aload_1 => aload_1(locals, stack),
             // Instruction::Aload_2 => aload_2(locals, stack),
@@ -307,27 +301,27 @@ impl Compiler {
             // Instruction::Baload => baload(stack),
             // Instruction::Caload => caload(stack),
             // Instruction::Saload => saload(stack),
-            Instruction::Istore(index) => istore(locals, stack, *index)?,
-            Instruction::Lstore(index) => lstore(locals, stack, *index)?,
-            Instruction::Fstore(index) => fstore(locals, stack, *index)?,
-            Instruction::Dstore(index) => dstore(locals, stack, *index)?,
+            Instruction::Istore(index) => istore(function_builder, stack, *index)?,
+            Instruction::Lstore(index) => lstore(function_builder, stack, *index)?,
+            Instruction::Fstore(index) => fstore(function_builder, stack, *index)?,
+            Instruction::Dstore(index) => dstore(function_builder, stack, *index)?,
             // Instruction::Astore(index) => astore(locals, stack, *index)?,
-            Instruction::Istore_0 => istore_0(locals, stack)?,
-            Instruction::Istore_1 => istore_1(locals, stack)?,
-            Instruction::Istore_2 => istore_2(locals, stack)?,
-            Instruction::Istore_3 => istore_3(locals, stack)?,
-            Instruction::Lstore_0 => lstore_0(locals, stack)?,
-            Instruction::Lstore_1 => lstore_1(locals, stack)?,
-            Instruction::Lstore_2 => lstore_2(locals, stack)?,
-            Instruction::Lstore_3 => lstore_3(locals, stack)?,
-            Instruction::Fstore_0 => fstore_0(locals, stack)?,
-            Instruction::Fstore_1 => fstore_1(locals, stack)?,
-            Instruction::Fstore_2 => fstore_2(locals, stack)?,
-            Instruction::Fstore_3 => fstore_3(locals, stack)?,
-            Instruction::Dstore_0 => dstore_0(locals, stack)?,
-            Instruction::Dstore_1 => dstore_1(locals, stack)?,
-            Instruction::Dstore_2 => dstore_2(locals, stack)?,
-            Instruction::Dstore_3 => dstore_3(locals, stack)?,
+            Instruction::Istore_0 => istore_0(function_builder, stack)?,
+            Instruction::Istore_1 => istore_1(function_builder, stack)?,
+            Instruction::Istore_2 => istore_2(function_builder, stack)?,
+            Instruction::Istore_3 => istore_3(function_builder, stack)?,
+            Instruction::Lstore_0 => lstore_0(function_builder, stack)?,
+            Instruction::Lstore_1 => lstore_1(function_builder, stack)?,
+            Instruction::Lstore_2 => lstore_2(function_builder, stack)?,
+            Instruction::Lstore_3 => lstore_3(function_builder, stack)?,
+            Instruction::Fstore_0 => fstore_0(function_builder, stack)?,
+            Instruction::Fstore_1 => fstore_1(function_builder, stack)?,
+            Instruction::Fstore_2 => fstore_2(function_builder, stack)?,
+            Instruction::Fstore_3 => fstore_3(function_builder, stack)?,
+            Instruction::Dstore_0 => dstore_0(function_builder, stack)?,
+            Instruction::Dstore_1 => dstore_1(function_builder, stack)?,
+            Instruction::Dstore_2 => dstore_2(function_builder, stack)?,
+            Instruction::Dstore_3 => dstore_3(function_builder, stack)?,
             // Instruction::Astore_0 => astore_0(locals, stack),
             // Instruction::Astore_1 => astore_1(locals, stack),
             // Instruction::Astore_2 => astore_2(locals, stack),
@@ -386,7 +380,7 @@ impl Compiler {
             Instruction::Ixor => ixor(function_builder, stack)?,
             Instruction::Lxor => lxor(function_builder, stack)?,
             Instruction::Iinc(index, constant) => {
-                iinc(function_builder, locals, *index, *constant)?;
+                iinc(function_builder, *index, *constant)?;
             }
             Instruction::I2l => i2l(function_builder, stack)?,
             Instruction::I2f => i2f(function_builder, stack)?,
@@ -476,18 +470,18 @@ impl Compiler {
             Instruction::Impdep1 => impdep1(function_builder, stack),
             Instruction::Impdep2 => impdep2(function_builder, stack),
             // Wide instructions
-            Instruction::Iload_w(index) => iload_w(locals, stack, *index)?,
-            Instruction::Lload_w(index) => lload_w(locals, stack, *index)?,
-            Instruction::Fload_w(index) => fload_w(locals, stack, *index)?,
-            Instruction::Dload_w(index) => dload_w(locals, stack, *index)?,
+            Instruction::Iload_w(index) => iload_w(function_builder, stack, *index)?,
+            Instruction::Lload_w(index) => lload_w(function_builder, stack, *index)?,
+            Instruction::Fload_w(index) => fload_w(function_builder, stack, *index)?,
+            Instruction::Dload_w(index) => dload_w(function_builder, stack, *index)?,
             // Instruction::Aload_w(index) => aload_w(locals, stack, *index),
-            Instruction::Istore_w(index) => istore_w(locals, stack, *index)?,
-            Instruction::Lstore_w(index) => lstore_w(locals, stack, *index)?,
-            Instruction::Fstore_w(index) => fstore_w(locals, stack, *index)?,
-            Instruction::Dstore_w(index) => dstore_w(locals, stack, *index)?,
+            Instruction::Istore_w(index) => istore_w(function_builder, stack, *index)?,
+            Instruction::Lstore_w(index) => lstore_w(function_builder, stack, *index)?,
+            Instruction::Fstore_w(index) => fstore_w(function_builder, stack, *index)?,
+            Instruction::Dstore_w(index) => dstore_w(function_builder, stack, *index)?,
             // Instruction::Astore_w(index) => astore_w(locals, stack, *index),
             Instruction::Iinc_w(index, constant) => {
-                iinc_w(function_builder, locals, *index, *constant)?;
+                iinc_w(function_builder, *index, *constant)?;
             }
             // Instruction::Ret_w(index) => ret_w(locals, *index),
             _ => {
