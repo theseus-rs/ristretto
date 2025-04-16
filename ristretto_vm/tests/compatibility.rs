@@ -130,7 +130,12 @@ fn compile_tests(java_home: &Path, test_dirs: &[PathBuf]) -> Result<()> {
 
 /// Compiles a test directory by running `javac` on the `Test.java` file.
 fn compile_test(java_home: &Path, test_dir: &PathBuf) -> Result<()> {
-    let arguments = vec!["-cp", test_dir.to_str().unwrap_or_default(), TEST_FILE];
+    let arguments = vec![
+        "-parameters",
+        "-cp",
+        test_dir.to_str().unwrap_or_default(),
+        TEST_FILE,
+    ];
     let javac = java_home.join("bin").join("javac");
     let output = std::process::Command::new(javac)
         .args(&arguments)
