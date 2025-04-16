@@ -27,12 +27,12 @@ rust-version = "1.86.0"
 version = "0.17.0"
 
 [workspace.dependencies]
-anyhow = "1.0.97"
+anyhow = "1.0.98"
 async-recursion = "1.1.1"
 bitflags = "2.9.0"
 byteorder = "1.5.0"
 byte-unit = "5.1.6"
-clap = "4.5.35"
+clap = "4.5.36"
 console = "0.15.11"
 cranelift = "0.118.0"
 criterion = { version = "0.5.1", default-features = false }

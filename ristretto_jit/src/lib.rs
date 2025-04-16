@@ -16,15 +16,22 @@
 #![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
 
+#[cfg(not(target_family = "wasm"))]
 mod compiler;
 mod error;
 mod function;
+#[cfg(not(target_family = "wasm"))]
 mod instruction;
 mod jit_value;
 mod value;
+#[cfg(target_family = "wasm")]
+mod wasm_compiler;
 
+#[cfg(not(target_family = "wasm"))]
 pub use compiler::Compiler;
 pub use error::{Error, Result};
 pub use function::Function;
 pub(crate) use jit_value::JitValue;
 pub use value::Value;
+#[cfg(target_family = "wasm")]
+pub use wasm_compiler::Compiler;

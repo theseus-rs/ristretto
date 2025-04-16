@@ -19,18 +19,20 @@ use crate::instruction::{
 };
 use crate::{JitValue, Result};
 use cranelift::codegen::ir::UserFuncName;
-use cranelift::codegen::isa::Builder;
 use cranelift::codegen::settings::Flags;
+use cranelift::jit::{JITBuilder, JITModule};
 use cranelift::module::{Linkage, Module, default_libcall_names};
 use cranelift::prelude::*;
 use ristretto_classfile::attributes::{Attribute, Instruction};
-use ristretto_classfile::{BaseType, ConstantPool, FieldType, Method, MethodAccessFlags};
+use ristretto_classfile::{
+    BaseType, ClassFile, ConstantPool, FieldType, Method, MethodAccessFlags,
+};
 use std::fmt::Debug;
 use std::mem;
 
 /// Java Virtual Machine (JVM) bytecode to native code compiler.
 pub struct Compiler {
-    isa_builder: Builder,
+    jit_module: JITModule,
 }
 
 impl Compiler {
@@ -41,7 +43,10 @@ impl Compiler {
     /// * If the target ISA cannot be created
     pub fn new() -> Result<Self> {
         let isa_builder = cranelift::native::builder().map_err(UnsupportedTargetISA)?;
-        let compiler = Compiler { isa_builder };
+        let target_isa = isa_builder.finish(Flags::new(settings::builder()))?;
+        let jit_builder = JITBuilder::with_isa(target_isa, default_libcall_names());
+        let jit_module = JITModule::new(jit_builder);
+        let compiler = Compiler { jit_module };
         Ok(compiler)
     }
 
@@ -49,22 +54,14 @@ impl Compiler {
     ///
     /// # Errors
     /// if the Java byte code cannot be compiled to native code
-    #[cfg(target_family = "wasm")]
-    pub fn compile(&self, _constant_pool: &ConstantPool, _method: &Method) -> Result<Function> {
-        Err(crate::Error::InternalError("Not implemented".to_string()))
-    }
-
-    /// Compiles the given bytecode into native code.
-    ///
-    /// # Errors
-    /// if the Java byte code cannot be compiled to native code
-    #[cfg(not(target_family = "wasm"))]
-    pub fn compile(&self, constant_pool: &ConstantPool, method: &Method) -> Result<Function> {
-        let name = constant_pool.try_get_utf8(method.name_index)?;
-        let descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
+    pub fn compile(&mut self, class_file: &ClassFile, method: &Method) -> Result<Function> {
+        let constant_pool = &class_file.constant_pool;
+        let class_name = class_file.class_name()?;
+        let method_name = constant_pool.try_get_utf8(method.name_index)?;
+        let method_descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
         if !method.access_flags.contains(MethodAccessFlags::STATIC) {
             return Err(UnsupportedMethod(format!(
-                "Unable to compile non-static method: {name}{descriptor}"
+                "Unable to compile non-static method: {class_name}.{method_name}{method_descriptor}"
             )));
         }
         let Some((max_stack, instructions)) = method.attributes.iter().find_map(|attribute| {
@@ -81,12 +78,12 @@ impl Compiler {
             return Err(InternalError("No Code attribute found".to_string()));
         };
 
-        let target_isa = self.isa_builder.finish(Flags::new(settings::builder()))?;
-        let jit_builder = cranelift::jit::JITBuilder::with_isa(target_isa, default_libcall_names());
-        let mut module = cranelift::jit::JITModule::new(jit_builder);
-        let signature = Self::signature(&mut module);
-        let function = module.declare_function(name, Linkage::Local, &signature)?;
-        let mut module_context = module.make_context();
+        let function_name = Self::function_name(class_name, method_name);
+        let signature = self.signature();
+        let function =
+            self.jit_module
+                .declare_function(function_name.as_str(), Linkage::Local, &signature)?;
+        let mut module_context = self.jit_module.make_context();
         module_context.func.signature = signature;
         module_context.func.name = UserFuncName::user(0, function.as_u32());
 
@@ -101,7 +98,7 @@ impl Compiler {
         let (arguments_pointer, _arguments_length_pointer, return_pointer) =
             Self::function_pointers(&mut function_builder, block)?;
 
-        Self::locals(descriptor, &mut function_builder, arguments_pointer)?;
+        Self::locals(method_descriptor, &mut function_builder, arguments_pointer)?;
         let mut stack = Vec::with_capacity(max_stack);
 
         for instruction in instructions {
@@ -117,11 +114,12 @@ impl Compiler {
         function_builder.seal_all_blocks();
         function_builder.finalize();
 
-        module.define_function(function, &mut module_context)?;
-        module.clear_context(&mut module_context);
-        module.finalize_definitions()?;
+        self.jit_module
+            .define_function(function, &mut module_context)?;
+        self.jit_module.clear_context(&mut module_context);
+        self.jit_module.finalize_definitions()?;
 
-        let code = module.get_finalized_function(function);
+        let code = self.jit_module.get_finalized_function(function);
         let function = unsafe {
             let function: fn(*const JitValue, usize, *mut JitValue) = mem::transmute(code);
             Function::new(function)
@@ -129,14 +127,25 @@ impl Compiler {
         Ok(function)
     }
 
+    /// Creates a new function name from the class and method names.
+    fn function_name(class_name: &str, method_name: &str) -> String {
+        let class_name = class_name.replace('/', "_");
+        let method_name = method_name
+            .strip_prefix("<")
+            .unwrap_or(method_name)
+            .strip_suffix(">")
+            .unwrap_or(method_name);
+        format!("{class_name}__{method_name}")
+    }
+
     /// Creates a new signature from the method descriptor.
     #[cfg(not(target_family = "wasm"))]
-    fn signature(module: &mut cranelift::jit::JITModule) -> Signature {
-        let mut signature = module.make_signature();
-        let arguments_type = module.target_config().pointer_type();
+    fn signature(&mut self) -> Signature {
+        let mut signature = self.jit_module.make_signature();
+        let arguments_type = self.jit_module.target_config().pointer_type();
         signature.params.push(AbiParam::new(arguments_type)); // pointer to array
         signature.params.push(AbiParam::new(types::I64)); // length of array
-        let return_type = module.target_config().pointer_type();
+        let return_type = self.jit_module.target_config().pointer_type();
         signature.params.push(AbiParam::new(return_type));
         signature
     }
@@ -496,7 +505,7 @@ impl Debug for Compiler {
     /// Formats the compiler for debugging.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Compiler")
-            .field("isa_builder", &self.isa_builder.triple())
+            .field("module", &self.jit_module.isa().triple())
             .finish()
     }
 }
@@ -510,22 +519,22 @@ mod tests {
         let compiler = Compiler::new()?;
         let debug_string = format!("{compiler:?}");
         assert!(debug_string.contains("Compiler"));
-        assert!(debug_string.contains("isa_builder"));
+        assert!(debug_string.contains("module"));
         Ok(())
     }
 
-    fn jit_module() -> Result<cranelift::jit::JITModule> {
-        let isa_builder = cranelift::native::builder().map_err(UnsupportedTargetISA)?;
-        let target_isa = isa_builder.finish(Flags::new(settings::builder()))?;
-        let jit_builder = cranelift::jit::JITBuilder::with_isa(target_isa, default_libcall_names());
-        let module = cranelift::jit::JITModule::new(jit_builder);
-        Ok(module)
+    #[test]
+    fn test_function_name() {
+        let class_name = "java/lang/Object";
+        let method_name = "<clinit>";
+        let function_name = Compiler::function_name(class_name, method_name);
+        assert_eq!("java_lang_Object__clinit", function_name);
     }
 
     #[test]
     fn test_make_signature_no_parameters_no_return() -> Result<()> {
-        let mut module = jit_module()?;
-        let signature = Compiler::signature(&mut module);
+        let mut compiler = Compiler::new()?;
+        let signature = compiler.signature();
         assert_eq!(signature.params.len(), 3);
         assert_eq!(signature.returns, vec![]);
         Ok(())
