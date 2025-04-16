@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use tracing::debug;
 
 const JAVA_8: Version = Version::Java8 { minor: 0 };
@@ -35,7 +35,7 @@ pub struct VM {
     method_registry: MethodRegistry,
     next_thread_id: AtomicU64,
     threads: DashMap<u64, Arc<Thread>>,
-    compiler: Compiler,
+    compiler: Option<Arc<Mutex<Compiler>>>,
 }
 
 /// VM
@@ -125,7 +125,13 @@ impl VM {
         let mut method_registry = MethodRegistry::new(java_major_version);
         method_registry.initialize();
 
-        let compiler = Compiler::new()?;
+        let compiler = match Compiler::new() {
+            Ok(compiler) => Some(Arc::new(Mutex::new(compiler))),
+            Err(error) => {
+                debug!("JIT compiler not available: {error:?}");
+                None
+            }
+        };
 
         let vm = Arc::new_cyclic(|vm| VM {
             vm: vm.clone(),
@@ -228,8 +234,8 @@ impl VM {
     }
 
     /// Get the JIT Compiler
-    pub(crate) fn compiler(&self) -> &Compiler {
-        &self.compiler
+    pub(crate) fn compiler(&self) -> Option<Arc<Mutex<Compiler>>> {
+        self.compiler.as_ref().map(|compiler| compiler.clone())
     }
 
     /// Create a new thread

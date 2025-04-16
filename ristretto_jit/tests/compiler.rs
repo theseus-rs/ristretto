@@ -1,10 +1,11 @@
 use ristretto_classfile::attributes::{Attribute, Instruction, MaxLocals, MaxStack};
-use ristretto_classfile::{ConstantPool, MethodAccessFlags};
+use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, MethodAccessFlags};
 use ristretto_jit::{Compiler, Result, Value};
 
 #[test]
 fn test_compile() -> Result<()> {
     let mut constant_pool = ConstantPool::default();
+    let class_name_index = constant_pool.add_class("Test")?;
     let first_argument_index = constant_pool.add_long(4294967295)?;
     let code_index = constant_pool.add_utf8("Code")?;
     let test_name_index = constant_pool.add_utf8("multiplyHigh")?;
@@ -80,9 +81,18 @@ fn test_compile() -> Result<()> {
         exception_table: Vec::new(),
         attributes: Vec::new(),
     });
+    let class_file = ClassFile {
+        constant_pool,
+        access_flags: ClassAccessFlags::PUBLIC,
+        this_class: class_name_index,
+        methods: vec![test_method],
+        attributes: Vec::new(),
+        ..Default::default()
+    };
+    let test_method = &class_file.methods[0];
 
-    let compiler = Compiler::new()?;
-    let function = compiler.compile(&constant_pool, &test_method)?;
+    let mut compiler = Compiler::new()?;
+    let function = compiler.compile(&class_file, test_method)?;
     let arguments = vec![Value::I64(4), Value::I64(8)];
     let value = function.execute(arguments)?.expect("value");
     assert_eq!(value, Value::I64(0));

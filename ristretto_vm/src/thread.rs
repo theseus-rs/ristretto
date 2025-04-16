@@ -265,7 +265,7 @@ impl Thread {
         let rust_method = method_registry.method(class_name, method_name, method_descriptor);
         // If the method is not found in the registry, try to JIT compile it.
         let jit_method = if rust_method.is_none() {
-            jit::compile(&vm, class, method)?
+            jit::compile(&vm, class, method).await?
         } else {
             None
         };

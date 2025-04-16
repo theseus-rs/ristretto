@@ -17,7 +17,7 @@ static FUNCTION_CACHE: LazyLock<DashMap<String, Option<Arc<Function>>>> =
 /// Attempt to JIT compile a method.
 ///
 /// This function will only compile the method if the VM is not in interpreted mode.
-pub(crate) fn compile(
+pub(crate) async fn compile(
     vm: &Arc<VM>,
     class: &Arc<Class>,
     method: &Method,
@@ -36,11 +36,14 @@ pub(crate) fn compile(
         debug!("Using cached function for {fully_qualified_method_name}");
         return Ok(function.clone());
     }
+    let compiler_lock = vm.compiler();
+    let Some(compiler_lock) = compiler_lock else {
+        return Ok(None);
+    };
+    let mut compiler = compiler_lock.lock().await;
+    let class_file = class.class_file();
 
-    let compiler = vm.compiler();
-    let constant_pool = class.constant_pool();
-
-    match compiler.compile(constant_pool, definition) {
+    match compiler.compile(class_file, definition) {
         Ok(function) => {
             let function = Arc::new(function);
             info!("Compiled {fully_qualified_method_name}");
@@ -68,6 +71,7 @@ pub(crate) fn compile(
             Ok(None)
         }
         Err(error) => {
+            let constant_pool = class.constant_pool();
             error!(
                 "Error compiling instructions for {fully_qualified_method_name}:\n\
                 Error:\n\
