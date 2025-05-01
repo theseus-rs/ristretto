@@ -46,7 +46,7 @@ os_info = "3.10.0"
 reqwest = { version = "0.12.15", default-features = false }
 serde = "1.0.219"
 serde_plain = "1.0.2"
-stacker = "0.1.20"
+stacker = "0.1.21"
 sysinfo = "0.34.2"
 sys-locale = "0.3.2"
 tar = "0.4.44"
