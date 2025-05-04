@@ -915,7 +915,6 @@ impl Instruction {
             Instruction::Invokevirtual(method_index)
             | Instruction::Invokespecial(method_index)
             | Instruction::Invokestatic(method_index)
-            | Instruction::Invokeinterface(method_index, ..)
             | Instruction::Invokedynamic(method_index) => {
                 let (_class_index, name_and_type_index) = constant_pool.try_get_method_ref(*method_index)?;
                 let (_name_index, descriptor_index) =
@@ -931,6 +930,17 @@ impl Instruction {
                     // Subtract 1 for the object reference 
                     delta.saturating_sub(1)
                 }
+            }
+            Instruction::Invokeinterface(method_index, ..) => {
+                let (_class_index, name_and_type_index) = constant_pool.try_get_interface_method_ref(*method_index)?;
+                let (_name_index, descriptor_index) =
+                    constant_pool.try_get_name_and_type(*name_and_type_index)?;
+                let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
+                let (parameters, _return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
+                let delta = -i16::try_from(parameters.len())?;
+
+                // Subtract 1 for the object reference
+                delta.saturating_sub(1)
             }
             _ => 0,
         };
