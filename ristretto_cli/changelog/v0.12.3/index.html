@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" id="oranda" class="dark">
+  <head>
+    <title>ristretto</title>
+    
+      <meta property="og:url" content="https://theseus-rs.github.io/ristretto/ristretto_cli/" />
+    
+    
+      <link rel="icon" href="/ristretto/ristretto_cli/favicon.ico" />
+    
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+      <meta name="description" content="A Java Virtual Machine (JVM) CLI." />
+      <meta property="og:description" content="A Java Virtual Machine (JVM) CLI." />
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ristretto" />
+    
+    
+    
+    <meta http-equiv="Permissions-Policy" content="interest-cohort=()" />
+    <link rel="stylesheet" href="/ristretto/ristretto_cli/oranda-v0.6.1.css" />
+    
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-body">
+        
+          <div class="repo_banner">
+            <a href="https://github.com/theseus-rs/ristretto">
+              <div class="github-icon" aria-hidden="true"></div>
+              Check out our GitHub!
+            </a>
+          </div>
+        
+
+        <main>
+          <header>
+            
+            <h1 class="title">ristretto</h1>
+            
+  <nav class="nav">
+    <ul>
+      <li><a href="/ristretto/ristretto_cli/">Home</a></li>
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/artifacts/">Install</a></li>
+      
+
+      
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/changelog/">Changelog</a></li>
+      
+    </ul>
+  </nav>
+
+          </header>
+
+          
+  <div>
+    <h1>v0.12.3</h1>
+    <div class="releases-body">
+      
+      
+      <section class="release ">
+  
+  <div class="release-info">
+    <span class="flex items-center gap-2">
+      <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>
+      v0.12.3
+    </span>
+    <span class="flex items-center gap-2">
+      
+        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'><path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>
+        Jan 20 2025 at 20:55 UTC
+      
+    </span>
+  </div>
+  <div class="release-body">
+    <h2>✨ Enhancements</h2>
+<ul>
+<li>implement Value::TryInto and Reference::TryInto for class vec (#221)</li>
+<li>implement java.lang.Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method; (#218)</li>
+</ul>
+<h2>🐞 Bug fixes</h2>
+<ul>
+<li>remove unnecessary clone() for Value::TryInto and Reference::TryInto (#224)</li>
+<li>correct java.lang.Class.getComponentType() (#222)</li>
+<li>correct invalid return value for java.lang.Class.initClassName()Ljava/lang/String; (#220)</li>
+<li>implement java.lang.Class.getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor; (#215)</li>
+<li>implement java.lang.ref.Finalizer (#212)</li>
+<li>implement java.lang.Class.getDeclaredClasses0()[Ljava/lang/Class; (#211)</li>
+<li>implement java.lang.Class.getInterfaces0()[Ljava/lang/Class; (#210)</li>
+<li>implement sun.nio.ch.IOUtil.iovMax()I and sun.nio.ch.IOUtil.writeMax()J (#208)</li>
+<li>implement java.lang.ProcessHandleImpl (#207)</li>
+<li>correct null handling of caller argument in MethodHandleNatives.resolve() (#204)</li>
+<li>remove unnecessary use of Arc from LocalVariables (#200)</li>
+</ul>
+<h2>📦 Build system</h2>
+<ul>
+<li>update bitflags, clap, thiserror and cargo dist (#209)</li>
+<li>update to Rust 1.84.0 (#206)</li>
+<li>bump reqwest from 0.12.11 to 0.12.12 (#205)</li>
+<li>upgrade cargo dist to 0.27.0 (#201)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>rename Arguments struct to Parameters (#225)</li>
+<li>add sun.* native method tests (#223)</li>
+<li>verify native method definitions (#219)</li>
+<li>improve test coverage (#216)</li>
+<li>update dirs and convert-case (#217)</li>
+<li>limit method creation to require ClassFile references (#214)</li>
+<li>consolidate method construction (#213)</li>
+<li>encapsulate OperandStack to Frame and remove unnecessary uses of Arc/RwLock (#203)</li>
+<li>encapsulate LocalVariables to Frame and remove unnecessary uses of Arc/RwLock (#202)</li>
+<li>display JAVA_VERSION or default java version for the CLI --version option (#198)</li>
+</ul>
+
+  </div>
+</section>
+    </div>
+  </div>
+
+        </main>
+      </div>
+
+      <footer>
+        
+          <a href="https://github.com/theseus-rs/ristretto"><div class="github-icon" aria-hidden="true"></div></a>
+        
+        <span>
+          ristretto, Apache-2.0 OR MIT
+        </span>
+      </footer>
+    </div>
+
+    
+    
+
+    
+  </body>
+</html>
