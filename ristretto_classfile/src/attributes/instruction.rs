@@ -915,7 +915,6 @@ impl Instruction {
             Instruction::Invokevirtual(method_index)
             | Instruction::Invokespecial(method_index)
             | Instruction::Invokestatic(method_index)
-            | Instruction::Invokeinterface(method_index, ..)
             | Instruction::Invokedynamic(method_index) => {
                 let (_class_index, name_and_type_index) = constant_pool.try_get_method_ref(*method_index)?;
                 let (_name_index, descriptor_index) =
@@ -931,6 +930,17 @@ impl Instruction {
                     // Subtract 1 for the object reference 
                     delta.saturating_sub(1)
                 }
+            }
+            Instruction::Invokeinterface(method_index, ..) => {
+                let (_class_index, name_and_type_index) = constant_pool.try_get_interface_method_ref(*method_index)?;
+                let (_name_index, descriptor_index) =
+                    constant_pool.try_get_name_and_type(*name_and_type_index)?;
+                let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
+                let (parameters, _return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
+                let delta = -i16::try_from(parameters.len())?;
+
+                // Subtract 1 for the object reference
+                delta.saturating_sub(1)
             }
             _ => 0,
         };
@@ -4844,14 +4854,14 @@ mod test {
     fn test_invokeinterface() -> Result<()> {
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class("Foo")?;
-        let method_index = constant_pool.add_method_ref(class_index, "x", "(IJ)V")?;
+        let method_index = constant_pool.add_interface_method_ref(class_index, "x", "(IJ)V")?;
         let instruction = Instruction::Invokeinterface(method_index, 3);
         let code = 185;
         let expected_bytes = [code, 0, 6, 3, 0];
 
         assert_eq!("invokeinterface #6, 3", instruction.to_string());
         assert_eq!(
-            "invokeinterface #6, 1 // Method Foo.x(IJ)V",
+            "invokeinterface #6, 1 // Interface method Foo.x(IJ)V",
             Instruction::Invokeinterface(method_index, 1).to_formatted_string(&constant_pool)?
         );
         assert_eq!(-3, instruction.stack_delta(&constant_pool)?);
