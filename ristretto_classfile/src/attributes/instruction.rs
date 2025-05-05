@@ -4854,14 +4854,14 @@ mod test {
     fn test_invokeinterface() -> Result<()> {
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class("Foo")?;
-        let method_index = constant_pool.add_method_ref(class_index, "x", "(IJ)V")?;
+        let method_index = constant_pool.add_interface_method_ref(class_index, "x", "(IJ)V")?;
         let instruction = Instruction::Invokeinterface(method_index, 3);
         let code = 185;
         let expected_bytes = [code, 0, 6, 3, 0];
 
         assert_eq!("invokeinterface #6, 3", instruction.to_string());
         assert_eq!(
-            "invokeinterface #6, 1 // Method Foo.x(IJ)V",
+            "invokeinterface #6, 1 // Interface method Foo.x(IJ)V",
             Instruction::Invokeinterface(method_index, 1).to_formatted_string(&constant_pool)?
         );
         assert_eq!(-3, instruction.stack_delta(&constant_pool)?);
