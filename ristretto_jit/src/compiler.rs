@@ -59,9 +59,9 @@ impl Compiler {
         let class_name = class_file.class_name()?;
         let method_name = constant_pool.try_get_utf8(method.name_index)?;
         let method_descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
-        if !method.access_flags.contains(MethodAccessFlags::STATIC) {
+        if !method.access_flags.contains(MethodAccessFlags::STATIC) && method_name != "<init>" {
             return Err(UnsupportedMethod(format!(
-                "Unable to compile non-static method: {class_name}.{method_name}{method_descriptor}"
+                "Unable to compile method that is not <init> or static: {class_name}.{method_name}{method_descriptor}"
             )));
         }
         let Some((max_stack, instructions)) = method.attributes.iter().find_map(|attribute| {
@@ -139,7 +139,6 @@ impl Compiler {
     }
 
     /// Creates a new signature from the method descriptor.
-    #[cfg(not(target_family = "wasm"))]
     fn signature(&mut self) -> Signature {
         let mut signature = self.jit_module.make_signature();
         let arguments_type = self.jit_module.target_config().pointer_type();
@@ -513,6 +512,12 @@ impl Debug for Compiler {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_compiler_new() {
+        let result = Compiler::new();
+        assert!(result.is_ok());
+    }
 
     #[test]
     fn test_compiler_debug() -> Result<()> {
