@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/v0.17.0...v0.18.0) - 2025-05-05
+
+### Fixed
+- improve jit error handling
+- update JIT compiler to retain state between invocations and define unique function names
+- correct long and double jit locals
+
+### Other
+- add java compatibility tests
+- update invokeinterface test to expect interface method
+- Fix bug where Instruction::stack_delta panics when processing an InvokeInterface because it calls the wrong try_get*ref function ([#319](https://github.com/theseus-rs/ristretto/pull/319))
+- add javac -parameters compiler flag to include parameter metadata in class files
+- update jit to track JVM locals as cranelift variables
+
+## `ristretto_vm` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.17.0...ristretto_vm-v0.18.0) - 2025-05-05
+
+### Fixed
+- update JIT compiler to retain state between invocations and define unique function names
+- improve jit error handling
+- correct long and double jit locals
+
+### Other
+- add javac -parameters compiler flag to include parameter metadata in class files
+- update jit to track JVM locals as cranelift variables
+- add java compatibility tests
+
+## `ristretto_jit` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.17.0...ristretto_jit-v0.18.0) - 2025-05-05
+
+### Added
+- implement jit dcmpl, dcmpg, fcmpl, fcmpg
+- implement jit lcmp
+
+### Fixed
+- update JIT compiler to retain state between invocations and define unique function names
+- improve jit error handling
+- correct long and double jit locals
+
+### Other
+- update jit to track JVM locals as cranelift variables
+
+## `ristretto_classfile` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.17.0...ristretto_classfile-v0.18.0) - 2025-05-05
+
+### Other
+- update invokeinterface test to expect interface method
+- Fix bug where Instruction::stack_delta panics when processing an InvokeInterface because it calls the wrong try_get*ref function ([#319](https://github.com/theseus-rs/ristretto/pull/319))
+
 ## `ristretto_cli` - [0.17.0](https://github.com/theseus-rs/ristretto/compare/v0.16.0...v0.17.0) - 2025-04-10
 
 ### Added
