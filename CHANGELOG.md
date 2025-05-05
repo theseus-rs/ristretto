@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.18.1](https://github.com/theseus-rs/ristretto/compare/v0.18.0...v0.18.1) - 2025-05-05
+
+### Added
+- add jit <init> method support
+
+## `ristretto_vm` - [0.18.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.18.0...ristretto_vm-v0.18.1) - 2025-05-05
+
+### Added
+- add jit <init> method support
+
+## `ristretto_jit` - [0.18.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.18.0...ristretto_jit-v0.18.1) - 2025-05-05
+
+### Added
+- add jit <init> method support
+
 ## `ristretto_cli` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/v0.17.0...v0.18.0) - 2025-05-05
 
 ### Fixed
