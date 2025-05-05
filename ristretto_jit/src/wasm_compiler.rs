@@ -21,3 +21,14 @@ impl Compiler {
         Err(crate::Error::InternalError("Not implemented".to_string()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compiler_new() {
+        let result = Compiler::new();
+        assert!(result.is_ok());
+    }
+}

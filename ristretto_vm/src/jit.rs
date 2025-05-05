@@ -46,7 +46,7 @@ pub(crate) async fn compile(
     match compiler.compile(class_file, definition) {
         Ok(function) => {
             let function = Arc::new(function);
-            info!("Compiled {fully_qualified_method_name}");
+            info!("compiled method {fully_qualified_method_name}");
             FUNCTION_CACHE.insert(fully_qualified_method_name, Some(function.clone()));
             Ok(Some(function))
         }
