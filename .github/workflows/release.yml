@@ -140,8 +140,6 @@ jobs:
           pattern: artifacts-*
           path: target/distrib/
           merge-multiple: true
-      - name: Install cargo-auditable
-        run: ${{ matrix.install_cargo_auditable.run }}
       - name: Install dependencies
         run: |
           ${{ matrix.packages_install }}
