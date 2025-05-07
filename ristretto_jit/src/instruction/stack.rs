@@ -1,5 +1,4 @@
-use crate::Error::OperandStackUnderflow;
-use crate::Result;
+use crate::operand_stack::OperandStack;
 use cranelift::codegen::ir::Value;
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::types;
@@ -13,136 +12,121 @@ fn is_category_1(function_builder: &mut FunctionBuilder, value: Value) -> bool {
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.pop>
-pub(crate) fn pop(stack: &mut Vec<Value>) -> Result<()> {
-    let _ = stack.pop().ok_or(OperandStackUnderflow)?;
-    Ok(())
+pub(crate) fn pop(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+    let _ = stack.pop(function_builder);
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.pop2>
-pub(crate) fn pop2(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) -> Result<()> {
-    let value = stack.pop().ok_or(OperandStackUnderflow)?;
+pub(crate) fn pop2(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+    let value = stack.pop(function_builder);
     if is_category_1(function_builder, value) {
-        let _ = stack.pop().ok_or(OperandStackUnderflow)?;
+        let _ = stack.pop(function_builder);
     }
-    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup>
-pub(crate) fn dup(stack: &mut Vec<Value>) -> Result<()> {
-    let value = stack.pop().ok_or(OperandStackUnderflow)?;
-    stack.push(value);
-    stack.push(value);
-    Ok(())
+pub(crate) fn dup(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+    let value = stack.pop(function_builder);
+    stack.push(function_builder, value);
+    stack.push(function_builder, value);
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup_x1>
-pub(crate) fn dup_x1(stack: &mut Vec<Value>) -> Result<()> {
-    let value1 = stack.pop().ok_or(OperandStackUnderflow)?;
-    let value2 = stack.pop().ok_or(OperandStackUnderflow)?;
-    stack.push(value1);
-    stack.push(value2);
-    stack.push(value1);
-    Ok(())
+pub(crate) fn dup_x1(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+    let value1 = stack.pop(function_builder);
+    let value2 = stack.pop(function_builder);
+    stack.push(function_builder, value1);
+    stack.push(function_builder, value2);
+    stack.push(function_builder, value1);
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup_x2>
-pub(crate) fn dup_x2(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) -> Result<()> {
-    let value1 = stack.pop().ok_or(OperandStackUnderflow)?;
-    let value2 = stack.pop().ok_or(OperandStackUnderflow)?;
+pub(crate) fn dup_x2(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+    let value1 = stack.pop(function_builder);
+    let value2 = stack.pop(function_builder);
     if is_category_1(function_builder, value2) {
-        let value3 = stack.pop().ok_or(OperandStackUnderflow)?;
-        stack.push(value1);
-        stack.push(value3);
-        stack.push(value2);
-        stack.push(value1);
+        let value3 = stack.pop(function_builder);
+        stack.push(function_builder, value1);
+        stack.push(function_builder, value3);
+        stack.push(function_builder, value2);
+        stack.push(function_builder, value1);
     } else {
-        stack.push(value1);
-        stack.push(value2);
-        stack.push(value1);
+        stack.push(function_builder, value1);
+        stack.push(function_builder, value2);
+        stack.push(function_builder, value1);
     }
-    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup2>
-pub(crate) fn dup2(function_builder: &mut FunctionBuilder, stack: &mut Vec<Value>) -> Result<()> {
-    let value1 = stack.pop().ok_or(OperandStackUnderflow)?;
+pub(crate) fn dup2(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+    let value1 = stack.pop(function_builder);
     if is_category_1(function_builder, value1) {
-        let value2 = stack.pop().ok_or(OperandStackUnderflow)?;
-        stack.push(value2);
-        stack.push(value1);
-        stack.push(value2);
-        stack.push(value1);
+        let value2 = stack.pop(function_builder);
+        stack.push(function_builder, value2);
+        stack.push(function_builder, value1);
+        stack.push(function_builder, value2);
+        stack.push(function_builder, value1);
     } else {
-        stack.push(value1);
-        stack.push(value1);
+        stack.push(function_builder, value1);
+        stack.push(function_builder, value1);
     }
-    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup2_x1>
-pub(crate) fn dup2_x1(
-    function_builder: &mut FunctionBuilder,
-    stack: &mut Vec<Value>,
-) -> Result<()> {
-    let value1 = stack.pop().ok_or(OperandStackUnderflow)?;
-    let value2 = stack.pop().ok_or(OperandStackUnderflow)?;
+pub(crate) fn dup2_x1(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+    let value1 = stack.pop(function_builder);
+    let value2 = stack.pop(function_builder);
     if is_category_1(function_builder, value1) {
-        let value3 = stack.pop().ok_or(OperandStackUnderflow)?;
-        stack.push(value2);
-        stack.push(value1);
-        stack.push(value3);
-        stack.push(value2);
-        stack.push(value1);
+        let value3 = stack.pop(function_builder);
+        stack.push(function_builder, value2);
+        stack.push(function_builder, value1);
+        stack.push(function_builder, value3);
+        stack.push(function_builder, value2);
+        stack.push(function_builder, value1);
     } else {
-        stack.push(value1);
-        stack.push(value2);
-        stack.push(value1);
+        stack.push(function_builder, value1);
+        stack.push(function_builder, value2);
+        stack.push(function_builder, value1);
     }
-    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup2_x2>
-pub(crate) fn dup2_x2(
-    function_builder: &mut FunctionBuilder,
-    stack: &mut Vec<Value>,
-) -> Result<()> {
-    let value1 = stack.pop().ok_or(OperandStackUnderflow)?;
-    let value2 = stack.pop().ok_or(OperandStackUnderflow)?;
+pub(crate) fn dup2_x2(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+    let value1 = stack.pop(function_builder);
+    let value2 = stack.pop(function_builder);
     if is_category_1(function_builder, value1) {
-        let value3 = stack.pop().ok_or(OperandStackUnderflow)?;
+        let value3 = stack.pop(function_builder);
         if is_category_1(function_builder, value3) {
-            let value4 = stack.pop().ok_or(OperandStackUnderflow)?;
-            stack.push(value2);
-            stack.push(value1);
-            stack.push(value4);
+            let value4 = stack.pop(function_builder);
+            stack.push(function_builder, value2);
+            stack.push(function_builder, value1);
+            stack.push(function_builder, value4);
         } else {
-            stack.push(value1);
+            stack.push(function_builder, value1);
         }
-        stack.push(value3);
-        stack.push(value2);
-        stack.push(value1);
+        stack.push(function_builder, value3);
+        stack.push(function_builder, value2);
+        stack.push(function_builder, value1);
     } else {
         if is_category_1(function_builder, value2) {
-            let value3 = stack.pop().ok_or(OperandStackUnderflow)?;
-            stack.push(value1);
-            stack.push(value3);
+            let value3 = stack.pop(function_builder);
+            stack.push(function_builder, value1);
+            stack.push(function_builder, value3);
         } else {
-            stack.push(value1);
+            stack.push(function_builder, value1);
         }
-        stack.push(value2);
-        stack.push(value1);
+        stack.push(function_builder, value2);
+        stack.push(function_builder, value1);
     }
-    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.swap>
-pub(crate) fn swap(stack: &mut Vec<Value>) -> Result<()> {
+pub(crate) fn swap(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
     // Swapping category 2 values (Double and Long) is not supported by the JVM specification and
     // there is no mention of what should happen in this case. We will just swap the values and
     // ignore the fact that category 2 values could be swapped here.
-    let value1 = stack.pop().ok_or(OperandStackUnderflow)?;
-    let value2 = stack.pop().ok_or(OperandStackUnderflow)?;
-    stack.push(value1);
-    stack.push(value2);
-    Ok(())
+    let value1 = stack.pop(function_builder);
+    let value2 = stack.pop(function_builder);
+    stack.push(function_builder, value1);
+    stack.push(function_builder, value2);
 }

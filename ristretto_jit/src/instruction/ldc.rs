@@ -1,6 +1,6 @@
 use crate::Error::{InvalidConstant, InvalidConstantIndex, UnsupportedType};
 use crate::Result;
-use cranelift::codegen::ir::Value;
+use crate::operand_stack::OperandStack;
 use cranelift::prelude::{FunctionBuilder, InstBuilder, types};
 use ristretto_classfile::{Constant, ConstantPool};
 
@@ -8,7 +8,7 @@ use ristretto_classfile::{Constant, ConstantPool};
 pub(crate) fn ldc(
     constant_pool: &ConstantPool,
     function_builder: &mut FunctionBuilder,
-    stack: &mut Vec<Value>,
+    stack: &mut OperandStack,
     index: u8,
 ) -> Result<()> {
     let index = u16::from(index);
@@ -19,7 +19,7 @@ pub(crate) fn ldc(
 pub(crate) fn ldc_w(
     constant_pool: &ConstantPool,
     function_builder: &mut FunctionBuilder,
-    stack: &mut Vec<Value>,
+    stack: &mut OperandStack,
     index: u16,
 ) -> Result<()> {
     load_constant(constant_pool, function_builder, stack, index)
@@ -32,7 +32,7 @@ pub(crate) fn ldc_w(
 fn load_constant(
     constant_pool: &ConstantPool,
     function_builder: &mut FunctionBuilder,
-    stack: &mut Vec<Value>,
+    stack: &mut OperandStack,
     index: u16,
 ) -> Result<()> {
     let constant = constant_pool
@@ -67,7 +67,7 @@ fn load_constant(
             });
         }
     };
-    stack.push(value);
+    stack.push(function_builder, value);
     Ok(())
 }
 
@@ -75,7 +75,7 @@ fn load_constant(
 pub(crate) fn ldc2_w(
     constant_pool: &ConstantPool,
     function_builder: &mut FunctionBuilder,
-    stack: &mut Vec<Value>,
+    stack: &mut OperandStack,
     index: u16,
 ) -> Result<()> {
     let constant = constant_pool
@@ -92,6 +92,6 @@ pub(crate) fn ldc2_w(
             });
         }
     };
-    stack.push(value);
+    stack.push(function_builder, value);
     Ok(())
 }

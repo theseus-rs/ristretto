@@ -30,9 +30,6 @@ pub enum Error {
     /// A module error occurred
     #[error(transparent)]
     ModuleError(#[from] cranelift::module::ModuleError),
-    /// The operand stack underflow
-    #[error("Operand stack underflow")]
-    OperandStackUnderflow,
     /// The instruction is not supported by the JIT compiler
     #[error("Unsupported instruction: {0}")]
     UnsupportedInstruction(Instruction),
