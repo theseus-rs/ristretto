@@ -111,7 +111,6 @@ impl LocalVariables {
     ///
     /// # Errors
     /// if the index is out of bounds.
-    #[inline]
     pub fn set(&mut self, index: usize, value: Value) -> Result<()> {
         if index >= self.locals.capacity() {
             return Err(InvalidLocalVariableIndex(index));

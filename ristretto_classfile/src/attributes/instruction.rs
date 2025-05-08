@@ -817,8 +817,8 @@ impl Instruction {
             | Instruction::Jsr(..)
             | Instruction::Getstatic(..)
             | Instruction::New(..)
+            // Wide instructions
             | Instruction::Jsr_w(..)
-            // Wide instructions 
             | Instruction::Iload_w(..)
             | Instruction::Lload_w(..)
             | Instruction::Fload_w(..)
