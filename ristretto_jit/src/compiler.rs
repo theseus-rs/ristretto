@@ -32,6 +32,11 @@ use ristretto_classfile::{
 use std::fmt::Debug;
 use std::mem;
 
+#[cfg(debug_assertions)]
+const ENABLE_VERIFIER: &str = "true";
+#[cfg(not(debug_assertions))]
+const ENABLE_VERIFIER: &str = "false";
+
 /// Java Virtual Machine (JVM) bytecode to native code compiler.
 pub struct Compiler {
     jit_module: JITModule,
@@ -45,9 +50,8 @@ impl Compiler {
     /// * If the target ISA cannot be created
     pub fn new() -> Result<Self> {
         let isa_builder = cranelift::native::builder().map_err(UnsupportedTargetISA)?;
-
         let mut flag_builder = settings::builder();
-        let settings = [("opt_level", "speed"), ("enable_verifier", "true")];
+        let settings = [("opt_level", "speed"), ("enable_verifier", ENABLE_VERIFIER)];
         for (name, value) in &settings {
             if flag_builder.set(name, value).is_err() {
                 return Err(InternalError(format!(
