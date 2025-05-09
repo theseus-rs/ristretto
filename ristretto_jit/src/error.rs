@@ -30,6 +30,9 @@ pub enum Error {
     /// A module error occurred
     #[error(transparent)]
     ModuleError(#[from] cranelift::module::ModuleError),
+    /// An error occurred while trying to convert a number
+    #[error(transparent)]
+    TryFromIntError(#[from] std::num::TryFromIntError),
     /// The instruction is not supported by the JIT compiler
     #[error("Unsupported instruction: {0}")]
     UnsupportedInstruction(Instruction),

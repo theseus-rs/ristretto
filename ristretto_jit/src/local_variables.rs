@@ -9,7 +9,7 @@ pub struct LocalVariables {}
 
 impl LocalVariables {
     /// Create a new local variables
-    pub fn new(_locals: Vec<Value>) -> Self {
+    pub fn new() -> Self {
         LocalVariables {}
     }
 

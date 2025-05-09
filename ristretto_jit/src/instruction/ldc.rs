@@ -39,14 +39,24 @@ fn load_constant(
         .get(index)
         .ok_or_else(|| InvalidConstantIndex(index))?;
 
-    let value = match constant {
+    match constant {
         Constant::Integer(value) => {
             let value = i64::from(*value);
-            function_builder.ins().iconst(types::I32, value)
+            let value = function_builder.ins().iconst(types::I32, value);
+            stack.push_int(function_builder, value);
         }
         Constant::Float(value) => {
             let value = f64::from(*value);
-            function_builder.ins().f64const(value)
+            let value = function_builder.ins().f64const(value);
+            stack.push_float(function_builder, value);
+        }
+        Constant::Long(value) => {
+            let value = function_builder.ins().iconst(types::I64, *value);
+            stack.push_float(function_builder, value);
+        }
+        Constant::Double(value) => {
+            let value = function_builder.ins().f64const(*value);
+            stack.push_float(function_builder, value);
         }
         Constant::String(utf8_index) => {
             let _utf8_value = constant_pool.try_get_utf8(*utf8_index)?;
@@ -66,8 +76,7 @@ fn load_constant(
                 actual: format!("{constant:?}"),
             });
         }
-    };
-    stack.push(function_builder, value);
+    }
     Ok(())
 }
 
@@ -82,16 +91,21 @@ pub(crate) fn ldc2_w(
         .get(index)
         .ok_or_else(|| InvalidConstantIndex(index))?;
 
-    let value = match constant {
-        Constant::Long(value) => function_builder.ins().iconst(types::I64, *value),
-        Constant::Double(value) => function_builder.ins().f64const(*value),
+    match constant {
+        Constant::Long(value) => {
+            let value = function_builder.ins().iconst(types::I64, *value);
+            stack.push(function_builder, value);
+        }
+        Constant::Double(value) => {
+            let value = function_builder.ins().f64const(*value);
+            stack.push(function_builder, value);
+        }
         constant => {
             return Err(InvalidConstant {
                 expected: "long|double".to_string(),
                 actual: format!("{constant:?}"),
             });
         }
-    };
-    stack.push(function_builder, value);
+    }
     Ok(())
 }
