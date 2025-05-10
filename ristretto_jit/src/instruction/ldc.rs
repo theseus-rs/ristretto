@@ -43,20 +43,20 @@ fn load_constant(
         Constant::Integer(value) => {
             let value = i64::from(*value);
             let value = function_builder.ins().iconst(types::I32, value);
-            stack.push_int(function_builder, value);
+            stack.push_int(function_builder, value)?;
         }
         Constant::Float(value) => {
             let value = f64::from(*value);
             let value = function_builder.ins().f64const(value);
-            stack.push_float(function_builder, value);
+            stack.push_float(function_builder, value)?;
         }
         Constant::Long(value) => {
             let value = function_builder.ins().iconst(types::I64, *value);
-            stack.push_float(function_builder, value);
+            stack.push_float(function_builder, value)?;
         }
         Constant::Double(value) => {
             let value = function_builder.ins().f64const(*value);
-            stack.push_float(function_builder, value);
+            stack.push_float(function_builder, value)?;
         }
         Constant::String(utf8_index) => {
             let _utf8_value = constant_pool.try_get_utf8(*utf8_index)?;
@@ -94,11 +94,11 @@ pub(crate) fn ldc2_w(
     match constant {
         Constant::Long(value) => {
             let value = function_builder.ins().iconst(types::I64, *value);
-            stack.push(function_builder, value);
+            stack.push(function_builder, value)?;
         }
         Constant::Double(value) => {
             let value = function_builder.ins().f64const(*value);
-            stack.push(function_builder, value);
+            stack.push(function_builder, value)?;
         }
         constant => {
             return Err(InvalidConstant {

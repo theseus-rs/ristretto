@@ -5,45 +5,73 @@ use cranelift::codegen::ir::Value;
 use cranelift::prelude::{FunctionBuilder, InstBuilder, MemFlags, types};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
-pub(crate) fn iconst_m1(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+pub(crate) fn iconst_m1(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
     let constant = function_builder.ins().iconst(types::I32, -1);
-    stack.push_int(function_builder, constant);
+    stack.push_int(function_builder, constant)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
-pub(crate) fn iconst_0(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+pub(crate) fn iconst_0(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
     let constant = function_builder.ins().iconst(types::I32, 0);
-    stack.push_int(function_builder, constant);
+    stack.push_int(function_builder, constant)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
-pub(crate) fn iconst_1(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+pub(crate) fn iconst_1(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
     let constant = function_builder.ins().iconst(types::I32, 1);
-    stack.push_int(function_builder, constant);
+    stack.push_int(function_builder, constant)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
-pub(crate) fn iconst_2(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+pub(crate) fn iconst_2(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
     let constant = function_builder.ins().iconst(types::I32, 2);
-    stack.push_int(function_builder, constant);
+    stack.push_int(function_builder, constant)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
-pub(crate) fn iconst_3(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+pub(crate) fn iconst_3(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
     let constant = function_builder.ins().iconst(types::I32, 3);
-    stack.push_int(function_builder, constant);
+    stack.push_int(function_builder, constant)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
-pub(crate) fn iconst_4(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+pub(crate) fn iconst_4(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
     let constant = function_builder.ins().iconst(types::I32, 4);
-    stack.push_int(function_builder, constant);
+    stack.push_int(function_builder, constant)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
-pub(crate) fn iconst_5(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+pub(crate) fn iconst_5(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
     let constant = function_builder.ins().iconst(types::I32, 5);
-    stack.push_int(function_builder, constant);
+    stack.push_int(function_builder, constant)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload>
@@ -55,7 +83,7 @@ pub(crate) fn iload(
 ) -> Result<()> {
     let index = usize::from(index);
     let value = locals.get_int(function_builder, index)?;
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
     Ok(())
 }
 
@@ -69,7 +97,7 @@ pub(crate) fn iload_w(
 ) -> Result<()> {
     let index = usize::from(index);
     let value = locals.get_int(function_builder, index)?;
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
     Ok(())
 }
 
@@ -80,7 +108,7 @@ pub(crate) fn iload_0(
     stack: &mut OperandStack,
 ) -> Result<()> {
     let value = locals.get_int(function_builder, 0)?;
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
     Ok(())
 }
 
@@ -91,7 +119,7 @@ pub(crate) fn iload_1(
     stack: &mut OperandStack,
 ) -> Result<()> {
     let value = locals.get_int(function_builder, 1)?;
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
     Ok(())
 }
 
@@ -102,7 +130,7 @@ pub(crate) fn iload_2(
     stack: &mut OperandStack,
 ) -> Result<()> {
     let value = locals.get_int(function_builder, 2)?;
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
     Ok(())
 }
 
@@ -113,7 +141,7 @@ pub(crate) fn iload_3(
     stack: &mut OperandStack,
 ) -> Result<()> {
     let value = locals.get_int(function_builder, 3)?;
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
     Ok(())
 }
 
@@ -124,7 +152,7 @@ pub(crate) fn istore(
     stack: &mut OperandStack,
     index: u8,
 ) -> Result<()> {
-    let value = stack.pop_int(function_builder);
+    let value = stack.pop_int(function_builder)?;
     let index = usize::from(index);
     locals.set_int(function_builder, index, value)?;
     Ok(())
@@ -138,7 +166,7 @@ pub(crate) fn istore_w(
     stack: &mut OperandStack,
     index: u16,
 ) -> Result<()> {
-    let value = stack.pop_int(function_builder);
+    let value = stack.pop_int(function_builder)?;
     let index = usize::from(index);
     locals.set_int(function_builder, index, value)?;
     Ok(())
@@ -150,7 +178,7 @@ pub(crate) fn istore_0(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
 ) -> Result<()> {
-    let value = stack.pop_int(function_builder);
+    let value = stack.pop_int(function_builder)?;
     locals.set_int(function_builder, 0, value)?;
     Ok(())
 }
@@ -161,7 +189,7 @@ pub(crate) fn istore_1(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
 ) -> Result<()> {
-    let value = stack.pop_int(function_builder);
+    let value = stack.pop_int(function_builder)?;
     locals.set_int(function_builder, 1, value)?;
     Ok(())
 }
@@ -172,7 +200,7 @@ pub(crate) fn istore_2(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
 ) -> Result<()> {
-    let value = stack.pop_int(function_builder);
+    let value = stack.pop_int(function_builder)?;
     locals.set_int(function_builder, 2, value)?;
     Ok(())
 }
@@ -183,39 +211,42 @@ pub(crate) fn istore_3(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
 ) -> Result<()> {
-    let value = stack.pop_int(function_builder);
+    let value = stack.pop_int(function_builder)?;
     locals.set_int(function_builder, 3, value)?;
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iadd>
-pub(crate) fn iadd(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_int(function_builder);
-    let value1 = stack.pop_int(function_builder);
+pub(crate) fn iadd(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_int(function_builder)?;
+    let value1 = stack.pop_int(function_builder)?;
     let value = function_builder.ins().iadd(value1, value2);
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.isub>
-pub(crate) fn isub(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_int(function_builder);
-    let value1 = stack.pop_int(function_builder);
+pub(crate) fn isub(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_int(function_builder)?;
+    let value1 = stack.pop_int(function_builder)?;
     let value = function_builder.ins().isub(value1, value2);
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.imul>
-pub(crate) fn imul(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_int(function_builder);
-    let value1 = stack.pop_int(function_builder);
+pub(crate) fn imul(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_int(function_builder)?;
+    let value1 = stack.pop_int(function_builder)?;
     let value = function_builder.ins().imul(value1, value2);
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.idiv>
-pub(crate) fn idiv(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_int(function_builder);
-    let value1 = stack.pop_int(function_builder);
+pub(crate) fn idiv(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_int(function_builder)?;
+    let value1 = stack.pop_int(function_builder)?;
     let value = function_builder.ins().sdiv(value1, value2);
     // TODO: Handle division by zero
     // stack.push_int(
@@ -223,13 +254,14 @@ pub(crate) fn idiv(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     //         .checked_div(value2)
     //         .ok_or(ArithmeticException("/ by zero".to_string()))?,
     // )?;
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.irem>
-pub(crate) fn irem(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_int(function_builder);
-    let value1 = stack.pop_int(function_builder);
+pub(crate) fn irem(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_int(function_builder)?;
+    let value1 = stack.pop_int(function_builder)?;
     let value = function_builder.ins().srem(value1, value2);
     // TODO: Handle division by zero
     // stack.push_int(
@@ -237,68 +269,79 @@ pub(crate) fn irem(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     //         .checked_rem(value2)
     //         .ok_or(ArithmeticException("/ by zero".to_string()))?,
     // )?;
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ineg>
-pub(crate) fn ineg(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value = stack.pop_int(function_builder);
+pub(crate) fn ineg(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value = stack.pop_int(function_builder)?;
     let value = function_builder.ins().ineg(value);
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ishl>
-pub(crate) fn ishl(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_int(function_builder);
-    let value1 = stack.pop_int(function_builder);
+pub(crate) fn ishl(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_int(function_builder)?;
+    let value1 = stack.pop_int(function_builder)?;
     let mask = function_builder.ins().iconst(types::I32, 0x1f);
     let value2 = function_builder.ins().band(value2, mask);
     let value = function_builder.ins().ishl(value1, value2);
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ishr>
-pub(crate) fn ishr(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_int(function_builder);
-    let value1 = stack.pop_int(function_builder);
+pub(crate) fn ishr(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_int(function_builder)?;
+    let value1 = stack.pop_int(function_builder)?;
     let mask = function_builder.ins().iconst(types::I32, 0x1f);
     let value2 = function_builder.ins().band(value2, mask);
     let value = function_builder.ins().sshr(value1, value2);
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iushr>
-pub(crate) fn iushr(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_int(function_builder);
-    let value1 = stack.pop_int(function_builder);
+pub(crate) fn iushr(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
+    let value2 = stack.pop_int(function_builder)?;
+    let value1 = stack.pop_int(function_builder)?;
     let mask = function_builder.ins().iconst(types::I32, 0x1f);
     let value2 = function_builder.ins().band(value2, mask);
     let value = function_builder.ins().ushr(value1, value2);
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iand>
-pub(crate) fn iand(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_int(function_builder);
-    let value1 = stack.pop_int(function_builder);
+pub(crate) fn iand(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_int(function_builder)?;
+    let value1 = stack.pop_int(function_builder)?;
     let value = function_builder.ins().band(value1, value2);
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ior>
-pub(crate) fn ior(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_int(function_builder);
-    let value1 = stack.pop_int(function_builder);
+pub(crate) fn ior(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_int(function_builder)?;
+    let value1 = stack.pop_int(function_builder)?;
     let value = function_builder.ins().bor(value1, value2);
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ixor>
-pub(crate) fn ixor(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_int(function_builder);
-    let value1 = stack.pop_int(function_builder);
+pub(crate) fn ixor(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_int(function_builder)?;
+    let value1 = stack.pop_int(function_builder)?;
     let value = function_builder.ins().bxor(value1, value2);
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iinc>
@@ -337,8 +380,8 @@ pub(crate) fn ireturn(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     return_pointer: Value,
-) {
-    let value = stack.pop_int(function_builder);
+) -> Result<()> {
+    let value = stack.pop_int(function_builder)?;
     let value = function_builder.ins().sextend(types::I64, value);
     let discriminate = i64::from(jit_value::I32);
     let discriminate = function_builder.ins().iconst(types::I8, discriminate);
@@ -349,4 +392,5 @@ pub(crate) fn ireturn(
         .ins()
         .store(MemFlags::new(), value, return_pointer, 8);
     function_builder.ins().return_(&[]);
+    Ok(())
 }

@@ -5,21 +5,33 @@ use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{InstBuilder, IntCC, MemFlags, Value, types};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fconst_f>
-pub(crate) fn fconst_0(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+pub(crate) fn fconst_0(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
     let constant = function_builder.ins().f32const(0.0);
-    stack.push_float(function_builder, constant);
+    stack.push_float(function_builder, constant)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fconst_f>
-pub(crate) fn fconst_1(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+pub(crate) fn fconst_1(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
     let constant = function_builder.ins().f32const(1.0);
-    stack.push_float(function_builder, constant);
+    stack.push_float(function_builder, constant)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fconst_f>
-pub(crate) fn fconst_2(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
+pub(crate) fn fconst_2(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
     let constant = function_builder.ins().f32const(2.0);
-    stack.push_float(function_builder, constant);
+    stack.push_float(function_builder, constant)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fload>
@@ -31,7 +43,7 @@ pub(crate) fn fload(
 ) -> Result<()> {
     let index = usize::from(index);
     let value = locals.get_float(function_builder, index)?;
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
     Ok(())
 }
 
@@ -45,7 +57,7 @@ pub(crate) fn fload_w(
 ) -> Result<()> {
     let index = usize::from(index);
     let value = locals.get_float(function_builder, index)?;
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
     Ok(())
 }
 
@@ -56,7 +68,7 @@ pub(crate) fn fload_0(
     stack: &mut OperandStack,
 ) -> Result<()> {
     let value = locals.get_float(function_builder, 0)?;
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
     Ok(())
 }
 
@@ -67,7 +79,7 @@ pub(crate) fn fload_1(
     stack: &mut OperandStack,
 ) -> Result<()> {
     let value = locals.get_float(function_builder, 1)?;
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
     Ok(())
 }
 
@@ -78,7 +90,7 @@ pub(crate) fn fload_2(
     stack: &mut OperandStack,
 ) -> Result<()> {
     let value = locals.get_float(function_builder, 2)?;
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
     Ok(())
 }
 
@@ -89,7 +101,7 @@ pub(crate) fn fload_3(
     stack: &mut OperandStack,
 ) -> Result<()> {
     let value = locals.get_float(function_builder, 3)?;
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
     Ok(())
 }
 
@@ -100,7 +112,7 @@ pub(crate) fn fstore(
     stack: &mut OperandStack,
     index: u8,
 ) -> Result<()> {
-    let value = stack.pop_float(function_builder);
+    let value = stack.pop_float(function_builder)?;
     let index = usize::from(index);
     locals.set_float(function_builder, index, value)?;
     Ok(())
@@ -114,7 +126,7 @@ pub(crate) fn fstore_w(
     stack: &mut OperandStack,
     index: u16,
 ) -> Result<()> {
-    let value = stack.pop_float(function_builder);
+    let value = stack.pop_float(function_builder)?;
     let index = usize::from(index);
     locals.set_float(function_builder, index, value)?;
     Ok(())
@@ -126,7 +138,7 @@ pub(crate) fn fstore_0(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
 ) -> Result<()> {
-    let value = stack.pop_float(function_builder);
+    let value = stack.pop_float(function_builder)?;
     locals.set_float(function_builder, 0, value)?;
     Ok(())
 }
@@ -137,7 +149,7 @@ pub(crate) fn fstore_1(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
 ) -> Result<()> {
-    let value = stack.pop_float(function_builder);
+    let value = stack.pop_float(function_builder)?;
     locals.set_float(function_builder, 1, value)?;
     Ok(())
 }
@@ -148,7 +160,7 @@ pub(crate) fn fstore_2(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
 ) -> Result<()> {
-    let value = stack.pop_float(function_builder);
+    let value = stack.pop_float(function_builder)?;
     locals.set_float(function_builder, 2, value)?;
     Ok(())
 }
@@ -159,70 +171,79 @@ pub(crate) fn fstore_3(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
 ) -> Result<()> {
-    let value = stack.pop_float(function_builder);
+    let value = stack.pop_float(function_builder)?;
     locals.set_float(function_builder, 3, value)?;
     Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fadd>
-pub(crate) fn fadd(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_float(function_builder);
-    let value1 = stack.pop_float(function_builder);
+pub(crate) fn fadd(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_float(function_builder)?;
+    let value1 = stack.pop_float(function_builder)?;
     let value = function_builder.ins().fadd(value1, value2);
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fsub>
-pub(crate) fn fsub(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_float(function_builder);
-    let value1 = stack.pop_float(function_builder);
+pub(crate) fn fsub(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_float(function_builder)?;
+    let value1 = stack.pop_float(function_builder)?;
     let value = function_builder.ins().fsub(value1, value2);
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fmul>
-pub(crate) fn fmul(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_float(function_builder);
-    let value1 = stack.pop_float(function_builder);
+pub(crate) fn fmul(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_float(function_builder)?;
+    let value1 = stack.pop_float(function_builder)?;
     let value = function_builder.ins().fmul(value1, value2);
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fdiv>
-pub(crate) fn fdiv(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_float(function_builder);
-    let value1 = stack.pop_float(function_builder);
+pub(crate) fn fdiv(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_float(function_builder)?;
+    let value1 = stack.pop_float(function_builder)?;
     let value = function_builder.ins().fdiv(value1, value2);
     // TODO: Handle division by zero
     // if value2 == 0.0 {
     //     return Err(ArithmeticException("/ by zero".to_string()).into());
     // };
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.frem>
-pub(crate) fn frem(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_float(function_builder);
-    let value1 = stack.pop_float(function_builder);
+pub(crate) fn frem(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value2 = stack.pop_float(function_builder)?;
+    let value1 = stack.pop_float(function_builder)?;
     // TODO: optimize this if/when cranelift supports frem
     let div = function_builder.ins().fdiv(value1, value2);
     let trunc = function_builder.ins().trunc(div);
     let mul = function_builder.ins().fmul(value2, trunc);
     let value = function_builder.ins().fsub(value1, mul);
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fneg>
-pub(crate) fn fneg(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value = stack.pop_float(function_builder);
+pub(crate) fn fneg(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
+    let value = stack.pop_float(function_builder)?;
     let value = function_builder.ins().fneg(value);
-    stack.push_float(function_builder, value);
+    stack.push_float(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fcmpl>
-pub(crate) fn fcmpl(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_float(function_builder);
-    let value1 = stack.pop_float(function_builder);
+pub(crate) fn fcmpl(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
+    let value2 = stack.pop_float(function_builder)?;
+    let value1 = stack.pop_float(function_builder)?;
 
     let equal_block = function_builder.create_block();
     let else_block = function_builder.create_block();
@@ -274,13 +295,17 @@ pub(crate) fn fcmpl(function_builder: &mut FunctionBuilder, stack: &mut OperandS
     function_builder.switch_to_block(merge_block);
     function_builder.seal_block(merge_block);
     let value = function_builder.block_params(merge_block)[0];
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fcmpg>
-pub(crate) fn fcmpg(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) {
-    let value2 = stack.pop_float(function_builder);
-    let value1 = stack.pop_float(function_builder);
+pub(crate) fn fcmpg(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
+    let value2 = stack.pop_float(function_builder)?;
+    let value1 = stack.pop_float(function_builder)?;
 
     let equal_block = function_builder.create_block();
     let else_block = function_builder.create_block();
@@ -330,7 +355,8 @@ pub(crate) fn fcmpg(function_builder: &mut FunctionBuilder, stack: &mut OperandS
     function_builder.switch_to_block(merge_block);
     function_builder.seal_block(merge_block);
     let value = function_builder.block_params(merge_block)[0];
-    stack.push_int(function_builder, value);
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.freturn>
@@ -338,8 +364,8 @@ pub(crate) fn freturn(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     return_pointer: Value,
-) {
-    let value = stack.pop_float(function_builder);
+) -> Result<()> {
+    let value = stack.pop_float(function_builder)?;
     let value = function_builder.ins().fcvt_to_sint(types::I64, value);
     let discriminate = i64::from(jit_value::F32);
     let discriminate = function_builder.ins().iconst(types::I8, discriminate);
@@ -350,4 +376,5 @@ pub(crate) fn freturn(
         .ins()
         .store(MemFlags::new(), value, return_pointer, 8);
     function_builder.ins().return_(&[]);
+    Ok(())
 }
