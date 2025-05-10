@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/v0.18.1...v0.19.0) - 2025-05-10
+
+### Added
+- implement jit operand stack
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_vm` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.18.1...ristretto_vm-v0.19.0) - 2025-05-10
+
+### Added
+- implement jit operand stack
+
+## `ristretto_jit` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.18.1...ristretto_jit-v0.19.0) - 2025-05-10
+
+### Added
+- optimize operand stack layout
+- optimize jit Instruction::Return
+- optimize operand stack to prevent allocation when not used; e.g. Object.<init>()
+- implement jit operand stack
+
+### Other
+- update jit operand stack to use cranelift stack slot
+- only enable jit verifier when debug assertions are enabled
+
+## `ristretto_classloader` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.18.1...ristretto_classloader-v0.19.0) - 2025-05-10
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classfile` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.18.1...ristretto_classfile-v0.19.0) - 2025-05-10
+
+### Added
+- implement jit operand stack
+
 ## `ristretto_cli` - [0.18.1](https://github.com/theseus-rs/ristretto/compare/v0.18.0...v0.18.1) - 2025-05-05
 
 ### Added
