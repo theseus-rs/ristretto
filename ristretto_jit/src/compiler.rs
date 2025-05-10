@@ -82,21 +82,16 @@ impl Compiler {
                 "Unable to compile method that is not <init> or static: {class_name}.{method_name}{method_descriptor}"
             )));
         }
-        let Some((max_locals, max_stack, instructions)) =
-            method.attributes.iter().find_map(|attribute| {
-                if let Attribute::Code {
-                    max_locals,
-                    max_stack,
-                    code,
-                    ..
-                } = attribute
-                {
-                    Some((*max_locals, *max_stack, code))
-                } else {
-                    None
-                }
-            })
-        else {
+        let Some((max_stack, instructions)) = method.attributes.iter().find_map(|attribute| {
+            if let Attribute::Code {
+                max_stack, code, ..
+            } = attribute
+            {
+                Some((*max_stack, code))
+            } else {
+                None
+            }
+        }) else {
             return Err(InternalError("No Code attribute found".to_string()));
         };
 
@@ -120,14 +115,9 @@ impl Compiler {
         let (arguments_pointer, _arguments_length_pointer, return_pointer) =
             Self::function_pointers(&mut function_builder, block)?;
 
-        let mut locals = Self::locals(
-            method_descriptor,
-            &mut function_builder,
-            arguments_pointer,
-            max_locals,
-        )?;
-        let mut stack = OperandStack::with_capacity(&mut function_builder, max_stack);
+        let mut locals = Self::locals(method_descriptor, &mut function_builder, arguments_pointer)?;
 
+        let mut stack = OperandStack::with_capacity(&mut function_builder, max_stack)?;
         for instruction in instructions {
             Self::process_instruction(
                 constant_pool,
@@ -211,10 +201,7 @@ impl Compiler {
         descriptor: &str,
         function_builder: &mut FunctionBuilder,
         arguments_pointer: Value,
-        max_locals: u16,
     ) -> Result<LocalVariables> {
-        // Ignore the discriminant
-        let mut locals = Vec::with_capacity(usize::from(max_locals));
         let size_of = i64::try_from(size_of::<JitValue>())
             .map_err(|error| InternalError(format!("{error:?}")))?;
         let struct_size = function_builder.ins().iconst(types::I64, size_of);
@@ -250,14 +237,7 @@ impl Compiler {
                     .ok_or_else(|| InternalError("variable index overflow".to_string()))?;
             }
         }
-        // The locals array is initialized with the placeholder value to predefine the size of the
-        // locals array.
-        while locals.len() < usize::from(max_locals) {
-            let placeholder = function_builder.ins().iconst(types::I64, 0);
-            locals.push(placeholder);
-        }
-        let locals = LocalVariables::new(locals);
-        Ok(locals)
+        Ok(LocalVariables::new())
     }
 
     /// Creates a new native type from the given field type.
