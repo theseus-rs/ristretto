@@ -20,6 +20,7 @@ use crate::instruction::{
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{JitValue, Result};
+use cranelift::codegen::Context;
 use cranelift::codegen::ir::UserFuncName;
 use cranelift::codegen::settings::Flags;
 use cranelift::jit::{JITBuilder, JITModule};
@@ -40,6 +41,7 @@ const ENABLE_VERIFIER: &str = "false";
 /// Java Virtual Machine (JVM) bytecode to native code compiler.
 pub struct Compiler {
     jit_module: JITModule,
+    module_context: Context,
 }
 
 impl Compiler {
@@ -64,7 +66,11 @@ impl Compiler {
         let target_isa = isa_builder.finish(flags)?;
         let jit_builder = JITBuilder::with_isa(target_isa, default_libcall_names());
         let jit_module = JITModule::new(jit_builder);
-        let compiler = Compiler { jit_module };
+        let module_context = jit_module.make_context();
+        let compiler = Compiler {
+            jit_module,
+            module_context,
+        };
         Ok(compiler)
     }
 
@@ -73,6 +79,7 @@ impl Compiler {
     /// # Errors
     /// if the Java byte code cannot be compiled to native code
     pub fn compile(&mut self, class_file: &ClassFile, method: &Method) -> Result<Function> {
+        self.module_context.clear();
         let constant_pool = &class_file.constant_pool;
         let class_name = class_file.class_name()?;
         let method_name = constant_pool.try_get_utf8(method.name_index)?;
@@ -100,13 +107,12 @@ impl Compiler {
         let function =
             self.jit_module
                 .declare_function(function_name.as_str(), Linkage::Local, &signature)?;
-        let mut module_context = self.jit_module.make_context();
-        module_context.func.signature = signature;
-        module_context.func.name = UserFuncName::user(0, function.as_u32());
+        self.module_context.func.signature = signature;
+        self.module_context.func.name = UserFuncName::user(0, function.as_u32());
 
         let mut function_context = FunctionBuilderContext::new();
         let mut function_builder =
-            FunctionBuilder::new(&mut module_context.func, &mut function_context);
+            FunctionBuilder::new(&mut self.module_context.func, &mut function_context);
 
         let block = function_builder.create_block();
         function_builder.switch_to_block(block);
@@ -133,8 +139,8 @@ impl Compiler {
         function_builder.finalize();
 
         self.jit_module
-            .define_function(function, &mut module_context)?;
-        self.jit_module.clear_context(&mut module_context);
+            .define_function(function, &mut self.module_context)?;
+        self.jit_module.clear_context(&mut self.module_context);
         self.jit_module.finalize_definitions()?;
 
         let code = self.jit_module.get_finalized_function(function);
@@ -519,6 +525,7 @@ impl Compiler {
     }
 }
 
+#[expect(clippy::missing_fields_in_debug)]
 impl Debug for Compiler {
     /// Formats the compiler for debugging.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
