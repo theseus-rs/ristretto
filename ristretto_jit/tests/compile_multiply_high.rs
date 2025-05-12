@@ -18,26 +18,33 @@ fn compile_multiply_high() -> Result<()> {
         attributes: Vec::new(),
     };
     let test_method_code = vec![
+        // Input arguments x: i64, y: i64
+        // x1 = x >> 32
         Instruction::Lload_0,
         Instruction::Bipush(32),
         Instruction::Lshr,
         Instruction::Lstore(4),
+        // x2 = x & 0xFFFFFFFF
         Instruction::Lload_0,
         Instruction::Ldc2_w(first_argument_index),
         Instruction::Land,
         Instruction::Lstore(6),
+        // y1 = y >> 32
         Instruction::Lload_2,
         Instruction::Bipush(32),
         Instruction::Lshr,
         Instruction::Lstore(8),
+        // y2 = y & 0xFFFFFFFF
         Instruction::Lload_2,
         Instruction::Ldc2_w(first_argument_index),
         Instruction::Land,
         Instruction::Lstore(10),
+        // z2 = x2 * y2
         Instruction::Lload(6),
         Instruction::Lload(10),
         Instruction::Lmul,
         Instruction::Lstore(12),
+        // t = x1 * y2 + (z2 >>> 32)
         Instruction::Lload(4),
         Instruction::Lload(10),
         Instruction::Lmul,
@@ -46,20 +53,24 @@ fn compile_multiply_high() -> Result<()> {
         Instruction::Lushr,
         Instruction::Ladd,
         Instruction::Lstore(14),
+        // z1 = t & 0xFFFFFFFF
         Instruction::Lload(14),
         Instruction::Ldc2_w(first_argument_index),
         Instruction::Land,
         Instruction::Lstore(16),
+        // z0 = t >> 32
         Instruction::Lload(14),
         Instruction::Bipush(32),
         Instruction::Lshr,
         Instruction::Lstore(18),
+        // z1 += x2 * y1
         Instruction::Lload(16),
         Instruction::Lload(6),
         Instruction::Lload(8),
         Instruction::Lmul,
         Instruction::Ladd,
         Instruction::Lstore(16),
+        // x1 * y1 + z0 + (z1 >> 32)
         Instruction::Lload(4),
         Instruction::Lload(8),
         Instruction::Lmul,
@@ -93,8 +104,8 @@ fn compile_multiply_high() -> Result<()> {
 
     let mut compiler = Compiler::new()?;
     let function = compiler.compile(&class_file, test_method)?;
-    let arguments = vec![Value::I64(4), Value::I64(8)];
+    let arguments = vec![Value::I64(32_767), Value::I64(9_223_372_036_854_775_807)];
     let value = function.execute(arguments)?.expect("value");
-    assert_eq!(value, Value::I64(0));
+    assert_eq!(value, Value::I64(16_383));
     Ok(())
 }

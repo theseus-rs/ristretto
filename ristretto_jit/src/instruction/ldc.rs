@@ -94,11 +94,11 @@ pub(crate) fn ldc2_w(
     match constant {
         Constant::Long(value) => {
             let value = function_builder.ins().iconst(types::I64, *value);
-            stack.push(function_builder, value)?;
+            stack.push(value)?;
         }
         Constant::Double(value) => {
             let value = function_builder.ins().f64const(*value);
-            stack.push(function_builder, value)?;
+            stack.push(value)?;
         }
         constant => {
             return Err(InvalidConstant {

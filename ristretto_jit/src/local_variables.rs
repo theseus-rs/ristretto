@@ -31,7 +31,15 @@ impl LocalVariables {
     /// # Errors
     /// if the local variable at the given index was not found or if the value is not an int.
     pub fn get_int(&self, function_builder: &mut FunctionBuilder, index: usize) -> Result<Value> {
-        self.get(function_builder, index)
+        let expected_type = types::I32;
+        let value = self.get(function_builder, index)?;
+        let value_type = function_builder.func.dfg.value_type(value);
+        if value_type != expected_type {
+            return Err(InternalError(format!(
+                "Expected {expected_type:?}, found {value_type:?}",
+            )));
+        }
+        Ok(value)
     }
 
     /// Get a long from the local variables.
@@ -39,7 +47,15 @@ impl LocalVariables {
     /// # Errors
     /// if the local variable at the given index was not found or if the value is not a long.
     pub fn get_long(&self, function_builder: &mut FunctionBuilder, index: usize) -> Result<Value> {
-        self.get(function_builder, index)
+        let expected_type = types::I64;
+        let value = self.get(function_builder, index)?;
+        let value_type = function_builder.func.dfg.value_type(value);
+        if value_type != expected_type {
+            return Err(InternalError(format!(
+                "Expected {expected_type:?}, found {value_type:?}",
+            )));
+        }
+        Ok(value)
     }
 
     /// Get a float from the local variables.
@@ -47,7 +63,15 @@ impl LocalVariables {
     /// # Errors
     /// if the local variable at the given index was not found or if the value is not a float.
     pub fn get_float(&self, function_builder: &mut FunctionBuilder, index: usize) -> Result<Value> {
-        self.get(function_builder, index)
+        let expected_type = types::F32;
+        let value = self.get(function_builder, index)?;
+        let value_type = function_builder.func.dfg.value_type(value);
+        if value_type != expected_type {
+            return Err(InternalError(format!(
+                "Expected {expected_type:?}, found {value_type:?}",
+            )));
+        }
+        Ok(value)
     }
 
     /// Get a double from the local variables.
@@ -59,7 +83,15 @@ impl LocalVariables {
         function_builder: &mut FunctionBuilder,
         index: usize,
     ) -> Result<Value> {
-        self.get(function_builder, index)
+        let expected_type = types::F64;
+        let value = self.get(function_builder, index)?;
+        let value_type = function_builder.func.dfg.value_type(value);
+        if value_type != expected_type {
+            return Err(InternalError(format!(
+                "Expected {expected_type:?}, found {value_type:?}",
+            )));
+        }
+        Ok(value)
     }
 
     /// Set a value in the local variables.
@@ -96,7 +128,14 @@ impl LocalVariables {
         index: usize,
         value: Value,
     ) -> Result<()> {
-        self.set(function_builder, index, types::I32, value)
+        let expected_type = types::I32;
+        let value_type = function_builder.func.dfg.value_type(value);
+        if value_type != expected_type {
+            return Err(InternalError(format!(
+                "Expected {expected_type:?}, found {value_type:?}",
+            )));
+        }
+        self.set(function_builder, index, expected_type, value)
     }
 
     /// Set a long in the local variables.
@@ -109,7 +148,14 @@ impl LocalVariables {
         index: usize,
         value: Value,
     ) -> Result<()> {
-        self.set(function_builder, index, types::I64, value)
+        let expected_type = types::I64;
+        let value_type = function_builder.func.dfg.value_type(value);
+        if value_type != expected_type {
+            return Err(InternalError(format!(
+                "Expected {expected_type:?}, found {value_type:?}",
+            )));
+        }
+        self.set(function_builder, index, expected_type, value)
     }
 
     /// Set a float in the local variables.
@@ -122,7 +168,14 @@ impl LocalVariables {
         index: usize,
         value: Value,
     ) -> Result<()> {
-        self.set(function_builder, index, types::F32, value)
+        let expected_type = types::F32;
+        let value_type = function_builder.func.dfg.value_type(value);
+        if value_type != expected_type {
+            return Err(InternalError(format!(
+                "Expected {expected_type:?}, found {value_type:?}",
+            )));
+        }
+        self.set(function_builder, index, expected_type, value)
     }
 
     /// Set a double in the local variables.
@@ -135,6 +188,13 @@ impl LocalVariables {
         index: usize,
         value: Value,
     ) -> Result<()> {
-        self.set(function_builder, index, types::F64, value)
+        let expected_type = types::F64;
+        let value_type = function_builder.func.dfg.value_type(value);
+        if value_type != expected_type {
+            return Err(InternalError(format!(
+                "Expected {expected_type:?}, found {value_type:?}",
+            )));
+        }
+        self.set(function_builder, index, expected_type, value)
     }
 }

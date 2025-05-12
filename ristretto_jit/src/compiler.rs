@@ -111,13 +111,12 @@ impl Compiler {
         let block = function_builder.create_block();
         function_builder.switch_to_block(block);
         function_builder.append_block_params_for_function_params(block);
-
         let (arguments_pointer, _arguments_length_pointer, return_pointer) =
             Self::function_pointers(&mut function_builder, block)?;
 
         let mut locals = Self::locals(method_descriptor, &mut function_builder, arguments_pointer)?;
 
-        let mut stack = OperandStack::with_capacity(&mut function_builder, max_stack)?;
+        let mut stack = OperandStack::with_capacity(max_stack);
         for instruction in instructions {
             Self::process_instruction(
                 constant_pool,
@@ -361,15 +360,15 @@ impl Compiler {
             // Instruction::Bastore => bastore(stack),
             // Instruction::Castore => castore(stack),
             // Instruction::Sastore => sastore(stack),
-            Instruction::Pop => pop(function_builder, stack)?,
+            Instruction::Pop => pop(stack)?,
             Instruction::Pop2 => pop2(function_builder, stack)?,
-            Instruction::Dup => dup(function_builder, stack)?,
-            Instruction::Dup_x1 => dup_x1(function_builder, stack)?,
+            Instruction::Dup => dup(stack)?,
+            Instruction::Dup_x1 => dup_x1(stack)?,
             Instruction::Dup_x2 => dup_x2(function_builder, stack)?,
             Instruction::Dup2 => dup2(function_builder, stack)?,
             Instruction::Dup2_x1 => dup2_x1(function_builder, stack)?,
             Instruction::Dup2_x2 => dup2_x2(function_builder, stack)?,
-            Instruction::Swap => swap(function_builder, stack)?,
+            Instruction::Swap => swap(stack)?,
             Instruction::Iadd => iadd(function_builder, stack)?,
             Instruction::Ladd => ladd(function_builder, stack)?,
             Instruction::Fadd => fadd(function_builder, stack)?,
@@ -483,8 +482,8 @@ impl Compiler {
             // Instruction::Athrow => athrow(stack).await,
             // Instruction::Checkcast(class_index) => checkcast(self, stack, *class_index).await,
             // Instruction::Instanceof(class_index) => instanceof(self, stack, *class_index).await,
-            Instruction::Monitorenter => monitorenter(function_builder, stack)?,
-            Instruction::Monitorexit => monitorexit(function_builder, stack)?,
+            Instruction::Monitorenter => monitorenter(stack)?,
+            Instruction::Monitorexit => monitorexit(stack)?,
             Instruction::Wide => wide()?,
             // Instruction::Multianewarray(index, dimensions) => {
             //     multianewarray(self, stack, *index, *dimensions).await
