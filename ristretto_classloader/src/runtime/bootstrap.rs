@@ -150,7 +150,7 @@ async fn extract_archive(
     };
 
     let archive = io::Cursor::new(archive);
-    let extract_dir = tempfile::tempdir_in(out_dir)?.into_path();
+    let extract_dir = tempfile::tempdir_in(out_dir)?.keep();
     debug!(
         "Extracting {file_name} to {}",
         extract_dir.to_string_lossy()
