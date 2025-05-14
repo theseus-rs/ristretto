@@ -18,6 +18,7 @@
 
 #[cfg(not(target_family = "wasm"))]
 mod compiler;
+mod control_flow_graph;
 mod error;
 mod function;
 #[cfg(not(target_family = "wasm"))]
