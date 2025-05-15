@@ -2195,7 +2195,7 @@ mod tests {
     }
 
     #[test]
-    fn test_simulate_invoke_instructions() -> Result<()> {
+    fn test_simulate_invoke_instructions_return_int() -> Result<()> {
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class("java/lang/Object")?;
         let method_index = constant_pool.add_method_ref(class_index, "foo", "(I)I")?;
@@ -2222,7 +2222,33 @@ mod tests {
     }
 
     #[test]
-    fn test_simulate_invokeinterface() -> Result<()> {
+    fn test_simulate_invoke_instructions_return_void() -> Result<()> {
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("java/lang/Object")?;
+        let method_index = constant_pool.add_method_ref(class_index, "foo", "(I)V")?;
+        let instructions = vec![
+            Instruction::Invokevirtual(method_index),
+            Instruction::Invokespecial(method_index),
+            Instruction::Invokestatic(method_index),
+            Instruction::Invokedynamic(method_index),
+        ];
+
+        for instruction in instructions {
+            let mut stack = TypeStack::new();
+            stack.push_int()?;
+            if !matches!(instruction, Instruction::Invokespecial(..))
+                && !matches!(instruction, Instruction::Invokestatic(..))
+            {
+                stack.push_object()?;
+            }
+            simulate(&mut stack, &constant_pool, &instruction)?;
+            assert_eq!(stack.len(), 0);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_simulate_invokeinterface_return_int() -> Result<()> {
         let mut stack = TypeStack::new();
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class("java/lang/Object")?;
@@ -2236,6 +2262,23 @@ mod tests {
         )?;
         assert_eq!(stack.len(), 1);
         assert!(stack.pop_int().is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_simulate_invokeinterface_return_void() -> Result<()> {
+        let mut stack = TypeStack::new();
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("java/lang/Object")?;
+        let method_index = constant_pool.add_interface_method_ref(class_index, "foo", "(I)V")?;
+        stack.push_int()?;
+        stack.push_object()?;
+        simulate(
+            &mut stack,
+            &constant_pool,
+            &Instruction::Invokeinterface(method_index, 0),
+        )?;
+        assert_eq!(stack.len(), 0);
         Ok(())
     }
 
