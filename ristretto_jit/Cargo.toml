@@ -13,9 +13,13 @@ version.workspace = true
 [dependencies]
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.18.1" }
 thiserror = { workspace = true }
+tracing = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 cranelift = { workspace = true, features = ["module", "native"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 cranelift = { workspace = true, features = ["jit", "module", "native"] }
+
+[dev-dependencies]
+indexmap = { workspace = true }

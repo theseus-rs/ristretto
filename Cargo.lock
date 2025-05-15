@@ -1905,8 +1905,10 @@ name = "ristretto_jit"
 version = "0.18.1"
 dependencies = [
  "cranelift",
+ "indexmap",
  "ristretto_classfile",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]

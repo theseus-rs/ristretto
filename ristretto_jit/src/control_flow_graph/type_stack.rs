@@ -121,9 +121,9 @@ impl TypeStack {
         self.stack.len()
     }
 
-    /// Clears the stack.
-    pub fn clear(&mut self) {
-        self.stack.clear();
+    /// Returns true if the stack is empty.
+    pub fn is_empty(&self) -> bool {
+        self.stack.is_empty()
     }
 
     /// Returns stack as a vector.
@@ -257,6 +257,24 @@ mod tests {
         let mut type_stack = TypeStack::new();
         type_stack.push_int()?;
         assert!(type_stack.pop_object().is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_len() -> Result<()> {
+        let mut type_stack = TypeStack::new();
+        assert_eq!(type_stack.len(), 0);
+        type_stack.push_int()?;
+        assert_eq!(type_stack.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_empty() -> Result<()> {
+        let mut type_stack = TypeStack::new();
+        assert!(type_stack.is_empty());
+        type_stack.push_int()?;
+        assert!(!type_stack.is_empty());
         Ok(())
     }
 

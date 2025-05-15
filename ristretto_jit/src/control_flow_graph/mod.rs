@@ -33,7 +33,7 @@
 ///                         |  v1 = load.i32 notrap aligned l1          stack: [v0, v1]  |
 ///                         |                                                            |
 ///                         |  ; Java 2: If_icmplt(5)                                    |
-///                         |  v2 = icmp_lt slt v0, v1                        stack: []  |
+///                         |  v2 = icmp slt v0, v1                           stack: []  |
 ///                         |  brif v2, block1, block2                        stack: []  |
 ///                         +------------------------------------------------------------+
 ///                                           /                        \
