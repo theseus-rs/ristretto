@@ -10,6 +10,7 @@ use std::fmt::{Debug, Display};
 use std::sync::{Arc, RwLock};
 
 /// A representation of a Java class.
+#[expect(clippy::struct_field_names)]
 #[derive(Debug)]
 pub struct Class {
     name: String,

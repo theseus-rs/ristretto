@@ -163,14 +163,12 @@ impl LocalVariables {
 
     /// Get the length of the local variables.
     pub fn len(&self) -> usize {
-        let length = self
-            .locals
+        self.locals
             .iter()
             .enumerate()
             .rev()
             .find(|&(_, value)| *value != Value::Unused)
-            .map_or(0, |(index, _)| index + 1);
-        length
+            .map_or(0, |(index, _)| index + 1)
     }
 
     /// Check if the local variables are empty.

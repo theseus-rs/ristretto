@@ -23,3 +23,6 @@ cranelift = { workspace = true, features = ["jit", "module", "native"] }
 
 [dev-dependencies]
 indexmap = { workspace = true }
+
+[lints.clippy]
+result_large_err = { level = "allow", priority = 1 }
