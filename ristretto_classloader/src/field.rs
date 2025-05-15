@@ -4,6 +4,7 @@ use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{BaseType, ClassFile, ConstantPool, FieldAccessFlags, FieldType};
 use std::sync::{Arc, RwLock};
 
+#[expect(clippy::struct_field_names)]
 #[derive(Clone, Debug)]
 pub struct Field {
     access_flags: FieldAccessFlags,

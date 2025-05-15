@@ -24,6 +24,7 @@ allow = [
     "MPL-2.0",
     "Unicode-3.0",
     "Unlicense",
+    "Zlib",
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
