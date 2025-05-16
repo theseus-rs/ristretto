@@ -187,7 +187,7 @@ mod tests {
     use crate::Result;
 
     #[test]
-    fn test_value_from_none() {
+    fn test_jit_value_from_none() {
         let value: Option<crate::Value> = None;
         let value = JitValue::from(value);
         assert_eq!(value.discriminant, NONE);
@@ -195,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_from_some_i32() -> Result<()> {
+    fn test_jit_value_from_some_value_i32() -> Result<()> {
         let value = Some(crate::Value::I32(42));
         let value = JitValue::from(value);
         let value: i32 = value.try_into()?;
@@ -204,7 +204,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_from_some_i64() -> Result<()> {
+    fn test_jit_value_from_some_value_i64() -> Result<()> {
         let value = Some(crate::Value::I64(42));
         let value = JitValue::from(value);
         let value: i64 = value.try_into()?;
@@ -213,7 +213,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_from_some_f32() -> Result<()> {
+    fn test_jit_value_from_some_value_f32() -> Result<()> {
         let value = Some(crate::Value::F32(42.1f32));
         let value = JitValue::from(value);
         let value: f32 = value.try_into()?;
@@ -223,7 +223,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_from_some_f64() -> Result<()> {
+    fn test_jit_value_from_some_value_f64() -> Result<()> {
         let value = Some(crate::Value::F64(42.1f64));
         let value = JitValue::from(value);
         let value: f64 = value.try_into()?;
@@ -233,7 +233,49 @@ mod tests {
     }
 
     #[test]
-    fn test_value_from_i32() -> Result<()> {
+    fn test_jit_value_try_into_value_i32() -> Result<()> {
+        let value = JitValue::from(42i32);
+        let value: crate::Value = value.try_into()?;
+        assert_eq!(value, crate::Value::I32(42));
+        Ok(())
+    }
+
+    #[test]
+    fn test_jit_value_try_into_value_i64() -> Result<()> {
+        let value = JitValue::from(42i64);
+        let value: crate::Value = value.try_into()?;
+        assert_eq!(value, crate::Value::I64(42));
+        Ok(())
+    }
+
+    #[test]
+    fn test_jit_value_try_into_value_if2() -> Result<()> {
+        let value = JitValue::from(42.1f32);
+        let value: crate::Value = value.try_into()?;
+        assert_eq!(value, crate::Value::F32(42.1f32));
+        Ok(())
+    }
+
+    #[test]
+    fn test_jit_value_try_into_value_f64() -> Result<()> {
+        let value = JitValue::from(42.1f64);
+        let value: crate::Value = value.try_into()?;
+        assert_eq!(value, crate::Value::F64(42.1f64));
+        Ok(())
+    }
+
+    #[test]
+    fn test_jit_value_try_into_value_error() {
+        let value = JitValue {
+            discriminant: NONE,
+            value: 0,
+        };
+        let result: Result<crate::Value> = value.try_into();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_jit_value_try_into_i32() -> Result<()> {
         let value = JitValue::from(42i32);
         let value: i32 = value.try_into()?;
         assert_eq!(value, 42i32);
@@ -241,7 +283,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_try_into_i32_error() {
+    fn test_jit_value_try_into_i32_error() {
         let value = JitValue::from(42i64);
         let result: Result<i32> = value.try_into();
         assert!(matches!(
@@ -254,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_from_i64() -> Result<()> {
+    fn test_jit_value_try_into_i64() -> Result<()> {
         let value = JitValue::from(42i64);
         let value: i64 = value.try_into()?;
         assert_eq!(value, 42i64);
@@ -262,7 +304,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_try_into_i64_error() {
+    fn test_jit_value_try_into_i64_error() {
         let value = JitValue::from(42i32);
         let result: Result<i64> = value.try_into();
         assert!(matches!(
@@ -275,7 +317,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_from_f32() -> Result<()> {
+    fn test_jit_value_try_into_f32() -> Result<()> {
         let value = JitValue::from(42.1f32);
         let value: f32 = value.try_into()?;
         let value = value - 42.1f32;
@@ -284,7 +326,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_try_into_f32_error() {
+    fn test_jit_value_try_into_f32_error() {
         let value = JitValue::from(42.1f64);
         let result: Result<f32> = value.try_into();
         assert!(matches!(
@@ -297,7 +339,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_from_f64() -> Result<()> {
+    fn test_jit_value_try_into_f64() -> Result<()> {
         let value = JitValue::from(42.1f64);
         let value: f64 = value.try_into()?;
         let value = value - 42.1f64;
@@ -306,7 +348,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_try_into_f64_error() {
+    fn test_jit_value_try_into_f64_error() {
         let value = JitValue::from(42.1f32);
         let result: Result<f64> = value.try_into();
         assert!(matches!(

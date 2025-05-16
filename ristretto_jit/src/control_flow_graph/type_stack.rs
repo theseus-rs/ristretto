@@ -56,9 +56,8 @@ impl TypeStack {
         Ok(value)
     }
 
-    /// Pop an int from the stack.
-    pub fn pop_int(&mut self) -> Result<Type> {
-        let expected_type = types::I32;
+    /// Pop a type from the stack and check if it matches the expected type.
+    fn pop_type(&mut self, expected_type: Type) -> Result<Type> {
         let value_type = self.pop()?;
         if value_type != expected_type {
             return Err(InternalError(format!(
@@ -66,54 +65,31 @@ impl TypeStack {
             )));
         }
         Ok(value_type)
+    }
+
+    /// Pop an int from the stack.
+    pub fn pop_int(&mut self) -> Result<Type> {
+        self.pop_type(types::I32)
     }
 
     /// Pop a long from the stack.
     pub fn pop_long(&mut self) -> Result<Type> {
-        let expected_type = types::I64;
-        let value_type = self.pop()?;
-        if value_type != expected_type {
-            return Err(InternalError(format!(
-                "Expected {expected_type:?}, found {value_type:?}",
-            )));
-        }
-        Ok(value_type)
+        self.pop_type(types::I64)
     }
 
     /// Pop a float from the stack.
     pub fn pop_float(&mut self) -> Result<Type> {
-        let expected_type = types::F32;
-        let value_type = self.pop()?;
-        if value_type != expected_type {
-            return Err(InternalError(format!(
-                "Expected {expected_type:?}, found {value_type:?}",
-            )));
-        }
-        Ok(value_type)
+        self.pop_type(types::F32)
     }
 
     /// Pop a double from the stack.
     pub fn pop_double(&mut self) -> Result<Type> {
-        let expected_type = types::F64;
-        let value_type = self.pop()?;
-        if value_type != expected_type {
-            return Err(InternalError(format!(
-                "Expected {expected_type:?}, found {value_type:?}",
-            )));
-        }
-        Ok(value_type)
+        self.pop_type(types::F64)
     }
 
     /// Pop a object from the stack.
     pub fn pop_object(&mut self) -> Result<Type> {
-        let expected_type = types::I64;
-        let value_type = self.pop()?;
-        if value_type != expected_type {
-            return Err(InternalError(format!(
-                "Expected {expected_type:?}, found {value_type:?}",
-            )));
-        }
-        Ok(value_type)
+        self.pop_type(types::I64)
     }
 
     /// Returns the length of the stack.

@@ -26,6 +26,8 @@ mod instruction;
 mod jit_value;
 mod local_variables;
 mod operand_stack;
+#[cfg(test)]
+mod test;
 mod value;
 #[cfg(target_family = "wasm")]
 mod wasm_compiler;
