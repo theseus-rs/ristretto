@@ -10,7 +10,7 @@
 
 ## Getting Started
 
-Implementation of a Java Virual Machine (JVM) Just-In-Time (JIT) compilation.
+Implementation of a Java Virual Machine (JVM) Just-In-Time (JIT) compiler.
 
 ## License
 
