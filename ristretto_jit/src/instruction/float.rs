@@ -2,7 +2,7 @@ use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{Result, jit_value};
 use cranelift::frontend::FunctionBuilder;
-use cranelift::prelude::{InstBuilder, IntCC, MemFlags, Value, types};
+use cranelift::prelude::{FloatCC, InstBuilder, MemFlags, Value, types};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fconst_f>
 pub(crate) fn fconst_0(
@@ -255,7 +255,7 @@ pub(crate) fn fcmpl(
 
     // TODO: Handle f32::is_nan(value1) || f32::is_nan(value2)
 
-    let condition_value = function_builder.ins().icmp(IntCC::Equal, value1, value2);
+    let condition_value = function_builder.ins().fcmp(FloatCC::Equal, value1, value2);
     function_builder
         .ins()
         .brif(condition_value, equal_block, &[], else_block, &[]);
@@ -269,7 +269,7 @@ pub(crate) fn fcmpl(
     function_builder.seal_block(else_block);
     let condition_value = function_builder
         .ins()
-        .icmp(IntCC::SignedGreaterThan, value1, value2);
+        .fcmp(FloatCC::GreaterThan, value1, value2);
     function_builder.ins().brif(
         condition_value,
         greater_than_block,
@@ -315,7 +315,7 @@ pub(crate) fn fcmpg(
 
     function_builder.append_block_param(merge_block, types::I32);
 
-    let condition_value = function_builder.ins().icmp(IntCC::Equal, value1, value2);
+    let condition_value = function_builder.ins().fcmp(FloatCC::Equal, value1, value2);
     function_builder
         .ins()
         .brif(condition_value, equal_block, &[], else_block, &[]);
@@ -329,7 +329,7 @@ pub(crate) fn fcmpg(
     function_builder.seal_block(else_block);
     let condition_value = function_builder
         .ins()
-        .icmp(IntCC::SignedGreaterThan, value1, value2);
+        .fcmp(FloatCC::GreaterThan, value1, value2);
     function_builder.ins().brif(
         condition_value,
         greater_than_block,
