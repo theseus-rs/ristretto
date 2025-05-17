@@ -54,7 +54,9 @@ pub(crate) fn get_blocks(
             | Instruction::If_icmplt(address)
             | Instruction::If_icmpge(address)
             | Instruction::If_icmpgt(address)
-            | Instruction::If_icmple(address) => {
+            | Instruction::If_icmple(address)
+            | Instruction::If_acmpeq(address)
+            | Instruction::If_acmpne(address) => {
                 let then_address = usize::from(*address);
                 insert_stack(&mut stack_states, then_address, &stack)?;
                 create_block_with_parameters(
