@@ -4,7 +4,7 @@ use crate::control_flow_graph::instruction;
 use crate::control_flow_graph::type_stack::TypeStack;
 use cranelift::prelude::{Block, FunctionBuilder, Type};
 use ristretto_classfile::ConstantPool;
-use ristretto_classfile::attributes::Instruction;
+use ristretto_classfile::attributes::{ExceptionTableEntry, Instruction};
 use std::collections::HashMap;
 
 /// Creates a control flow graph of blocks for a function by analyzing the instructions.
@@ -25,9 +25,14 @@ pub(crate) fn get_blocks(
     function_builder: &mut FunctionBuilder,
     constant_pool: &ConstantPool,
     instructions: &[Instruction],
+    exception_table: &[ExceptionTableEntry],
 ) -> Result<HashMap<usize, Block>> {
     let mut blocks = HashMap::new();
     let mut stack_states: HashMap<usize, TypeStack> = HashMap::new();
+    let exception_handler_addresses = exception_table
+        .iter()
+        .map(|entry| usize::from(entry.handler_pc))
+        .collect::<Vec<_>>();
     let mut stack = TypeStack::new();
 
     // The first block is always the function entry point (with empty stack)
@@ -35,6 +40,17 @@ pub(crate) fn get_blocks(
     stack_states.insert(0, stack.clone());
 
     for (program_counter, instruction) in instructions.iter().enumerate() {
+        if exception_handler_addresses.contains(&program_counter) {
+            // Push an object onto the stack for the exception object
+            stack.push_object()?;
+            insert_stack(&mut stack_states, program_counter, &stack)?;
+            create_block_with_parameters(
+                function_builder,
+                &stack_states,
+                program_counter,
+                &mut blocks,
+            );
+        }
         if let Some(new_stack) = stack_states.get(&program_counter) {
             stack = new_stack.clone();
         }
@@ -224,9 +240,15 @@ mod tests {
             Instruction::Iload_1,      // 5: Load local variable 1
             Instruction::Ireturn,      // 6: Return value on stack
         ];
+        let exception_table = Vec::new();
 
         // Create the control_flow_graph
-        let blocks = get_blocks(&mut function_builder, &constant_pool, &instructions)?;
+        let blocks = get_blocks(
+            &mut function_builder,
+            &constant_pool,
+            &instructions,
+            &exception_table,
+        )?;
         assert_eq!(blocks.len(), 4);
         let _block_0 = blocks.get(&0).expect("block0");
         let _block_3 = blocks.get(&3).expect("block3");
