@@ -129,6 +129,19 @@ impl OperandStack {
     pub fn is_empty(&self) -> bool {
         self.stack.is_empty()
     }
+
+    /// Returns the values on the stack
+    pub fn as_slice(&self) -> &[Value] {
+        &self.stack
+    }
+
+    /// Returns a vector of types based on the values in the stack.
+    pub fn to_type_vec(&self, function_builder: &FunctionBuilder) -> Vec<Type> {
+        self.stack
+            .iter()
+            .map(|value| function_builder.func.dfg.value_type(*value))
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -290,6 +303,57 @@ mod tests {
         let value = function_builder.ins().iconst(types::I32, 42);
         operand_stack.push(value)?;
         assert!(operand_stack.pop_long(&mut function_builder).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_slice() -> Result<()> {
+        let (mut module_context, mut function_context) = create_function_builder_contexts()?;
+        let mut function_builder =
+            FunctionBuilder::new(&mut module_context.func, &mut function_context);
+        let block = function_builder.create_block();
+        function_builder.switch_to_block(block);
+
+        let mut operand_stack = OperandStack::with_capacity(4);
+        let int_value = function_builder.ins().iconst(types::I32, 42);
+        let long_value = function_builder.ins().iconst(types::I64, 42);
+        let float_value = function_builder.ins().f32const(42.1);
+        let double_value = function_builder.ins().f64const(42.1);
+
+        operand_stack.push(int_value)?;
+        operand_stack.push(long_value)?;
+        operand_stack.push(float_value)?;
+        operand_stack.push(double_value)?;
+
+        assert_eq!(
+            operand_stack.as_slice(),
+            &[int_value, long_value, float_value, double_value]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_to_type_vec() -> Result<()> {
+        let (mut module_context, mut function_context) = create_function_builder_contexts()?;
+        let mut function_builder =
+            FunctionBuilder::new(&mut module_context.func, &mut function_context);
+        let block = function_builder.create_block();
+        function_builder.switch_to_block(block);
+
+        let mut operand_stack = OperandStack::with_capacity(4);
+        let int_value = function_builder.ins().iconst(types::I32, 42);
+        let long_value = function_builder.ins().iconst(types::I64, 42);
+        let float_value = function_builder.ins().f32const(42.1);
+        let double_value = function_builder.ins().f64const(42.1);
+
+        operand_stack.push(int_value)?;
+        operand_stack.push(long_value)?;
+        operand_stack.push(float_value)?;
+        operand_stack.push(double_value)?;
+
+        let types = operand_stack.to_type_vec(&function_builder);
+        assert_eq!(types.len(), 4);
+        assert_eq!(types, vec![types::I32, types::I64, types::F32, types::F64]);
         Ok(())
     }
 }

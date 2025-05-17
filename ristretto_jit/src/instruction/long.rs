@@ -1,3 +1,4 @@
+use crate::control_flow_graph::append_block_params;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{Result, jit_value};
@@ -301,19 +302,25 @@ pub(crate) fn lxor(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
 pub(crate) fn lcmp(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
+    let stack_types = stack.to_type_vec(function_builder);
+    let params = stack.as_slice();
 
     let equal_block = function_builder.create_block();
+    append_block_params(function_builder, equal_block, &stack_types);
     let else_block = function_builder.create_block();
+    append_block_params(function_builder, equal_block, &stack_types);
     let greater_than_block = function_builder.create_block();
+    append_block_params(function_builder, equal_block, &stack_types);
     let less_than_block = function_builder.create_block();
+    append_block_params(function_builder, equal_block, &stack_types);
     let merge_block = function_builder.create_block();
-
+    append_block_params(function_builder, equal_block, &stack_types);
     function_builder.append_block_param(merge_block, types::I32);
 
     let condition_value = function_builder.ins().icmp(IntCC::Equal, value1, value2);
     function_builder
         .ins()
-        .brif(condition_value, equal_block, &[], else_block, &[]);
+        .brif(condition_value, equal_block, params, else_block, params);
 
     function_builder.switch_to_block(equal_block);
     function_builder.seal_block(equal_block);
@@ -328,24 +335,26 @@ pub(crate) fn lcmp(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     function_builder.ins().brif(
         condition_value,
         greater_than_block,
-        &[],
+        params,
         less_than_block,
-        &[],
+        params,
     );
 
     function_builder.switch_to_block(greater_than_block);
     function_builder.seal_block(greater_than_block);
+    let mut greater_than_params = params.to_vec();
     let greater_than_return = function_builder.ins().iconst(types::I32, 1);
+    greater_than_params.push(greater_than_return);
     function_builder
         .ins()
-        .jump(merge_block, &[greater_than_return]);
+        .jump(merge_block, &greater_than_params);
 
     function_builder.switch_to_block(less_than_block);
     function_builder.seal_block(less_than_block);
+    let mut less_than_params = params.to_vec();
     let less_than_return = function_builder.ins().iconst(types::I32, -1);
-    function_builder
-        .ins()
-        .jump(merge_block, &[less_than_return]);
+    less_than_params.push(less_than_return);
+    function_builder.ins().jump(merge_block, &less_than_params);
 
     function_builder.switch_to_block(merge_block);
     function_builder.seal_block(merge_block);

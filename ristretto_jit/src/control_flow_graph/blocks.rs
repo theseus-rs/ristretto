@@ -2,7 +2,7 @@ use crate::Error::InternalError;
 use crate::Result;
 use crate::control_flow_graph::instruction;
 use crate::control_flow_graph::type_stack::TypeStack;
-use cranelift::prelude::{Block, FunctionBuilder};
+use cranelift::prelude::{Block, FunctionBuilder, Type};
 use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::Instruction;
 use std::collections::HashMap;
@@ -149,7 +149,7 @@ pub(crate) fn get_blocks(
 }
 
 /// Inserts stack for address
-pub fn insert_stack(
+pub(crate) fn insert_stack(
     stack_states: &mut HashMap<usize, TypeStack>,
     address: usize,
     stack: &TypeStack,
@@ -170,7 +170,7 @@ pub fn insert_stack(
 }
 
 /// Utility function to create a block with parameters matching the expected stack state
-fn create_block_with_parameters(
+pub(crate) fn create_block_with_parameters(
     function_builder: &mut FunctionBuilder,
     stack_states: &HashMap<usize, TypeStack>,
     address: usize,
@@ -181,13 +181,22 @@ fn create_block_with_parameters(
 
         if let Some(stack_types) = stack_states.get(&address) {
             let stack_types = stack_types.to_vec();
-            for value_type in stack_types {
-                function_builder.append_block_param(block, value_type);
-            }
+            append_block_params(function_builder, block, &stack_types);
         }
 
         block
     });
+}
+
+/// Appends types as block parameters to the given block
+pub(crate) fn append_block_params(
+    function_builder: &mut FunctionBuilder,
+    block: Block,
+    types: &[Type],
+) {
+    for value_type in types {
+        function_builder.append_block_param(block, *value_type);
+    }
 }
 
 #[cfg(test)]
