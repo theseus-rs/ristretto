@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/crates/l/ristretto_classfile)](https://github.com/theseus-rs/ristretto#license)
 [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
 
-[JVM](https://docs.oracle.com/javase/specs/jvms/se24/html/) implementation with deterministic memory deallocation.
+Embeddable Java Virtual Machine [JVM](https://docs.oracle.com/javase/specs/jvms/se24/html/) implementation.
 
 ## Getting Started
 
@@ -33,8 +33,6 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 
 ### Features
 
-- Deterministic memory allocation / deallocation
-- No tracing garbage collector
 - Runtime classes based on LTS versions of [AWS Corretto](https://github.com/corretto)
 - Load classes from directories, jars, modules
 - Url class loading from jars and modules
