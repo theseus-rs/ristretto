@@ -15,6 +15,9 @@ pub enum Error {
     /// Internal error
     #[error("Internal error: {0}")]
     InternalError(String),
+    /// Invalid block address
+    #[error("Invalid block address: {0}")]
+    InvalidBlockAddress(usize),
     /// Invalid constant
     #[error("Invalid constant; expected {expected}, found {actual}")]
     InvalidConstant { expected: String, actual: String },

@@ -1,5 +1,6 @@
 use crate::Error::{
-    InternalError, UnsupportedInstruction, UnsupportedMethod, UnsupportedTargetISA, UnsupportedType,
+    InternalError, InvalidBlockAddress, UnsupportedInstruction, UnsupportedMethod,
+    UnsupportedTargetISA, UnsupportedType,
 };
 use crate::function::Function;
 use crate::instruction::{
@@ -19,7 +20,7 @@ use crate::instruction::{
 };
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use crate::{JitValue, Result};
+use crate::{JitValue, Result, control_flow_graph};
 use cranelift::codegen::ir::UserFuncName;
 use cranelift::codegen::settings::Flags;
 use cranelift::jit::{JITBuilder, JITModule};
@@ -82,16 +83,21 @@ impl Compiler {
                 "Unable to compile method that is not <init> or static: {class_name}.{method_name}{method_descriptor}"
             )));
         }
-        let Some((max_stack, instructions)) = method.attributes.iter().find_map(|attribute| {
-            if let Attribute::Code {
-                max_stack, code, ..
-            } = attribute
-            {
-                Some((*max_stack, code))
-            } else {
-                None
-            }
-        }) else {
+        let Some((max_stack, instructions, exception_table)) =
+            method.attributes.iter().find_map(|attribute| {
+                if let Attribute::Code {
+                    max_stack,
+                    code,
+                    exception_table,
+                    ..
+                } = attribute
+                {
+                    Some((*max_stack, code, exception_table))
+                } else {
+                    None
+                }
+            })
+        else {
             return Err(InternalError("No Code attribute found".to_string()));
         };
 
@@ -108,7 +114,15 @@ impl Compiler {
         let mut function_builder =
             FunctionBuilder::new(&mut module_context.func, &mut function_context);
 
-        let block = function_builder.create_block();
+        let blocks = control_flow_graph::get_blocks(
+            &mut function_builder,
+            constant_pool,
+            instructions,
+            exception_table,
+        )?;
+        let mut block_indexes = blocks.keys().copied().collect::<Vec<_>>();
+        block_indexes.sort_unstable();
+        let block = *blocks.get(&0).ok_or_else(|| InvalidBlockAddress(0))?;
         function_builder.switch_to_block(block);
         function_builder.append_block_params_for_function_params(block);
         let (arguments_pointer, _arguments_length_pointer, return_pointer) =

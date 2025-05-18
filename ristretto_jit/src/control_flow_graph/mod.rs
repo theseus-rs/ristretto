@@ -67,4 +67,4 @@ mod blocks;
 mod instruction;
 mod type_stack;
 
-pub(crate) use blocks::append_block_params;
+pub(crate) use blocks::{append_block_params, get_blocks};
