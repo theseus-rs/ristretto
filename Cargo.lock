@@ -1918,7 +1918,6 @@ dependencies = [
  "indexmap",
  "ristretto_classfile",
  "thiserror",
- "tracing",
 ]
 
 [[package]]

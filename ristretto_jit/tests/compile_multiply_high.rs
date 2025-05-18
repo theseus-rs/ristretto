@@ -5,7 +5,7 @@ use ristretto_jit::{Compiler, Result, Value};
 #[test]
 fn compile_multiply_high() -> Result<()> {
     let mut constant_pool = ConstantPool::default();
-    let class_name_index = constant_pool.add_class("Test")?;
+    let class_name_index = constant_pool.add_class("Math")?;
     let first_argument_index = constant_pool.add_long(4_294_967_295)?;
     let code_index = constant_pool.add_utf8("Code")?;
     let test_name_index = constant_pool.add_utf8("multiplyHigh")?;

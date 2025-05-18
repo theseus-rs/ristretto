@@ -5,7 +5,6 @@ use cranelift::prelude::{Type, types};
 use ristretto_classfile::Error::InvalidConstantPoolIndexType;
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classfile::{BaseType, Constant, ConstantPool, FieldType};
-use tracing::trace;
 
 /// Simulates the effect of an instruction on the stack.
 #[expect(clippy::too_many_lines)]
@@ -461,66 +460,38 @@ pub(crate) fn simulate(
             let _ = stack.pop_object()?;
         }
         Instruction::Getstatic(index) => {
-            let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(*index)?;
-            let (name_index, descriptor_index) =
+            let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(*index)?;
+            let (_name_index, descriptor_index) =
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
             let field_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-
-            #[cfg(debug_assertions)]
-            {
-                let class_name = constant_pool.try_get_class(*class_index)?;
-                let field_name = constant_pool.try_get_utf8(*name_index)?;
-                trace!("Simulating {instruction} on {class_name}.{field_name}");
-            }
 
             let field_type = FieldType::parse(field_descriptor)?;
             push_field_type(stack, &field_type)?;
         }
         Instruction::Putstatic(index) => {
-            let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(*index)?;
-            let (name_index, descriptor_index) =
+            let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(*index)?;
+            let (_name_index, descriptor_index) =
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
             let field_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-
-            #[cfg(debug_assertions)]
-            {
-                let class_name = constant_pool.try_get_class(*class_index)?;
-                let field_name = constant_pool.try_get_utf8(*name_index)?;
-                trace!("Simulating {instruction} on {class_name}.{field_name}");
-            }
 
             let field_type = FieldType::parse(field_descriptor)?;
             let _ = pop_field_type(stack, &field_type)?;
         }
         Instruction::Getfield(index) => {
-            let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(*index)?;
-            let (name_index, descriptor_index) =
+            let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(*index)?;
+            let (_name_index, descriptor_index) =
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
             let field_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-
-            #[cfg(debug_assertions)]
-            {
-                let class_name = constant_pool.try_get_class(*class_index)?;
-                let field_name = constant_pool.try_get_utf8(*name_index)?;
-                trace!("Simulating {instruction} on {class_name}.{field_name}");
-            }
 
             let _ = stack.pop_object()?;
             let field_type = FieldType::parse(field_descriptor)?;
             push_field_type(stack, &field_type)?;
         }
         Instruction::Putfield(index) => {
-            let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(*index)?;
-            let (name_index, descriptor_index) =
+            let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(*index)?;
+            let (_name_index, descriptor_index) =
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
             let field_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-
-            #[cfg(debug_assertions)]
-            {
-                let class_name = constant_pool.try_get_class(*class_index)?;
-                let field_name = constant_pool.try_get_utf8(*name_index)?;
-                trace!("Simulating {instruction} on {class_name}.{field_name}");
-            }
 
             let field_type = FieldType::parse(field_descriptor)?;
             let _ = pop_field_type(stack, &field_type)?;
