@@ -2210,7 +2210,7 @@ mod tests {
     }
 
     #[test]
-    fn test_simulate_invokestatic() -> Result<()> {
+    fn test_simulate_invokestatic_method_ref() -> Result<()> {
         let mut stack = TypeStack::new();
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class("java/lang/Object")?;
@@ -2224,6 +2224,39 @@ mod tests {
         )?;
         assert_eq!(stack.len(), 1);
         assert!(stack.pop_int().is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_simulate_invokestatic_interface_method_ref() -> Result<()> {
+        let mut stack = TypeStack::new();
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("java/lang/Object")?;
+        let method_index = constant_pool.add_interface_method_ref(class_index, "foo", "(IF)I")?;
+        stack.push_int()?;
+        stack.push_float()?;
+        simulate(
+            &mut stack,
+            &constant_pool,
+            &Instruction::Invokestatic(method_index),
+        )?;
+        assert_eq!(stack.len(), 1);
+        assert!(stack.pop_int().is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_simulate_invokestatic_invoke_dynamic_error() -> Result<()> {
+        let mut stack = TypeStack::new();
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("java/lang/Object")?;
+        let method_index = constant_pool.add_invoke_dynamic(class_index, "foo", "(IF)I")?;
+        let result = simulate(
+            &mut stack,
+            &constant_pool,
+            &Instruction::Invokestatic(method_index),
+        );
+        assert!(result.is_err());
         Ok(())
     }
 

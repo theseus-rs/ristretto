@@ -13,6 +13,7 @@ use std::collections::HashMap;
 /// * `function_builder` - The function builder to create blocks with
 /// * `constant_pool` - The constant pool for the class
 /// * `instructions` - The Java bytecode instructions
+/// * `exception_table` - The exception table for the method
 ///
 /// # Returns
 /// A map from instruction addresses to Cranelift blocks

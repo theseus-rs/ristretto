@@ -368,4 +368,32 @@ mod tests {
         assert_eq!(types, vec![types::I32, types::I64, types::F32, types::F64]);
         Ok(())
     }
+
+    #[test]
+    fn test_reset() -> Result<()> {
+        let (mut module_context, mut function_context) = create_function_builder_contexts()?;
+        let mut function_builder =
+            FunctionBuilder::new(&mut module_context.func, &mut function_context);
+        let block = function_builder.create_block();
+        function_builder.switch_to_block(block);
+
+        let mut operand_stack = OperandStack::with_capacity(1);
+        let int_value = function_builder.ins().iconst(types::I32, 42);
+
+        operand_stack.push(int_value)?;
+        assert_eq!(operand_stack.len(), 1);
+        operand_stack.reset(&mut function_builder)?;
+        assert!(operand_stack.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn test_reset_no_current_block_error() -> Result<()> {
+        let (mut module_context, mut function_context) = create_function_builder_contexts()?;
+        let mut function_builder =
+            FunctionBuilder::new(&mut module_context.func, &mut function_context);
+        let mut operand_stack = OperandStack::with_capacity(1);
+        assert!(operand_stack.reset(&mut function_builder).is_err());
+        Ok(())
+    }
 }
