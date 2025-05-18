@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/v0.18.1...v0.19.0) - 2025-05-18
+
+### Added
+- implement jit operand stack
+
+### Other
+- update to Rust 1.87.0
+- update to clap=4.5.38, os_info=3.11.0, sysinfo=0.35.1, tempfile=3.20.0
+
+## `ristretto_vm` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.18.1...ristretto_vm-v0.19.0) - 2025-05-18
+
+### Added
+- implement jit operand stack
+
+### Other
+- update to Rust 1.87.0
+
+## `ristretto_jit` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.18.1...ristretto_jit-v0.19.0) - 2025-05-18
+
+### Added
+- implement basic jit branch instructions
+- enable creation of jit control flow graph blocks
+- generate jit control flow graph using cranelift blocks
+- optimize operand stack layout
+- optimize jit Instruction::Return
+- optimize operand stack to prevent allocation when not used; e.g. Object.<init>()
+- implement jit operand stack
+
+### Fixed
+- add jit cfg exception blocks
+- add jit block support for ifnull and ifnonnull
+- add jit control flow logic for if_acmpeq and if_acmpne
+- correct lcmp, dcmpl, dcmpg, fcmpl, fcmpg to pass stack values through block params
+- correct jit dcmpl, dcmpg, fcmpl, fcmpg to emit float instructions instead of int.
+- correct jit invoke* instruction parameter processing
+- correct jit field, invoke and stack simulation errors
+
+### Other
+- minor jit readme update
+- simplify jit stack implementations
+- update to Rust 1.87.0
+- improve jit instruction simulation test coverage
+- refactor to use block params for OperandStack
+- update jit operand stack to use cranelift stack slot
+- only enable jit verifier when debug assertions are enabled
+
+## `ristretto_classloader` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.18.1...ristretto_classloader-v0.19.0) - 2025-05-18
+
+### Other
+- update to Rust 1.87.0
+- update to clap=4.5.38, os_info=3.11.0, sysinfo=0.35.1, tempfile=3.20.0
+
+## `ristretto_classfile` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.18.1...ristretto_classfile-v0.19.0) - 2025-05-18
+
+### Added
+- implement jit operand stack
+
 ## `ristretto_cli` - [0.18.1](https://github.com/theseus-rs/ristretto/compare/v0.18.0...v0.18.1) - 2025-05-05
 
 ### Added
