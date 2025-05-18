@@ -2,6 +2,7 @@ use crate::Error::{
     InternalError, InvalidBlockAddress, UnsupportedInstruction, UnsupportedMethod,
     UnsupportedTargetISA, UnsupportedType,
 };
+use crate::control_flow_graph::InstructionControlFlow;
 use crate::function::Function;
 use crate::instruction::{
     bipush, breakpoint, d2f, d2i, d2l, dadd, dcmpg, dcmpl, dconst_0, dconst_1, ddiv, dload,
@@ -9,14 +10,15 @@ use crate::instruction::{
     dstore_1, dstore_2, dstore_3, dstore_w, dsub, dup, dup_x1, dup_x2, dup2, dup2_x1, dup2_x2, f2d,
     f2i, f2l, fadd, fcmpg, fcmpl, fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1,
     fload_2, fload_3, fload_w, fmul, fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2,
-    fstore_3, fstore_w, fsub, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iand, iconst_0, iconst_1,
-    iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv, iinc, iinc_w, iload, iload_0, iload_1,
-    iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, ior, irem, ireturn, ishl, ishr,
-    istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr, ixor, l2d, l2f, l2i,
-    ladd, land, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w, ldiv, lload, lload_0, lload_1,
-    lload_2, lload_3, lload_w, lmul, lneg, lor, lrem, lreturn, lshl, lshr, lstore, lstore_0,
-    lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr, lxor, monitorenter, monitorexit, nop, pop,
-    pop2, r#return, sipush, swap, wide,
+    fstore_3, fstore_w, fsub, goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iand, iconst_0,
+    iconst_1, iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv, if_icmpeq, if_icmpge,
+    if_icmpgt, if_icmple, if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, iinc, iinc_w,
+    iload, iload_0, iload_1, iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, ior, irem,
+    ireturn, ishl, ishr, istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr,
+    ixor, jsr, jsr_w, l2d, l2f, l2i, ladd, land, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w,
+    ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lor, lrem, lreturn, lshl,
+    lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr, lxor,
+    monitorenter, monitorexit, nop, pop, pop2, r#return, sipush, swap, wide,
 };
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
@@ -30,6 +32,7 @@ use ristretto_classfile::attributes::{Attribute, Instruction};
 use ristretto_classfile::{
     BaseType, ClassFile, ConstantPool, FieldType, Method, MethodAccessFlags,
 };
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::mem;
 
@@ -131,12 +134,32 @@ impl Compiler {
         let mut locals = Self::locals(method_descriptor, &mut function_builder, arguments_pointer)?;
 
         let mut stack = OperandStack::with_capacity(max_stack);
-        for instruction in instructions {
+        for (program_counter, instruction) in instructions.iter().enumerate() {
+            if let Some(block) = blocks.get(&program_counter) {
+                // The block needs to be filled before switching
+                if program_counter != 0 {
+                    let last_instruction_index = program_counter.saturating_sub(1);
+                    if let Some(last_instruction) = instructions.get(last_instruction_index) {
+                        // Determine if instructions in the last block changes the control flow.
+                        // If it doesn't, then a jump to the next block is needed.
+                        if !last_instruction.changes_control_flow() {
+                            let stack_values = stack.as_slice().to_vec();
+                            function_builder.ins().jump(*block, &stack_values);
+                        }
+                    }
+
+                    function_builder.switch_to_block(*block);
+                    stack.reset(&mut function_builder)?;
+                }
+            }
+
             Self::process_instruction(
                 constant_pool,
                 &mut function_builder,
+                &blocks,
                 &mut locals,
                 &mut stack,
+                program_counter,
                 return_pointer,
                 instruction,
             )?;
@@ -273,12 +296,15 @@ impl Compiler {
         }
     }
 
+    #[expect(clippy::too_many_arguments)]
     #[expect(clippy::too_many_lines)]
     fn process_instruction(
         constant_pool: &ConstantPool,
         function_builder: &mut FunctionBuilder,
+        blocks: &HashMap<usize, Block>,
         locals: &mut LocalVariables,
         stack: &mut OperandStack,
+        program_counter: usize,
         return_pointer: Value,
         instruction: &Instruction,
     ) -> Result<()> {
@@ -442,22 +468,46 @@ impl Compiler {
             Instruction::Fcmpg => fcmpg(function_builder, stack)?,
             Instruction::Dcmpl => dcmpl(function_builder, stack)?,
             Instruction::Dcmpg => dcmpg(function_builder, stack)?,
-            // Instruction::Ifeq(address) => ifeq(stack, *address),
-            // Instruction::Ifne(address) => ifne(stack, *address),
-            // Instruction::Iflt(address) => iflt(stack, *address),
-            // Instruction::Ifge(address) => ifge(stack, *address),
-            // Instruction::Ifgt(address) => ifgt(stack, *address),
-            // Instruction::Ifle(address) => ifle(stack, *address),
-            // Instruction::If_icmpeq(address) => if_icmpeq(stack, *address),
-            // Instruction::If_icmpne(address) => if_icmpne(stack, *address),
-            // Instruction::If_icmplt(address) => if_icmplt(stack, *address),
-            // Instruction::If_icmpge(address) => if_icmpge(stack, *address),
-            // Instruction::If_icmpgt(address) => if_icmpgt(stack, *address),
-            // Instruction::If_icmple(address) => if_icmple(stack, *address),
+            Instruction::Ifeq(address) => {
+                ifeq(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::Ifne(address) => {
+                ifne(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::Iflt(address) => {
+                iflt(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::Ifge(address) => {
+                ifge(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::Ifgt(address) => {
+                ifgt(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::Ifle(address) => {
+                ifle(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::If_icmpeq(address) => {
+                if_icmpeq(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::If_icmpne(address) => {
+                if_icmpne(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::If_icmplt(address) => {
+                if_icmplt(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::If_icmpge(address) => {
+                if_icmpge(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::If_icmpgt(address) => {
+                if_icmpgt(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::If_icmple(address) => {
+                if_icmple(function_builder, blocks, stack, program_counter, *address)?;
+            }
             // Instruction::If_acmpeq(address) => if_acmpeq(stack, *address),
             // Instruction::If_acmpne(address) => if_acmpne(stack, *address),
-            // Instruction::Goto(address) => goto(*address),
-            // Instruction::Jsr(address) => jsr(stack, *address),
+            Instruction::Goto(address) => goto(function_builder, blocks, stack, *address)?,
+            Instruction::Jsr(address) => jsr(function_builder, blocks, stack, *address)?,
             // Instruction::Ret(index) => ret(locals, *index),
             // Instruction::Tableswitch {
             //     default,
@@ -477,7 +527,7 @@ impl Compiler {
             Instruction::Freturn => freturn(function_builder, stack, return_pointer)?,
             Instruction::Dreturn => dreturn(function_builder, stack, return_pointer)?,
             // Instruction::Areturn => areturn(stack),
-            Instruction::Return => r#return(function_builder, return_pointer),
+            Instruction::Return => r#return(function_builder, stack, return_pointer),
             // Instruction::Getstatic(index) => getstatic(self, stack, *index).await,
             // Instruction::Putstatic(index) => putstatic(self, stack, *index).await,
             // Instruction::Getfield(index) => getfield(stack, &self.class, *index),
@@ -504,8 +554,8 @@ impl Compiler {
             // }
             // Instruction::Ifnull(address) => ifnull(stack, *address),
             // Instruction::Ifnonnull(address) => ifnonnull(stack, *address),
-            // Instruction::Goto_w(address) => goto_w(*address),
-            // Instruction::Jsr_w(address) => jsr_w(stack, *address),
+            Instruction::Goto_w(address) => goto_w(function_builder, blocks, stack, *address)?,
+            Instruction::Jsr_w(address) => jsr_w(function_builder, blocks, stack, *address)?,
             Instruction::Breakpoint => breakpoint(function_builder, stack),
             Instruction::Impdep1 => impdep1(function_builder, stack),
             Instruction::Impdep2 => impdep2(function_builder, stack),

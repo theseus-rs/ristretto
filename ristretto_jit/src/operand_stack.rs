@@ -142,6 +142,18 @@ impl OperandStack {
             .map(|value| function_builder.func.dfg.value_type(*value))
             .collect()
     }
+
+    /// Sets the stack to the given values.
+    pub fn reset(&mut self, function_builder: &mut FunctionBuilder) -> Result<()> {
+        let Some(current_block) = function_builder.current_block() else {
+            return Err(InternalError("No current block".to_string()));
+        };
+        let values = function_builder.block_params(current_block);
+        // Retain the capacity of the original stack
+        self.stack.clear();
+        self.stack.extend(values);
+        Ok(())
+    }
 }
 
 #[cfg(test)]

@@ -64,7 +64,9 @@
 /// ```
 ///
 mod blocks;
+mod control_flow;
 mod instruction;
 mod type_stack;
 
 pub(crate) use blocks::{append_block_params, get_blocks};
+pub(crate) use control_flow::InstructionControlFlow;
