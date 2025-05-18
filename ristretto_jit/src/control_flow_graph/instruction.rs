@@ -2,6 +2,7 @@ use crate::Error::{InvalidConstant, InvalidConstantIndex};
 use crate::Result;
 use crate::control_flow_graph::type_stack::TypeStack;
 use cranelift::prelude::{Type, types};
+use ristretto_classfile::Error::InvalidConstantPoolIndexType;
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classfile::{BaseType, Constant, ConstantPool, FieldType};
 use tracing::trace;
@@ -525,61 +526,35 @@ pub(crate) fn simulate(
             let _ = pop_field_type(stack, &field_type)?;
             let _ = stack.pop_object()?;
         }
-        Instruction::Invokevirtual(method_index)
-        | Instruction::Invokespecial(method_index)
-        | Instruction::Invokestatic(method_index)
-        | Instruction::Invokedynamic(method_index) => {
-            let (class_index, name_and_type_index) =
+        Instruction::Invokevirtual(method_index) | Instruction::Invokespecial(method_index) => {
+            let (_class_index, name_and_type_index) =
                 constant_pool.try_get_method_ref(*method_index)?;
-            let (name_index, descriptor_index) =
-                constant_pool.try_get_name_and_type(*name_and_type_index)?;
-            let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-
-            #[cfg(debug_assertions)]
-            {
-                let class_name = constant_pool.try_get_class(*class_index)?;
-                let method_name = constant_pool.try_get_utf8(*name_index)?;
-                trace!("Simulating {instruction} on {class_name}.{method_name}{method_descriptor}");
+            invoke(stack, constant_pool, *name_and_type_index, true)?;
+        }
+        Instruction::Invokestatic(method_index) => {
+            let constant = constant_pool.try_get(*method_index)?;
+            let (Constant::MethodRef {
+                class_index: _,
+                name_and_type_index,
             }
-
-            let (parameters, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
-            for parameter in parameters.iter().rev() {
-                pop_field_type(stack, parameter)?;
-            }
-
-            if !matches!(instruction, Instruction::Invokespecial(..))
-                && !matches!(instruction, Instruction::Invokestatic(..))
-            {
-                let _ = stack.pop_object()?;
-            }
-
-            if let Some(return_type) = return_type {
-                push_field_type(stack, &return_type)?;
-            }
+            | Constant::InterfaceMethodRef {
+                class_index: _,
+                name_and_type_index,
+            }) = constant
+            else {
+                return Err(InvalidConstantPoolIndexType(*method_index).into());
+            };
+            invoke(stack, constant_pool, *name_and_type_index, false)?;
         }
         Instruction::Invokeinterface(method_index, ..) => {
-            let (class_index, name_and_type_index) =
+            let (_class_index, name_and_type_index) =
                 constant_pool.try_get_interface_method_ref(*method_index)?;
-            let (name_index, descriptor_index) =
-                constant_pool.try_get_name_and_type(*name_and_type_index)?;
-            let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-
-            #[cfg(debug_assertions)]
-            {
-                let class_name = constant_pool.try_get_class(*class_index)?;
-                let method_name = constant_pool.try_get_utf8(*name_index)?;
-                trace!("Simulating {instruction} on {class_name}.{method_name}{method_descriptor}");
-            }
-
-            let (parameters, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
-            for parameter in parameters.iter().rev() {
-                pop_field_type(stack, parameter)?;
-            }
-            let _ = stack.pop_object()?;
-
-            if let Some(return_type) = return_type {
-                push_field_type(stack, &return_type)?;
-            }
+            invoke(stack, constant_pool, *name_and_type_index, true)?;
+        }
+        Instruction::Invokedynamic(method_index) => {
+            let (_bootstrap_method_attr_index, name_and_type_index) =
+                constant_pool.try_get_invoke_dynamic(*method_index)?;
+            invoke(stack, constant_pool, *name_and_type_index, false)?;
         }
         Instruction::New(..) => {
             stack.push_object()?;
@@ -606,7 +581,7 @@ pub(crate) fn simulate(
         Instruction::Monitorenter | Instruction::Monitorexit => {
             let _ = stack.pop_object()?;
         }
-        Instruction::Multianewarray(dimensions, ..) => {
+        Instruction::Multianewarray(_index, dimensions) => {
             let _ = stack.pop_int()?;
             for _ in 1..*dimensions {
                 let _ = stack.pop_int()?;
@@ -645,6 +620,32 @@ fn ldc(stack: &mut TypeStack, constant_pool: &ConstantPool, index: u16) -> Resul
             actual: format!("{constant:?}"),
         }),
     }
+}
+
+/// Handles the invocation of a method.
+fn invoke(
+    stack: &mut TypeStack,
+    constant_pool: &ConstantPool,
+    name_and_type_index: u16,
+    expects_object_reference: bool,
+) -> Result<()> {
+    let (_name_index, descriptor_index) =
+        constant_pool.try_get_name_and_type(name_and_type_index)?;
+    let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
+
+    let (parameters, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
+    for parameter in parameters.iter().rev() {
+        pop_field_type(stack, parameter)?;
+    }
+
+    if expects_object_reference {
+        let _ = stack.pop_object()?;
+    }
+
+    if let Some(return_type) = return_type {
+        push_field_type(stack, &return_type)?;
+    }
+    Ok(())
 }
 
 /// Pushes a field type onto the stack.
@@ -2195,24 +2196,18 @@ mod tests {
     }
 
     #[test]
-    fn test_simulate_invoke_instructions_return_int() -> Result<()> {
+    fn test_simulate_invoke_virtual_or_special_return_int() -> Result<()> {
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class("java/lang/Object")?;
         let method_index = constant_pool.add_method_ref(class_index, "foo", "(IF)I")?;
         let instructions = vec![
             Instruction::Invokevirtual(method_index),
             Instruction::Invokespecial(method_index),
-            Instruction::Invokestatic(method_index),
-            Instruction::Invokedynamic(method_index),
         ];
 
         for instruction in instructions {
             let mut stack = TypeStack::new();
-            if !matches!(instruction, Instruction::Invokespecial(..))
-                && !matches!(instruction, Instruction::Invokestatic(..))
-            {
-                stack.push_object()?;
-            }
+            stack.push_object()?;
             stack.push_int()?;
             stack.push_float()?;
             simulate(&mut stack, &constant_pool, &instruction)?;
@@ -2223,24 +2218,18 @@ mod tests {
     }
 
     #[test]
-    fn test_simulate_invoke_instructions_return_void() -> Result<()> {
+    fn test_simulate_invoke_virtual_or_special_instructions_return_void() -> Result<()> {
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class("java/lang/Object")?;
         let method_index = constant_pool.add_method_ref(class_index, "foo", "(IF)V")?;
         let instructions = vec![
             Instruction::Invokevirtual(method_index),
             Instruction::Invokespecial(method_index),
-            Instruction::Invokestatic(method_index),
-            Instruction::Invokedynamic(method_index),
         ];
 
         for instruction in instructions {
             let mut stack = TypeStack::new();
-            if !matches!(instruction, Instruction::Invokespecial(..))
-                && !matches!(instruction, Instruction::Invokestatic(..))
-            {
-                stack.push_object()?;
-            }
+            stack.push_object()?;
             stack.push_int()?;
             stack.push_float()?;
             simulate(&mut stack, &constant_pool, &instruction)?;
@@ -2250,7 +2239,25 @@ mod tests {
     }
 
     #[test]
-    fn test_simulate_invokeinterface_return_int() -> Result<()> {
+    fn test_simulate_invokestatic() -> Result<()> {
+        let mut stack = TypeStack::new();
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("java/lang/Object")?;
+        let method_index = constant_pool.add_method_ref(class_index, "foo", "(IF)I")?;
+        stack.push_int()?;
+        stack.push_float()?;
+        simulate(
+            &mut stack,
+            &constant_pool,
+            &Instruction::Invokestatic(method_index),
+        )?;
+        assert_eq!(stack.len(), 1);
+        assert!(stack.pop_int().is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_simulate_invokeinterface() -> Result<()> {
         let mut stack = TypeStack::new();
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class("java/lang/Object")?;
@@ -2269,20 +2276,20 @@ mod tests {
     }
 
     #[test]
-    fn test_simulate_invokeinterface_return_void() -> Result<()> {
+    fn test_simulate_invokedynamic() -> Result<()> {
         let mut stack = TypeStack::new();
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class("java/lang/Object")?;
-        let method_index = constant_pool.add_interface_method_ref(class_index, "foo", "(IF)V")?;
-        stack.push_object()?;
+        let method_index = constant_pool.add_invoke_dynamic(class_index, "foo", "(IF)I")?;
         stack.push_int()?;
         stack.push_float()?;
         simulate(
             &mut stack,
             &constant_pool,
-            &Instruction::Invokeinterface(method_index, 0),
+            &Instruction::Invokedynamic(method_index),
         )?;
-        assert_eq!(stack.len(), 0);
+        assert_eq!(stack.len(), 1);
+        assert!(stack.pop_int().is_ok());
         Ok(())
     }
 
