@@ -6,6 +6,7 @@ use crate::{JavaObject, Result, VM};
 use ristretto_classfile::attributes::{Attribute, BootstrapMethod};
 use ristretto_classfile::{Constant, ConstantPool, FieldType};
 use ristretto_classloader::{ConcurrentVec, Reference, Value};
+use std::sync::Arc;
 use tracing::debug;
 
 /// Get the bootstrap method attribute name and type for the specified method index.
@@ -116,6 +117,43 @@ async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Val
         .await
 }
 
+/// Append the static arguments from the bootstrap method to the arguments vector.
+async fn append_bootstrap_arguments(
+    vm: &Arc<VM>,
+    constant_pool: &ConstantPool,
+    bootstrap_method: &BootstrapMethod,
+    arguments: &mut Vec<Value>,
+) -> Result<()> {
+    for argument in &bootstrap_method.arguments {
+        let constant = constant_pool.try_get(*argument)?;
+        match constant {
+            Constant::Integer(value) => {
+                arguments.push(Value::from(*value));
+            }
+            Constant::Float(value) => {
+                arguments.push(Value::from(*value));
+            }
+            Constant::Long(value) => {
+                arguments.push(Value::from(*value));
+            }
+            Constant::Double(value) => {
+                arguments.push(Value::from(*value));
+            }
+            Constant::String(value) => {
+                let string = constant_pool.try_get_utf8(*value)?;
+                let value = string.to_object(vm).await?;
+                arguments.push(value);
+            }
+            _ => {
+                return Err(InternalError(format!(
+                    "Invalid bootstrap argument type: {argument}"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Resolves the invokedynamic call site from the frame and constant pool.
 pub async fn get_call_site(frame: &Frame, method_index: u16) -> Result<Value> {
     let thread = frame.thread()?;
@@ -133,9 +171,10 @@ pub async fn get_call_site(frame: &Frame, method_index: u16) -> Result<Value> {
         constant_pool.try_get_utf8(*bootstrap_method_attr_descriptor_index)?;
 
     // Get the bootstrap method
-    let bootstrap_method = get_bootstrap_method_attribute(frame, bootstrap_method_attr_index)?;
+    let bootstrap_method_attribute =
+        get_bootstrap_method_attribute(frame, bootstrap_method_attr_index)?;
     let (reference_kind, method_ref) =
-        constant_pool.try_get_method_handle(bootstrap_method.bootstrap_method_ref)?;
+        constant_pool.try_get_method_handle(bootstrap_method_attribute.bootstrap_method_ref)?;
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(*method_ref)?;
     let bootstrap_class_name = constant_pool.try_get_class(*class_index)?;
     let bootstrap_class = thread.class(bootstrap_class_name).await?;
@@ -158,13 +197,14 @@ pub async fn get_call_site(frame: &Frame, method_index: u16) -> Result<Value> {
     let method_handle = Value::Object(None); // TODO: obtain MethodHandles.lookup representing the callers class
     let method_name = bootstrap_method_attr_name.to_object(&vm).await?;
     let method_type = get_method_type(&thread, bootstrap_method_descriptor).await?;
-    #[expect(clippy::useless_vec)]
-    let _arguments = vec![
-        method_handle,
-        method_name,
-        method_type,
-        // TODO: any additional static arguments specified in the BootstrapMethods attribute
-    ];
+    let mut arguments = vec![method_handle, method_name, method_type];
+    append_bootstrap_arguments(
+        &vm,
+        constant_pool,
+        &bootstrap_method_attribute,
+        &mut arguments,
+    )
+    .await?;
 
     todo!("invokedynamic get_call_site")
 }
