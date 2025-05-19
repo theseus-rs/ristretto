@@ -335,21 +335,23 @@ async fn resolve_2(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Op
 #[async_recursion(?Send)]
 async fn set_call_site_target_normal(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.MethodHandleNatives.setCallSiteTargetNormal(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V"
-    )
+    let call_site = parameters.pop_object()?;
+    let method_handle = parameters.pop_object()?;
+    call_site.set_value("target", Value::from(method_handle))?;
+    Ok(None)
 }
 
 #[async_recursion(?Send)]
 async fn set_call_site_target_volatile(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.MethodHandleNatives.setCallSiteTargetVolatile(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V"
-    )
+    let call_site = parameters.pop_object()?;
+    let method_handle = parameters.pop_object()?;
+    call_site.set_value("target", Value::from(method_handle))?;
+    Ok(None)
 }
 
 #[async_recursion(?Send)]
@@ -370,6 +372,7 @@ async fn static_field_offset(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classloader::Reference;
 
     #[tokio::test]
     #[should_panic(
@@ -460,21 +463,33 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.setCallSiteTargetNormal(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V"
-    )]
-    async fn test_set_call_site_target_normal() {
+    async fn test_set_call_site_target_normal() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_call_site_target_normal(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        let method_handle_class = thread.class("java.lang.invoke.MethodHandle").await?;
+        let method_handle = Reference::from(Object::new(method_handle_class)?);
+        parameters.push_reference(Some(method_handle));
+        let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
+        let call_site = Reference::from(Object::new(call_site_class)?);
+        parameters.push_reference(Some(call_site));
+        let result = set_call_site_target_normal(thread, parameters).await?;
+        assert_eq!(None, result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.setCallSiteTargetVolatile(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V"
-    )]
-    async fn test_set_call_site_target_volatile() {
+    async fn test_set_call_site_target_volatile() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_call_site_target_volatile(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        let method_handle_class = thread.class("java.lang.invoke.MethodHandle").await?;
+        let method_handle = Reference::from(Object::new(method_handle_class)?);
+        parameters.push_reference(Some(method_handle));
+        let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
+        let call_site = Reference::from(Object::new(call_site_class)?);
+        parameters.push_reference(Some(call_site));
+        let result = set_call_site_target_volatile(thread, parameters).await?;
+        assert_eq!(None, result);
+        Ok(())
     }
 
     #[tokio::test]
