@@ -206,9 +206,15 @@ async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Va
 #[async_recursion(?Send)]
 async fn object_field_offset(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J")
+    let member_name = parameters.pop_object()?;
+    let class_object: Object = member_name.value("clazz")?.try_into()?;
+    let class = class_object.class();
+    let field_name: String = member_name.value("name")?.try_into()?;
+    let offset = class.field_offset(&field_name)?;
+    let offset = i64::try_from(offset)?;
+    Ok(Some(Value::Long(offset)))
 }
 
 #[async_recursion(?Send)]
@@ -355,23 +361,33 @@ async fn set_call_site_target_volatile(
 }
 
 #[async_recursion(?Send)]
-async fn static_field_base(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.MethodHandleNatives.staticFieldBase(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;"
-    )
+async fn static_field_base(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let member_name = parameters.pop_object()?;
+    let class = member_name.value("clazz")?;
+    Ok(Some(class))
 }
 
 #[async_recursion(?Send)]
 async fn static_field_offset(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J")
+    let member_name = parameters.pop_object()?;
+    let class_object: Object = member_name.value("clazz")?.try_into()?;
+    let class = class_object.class();
+    let field_name: String = member_name.value("name")?.try_into()?;
+    let offset = class.field_offset(&field_name)?;
+    let offset = i64::try_from(offset)?;
+    Ok(Some(Value::Long(offset)))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::JavaObject;
     use ristretto_classloader::Reference;
 
     #[tokio::test]
@@ -446,12 +462,20 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J"
-    )]
-    async fn test_object_field_offset() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = object_field_offset(thread, Parameters::default()).await;
+    async fn test_object_field_offset() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let mut parameters = Parameters::default();
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let member_name = Object::new(member_name_class)?;
+        let class_object = thread.class("java.lang.Integer").await?;
+        let class = Reference::from(Object::new(class_object)?);
+        member_name.set_value("clazz", Value::from(class))?;
+        let value_string = "value".to_object(&vm).await?;
+        member_name.set_value("name", value_string)?;
+        parameters.push_reference(Some(Reference::from(member_name)));
+        let result = object_field_offset(thread, parameters).await?;
+        assert_eq!(Some(Value::Long(7)), result);
+        Ok(())
     }
 
     #[tokio::test]
@@ -493,20 +517,34 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.staticFieldBase(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;"
-    )]
-    async fn test_static_field_base() {
+    async fn test_static_field_base() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = static_field_base(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let member_name = Object::new(member_name_class)?;
+        let class_object = thread.class("java.lang.Integer").await?;
+        let class = Reference::from(Object::new(class_object)?);
+        member_name.set_value("clazz", Value::from(class.clone()))?;
+        parameters.push_reference(Some(Reference::from(member_name)));
+        let result = static_field_base(thread, parameters).await?;
+        assert_eq!(Some(Value::from(class)), result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J"
-    )]
-    async fn test_static_field_offset() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = static_field_offset(thread, Parameters::default()).await;
+    async fn test_static_field_offset() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let mut parameters = Parameters::default();
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let member_name = Object::new(member_name_class)?;
+        let class_object = thread.class("java.lang.Integer").await?;
+        let class = Reference::from(Object::new(class_object)?);
+        member_name.set_value("clazz", Value::from(class))?;
+        let value_string = "MAX_VALUE".to_object(&vm).await?;
+        member_name.set_value("name", value_string)?;
+        parameters.push_reference(Some(Reference::from(member_name)));
+        let result = static_field_offset(thread, parameters).await?;
+        assert_eq!(Some(Value::Long(2)), result);
+        Ok(())
     }
 }
