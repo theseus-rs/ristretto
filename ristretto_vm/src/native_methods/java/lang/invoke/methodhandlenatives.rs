@@ -251,7 +251,7 @@ async fn resolve(
         (
             "getField",
             "(Ljava/lang/String;)Ljava/lang/reflect/Field;",
-            vec![Value::from(class_object)],
+            vec![Value::from(class_object), name],
         )
     } else {
         return Err(InternalError(format!(
@@ -284,6 +284,8 @@ async fn resolve(
 
 #[async_recursion(?Send)]
 async fn resolve_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    // Correct parameter order: pop MemberName first, then caller (Class)
+    let member_self = parameters.pop_object()?;
     let caller = match parameters.pop_object() {
         Ok(caller) => {
             let caller: Arc<Class> = caller.try_into()?;
@@ -291,7 +293,6 @@ async fn resolve_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Op
         }
         Err(_) => None,
     };
-    let member_self = parameters.pop_object()?;
     resolve(thread, member_self, caller, -1, true).await
 }
 
