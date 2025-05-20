@@ -192,7 +192,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_runtime_archive_latest_exact() -> Result<()> {
-        let expected_version = "11.0.26.4.1";
+        let expected_version = "11.0.27.6.1";
         let (version, file_name, archive) = get_runtime_archive(expected_version).await?;
         assert_eq!(expected_version, version);
         assert!(file_name.contains(expected_version));
@@ -243,7 +243,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_archive() -> Result<()> {
-        let version = "21.0.6.7.1";
+        let version = "21.0.7.6.1";
         let (_file_name, archive) = download_archive(version).await?;
         assert!(!archive.is_empty());
         Ok(())
@@ -253,7 +253,7 @@ mod tests {
     async fn test_get_release_versions() -> Result<()> {
         let major_version = "21";
         let release_versions = get_release_versions(major_version).await?;
-        let expected_version = "21.0.6.7.1".to_string();
+        let expected_version = "21.0.7.6.1".to_string();
         assert!(release_versions.contains(&expected_version));
         Ok(())
     }
@@ -261,7 +261,7 @@ mod tests {
     #[test]
     fn test_parse_major_version() {
         assert_eq!(11, parse_major_version("11"));
-        assert_eq!(8, parse_major_version("8.442.06.1"));
+        assert_eq!(8, parse_major_version("8.452.09.1"));
         assert_eq!(0, parse_major_version(""));
         assert_eq!(0, parse_major_version("a"));
     }
