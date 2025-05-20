@@ -35,7 +35,7 @@ byte-unit = "5.1.6"
 clap = "4.5.38"
 console = "0.15.11"
 cranelift = "0.119.0"
-criterion = { version = "0.5.1", default-features = false }
+criterion = { version = "0.6.0", default-features = false }
 dashmap = "6.1.0"
 dirs = "6.0.0"
 flate2 = "1.1.1"
