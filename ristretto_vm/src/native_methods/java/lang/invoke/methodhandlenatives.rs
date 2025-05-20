@@ -1,6 +1,6 @@
 use crate::Error::InternalError;
 use crate::Result;
-use crate::native_methods::registry::{JAVA_8, JAVA_11, JAVA_17, MethodRegistry};
+use crate::native_methods::registry::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
@@ -54,12 +54,15 @@ pub(crate) fn register(registry: &mut MethodRegistry) {
             resolve_0,
         );
     } else {
-        registry.register(
-            CLASS_NAME,
-            "clearCallSiteContext",
-            "(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V",
-            clear_call_site_context,
-        );
+        if registry.java_major_version() <= JAVA_21 {
+            registry.register(
+                CLASS_NAME,
+                "clearCallSiteContext",
+                "(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V",
+                clear_call_site_context,
+            );
+        }
+
         registry.register(
             CLASS_NAME,
             "copyOutBootstrapArguments",
