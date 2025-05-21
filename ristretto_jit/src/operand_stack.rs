@@ -1,6 +1,6 @@
 use crate::Error::InternalError;
 use crate::Result;
-use cranelift::codegen::ir::Value;
+use cranelift::codegen::ir::{BlockArg, Value};
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{Type, types};
 
@@ -133,6 +133,14 @@ impl OperandStack {
     /// Returns the values on the stack
     pub fn as_slice(&self) -> &[Value] {
         &self.stack
+    }
+
+    /// Returns the values on the stack as block arguments.
+    pub fn as_block_arguments(&self) -> Vec<BlockArg> {
+        self.stack
+            .iter()
+            .map(|value| BlockArg::Value(*value))
+            .collect::<Vec<BlockArg>>()
     }
 
     /// Returns a vector of types based on the values in the stack.
@@ -340,6 +348,37 @@ mod tests {
         assert_eq!(
             operand_stack.as_slice(),
             &[int_value, long_value, float_value, double_value]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_block_arguments() -> Result<()> {
+        let (mut module_context, mut function_context) = create_function_builder_contexts()?;
+        let mut function_builder =
+            FunctionBuilder::new(&mut module_context.func, &mut function_context);
+        let block = function_builder.create_block();
+        function_builder.switch_to_block(block);
+
+        let mut operand_stack = OperandStack::with_capacity(4);
+        let int_value = function_builder.ins().iconst(types::I32, 42);
+        let long_value = function_builder.ins().iconst(types::I64, 42);
+        let float_value = function_builder.ins().f32const(42.1);
+        let double_value = function_builder.ins().f64const(42.1);
+
+        operand_stack.push(int_value)?;
+        operand_stack.push(long_value)?;
+        operand_stack.push(float_value)?;
+        operand_stack.push(double_value)?;
+
+        assert_eq!(
+            operand_stack.as_block_arguments(),
+            &[
+                BlockArg::Value(int_value),
+                BlockArg::Value(long_value),
+                BlockArg::Value(float_value),
+                BlockArg::Value(double_value),
+            ]
         );
         Ok(())
     }

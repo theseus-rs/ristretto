@@ -37,7 +37,7 @@ fn compile_return_constant() -> Result<()> {
     };
     let test_method = &class_file.methods[0];
 
-    let mut compiler = Compiler::new()?;
+    let compiler = Compiler::new()?;
     let function = compiler.compile(&class_file, test_method)?;
     let value = function.execute(Vec::new())?.expect("value");
     assert_eq!(value, Value::I32(3));

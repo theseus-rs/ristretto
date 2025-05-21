@@ -34,7 +34,7 @@ byteorder = "1.5.0"
 byte-unit = "5.1.6"
 clap = "4.5.38"
 console = "0.15.11"
-cranelift = "0.119.0"
+cranelift = "0.120.0"
 criterion = { version = "0.6.0", default-features = false }
 dashmap = "6.1.0"
 dirs = "6.0.0"
@@ -57,7 +57,7 @@ tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 walkdir = "2.5.0"
 whoami = "1.6.0"
-zip = { version = "3.0.0", default-features = false, features = ["deflate"] }
+zip = { version = "4.0.0", default-features = false, features = ["deflate"] }
 
 [workspace.metadata.release]
 shared-version = true

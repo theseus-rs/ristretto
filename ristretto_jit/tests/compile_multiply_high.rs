@@ -102,7 +102,7 @@ fn compile_multiply_high() -> Result<()> {
     };
     let test_method = &class_file.methods[0];
 
-    let mut compiler = Compiler::new()?;
+    let compiler = Compiler::new()?;
     let function = compiler.compile(&class_file, test_method)?;
     let arguments = vec![Value::I64(32_767), Value::I64(9_223_372_036_854_775_807)];
     let value = function.execute(arguments)?.expect("value");

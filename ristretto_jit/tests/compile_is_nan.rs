@@ -46,7 +46,7 @@ fn compile_is_nan() -> Result<()> {
     };
     let test_method = &class_file.methods[0];
 
-    let mut compiler = Compiler::new()?;
+    let compiler = Compiler::new()?;
     let function = compiler.compile(&class_file, test_method)?;
     let value = function.execute(vec![Value::F32(42.1)])?.expect("value");
     assert_eq!(value, Value::I32(0));

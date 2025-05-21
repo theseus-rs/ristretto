@@ -28,13 +28,13 @@ pub(crate) fn ifeq(
 
     let value2 = function_builder.ins().iconst(types::I32, 0);
     let condition_value = function_builder.ins().icmp(IntCC::Equal, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -62,13 +62,13 @@ pub(crate) fn ifne(
 
     let value2 = function_builder.ins().iconst(types::I32, 0);
     let condition_value = function_builder.ins().icmp(IntCC::NotEqual, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -98,13 +98,13 @@ pub(crate) fn iflt(
     let condition_value = function_builder
         .ins()
         .icmp(IntCC::SignedLessThan, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -135,13 +135,13 @@ pub(crate) fn ifge(
         function_builder
             .ins()
             .icmp(IntCC::SignedGreaterThanOrEqual, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -171,13 +171,13 @@ pub(crate) fn ifgt(
     let condition_value = function_builder
         .ins()
         .icmp(IntCC::SignedGreaterThan, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -207,13 +207,13 @@ pub(crate) fn ifle(
     let condition_value = function_builder
         .ins()
         .icmp(IntCC::SignedLessThanOrEqual, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -241,13 +241,13 @@ pub(crate) fn if_icmpeq(
         .ok_or_else(|| InvalidBlockAddress(address))?;
 
     let condition_value = function_builder.ins().icmp(IntCC::Equal, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -275,13 +275,13 @@ pub(crate) fn if_icmpne(
         .ok_or_else(|| InvalidBlockAddress(address))?;
 
     let condition_value = function_builder.ins().icmp(IntCC::NotEqual, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -311,13 +311,13 @@ pub(crate) fn if_icmplt(
     let condition_value = function_builder
         .ins()
         .icmp(IntCC::SignedLessThan, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -348,13 +348,13 @@ pub(crate) fn if_icmpge(
         function_builder
             .ins()
             .icmp(IntCC::SignedGreaterThanOrEqual, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -384,13 +384,13 @@ pub(crate) fn if_icmpgt(
     let condition_value = function_builder
         .ins()
         .icmp(IntCC::SignedGreaterThan, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -420,13 +420,13 @@ pub(crate) fn if_icmple(
     let condition_value = function_builder
         .ins()
         .icmp(IntCC::SignedLessThanOrEqual, value1, value2);
-    let stack_values = stack.as_slice();
+    let block_arguments = stack.as_block_arguments();
     function_builder.ins().brif(
         condition_value,
         *then_block,
-        stack_values,
+        &block_arguments,
         *else_block,
-        stack_values,
+        &block_arguments,
     );
     Ok(())
 }
@@ -456,8 +456,8 @@ pub(crate) fn goto_w(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
 
-    let stack_values = stack.as_slice();
-    function_builder.ins().jump(*block, stack_values);
+    let block_arguments = stack.as_block_arguments();
+    function_builder.ins().jump(*block, &block_arguments);
     stack.reset(function_builder)?;
     Ok(())
 }
@@ -490,8 +490,8 @@ pub(crate) fn jsr_w(
     let value = function_builder.ins().iconst(types::I32, address);
     stack.push(value)?;
 
-    let stack_values = stack.as_slice();
-    function_builder.ins().jump(*block, stack_values);
+    let block_arguments = stack.as_block_arguments();
+    function_builder.ins().jump(*block, &block_arguments);
     Ok(())
 }
 

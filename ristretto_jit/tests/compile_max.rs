@@ -45,7 +45,7 @@ fn compile_max() -> Result<()> {
     };
     let test_method = &class_file.methods[0];
 
-    let mut compiler = Compiler::new()?;
+    let compiler = Compiler::new()?;
     let function = compiler.compile(&class_file, test_method)?;
     let value = function
         .execute(vec![Value::I32(3), Value::I32(42)])?

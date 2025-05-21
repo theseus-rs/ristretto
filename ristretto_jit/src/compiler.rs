@@ -42,9 +42,8 @@ const ENABLE_VERIFIER: &str = "true";
 const ENABLE_VERIFIER: &str = "false";
 
 /// Java Virtual Machine (JVM) bytecode to native code compiler.
-pub struct Compiler {
-    jit_module: JITModule,
-}
+#[derive(Clone, Debug)]
+pub struct Compiler {}
 
 impl Compiler {
     /// Creates a new instance of the compiler for the host machine.
@@ -53,6 +52,12 @@ impl Compiler {
     /// * If the target ISA is not supported
     /// * If the target ISA cannot be created
     pub fn new() -> Result<Self> {
+        let compiler = Compiler {};
+        Ok(compiler)
+    }
+
+    /// Creates a new JIT module for the compiler.
+    fn jit_module() -> Result<JITModule> {
         let isa_builder = cranelift::native::builder().map_err(UnsupportedTargetISA)?;
         let mut flag_builder = settings::builder();
         let settings = [("opt_level", "speed"), ("enable_verifier", ENABLE_VERIFIER)];
@@ -64,19 +69,18 @@ impl Compiler {
             }
         }
         let flags = Flags::new(flag_builder);
-
         let target_isa = isa_builder.finish(flags)?;
         let jit_builder = JITBuilder::with_isa(target_isa, default_libcall_names());
         let jit_module = JITModule::new(jit_builder);
-        let compiler = Compiler { jit_module };
-        Ok(compiler)
+        Ok(jit_module)
     }
 
     /// Compiles the given bytecode into native code.
     ///
     /// # Errors
     /// if the Java byte code cannot be compiled to native code
-    pub fn compile(&mut self, class_file: &ClassFile, method: &Method) -> Result<Function> {
+    pub fn compile(&self, class_file: &ClassFile, method: &Method) -> Result<Function> {
+        let mut jit_module = Self::jit_module()?;
         let constant_pool = &class_file.constant_pool;
         let class_name = class_file.class_name()?;
         let method_name = constant_pool.try_get_utf8(method.name_index)?;
@@ -105,11 +109,10 @@ impl Compiler {
         };
 
         let function_name = Self::function_name(class_name, method_name);
-        let signature = self.signature();
+        let signature = Self::signature(&jit_module);
         let function =
-            self.jit_module
-                .declare_function(function_name.as_str(), Linkage::Local, &signature)?;
-        let mut module_context = self.jit_module.make_context();
+            jit_module.declare_function(function_name.as_str(), Linkage::Local, &signature)?;
+        let mut module_context = jit_module.make_context();
         module_context.func.signature = signature;
         module_context.func.name = UserFuncName::user(0, function.as_u32());
 
@@ -143,8 +146,8 @@ impl Compiler {
                         // Determine if instructions in the last block changes the control flow.
                         // If it doesn't, then a jump to the next block is needed.
                         if !last_instruction.changes_control_flow() {
-                            let stack_values = stack.as_slice().to_vec();
-                            function_builder.ins().jump(*block, &stack_values);
+                            let block_arguments = stack.as_block_arguments();
+                            function_builder.ins().jump(*block, &block_arguments);
                         }
                     }
 
@@ -168,12 +171,11 @@ impl Compiler {
         function_builder.seal_all_blocks();
         function_builder.finalize();
 
-        self.jit_module
-            .define_function(function, &mut module_context)?;
-        self.jit_module.clear_context(&mut module_context);
-        self.jit_module.finalize_definitions()?;
+        jit_module.define_function(function, &mut module_context)?;
+        jit_module.clear_context(&mut module_context);
+        jit_module.finalize_definitions()?;
 
-        let code = self.jit_module.get_finalized_function(function);
+        let code = jit_module.get_finalized_function(function);
         let function = unsafe {
             let function: fn(*const JitValue, usize, *mut JitValue) = mem::transmute(code);
             Function::new(function)
@@ -193,12 +195,12 @@ impl Compiler {
     }
 
     /// Creates a new signature from the method descriptor.
-    fn signature(&mut self) -> Signature {
-        let mut signature = self.jit_module.make_signature();
-        let arguments_type = self.jit_module.target_config().pointer_type();
+    fn signature(jit_module: &JITModule) -> Signature {
+        let mut signature = jit_module.make_signature();
+        let arguments_type = jit_module.target_config().pointer_type();
         signature.params.push(AbiParam::new(arguments_type)); // pointer to array
         signature.params.push(AbiParam::new(types::I64)); // length of array
-        let return_type = self.jit_module.target_config().pointer_type();
+        let return_type = jit_module.target_config().pointer_type();
         signature.params.push(AbiParam::new(return_type));
         signature
     }
@@ -582,15 +584,6 @@ impl Compiler {
     }
 }
 
-impl Debug for Compiler {
-    /// Formats the compiler for debugging.
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Compiler")
-            .field("module", &self.jit_module.isa().triple())
-            .finish()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -602,29 +595,11 @@ mod tests {
     }
 
     #[test]
-    fn test_compiler_debug() -> Result<()> {
-        let compiler = Compiler::new()?;
-        let debug_string = format!("{compiler:?}");
-        assert!(debug_string.contains("Compiler"));
-        assert!(debug_string.contains("module"));
-        Ok(())
-    }
-
-    #[test]
     fn test_function_name() {
         let class_name = "java/lang/Object";
         let method_name = "<clinit>";
         let function_name = Compiler::function_name(class_name, method_name);
         assert_eq!("java_lang_Object__clinit", function_name);
-    }
-
-    #[test]
-    fn test_make_signature_no_parameters_no_return() -> Result<()> {
-        let mut compiler = Compiler::new()?;
-        let signature = compiler.signature();
-        assert_eq!(signature.params.len(), 3);
-        assert_eq!(signature.returns, vec![]);
-        Ok(())
     }
 
     #[test]
