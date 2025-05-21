@@ -37,7 +37,7 @@ fn compile_return_parameter() -> Result<()> {
     };
     let test_method = &class_file.methods[0];
 
-    let mut compiler = Compiler::new()?;
+    let compiler = Compiler::new()?;
     let function = compiler.compile(&class_file, test_method)?;
     let arguments = vec![Value::I32(42)];
     let value = function.execute(arguments)?.expect("value");

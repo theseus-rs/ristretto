@@ -246,7 +246,7 @@ pub(crate) fn fcmpl(
     let value2 = stack.pop_float(function_builder)?;
     let value1 = stack.pop_float(function_builder)?;
     let stack_types = stack.to_type_vec(function_builder);
-    let params = stack.as_slice();
+    let params = stack.as_block_arguments();
 
     let equal_block = function_builder.create_block();
     append_block_params(function_builder, equal_block, &stack_types);
@@ -265,12 +265,14 @@ pub(crate) fn fcmpl(
     let condition_value = function_builder.ins().fcmp(FloatCC::Equal, value1, value2);
     function_builder
         .ins()
-        .brif(condition_value, equal_block, params, else_block, params);
+        .brif(condition_value, equal_block, &params, else_block, &params);
 
     function_builder.switch_to_block(equal_block);
     function_builder.seal_block(equal_block);
     let equal_return = function_builder.ins().iconst(types::I32, 0);
-    function_builder.ins().jump(merge_block, &[equal_return]);
+    function_builder
+        .ins()
+        .jump(merge_block, &[equal_return.into()]);
 
     function_builder.switch_to_block(else_block);
     function_builder.seal_block(else_block);
@@ -280,25 +282,25 @@ pub(crate) fn fcmpl(
     function_builder.ins().brif(
         condition_value,
         greater_than_block,
-        params,
+        &params,
         less_than_block,
-        params,
+        &params,
     );
 
     function_builder.switch_to_block(greater_than_block);
     function_builder.seal_block(greater_than_block);
-    let mut greater_than_params = params.to_vec();
+    let mut greater_than_params = params.clone();
     let greater_than_return = function_builder.ins().iconst(types::I32, 1);
-    greater_than_params.push(greater_than_return);
+    greater_than_params.push(greater_than_return.into());
     function_builder
         .ins()
         .jump(merge_block, &greater_than_params);
 
     function_builder.switch_to_block(less_than_block);
     function_builder.seal_block(less_than_block);
-    let mut less_than_params = params.to_vec();
+    let mut less_than_params = params.clone();
     let less_than_return = function_builder.ins().iconst(types::I32, -1);
-    less_than_params.push(less_than_return);
+    less_than_params.push(less_than_return.into());
     function_builder.ins().jump(merge_block, &less_than_params);
 
     function_builder.switch_to_block(merge_block);
@@ -316,7 +318,7 @@ pub(crate) fn fcmpg(
     let value2 = stack.pop_float(function_builder)?;
     let value1 = stack.pop_float(function_builder)?;
     let stack_types = stack.to_type_vec(function_builder);
-    let params = stack.as_slice();
+    let params = stack.as_block_arguments();
 
     let equal_block = function_builder.create_block();
     append_block_params(function_builder, equal_block, &stack_types);
@@ -335,12 +337,14 @@ pub(crate) fn fcmpg(
     let condition_value = function_builder.ins().fcmp(FloatCC::Equal, value1, value2);
     function_builder
         .ins()
-        .brif(condition_value, equal_block, params, else_block, params);
+        .brif(condition_value, equal_block, &params, else_block, &params);
 
     function_builder.switch_to_block(equal_block);
     function_builder.seal_block(equal_block);
     let equal_return = function_builder.ins().iconst(types::I32, 0);
-    function_builder.ins().jump(merge_block, &[equal_return]);
+    function_builder
+        .ins()
+        .jump(merge_block, &[equal_return.into()]);
 
     function_builder.switch_to_block(else_block);
     function_builder.seal_block(else_block);
@@ -350,25 +354,25 @@ pub(crate) fn fcmpg(
     function_builder.ins().brif(
         condition_value,
         greater_than_block,
-        params,
+        &params,
         less_than_block,
-        params,
+        &params,
     );
 
     function_builder.switch_to_block(greater_than_block);
     function_builder.seal_block(greater_than_block);
-    let mut greater_than_params = params.to_vec();
+    let mut greater_than_params = params.clone();
     let greater_than_return = function_builder.ins().iconst(types::I32, 1);
-    greater_than_params.push(greater_than_return);
+    greater_than_params.push(greater_than_return.into());
     function_builder
         .ins()
         .jump(merge_block, &greater_than_params);
 
     function_builder.switch_to_block(less_than_block);
     function_builder.seal_block(less_than_block);
-    let mut less_than_params = params.to_vec();
+    let mut less_than_params = params.clone();
     let less_than_return = function_builder.ins().iconst(types::I32, -1);
-    less_than_params.push(less_than_return);
+    less_than_params.push(less_than_return.into());
     function_builder.ins().jump(merge_block, &less_than_params);
 
     function_builder.switch_to_block(merge_block);

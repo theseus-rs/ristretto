@@ -36,11 +36,10 @@ pub(crate) async fn compile(
         debug!("Using cached function for {fully_qualified_method_name}");
         return Ok(function.clone());
     }
-    let compiler_lock = vm.compiler();
-    let Some(compiler_lock) = compiler_lock else {
+    let Some(compiler) = vm.compiler() else {
         return Ok(None);
     };
-    let mut compiler = compiler_lock.lock().await;
+
     let class_file = class.class_file();
 
     match compiler.compile(class_file, definition) {
