@@ -240,6 +240,221 @@ fn istore_3() -> Result<()> {
 }
 
 #[test]
+fn iadd() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_1,
+        Instruction::Iadd,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(II)I", &instructions)?;
+    let value = function
+        .execute(vec![Value::I32(1), Value::I32(2)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(3));
+    Ok(())
+}
+
+#[test]
+fn isub() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_1,
+        Instruction::Isub,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(II)I", &instructions)?;
+    let value = function
+        .execute(vec![Value::I32(2), Value::I32(1)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+    Ok(())
+}
+
+#[test]
+fn imul() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_1,
+        Instruction::Imul,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(II)I", &instructions)?;
+    let value = function
+        .execute(vec![Value::I32(2), Value::I32(3)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(6));
+    Ok(())
+}
+
+#[test]
+fn idiv() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_1,
+        Instruction::Idiv,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(II)I", &instructions)?;
+    let value = function
+        .execute(vec![Value::I32(6), Value::I32(3)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(2));
+    Ok(())
+}
+
+#[test]
+fn irem() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_1,
+        Instruction::Irem,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(II)I", &instructions)?;
+    let value = function
+        .execute(vec![Value::I32(5), Value::I32(2)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+    Ok(())
+}
+
+#[test]
+fn ineg() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Ineg,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(I)I", &instructions)?;
+    let value = function.execute(vec![Value::I32(3)])?.expect("value");
+    assert_eq!(value, Value::I32(-3));
+    Ok(())
+}
+
+#[test]
+fn ishl() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_1,
+        Instruction::Ishl,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(II)I", &instructions)?;
+    let value = function
+        .execute(vec![Value::I32(2), Value::I32(1)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(4));
+    Ok(())
+}
+
+#[test]
+fn ishr() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_1,
+        Instruction::Ishr,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(II)I", &instructions)?;
+    let value = function
+        .execute(vec![Value::I32(8), Value::I32(1)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(4));
+    Ok(())
+}
+
+#[test]
+fn iushr() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_1,
+        Instruction::Iushr,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(II)I", &instructions)?;
+    let value = function
+        .execute(vec![Value::I32(8), Value::I32(1)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(4));
+    Ok(())
+}
+
+#[test]
+fn iand() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_1,
+        Instruction::Iand,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(II)I", &instructions)?;
+    let value = function
+        .execute(vec![Value::I32(3), Value::I32(2)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(2));
+    Ok(())
+}
+
+#[test]
+fn ior() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_1,
+        Instruction::Ior,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(II)I", &instructions)?;
+    let value = function
+        .execute(vec![Value::I32(3), Value::I32(2)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(3));
+    Ok(())
+}
+
+#[test]
+fn ixor() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_1,
+        Instruction::Ixor,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(II)I", &instructions)?;
+    let value = function
+        .execute(vec![Value::I32(3), Value::I32(2)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+    Ok(())
+}
+
+#[test]
+fn iinc() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iinc(0, 1),
+        Instruction::Iload_0,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(I)I", &instructions)?;
+    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    assert_eq!(value, Value::I32(2));
+    Ok(())
+}
+
+#[test]
+fn iinc_w() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iinc_w(0, 1),
+        Instruction::Iload_0,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(I)I", &instructions)?;
+    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    assert_eq!(value, Value::I32(2));
+    Ok(())
+}
+
+#[test]
 fn ireturn() -> Result<()> {
     let instructions = vec![Instruction::Iload_0, Instruction::Ireturn];
     let function = create_function("(I)I", &instructions)?;
