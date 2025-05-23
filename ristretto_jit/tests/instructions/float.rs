@@ -200,6 +200,99 @@ fn fstore_3() -> Result<()> {
 }
 
 #[test]
+fn fadd() -> Result<()> {
+    let instructions = vec![
+        Instruction::Fload_0,
+        Instruction::Fload_1,
+        Instruction::Fadd,
+        Instruction::Freturn,
+    ];
+    let function = create_function("(FF)F", &instructions)?;
+    let value = function
+        .execute(vec![Value::F32(1.0), Value::F32(2.0)])?
+        .expect("value");
+    assert_eq!(value, Value::F32(3.0));
+    Ok(())
+}
+
+#[test]
+fn fsub() -> Result<()> {
+    let instructions = vec![
+        Instruction::Fload_0,
+        Instruction::Fload_1,
+        Instruction::Fsub,
+        Instruction::Freturn,
+    ];
+    let function = create_function("(FF)F", &instructions)?;
+    let value = function
+        .execute(vec![Value::F32(2.0), Value::F32(1.0)])?
+        .expect("value");
+    assert_eq!(value, Value::F32(1.0));
+    Ok(())
+}
+
+#[test]
+fn fmul() -> Result<()> {
+    let instructions = vec![
+        Instruction::Fload_0,
+        Instruction::Fload_1,
+        Instruction::Fmul,
+        Instruction::Freturn,
+    ];
+    let function = create_function("(FF)F", &instructions)?;
+    let value = function
+        .execute(vec![Value::F32(2.0), Value::F32(3.0)])?
+        .expect("value");
+    assert_eq!(value, Value::F32(6.0));
+    Ok(())
+}
+
+#[test]
+fn fdiv() -> Result<()> {
+    let instructions = vec![
+        Instruction::Fload_0,
+        Instruction::Fload_1,
+        Instruction::Fdiv,
+        Instruction::Freturn,
+    ];
+    let function = create_function("(FF)F", &instructions)?;
+    let value = function
+        .execute(vec![Value::F32(6.0), Value::F32(3.0)])?
+        .expect("value");
+    assert_eq!(value, Value::F32(2.0));
+    Ok(())
+}
+
+#[test]
+fn frem() -> Result<()> {
+    let instructions = vec![
+        Instruction::Fload_0,
+        Instruction::Fload_1,
+        Instruction::Frem,
+        Instruction::Freturn,
+    ];
+    let function = create_function("(FF)F", &instructions)?;
+    let value = function
+        .execute(vec![Value::F32(5.0), Value::F32(2.0)])?
+        .expect("value");
+    assert_eq!(value, Value::F32(1.0));
+    Ok(())
+}
+
+#[test]
+fn fneg() -> Result<()> {
+    let instructions = vec![
+        Instruction::Fload_0,
+        Instruction::Fneg,
+        Instruction::Freturn,
+    ];
+    let function = create_function("(F)F", &instructions)?;
+    let value = function.execute(vec![Value::F32(3.0)])?.expect("value");
+    assert_eq!(value, Value::F32(-3.0));
+    Ok(())
+}
+
+#[test]
 fn freturn() -> Result<()> {
     let instructions = vec![Instruction::Fload_0, Instruction::Freturn];
     let function = create_function("(F)F", &instructions)?;
