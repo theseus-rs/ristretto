@@ -3,12 +3,12 @@ use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, MethodAcces
 use ristretto_jit::{Compiler, Result, Value};
 
 #[test]
-fn float_is_nan() -> Result<()> {
+fn lreturn() -> Result<()> {
     let mut constant_pool = ConstantPool::default();
-    let class_name_index = constant_pool.add_class("Float")?;
+    let class_name_index = constant_pool.add_class("Long")?;
     let code_index = constant_pool.add_utf8("Code")?;
-    let test_name_index = constant_pool.add_utf8("isNan")?;
-    let test_descriptor_index = constant_pool.add_utf8("(F)Z")?;
+    let test_name_index = constant_pool.add_utf8("lreturn")?;
+    let test_descriptor_index = constant_pool.add_utf8("(J)J")?;
 
     let mut test_method = ristretto_classfile::Method {
         access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
@@ -16,16 +16,7 @@ fn float_is_nan() -> Result<()> {
         descriptor_index: test_descriptor_index,
         attributes: Vec::new(),
     };
-    let test_method_code = vec![
-        Instruction::Fload_0,
-        Instruction::Fload_0,
-        Instruction::Fcmpl,
-        Instruction::Ifeq(6),
-        Instruction::Iconst_1,
-        Instruction::Goto(7),
-        Instruction::Iconst_0,
-        Instruction::Ireturn,
-    ];
+    let test_method_code = vec![Instruction::Lload_0, Instruction::Lreturn];
     let test_max_stack = test_method_code.max_stack(&constant_pool)?;
     let test_max_locals = test_method_code.max_locals(&constant_pool, test_descriptor_index)?;
     test_method.attributes.push(Attribute::Code {
@@ -48,11 +39,10 @@ fn float_is_nan() -> Result<()> {
 
     let compiler = Compiler::new()?;
     let function = compiler.compile(&class_file, test_method)?;
-    let value = function.execute(vec![Value::F32(42.1)])?.expect("value");
-    assert_eq!(value, Value::I32(0));
+    let expected_value = Value::I64(42);
     let value = function
-        .execute(vec![Value::F32(f32::NAN)])?
+        .execute(vec![expected_value.clone()])?
         .expect("value");
-    assert_eq!(value, Value::I32(1));
+    assert_eq!(value, expected_value);
     Ok(())
 }
