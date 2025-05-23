@@ -409,7 +409,6 @@ pub(crate) fn dreturn(
     return_pointer: Value,
 ) -> Result<()> {
     let value = stack.pop_double(function_builder)?;
-    let value = function_builder.ins().fcvt_to_sint(types::I64, value);
     let discriminate = i64::from(jit_value::F64);
     let discriminate = function_builder.ins().iconst(types::I8, discriminate);
     function_builder

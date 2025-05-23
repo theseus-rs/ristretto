@@ -127,10 +127,9 @@ impl TryInto<i64> for JitValue {
 }
 
 impl From<f32> for JitValue {
-    #[expect(clippy::cast_possible_wrap)]
     fn from(value: f32) -> JitValue {
-        let value = f64::from(value);
-        let value = value.to_bits() as i64;
+        let value = value.to_bits();
+        let value = i64::from(value);
         JitValue {
             discriminant: F32,
             value,
@@ -141,8 +140,6 @@ impl From<f32> for JitValue {
 impl TryInto<f32> for JitValue {
     type Error = Error;
 
-    #[expect(clippy::cast_possible_truncation)]
-    #[expect(clippy::cast_sign_loss)]
     fn try_into(self) -> Result<f32, Self::Error> {
         if self.discriminant != F32 {
             return Err(InvalidValue {
@@ -150,8 +147,9 @@ impl TryInto<f32> for JitValue {
                 actual: self.discriminant,
             });
         }
-        let value = f64::from_bits(self.value as u64);
-        Ok(value as f32)
+        let value = u32::try_from(self.value)?;
+        let value = f32::from_bits(value);
+        Ok(value)
     }
 }
 

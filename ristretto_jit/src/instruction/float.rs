@@ -419,7 +419,6 @@ pub(crate) fn freturn(
     return_pointer: Value,
 ) -> Result<()> {
     let value = stack.pop_float(function_builder)?;
-    let value = function_builder.ins().fcvt_to_sint(types::I64, value);
     let discriminate = i64::from(jit_value::F32);
     let discriminate = function_builder.ins().iconst(types::I8, discriminate);
     function_builder
