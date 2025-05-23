@@ -268,7 +268,7 @@ pub(crate) fn dneg(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dcmpl>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dcmp_op>
 #[inline]
 pub(crate) fn dcmpl(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
@@ -286,7 +286,7 @@ pub(crate) fn dcmpl(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dcmpg>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dcmp_op>
 #[inline]
 pub(crate) fn dcmpg(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;

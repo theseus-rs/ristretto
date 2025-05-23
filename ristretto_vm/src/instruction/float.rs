@@ -275,7 +275,7 @@ pub(crate) fn fneg(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fcmpl>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fcmp_op>
 #[inline]
 pub(crate) fn fcmpl(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_float()?;
@@ -293,7 +293,7 @@ pub(crate) fn fcmpl(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fcmpg>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.fcmp_op>
 #[inline]
 pub(crate) fn fcmpg(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_float()?;
