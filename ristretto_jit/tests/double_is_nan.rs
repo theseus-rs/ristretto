@@ -3,12 +3,12 @@ use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, MethodAcces
 use ristretto_jit::{Compiler, Result, Value};
 
 #[test]
-fn compile_max() -> Result<()> {
+fn double_is_nan() -> Result<()> {
     let mut constant_pool = ConstantPool::default();
-    let class_name_index = constant_pool.add_class("Math")?;
+    let class_name_index = constant_pool.add_class("Double")?;
     let code_index = constant_pool.add_utf8("Code")?;
-    let test_name_index = constant_pool.add_utf8("max")?;
-    let test_descriptor_index = constant_pool.add_utf8("(II)I")?;
+    let test_name_index = constant_pool.add_utf8("isNan")?;
+    let test_descriptor_index = constant_pool.add_utf8("(D)Z")?;
 
     let mut test_method = ristretto_classfile::Method {
         access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
@@ -17,13 +17,14 @@ fn compile_max() -> Result<()> {
         attributes: Vec::new(),
     };
     let test_method_code = vec![
-        Instruction::Iload_0, // block: 0; stack: []
-        Instruction::Iload_1,
-        Instruction::If_icmplt(5),
-        Instruction::Iload_0, // block: 3; stack: []
-        Instruction::Goto(6),
-        Instruction::Iload_1, // block: 5; stack: []
-        Instruction::Ireturn, // block: 6; stack: [v15]
+        Instruction::Dload_0,
+        Instruction::Dload_0,
+        Instruction::Dcmpl,
+        Instruction::Ifeq(6),
+        Instruction::Iconst_1,
+        Instruction::Goto(7),
+        Instruction::Iconst_0,
+        Instruction::Ireturn,
     ];
     let test_max_stack = test_method_code.max_stack(&constant_pool)?;
     let test_max_locals = test_method_code.max_locals(&constant_pool, test_descriptor_index)?;
@@ -47,13 +48,11 @@ fn compile_max() -> Result<()> {
 
     let compiler = Compiler::new()?;
     let function = compiler.compile(&class_file, test_method)?;
+    let value = function.execute(vec![Value::F64(42.1)])?.expect("value");
+    assert_eq!(value, Value::I32(0));
     let value = function
-        .execute(vec![Value::I32(3), Value::I32(42)])?
+        .execute(vec![Value::F64(f64::NAN)])?
         .expect("value");
-    assert_eq!(value, Value::I32(42));
-    let value = function
-        .execute(vec![Value::I32(42), Value::I32(3)])?
-        .expect("value");
-    assert_eq!(value, Value::I32(42));
+    assert_eq!(value, Value::I32(1));
     Ok(())
 }

@@ -228,7 +228,7 @@ pub(crate) fn dneg(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dcmpl>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dcmp_op>
 pub(crate) fn dcmpl(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -238,6 +238,8 @@ pub(crate) fn dcmpl(
     let stack_types = stack.to_type_vec(function_builder);
     let params = stack.as_block_arguments();
 
+    let nan_block = function_builder.create_block();
+    append_block_params(function_builder, nan_block, &stack_types);
     let equal_block = function_builder.create_block();
     append_block_params(function_builder, equal_block, &stack_types);
     let else_block = function_builder.create_block();
@@ -250,22 +252,35 @@ pub(crate) fn dcmpl(
     append_block_params(function_builder, equal_block, &stack_types);
     function_builder.append_block_param(merge_block, types::I32);
 
-    // TODO: Handle f64::is_nan(value1) || f64::is_nan(value2)
+    // NOTE: this could be optimized to use FloatCC::UnorderedOrLessThan once implemented by cranelift
 
-    let condition_value = function_builder.ins().fcmp(FloatCC::Equal, value1, value2);
+    // Check for NaN: if value1 or value2 is NaN, go to nan_block
+    let is_nan = function_builder
+        .ins()
+        .fcmp(FloatCC::Unordered, value1, value2);
     function_builder
         .ins()
-        .brif(condition_value, equal_block, &params, else_block, &params);
+        .brif(is_nan, nan_block, &params, equal_block, &params);
 
+    // nan_block: push -1
+    function_builder.switch_to_block(nan_block);
+    let mut nan_params = params.clone();
+    let nan_return = function_builder.ins().iconst(types::I32, -1);
+    nan_params.push(nan_return.into());
+    function_builder.ins().jump(merge_block, &nan_params);
+
+    // equal_block: check for equality
     function_builder.switch_to_block(equal_block);
-    function_builder.seal_block(equal_block);
+    let is_equal = function_builder.ins().fcmp(FloatCC::Equal, value1, value2);
+    let mut equals_params = params.clone();
     let equal_return = function_builder.ins().iconst(types::I32, 0);
+    equals_params.push(equal_return.into());
     function_builder
         .ins()
-        .jump(merge_block, &[equal_return.into()]);
+        .brif(is_equal, merge_block, &equals_params, else_block, &params);
 
+    // else_block: check for greater than
     function_builder.switch_to_block(else_block);
-    function_builder.seal_block(else_block);
     let condition_value = function_builder
         .ins()
         .fcmp(FloatCC::GreaterThan, value1, value2);
@@ -277,8 +292,8 @@ pub(crate) fn dcmpl(
         &params,
     );
 
+    // greater_than_block: push 1
     function_builder.switch_to_block(greater_than_block);
-    function_builder.seal_block(greater_than_block);
     let mut greater_than_params = params.clone();
     let greater_than_return = function_builder.ins().iconst(types::I32, 1);
     greater_than_params.push(greater_than_return.into());
@@ -286,21 +301,21 @@ pub(crate) fn dcmpl(
         .ins()
         .jump(merge_block, &greater_than_params);
 
+    // less_than_block: push -1
     function_builder.switch_to_block(less_than_block);
-    function_builder.seal_block(less_than_block);
     let mut less_than_params = params.clone();
     let less_than_return = function_builder.ins().iconst(types::I32, -1);
     less_than_params.push(less_than_return.into());
     function_builder.ins().jump(merge_block, &less_than_params);
 
+    // merge_block: push result
     function_builder.switch_to_block(merge_block);
-    function_builder.seal_block(merge_block);
     let value = function_builder.block_params(merge_block)[0];
     stack.push_int(function_builder, value)?;
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dcmpg>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dcmp_op>
 pub(crate) fn dcmpg(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -310,6 +325,8 @@ pub(crate) fn dcmpg(
     let stack_types = stack.to_type_vec(function_builder);
     let params = stack.as_block_arguments();
 
+    let nan_block = function_builder.create_block();
+    append_block_params(function_builder, nan_block, &stack_types);
     let equal_block = function_builder.create_block();
     append_block_params(function_builder, equal_block, &stack_types);
     let else_block = function_builder.create_block();
@@ -322,22 +339,35 @@ pub(crate) fn dcmpg(
     append_block_params(function_builder, equal_block, &stack_types);
     function_builder.append_block_param(merge_block, types::I32);
 
-    // TODO: Handle f64::is_nan(value1) || f64::is_nan(value2)
+    // NOTE: this could be optimized to use FloatCC::UnorderedOrGreaterThan once implemented by cranelift
 
-    let condition_value = function_builder.ins().fcmp(FloatCC::Equal, value1, value2);
+    // Check for NaN: if value1 or value2 is NaN, go to nan_block
+    let is_nan = function_builder
+        .ins()
+        .fcmp(FloatCC::Unordered, value1, value2);
     function_builder
         .ins()
-        .brif(condition_value, equal_block, &params, else_block, &params);
+        .brif(is_nan, nan_block, &params, equal_block, &params);
 
+    // nan_block: push 1
+    function_builder.switch_to_block(nan_block);
+    let mut nan_params = params.clone();
+    let nan_return = function_builder.ins().iconst(types::I32, 1);
+    nan_params.push(nan_return.into());
+    function_builder.ins().jump(merge_block, &nan_params);
+
+    // equal_block: check for equality
     function_builder.switch_to_block(equal_block);
-    function_builder.seal_block(equal_block);
+    let is_equal = function_builder.ins().fcmp(FloatCC::Equal, value1, value2);
+    let mut equals_params = params.clone();
     let equal_return = function_builder.ins().iconst(types::I32, 0);
+    equals_params.push(equal_return.into());
     function_builder
         .ins()
-        .jump(merge_block, &[equal_return.into()]);
+        .brif(is_equal, merge_block, &equals_params, else_block, &params);
 
+    // else_block: check for greater than
     function_builder.switch_to_block(else_block);
-    function_builder.seal_block(else_block);
     let condition_value = function_builder
         .ins()
         .fcmp(FloatCC::GreaterThan, value1, value2);
@@ -349,8 +379,8 @@ pub(crate) fn dcmpg(
         &params,
     );
 
+    // greater_than_block: push 1
     function_builder.switch_to_block(greater_than_block);
-    function_builder.seal_block(greater_than_block);
     let mut greater_than_params = params.clone();
     let greater_than_return = function_builder.ins().iconst(types::I32, 1);
     greater_than_params.push(greater_than_return.into());
@@ -358,15 +388,15 @@ pub(crate) fn dcmpg(
         .ins()
         .jump(merge_block, &greater_than_params);
 
+    // less_than_block: push -1
     function_builder.switch_to_block(less_than_block);
-    function_builder.seal_block(less_than_block);
     let mut less_than_params = params.clone();
     let less_than_return = function_builder.ins().iconst(types::I32, -1);
     less_than_params.push(less_than_return.into());
     function_builder.ins().jump(merge_block, &less_than_params);
 
+    // merge_block: push result
     function_builder.switch_to_block(merge_block);
-    function_builder.seal_block(merge_block);
     let value = function_builder.block_params(merge_block)[0];
     stack.push_int(function_builder, value)?;
     Ok(())
