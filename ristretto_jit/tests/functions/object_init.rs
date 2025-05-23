@@ -1,0 +1,12 @@
+use crate::util::create_function;
+use ristretto_classfile::attributes::Instruction;
+use ristretto_jit::Result;
+
+#[test]
+fn compile_object_init() -> Result<()> {
+    let instructions = vec![Instruction::Return];
+    let function = create_function("()V", &instructions)?;
+    let value = function.execute(Vec::new())?;
+    assert_eq!(value, None);
+    Ok(())
+}
