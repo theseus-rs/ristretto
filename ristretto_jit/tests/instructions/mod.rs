@@ -1,3 +1,4 @@
+mod convert;
 mod double;
 mod float;
 mod integer;

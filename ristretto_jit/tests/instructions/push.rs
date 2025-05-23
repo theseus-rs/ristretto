@@ -1,9 +1,9 @@
 use crate::util::create_function;
 use ristretto_classfile::attributes::Instruction;
-use ristretto_jit::Value;
+use ristretto_jit::{Result, Value};
 
 #[test]
-fn bipush() -> ristretto_jit::Result<()> {
+fn bipush() -> Result<()> {
     let instructions = vec![Instruction::Bipush(42), Instruction::Ireturn];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(42);
@@ -13,7 +13,7 @@ fn bipush() -> ristretto_jit::Result<()> {
 }
 
 #[test]
-fn sipush() -> ristretto_jit::Result<()> {
+fn sipush() -> Result<()> {
     let instructions = vec![Instruction::Sipush(42), Instruction::Ireturn];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(42);
