@@ -190,6 +190,195 @@ fn lstore_3() -> Result<()> {
 }
 
 #[test]
+fn ladd() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Lload_2,
+        Instruction::Ladd,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(JJ)J", &instructions)?;
+    let value = function
+        .execute(vec![Value::I64(1), Value::I64(2)])?
+        .expect("value");
+    assert_eq!(value, Value::I64(3));
+    Ok(())
+}
+
+#[test]
+fn lsub() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Lload_2,
+        Instruction::Lsub,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(JJ)J", &instructions)?;
+    let value = function
+        .execute(vec![Value::I64(2), Value::I64(1)])?
+        .expect("value");
+    assert_eq!(value, Value::I64(1));
+    Ok(())
+}
+
+#[test]
+fn lmul() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Lload_2,
+        Instruction::Lmul,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(JJ)J", &instructions)?;
+    let value = function
+        .execute(vec![Value::I64(2), Value::I64(3)])?
+        .expect("value");
+    assert_eq!(value, Value::I64(6));
+    Ok(())
+}
+
+#[test]
+fn ldiv() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Lload_2,
+        Instruction::Ldiv,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(JJ)J", &instructions)?;
+    let value = function
+        .execute(vec![Value::I64(6), Value::I64(3)])?
+        .expect("value");
+    assert_eq!(value, Value::I64(2));
+    Ok(())
+}
+
+#[test]
+fn lrem() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Lload_2,
+        Instruction::Lrem,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(JJ)J", &instructions)?;
+    let value = function
+        .execute(vec![Value::I64(5), Value::I64(2)])?
+        .expect("value");
+    assert_eq!(value, Value::I64(1));
+    Ok(())
+}
+
+#[test]
+fn lneg() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Lneg,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(J)J", &instructions)?;
+    let value = function.execute(vec![Value::I64(3)])?.expect("value");
+    assert_eq!(value, Value::I64(-3));
+    Ok(())
+}
+
+#[test]
+fn lshl() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Iload_2,
+        Instruction::Lshl,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(JI)J", &instructions)?;
+    let value = function
+        .execute(vec![Value::I64(2), Value::I32(1)])?
+        .expect("value");
+    assert_eq!(value, Value::I64(4));
+    Ok(())
+}
+
+#[test]
+fn lshr() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Iload_2,
+        Instruction::Lshr,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(JI)J", &instructions)?;
+    let value = function
+        .execute(vec![Value::I64(8), Value::I32(1)])?
+        .expect("value");
+    assert_eq!(value, Value::I64(4));
+    Ok(())
+}
+
+#[test]
+fn lushr() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Iload_2,
+        Instruction::Lushr,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(JI)J", &instructions)?;
+    let value = function
+        .execute(vec![Value::I64(8), Value::I32(1)])?
+        .expect("value");
+    assert_eq!(value, Value::I64(4));
+    Ok(())
+}
+
+#[test]
+fn land() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Lload_2,
+        Instruction::Land,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(JJ)J", &instructions)?;
+    let value = function
+        .execute(vec![Value::I64(3), Value::I64(2)])?
+        .expect("value");
+    assert_eq!(value, Value::I64(2));
+    Ok(())
+}
+
+#[test]
+fn lor() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Lload_2,
+        Instruction::Lor,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(JJ)J", &instructions)?;
+    let value = function
+        .execute(vec![Value::I64(3), Value::I64(2)])?
+        .expect("value");
+    assert_eq!(value, Value::I64(3));
+    Ok(())
+}
+
+#[test]
+fn lxor() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Lload_2,
+        Instruction::Lxor,
+        Instruction::Lreturn,
+    ];
+    let function = create_function("(JJ)J", &instructions)?;
+    let value = function
+        .execute(vec![Value::I64(3), Value::I64(2)])?
+        .expect("value");
+    assert_eq!(value, Value::I64(1));
+    Ok(())
+}
+
+#[test]
 fn lreturn() -> Result<()> {
     let instructions = vec![Instruction::Lload_0, Instruction::Lreturn];
     let function = create_function("(J)J", &instructions)?;
