@@ -17,11 +17,24 @@ fn pop() -> ristretto_jit::Result<()> {
 }
 
 #[test]
-fn pop2() -> ristretto_jit::Result<()> {
+fn pop2_category_1() -> ristretto_jit::Result<()> {
     let instructions = vec![
         Instruction::Iconst_2,
         Instruction::Iconst_1,
         Instruction::Iconst_0,
+        Instruction::Pop2,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("()I", &instructions)?;
+    let value = function.execute(vec![])?.expect("value");
+    assert_eq!(value, Value::I32(2));
+    Ok(())
+}
+#[test]
+fn pop2_category_2() -> ristretto_jit::Result<()> {
+    let instructions = vec![
+        Instruction::Iconst_2,
+        Instruction::Lconst_0,
         Instruction::Pop2,
         Instruction::Ireturn,
     ];
