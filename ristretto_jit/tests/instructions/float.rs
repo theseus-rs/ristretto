@@ -293,6 +293,90 @@ fn fneg() -> Result<()> {
 }
 
 #[test]
+fn fcmpl() -> Result<()> {
+    let instructions = vec![
+        Instruction::Fload_0,
+        Instruction::Fload_1,
+        Instruction::Fcmpl,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(FF)I", &instructions)?;
+
+    // 0 if values are equal
+    let value = function
+        .execute(vec![Value::F32(0.0), Value::F32(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(0));
+
+    // 1 if first value is greater than second
+    let value = function
+        .execute(vec![Value::F32(1.0), Value::F32(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    // -1 if first value is lesser than the second
+    let value = function
+        .execute(vec![Value::F32(0.0), Value::F32(1.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(-1));
+
+    // -1 if first value is NaN
+    let value = function
+        .execute(vec![Value::F32(f32::NAN), Value::F32(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(-1));
+
+    // -1 if second value is NaN
+    let value = function
+        .execute(vec![Value::F32(0.0), Value::F32(f32::NAN)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(-1));
+    Ok(())
+}
+
+#[test]
+fn fcmpg() -> Result<()> {
+    let instructions = vec![
+        Instruction::Fload_0,
+        Instruction::Fload_1,
+        Instruction::Fcmpg,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(FF)I", &instructions)?;
+
+    // 0 if values are equal
+    let value = function
+        .execute(vec![Value::F32(0.0), Value::F32(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(0));
+
+    // 1 if first value is greater than second
+    let value = function
+        .execute(vec![Value::F32(1.0), Value::F32(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    // -1 if first value is lesser than the second
+    let value = function
+        .execute(vec![Value::F32(0.0), Value::F32(1.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(-1));
+
+    // 1 if first value is NaN
+    let value = function
+        .execute(vec![Value::F32(f32::NAN), Value::F32(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    // 1 if second value is NaN
+    let value = function
+        .execute(vec![Value::F32(0.0), Value::F32(f32::NAN)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+    Ok(())
+}
+
+#[test]
 fn freturn() -> Result<()> {
     let instructions = vec![Instruction::Fload_0, Instruction::Freturn];
     let function = create_function("(F)F", &instructions)?;

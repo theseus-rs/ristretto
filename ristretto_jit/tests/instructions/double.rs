@@ -283,6 +283,90 @@ fn dneg() -> Result<()> {
 }
 
 #[test]
+fn dcmpl() -> Result<()> {
+    let instructions = vec![
+        Instruction::Dload_0,
+        Instruction::Dload_2,
+        Instruction::Dcmpl,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(DD)I", &instructions)?;
+
+    // 0 if values are equal
+    let value = function
+        .execute(vec![Value::F64(0.0), Value::F64(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(0));
+
+    // 1 if first value is greater than second
+    let value = function
+        .execute(vec![Value::F64(1.0), Value::F64(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    // -1 if first value is lesser than the second
+    let value = function
+        .execute(vec![Value::F64(0.0), Value::F64(1.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(-1));
+
+    // -1 if first value is NaN
+    let value = function
+        .execute(vec![Value::F64(f64::NAN), Value::F64(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(-1));
+
+    // -1 if second value is NaN
+    let value = function
+        .execute(vec![Value::F64(0.0), Value::F64(f64::NAN)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(-1));
+    Ok(())
+}
+
+#[test]
+fn dcmpg() -> Result<()> {
+    let instructions = vec![
+        Instruction::Dload_0,
+        Instruction::Dload_2,
+        Instruction::Dcmpg,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(DD)I", &instructions)?;
+
+    // 0 if values are equal
+    let value = function
+        .execute(vec![Value::F64(0.0), Value::F64(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(0));
+
+    // 1 if first value is greater than second
+    let value = function
+        .execute(vec![Value::F64(1.0), Value::F64(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    // -1 if first value is lesser than the second
+    let value = function
+        .execute(vec![Value::F64(0.0), Value::F64(1.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(-1));
+
+    // 1 if first value is NaN
+    let value = function
+        .execute(vec![Value::F64(f64::NAN), Value::F64(0.0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    // 1 if second value is NaN
+    let value = function
+        .execute(vec![Value::F64(0.0), Value::F64(f64::NAN)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+    Ok(())
+}
+
+#[test]
 fn dreturn() -> Result<()> {
     let instructions = vec![Instruction::Dload_0, Instruction::Dreturn];
     let function = create_function("(D)D", &instructions)?;

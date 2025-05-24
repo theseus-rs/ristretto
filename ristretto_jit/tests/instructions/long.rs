@@ -379,6 +379,36 @@ fn lxor() -> Result<()> {
 }
 
 #[test]
+fn lcmp() -> Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::Lload_2,
+        Instruction::Lcmp,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(JJ)I", &instructions)?;
+
+    // 0 if values are equal
+    let value = function
+        .execute(vec![Value::I64(0), Value::I64(0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(0));
+
+    // 1 if first value is greater than the second
+    let value = function
+        .execute(vec![Value::I64(1), Value::I64(0)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    // -1 if first value is lesser than the second
+    let value = function
+        .execute(vec![Value::I64(0), Value::I64(1)])?
+        .expect("value");
+    assert_eq!(value, Value::I32(-1));
+    Ok(())
+}
+
+#[test]
 fn lreturn() -> Result<()> {
     let instructions = vec![Instruction::Lload_0, Instruction::Lreturn];
     let function = create_function("(J)J", &instructions)?;
