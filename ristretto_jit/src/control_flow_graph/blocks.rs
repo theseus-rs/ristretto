@@ -108,6 +108,16 @@ pub(crate) fn get_blocks(
                 insert_stack(&mut stack_states, address, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
             }
+            Instruction::Ret(address) => {
+                let address = usize::from(*address);
+                insert_stack(&mut stack_states, address, &stack)?;
+                create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
+            }
+            Instruction::Ret_w(address) => {
+                let address = usize::from(*address);
+                insert_stack(&mut stack_states, address, &stack)?;
+                create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
+            }
             Instruction::Tableswitch {
                 default, offsets, ..
             } => {

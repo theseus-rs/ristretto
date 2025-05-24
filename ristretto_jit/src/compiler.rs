@@ -509,7 +509,9 @@ impl Compiler {
             // Instruction::If_acmpeq(address) => if_acmpeq(stack, *address),
             // Instruction::If_acmpne(address) => if_acmpne(stack, *address),
             Instruction::Goto(address) => goto(function_builder, blocks, stack, *address)?,
-            Instruction::Jsr(address) => jsr(function_builder, blocks, stack, *address)?,
+            Instruction::Jsr(address) => {
+                jsr(function_builder, blocks, stack, program_counter, *address)?;
+            }
             // Instruction::Ret(index) => ret(locals, *index),
             // Instruction::Tableswitch {
             //     default,
@@ -557,7 +559,9 @@ impl Compiler {
             // Instruction::Ifnull(address) => ifnull(stack, *address),
             // Instruction::Ifnonnull(address) => ifnonnull(stack, *address),
             Instruction::Goto_w(address) => goto_w(function_builder, blocks, stack, *address)?,
-            Instruction::Jsr_w(address) => jsr_w(function_builder, blocks, stack, *address)?,
+            Instruction::Jsr_w(address) => {
+                jsr_w(function_builder, blocks, stack, program_counter, *address)?;
+            }
             Instruction::Breakpoint => breakpoint(function_builder, stack),
             Instruction::Impdep1 => impdep1(function_builder, stack),
             Instruction::Impdep2 => impdep2(function_builder, stack),
