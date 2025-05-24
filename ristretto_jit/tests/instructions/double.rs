@@ -190,6 +190,99 @@ fn dstore_3() -> Result<()> {
 }
 
 #[test]
+fn dadd() -> Result<()> {
+    let instructions = vec![
+        Instruction::Dload_0,
+        Instruction::Dload_2,
+        Instruction::Dadd,
+        Instruction::Dreturn,
+    ];
+    let function = create_function("(DD)D", &instructions)?;
+    let value = function
+        .execute(vec![Value::F64(1.0), Value::F64(2.0)])?
+        .expect("value");
+    assert_eq!(value, Value::F64(3.0));
+    Ok(())
+}
+
+#[test]
+fn dsub() -> Result<()> {
+    let instructions = vec![
+        Instruction::Dload_0,
+        Instruction::Dload_2,
+        Instruction::Dsub,
+        Instruction::Dreturn,
+    ];
+    let function = create_function("(DD)D", &instructions)?;
+    let value = function
+        .execute(vec![Value::F64(2.0), Value::F64(1.0)])?
+        .expect("value");
+    assert_eq!(value, Value::F64(1.0));
+    Ok(())
+}
+
+#[test]
+fn dmul() -> Result<()> {
+    let instructions = vec![
+        Instruction::Dload_0,
+        Instruction::Dload_2,
+        Instruction::Dmul,
+        Instruction::Dreturn,
+    ];
+    let function = create_function("(DD)D", &instructions)?;
+    let value = function
+        .execute(vec![Value::F64(2.0), Value::F64(3.0)])?
+        .expect("value");
+    assert_eq!(value, Value::F64(6.0));
+    Ok(())
+}
+
+#[test]
+fn ddiv() -> Result<()> {
+    let instructions = vec![
+        Instruction::Dload_0,
+        Instruction::Dload_2,
+        Instruction::Ddiv,
+        Instruction::Dreturn,
+    ];
+    let function = create_function("(DD)D", &instructions)?;
+    let value = function
+        .execute(vec![Value::F64(6.0), Value::F64(3.0)])?
+        .expect("value");
+    assert_eq!(value, Value::F64(2.0));
+    Ok(())
+}
+
+#[test]
+fn drem() -> Result<()> {
+    let instructions = vec![
+        Instruction::Dload_0,
+        Instruction::Dload_2,
+        Instruction::Drem,
+        Instruction::Dreturn,
+    ];
+    let function = create_function("(DD)D", &instructions)?;
+    let value = function
+        .execute(vec![Value::F64(5.0), Value::F64(2.0)])?
+        .expect("value");
+    assert_eq!(value, Value::F64(1.0));
+    Ok(())
+}
+
+#[test]
+fn dneg() -> Result<()> {
+    let instructions = vec![
+        Instruction::Dload_0,
+        Instruction::Dneg,
+        Instruction::Dreturn,
+    ];
+    let function = create_function("(D)D", &instructions)?;
+    let value = function.execute(vec![Value::F64(3.0)])?.expect("value");
+    assert_eq!(value, Value::F64(-3.0));
+    Ok(())
+}
+
+#[test]
 fn dreturn() -> Result<()> {
     let instructions = vec![Instruction::Dload_0, Instruction::Dreturn];
     let function = create_function("(D)D", &instructions)?;
