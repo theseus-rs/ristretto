@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/v0.19.0...v0.19.1) - 2025-05-24
+
+### Added
+- add java.lang.invoke.MethodHandleNatives objectFieldOffset(..), staticFieldBase(..) and staticFieldOffset(..)
+- add java.lang.invoke.MethodHandleNatives setCallSiteTargetNormal(..) and setCallSiteTargetVolatile(..)
+
+### Fixed
+- update jit dcmpg, dcmpl, fcmpg, fcmpl to correctly handle NaN
+- correct java.lang.invoke.MethodHandleNatives.resolve(..) field support
+
+### Other
+- update Cargo.lock dependencies
+- update Cargo.toml dependencies
+- update default java version to 21.0.7.6.1
+- update to cranelift=0.120.0
+- stub invokedynamic caller method handle lookup
+- stub invokedynamic static bootstrap arguments
+- expand invokedynamic stub by obtaining MethodType parameter for bootstrap method
+- stub invokedynamic bootstrap method lookup
+
+## `ristretto_vm` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.19.0...ristretto_vm-v0.19.1) - 2025-05-24
+
+### Added
+- add java.lang.invoke.MethodHandleNatives objectFieldOffset(..), staticFieldBase(..) and staticFieldOffset(..)
+- add java.lang.invoke.MethodHandleNatives setCallSiteTargetNormal(..) and setCallSiteTargetVolatile(..)
+
+### Fixed
+- update jit dcmpg, dcmpl, fcmpg, fcmpl to correctly handle NaN
+- correct java.lang.invoke.MethodHandleNatives.resolve(..) field support
+
+### Other
+- update to cranelift=0.120.0
+- stub invokedynamic caller method handle lookup
+- update default java version to 21.0.7.6.1
+- stub invokedynamic static bootstrap arguments
+- expand invokedynamic stub by obtaining MethodType parameter for bootstrap method
+- stub invokedynamic bootstrap method lookup
+
+## `ristretto_jit` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.19.0...ristretto_jit-v0.19.1) - 2025-05-24
+
+### Fixed
+- correct jit dreturn and freturn
+- update jit dcmpg, dcmpl, fcmpg, fcmpl to correctly handle NaN
+
+### Other
+- add jit double math tests
+- add jit long math tests
+- add jit float math tests
+- add jit integer math tests
+- add jit debug, monitor, and nop tests
+- add jit convert instruction tests
+- add jit bipush and sipush instruction tests
+- add jit primitive load and store instruction tests
+- update to cranelift=0.120.0
+- update cfg doc formatting
+- add jit test coverage
+
+## `ristretto_classloader` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.19.0...ristretto_classloader-v0.19.1) - 2025-05-24
+
+### Other
+- update default java version to 21.0.7.6.1
+
+## `ristretto_classfile` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.19.0...ristretto_classfile-v0.19.1) - 2025-05-24
+
+### Other
+- update Cargo.toml dependencies
+
 ## `ristretto_cli` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/v0.18.1...v0.19.0) - 2025-05-18
 
 ### Added
