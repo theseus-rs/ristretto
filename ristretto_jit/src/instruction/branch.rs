@@ -467,10 +467,11 @@ pub(crate) fn jsr(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
     stack: &mut OperandStack,
+    program_counter: usize,
     address: u16,
 ) -> Result<()> {
     let address = i32::from(address);
-    jsr_w(function_builder, blocks, stack, address)
+    jsr_w(function_builder, blocks, stack, program_counter, address)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.jsr_w>
@@ -479,17 +480,20 @@ pub(crate) fn jsr_w(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
     stack: &mut OperandStack,
+    program_counter: usize,
     address: i32,
 ) -> Result<()> {
-    let address = usize::try_from(address)?;
+    let next_address = i64::try_from(program_counter)?;
+    let next_address = next_address
+        .checked_add(1)
+        .ok_or_else(|| InvalidBlockAddress(program_counter))?;
+    let value = function_builder.ins().iconst(types::I32, next_address);
+    stack.push(value)?;
 
+    let address = usize::try_from(address)?;
     let block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
-    let address = i64::try_from(address)?;
-    let value = function_builder.ins().iconst(types::I32, address);
-    stack.push(value)?;
-
     let block_arguments = stack.as_block_arguments();
     function_builder.ins().jump(*block, &block_arguments);
     Ok(())

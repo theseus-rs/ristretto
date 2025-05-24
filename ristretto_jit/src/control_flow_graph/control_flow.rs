@@ -31,6 +31,7 @@ impl InstructionControlFlow for Instruction {
                 | Instruction::Tableswitch { .. }
                 | Instruction::Lookupswitch { .. }
                 | Instruction::Ret(..)
+                | Instruction::Ret_w(..)
                 | Instruction::Return
                 | Instruction::Ireturn
                 | Instruction::Lreturn
@@ -80,6 +81,7 @@ mod tests {
                 pairs: IndexMap::new(),
             },
             Instruction::Ret(0),
+            Instruction::Ret_w(0),
             Instruction::Return,
             Instruction::Ireturn,
             Instruction::Lreturn,
