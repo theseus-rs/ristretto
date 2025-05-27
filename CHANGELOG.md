@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/v0.19.1...v0.19.2) - 2025-05-27
+
+### Fixed
+- java/lang/Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method; set void return types to void class instead of null
+- correct invokedynamic get_method_type to handle descriptors without parameters
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_vm` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.19.1...ristretto_vm-v0.19.2) - 2025-05-27
+
+### Fixed
+- java/lang/Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method; set void return types to void class instead of null
+- correct invokedynamic get_method_type to handle descriptors without parameters
+
+## `ristretto_jit` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.19.1...ristretto_jit-v0.19.2) - 2025-05-27
+
+### Fixed
+- correct jit jsr and jsr_w instructions
+
+### Other
+- add jit pop2 category2 test
+- add jit stack tests
+- add jit test coverage for dcmpg, dcmpl, fcmpg, fcmpl, lcmp
+
+## `ristretto_classloader` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.19.1...ristretto_classloader-v0.19.2) - 2025-05-27
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classfile` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.19.1...ristretto_classfile-v0.19.2) - 2025-05-27
+
+### Other
+- update Cargo.toml dependencies
+
 ## `ristretto_cli` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/v0.19.0...v0.19.1) - 2025-05-24
 
 ### Added
