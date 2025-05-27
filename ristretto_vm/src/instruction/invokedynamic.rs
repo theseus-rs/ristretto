@@ -95,6 +95,17 @@ async fn get_method_type(vm: &VM, thread: &Thread, method_descriptor: &str) -> R
     let (argument_types, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
     let return_class = get_field_type_class(vm, return_type).await?;
 
+    let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
+    if argument_types.is_empty() {
+        let method = method_type_class.try_get_method(
+            "methodType",
+            "(Ljava/lang/Class;)Ljava/lang/invoke/MethodType;",
+        )?;
+        return thread
+            .try_execute(&method_type_class, &method, vec![return_class])
+            .await;
+    }
+
     let first_argument = get_field_type_class(vm, argument_types.first().cloned()).await?;
     let argument_classes = ConcurrentVec::from(Vec::with_capacity(argument_types.len() - 1));
     for argument_type in argument_types.iter().skip(1) {
@@ -105,7 +116,6 @@ async fn get_method_type(vm: &VM, thread: &Thread, method_descriptor: &str) -> R
     let class_array = vm.class("[Ljava/lang/Class;").await?;
     let arguments = Value::from(Reference::Array(class_array, argument_classes));
 
-    let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
     let method = method_type_class.try_get_method(
         "methodType",
         "(Ljava/lang/Class;Ljava/lang/Class;[Ljava/lang/Class;)Ljava/lang/invoke/MethodType;",
