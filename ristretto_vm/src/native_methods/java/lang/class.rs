@@ -593,7 +593,10 @@ async fn get_declared_methods_0(
                 let class = thread.class(class_name).await?;
                 class.to_object(&vm).await?
             }
-            None => Value::Object(None),
+            None => {
+                let class = thread.class("void").await?;
+                class.to_object(&vm).await?
+            }
         };
         let checked_exceptions = get_exceptions(&thread, &class, method).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
