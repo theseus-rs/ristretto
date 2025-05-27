@@ -152,7 +152,7 @@ async fn get_caller_method_handle_lookup(vm: &VM, thread: &Thread, frame: &Frame
     let lookup_class = thread
         .class("java.lang.invoke.MethodHandles$Lookup")
         .await?;
-    let _lookup_method = if method_name == "<init>" {
+    let _find_method = if method_name == "<init>" {
         lookup_class.try_get_method(
             "findConstructor",
             "(Ljava/lang/Class;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
@@ -175,7 +175,7 @@ async fn get_caller_method_handle_lookup(vm: &VM, thread: &Thread, frame: &Frame
     // TODO: fix stack overflow error when calling MethodHandles$Lookup.findStatic
     //       "fatal runtime error: stack overflow"
     // let method_handle = thread
-    //     .try_execute(&lookup_class, &lookup_method, arguments)
+    //     .try_execute(&lookup_class, &find_method, arguments)
     //     .await?;
     let method_handle = Value::Object(None);
     Ok(method_handle)
