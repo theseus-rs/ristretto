@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.19.3](https://github.com/theseus-rs/ristretto/compare/v0.19.2...v0.19.3) - 2025-05-31
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classfile` - [0.19.3](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.19.2...ristretto_classfile-v0.19.3) - 2025-05-31
+
+### Other
+- update Cargo.toml dependencies
+
 ## `ristretto_cli` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/v0.19.1...v0.19.2) - 2025-05-27
 
 ### Fixed
