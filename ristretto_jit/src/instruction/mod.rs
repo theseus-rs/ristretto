@@ -1,3 +1,35 @@
+//! # JVM Instruction Module
+//!
+//! This module provides implementations of Java Virtual Machine (JVM) bytecode instructions for the
+//! Ristretto JIT compiler.
+//!
+//! ## Instruction Categories
+//!
+//! * `array` - Array manipulation instructions (e.g., `aaload`, `aastore`)
+//! * `branch` - Branching and control flow instructions (e.g., `if_icmpeq`, `goto`)
+//! * `byte` - Byte manipulation instructions
+//! * `char` - Character manipulation instructions
+//! * `convert` - Type conversion instructions (e.g., `i2l`, `f2d`)
+//! * `debug` - Debugging-related instructions
+//! * `double` - Double-precision floating point instructions
+//! * `exception` - Exception handling instructions (e.g., `athrow`)
+//! * `field` - Field access instructions (e.g., `getfield`, `putfield`)
+//! * `float` - Floating point instructions
+//! * `integer` - Integer arithmetic and logic instructions
+//! * `invoke` - Method invocation instructions (e.g., `invokevirtual`, `invokespecial`)
+//! * `invokedynamic` - Dynamic method invocation instructions
+//! * `ldc` - Constant loading instructions
+//! * `long` - Long integer instructions
+//! * `monitor` - Monitor-related instructions for synchronization
+//! * `nop` - No-operation instruction
+//! * `object` - Object manipulation instructions
+//! * `push` - Stack value pushing instructions
+//! * `short` - Short integer instructions
+//! * `stack` - Stack manipulation instructions (e.g., `dup`, `swap`)
+//! * `static` - Static field instructions
+//! * `wide` - Wide instruction prefix for accessing local variables with wider indices
+//!
+
 mod array;
 mod branch;
 mod byte;

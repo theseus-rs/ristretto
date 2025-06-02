@@ -10,13 +10,49 @@ use ristretto_jit::Function;
 use std::sync::{Arc, LazyLock};
 use tracing::{debug, error, info};
 
-/// The function cache is a thread-safe map that stores compiled functions.
+/// A thread-safe global cache for JIT-compiled functions.
+///
+/// # Overview
+///
+/// The function cache stores compiled native functions indexed by their fully-qualified method
+/// names. This allows the JVM to reuse previously compiled methods rather than recompiling them on
+/// each invocation, significantly improving performance for frequently called methods.
+///
+/// # Structure
+///
+/// The cache maps fully qualified method names (in the format
+/// `class_name.method_name(method_descriptor)`) to `Option<Arc<Function>>`. The `Option` allows us
+/// to cache negative results (methods that failed to compile) to avoid repeated compilation
+/// attempts for methods known to be incompatible with the JIT.
+///
+/// # Thread Safety
+///
+/// Uses `DashMap` to provide thread-safe concurrent access without locks in the common case.
+/// This allows multiple threads to access the cache simultaneously without blocking each other.
+///
+/// # Lifetime
+///
+/// The cache persists for the entire duration of the program execution. Compiled functions are
+/// not automatically evicted, which could potentially lead to high memory usage in long-running
+/// applications that load many classes.
+///
+/// # Example
+///
+/// ```text
+/// "java/lang/String.length()I" => Some(Arc<Function>)
+/// "java/util/HashMap.resize()V" => None  // Method was attempted but couldn't be compiled
+/// ```
 static FUNCTION_CACHE: LazyLock<DashMap<String, Option<Arc<Function>>>> =
     LazyLock::new(DashMap::new);
 
-/// Attempt to JIT compile a method.
+/// Attempts to compile a Java method to native code using the Just-In-Time compiler. It first
+/// checks if the method has already been compiled and cached, and returns the cached function if
+/// available. Otherwise, it attempts to compile the method and caches the result.
 ///
-/// This function will only compile the method if the VM is not in interpreted mode.
+/// # Caching
+///
+/// Successfully compiled functions are cached in order to avoid recompilation. Failed compilation
+/// attempts are also cached (as `None`) to avoid retrying incompatible methods.
 pub(crate) async fn compile(
     vm: &Arc<VM>,
     class: &Arc<Class>,
@@ -85,6 +121,14 @@ pub(crate) async fn compile(
     }
 }
 
+/// Executes a previously JIT-compiled method with the given parameters. It handles the conversion
+/// between VM values and JIT values, and manages the case of non-static methods where the first
+/// parameter is the `this` reference.
+///
+/// # Value Conversion
+///
+/// Parameters are converted from VM value representation to JIT value representation before
+/// execution, and the result is converted back from JIT value to VM value.
 pub(crate) fn execute(
     function: Arc<Function>,
     method: &Method,
@@ -105,7 +149,7 @@ pub(crate) fn execute(
     Ok(result)
 }
 
-/// Convert parameters to JIT values.
+/// Converts a vector of VM values to a vector of JIT values for passing to a JIT-compiled function.
 fn convert_parameters(parameters: Vec<Value>) -> Result<Vec<ristretto_jit::Value>> {
     let mut values = Vec::with_capacity(parameters.len());
     for value in &parameters {
@@ -115,7 +159,7 @@ fn convert_parameters(parameters: Vec<Value>) -> Result<Vec<ristretto_jit::Value
     Ok(values)
 }
 
-/// Convert a VM value to a JIT value.
+/// Converts a single VM value to its corresponding JIT value representation.
 fn convert_to_jit(value: &Value) -> Result<ristretto_jit::Value> {
     let jit_value = match value {
         Value::Int(value) => ristretto_jit::Value::I32(*value),
@@ -132,7 +176,7 @@ fn convert_to_jit(value: &Value) -> Result<ristretto_jit::Value> {
     Ok(jit_value)
 }
 
-/// Convert a JIT value to a VM value.
+/// Converts a JIT value returned by a compiled function back to a VM value.
 fn convert_to_vm(jit_value: &ristretto_jit::Value) -> Result<Value> {
     let value = match jit_value {
         ristretto_jit::Value::I32(value) => Value::from(*value),

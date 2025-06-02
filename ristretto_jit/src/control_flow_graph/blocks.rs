@@ -9,18 +9,11 @@ use std::collections::HashMap;
 
 /// Creates a control flow graph of blocks for a function by analyzing the instructions.
 ///
-/// # Arguments
-/// * `function_builder` - The function builder to create blocks with
-/// * `constant_pool` - The constant pool for the class
-/// * `instructions` - The Java bytecode instructions
-/// * `exception_table` - The exception table for the method
-///
-/// # Returns
-/// A map from instruction addresses to Cranelift blocks
-///
-/// # Errors
-/// * If the address calculation overflows
-/// * If the address is not valid
+/// This function analyzes Java bytecode instructions to create a Cranelift IR control flow graph
+/// representation. It maps each instruction address that can be a target of control flow (branch
+/// targets, exception handlers, etc.) to a Cranelift Block. The function also calculates the
+/// operand stack state at each point and ensures consistent stack states across different paths to
+/// the same instruction.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn get_blocks(
     function_builder: &mut FunctionBuilder,
@@ -179,7 +172,11 @@ pub(crate) fn get_blocks(
     Ok(blocks)
 }
 
-/// Inserts stack for address
+/// Inserts a stack state for a specific address, ensuring consistency with any existing state.
+///
+/// This function is used to track the operand stack state at different points in the program. If a
+/// state already exists for the address, it validates that the new state matches the existing one
+/// to ensure that all paths to this instruction have compatible stack states.
 pub(crate) fn insert_stack(
     stack_states: &mut HashMap<usize, TypeStack>,
     address: usize,
@@ -200,7 +197,17 @@ pub(crate) fn insert_stack(
     Ok(())
 }
 
-/// Utility function to create a block with parameters matching the expected stack state
+/// Creates a new block with parameters matching the expected stack state at an address.
+///
+/// This function creates a Cranelift Block for a specific instruction address and configures it
+/// with the appropriate parameters based on the operand stack state expected at that point in the
+/// program.
+///
+/// # Note
+///
+/// This function only creates a new block if one doesn't already exist for the address. Block
+/// parameters are added to match the stack state, enabling proper SSA form across control flow
+/// edges.
 pub(crate) fn create_block_with_parameters(
     function_builder: &mut FunctionBuilder,
     stack_states: &HashMap<usize, TypeStack>,
@@ -219,7 +226,11 @@ pub(crate) fn create_block_with_parameters(
     });
 }
 
-/// Appends types as block parameters to the given block
+/// Appends type parameters to a Cranelift block.
+///
+/// This function adds formal parameters to a Cranelift Block, with types matching the given type
+/// list. These parameters represent the values that will be on the operand stack when control
+/// reaches this block.
 pub(crate) fn append_block_params(
     function_builder: &mut FunctionBuilder,
     block: Block,

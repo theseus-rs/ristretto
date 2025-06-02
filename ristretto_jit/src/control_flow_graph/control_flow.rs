@@ -1,12 +1,25 @@
 use ristretto_classfile::attributes::Instruction;
 
+/// Defines behavior for determining if an instruction changes control flow.
+///
+/// This trait provides a standard way to analyze whether Java bytecode instructions
+/// will alter the normal sequential execution of instructions through jumps,
+/// branches, returns, or exceptions.
 pub(crate) trait InstructionControlFlow {
-    /// Return true if the instruction changes the program control flow.
+    /// Returns true if the instruction changes the program control flow.
+    ///
+    /// Control flow changing instructions include:
+    /// - Conditional branches (if_* instructions)
+    /// - Unconditional jumps (goto)
+    /// - Subroutine calls and returns (jsr, ret)
+    /// - Method returns (return, *return)
+    /// - Exception throws (athrow)
+    /// - Switch statements (tableswitch, lookupswitch)
     fn changes_control_flow(&self) -> bool;
 }
 
 impl InstructionControlFlow for Instruction {
-    /// Return true if the instruction changes the program control flow.
+    /// Returns true if the instruction changes the program control flow.
     fn changes_control_flow(&self) -> bool {
         matches!(
             self,

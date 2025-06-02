@@ -2,42 +2,42 @@
 #[derive(Debug, thiserror::Error)]
 pub enum JavaError {
     /// `ArithmeticException`
-    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/ArithmeticException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ArithmeticException.html>
     #[error("{0}")]
     ArithmeticException(String),
     /// `ArrayIndexOutOfBoundsException`
-    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/ArrayIndexOutOfBoundsException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ArrayIndexOutOfBoundsException.html>
     #[error("Index {index} out of bounds for length {length}")]
     ArrayIndexOutOfBoundsException { index: usize, length: usize },
     /// `ClassCastException`
-    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/ClassCastException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ClassCastException.html>
     #[error("class {source_class_name} cannot be cast to class {target_class_name}")]
     ClassCastException {
         source_class_name: String,
         target_class_name: String,
     },
     /// `ClassFormatError`
-    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/ClassFormatError.html>
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ClassFormatError.html>
     #[error("{0}")]
     ClassFormatError(String),
     /// `ClassNotFoundException`
-    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/ClassNotFoundException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ClassNotFoundException.html>
     #[error("{0}")]
     ClassNotFoundException(String),
     /// `IllegalArgumentException`
-    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/IllegalArgumentException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IllegalArgumentException.html>
     #[error("{0}")]
     IllegalArgumentException(String),
     /// `IndexOutOfBoundsException`
-    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/IndexOutOfBoundsException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IndexOutOfBoundsException.html>
     #[error("Index: {index}, Size {size}")]
     IndexOutOfBoundsException { index: i32, size: i32 },
     /// `NoClassDefFoundError`
-    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/NoClassDefFoundError.html>
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NoClassDefFoundError.html>
     #[error("{0}")]
     NoClassDefFoundError(String),
     /// `NullPointerException`
-    /// See: <https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/NullPointerException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NullPointerException.html>
     #[error("{0}")]
     NullPointerException(String),
 }

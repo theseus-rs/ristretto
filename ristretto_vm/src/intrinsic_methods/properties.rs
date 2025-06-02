@@ -15,15 +15,10 @@ use std::sync::Arc;
 /// into a Java object representation. The properties include information about the runtime
 /// environment such as OS details, file paths, user information, Java version, etc.
 ///
-/// # Parameters
-/// * `thread` - Reference to the current thread executing in the VM
+/// # Note
 ///
-/// # Returns
-/// * `Result<HashMap<&'static str, Value>>` - A map of property names to their Java object values
-///
-/// # Examples
-/// This function is typically called during Java system initialization when
-/// `System.getProperties()` is invoked from Java code.
+/// This function is called during Java system initialization when`System.getProperties()` is
+/// invoked from Java code.
 pub(crate) async fn system(thread: &Arc<Thread>) -> Result<HashMap<&'static str, Value>> {
     let vm = thread.vm()?;
     let system_properties = system_properties(&vm)?;
@@ -37,8 +32,8 @@ pub(crate) async fn system(thread: &Arc<Thread>) -> Result<HashMap<&'static str,
 
 /// Creates a map of all standard Java system properties.
 ///
-/// This function initializes a collection of system properties that would typically
-/// be available in a Java runtime environment. It includes properties related to:
+/// This function initializes a collection of system properties that should be available in a Java
+/// runtime environment. It includes properties related to:
 /// - File system information (separators, encoding)
 /// - Locale and formatting settings
 /// - Network proxy configurations
@@ -46,16 +41,10 @@ pub(crate) async fn system(thread: &Arc<Thread>) -> Result<HashMap<&'static str,
 /// - Operating system information
 /// - User environment (home directory, username, working directory)
 ///
-/// # Parameters
-/// * `vm` - Reference to the VM instance to extract configuration from
-///
-/// # Returns
-/// * `Result<HashMap<&'static str, String>>` - A map of property names to their string values,
-///   or an error if certain environment information cannot be retrieved
-///
 /// # Note
-/// This function is typically used internally during JVM initialization or when
-/// properties need to be exposed to Java code via System.getProperties().
+///
+/// This function is used internally during JVM initialization or when properties need to be exposed
+/// to Java code via System.getProperties().
 #[expect(clippy::too_many_lines)]
 fn system_properties(vm: &VM) -> Result<HashMap<&'static str, String>> {
     let mut properties = HashMap::new();

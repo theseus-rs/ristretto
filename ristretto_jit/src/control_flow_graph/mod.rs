@@ -1,8 +1,28 @@
-/// This module creates a Control Flow Graph (CFG) for Java byte code using Cranelift
+/// # Control Flow Graph (CFG)
+///
+/// This module creates a Control Flow Graph (CFG) for Java bytecode using Cranelift
 /// [Block](https://docs.rs/cranelift-codegen/latest/cranelift_codegen/ir/entities/struct.Block.html)
-/// structures.  The Java stack is transformed into `Block` arguments with Static Single Assignment
+/// structures. The Java operand stack is transformed into `Block` arguments with Static Single Assignment
 /// (SSA) [Values](https://docs.rs/cranelift-codegen/latest/cranelift_codegen/ir/entities/struct.Value.html)
-/// passed as parameters to blocks with branching operations (e.g. `jump`, `brif`, etc)
+/// passed as parameters to blocks with branching operations.
+///
+/// ## Purpose
+///
+/// The CFG transformation serves as a critical step in JIT compilation, enabling:
+/// - Conversion of stack-based Java bytecode to Cranelift's register-based IR
+/// - Preservation of program control flow (branches, loops, etc.)
+/// - Implementation of SSA form for optimizations
+/// - Handling of Java's operand stack state across basic blocks
+///
+/// ## Components
+///
+/// This module consists of several submodules:
+/// - `blocks`: Manages creation and configuration of Cranelift `Block` structures
+/// - `control_flow`: Analyzes bytecode for control flow patterns
+/// - `instruction`: Transforms Java bytecode instructions to Cranelift IR
+/// - `type_stack`: Tracks operand types throughout control flow
+///
+/// ## Example
 ///
 /// Java byte code for `Integer.max(II)I`:
 /// ```rust
@@ -68,5 +88,7 @@ mod control_flow;
 mod instruction;
 mod type_stack;
 
+/// Exports functions for appending parameters to blocks and retrieving the block structure
 pub(crate) use blocks::{append_block_params, get_blocks};
+/// Exports traits for analyzing control flow of instructions
 pub(crate) use control_flow::InstructionControlFlow;

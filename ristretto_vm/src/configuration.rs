@@ -9,7 +9,11 @@ use std::string::ToString;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-/// Configuration
+/// Configuration for the Ristretto Virtual Machine (VM).
+///
+/// This struct contains all the settings needed to configure and run
+/// the VM, including classpath, main class, Java version, system properties,
+/// and I/O streams.
 pub struct Configuration {
     class_path: ClassPath,
     main_class: Option<String>,
@@ -25,61 +29,90 @@ pub struct Configuration {
 
 /// Configuration
 impl Configuration {
-    /// Get the class path
+    /// Returns a reference to the class path configuration.
+    ///
+    /// The class path determines where the VM will look for classes during execution.
     #[must_use]
     pub fn class_path(&self) -> &ClassPath {
         &self.class_path
     }
 
-    /// Get the main class
+    /// Returns the name of the main class to be executed, if specified.
+    ///
+    /// This is the class containing the `main` method that will be invoked when the VM starts.
+    /// Returns `None` if no main class has been specified.
     #[must_use]
     pub fn main_class(&self) -> Option<&String> {
         self.main_class.as_ref()
     }
 
-    /// Get the jar
+    /// Returns the path to the JAR file to be executed, if specified.
+    ///
+    /// When running a JAR file, the VM will look for the main class in the JAR's manifest.
+    /// Returns `None` if no JAR file has been specified.
     #[must_use]
     pub fn jar(&self) -> Option<&PathBuf> {
         self.jar.as_ref()
     }
 
-    /// Get the Java home path
+    /// Returns the path to the Java home directory, if specified.
+    ///
+    /// This is used to locate the standard Java libraries.
+    /// Returns `None` if no Java home has been specified.
     #[must_use]
     pub fn java_home(&self) -> Option<&PathBuf> {
         self.java_home.as_ref()
     }
 
-    /// Get the Java version
+    /// Returns the Java version to be used, if specified.
+    ///
+    /// This determines which version of the Java standard libraries will be used.
+    /// Returns `None` if no specific Java version has been requested.
     #[must_use]
     pub fn java_version(&self) -> Option<&String> {
         self.java_version.as_ref()
     }
 
-    /// Get the system properties
+    /// Returns a reference to the system properties map.
+    ///
+    /// System properties are key-value pairs accessible via `System.getProperty()` in Java code.
+    /// These properties configure various aspects of the Java runtime environment.
     #[must_use]
     pub fn system_properties(&self) -> &HashMap<String, String> {
         &self.system_properties
     }
 
-    /// Get the interpreted flag
+    /// Returns whether the VM should run in interpreted mode.
+    ///
+    /// When `true`, the VM will interpret bytecode rather than using JIT compilation.
+    /// This may be slower but can be useful for debugging or testing.
     #[must_use]
     pub fn interpreted(&self) -> bool {
         self.interpreted
     }
 
-    /// Get the preview features flag
+    /// Returns whether Java preview features should be enabled.
+    ///
+    /// When `true`, the VM will allow the use of preview features from the Java language.
+    /// Preview features are not finalized and may change in future Java releases.
     #[must_use]
     pub fn preview_features(&self) -> bool {
         self.preview_features
     }
 
-    /// Get the standard output stream
+    /// Returns a reference to the standard output stream.
+    ///
+    /// This stream is used for normal output from the VM and executed Java programs.
+    /// The stream is wrapped in an `Arc<Mutex>` to allow for thread-safe access.
     #[must_use]
     pub fn stdout(&self) -> Arc<Mutex<dyn Write>> {
         self.stdout.clone()
     }
 
-    /// Get the standard error stream
+    /// Returns a reference to the standard error stream.
+    ///
+    /// This stream is used for error messages from the VM and executed Java programs.
+    /// The stream is wrapped in an `Arc<Mutex>` to allow for thread-safe access.
     #[must_use]
     pub fn stderr(&self) -> Arc<Mutex<dyn Write>> {
         self.stderr.clone()
@@ -101,7 +134,10 @@ impl Debug for Configuration {
     }
 }
 
-/// Configuration builder
+/// Builder for creating a `Configuration` with a fluent interface.
+///
+/// This builder provides methods to set all the configuration options
+/// and then create a `Configuration` instance with the `build()` method.
 pub struct ConfigurationBuilder {
     class_path: Option<ClassPath>,
     main_class: Option<String>,
@@ -117,7 +153,18 @@ pub struct ConfigurationBuilder {
 
 /// Configuration builder
 impl ConfigurationBuilder {
-    /// Create a new configuration builder
+    /// Creates a new `ConfigurationBuilder` with default values.
+    ///
+    /// Default values include:
+    /// - No class path (will be set to "." when building)
+    /// - No main class
+    /// - No JAR file
+    /// - No Java home
+    /// - Default Java version (will be set when building if no Java home is provided)
+    /// - Empty system properties
+    /// - JIT mode enabled
+    /// - Preview features disabled
+    /// - Standard output and error streams directed to system stdout/stderr
     #[must_use]
     pub fn new() -> Self {
         ConfigurationBuilder {
