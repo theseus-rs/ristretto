@@ -172,8 +172,23 @@ async fn get_caller_method_handle_lookup(vm: &VM, thread: &Thread, frame: &Frame
     };
 
     arguments.insert(0, lookup);
-    // TODO: fix stack overflow error when calling MethodHandles$Lookup.findStatic
-    //       "fatal runtime error: stack overflow"
+    // TODO: fix error when calling MethodHandle.linkToStatic
+    // Exception java/lang/InternalError: Method not found: java/lang/invoke/MethodHandle.linkToStatic(Ljava/lang/Object;Ljava/lang/invoke/MemberName;)V
+    //     at java/lang/Error.<init>(Error.java:67)
+    //     at java/lang/VirtualMachineError.<init>(VirtualMachineError.java:54)
+    //     at java/lang/InternalError.<init>(InternalError.java:51)
+    //     at java/lang/invoke/MemberName$Factory.resolve(MemberName.java:962)
+    //     at java/lang/invoke/MemberName$Factory.resolveOrFail(MemberName.java:991)
+    //     at java/lang/invoke/DirectMethodHandle.makePreparedLambdaForm(DirectMethodHandle.java:261)
+    //     at java/lang/invoke/DirectMethodHandle.preparedLambdaForm(DirectMethodHandle.java:231)
+    //     at java/lang/invoke/DirectMethodHandle.preparedLambdaForm(DirectMethodHandle.java:216)
+    //     at java/lang/invoke/DirectMethodHandle.preparedLambdaForm(DirectMethodHandle.java:225)
+    //     at java/lang/invoke/DirectMethodHandle.make(DirectMethodHandle.java:106)
+    //     at java/lang/invoke/MethodHandles$Lookup.getDirectMethodCommon(MethodHandles.java:4109)
+    //     at java/lang/invoke/MethodHandles$Lookup.getDirectMethod(MethodHandles.java:4053)
+    //     at java/lang/invoke/MethodHandles$Lookup.findStatic(MethodHandles.java:2676)
+    //     at HelloWorld.main(HelloWorld.java:4)
+    //
     // let method_handle = thread
     //     .try_execute(&lookup_class, &find_method, arguments)
     //     .await?;

@@ -230,64 +230,52 @@ async fn resolve(
     member_self: Object,
     _caller: Option<Arc<Class>>,
     _lookup_mode: i32,
-    speculative_resolve: bool,
+    _speculative_resolve: bool,
 ) -> Result<Option<Value>> {
     let class_object: Object = member_self.value("clazz")?.try_into()?;
+    let class_name: String = class_object.value("name")?.try_into()?;
+    let class = thread.class(class_name).await?;
     let name = member_self.value("name")?;
     let flags = member_self.value("flags")?.to_int()?;
     let member_name_flags = MemberNameFlags::from_bits_truncate(flags);
 
-    let (method_name, method_descriptor, method_parameters) = if member_name_flags
-        .contains(MemberNameFlags::IS_METHOD)
+    if member_name_flags.contains(MemberNameFlags::IS_METHOD)
         || member_name_flags.contains(MemberNameFlags::IS_CONSTRUCTOR)
     {
-        let method_type = member_self.value("type")?;
-        let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
-        let ptypes_method = method_type_class.try_get_method("ptypes", "()[Ljava/lang/Class;")?;
-        let parameter_types = thread
-            .try_execute(
-                &method_type_class,
-                &ptypes_method,
-                vec![method_type.clone()],
-            )
-            .await?;
-        (
-            "getMethod",
-            "(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;",
-            vec![Value::from(class_object), name, parameter_types],
-        )
-    } else if member_name_flags.contains(MemberNameFlags::IS_FIELD) {
-        (
-            "getField",
-            "(Ljava/lang/String;)Ljava/lang/reflect/Field;",
-            vec![Value::from(class_object), name],
-        )
-    } else {
-        return Err(InternalError(format!(
-            "Unsupported member name flag: {member_name_flags:?}"
-        )));
-    };
+        let method_type: Object = member_self.value("type")?.try_into()?;
+        let parameter_types = method_type.value("ptypes")?;
+        let parameters: Vec<Value> = parameter_types.try_into()?;
+        let mut parameter_descriptors = Vec::with_capacity(parameters.len());
+        for parameter in parameters {
+            let class_object: Object = parameter.try_into()?;
+            let class_name: String = class_object.value("name")?.try_into()?;
+            let descriptor = Class::to_descriptor(&class_name);
+            parameter_descriptors.push(descriptor);
+        }
+        let return_type: Object = method_type.value("rtype")?.try_into()?;
+        let return_class_name: String = return_type.value("name")?.try_into()?;
+        let return_descriptor = Class::to_descriptor(&return_class_name);
 
-    let class = thread.class("java.lang.Class").await?;
-    let get_method = class.try_get_method(method_name, method_descriptor)?;
-    match thread
-        .try_execute(&class, &get_method, method_parameters)
-        .await
-    {
-        Ok(object) => {
-            let object: Object = object.try_into()?;
-            let modifiers: i32 = object.value("modifiers")?.to_int()?;
-            let flags = flags | modifiers;
-            member_self.set_value("flags", Value::from(flags))?;
-            Ok(Some(member_self.into()))
-        }
-        Err(error) => {
-            if speculative_resolve {
-                Ok(None)
-            } else {
-                Err(error)
-            }
-        }
+        let method_name: String = name.try_into()?;
+        let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
+        let method = class.try_get_method(method_name, method_descriptor)?;
+        let method_access_flags = method.access_flags().bits();
+        let modifiers = i32::from(method_access_flags);
+        let flags = flags | modifiers;
+        member_self.set_value("flags", Value::from(flags))?;
+        Ok(Some(member_self.into()))
+    } else if member_name_flags.contains(MemberNameFlags::IS_FIELD) {
+        let field_name: String = name.try_into()?;
+        let field = class_object.field(&field_name)?;
+        let field_access_flags = field.access_flags().bits();
+        let modifiers = i32::from(field_access_flags);
+        let flags = flags | modifiers;
+        member_self.set_value("flags", Value::from(flags))?;
+        Ok(Some(member_self.into()))
+    } else {
+        Err(InternalError(format!(
+            "Unsupported member name flag: {member_name_flags:?}"
+        )))
     }
 }
 
