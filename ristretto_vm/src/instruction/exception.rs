@@ -63,7 +63,7 @@ pub(crate) async fn process_throwable(
     Err(Throwable(throwable))
 }
 
-/// Convert native Rust errors to Java throwables.
+/// Convert native Rust errors to Java throwable.
 ///
 /// # Errors
 /// if the error cannot be converted to a throwable

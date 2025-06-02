@@ -1,6 +1,6 @@
 use crate::Error::InternalError;
+use crate::intrinsic_methods::MethodRegistry;
 use crate::java_object::JavaObject;
-use crate::native_methods::MethodRegistry;
 use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use crate::{Configuration, ConfigurationBuilder, Result};
