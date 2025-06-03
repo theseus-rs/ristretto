@@ -10,10 +10,29 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+/// Major version number for Java 8.
+///
+/// Used to determine which methods to register in the VM based on Java version compatibility.
 pub(crate) const JAVA_8: u16 = 8;
+
+/// Major version number for Java 11.
+///
+/// Used to determine which methods to register in the VM based on Java version compatibility.
 pub(crate) const JAVA_11: u16 = 11;
+
+/// Major version number for Java 17.
+///
+/// Used to determine which methods to register in the VM based on Java version compatibility.
 pub(crate) const JAVA_17: u16 = 17;
+
+/// Major version number for Java 21.
+///
+/// Used to determine which methods to register in the VM based on Java version compatibility.
 pub(crate) const JAVA_21: u16 = 21;
+
+/// Major version number for Java 24.
+///
+/// Used to determine which methods to register in the VM based on Java version compatibility.
 pub(crate) const JAVA_24: u16 = 24;
 
 /// An intrinsic method represents a native Java method required by the Java Virtual Machine (JVM)
@@ -22,18 +41,6 @@ pub(crate) const JAVA_24: u16 = 24;
 /// Intrinsic methods are native functions that implement Java functionality directly
 /// in Rust rather than in Java bytecode. These methods are registered with the VM
 /// and are called when their corresponding Java native methods are invoked.
-///
-/// # Parameters
-///
-/// * `thread` - The Java thread context in which the method is being executed
-/// * `parameters` - The arguments passed to the native method from Java
-///
-/// # Returns
-///
-/// Returns a pinned `Future` that resolves to a `Result<Option<Value>>` where:
-/// * `Ok(Some(Value))` - Successful execution with a return value
-/// * `Ok(None)` - Successful execution with no return value (void method)
-/// * `Err(...)` - An error occurred during execution
 ///
 /// # Usage
 ///
@@ -75,7 +82,19 @@ pub struct MethodRegistry {
 }
 
 impl MethodRegistry {
-    /// Create a new registry.
+    /// Creates a new method registry configured for the specified Java major version.
+    ///
+    /// This constructor initializes an empty registry that will be configured for the specified
+    /// Java major version. The version determines which set of native methods will be registered
+    /// when `initialize()` is called.
+    ///
+    /// # Arguments
+    ///
+    /// * `java_major_version` - The major Java version number (e.g., 8, 11, 17, 21, 24)
+    ///
+    /// # Returns
+    ///
+    /// A new empty `MethodRegistry` configured for the specified Java version.
     pub fn new(java_major_version: u16) -> Self {
         MethodRegistry {
             java_major_version,
@@ -83,7 +102,15 @@ impl MethodRegistry {
         }
     }
 
-    /// Initialize the registry with all the native methods.
+    /// Initializes the registry with all native methods appropriate for the configured Java
+    /// version.
+    ///
+    /// This method populates the registry with all the native method implementations required by
+    /// the Java version specified during construction. It registers different sets of methods based
+    /// on the Java version to ensure compatibility with different JDK releases.
+    ///
+    /// After calling this method, the registry will be fully populated and ready for use by the VM
+    /// to resolve and execute native method calls.
     #[expect(clippy::too_many_lines)]
     pub fn initialize(&mut self) {
         if self.java_major_version <= JAVA_8 {
@@ -588,12 +615,24 @@ impl MethodRegistry {
         sun::security::smartcardio::pcsc::register(self);
     }
 
-    /// Get the java version.
+    /// Returns the major Java version this registry is configured for.
+    ///
+    /// This method provides access to the major Java version (e.g., 8, 11, 17, 21, 24) that the
+    /// registry is configured for. This version determines which set of native methods are
+    /// registered and available when `initialize()` is called.
+    ///
+    /// # Returns
+    ///
+    /// The major Java version number as a u16.
     pub fn java_major_version(&self) -> u16 {
         self.java_major_version
     }
 
-    /// Register a new Rust method.
+    /// Registers a new native method implementation in the registry.
+    ///
+    /// This function adds a Rust implementation of a native Java method to the registry. The method
+    /// is stored using a composite key made up of the class name, method name, and method
+    /// descriptor.
     pub(crate) fn register(
         &mut self,
         class_name: &str,
@@ -601,21 +640,29 @@ impl MethodRegistry {
         method_descriptor: &str,
         method: IntrinsicMethod,
     ) {
-        self.methods.insert(
-            format!("{class_name}.{method_name}{method_descriptor}"),
-            method,
-        );
+        let method_signature = format!("{class_name}.{method_name}{method_descriptor}");
+        self.methods.insert(method_signature, method);
     }
 
-    /// Return a map of all the registered Rust methods.
+    /// Returns a reference to the hash map of all registered native methods.
+    ///
+    /// This function provides access to the internal map that stores all registered intrinsic
+    /// methods. The keys of the map are method signatures, while the values are the
+    /// `IntrinsicMethod` function pointers.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the hash map of registered methods, where the key is a method signature and
+    /// the value is the corresponding `IntrinsicMethod` implementation.
     pub(crate) fn methods(&self) -> &HashMap<String, IntrinsicMethod> {
         &self.methods
     }
 
-    /// Get a Rust method by class and method name.
+    /// Looks up a native method implementation by its fully qualified signature.
     ///
-    /// # Errors
-    /// if the method is not found.
+    /// This method attempts to find a registered native method implementation by its
+    /// Java class name, method name, and method descriptor. If found, it returns a
+    /// reference to the `IntrinsicMethod` function; otherwise, it returns `None`.
     pub(crate) fn method(
         &self,
         class_name: &str,

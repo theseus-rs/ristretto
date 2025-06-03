@@ -7,6 +7,10 @@ use ristretto_classfile::attributes::Instruction;
 use ristretto_classfile::{BaseType, Constant, ConstantPool, FieldType};
 
 /// Simulates the effect of an instruction on the stack.
+///
+/// This function takes a `TypeStack`, a `ConstantPool`, and an `Instruction` and simulates the
+/// effect of executing the instruction on the stack. It updates the stack state to reflect the
+/// changes that would occur when the instruction is executed.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn simulate(
     stack: &mut TypeStack,
@@ -567,16 +571,26 @@ pub(crate) fn simulate(
 }
 
 /// Returns true if the type is a category 1 type.
+///
+/// In the JVM, computational types are divided into categories. Category 1 types occupy a single
+/// slot on the operand stack, while category 2 types occupy two slots.
 fn is_category_1(value_type: Type) -> bool {
     !is_category_2(value_type)
 }
 
 /// Returns true if the type is a category 2 type.
+///
+/// In the JVM, computational types are divided into categories. Category 1 types occupy a single
+/// slot on the operand stack, while category 2 types occupy two slots. Long and double are category
+/// 2 types.
 fn is_category_2(value_type: Type) -> bool {
     value_type == types::I64 || value_type == types::F64
 }
 
 /// Loads a constant from the constant pool and pushes the type onto the stack.
+///
+/// This function handles the `ldc` and `ldc_w` instructions by retrieving a constant from the
+/// constant pool and pushing the appropriate type onto the stack.
 fn ldc(stack: &mut TypeStack, constant_pool: &ConstantPool, index: u16) -> Result<()> {
     let constant = constant_pool
         .get(index)
@@ -594,6 +608,9 @@ fn ldc(stack: &mut TypeStack, constant_pool: &ConstantPool, index: u16) -> Resul
 }
 
 /// Handles the invocation of a method.
+///
+/// This function simulates the stack effects of invoking a method, including
+/// popping parameters from the stack and pushing a return value if applicable.
 fn invoke(
     stack: &mut TypeStack,
     constant_pool: &ConstantPool,
@@ -620,6 +637,9 @@ fn invoke(
 }
 
 /// Pushes a field type onto the stack.
+///
+/// This function translates a Java field type into the appropriate stack type
+/// and pushes it onto the stack.
 fn push_field_type(stack: &mut TypeStack, field_type: &FieldType) -> Result<()> {
     match field_type {
         FieldType::Base(
@@ -633,6 +653,8 @@ fn push_field_type(stack: &mut TypeStack, field_type: &FieldType) -> Result<()> 
 }
 
 /// Pops a field type from the stack.
+///
+/// This function pops a value from the stack based on the expected field type.
 fn pop_field_type(stack: &mut TypeStack, field_type: &FieldType) -> Result<Type> {
     match field_type {
         FieldType::Base(

@@ -9,6 +9,64 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::sync::{Arc, RwLock};
 
+/// A list of methods that are designated as polymorphic in the Java Virtual Machine.
+///
+/// Polymorphic methods can accept different argument types and return types at different call
+/// sites, even though they have a single method descriptor in the class file. The JVM uses a
+/// special invokedynamic mechanism to dispatch these methods.
+///
+/// Each entry is a tuple of (`class_name`, `method_name`, `method_decsriptor`) that identifies a
+/// polymorphic method. The method will be matched regardless of the descriptor at the call site.
+///
+/// These methods are primarily used with method handles and the invokedynamic instruction
+/// in Java's reflection and lambda implementations.
+///
+/// TODO: This implementation should likely be refactored to use a more dynamic approach that looks
+///       for the `PolymorphicSignature` annotation in the method attributes, rather than hardcoding
+///       the method names and classes.
+const POLYMORPHIC_METHODS: &[(&str, &str, &str)] = &[
+    (
+        "java/lang/invoke/MethodHandle",
+        "invoke",
+        "([Ljava/lang/Object;)Ljava/lang/Object;",
+    ),
+    (
+        "java/lang/invoke/MethodHandle",
+        "invokeBasic",
+        "([Ljava/lang/Object;)Ljava/lang/Object;",
+    ),
+    (
+        "java/lang/invoke/MethodHandle",
+        "invokeExact",
+        "([Ljava/lang/Object;)Ljava/lang/Object;",
+    ),
+    (
+        "java/lang/invoke/MethodHandle",
+        "linkToInterface",
+        "([Ljava/lang/Object;)Ljava/lang/Object;",
+    ),
+    (
+        "java/lang/invoke/MethodHandle",
+        "linkToNative",
+        "([Ljava/lang/Object;)Ljava/lang/Object;",
+    ),
+    (
+        "java/lang/invoke/MethodHandle",
+        "linkToSpecial",
+        "([Ljava/lang/Object;)Ljava/lang/Object;",
+    ),
+    (
+        "java/lang/invoke/MethodHandle",
+        "linkToStatic",
+        "([Ljava/lang/Object;)Ljava/lang/Object;",
+    ),
+    (
+        "java/lang/invoke/MethodHandle",
+        "linkToVirtual",
+        "([Ljava/lang/Object;)Ljava/lang/Object;",
+    ),
+];
+
 /// A representation of a Java class.
 #[expect(clippy::struct_field_names)]
 #[derive(Debug)]
@@ -400,8 +458,25 @@ impl Class {
         let name = name.as_ref();
         let descriptor = descriptor.as_ref();
         let method_identifier = format!("{name}:{descriptor}");
-        let method = self.methods.get(&method_identifier);
-        method.cloned()
+        if let Some(method) = self.methods.get(&method_identifier) {
+            return Some(method.clone());
+        }
+
+        let Ok(class_name) = self.class_file.class_name() else {
+            return None;
+        };
+
+        for (polymorphic_class_name, polymorphic_method_name, polymorphic_method_descriptor) in
+            POLYMORPHIC_METHODS
+        {
+            if class_name != polymorphic_class_name || name != *polymorphic_method_name {
+                continue;
+            }
+            let method_identifier = format!("{name}:{polymorphic_method_descriptor}");
+            return self.methods.get(&method_identifier).cloned();
+        }
+
+        None
     }
 
     /// Get a method by name and descriptor.

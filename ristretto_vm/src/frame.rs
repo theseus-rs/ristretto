@@ -32,6 +32,30 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 use tracing::{Level, debug, event_enabled};
 
+/// Represents the result of executing a JVM bytecode instruction.
+///
+/// # Overview
+///
+/// This enum is used to control the flow of execution within a frame. After each
+/// instruction is processed, an `ExecutionResult` is returned to indicate how the
+/// virtual machine should proceed.
+///
+/// # Variants
+///
+/// - `Return(Option<Value>)`: Indicates that the method execution should terminate and
+///   return the specified value (if any) to the caller. Methods with a void return type
+///   use `Return(None)`.
+///
+/// - `Continue`: Indicates that execution should continue with the next instruction
+///   (increments the program counter by 1).
+///
+/// - `ContinueAtPosition(usize)`: Indicates that execution should continue at the specified
+///   bytecode offset. Used for branch instructions like `goto`, `if_*`, and exception handlers.
+///
+/// # Usage
+///
+/// The VM's execution loop uses this enum to determine whether to proceed to the next
+/// instruction, jump to a different instruction, or return from the current method.
 #[derive(Debug, PartialEq)]
 pub(crate) enum ExecutionResult {
     Return(Option<Value>),
@@ -39,8 +63,30 @@ pub(crate) enum ExecutionResult {
     ContinueAtPosition(usize),
 }
 
+/// A frame is created each time a method is invoked in the JVM.
+///
+/// # Overview
 /// A frame stores data and partial results, performs dynamic linking, returns method values, and
-/// dispatches exceptions.
+/// dispatches exceptions. Each frame has its own array of local variables, its own operand stack,
+/// and a reference to the runtime constant pool of the class of the current method.
+///
+/// # Fields
+/// - `thread`: A weak reference to the thread that owns this frame
+/// - `class`: Reference to the class that contains the method being executed
+/// - `method`: Reference to the method being executed
+/// - `program_counter`: Current position in the bytecode
+///
+/// # Execution Model
+/// When a method is invoked, a new frame is created and pushed onto the JVM stack of the invoking thread.
+/// When the method completes (normally or abruptly), the frame is popped, and the invoker's frame becomes
+/// the current frame.
+///
+/// # Stack Effects
+/// The frame maintains two key data structures:
+/// - Local Variables: Used to pass parameters to methods and store local variables
+/// - Operand Stack: Used for storing intermediate computation results
+///
+/// # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6>
 #[derive(Debug)]
@@ -64,9 +110,6 @@ impl Frame {
     }
 
     /// Get the thread that owns this frame.
-    ///
-    /// # Errors
-    /// if the thread is not available.
     pub fn thread(&self) -> Result<Arc<Thread>> {
         match self.thread.upgrade() {
             Some(thread) => Ok(thread),
@@ -84,12 +127,15 @@ impl Frame {
         &mut self.class
     }
 
-    /// Get the method in this frame
+    /// Get the method in this frame.
     pub fn method(&self) -> &Arc<Method> {
         &self.method
     }
 
-    /// Get the program counter in this frame
+    /// Get the current program counter in this frame.
+    ///
+    /// The program counter represents the current position in the bytecode of the method
+    /// being executed. It's used to determine which instruction to execute next.
     #[inline]
     pub fn program_counter(&self) -> usize {
         self.program_counter.load(Ordering::Relaxed)
@@ -97,9 +143,30 @@ impl Frame {
 
     /// Execute the method in this frame
     ///
-    /// # Errors
-    /// * if the program counter is invalid
-    /// * if an invalid instruction is encountered
+    /// # Overview
+    ///
+    /// This method runs the bytecode instructions of the current method in the frame.
+    /// It sets up the local variables with the provided parameters, creates an operand
+    /// stack, and executes each instruction in sequence until the method returns or
+    /// an exception is thrown and not handled within the method.
+    ///
+    /// # Error Handling
+    ///
+    /// This method handles two types of errors:
+    /// 1. Java exceptions: When a Java exception is thrown, the method attempts to find
+    ///    an appropriate exception handler within the current method. If found, execution
+    ///    continues at the handler. If not, the exception is propagated to the caller.
+    /// 2. VM errors: Invalid program counter, stack overflow, etc. These are converted to
+    ///    Java exceptions where possible.
+    ///
+    /// # Bytecode Execution Process
+    ///
+    /// 1. Initialize local variables with the provided parameters
+    /// 2. Create an operand stack with the max stack size defined in the method
+    /// 3. For each instruction:
+    ///    - Load the instruction at the current program counter
+    ///    - Execute the instruction, which may modify locals and stack
+    ///    - Process the execution result (continue, jump, or return)
     #[async_recursion(?Send)]
     pub async fn execute(&self, mut parameters: Vec<Value>) -> Result<Option<Value>> {
         let max_locals = self.method.max_locals();
@@ -141,8 +208,31 @@ impl Frame {
         }
     }
 
-    /// The JVM specification requires that Long and Double take two places in the locals list
-    /// when passed to a method. This method adjusts the locals list to account for this.
+    /// Adjusts the parameters vector to conform to JVM local variable layout rules.
+    ///
+    /// # Overview
+    ///
+    /// According to the JVM specification, `long` and `double` values occupy two consecutive
+    /// local variable slots. This method inserts `Value::Unused` placeholders after
+    /// each `Long` and `Double` value in the parameters vector to ensure proper layout
+    /// in the local variables array. It also ensures the total size matches `max_size` by
+    /// padding with additional `Value::Unused` entries if necessary.
+    ///
+    /// # JVM Specification
+    ///
+    /// The JVM uses indices to 32-bit address for local variables. Local variables that are `long`
+    /// or `double` occupy two consecutive slots due to their 64-bit width. However, this JVM
+    /// implementation is not constrained by the 32-bit limit, so second slot is reserved and should
+    /// not be used for accessing variables.
+    ///
+    /// # Example
+    ///
+    /// ```text
+    /// // Before adjustment: [Int(1), Long(2), Float(3.0)]
+    /// // After adjustment:  [Int(1), Long(2), Unused, Float(3.0)]
+    /// ```
+    ///
+    /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6.1>
     fn adjust_parameters(parameters: &mut Vec<Value>, max_size: usize) {
@@ -162,6 +252,25 @@ impl Frame {
     }
 
     /// Debug the execution of an instruction in this frame
+    ///
+    /// # Overview
+    ///
+    /// This method logs detailed debug information about the current execution state
+    /// of the frame, including local variables, operand stack, program counter, and
+    /// the instruction about to be executed. It's only called when debug-level logging
+    /// is enabled.
+    ///
+    /// # Debug Output
+    ///
+    /// The method logs the following information:
+    /// * Class name, method name, method descriptor, and source file with line number (if available)
+    /// * Contents of the local variables array
+    /// * Current operand stack contents and remaining stack size
+    /// * Current program counter and formatted instruction string
+    ///
+    /// # Implementation Note
+    ///
+    /// This is only invoked when the debug log level is enabled, minimizing performance impact.
     fn debug_execute(
         &self,
         locals: &LocalVariables,
@@ -190,6 +299,29 @@ impl Frame {
     }
 
     /// Process an instruction in this frame
+    ///
+    /// # Overview
+    ///
+    /// This method is responsible for executing a single JVM bytecode instruction within the current frame.
+    /// It dispatches the instruction to the appropriate handler function based on its opcode and
+    /// manages the modification of the local variables and operand stack.
+    ///
+    /// # Error Handling
+    ///
+    /// If an instruction throws an exception (either explicitly via `athrow` or due to an error
+    /// condition), this method returns an `Err` that will be handled by the caller (`execute`
+    /// method).
+    ///
+    /// # Implementation Note
+    ///
+    /// This method uses a large match statement to dispatch each instruction to its
+    /// specialized handler function. The JVM specification defines over 200 bytecode
+    /// instructions, and this method handles all of them.
+    ///
+    /// # References
+    ///
+    /// Each instruction's behavior is defined by the JVM specification:
+    /// <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html>
     #[expect(clippy::too_many_lines)]
     async fn process(
         &self,

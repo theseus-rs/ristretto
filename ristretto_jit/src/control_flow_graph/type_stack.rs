@@ -5,13 +5,17 @@ use cranelift::prelude::{Type, types};
 const POINTER_SIZE: i32 = 8;
 
 /// Type stack for determining block parameters when simulating stack operations.
+///
+/// This struct maintains a stack of Cranelift types to track the types of values during
+/// compilation. It helps with type checking and ensures proper stack manipulation in the control
+/// flow graph.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TypeStack {
     stack: Vec<Type>,
 }
 
 impl TypeStack {
-    /// Creates a new type stack with the specified capacity.
+    /// Creates a new empty type stack.
     pub fn new() -> Self {
         TypeStack { stack: Vec::new() }
     }
@@ -43,7 +47,7 @@ impl TypeStack {
         self.push(types::F64)
     }
 
-    /// Push a double type onto the stack.
+    /// Pushes an object reference type (represented as I64) onto the stack.
     pub fn push_object(&mut self) -> Result<()> {
         self.push(types::I64)
     }
@@ -56,7 +60,7 @@ impl TypeStack {
         Ok(value)
     }
 
-    /// Pop a type from the stack and check if it matches the expected type.
+    /// Pop a type from the stack and verify it matches the expected type.
     fn pop_type(&mut self, expected_type: Type) -> Result<Type> {
         let value_type = self.pop()?;
         if value_type != expected_type {
@@ -67,42 +71,42 @@ impl TypeStack {
         Ok(value_type)
     }
 
-    /// Pop an int from the stack.
+    /// Pop an int from the stack, verifying the type.
     pub fn pop_int(&mut self) -> Result<Type> {
         self.pop_type(types::I32)
     }
 
-    /// Pop a long from the stack.
+    /// Pop a long from the stack, verifying the type.
     pub fn pop_long(&mut self) -> Result<Type> {
         self.pop_type(types::I64)
     }
 
-    /// Pop a float from the stack.
+    /// Pop a float from the stack, verifying the type.
     pub fn pop_float(&mut self) -> Result<Type> {
         self.pop_type(types::F32)
     }
 
-    /// Pop a double from the stack.
+    /// Pop a double from the stack, verifying the type.
     pub fn pop_double(&mut self) -> Result<Type> {
         self.pop_type(types::F64)
     }
 
-    /// Pop a object from the stack.
+    /// Pops an object reference from the stack, verifying the type.
     pub fn pop_object(&mut self) -> Result<Type> {
         self.pop_type(types::I64)
     }
 
-    /// Returns the length of the stack.
+    /// Returns the number of elements in the stack.
     pub fn len(&self) -> usize {
         self.stack.len()
     }
 
-    /// Returns true if the stack is empty.
+    /// Checks if the stack is empty.
     pub fn is_empty(&self) -> bool {
         self.stack.is_empty()
     }
 
-    /// Returns stack as a vector.
+    /// Returns a copy of the stack as a vector of types.
     pub fn to_vec(&self) -> Vec<Type> {
         self.stack.clone()
     }
