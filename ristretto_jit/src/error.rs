@@ -1,9 +1,20 @@
+//! Error handling for the Ristretto JIT compiler.
+//!
+//! This module provides a comprehensive error type system for the Ristretto JIT compiler, covering
+//! errors that might occur during class loading, code generation, and runtime execution.
+
 use ristretto_classfile::attributes::Instruction;
 
 /// Ristretto JIT result type
+///
+/// This is a type alias for the standard library's [`Result`](core::result::Result) type with the
+/// error type defaulting to [`Error`].
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
-/// Errors that can occur when loading classes
+/// Errors that can occur during JIT compilation and execution.
+///
+/// This enum represents all possible error conditions that might arise when loading classes,
+/// compiling methods, or executing JIT-compiled code.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// An error occurred while loading a class file

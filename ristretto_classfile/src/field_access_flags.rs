@@ -5,7 +5,47 @@ use std::fmt;
 use std::io::Cursor;
 
 bitflags! {
-    /// Field access flags.
+    /// Field access flags used in Java class files to specify the access permissions and properties
+    /// of fields.
+    ///
+    /// These flags determine visibility (public, private, protected), mutability (final),and other
+    /// characteristics of class fields. Multiple flags can be combined using bitwise OR operations.
+    ///
+    /// # Examples
+    ///
+    /// Creating field access flags for common field types:
+    ///
+    /// ```rust
+    /// use ristretto_classfile::FieldAccessFlags;
+    /// use std::io::Cursor;
+    ///
+    /// // A private final instance field
+    /// let flags = FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL;
+    ///
+    /// // Check if specific flags are set
+    /// assert!(flags.contains(FieldAccessFlags::PRIVATE));
+    /// assert!(flags.contains(FieldAccessFlags::FINAL));
+    /// assert!(!flags.contains(FieldAccessFlags::PUBLIC));
+    /// assert!(!flags.contains(FieldAccessFlags::STATIC));
+    ///
+    /// // Get a code representation
+    /// assert_eq!("private final", flags.as_code());
+    ///
+    /// // Serialize to bytes
+    /// let mut bytes = Vec::new();
+    /// flags.to_bytes(&mut bytes)?;
+    /// assert_eq!(vec![0x00, 0x12], bytes); // 0x0012 = PRIVATE | FINAL
+    ///
+    /// // Deserialize from bytes
+    /// let mut cursor = Cursor::new(bytes);
+    /// let deserialized = FieldAccessFlags::from_bytes(&mut cursor)?;
+    /// assert_eq!(flags, deserialized);
+    ///
+    /// // Display as string
+    /// assert_eq!("(0x0012) ACC_PRIVATE, ACC_FINAL", flags.to_string());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.5:~:text=field_info%20structure%20are%20as%20follows%3A-,access_flags,-The%20value%20of%20the%20access_flags>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -32,6 +72,17 @@ bitflags! {
 }
 
 impl Default for FieldAccessFlags {
+    /// Creates a new `FieldAccessFlags` with no flags set.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::FieldAccessFlags;
+    ///
+    /// let flags = FieldAccessFlags::default();
+    /// assert!(flags.is_empty());
+    /// assert_eq!(0, flags.bits());
+    /// ```
     fn default() -> FieldAccessFlags {
         FieldAccessFlags::empty()
     }
@@ -39,6 +90,26 @@ impl Default for FieldAccessFlags {
 
 impl FieldAccessFlags {
     /// Deserialize the `FieldAccessFlags` from bytes.
+    ///
+    /// Reads a u16 value from the given cursor in big-endian order and constructs
+    /// a `FieldAccessFlags` instance from it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::io::Cursor;
+    /// use ristretto_classfile::FieldAccessFlags;
+    ///
+    /// // Create a byte buffer representing a public static field
+    /// let access_flags: u16 = 0x0009; // PUBLIC | STATIC
+    /// let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
+    ///
+    /// // Parse the access flags
+    /// let flags = FieldAccessFlags::from_bytes(&mut bytes)?;
+    /// assert!(flags.contains(FieldAccessFlags::PUBLIC));
+    /// assert!(flags.contains(FieldAccessFlags::STATIC));
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
     /// Should not occur; reserved for future use.
@@ -50,6 +121,25 @@ impl FieldAccessFlags {
 
     /// Serialize the `FieldAccessFlags` to bytes.
     ///
+    /// Writes the flags as a u16 value in big-endian order to the given byte vector.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::FieldAccessFlags;
+    ///
+    /// // Create a flags instance representing a public final field
+    /// let flags = FieldAccessFlags::PUBLIC | FieldAccessFlags::FINAL;
+    ///
+    /// // Serialize to bytes
+    /// let mut bytes = Vec::new();
+    /// flags.to_bytes(&mut bytes)?;
+    ///
+    /// // Check the serialized value (0x0011 = PUBLIC | FINAL)
+    /// assert_eq!(bytes, [0x00, 0x11]);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
     /// Should not occur; reserved for future use.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
@@ -57,7 +147,27 @@ impl FieldAccessFlags {
         Ok(())
     }
 
-    /// Get the Field Access Flags as a string of code.
+    /// Get the `FieldAccessFlags` as a string of Java modifiers.
+    ///
+    /// This method converts the flags to a string representation that
+    /// matches how the modifiers would appear in Java source code.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::FieldAccessFlags;
+    ///
+    /// // Public static final field (common for constants)
+    /// let flags = FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL;
+    /// assert_eq!("public static final", flags.as_code());
+    ///
+    /// // Private volatile field
+    /// let flags = FieldAccessFlags::PRIVATE | FieldAccessFlags::VOLATILE;
+    /// assert_eq!("private volatile", flags.as_code());
+    ///
+    /// // Flags without Java modifiers return empty strings
+    /// assert_eq!("", FieldAccessFlags::empty().as_code());
+    /// ```
     #[must_use]
     pub fn as_code(&self) -> String {
         let mut modifiers = Vec::new();
@@ -94,6 +204,22 @@ impl FieldAccessFlags {
 }
 
 impl fmt::Display for FieldAccessFlags {
+    /// Formats the `FieldAccessFlags` as a string showing the hexadecimal value and the individual flag
+    /// constants.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::FieldAccessFlags;
+    ///
+    /// // Public static field
+    /// let flags = FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC;
+    /// assert_eq!("(0x0009) ACC_PUBLIC, ACC_STATIC", flags.to_string());
+    ///
+    /// // Private final field
+    /// let flags = FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL;
+    /// assert_eq!("(0x0012) ACC_PRIVATE, ACC_FINAL", flags.to_string());
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut access_flags = Vec::new();
         if self.contains(FieldAccessFlags::PUBLIC) {

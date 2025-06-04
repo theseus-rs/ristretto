@@ -15,6 +15,62 @@ const VERSION_55_0: Version = Version::Java11 { minor: 0 };
 
 /// Constant
 ///
+/// Represents the different types of constants in the Java class file constant pool. The constant
+/// pool is a table of structures representing various string constants, class and interface names,
+/// field names, and other constants that are referred to within the class file structure and its
+/// substructures.
+///
+/// # Examples
+///
+/// Creating different types of constants and working with them:
+///
+/// ```rust
+/// use ristretto_classfile::{Constant, ReferenceKind, Version};
+/// use std::io::Cursor;
+///
+/// // Create some constants
+/// let utf8_constant = Constant::Utf8("java/lang/Object".to_string());
+/// let class_constant = Constant::Class(1); // Points to the UTF-8 constant
+/// let string_const = Constant::String(1);
+/// let method_reference = Constant::MethodRef {
+///     class_index: 2,          // Points to a Class constant
+///     name_and_type_index: 3,  // Points to a NameAndType constant
+/// };
+///
+/// // Serialize constants to bytes
+/// let mut buffer = Vec::new();
+/// utf8_constant.to_bytes(&mut buffer)?;
+///
+/// // Check if constant is valid for a specific Java version
+/// let java7 = Version::Java7 { minor: 0 };
+/// let java11 = Version::Java11 { minor: 0 };
+///
+/// assert!(utf8_constant.valid_for_version(&java7));
+///
+/// let dynamic_constant = Constant::Dynamic {
+///     bootstrap_method_attr_index: 1,
+///     name_and_type_index: 2,
+/// };
+/// assert!(!dynamic_constant.valid_for_version(&java7)); // Dynamic was added in Java 11
+/// assert!(dynamic_constant.valid_for_version(&java11));
+///
+/// // Deserialize a constant from bytes
+/// // For example, deserializing an Integer constant:
+/// // Tag 3 (Integer) followed by a 4-byte integer value
+/// let int_bytes = vec![3, 0, 0, 0, 42];
+/// let mut cursor = Cursor::new(int_bytes);
+/// let deserialized = Constant::from_bytes(&mut cursor)?;
+/// assert_eq!(deserialized, Constant::Integer(42));
+///
+/// // Display constants in human-readable format
+/// println!("{utf8_constant}");    // Outputs: "Utf8 java/lang/Object"
+/// println!("{class_constant}");   // Outputs: "Class #1"
+/// println!("{method_reference}");    // Outputs: "Methodref #2.#3"
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+///  # References
+///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4>
 #[derive(Clone, Debug, PartialEq)]
 pub enum Constant {
@@ -76,7 +132,22 @@ pub enum Constant {
 }
 
 impl Constant {
-    /// Get the tag of the `Constant`.
+    /// Returns the tag value for this constant type.
+    ///
+    /// The tag is a single-byte identifier used to differentiate between different constant types
+    /// in a class file.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Constant;
+    ///
+    /// let constant = Constant::Utf8("Hello, world!".to_string());
+    /// assert_eq!(constant.tag(), 1);
+    ///
+    /// let constant = Constant::Integer(42);
+    /// assert_eq!(constant.tag(), 3);
+    /// ```
     #[must_use]
     pub fn tag(&self) -> u8 {
         match self {
@@ -100,7 +171,27 @@ impl Constant {
         }
     }
 
-    /// Check if the `Constant` is valid for the given version.
+    /// Checks if the constant is valid for the specified Java version.
+    ///
+    /// Different constant types were introduced in different Java versions. This method verifies
+    /// whether the constant is supported in the given version.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ReferenceKind, Version};
+    ///
+    /// let constant = Constant::Utf8("Hello, world!".to_string());
+    /// let java7 = Version::Java7 { minor: 0 };
+    /// assert!(constant.valid_for_version(&java7));
+    ///
+    /// let constant = Constant::MethodHandle {
+    ///     reference_kind: ReferenceKind::GetField,
+    ///     reference_index: 1,
+    /// };
+    /// let java6 = Version::Java6 { minor: 0 };
+    /// assert!(!constant.valid_for_version(&java6)); // MethodHandle was introduced in Java 7
+    /// ```
     #[must_use]
     pub fn valid_for_version(&self, version: &Version) -> bool {
         match self {
@@ -113,10 +204,33 @@ impl Constant {
         }
     }
 
-    /// Deserialize the Constant from bytes.
+    /// Deserializes a `Constant` from bytes.
+    ///
+    /// Reads a constant pool entry from the provided byte buffer according to the Java class file
+    /// format specification.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Constant;
+    /// use std::io::Cursor;
+    ///
+    /// // Create a buffer with a UTF-8 constant (tag 1)
+    /// // Format: [tag(1), length(2 bytes), data(length bytes)]
+    /// let buffer = vec![1, 0, 5, 72, 101, 108, 108, 111]; // "Hello"
+    /// let mut cursor = Cursor::new(buffer);
+    ///
+    /// let constant = Constant::from_bytes(&mut cursor)?;
+    /// assert_eq!(constant, Constant::Utf8("Hello".to_string()));
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
-    /// Returns an error if the tag is invalid.
+    ///
+    /// Returns an error if:
+    /// - The tag is invalid
+    /// - There's not enough data to read
+    /// - The data is malformed
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Constant> {
         let tag = bytes.read_u8()?;
         let constant = match tag {
@@ -169,10 +283,30 @@ impl Constant {
         Ok(constant)
     }
 
-    /// Serialize the `Constant` to bytes.
+    /// Serializes the `Constant` to bytes.
+    ///
+    /// Writes the constant pool entry to the provided byte buffer according to the Java class file
+    /// format specification.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Constant;
+    ///
+    /// let constant = Constant::Integer(42);
+    /// let mut buffer = Vec::new();
+    ///
+    /// constant.to_bytes(&mut buffer)?;
+    /// assert_eq!(buffer, vec![3, 0, 0, 0, 42]);
+    /// // Tag 3 (Integer) followed by the 4-byte integer value in big-endian format
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
-    /// If a UTF-8 string is more than 65535 bytes long.
+    ///
+    /// Returns an error if:
+    /// - A UTF-8 string is more than 65535 bytes long
+    /// - Writing to the buffer fails
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u8(self.tag())?;
 
@@ -250,6 +384,34 @@ impl Constant {
 }
 
 impl fmt::Display for Constant {
+    /// Formats the `Constant` for display purposes.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Constant;
+    /// use std::fmt::Display;
+    ///
+    /// // Create some constants
+    /// let utf8 = Constant::Utf8("Hello, world!".to_string());
+    /// let class = Constant::Class(5);
+    /// let method_reference = Constant::MethodRef {
+    ///     class_index: 3,
+    ///     name_and_type_index: 7,
+    /// };
+    ///
+    /// // Display them as strings
+    /// assert_eq!(utf8.to_string(), "Utf8 Hello, world!");
+    /// assert_eq!(class.to_string(), "Class #5");
+    /// assert_eq!(method_reference.to_string(), "Methodref #3.#7");
+    ///
+    /// // Using format! with Display trait
+    /// let formatted = format!("Constants: {utf8}, {class}, {method_reference}");
+    /// assert_eq!(
+    ///     formatted,
+    ///     "Constants: Utf8 Hello, world!, Class #5, Methodref #3.#7"
+    /// );
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Constant::Utf8(value) => write!(f, "Utf8 {value}"),

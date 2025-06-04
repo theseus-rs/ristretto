@@ -8,7 +8,33 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
 
-/// Field.
+/// Represents a field in a Java class file.
+///
+/// Fields store data in Java classes and can be static or instance variables.
+/// Each field has access flags (e.g., public, private), a name, a descriptor
+/// indicating its type, and optional attributes for additional metadata.
+///
+/// # Examples
+///
+/// Creating a field representing a public static final integer constant:
+///
+/// ```rust
+/// use ristretto_classfile::{BaseType, Field, FieldAccessFlags, FieldType};
+///
+/// // Create the field with appropriate access flags
+/// let field = Field {
+///     access_flags: FieldAccessFlags::PUBLIC,
+///     name_index: 1,
+///     descriptor_index: 2,
+///     field_type: FieldType::Base(BaseType::Int),
+///     attributes: vec![],
+/// };
+///
+/// // Use the field
+/// println!("Field name index: {}", field.name_index);
+/// println!("Field access flags: {}", field.access_flags);
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.5>
 #[derive(Clone, Debug, PartialEq)]
@@ -21,7 +47,40 @@ pub struct Field {
 }
 
 impl Field {
-    /// Deserialize the Field from bytes.
+    /// Deserialize a `Field` from bytes in a Java class file.
+    ///
+    /// This function reads a `field_info` structure from the provided byte cursor and constructs a
+    /// `Field` struct. It reads access flags, name and descriptor indices, parses the field type,
+    /// and reads all attributes associated with the field.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Field, ConstantPool};
+    /// use std::io::Cursor;
+    ///
+    /// // Prepare a constant pool with necessary entries
+    /// let mut constant_pool = ConstantPool::default();
+    /// let name_index = constant_pool.add_utf8("count")?;
+    /// let descriptor_index = constant_pool.add_utf8("I")?;
+    ///
+    /// // Create a byte array representing a field_info structure
+    /// // Format: [access_flags(2), name_index(2), descriptor_index(2), attributes_count(2), attributes(...)]
+    /// let field_bytes = vec![
+    ///     0x00, 0x01, // ACC_PUBLIC
+    ///     0x00, name_index as u8, // name_index
+    ///     0x00, descriptor_index as u8, // descriptor_index
+    ///     0x00, 0x00, // attributes_count = 0
+    /// ];
+    ///
+    /// // Parse the field from bytes
+    /// let mut cursor = Cursor::new(field_bytes);
+    /// let field = Field::from_bytes(&constant_pool, &mut cursor)?;
+    ///
+    /// assert_eq!(field.name_index, name_index);
+    /// assert_eq!(field.descriptor_index, descriptor_index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
     /// Returns an error if the bytes do not represent a valid Field.
@@ -49,7 +108,33 @@ impl Field {
         Ok(field)
     }
 
-    /// Serialize the Field to bytes.
+    /// Serialize the `Field` to bytes for inclusion in a class file.
+    ///
+    /// This function writes the `field_info` structure to the provided byte vector according to the
+    /// Java class file format specification.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{BaseType, Field, FieldAccessFlags, FieldType};
+    ///
+    /// // Create a field
+    /// let field = Field {
+    ///     access_flags: FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
+    ///     name_index: 5, // index in constant pool
+    ///     descriptor_index: 6, // index in constant pool
+    ///     field_type: FieldType::Base(BaseType::Int),
+    ///     attributes: vec![],
+    /// };
+    ///
+    /// // Serialize to bytes
+    /// let mut bytes = Vec::new();
+    /// field.to_bytes(&mut bytes)?;
+    ///
+    /// // The resulting bytes can be included in a class file
+    /// assert_eq!(bytes.len(), 8); // 2 (flags) + 2 (name_idx) + 2 (desc_idx) + 2 (attr_count)
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
     /// If there are more than 65,534 attributes, an error is returned.
@@ -69,6 +154,42 @@ impl Field {
 }
 
 impl fmt::Display for Field {
+    /// Formats the `Field` for display.
+    ///
+    /// This produces a human-readable multi-line representation of the field, including:
+    /// - Access flags
+    /// - Name index
+    /// - Descriptor index
+    /// - Field type
+    /// - Attributes (indented)
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{BaseType, ConstantPool, Field, FieldAccessFlags, FieldType};
+    /// use std::io::Cursor;
+    ///
+    /// // Set up a simple field with one attribute
+    /// let mut constant_pool = ConstantPool::default();
+    /// constant_pool.add_utf8("ConstantValue")?;
+    /// constant_pool.add_utf8("I")?;
+    ///
+    /// let field = Field {
+    ///     access_flags: FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC,
+    ///     name_index: 1,
+    ///     descriptor_index: 2,
+    ///     field_type: FieldType::Base(BaseType::Int),
+    ///     attributes: vec![],
+    /// };
+    ///
+    /// // Display output will look like:
+    /// // flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    /// // name_index: #1
+    /// // descriptor_index: #2
+    /// // field_type: Base(Int)
+    /// println!("{field}");
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "flags: {}", self.access_flags)?;
         writeln!(f, "name_index: #{}", self.name_index)?;

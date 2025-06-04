@@ -3,7 +3,90 @@ use crate::base_type::BaseType;
 use crate::error::Result;
 use std::{fmt, io};
 
-/// Implementation of `FieldType`.
+/// Represents a Java field type descriptor as defined in the JVM specification.
+///
+/// A `FieldType` can be:
+/// - A base type (primitive Java types like `int`, `boolean`, etc.)
+/// - An object type (class or interface)
+/// - An array type (arrays of any other field type)
+///
+/// This enum is used to represent Java type signatures in classfile structures such as field
+/// descriptors, method descriptors, and signatures.
+///
+/// # Examples
+///
+/// Creating different types of field descriptors:
+///
+/// ```rust
+/// use ristretto_classfile::{BaseType, FieldType};
+///
+/// // Create a primitive type (int)
+/// let int_type = FieldType::Base(BaseType::Int);
+/// assert_eq!(int_type.descriptor(), "I");
+/// assert_eq!(int_type.to_string(), "int");
+///
+/// // Create an object type (String)
+/// let string_type = FieldType::Object("java/lang/String".to_string());
+/// assert_eq!(string_type.descriptor(), "Ljava/lang/String;");
+/// assert_eq!(string_type.to_string(), "java/lang/String");
+///
+/// // Create an array type (int[])
+/// let int_array = FieldType::Array(Box::new(FieldType::Base(BaseType::Int)));
+/// assert_eq!(int_array.descriptor(), "[I");
+/// assert_eq!(int_array.to_string(), "int[]");
+///
+/// // Create a multidimensional array (String[][])
+/// let string_2d_array = FieldType::Array(Box::new(
+///     FieldType::Array(Box::new(
+///         FieldType::Object("java/lang/String".to_string())
+///     ))
+/// ));
+/// assert_eq!(string_2d_array.descriptor(), "[[Ljava/lang/String;");
+/// assert_eq!(string_2d_array.to_string(), "java/lang/String[][]");
+/// ```
+///
+/// Parsing a field type from a descriptor:
+///
+/// ```rust
+/// use ristretto_classfile::{BaseType, FieldType};
+///
+/// // Parse a field descriptor
+/// let field_type = FieldType::parse(&"Ljava/lang/Object;".to_string())?;
+/// assert_eq!(field_type, FieldType::Object("java/lang/Object".to_string()));
+///
+/// // Parse an array descriptor
+/// let array_type = FieldType::parse(&"[[Z".to_string())?;
+/// let expected = FieldType::Array(Box::new(
+///     FieldType::Array(Box::new(
+///         FieldType::Base(BaseType::Boolean)
+///     ))
+/// ));
+/// assert_eq!(array_type, expected);
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+/// Parsing a method descriptor:
+///
+/// ```rust
+/// use ristretto_classfile::{BaseType, FieldType};
+///
+/// // Parse a method descriptor: String toString()
+/// let (params, ret) = FieldType::parse_method_descriptor("()Ljava/lang/String;")?;
+/// assert!(params.is_empty());
+/// assert_eq!(ret, Some(FieldType::Object("java/lang/String".to_string())));
+///
+/// // Parse a more complex method: static int compare(Object o1, Object o2)
+/// let (params, ret) = FieldType::parse_method_descriptor(
+///     "(Ljava/lang/Object;Ljava/lang/Object;)I"
+/// )?;
+/// assert_eq!(params.len(), 2);
+/// assert_eq!(params[0], FieldType::Object("java/lang/Object".to_string()));
+/// assert_eq!(params[1], FieldType::Object("java/lang/Object".to_string()));
+/// assert_eq!(ret, Some(FieldType::Base(BaseType::Int)));
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+/// # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.3.2>
 #[derive(Clone, Debug, PartialEq)]
@@ -15,6 +98,26 @@ pub enum FieldType {
 
 impl FieldType {
     /// Return the code for the `FieldType`.
+    ///
+    /// Returns a character that represents the type in JVM field descriptors:
+    /// - For base types, returns the type code (e.g., 'I' for int)
+    /// - For object types, returns 'L'
+    /// - For array types, returns '['
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{BaseType, FieldType};
+    ///
+    /// let int_type = FieldType::Base(BaseType::Int);
+    /// assert_eq!(int_type.code(), 'I');
+    ///
+    /// let object_type = FieldType::Object("java/lang/String".to_string());
+    /// assert_eq!(object_type.code(), 'L');
+    ///
+    /// let array_type = FieldType::Array(Box::new(FieldType::Base(BaseType::Int)));
+    /// assert_eq!(array_type.code(), '[');
+    /// ```
     #[must_use]
     pub fn code(&self) -> char {
         match self {
@@ -25,6 +128,24 @@ impl FieldType {
     }
 
     /// Return the class name for the `FieldType`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{BaseType, FieldType};
+    ///
+    /// let int_type = FieldType::Base(BaseType::Int);
+    /// assert_eq!(int_type.class_name(), "int");
+    ///
+    /// let object_type = FieldType::Object("java/lang/String".to_string());
+    /// assert_eq!(object_type.class_name(), "java/lang/String");
+    ///
+    /// let array_type = FieldType::Array(Box::new(FieldType::Base(BaseType::Int)));
+    /// assert_eq!(array_type.class_name(), "[I");
+    ///
+    /// let object_array_type = FieldType::Array(Box::new(FieldType::Object("java/lang/String".to_string())));
+    /// assert_eq!(object_array_type.class_name(), "[Ljava/lang/String;");
+    /// ```
     #[must_use]
     pub fn class_name(&self) -> String {
         match self {
@@ -39,6 +160,31 @@ impl FieldType {
     }
 
     /// Return the descriptor for the `FieldType`.
+    ///
+    /// The descriptor is a string representation used in the JVM to identify types:
+    /// - Base types use a single character (e.g., 'I' for int)
+    /// - Object types use the format "L`<className>`;"
+    /// - Array types use "[" followed by the component type descriptor
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{BaseType, FieldType};
+    ///
+    /// let int_type = FieldType::Base(BaseType::Int);
+    /// assert_eq!(int_type.descriptor(), "I");
+    ///
+    /// let object_type = FieldType::Object("java/lang/String".to_string());
+    /// assert_eq!(object_type.descriptor(), "Ljava/lang/String;");
+    ///
+    /// let array_type = FieldType::Array(Box::new(FieldType::Base(BaseType::Int)));
+    /// assert_eq!(array_type.descriptor(), "[I");
+    ///
+    /// let multi_array_type = FieldType::Array(Box::new(
+    ///     FieldType::Array(Box::new(FieldType::Base(BaseType::Int)))
+    /// ));
+    /// assert_eq!(multi_array_type.descriptor(), "[[I");
+    /// ```
     #[must_use]
     pub fn descriptor(&self) -> String {
         match self {
@@ -50,7 +196,35 @@ impl FieldType {
         }
     }
 
-    /// Return the `FieldType` for a given code.
+    /// Parse a field descriptor string and return the corresponding `FieldType`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{BaseType, FieldType};
+    ///
+    /// // Parse a base type
+    /// let int_type = FieldType::parse(&"I".to_string())?;
+    /// assert_eq!(int_type, FieldType::Base(BaseType::Int));
+    ///
+    /// // Parse an object type
+    /// let object_type = FieldType::parse(&"Ljava/lang/String;".to_string())?;
+    /// assert_eq!(object_type, FieldType::Object("java/lang/String".to_string()));
+    ///
+    /// // Parse an array type
+    /// let array_type = FieldType::parse(&"[I".to_string())?;
+    /// assert_eq!(array_type, FieldType::Array(Box::new(FieldType::Base(BaseType::Int))));
+    ///
+    /// // Parse a multi-dimensional array
+    /// let multi_array = FieldType::parse(&"[[Ljava/lang/Object;".to_string())?;
+    /// assert_eq!(
+    ///     multi_array,
+    ///     FieldType::Array(Box::new(
+    ///         FieldType::Array(Box::new(FieldType::Object("java/lang/Object".to_string())))
+    ///     ))
+    /// );
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
     /// - Returns an error if the code is invalid.
@@ -88,10 +262,56 @@ impl FieldType {
     /// Parse the method descriptor. The descriptor is a string representing the method signature.
     /// The descriptor has the following format:
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.3.3>
+    /// ```text
+    /// MethodDescriptor:
+    ///     ( ParameterDescriptor* ) ReturnDescriptor
+    ///
+    /// ParameterDescriptor:
+    ///     FieldType
+    ///
+    /// ReturnDescriptor:
+    ///     FieldType
+    ///     V  // represents void
+    /// ```
+    ///
+    /// The method returns a tuple containing:
+    /// - A vector of `FieldType` representing the parameter types
+    /// - An optional `FieldType` representing the return type (None for void)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{BaseType, FieldType};
+    ///
+    /// // Parse a method with no parameters that returns void: void methodName()
+    /// let (params, ret) = FieldType::parse_method_descriptor("()V")?;
+    /// assert!(params.is_empty());
+    /// assert_eq!(ret, None);
+    ///
+    /// // Parse a method with an int parameter that returns boolean: boolean methodName(int)
+    /// let (params, ret) = FieldType::parse_method_descriptor("(I)Z")?;
+    /// assert_eq!(params.len(), 1);
+    /// assert_eq!(params[0], FieldType::Base(BaseType::Int));
+    /// assert_eq!(ret, Some(FieldType::Base(BaseType::Boolean)));
+    ///
+    /// // Parse a method with String and int parameters that returns String: String methodName(String, int)
+    /// let (params, ret) = FieldType::parse_method_descriptor("(Ljava/lang/String;I)Ljava/lang/String;")?;
+    /// assert_eq!(params.len(), 2);
+    /// assert_eq!(params[0], FieldType::Object("java/lang/String".to_string()));
+    /// assert_eq!(params[1], FieldType::Base(BaseType::Int));
+    /// assert_eq!(ret, Some(FieldType::Object("java/lang/String".to_string())));
+    ///
+    /// // Parse a method with array parameter and return type: int[] methodName(boolean[])
+    /// let (params, ret) = FieldType::parse_method_descriptor("([Z)[I")?;
+    /// assert_eq!(params.len(), 1);
+    /// assert_eq!(params[0], FieldType::Array(Box::new(FieldType::Base(BaseType::Boolean))));
+    /// assert_eq!(ret, Some(FieldType::Array(Box::new(FieldType::Base(BaseType::Int)))));
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
-    /// if the descriptor cannot be parsed
+    /// - Returns `InvalidMethodDescriptor` if the descriptor format is invalid
+    /// - Returns other errors if field types cannot be parsed
     pub fn parse_method_descriptor(
         descriptor: &str,
     ) -> Result<(Vec<FieldType>, Option<FieldType>)> {
@@ -125,7 +345,10 @@ impl FieldType {
         Ok((parameters, return_type))
     }
 
-    /// Parse the field type.
+    /// Parse a field type from a character iterator.
+    ///
+    /// This is a helper method used internally by `parse_method_descriptor` to parse individual
+    /// field types from a method descriptor string.
     ///
     /// # Errors
     /// if the field type cannot be parsed

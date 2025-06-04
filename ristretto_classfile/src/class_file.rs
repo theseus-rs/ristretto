@@ -12,9 +12,43 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
 
+/// The magic number that identifies a valid Java class file.
+///
+/// Every Java class file begins with this 4-byte value (`0xCAFE_BABE`) in big-endian format. This
+/// signature helps JVM identify valid class files and reject invalid ones.
 const MAGIC: u32 = 0xCAFE_BABE;
 
 /// `ClassFile` represents the content of a Java .class file.
+///
+/// A class file contains the definition of a single class or interface, including:
+/// - Version information
+/// - Constant pool (containing various string constants, class and field references, etc.)
+/// - Access flags (defining visibility and properties)
+/// - This class and super class references
+/// - Interfaces implemented by the class
+/// - Fields and methods of the class
+/// - Class attributes
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use ristretto_classfile::ClassFile;
+/// use std::fs;
+/// use std::io::Cursor;
+///
+/// // Read the bytes of a class file
+/// let bytes = fs::read("path/to/Example.class")?;
+///
+/// // Parse the bytes into a ClassFile
+/// let class_file = ClassFile::from_bytes(&mut Cursor::new(bytes))?;
+///
+/// // Now you can inspect the class
+/// println!("Class name: {}", class_file.class_name()?);
+/// println!("Class version: {}", class_file.version);
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+/// # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1>
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -33,6 +67,18 @@ pub struct ClassFile {
 impl ClassFile {
     /// Get the fully qualified class name.
     ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use ristretto_classfile::ClassFile;
+    /// # use std::io::Cursor;
+    /// # let bytes = vec![];
+    /// # let class_file = ClassFile::from_bytes(&mut Cursor::new(bytes))?;
+    /// let class_name = class_file.class_name().expect("Failed to get class name");
+    /// println!("Class name: {class_name}"); // e.g., "java.lang.String"
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
     /// Returns an error if the class name is not found.
     pub fn class_name(&self) -> Result<&String> {
@@ -40,6 +86,24 @@ impl ClassFile {
     }
 
     /// Verify the `ClassFile`.
+    ///
+    /// This method checks that the class file is well-formed according to the JVM specification.
+    /// It validates the constant pool entries, method definitions, and other aspects of the class.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use ristretto_classfile::ClassFile;
+    ///
+    /// let class_file = ClassFile::default();
+    ///
+    /// // Verify that the class file is valid
+    /// if let Err(error) = class_file.verify() {
+    ///     eprintln!("Class verification failed: {error:?}");
+    /// } else {
+    ///     println!("Class verified successfully");
+    /// }
+    /// ```
     ///
     /// # Errors
     /// Returns a `VerificationError` if the verification fails.
@@ -59,8 +123,42 @@ impl ClassFile {
 
     /// Deserialize the `ClassFile` from bytes.
     ///
+    /// This function reads a binary class file format and constructs a `ClassFile` instance. It
+    /// follows the Java class file format specification to parse:
+    /// - Magic number (`0xCAFE_BABE`)
+    /// - Version information
+    /// - Constant pool
+    /// - Access flags
+    /// - Class references
+    /// - Interfaces
+    /// - Fields
+    /// - Methods
+    /// - Attributes
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use ristretto_classfile::ClassFile;
+    /// use std::fs;
+    /// use std::io::Cursor;
+    ///
+    /// // Read the bytes of a class file
+    /// let bytes = fs::read("path/to/Example.class")?;
+    ///
+    /// // Parse the bytes into a ClassFile
+    /// let class_file = ClassFile::from_bytes(&mut Cursor::new(bytes))?;
+    ///
+    /// // Now you can inspect the class
+    /// println!("Class name: {}", class_file.class_name()?);
+    /// println!("Class version: {}", class_file.version);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
-    /// Returns an error if the bytes are not a valid class file.
+    /// Returns an error if:
+    /// - The bytes do not start with the correct magic number
+    /// - The class file format is invalid
+    /// - There are IO errors when reading the bytes
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ClassFile> {
         let magic = bytes.read_u32::<BigEndian>()?;
         if magic != MAGIC {
@@ -116,8 +214,46 @@ impl ClassFile {
 
     /// Serialize the `ClassFile` to bytes.
     ///
+    /// This function converts a `ClassFile` instance into its binary representation according to
+    /// the Java class file format specification.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use ristretto_classfile::{ClassFile, ConstantPool, Version, ClassAccessFlags};
+    /// use std::fs;
+    /// use std::io::{Cursor, Write};
+    ///
+    /// // Create a new class file
+    /// let mut constant_pool = ConstantPool::default();
+    /// let this_class = constant_pool.add_class("HelloWorld")?;
+    /// let super_class = constant_pool.add_class("java/lang/Object")?;
+    ///
+    /// let class_file = ClassFile {
+    ///     version: Version::Java21 { minor: 0 },
+    ///     access_flags: ClassAccessFlags::PUBLIC,
+    ///     constant_pool,
+    ///     this_class,
+    ///     super_class,
+    ///     ..Default::default()
+    /// };
+    ///
+    /// // Verify the class file is valid
+    /// class_file.verify()?;
+    ///
+    /// // Write the class file to a vector of bytes
+    /// let mut buffer = Vec::new();
+    /// class_file.to_bytes(&mut buffer)?;
+    ///
+    /// // Now you can save these bytes to a file
+    /// fs::write("HelloWorld.class", buffer)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    ///
     /// # Errors
-    /// - If there are more than 65,534 interfaces, fields, methods, or attributes.
+    /// - If there are more than 65,534 interfaces, fields, methods, or attributes
+    ///   (exceeding u16 capacity)
+    /// - If there are IO errors when writing to the output vector
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u32::<BigEndian>(MAGIC)?;
         self.version.to_bytes(bytes)?;
@@ -155,6 +291,50 @@ impl ClassFile {
 }
 
 impl fmt::Display for ClassFile {
+    /// Implements the Display trait for `ClassFile` to provide a human-readable representation.
+    ///
+    /// The formatted output includes:
+    /// - Class name and access flags
+    /// - Version information (minor and major versions)
+    /// - Flag descriptions
+    /// - Class references (`this_class` and `super_class`)
+    /// - Counts of interfaces, fields, methods, and attributes
+    /// - Full constant pool listing
+    /// - Interface references
+    /// - Field definitions
+    /// - Method definitions
+    /// - Class attributes
+    ///
+    /// This format is similar to the output of the `javap -v` command.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use ristretto_classfile::ClassFile;
+    /// use std::fs;
+    /// use std::io::Cursor;
+    ///
+    /// // Load a class file
+    /// let bytes = fs::read("HelloWorld.class")?;
+    /// let class_file = ClassFile::from_bytes(&mut Cursor::new(bytes))?;
+    ///
+    /// // Print the class file in a human-readable format
+    /// println!("{class_file}");
+    ///
+    /// // Output will look similar to:
+    /// // public class HelloWorld
+    /// //   minor version: 0
+    /// //   major version: 65 (Java 21)
+    /// //   flags: (0x0021) ACC_PUBLIC, ACC_SUPER
+    /// //   this_class: #7
+    /// //   super_class: #2
+    /// //   interfaces: 0, fields: 0, methods: 1, attributes: 1
+    /// // Constant pool:
+    /// //    #1 = Methodref          #2.#3
+    /// //    #2 = Class              #4
+    /// //    ...
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let class_name = self.class_name().map_err(|_| fmt::Error)?;
         writeln!(f, "{} {class_name}", self.access_flags.as_code())?;
