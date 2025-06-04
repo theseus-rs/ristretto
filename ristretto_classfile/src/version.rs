@@ -4,9 +4,50 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
 
+/// Minor version number that indicates a Java preview release.
+///
+/// The value 65535 (0xFFFF) is used to indicate a preview version of Java.
 pub const JAVA_PREVIEW_MINOR_VERSION: u16 = 65535;
 
 /// Implementation of Version based on `ClassFile` format for major/minor versions.
+///
+/// Represents the Java version that corresponds to a specific `ClassFile` format version. Each enum
+/// variant corresponds to a specific Java version with its associated minor version.
+///
+/// # Examples
+///
+/// Creating and working with Version objects:
+///
+/// ```rust
+/// use ristretto_classfile::{Version, JAVA_PREVIEW_MINOR_VERSION};
+/// use std::io::Cursor;
+///
+/// // Create a Version from major and minor version numbers
+/// let java11 = Version::from(55, 0)?;
+/// let java17_preview = Version::from(61, JAVA_PREVIEW_MINOR_VERSION)?;
+///
+/// // Compare versions
+/// assert!(java17_preview.supports(&java11)); // Java 17 supports Java 11 features
+/// assert!(!java11.supports(&java17_preview)); // Java 11 doesn't support Java 17 features
+///
+/// // Check if a version is a preview release
+/// assert!(java17_preview.is_preview());
+/// assert!(!java11.is_preview());
+///
+/// // Get the display name of the version
+/// assert_eq!(java11.to_string(), "Java 11");
+///
+/// // Serialize and deserialize a version
+/// let mut bytes = Vec::new();
+/// java11.to_bytes(&mut bytes)?;
+///
+/// let mut cursor = Cursor::new(bytes);
+/// let deserialized = Version::from_bytes(&mut cursor)?;
+/// assert_eq!(deserialized, java11);
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+/// #  Reference
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1>
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
@@ -41,6 +82,25 @@ pub enum Version {
 
 impl Version {
     /// Create a new version from a major and minor version.
+    ///
+    /// The major version determines the Java version, while the minor version typically
+    /// indicates incremental updates or preview status.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Version;
+    ///
+    /// // Create Java 17 version
+    /// let java17 = Version::from(61, 0)?;
+    /// assert_eq!(java17.major(), 61);
+    /// assert_eq!(java17.minor(), 0);
+    ///
+    /// // Create Java 21 preview version
+    /// let java21_preview = Version::from(65, 65535)?;
+    /// assert!(java21_preview.is_preview());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
     /// Returns an error if the major and minor version are invalid.
@@ -82,6 +142,19 @@ impl Version {
     }
 
     /// Returns the major version.
+    ///
+    /// The major version corresponds to the Java version according to the `ClassFile` format.
+    /// For example, Java 8 has a major version of 52.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Version;
+    ///
+    /// let version = Version::from(52, 0)?; // Java 8
+    /// assert_eq!(version.major(), 52);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     #[must_use]
     pub fn major(&self) -> u16 {
         match self {
@@ -114,6 +187,21 @@ impl Version {
     }
 
     /// Returns the minor version.
+    ///
+    /// The minor version is typically 0 for standard releases or 65535 for preview releases.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Version, JAVA_PREVIEW_MINOR_VERSION};
+    ///
+    /// let standard = Version::from(61, 0)?; // Java 17
+    /// assert_eq!(standard.minor(), 0);
+    ///
+    /// let preview = Version::from(61, JAVA_PREVIEW_MINOR_VERSION)?; // Java 17 preview
+    /// assert_eq!(preview.minor(), JAVA_PREVIEW_MINOR_VERSION);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     #[must_use]
     pub fn minor(&self) -> u16 {
         match self {
@@ -147,12 +235,47 @@ impl Version {
     }
 
     /// Returns the major version for Java (e.g. 8 for Java 8).
+    ///
+    /// This converts the internal major version number to the more commonly used
+    /// Java version number by subtracting 44.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Version;
+    ///
+    /// let version = Version::from(52, 0)?; // Java 8
+    /// assert_eq!(version.java(), 8);
+    ///
+    /// let version = Version::from(61, 0)?; // Java 17
+    /// assert_eq!(version.java(), 17);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     #[must_use]
     pub fn java(&self) -> u16 {
         self.major() - 44
     }
 
     /// Returns true if the current major version supports the given version.
+    ///
+    /// A Java version supports all earlier versions but not later ones.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Version;
+    ///
+    /// let java11 = Version::from(55, 0)?; // Java 11
+    /// let java17 = Version::from(61, 0)?; // Java 17
+    /// let java21 = Version::from(65, 0)?; // Java 21
+    ///
+    /// // Java 17 supports Java 11 features
+    /// assert!(java17.supports(&java11));
+    ///
+    /// // Java 17 does not support Java 21 features
+    /// assert!(!java17.supports(&java21));
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     #[must_use]
     pub fn supports(&self, version: &Version) -> bool {
         self.major() >= version.major()
@@ -160,12 +283,30 @@ impl Version {
 
     /// Returns true if the current major version is >= Java 12 (`56`) is a preview minor
     /// version (`65535`).
+    ///
+    /// Preview versions are indicated by a minor version of 65535 (0xFFFF).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Version, JAVA_PREVIEW_MINOR_VERSION};
+    ///
+    /// let standard = Version::from(61, 0)?; // Java 17
+    /// assert!(!standard.is_preview());
+    ///
+    /// let preview = Version::from(61, JAVA_PREVIEW_MINOR_VERSION)?; // Java 17 preview
+    /// assert!(preview.is_preview());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     #[must_use]
     pub fn is_preview(&self) -> bool {
         self.major() >= 56 && self.minor() == JAVA_PREVIEW_MINOR_VERSION
     }
 
     /// Deserialize the major and minor version bytes.
+    ///
+    /// Reads the version information from a cursor pointing to the binary data
+    /// representing the class file's minor and major version.
     ///
     /// ```text
     /// |--------------------- u32 ---------------------|
@@ -174,8 +315,28 @@ impl Version {
     /// |     31 30 29 .. 16    |     15 14 13 .. 0     |
     /// ```
     ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Version;
+    /// use std::io::Cursor;
+    /// use byteorder::{BigEndian, WriteBytesExt};
+    ///
+    /// // Create a binary representation of Java 11 (major: 55, minor: 0)
+    /// let mut buffer = Vec::new();
+    /// buffer.write_u16::<BigEndian>(0)?; // minor version
+    /// buffer.write_u16::<BigEndian>(55)?; // major version
+    ///
+    /// let mut cursor = Cursor::new(buffer);
+    /// let version = Version::from_bytes(&mut cursor)?;
+    ///
+    /// assert_eq!(version.major(), 55);
+    /// assert_eq!(version.minor(), 0);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
-    /// Returns an error if the bytes do not represent a valid version.
+    /// Returns an error if reading from the byte cursor fails or if the version is invalid.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Version> {
         let minor = bytes.read_u16::<BigEndian>()?;
         let major = bytes.read_u16::<BigEndian>()?;
@@ -184,6 +345,8 @@ impl Version {
 
     /// Serialize the major and minor version to bytes.
     ///
+    /// Writes the version information to a vector of bytes according to the `ClassFile` format.
+    ///
     /// ```text
     /// |--------------------- u32 ---------------------|
     /// |--------- u16 ---------|--------- u16 ---------|
@@ -191,8 +354,26 @@ impl Version {
     /// |     31 30 29 .. 16    |     15 14 13 .. 0     |
     /// ```
     ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Version;
+    /// use std::io::Cursor;
+    /// use byteorder::{BigEndian, ReadBytesExt};
+    ///
+    /// let version = Version::from(55, 0)?; // Java 11
+    /// let mut bytes = Vec::new();
+    /// version.to_bytes(&mut bytes)?;
+    ///
+    /// // The bytes should represent minor version (0) followed by major version (55)
+    /// let mut cursor = Cursor::new(bytes);
+    /// assert_eq!(cursor.read_u16::<BigEndian>()?, 0); // minor version
+    /// assert_eq!(cursor.read_u16::<BigEndian>()?, 55); // major version
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
-    /// Should not occur; reserved for future use.
+    /// Returns an error if writing to the byte vector fails.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.minor())?;
         bytes.write_u16::<BigEndian>(self.major())?;
@@ -201,12 +382,52 @@ impl Version {
 }
 
 impl Default for Version {
+    /// Returns the default version, which is Java 1.0.2 with minor version 0.
+    ///
+    /// This is useful when you need to initialize a `Version` with the earliest supported Java
+    /// version.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Version;
+    ///
+    /// // Create a default Version
+    /// let version = Version::default();
+    ///
+    /// // The default version is Java 1.0.2
+    /// assert_eq!(version.to_string(), "Java 1.0.2");
+    /// assert_eq!(version.major(), 45);
+    /// assert_eq!(version.minor(), 0);
+    /// ```
     fn default() -> Self {
         Version::Java1_0_2 { minor: 0 }
     }
 }
 
 impl fmt::Display for Version {
+    /// Formats the Version as a human-readable string.
+    ///
+    /// The version is displayed as "Java X" where X is the Java version number.
+    /// For older versions (1.0.2 through 5.0), the format follows the historical
+    /// naming convention with decimals.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Version;
+    ///
+    /// let java1_2 = Version::from(46, 0)?;
+    /// assert_eq!(java1_2.to_string(), "Java 1.2");
+    ///
+    /// let java5 = Version::from(49, 0)?;
+    /// assert_eq!(java5.to_string(), "Java 5.0");
+    ///
+    /// let java8 = Version::from(52, 0)?;
+    /// assert_eq!(java8.to_string(), "Java 8");
+    ///
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Version::Java1_0_2 { .. } => write!(f, "Java 1.0.2"),

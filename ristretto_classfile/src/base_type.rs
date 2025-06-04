@@ -2,23 +2,62 @@ use crate::Error::InvalidBaseTypeCode;
 use crate::error::Result;
 use std::fmt;
 
-/// Implementation of `BaseType`.
+/// Represents the primitive types in the Java Virtual Machine.
+///
+/// `BaseType` corresponds to the basic primitive types in Java, each with a specific type
+/// descriptor character used in field and method descriptors in the class file format.
+///
+/// # Examples
+///
+/// ```rust
+/// use ristretto_classfile::{BaseType, Result};
+///
+/// // Parse a base type from its descriptor code
+/// let int_type = BaseType::parse('I')?;
+/// assert_eq!(int_type, BaseType::Int);
+///
+/// // Get the class name for display purposes
+/// assert_eq!(BaseType::Boolean.class_name(), "boolean");
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+/// # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.3.2>
 #[derive(Clone, Debug, PartialEq)]
 pub enum BaseType {
+    /// Represents the boolean primitive type (Java `boolean`)
     Boolean,
+    /// Represents the byte primitive type (Java `byte`)
     Byte,
+    /// Represents the character primitive type (Java `char`)
     Char,
+    /// Represents the double-precision floating-point primitive type (Java `double`)
     Double,
+    /// Represents the single-precision floating-point primitive type (Java `float`)
     Float,
+    /// Represents the integer primitive type (Java `int`)
     Int,
+    /// Represents the long integer primitive type (Java `long`)
     Long,
+    /// Represents the short integer primitive type (Java `short`)
     Short,
 }
 
 impl BaseType {
-    /// Return the code for the `BaseType`.
+    /// Returns the JVM descriptor character for the `BaseType`.
+    ///
+    /// Each primitive type in the JVM has a single character that represents it in field and method
+    /// descriptors.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::BaseType;
+    ///
+    /// assert_eq!(BaseType::Int.code(), 'I');
+    /// assert_eq!(BaseType::Boolean.code(), 'Z');
+    /// ```
     #[must_use]
     pub fn code(&self) -> char {
         match self {
@@ -33,7 +72,19 @@ impl BaseType {
         }
     }
 
-    /// Return the class name for the `BaseType`.
+    /// Returns the Java language class name for the `BaseType`.
+    ///
+    /// This method returns the standard Java language keyword that corresponds to this primitive
+    /// type.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::BaseType;
+    ///
+    /// assert_eq!(BaseType::Int.class_name(), "int");
+    /// assert_eq!(BaseType::Boolean.class_name(), "boolean");
+    /// ```
     #[must_use]
     pub fn class_name(&self) -> &'static str {
         match self {
@@ -48,7 +99,27 @@ impl BaseType {
         }
     }
 
-    /// Return the `BaseType` for a given code.
+    /// Parses a JVM descriptor character and returns the corresponding `BaseType`.
+    ///
+    /// This function takes a single character from a field or method descriptor and converts it to
+    /// the appropriate `BaseType` enum variant.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{BaseType, Result};
+    ///
+    /// // Parse valid base types
+    /// let int_type = BaseType::parse('I')?;
+    /// assert_eq!(int_type, BaseType::Int);
+    ///
+    /// let boolean_type = BaseType::parse('Z')?;
+    /// assert_eq!(boolean_type, BaseType::Boolean);
+    ///
+    /// // Invalid codes will return an error
+    /// assert!(BaseType::parse('X').is_err());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
     /// Returns an error if the code is invalid.
@@ -69,6 +140,25 @@ impl BaseType {
     }
 }
 
+/// Implements the `Display` trait for `BaseType`.
+///
+/// This implementation allows for convenient string representation of base types by formatting them
+/// as their Java language names (e.g., "int", "boolean").
+///
+/// # Examples
+///
+/// ```rust
+/// use ristretto_classfile::BaseType;
+/// use std::fmt::Display;
+///
+/// // Direct string conversion
+/// let type_str = BaseType::Int.to_string();
+/// assert_eq!(type_str, "int");
+///
+/// // Use in string formatting
+/// let formatted = format!("The type is: {}", BaseType::Boolean);
+/// assert_eq!(formatted, "The type is: boolean");
+/// ```
 impl fmt::Display for BaseType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.class_name())

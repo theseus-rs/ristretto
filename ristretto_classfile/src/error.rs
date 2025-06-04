@@ -1,10 +1,24 @@
+//! Error types for the Ristretto classfile parser.
+//!
+//! This module provides a comprehensive set of error types that can occur during JVM class file
+//! parsing, verification, and processing operations.
+//!
+//! The main type exported is the [`Error`] enum, which represents all possible errors that can
+//! occur. The module also provides a [`Result`] type alias for convenience.
+
 use std::num::TryFromIntError;
 use std::string::FromUtf8Error;
 
-/// Ristretto classfile result type
+/// A specialized Result type for Ristretto classfile operations.
+///
+/// This is a type alias for the standard library's [`Result`](core::result::Result) type with the
+/// error type defaulting to [`Error`].
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
-/// Errors that can occur processing ristretto classes
+/// Errors that can occur when processing JVM class files.
+///
+/// This enum represents all possible errors that can occur during parsing, verification, and
+/// processing of JVM class files in the Ristretto system.
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum Error {
     /// `BootstrapMethods` attribute not defined in class file

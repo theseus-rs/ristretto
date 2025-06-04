@@ -4,24 +4,95 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
 
-/// Implementation of the `ReferenceKind`.
+/// Represents the behavior of a dynamic call site in the Java Virtual Machine.
+///
+/// The `ReferenceKind` enum is used in `MethodHandle` constant pool entries to indicate how the
+/// method handle should be interpreted by the JVM. Each variant represents a different kind of
+/// access or invocation that can be performed on fields and methods.
+///
+/// These reference kinds are essential for method handles and invokedynamic instructions  in the
+/// JVM, which enable advanced language features like lambda expressions and  method references in
+/// Java.
+///
+/// # Examples
+///
+/// ```rust
+/// use ristretto_classfile::ReferenceKind;
+/// use std::io::Cursor;
+///
+/// // Create a reference kind
+/// let reference_kind = ReferenceKind::InvokeVirtual;
+///
+/// // Serialize to bytes
+/// let mut bytes = Vec::new();
+/// reference_kind.to_bytes(&mut bytes)?;
+/// assert_eq!(bytes, vec![5]); // InvokeVirtual has value 5
+///
+/// // Deserialize from bytes
+/// let mut cursor = Cursor::new(vec![6]);
+/// let deserialized = ReferenceKind::from_bytes(&mut cursor)?;
+/// assert_eq!(deserialized, ReferenceKind::InvokeStatic);
+///
+/// // Get all reference kinds
+/// let all_kinds = ReferenceKind::all();
+/// assert_eq!(all_kinds.len(), 9);
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+/// # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html#jvms-5.4.3.5>
 #[derive(Clone, Debug, PartialEq)]
 pub enum ReferenceKind {
+    /// Reference kind 1: Read a non-static field.
+    /// Used to get the value of an instance field.
     GetField,
+    /// Reference kind 2: Read a static field.
+    /// Used to get the value of a static field.
     GetStatic,
+    /// Reference kind 3: Write a non-static field.
+    /// Used to set the value of an instance field.
     PutField,
+    /// Reference kind 4: Write a static field.
+    /// Used to set the value of a static field.
     PutStatic,
+    /// Reference kind 5: Invoke a virtual method.
+    /// Used for regular method calls on object instances, with virtual method resolution.
     InvokeVirtual,
+    /// Reference kind 6: Invoke a static method.
+    /// Used for calls to static methods.
     InvokeStatic,
+    /// Reference kind 7: Invoke a special method.
+    /// Used for calls to instance initialization methods, private methods, and superclass methods.
     InvokeSpecial,
+    /// Reference kind 8: Invoke a constructor.
+    /// Used specifically for constructor invocation with the new keyword.
     NewInvokeSpecial,
+    /// Reference kind 9: Invoke an interface method.
+    /// Used for calls to interface methods.
     InvokeInterface,
 }
 
 impl ReferenceKind {
     /// Deserialize the `ReferenceKind` from bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ReferenceKind;
+    /// use std::io::Cursor;
+    ///
+    /// // Deserialize a valid reference kind
+    /// let mut cursor = Cursor::new(vec![5]);
+    /// let reference_kind = ReferenceKind::from_bytes(&mut cursor)?;
+    /// assert_eq!(reference_kind, ReferenceKind::InvokeVirtual);
+    ///
+    /// // Attempting to deserialize an invalid reference kind
+    /// let mut cursor = Cursor::new(vec![10]);
+    /// let result = ReferenceKind::from_bytes(&mut cursor);
+    /// assert!(result.is_err());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
     /// Returns an error if the bytes do not represent a valid `ReferenceKind`.
@@ -44,6 +115,25 @@ impl ReferenceKind {
 
     /// Serialize the `ReferenceKind` to bytes.
     ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ReferenceKind;
+    ///
+    /// // Serialize GetField (kind 1)
+    /// let reference_kind = ReferenceKind::GetField;
+    /// let mut bytes = Vec::new();
+    /// reference_kind.to_bytes(&mut bytes)?;
+    /// assert_eq!(bytes, vec![1]);
+    ///
+    /// // Serialize InvokeInterface (kind 9)
+    /// let reference_kind = ReferenceKind::InvokeInterface;
+    /// let mut bytes = Vec::new();
+    /// reference_kind.to_bytes(&mut bytes)?;
+    /// assert_eq!(bytes, vec![9]);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
     /// Should not occur; reserved for future use.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
@@ -52,6 +142,24 @@ impl ReferenceKind {
     }
 
     /// Get the numeric value of the reference kind.
+    ///
+    /// Returns the u8 value that corresponds to this reference kind in the JVM specification.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ReferenceKind;
+    ///
+    /// let reference_kind = ReferenceKind::InvokeVirtual;
+    /// assert_eq!(reference_kind.kind(), 5);
+    ///
+    /// let reference_kind = ReferenceKind::GetField;
+    /// assert_eq!(reference_kind.kind(), 1);
+    ///
+    /// // The kind value can be used when working with bytecode directly
+    /// let bytecode_value = ReferenceKind::InvokeInterface.kind();
+    /// assert_eq!(bytecode_value, 9);
+    /// ```
     #[must_use]
     pub fn kind(&self) -> u8 {
         match self {
@@ -68,6 +176,30 @@ impl ReferenceKind {
     }
 
     /// Get all reference kinds.
+    ///
+    /// Returns a vector containing all possible reference kinds defined in the JVM specification.
+    /// This can be useful for iterating through all reference kinds or for validation purposes.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ReferenceKind;
+    ///
+    /// // Get all reference kinds
+    /// let all_kinds = ReferenceKind::all();
+    ///
+    /// // There should be exactly 9 reference kinds
+    /// assert_eq!(all_kinds.len(), 9);
+    ///
+    /// // Check if a specific reference kind is in the list
+    /// assert!(all_kinds.contains(&ReferenceKind::InvokeVirtual));
+    ///
+    /// // Iterate through all reference kinds
+    /// for kind in ReferenceKind::all() {
+    ///     // Each kind should have a valid numeric value between 1 and 9
+    ///     assert!(kind.kind() >= 1 && kind.kind() <= 9);
+    /// }
+    /// ```
     #[must_use]
     pub fn all() -> Vec<ReferenceKind> {
         vec![
@@ -85,6 +217,34 @@ impl ReferenceKind {
 }
 
 impl fmt::Display for ReferenceKind {
+    /// Formats the `ReferenceKind` as a string.
+    ///
+    /// This implementation returns the name of the reference kind variant as a string,
+    /// which is useful for debugging, logging, and generating human-readable output.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ReferenceKind;
+    /// use std::fmt::Display;
+    ///
+    /// // Convert a reference kind to a string
+    /// let reference_kind = ReferenceKind::InvokeVirtual;
+    /// assert_eq!(reference_kind.to_string(), "InvokeVirtual");
+    ///
+    /// // Use with string formatting
+    /// let message = format!("Method handle type: {}", ReferenceKind::GetField);
+    /// assert_eq!(message, "Method handle type: GetField");
+    ///
+    /// // Useful in error messages or logging
+    /// let reference_kinds = vec![ReferenceKind::InvokeStatic, ReferenceKind::InvokeInterface];
+    /// for kind in reference_kinds {
+    ///     println!("Processing reference kind: {kind}");
+    ///     // This would print:
+    ///     // Processing reference kind: InvokeStatic
+    ///     // Processing reference kind: InvokeInterface
+    /// }
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ReferenceKind::GetField => write!(f, "GetField"),

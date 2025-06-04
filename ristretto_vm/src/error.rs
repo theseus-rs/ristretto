@@ -1,9 +1,23 @@
+//! Error handling for the Ristretto VM.
+//!
+//! This module provides a comprehensive error type system for the Ristretto VM,
+//! handling various error conditions that can occur during class loading,
+//! verification, execution, and other VM operations.
+//!
+//! The central type is [`Error`], which encompasses all possible error conditions.
+//! The module also provides a type alias [`Result<T>`](Result) for convenience.
+
 use crate::java_error::JavaError;
 
 /// Ristretto VM result type
+///
+/// This is a type alias for the standard library's [`Result`](core::result::Result) type with the
+/// error type defaulting to [`Error`].
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
-/// Errors that can occur when loading classes
+/// Comprehensive error type for the Ristretto VM.
+///
+/// This enum represents all the different error conditions that can occur within the Ristretto VM.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// An error occurred while loading a class file

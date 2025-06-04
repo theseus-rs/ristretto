@@ -8,6 +8,23 @@ use std::{fmt, io};
 
 /// Constant pool.
 ///
+/// The constant pool is a table of structures representing various string constants, class and
+/// interface names, field names, and other constants that are referred to within the `ClassFile`
+/// structure and its substructures.
+///
+/// # Example
+///
+/// ```rust
+/// use ristretto_classfile::{Constant, ConstantPool};
+///
+/// let mut constant_pool = ConstantPool::new();
+/// constant_pool.add_utf8("Hello, World!")?;
+/// constant_pool.add_class("java/lang/Object")?;
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+///  # References
+///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4>
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConstantPool {
@@ -16,6 +33,17 @@ pub struct ConstantPool {
 
 impl ConstantPool {
     /// Create a new constant pool.
+    ///
+    /// Creates an empty constant pool with a placeholder entry at index 0.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let constant_pool = ConstantPool::new();
+    /// assert_eq!(0, constant_pool.len());
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         // The constant pool is 1-based, so the first entry is a placeholder.
@@ -25,6 +53,19 @@ impl ConstantPool {
     }
 
     /// Push a constant to the pool.
+    ///
+    /// Adds a constant to the pool without returning its index. For Long and Double constants, an
+    /// additional placeholder entry is added.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Integer(42));
+    /// assert_eq!(1, constant_pool.len());
+    /// ```
     pub fn push(&mut self, constant: Constant) {
         let add_placeholder = matches!(constant, Constant::Long(_) | Constant::Double(_));
         self.constants.push(ConstantEntry::Constant(constant));
@@ -35,7 +76,19 @@ impl ConstantPool {
 
     /// Add a constant to the pool and return the index.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add(Constant::Integer(42))?;
+    /// assert_eq!(1, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
     pub fn add(&mut self, constant: Constant) -> Result<u16> {
         // Logically the index is self.len() + 1.  However, since the constant pool is one based a
@@ -47,7 +100,23 @@ impl ConstantPool {
     }
 
     /// Get a constant from the pool by index; indexes are 1-based.
+    ///
     /// Returns None if the index is out of bounds.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Integer(42));
+    /// assert_eq!(Some(&Constant::Integer(42)), constant_pool.get(1));
+    /// assert_eq!(None, constant_pool.get(0)); // Index 0 is invalid
+    /// assert_eq!(None, constant_pool.get(2)); // Index out of bounds
+    /// ```
+    ///
+    /// # References
+    ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
     #[must_use]
     pub fn get(&self, index: u16) -> Option<&Constant> {
@@ -55,11 +124,27 @@ impl ConstantPool {
     }
 
     /// Get a constant from the pool by index; indexes are 1-based.
+    ///
     /// Returns an error if the index is out of bounds.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool, Error};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Integer(42));
+    /// assert!(constant_pool.try_get(1).is_ok());
+    /// assert!(matches!(constant_pool.try_get(0), Err(Error::InvalidConstantPoolIndex(0))));
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
     pub fn try_get(&self, index: u16) -> Result<&Constant> {
         let constant_entry = self.constants.get(index as usize);
         match constant_entry {
@@ -69,18 +154,55 @@ impl ConstantPool {
     }
 
     /// Get the number of constants in the pool.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// assert_eq!(0, constant_pool.len());
+    /// constant_pool.push(Constant::Integer(42));
+    /// assert_eq!(1, constant_pool.len());
+    /// ```
     #[must_use]
     pub fn len(&self) -> usize {
         self.constants.len() - 1
     }
 
     /// Check if the pool is empty.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// assert!(constant_pool.is_empty());
+    /// constant_pool.push(Constant::Integer(42));
+    /// assert!(!constant_pool.is_empty());
+    /// ```
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Get an iterator over the constants in the pool.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Integer(42));
+    /// constant_pool.push(Constant::Utf8("Hello".to_string()));
+    ///
+    /// let mut iterator = constant_pool.iter();
+    /// assert_eq!(Some(&Constant::Integer(42)), iterator.next());
+    /// assert_eq!(Some(&Constant::Utf8("Hello".to_string())), iterator.next());
+    /// assert_eq!(None, iterator.next());
+    /// ```
     #[must_use]
     pub fn iter(&self) -> ConstantPoolIterator {
         ConstantPoolIterator::new(self)
@@ -88,7 +210,21 @@ impl ConstantPool {
 
     /// Deserialize the `ConstantPool` from bytes.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    /// use std::io::Cursor;
+    ///
+    /// let bytes = vec![0, 2, 3, 0, 0, 0, 42]; // constant_pool_count=2, Integer=42
+    /// let mut cursor = Cursor::new(bytes);
+    /// let constant_pool = ConstantPool::from_bytes(&mut cursor)?;
+    /// assert_eq!(1, constant_pool.len());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// Returns an error if the bytes are not a valid constant pool.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ConstantPool> {
         let mut constant_pool = ConstantPool::default();
@@ -109,7 +245,22 @@ impl ConstantPool {
 
     /// Serialize the `ConstantPool` to bytes.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Integer(42));
+    ///
+    /// let mut bytes = Vec::new();
+    /// constant_pool.to_bytes(&mut bytes)?;
+    /// assert_eq!(&[0, 2, 3, 0, 0, 0, 42], bytes.as_slice()); // constant_pool_count=2, Integer=42
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         let constant_pool_count = u16::try_from(self.len())? + 1;
@@ -124,19 +275,49 @@ impl ConstantPool {
 
     /// Add a UTF-8 constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_utf8("Hello")?;
+    /// assert_eq!(1, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.7>
     pub fn add_utf8<S: AsRef<str>>(&mut self, value: S) -> Result<u16> {
         let value = value.as_ref().to_string();
         self.add(Constant::Utf8(value))
     }
 
     /// Get a UTF-8 constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a UTF-8 constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.7>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut pool = ConstantPool::new();
+    /// pool.push(Constant::Utf8("Hello".to_string()));
+    /// assert_eq!("Hello", pool.try_get_utf8(1)?);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a UTF-8 constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.7>
     pub fn try_get_utf8(&self, index: u16) -> Result<&String> {
         match self.try_get(index)? {
             Constant::Utf8(value) => Ok(value),
@@ -146,18 +327,48 @@ impl ConstantPool {
 
     /// Add an integer constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_integer(42)?;
+    /// assert_eq!(1, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
     pub fn add_integer(&mut self, value: i32) -> Result<u16> {
         self.add(Constant::Integer(value))
     }
 
     /// Get an integer constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not an integer constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Integer(42));
+    /// assert_eq!(&42, constant_pool.try_get_integer(1)?);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not an integer constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
     pub fn try_get_integer(&self, index: u16) -> Result<&i32> {
         match self.try_get(index)? {
             Constant::Integer(value) => Ok(value),
@@ -167,18 +378,48 @@ impl ConstantPool {
 
     /// Add a float constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_float(3.14)?;
+    /// assert_eq!(1, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
     pub fn add_float(&mut self, value: f32) -> Result<u16> {
         self.add(Constant::Float(value))
     }
 
     /// Get a float constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a float constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Float(3.14));
+    /// assert_eq!(&3.14, constant_pool.try_get_float(1)?);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a float constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
     pub fn try_get_float(&self, index: u16) -> Result<&f32> {
         match self.try_get(index)? {
             Constant::Float(value) => Ok(value),
@@ -188,18 +429,51 @@ impl ConstantPool {
 
     /// Add a long constant to the pool.
     ///
+    /// Note: Long constants take up two entries in the constant pool.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_long(42i64)?;
+    /// assert_eq!(1, index);
+    /// assert_eq!(2, constant_pool.len()); // Long takes two slots
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
     pub fn add_long(&mut self, value: i64) -> Result<u16> {
         self.add(Constant::Long(value))
     }
 
     /// Get a long constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a long constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Long(42i64));
+    /// assert_eq!(&42i64, constant_pool.try_get_long(1)?);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a long constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
     pub fn try_get_long(&self, index: u16) -> Result<&i64> {
         match self.try_get(index)? {
             Constant::Long(value) => Ok(value),
@@ -209,18 +483,51 @@ impl ConstantPool {
 
     /// Add a double constant to the pool.
     ///
+    /// Note: Double constants take up two entries in the constant pool.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_double(3.14)?;
+    /// assert_eq!(1, index);
+    /// assert_eq!(2, constant_pool.len()); // Double takes two slots
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
     pub fn add_double(&mut self, value: f64) -> Result<u16> {
         self.add(Constant::Double(value))
     }
 
     /// Get a double constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a double constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Double(3.14));
+    /// assert_eq!(&3.14, constant_pool.try_get_double(1)?);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a double constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
     pub fn try_get_double(&self, index: u16) -> Result<&f64> {
         match self.try_get(index)? {
             Constant::Double(value) => Ok(value),
@@ -230,19 +537,49 @@ impl ConstantPool {
 
     /// Add a class constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_class("java/lang/Object")?;
+    /// assert_eq!(2, index); // Index 1 is the UTF-8 constant, 2 is the class
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.1>
     pub fn add_class<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
         let utf8_index = self.add_utf8(name)?;
         self.add(Constant::Class(utf8_index))
     }
 
     /// Get a class constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a class constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.1>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let class_index = constant_pool.add_class("java/lang/Object")?;
+    /// assert_eq!("java/lang/Object", constant_pool.try_get_class(class_index)?);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a class constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.1>
     pub fn try_get_class(&self, index: u16) -> Result<&String> {
         match self.try_get(index)? {
             Constant::Class(utf8_index) => self.try_get_utf8(*utf8_index),
@@ -252,19 +589,49 @@ impl ConstantPool {
 
     /// Add a string constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_string("Hello, World!")?;
+    /// assert_eq!(2, index); // Index 1 is the UTF-8 constant, 2 is the string
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.3>
     pub fn add_string<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
         let utf8_index = self.add_utf8(name)?;
         self.add(Constant::String(utf8_index))
     }
 
     /// Get a string constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a string constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.3>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let string_index = constant_pool.add_string("Hello, World!")?;
+    /// assert_eq!("Hello, World!", constant_pool.try_get_string(string_index)?);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a string constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.3>
     pub fn try_get_string(&self, index: u16) -> Result<&String> {
         match self.try_get(index)? {
             Constant::String(value) => self.try_get_utf8(*value),
@@ -274,8 +641,24 @@ impl ConstantPool {
 
     /// Add a field reference constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let class_index = constant_pool.add_class("java/lang/System")?;
+    /// let index = constant_pool.add_field_ref(class_index, "out", "Ljava/io/PrintStream;")?;
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
     pub fn add_field_ref<S: AsRef<str>>(
         &mut self,
         class_index: u16,
@@ -290,11 +673,27 @@ impl ConstantPool {
     }
 
     /// Get a field constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a field constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::FieldRef { class_index: 1, name_and_type_index: 2 });
+    /// let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(1)?;
+    /// assert_eq!(&1u16, class_index);
+    /// assert_eq!(&2u16, name_and_type_index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a field constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
     pub fn try_get_field_ref(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::FieldRef {
@@ -307,8 +706,24 @@ impl ConstantPool {
 
     /// Add a method reference constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let class_index = constant_pool.add_class("java/io/PrintStream")?;
+    /// let index = constant_pool.add_method_ref(class_index, "println", "(Ljava/lang/String;)V")?;
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
     pub fn add_method_ref<S: AsRef<str>>(
         &mut self,
         class_index: u16,
@@ -323,11 +738,27 @@ impl ConstantPool {
     }
 
     /// Get a method constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a method constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut pool = ConstantPool::new();
+    /// pool.push(Constant::MethodRef { class_index: 1, name_and_type_index: 2 });
+    /// let (class_index, name_and_type_index) = pool.try_get_method_ref(1)?;
+    /// assert_eq!(&1u16, class_index);
+    /// assert_eq!(&2u16, name_and_type_index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a method constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
     pub fn try_get_method_ref(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::MethodRef {
@@ -340,8 +771,25 @@ impl ConstantPool {
 
     /// Add an interface method reference constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let class_index = constant_pool.add_class("java/lang/Comparable")?;
+    /// let index = constant_pool.add_interface_method_ref(class_index, "compareTo", "(Ljava/lang/Object;)I")?;
+    /// assert_eq!(6, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
     pub fn add_interface_method_ref<S: AsRef<str>>(
         &mut self,
         class_index: u16,
@@ -356,12 +804,28 @@ impl ConstantPool {
     }
 
     /// Get an interface method constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not an interface method constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let class_index = constant_pool.add_class("java/lang/Comparable")?;
+    /// let index = constant_pool.add_interface_method_ref(class_index, "compareTo", "(Ljava/lang/Object;)I")?;
+    /// let (class_idx, name_and_type_idx) = constant_pool.try_get_interface_method_ref(index)?;
+    /// assert_eq!(&class_index, class_idx);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not an interface method
     /// constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
     pub fn try_get_interface_method_ref(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::InterfaceMethodRef {
@@ -374,8 +838,24 @@ impl ConstantPool {
 
     /// Add a name and type constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_name_and_type("field", "I")?;
+    /// assert_eq!(3, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.6>
     pub fn add_name_and_type<S: AsRef<str>>(&mut self, name: S, descriptor: S) -> Result<u16> {
         let name_index = self.add_utf8(name)?;
         let descriptor_index = self.add_utf8(descriptor)?;
@@ -386,12 +866,28 @@ impl ConstantPool {
     }
 
     /// Get a name and type constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a name and type constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_name_and_type("field", "I")?;
+    /// let (name_idx, descriptor_idx) = constant_pool.try_get_name_and_type(index)?;
+    /// let name = constant_pool.try_get_utf8(*name_idx)?;
+    /// assert_eq!("field", name);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a name and type
     /// constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.6>
     pub fn try_get_name_and_type(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::NameAndType {
@@ -404,8 +900,26 @@ impl ConstantPool {
 
     /// Add a method handle constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{ConstantPool, ReferenceKind};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let class_index = constant_pool.add_class("java/lang/System")?;
+    /// let field_index = constant_pool.add_field_ref(class_index, "out", "Ljava/io/PrintStream;")?;
+    /// let index = constant_pool.add_method_handle(ReferenceKind::GetStatic, field_index)?;
+    /// assert_eq!(7, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.8>
     pub fn add_method_handle(
         &mut self,
         reference_kind: ReferenceKind,
@@ -418,12 +932,29 @@ impl ConstantPool {
     }
 
     /// Get a method handle constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a method handle constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.8>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool, ReferenceKind};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let class_index = constant_pool.add_class("java/lang/System")?;
+    /// let field_index = constant_pool.add_field_ref(class_index, "out", "Ljava/io/PrintStream;")?;
+    /// let index = constant_pool.add_method_handle(ReferenceKind::GetStatic, field_index)?;
+    /// let (reference_kind, ref_index) = constant_pool.try_get_method_handle(index)?;
+    /// assert_eq!(&ReferenceKind::GetStatic, reference_kind);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a method handle
     /// constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.8>
     pub fn try_get_method_handle(&self, index: u16) -> Result<(&ReferenceKind, &u16)> {
         match self.try_get(index)? {
             Constant::MethodHandle {
@@ -436,20 +967,52 @@ impl ConstantPool {
 
     /// Add a method type constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_method_type("(Ljava/lang/String;)V")?;
+    /// assert_eq!(2, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.9>
     pub fn add_method_type<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
         let utf8_index = self.add_utf8(name)?;
         self.add(Constant::MethodType(utf8_index))
     }
 
     /// Get a method type constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a method type constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.9>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_method_type("(Ljava/lang/String;)V")?;
+    /// let descriptor_idx = constant_pool.try_get_method_type(index)?;
+    /// let descriptor = constant_pool.try_get_utf8(*descriptor_idx)?;
+    /// assert_eq!("(Ljava/lang/String;)V", descriptor);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a method type
     /// constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.9>
     pub fn try_get_method_type(&self, index: u16) -> Result<&u16> {
         match self.try_get(index)? {
             Constant::MethodType(name_and_type_index) => Ok(name_and_type_index),
@@ -459,8 +1022,25 @@ impl ConstantPool {
 
     /// Add a dynamic constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let bootstrap_method_attr_index = 1; // Would reference an actual bootstrap method in real usage
+    /// let index = constant_pool.add_dynamic(bootstrap_method_attr_index, "value", "I")?;
+    /// assert_eq!(4, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
     pub fn add_dynamic<S: AsRef<str>>(
         &mut self,
         bootstrap_method_attr_index: u16,
@@ -475,11 +1055,27 @@ impl ConstantPool {
     }
 
     /// Get a dynamic constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a dynamic constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let bootstrap_method_attr_index = 1; // Would reference an actual bootstrap method in real usage
+    /// let index = constant_pool.add_dynamic(bootstrap_method_attr_index, "value", "I")?;
+    /// let (bootstrap_idx, name_and_type_idx) = constant_pool.try_get_dynamic(index)?;
+    /// assert_eq!(&bootstrap_method_attr_index, bootstrap_idx);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a dynamic constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
     pub fn try_get_dynamic(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::Dynamic {
@@ -492,8 +1088,25 @@ impl ConstantPool {
 
     /// Add a invoke dynamic constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let bootstrap_method_attr_index = 1; // Would reference an actual bootstrap method in real usage
+    /// let index = constant_pool.add_invoke_dynamic(bootstrap_method_attr_index, "apply", "()Ljava/util/function/Function;")?;
+    /// assert_eq!(4, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
     pub fn add_invoke_dynamic<S: AsRef<str>>(
         &mut self,
         bootstrap_method_attr_index: u16,
@@ -508,12 +1121,28 @@ impl ConstantPool {
     }
 
     /// Get an invoke dynamic constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not an invoke dynamic constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let bootstrap_method_attr_index = 1; // Would reference an actual bootstrap method in real usage
+    /// let index = constant_pool.add_invoke_dynamic(bootstrap_method_attr_index, "apply", "()Ljava/util/function/Function;")?;
+    /// let (bootstrap_idx, name_and_type_idx) = constant_pool.try_get_invoke_dynamic(index)?;
+    /// assert_eq!(&bootstrap_method_attr_index, bootstrap_idx);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not an invoke
     /// dynamic constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
     pub fn try_get_invoke_dynamic(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::InvokeDynamic {
@@ -526,19 +1155,50 @@ impl ConstantPool {
 
     /// Add a module constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_module("java.base")?;
+    /// assert_eq!(2, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.11>
     pub fn add_module<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
         let utf8_index = self.add_utf8(name)?;
         self.add(Constant::Module(utf8_index))
     }
 
     /// Get a module constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a module constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.11>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_module("java.base")?;
+    /// let module_name = constant_pool.try_get_module(index)?;
+    /// assert_eq!("java.base", module_name);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a module constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.11>
     pub fn try_get_module(&self, index: u16) -> Result<&String> {
         match self.try_get(index)? {
             Constant::Module(name_index) => self.try_get_utf8(*name_index),
@@ -548,19 +1208,50 @@ impl ConstantPool {
 
     /// Add a package constant to the pool.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_package("java/lang")?;
+    /// assert_eq!(2, index);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.12>
     pub fn add_package<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
         let utf8_index = self.add_utf8(name)?;
         self.add(Constant::Package(utf8_index))
     }
 
     /// Get a package constant from the pool by index; indexes are 1-based.
-    /// Returns an error if the constant is not a package constant.
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.12>
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let index = constant_pool.add_package("java/lang")?;
+    /// let package_name = constant_pool.try_get_package(index)?;
+    /// assert_eq!("java/lang", package_name);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds or the constant is not a package constant.
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.12>
     pub fn try_get_package(&self, index: u16) -> Result<&String> {
         match self.try_get(index)? {
             Constant::Package(name_index) => self.try_get_utf8(*name_index),
@@ -570,7 +1261,23 @@ impl ConstantPool {
 
     /// Get a formatted string constant from the pool by index; indexes are 1-based.
     ///
+    /// Returns a human-readable string representation of the constant at the given index.
+    /// This is useful for debugging and displaying constant pool entries.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// let class_index = constant_pool.add_class("java/lang/Object")?;
+    /// let formatted = constant_pool.try_get_formatted_string(class_index)?;
+    /// assert_eq!("Class java/lang/Object", formatted);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
+    ///
     /// Returns an error if the index is out of bounds
     pub fn try_get_formatted_string(&self, index: u16) -> Result<String> {
         let value = match self.try_get(index)? {
@@ -668,26 +1375,97 @@ impl ConstantPool {
 }
 
 impl Default for ConstantPool {
+    /// Create a new empty constant pool.
+    ///
+    /// This is equivalent to calling `ConstantPool::new()`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ConstantPool;
+    /// use std::default::Default;
+    ///
+    /// let constant_pool = ConstantPool::default();
+    /// assert_eq!(0, constant_pool.len());
+    /// assert!(constant_pool.is_empty());
+    ///
+    /// // Using Default trait
+    /// let constant_pool: ConstantPool = Default::default();
+    /// assert_eq!(0, constant_pool.len());
+    /// ```
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// All 8 byte constants (double and long) take up two entries in the constant pool; a placeholder
-/// is used to facilitate efficient indexed access of constants in the pool. See the JVM spec for:
-/// <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
+/// Entry in the constant pool.
+///
+/// The constant pool uses a 1-based indexing scheme, where valid indices are in the range `[1, constant_pool_count-1]`.
+/// Additionally, certain constants (long and double) occupy two slots in the constant pool.
+///
+/// This enum represents either an actual constant or a placeholder entry used for:
+/// 1. The 0 index position (since constant pool is 1-based)
+/// 2. The slot following a long or double constant
+///
+/// # Example
+///
+/// ```rust
+/// use ristretto_classfile::{Constant, ConstantPool};
+///
+/// let mut constant_pool = ConstantPool::new();
+/// constant_pool.push(Constant::Long(42)); // Adds a constant entry and a placeholder entry
+/// assert_eq!(2, constant_pool.len()); // Long takes two slots
+/// ```
+///
+/// # References
+///
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
 #[derive(Clone, Debug, PartialEq)]
 enum ConstantEntry {
+    /// An actual constant in the pool.
     Constant(Constant),
-    /// The constant pool is one based; a placeholder is added at position 0 to facilitate one based
-    /// indexing without needing to calculate an offset.  The JVM specification also expects 8 byte
-    /// constants (e.g double and long) to take two places in the constant pool. This implementation
-    /// only uses one position for 8 byte constants and uses the placeholder as a way to correctly
-    /// offset the constant pool index.  
+
+    /// A placeholder entry in the constant pool.
+    ///
+    /// Used for two purposes:
+    /// 1. The constant pool is one-based; a placeholder is added at position 0 to facilitate
+    ///    one-based indexing without needing to calculate an offset.
+    /// 2. The JVM specification requires 8-byte constants (double and long) to take two consecutive
+    ///    positions in the constant pool. This implementation uses the placeholder as the second
+    ///    position for these 8-byte constants.
     Placeholder,
 }
 
 impl fmt::Display for ConstantEntry {
+    /// Implements the `Display` trait for `ConstantEntry` to provide a string representation.
+    ///
+    /// This implementation formats a `ConstantEntry` as follows:
+    /// - For a `Constant` entry, delegates to the `Display` implementation of the inner `Constant`
+    /// - For a `Placeholder` entry, produces an empty string
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    /// use std::fmt::Write;
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Integer(42));
+    /// constant_pool.push(Constant::Long(123_456_789));
+    ///
+    /// for entry in constant_pool.iter() {
+    ///     println!("{entry}");
+    /// }
+    ///
+    /// // The output will look like:
+    /// // Integer 42
+    /// // Long 123456789
+    /// # Ok::<(), std::fmt::Error>(())
+    /// ```
+    ///
+    /// # References
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4>
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ConstantEntry::Constant(constant) => write!(f, "{constant}"),
@@ -696,12 +1474,76 @@ impl fmt::Display for ConstantEntry {
     }
 }
 
+/// Iterator over constants in a constant pool.
+///
+/// This struct provides a convenient way to iterate over all constants in a constant pool, skipping
+/// placeholder entries automatically.
+///
+/// # Example
+///
+/// ```rust
+/// use ristretto_classfile::{Constant, ConstantPool};
+///
+/// let mut constant_pool = ConstantPool::new();
+/// constant_pool.add_utf8("foo")?;
+/// constant_pool.add_long(42)?; // Long constants take two slots
+/// constant_pool.add_integer(3)?;
+///
+/// // Using the iterator directly
+/// let mut iterator = constant_pool.iter();
+/// assert_eq!(Some(&Constant::Utf8("foo".to_string())), iterator.next());
+/// assert_eq!(Some(&Constant::Long(42)), iterator.next());
+/// assert_eq!(Some(&Constant::Integer(3)), iterator.next());
+/// assert_eq!(None, iterator.next());
+///
+/// // Or with a for loop
+/// for constant in constant_pool.iter() {
+///     println!("{constant}");
+/// }
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+/// # Implementation Details
+///
+/// The iterator automatically skips the placeholder entry at index 0 and any placeholder
+/// entries following long and double constants.
 pub struct ConstantPoolIterator<'a> {
     constant_pool: &'a ConstantPool,
     index: usize,
 }
 
 impl<'a> ConstantPoolIterator<'a> {
+    /// Creates a new iterator over constants in a constant pool.
+    ///
+    /// This constructor creates an iterator that automatically skips placeholder entries in the
+    /// constant pool, including the initial placeholder at index 0 and any placeholders following
+    /// long and double constants.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.add_utf8("foo")?;
+    /// constant_pool.add_long(42)?; // Takes two slots
+    /// constant_pool.add_integer(3)?;
+    ///
+    /// // Create an iterator using new
+    /// let mut itererator = constant_pool.iter();
+    ///
+    /// // The iterator will automatically skip placeholder entries
+    /// assert_eq!(Some(&Constant::Utf8("foo".to_string())), itererator.next());
+    /// assert_eq!(Some(&Constant::Long(42)), itererator.next());
+    /// assert_eq!(Some(&Constant::Integer(3)), itererator.next());
+    /// assert_eq!(None, itererator.next());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
+    /// # Notes
+    ///
+    /// The iterator begins at index 1 rather than 0, as the constant pool uses 1-based indexing
+    /// with a placeholder at index 0.
     pub fn new(constant_pool: &'a ConstantPool) -> Self {
         // index is 1-based; skip the first entry, which is a placeholder
         Self {
@@ -714,6 +1556,43 @@ impl<'a> ConstantPoolIterator<'a> {
 impl<'a> Iterator for ConstantPoolIterator<'a> {
     type Item = &'a Constant;
 
+    /// Returns the next constant in the iteration.
+    ///
+    /// This method advances the iterator and returns the next constant from the constant pool,
+    /// automatically skipping any placeholder entries. It returns `None` when there are no more
+    /// constants to iterate over.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.add_utf8("foo")?;
+    /// constant_pool.add_long(42)?; // Long constants take two slots
+    /// constant_pool.add_integer(3)?;
+    ///
+    /// let mut iterator = constant_pool.iter();
+    ///
+    /// // The first constant is the UTF-8 "Hello"
+    /// assert_eq!(Some(&Constant::Utf8("foo".to_string())), iterator.next());
+    ///
+    /// // The second constant is the Long value (the placeholder is skipped)
+    /// assert_eq!(Some(&Constant::Long(42)), iterator.next());
+    ///
+    /// // The third constant is the Integer
+    /// assert_eq!(Some(&Constant::Integer(3)), iterator.next());
+    ///
+    /// // No more constants
+    /// assert_eq!(None, iterator.next());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
+    /// # Implementation Notes
+    ///
+    /// - Placeholder entries (at index 0 and after Long/Double constants) are automatically skipped
+    /// - The iterator advances through the constant pool until it either finds a constant or
+    ///   reaches the end of the pool
     fn next(&mut self) -> Option<Self::Item> {
         while self.index < self.constant_pool.constants.len() {
             match &self.constant_pool.constants[self.index] {
@@ -740,6 +1619,36 @@ impl<'a> IntoIterator for &'a ConstantPool {
 }
 
 impl fmt::Display for ConstantPool {
+    /// Formats the `ConstantPool` for display.
+    ///
+    /// Produces a human-readable string representation of the constant pool, displaying each
+    /// constant with its index and formatted value. The output is formatted as a table with the
+    /// following columns:
+    /// - Index number (prefixed with #)
+    /// - Constant type
+    /// - Constant value
+    ///
+    /// Placeholder entries are skipped in the output.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.add_utf8("Hello, World!")?;
+    /// constant_pool.add_class("java/lang/Object")?;
+    /// constant_pool.add_string("test")?;
+    ///
+    /// // When printed, the output looks like:
+    /// //    #1 = Utf8             Hello, World!
+    /// //    #2 = Utf8             java/lang/Object
+    /// //    #3 = Class            java/lang/Object
+    /// //    #4 = Utf8             test
+    /// //    #5 = String           test
+    /// println!("{}", constant_pool);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // skip the first entry, which is a placeholder
         for (index, constant_entry) in self.constants.iter().skip(1).enumerate() {

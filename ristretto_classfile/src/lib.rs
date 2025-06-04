@@ -7,28 +7,81 @@
 //!
 //! ## Getting Started
 //!
-//! Implementation of the [JVM Class File Format](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html) that
-//! is used to read, write and verify Java classes.
+//! Implementation of the [JVM Class File Format](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html)
+//! that is used to read, write and verify Java classes.
 //!
 //! Supports reading and writing class files for any version of Java version up to 25. Verification
 //! of class files is supported, but is still a work in progress.
 //!
-//! # Examples
+//! ## Examples
+//!
+//! ### Creating a Simple Class File
 //!
 //! ```rust
-//! use ristretto_classfile::{ClassFile, ConstantPool, Result, Version};
+//! use ristretto_classfile::{ClassFile, ConstantPool, Version};
 //!
-//! fn main() -> Result<()> {
-//!     let mut constant_pool = ConstantPool::default();
-//!     let this_class = constant_pool.add_class("Foo")?;
-//!     let class_file = ClassFile {
-//!         version: Version::Java21 { minor: 0 },
-//!         constant_pool,
-//!         this_class,
-//!         ..Default::default()
-//!     };
-//!     class_file.verify()
-//! }
+//! let mut constant_pool = ConstantPool::default();
+//! let this_class = constant_pool.add_class("Foo")?;
+//! let class_file = ClassFile {
+//!     version: Version::Java21 { minor: 0 },
+//!     constant_pool,
+//!     this_class,
+//!     ..Default::default()
+//! };
+//! class_file.verify()?;
+//! # Ok::<(), ristretto_classfile::Error>(())
+//! ```
+//!
+//! ### Reading a Class File from Bytes
+//!
+//! ```rust,no_run
+//! use ristretto_classfile::ClassFile;
+//! use std::fs;
+//! use std::io::Cursor;
+//!
+//! // Read the bytes of a class file
+//! let bytes = fs::read("path/to/Example.class")?;
+//!
+//! // Parse the bytes into a ClassFile
+//! let class_file = ClassFile::from_bytes(&mut Cursor::new(bytes))?;
+//!
+//! // Now you can inspect the class
+//! println!("Class name: {}", class_file.class_name()?);
+//! println!("Class version: {}", class_file.version);
+//! # Ok::<(), ristretto_classfile::Error>(())
+//! ```
+//!
+//! ### Writing a Class File to Bytes
+//!
+//! ```rust,no_run
+//! use ristretto_classfile::{ClassFile, ConstantPool, Version, ClassAccessFlags};
+//! use std::fs;
+//! use std::io::{Cursor, Write};
+//!
+//! // Create a new class file
+//! let mut constant_pool = ConstantPool::default();
+//! let this_class = constant_pool.add_class("HelloWorld")?;
+//! let super_class = constant_pool.add_class("java/lang/Object")?;
+//!
+//! let class_file = ClassFile {
+//!     version: Version::Java21 { minor: 0 },
+//!     access_flags: ClassAccessFlags::PUBLIC,
+//!     constant_pool,
+//!     this_class,
+//!     super_class,
+//!     ..Default::default()
+//! };
+//!
+//! // Verify the class file is valid
+//! class_file.verify()?;
+//!
+//! // Write the class file to a vector of bytes
+//! let mut buffer = Vec::new();
+//! class_file.to_bytes(&mut buffer)?;
+//!
+//! // Now you can save these bytes to a file
+//! fs::write("HelloWorld.class", buffer)?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
 //! ## Safety

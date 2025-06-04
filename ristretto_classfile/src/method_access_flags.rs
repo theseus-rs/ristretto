@@ -5,7 +5,49 @@ use std::fmt;
 use std::io::Cursor;
 
 bitflags! {
-    /// Method access flags.
+    /// Method access flags used in Java class files to specify the access permissions and
+    /// properties of methods.
+    ///
+    /// These flags determine visibility (public, private, protected), mutability (final), execution
+    /// context (static, synchronized, native), and other characteristics of class methods. Multiple
+    /// flags can be combined using bitwise OR operations.
+    ///
+    /// # Examples
+    ///
+    /// Creating method access flags for common method types:
+    ///
+    /// ```rust
+    /// use ristretto_classfile::MethodAccessFlags;
+    /// use std::io::Cursor;
+    ///
+    /// // A public static method
+    /// let flags = MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC;
+    ///
+    /// // Check if specific flags are set
+    /// assert!(flags.contains(MethodAccessFlags::PUBLIC));
+    /// assert!(flags.contains(MethodAccessFlags::STATIC));
+    /// assert!(!flags.contains(MethodAccessFlags::FINAL));
+    /// assert!(!flags.contains(MethodAccessFlags::SYNCHRONIZED));
+    ///
+    /// // Get a code representation
+    /// assert_eq!("public static", flags.as_code());
+    ///
+    /// // Serialize to bytes
+    /// let mut bytes = Vec::new();
+    /// flags.to_bytes(&mut bytes)?;
+    /// assert_eq!(vec![0x00, 0x09], bytes); // 0x0009 = PUBLIC | STATIC
+    ///
+    /// // Deserialize from bytes
+    /// let mut cursor = Cursor::new(bytes);
+    /// let deserialized = MethodAccessFlags::from_bytes(&mut cursor)?;
+    /// assert_eq!(flags, deserialized);
+    ///
+    /// // Display as string
+    /// assert_eq!("(0x0009) ACC_PUBLIC, ACC_STATIC", flags.to_string());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
+    /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.5:~:text=method_info%20structure%20are%20as%20follows%3A-,access_flags,-The%20value%20of%20the%20access_flags>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -38,6 +80,17 @@ bitflags! {
 }
 
 impl Default for MethodAccessFlags {
+    /// Returns an empty set of method access flags.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::MethodAccessFlags;
+    ///
+    /// let flags = MethodAccessFlags::default();
+    /// assert!(flags.is_empty());
+    /// assert_eq!(flags.bits(), 0);
+    /// ```
     fn default() -> MethodAccessFlags {
         MethodAccessFlags::empty()
     }
@@ -46,8 +99,27 @@ impl Default for MethodAccessFlags {
 impl MethodAccessFlags {
     /// Deserialize the `MethodAccessFlags` from bytes.
     ///
+    /// This method reads a 16-bit big-endian value from the provided byte cursor and constructs a
+    /// `MethodAccessFlags` value from it.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::MethodAccessFlags;
+    /// use std::io::Cursor;
+    ///
+    /// // Create a cursor with bytes representing PUBLIC | STATIC (0x0009)
+    /// let mut bytes = Cursor::new(vec![0x00, 0x09]);
+    /// let flags = MethodAccessFlags::from_bytes(&mut bytes)?;
+    ///
+    /// assert!(flags.contains(MethodAccessFlags::PUBLIC));
+    /// assert!(flags.contains(MethodAccessFlags::STATIC));
+    /// assert_eq!(flags.bits(), 0x0009);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
-    /// Should not occur; reserved for future use.
+    /// Returns an error if reading from the byte cursor fails.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<MethodAccessFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let method_access_flags = MethodAccessFlags::from_bits_truncate(access_flags);
@@ -56,14 +128,50 @@ impl MethodAccessFlags {
 
     /// Serialize the `MethodAccessFlags` to bytes.
     ///
+    /// This method writes the flags as a 16-bit big-endian value to the provided byte vector.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::MethodAccessFlags;
+    ///
+    /// let flags = MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC;
+    /// let mut bytes = Vec::new();
+    ///
+    /// flags.to_bytes(&mut bytes)?;
+    /// assert_eq!(bytes, vec![0x00, 0x09]); // 0x0009 in big-endian
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
     /// # Errors
-    /// Should not occur; reserved for future use.
+    /// Returns an error if writing to the byte vector fails.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.bits())?;
         Ok(())
     }
 
-    /// Get the Method Access Flags as a string of code.
+    /// Get the `MethodAccessFlags` as a string of Java modifiers.
+    ///
+    /// This method returns a string representation of the access flags as they would
+    /// appear in Java source code. Note that not all flags (like BRIDGE, VARARGS, etc.)
+    /// have a corresponding Java modifier and will be omitted from the result.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::MethodAccessFlags;
+    ///
+    /// // Single flags
+    /// assert_eq!("public", MethodAccessFlags::PUBLIC.as_code());
+    /// assert_eq!("static", MethodAccessFlags::STATIC.as_code());
+    ///
+    /// // Multiple flags
+    /// let flags = MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL;
+    /// assert_eq!("public static final", flags.as_code());
+    ///
+    /// // Flags without Java modifiers return empty strings
+    /// assert_eq!("", MethodAccessFlags::empty().as_code());
+    /// ```
     #[must_use]
     pub fn as_code(&self) -> String {
         let mut modifiers = Vec::new();
@@ -97,6 +205,22 @@ impl MethodAccessFlags {
 }
 
 impl fmt::Display for MethodAccessFlags {
+    /// Formats the `MethodAccessFlags` as a string showing its hexadecimal value and a
+    /// comma-separated list of flag names.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::MethodAccessFlags;
+    ///
+    /// // Public method
+    /// let flags = MethodAccessFlags::PUBLIC;
+    /// assert_eq!("(0x0001) ACC_PUBLIC", flags.to_string());
+    ///
+    /// // Public static final method
+    /// let flags = MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL;
+    /// assert_eq!("(0x0019) ACC_PUBLIC, ACC_STATIC, ACC_FINAL", flags.to_string());
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut access_flags = Vec::new();
         if self.contains(MethodAccessFlags::PUBLIC) {

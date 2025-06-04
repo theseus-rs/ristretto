@@ -1,7 +1,19 @@
+//! Error handling for the Ristretto classloader
+//!
+//! This module provides the error types and result alias used throughout the Ristretto classloader.
+//! The [`Error`] enum covers various failure scenarios that can occur during class loading
+//! operations.
+
 /// Ristretto classloader result type
+///
+/// This is a type alias for the standard library's [`Result`](core::result::Result) type with the
+/// error type defaulting to [`Error`].
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 /// Errors that can occur when loading classes
+///
+/// This enum represents all possible error conditions that may arise during class loading
+/// operations in the Ristretto JVM implementation.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// An error occurred while processing a runtime archive
