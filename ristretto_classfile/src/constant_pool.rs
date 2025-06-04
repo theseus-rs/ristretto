@@ -305,9 +305,9 @@ impl ConstantPool {
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
     ///
-    /// let mut pool = ConstantPool::new();
-    /// pool.push(Constant::Utf8("Hello".to_string()));
-    /// assert_eq!("Hello", pool.try_get_utf8(1)?);
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Utf8("Hello".to_string()));
+    /// assert_eq!("Hello", constant_pool.try_get_utf8(1)?);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     ///
@@ -744,9 +744,9 @@ impl ConstantPool {
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
     ///
-    /// let mut pool = ConstantPool::new();
-    /// pool.push(Constant::MethodRef { class_index: 1, name_and_type_index: 2 });
-    /// let (class_index, name_and_type_index) = pool.try_get_method_ref(1)?;
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::MethodRef { class_index: 1, name_and_type_index: 2 });
+    /// let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(1)?;
     /// assert_eq!(&1u16, class_index);
     /// assert_eq!(&2u16, name_and_type_index);
     /// # Ok::<(), ristretto_classfile::Error>(())

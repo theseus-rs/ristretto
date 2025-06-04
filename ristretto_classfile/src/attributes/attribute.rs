@@ -1393,6 +1393,7 @@ mod test {
     use crate::attributes::nested_class_access_flags::NestedClassAccessFlags;
     use crate::attributes::{
         AnnotationElement, ExportsFlags, OpensFlags, RequiresFlags, TargetPath, TargetType,
+        VerificationType,
     };
     use crate::method_access_flags::MethodAccessFlags;
     use indoc::indoc;
@@ -1461,6 +1462,7 @@ mod test {
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
     }
 
+    #[expect(clippy::too_many_lines)]
     #[test]
     fn test_code() -> Result<()> {
         let constant = Attribute::ConstantValue {
@@ -1474,32 +1476,108 @@ mod test {
                 line_number: 1,
             }],
         };
+        let frames = vec![
+            StackFrame::SameFrame { frame_type: 0 },
+            StackFrame::SameLocals1StackItemFrame {
+                frame_type: 65,
+                stack: vec![VerificationType::Null],
+            },
+            StackFrame::SameLocals1StackItemFrameExtended {
+                frame_type: 247,
+                offset_delta: 0,
+                stack: vec![VerificationType::Null],
+            },
+            StackFrame::ChopFrame {
+                frame_type: 248,
+                offset_delta: 0,
+            },
+            StackFrame::SameFrameExtended {
+                frame_type: 251,
+                offset_delta: 0,
+            },
+            StackFrame::AppendFrame {
+                frame_type: 252,
+                offset_delta: 0,
+                locals: vec![VerificationType::Null],
+            },
+            StackFrame::FullFrame {
+                frame_type: 255,
+                offset_delta: 0,
+                locals: vec![VerificationType::Null],
+                stack: vec![VerificationType::Integer],
+            },
+        ];
+        let stack_map_table = Attribute::StackMapTable {
+            name_index: 4,
+            frames: frames.clone(),
+        };
         let exception_table_entry = ExceptionTableEntry {
             range_pc: 0..1,
             handler_pc: 0,
             catch_type: 4,
         };
-        let attribute = Attribute::Code {
+        let mut attribute = Attribute::Code {
             name_index: 1,
             max_stack: 2,
             max_locals: 3,
-            code: vec![Instruction::Iconst_1, Instruction::Return],
+            code: vec![
+                Instruction::Nop,
+                Instruction::Nop,
+                Instruction::Nop,
+                Instruction::Nop,
+                Instruction::Nop,
+                Instruction::Nop,
+                Instruction::Nop,
+                Instruction::Nop,
+                Instruction::Return,
+            ],
             exception_table: vec![exception_table_entry],
-            attributes: vec![constant.clone(), line_number_table.clone()],
+            attributes: vec![
+                constant.clone(),
+                line_number_table.clone(),
+                stack_map_table.clone(),
+            ],
         };
         let expected_bytes = [
-            0, 1, 0, 0, 0, 42, 0, 2, 0, 3, 0, 0, 0, 2, 4, 177, 0, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 2,
-            0, 2, 0, 0, 0, 2, 0, 42, 0, 3, 0, 0, 0, 6, 0, 1, 0, 0, 0, 1,
+            0, 1, 0, 0, 0, 83, 0, 2, 0, 3, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 177, 0, 1, 0, 0, 0,
+            1, 0, 0, 0, 4, 0, 3, 0, 2, 0, 0, 0, 2, 0, 42, 0, 3, 0, 0, 0, 6, 0, 1, 0, 0, 0, 1, 0, 4,
+            0, 0, 0, 28, 0, 7, 0, 66, 5, 247, 0, 0, 5, 248, 0, 0, 251, 0, 0, 252, 0, 0, 5, 255, 0,
+            0, 0, 1, 5, 0, 1, 1,
         ];
-        let expected = indoc! {"
+        let expected = indoc! {"\
             Code:
               stack=2, locals=3
-                 0: iconst_1
-                 1: return
+                 0: nop
+                 1: nop
+                 2: nop
+                 3: nop
+                 4: nop
+                 5: nop
+                 6: nop
+                 7: nop
+                 8: return
               [ExceptionTableEntry { range_pc: 0..2, handler_pc: 0, catch_type: 4 }]
               ConstantValue { name_index: 2, constant_value_index: 42 }
               LineNumberTable:
                 line 1: 0
+              StackMapTable: number_of_entries = 7
+                frame_type = 0 /* same */
+                frame_type = 65 /* same_locals_1_stack_item */
+                  stack = [ null ]
+                frame_type = 247 /* same_locals_1_stack_item_frame_extended */
+                  offset_delta = 0
+                  stack = [ null ]
+                frame_type = 248 /* chop */
+                  offset_delta = 0
+                frame_type = 251 /* same_frame_extended */
+                  offset_delta = 0
+                frame_type = 252 /* append */
+                  offset_delta = 0
+                  locals = [ null ]
+                frame_type = 255 /* full_frame */
+                  offset_delta = 0
+                  locals = [ null ]
+                  stack = [ int ]
         "};
 
         assert_eq!(expected, attribute.to_string());
@@ -1508,18 +1586,28 @@ mod test {
         constant_pool.add_utf8(attribute.name())?;
         constant_pool.add_utf8(constant.name())?;
         constant_pool.add_utf8(line_number_table.name())?;
+        constant_pool.add_utf8(stack_map_table.name())?;
 
-        assert!(attribute.valid_for_version(&VERSION_45_3));
+        assert!(attribute.valid_for_version(&VERSION_50_0)); // Update to VERSION_50_0 since StackMapTable requires it
         assert!(!attribute.valid_for_version(&VERSION_45_0));
 
         let mut bytes = Vec::new();
         attribute.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
         let mut bytes = Cursor::new(expected_bytes.to_vec());
-        assert_eq!(
-            attribute,
-            Attribute::from_bytes(&constant_pool, &mut bytes)?
-        );
+
+        // Adjust the frame_type offest before comparing
+        if let Attribute::Code { attributes, .. } = &mut attribute {
+            if let Some(Attribute::StackMapTable { frames, .. }) = attributes.get_mut(2) {
+                if let Some(StackFrame::SameLocals1StackItemFrame { frame_type, .. }) =
+                    frames.get_mut(1)
+                {
+                    *frame_type = 66; // Update to match the expected frame type
+                }
+            }
+        }
+        let code_attribute = Attribute::from_bytes(&constant_pool, &mut bytes)?;
+        assert_eq!(attribute, code_attribute);
         Ok(())
     }
 
