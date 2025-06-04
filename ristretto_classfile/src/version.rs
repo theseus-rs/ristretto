@@ -154,7 +154,7 @@ impl Version {
 
     /// Returns true if the current major version supports the given version.
     #[must_use]
-    pub fn supports(self, version: &Version) -> bool {
+    pub fn supports(&self, version: &Version) -> bool {
         self.major() >= version.major()
     }
 
