@@ -5,11 +5,22 @@
 //! [![License](https://img.shields.io/crates/l/ristretto_classloader)](https://github.com/theseus-rs/ristretto#license)
 //! [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
 //!
-//! ## Getting Started
+//! ## Overview
 //!
-//! Implementation of a JIT compiler for the Ristretto VM. The JIT compiler uses generates native
-//! code for the Ristretto VM bytecode. The generated code can be executed directly on the host
-//! machine.
+//! Ristretto JIT provides a Just-In-Time compiler for the Ristretto VM. The JIT compiler generates
+//! native code from Ristretto VM bytecode, allowing for high-performance execution directly on the
+//! host machine. The library supports both standard platforms and WebAssembly targets with tailored
+//! compilation strategies.  The appropriate compiler is automatically selected based on the target
+//! platform.
+//!
+//! ## Features
+//!
+//! - Fast execution through native code generation
+//! - Automatic optimization of bytecode
+//! - Control flow graph analysis
+//! - Platform-specific compilation for x86-64, aarch64 (aka ARM64), s390x (aka IBM Z) and riscv64
+//! - Comprehensive error handling
+//!
 #![forbid(clippy::allow_attributes)]
 #![allow(dead_code)]
 #![deny(clippy::pedantic)]

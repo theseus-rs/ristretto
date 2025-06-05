@@ -233,6 +233,7 @@ impl MethodRegistry {
             java::lang::stackstreamfactory::register(self);
             java::lang::stackstreamfactory_abstractstackwalker::register(self);
             java::lang::stacktraceelement::register(self);
+            java::lang::invoke::directmethodhandle_holder::register(self);
             java::lang::invoke::varhandle::register(self);
             java::lang::r#ref::reference::register(self);
             jdk::internal::agent::filesystemimpl::register(self);
@@ -712,8 +713,8 @@ mod tests {
         Ok(())
     }
 
-    /// Get all the native methods for a given Java runtime.
-    async fn get_native_methods(version: &str) -> Result<Vec<String>> {
+    /// Get all the intrinsic methods for a given Java runtime.
+    async fn get_intrinsic_methods(version: &str) -> Result<Vec<String>> {
         let (_java_home, _java_version, class_loader) =
             runtime::version_class_loader(version).await?;
         let class_path = class_loader.class_path();
@@ -748,6 +749,10 @@ mod tests {
         let mut registry_methods = method_registry
             .methods()
             .keys()
+            .filter(|&method| {
+                // Skip internal JVM runtime classes
+                !method.starts_with("java/lang/invoke/DirectMethodHandle$Holder")
+            })
             .cloned()
             .collect::<Vec<String>>();
         registry_methods.sort();
@@ -756,7 +761,7 @@ mod tests {
 
     /// Verify that all the native methods are registered for a given runtime
     async fn test_runtime(version: &str) -> Result<()> {
-        let native_methods = get_native_methods(version).await?;
+        let intrinsic_methods = get_intrinsic_methods(version).await?;
         let registry_methods = get_registry_methods(version).await?;
         // Required methods for ristretto
         #[expect(unused_mut)]
@@ -780,14 +785,16 @@ mod tests {
             .cloned()
             .collect::<Vec<String>>();
         #[cfg(target_os = "macos")]
-        let missing_methods = native_methods
+        let missing_methods = intrinsic_methods
             .iter()
             .filter(|method| !registry_methods.contains(method))
             .cloned()
             .collect::<Vec<String>>();
         let extra_methods = registry_methods
             .iter()
-            .filter(|method| !native_methods.contains(method) && !required_methods.contains(method))
+            .filter(|method| {
+                !intrinsic_methods.contains(method) && !required_methods.contains(method)
+            })
             .cloned()
             .collect::<Vec<String>>();
 
