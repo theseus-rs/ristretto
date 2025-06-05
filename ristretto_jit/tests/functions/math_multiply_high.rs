@@ -83,7 +83,7 @@ fn math_multiply_high() -> Result<()> {
         Instruction::Lreturn,
     ];
     let test_max_stack = test_method_code.max_stack(&constant_pool)?;
-    let test_max_locals = test_method_code.max_locals(&constant_pool, test_descriptor_index)?;
+    let test_max_locals = test_method_code.max_locals(&constant_pool, &test_method)?;
     test_method.attributes.push(Attribute::Code {
         name_index: code_index,
         max_stack: test_max_stack,

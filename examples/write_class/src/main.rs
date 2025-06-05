@@ -49,7 +49,7 @@ fn main() -> Result<()> {
         Instruction::Return,
     ];
     let init_max_stack = init_method_code.max_stack(&constant_pool)?;
-    let init_max_locals = init_method_code.max_locals(&constant_pool, *descriptor_index)?;
+    let init_max_locals = init_method_code.max_locals(&constant_pool, &init_method)?;
     init_method.attributes.push(Attribute::Code {
         name_index: code_index,
         max_stack: init_max_stack,
@@ -73,7 +73,7 @@ fn main() -> Result<()> {
         Instruction::Return,
     ];
     let main_max_stack = main_method_code.max_stack(&constant_pool)?;
-    let main_max_locals = main_method_code.max_locals(&constant_pool, main_descriptor_index)?;
+    let main_max_locals = main_method_code.max_locals(&constant_pool, &main_method)?;
     main_method.attributes.push(Attribute::Code {
         name_index: code_index,
         max_stack: main_max_stack,

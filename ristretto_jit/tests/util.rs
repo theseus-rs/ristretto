@@ -17,7 +17,7 @@ pub fn create_function(descriptor: &str, instructions: &[Instruction]) -> Result
         attributes: Vec::new(),
     };
     let test_max_stack = instructions.max_stack(&constant_pool)?;
-    let test_max_locals = instructions.max_locals(&constant_pool, test_descriptor_index)?;
+    let test_max_locals = instructions.max_locals(&constant_pool, &test_method)?;
     test_method.attributes.push(Attribute::Code {
         name_index: code_index,
         max_stack: test_max_stack,

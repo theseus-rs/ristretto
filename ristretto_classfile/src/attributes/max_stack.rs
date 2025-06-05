@@ -1,11 +1,64 @@
 use crate::attributes::Instruction;
 use crate::{ConstantPool, Result};
 
-/// Trait for calculating the maximum stack size.
+/// Trait for calculating the maximum stack size required by a sequence of JVM bytecode
+/// instructions.
+///
+/// This trait analyzes bytecode instructions to determine the maximum operand stack depth that can
+/// be reached during execution. The maximum stack size is a required value in the JVM class file
+/// format's Code attribute for methods.
+///
+/// # Example
+///
+/// ```rust
+/// use ristretto_classfile::attributes::{Instruction, MaxStack};
+/// use ristretto_classfile::ConstantPool;
+///
+/// // Create a constant pool (needed for some instructions)
+/// let constant_pool = ConstantPool::new();
+///
+/// // Define a sequence of instructions that manipulate the stack
+/// let instructions = [
+///     Instruction::Iconst_0,  // Pushes 0 onto stack (+1)
+///     Instruction::Iconst_1,  // Pushes 1 onto stack (+1, total: 2)
+///     Instruction::Pop,       // Removes top value (-1, total: 1)
+///     Instruction::Return,    // Method return (no effect on stack)
+/// ];
+///
+/// // Calculate the maximum stack size reached
+/// let max_size = instructions.max_stack(&constant_pool)?;
+/// assert_eq!(max_size, 2); // Maximum depth was 2 (after Iconst_1)
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+/// # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3>
 pub trait MaxStack {
-    /// Calculates the maximum stack size.
+    /// Calculates the maximum stack size required by the instructions.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::{Instruction, MaxStack};
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// // Create a constant pool (needed for some instructions)
+    /// let constant_pool = ConstantPool::new();
+    ///
+    /// // Define a sequence of instructions that manipulate the stack
+    /// let instructions = [
+    ///     Instruction::Iconst_0,  // Pushes 0 onto stack (+1)
+    ///     Instruction::Iconst_1,  // Pushes 1 onto stack (+1, total: 2)
+    ///     Instruction::Pop,       // Removes top value (-1, total: 1)
+    ///     Instruction::Return,    // Method return (no effect on stack)
+    /// ];
+    ///
+    /// // Calculate the maximum stack size reached
+    /// let max_size = instructions.max_stack(&constant_pool)?;
+    /// assert_eq!(max_size, 2); // Maximum depth was 2 (after Iconst_1)
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
     /// if the stack size exceeds `u16::MAX`
