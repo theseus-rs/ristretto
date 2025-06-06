@@ -77,3 +77,6 @@ pub(crate) use push::*;
 pub(crate) use stack::*;
 // pub(crate) use r#static::*;
 pub(crate) use wide::*;
+
+/// Constants for trap internal errors
+pub(crate) const TRAP_INTERNAL_ERROR: u8 = 127;

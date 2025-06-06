@@ -335,14 +335,13 @@ fn goto_w() -> Result<()> {
 }
 
 #[test]
-fn jsr() -> Result<()> {
+fn jsr_and_ret() -> Result<()> {
     let instructions = vec![
-        Instruction::Iconst_0,
-        Instruction::Jsr(5),
-        Instruction::Istore_1,
-        Instruction::Iload_1,
+        Instruction::Jsr(2),
         Instruction::Ireturn,
-        Instruction::Goto(2), // Note: this should be Instruction::Ret(2)
+        Instruction::Istore_0,
+        Instruction::Iconst_2,
+        Instruction::Ret(0),
     ];
     let function = create_function("()I", &instructions)?;
     let value = function.execute(vec![])?.expect("value");
@@ -351,14 +350,13 @@ fn jsr() -> Result<()> {
 }
 
 #[test]
-fn jsr_w() -> Result<()> {
+fn jsr_w_and_ret_w() -> Result<()> {
     let instructions = vec![
-        Instruction::Iconst_0,
-        Instruction::Jsr_w(5),
-        Instruction::Istore_1,
-        Instruction::Iload_1,
+        Instruction::Jsr_w(2),
         Instruction::Ireturn,
-        Instruction::Goto(2), // Note: this should be Instruction::Ret_w(2)
+        Instruction::Istore_0,
+        Instruction::Iconst_2,
+        Instruction::Ret_w(0),
     ];
     let function = create_function("()I", &instructions)?;
     let value = function.execute(vec![])?.expect("value");

@@ -8,9 +8,18 @@
 [![License](https://img.shields.io/crates/l/ristretto_jit)](https://github.com/theseus-rs/ristretto#license)
 [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
 
-## Getting Started
+## Overview
 
-Implementation of a Java Virual Machine (JVM) Just-In-Time (JIT) compiler.
+Ristretto JIT is an implementation of a Java Virtual Machine (JVM) Just-In-Time (JIT) compiler written in Rust. It
+dynamically compiles Java bytecode to native machine code at runtime to improve performance.
+
+## Features
+
+- Fast execution through native code generation
+- Automatic optimization of bytecode
+- Control flow graph analysis
+- Platform-specific compilation for x86-64, aarch64 (aka ARM64), s390x (aka IBM Z) and riscv64
+- Comprehensive error handling
 
 ## License
 

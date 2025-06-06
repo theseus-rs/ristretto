@@ -1,18 +1,39 @@
-//! # Ristretto `ClassLoader`
+//! # Ristretto VM
 //!
 //! [![Code Coverage](https://codecov.io/gh/theseus-rs/ristretto/branch/main/graph/badge.svg)](https://codecov.io/gh/theseus-rs/ristretto)
 //! [![Benchmarks](https://img.shields.io/badge/%F0%9F%90%B0_bencher-enabled-6ec241)](https://bencher.dev/perf/theseus-rs-ristretto)
-//! [![License](https://img.shields.io/crates/l/ristretto_classloader)](https://github.com/theseus-rs/ristretto#license)
+//! [![License](https://img.shields.io/crates/l/ristretto_vm)](https://github.com/theseus-rs/ristretto#license)
 //! [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
 //!
-//! ## Getting Started
+//! Ristretto VM is a Java Virtual Machine implementation written in pure Rust. It executes Java
+//! bytecode by interpreting class files loaded through the Ristretto classloader.
 //!
-//! Implementation of a [JVM Class Loader](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html)
-//! that is used to load Java classes. Classes can be loaded from the file system or from a URL;
-//! jar and modules are supported.  A runtime Java class loader can be created from a LTS version of
-//! [AWS Corretto](https://github.com/corretto).  The runtime class loader will download and install
-//! the requested version of Corretto into and create a class loader that can be used to load Java
-//! classes.
+//! ## Features
+//!
+//! - Bytecode interpretation with no dependencies on existing JVM implementations
+//! - Pure Rust implementation for memory safety and performance
+//! - Support for Java class loading and execution
+//! - Configurable VM parameters
+//! - Basic JIT compilation capabilities
+//!
+//! ## Example
+//!
+//! ```rust,no_run
+//! use ristretto_vm::{VM, Configuration, ConfigurationBuilder};
+//! use ristretto_classloader::ClassPath;
+//!
+//! // Create a VM configuration
+//! let configuration = ConfigurationBuilder::new()
+//!     .class_path("/path/to/classes".into())
+//!     .build()?;
+//!
+//! // Create the VM instance
+//! let mut vm = VM::new(configuration)?;
+//!
+//! // Execute main method of a class
+//! vm.execute_main("com.example.Main", vec![])?;
+//! # Ok::<(), ristretto_classfile::Error>(())
+//! ```
 //!
 //! ## Safety
 //!

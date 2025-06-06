@@ -171,7 +171,7 @@ pub(crate) fn jsr(stack: &mut OperandStack, address: u16) -> Result<ExecutionRes
     Ok(ContinueAtPosition(usize::try_from(address)?))
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.jsr_w>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.jsr>
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
 pub(crate) fn jsr_w(stack: &mut OperandStack, address: i32) -> Result<ExecutionResult> {
@@ -186,7 +186,7 @@ pub(crate) fn ret(locals: &LocalVariables, index: u8) -> Result<ExecutionResult>
     Ok(ContinueAtPosition(usize::try_from(address)?))
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ret_w>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ret>
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
 #[inline]
 pub(crate) fn ret_w(locals: &LocalVariables, index: u16) -> Result<ExecutionResult> {
