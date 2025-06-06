@@ -4,6 +4,7 @@ mod debug;
 mod double;
 mod float;
 mod integer;
+mod ldc;
 mod long;
 mod monitor;
 mod nop;
