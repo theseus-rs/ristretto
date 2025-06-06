@@ -1,4 +1,4 @@
-use crate::Error::{InternalError, InvalidBlockAddress};
+use crate::Error::InvalidBlockAddress;
 use crate::Result;
 use crate::control_flow_graph::append_block_params;
 use crate::instruction::TRAP_INTERNAL_ERROR;
@@ -558,9 +558,7 @@ pub(crate) fn ret_w(
         function_builder.switch_to_block(else_block);
         // If this is the last block, create a trap, indicating an invalid RET address.
         if index == sorted_block_entries.len() - 1 {
-            let Some(trap_code) = TrapCode::user(TRAP_INTERNAL_ERROR) else {
-                return Err(InternalError("Failed to create user trap code".to_string()));
-            };
+            let trap_code = TrapCode::unwrap_user(TRAP_INTERNAL_ERROR);
             function_builder.ins().trap(trap_code);
         }
     }
