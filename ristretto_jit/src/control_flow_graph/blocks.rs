@@ -91,23 +91,49 @@ pub(crate) fn get_blocks(
                     &mut blocks,
                 );
             }
-            Instruction::Goto(address) | Instruction::Jsr(address) => {
+            Instruction::Goto(address) => {
                 let address = usize::from(*address);
                 insert_stack(&mut stack_states, address, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
             }
-            Instruction::Goto_w(address) | Instruction::Jsr_w(address) => {
+            Instruction::Goto_w(address) => {
                 let address = usize::try_from(*address)?;
                 insert_stack(&mut stack_states, address, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
             }
-            Instruction::Ret(address) => {
+            Instruction::Jsr(address) => {
+                let Some(next_address) = program_counter.checked_add(1) else {
+                    return Err(InternalError(format!(
+                        "Address overflow: {program_counter} + 1"
+                    )));
+                };
+                insert_stack(&mut stack_states, next_address, &stack)?;
+                create_block_with_parameters(
+                    function_builder,
+                    &stack_states,
+                    next_address,
+                    &mut blocks,
+                );
+
                 let address = usize::from(*address);
                 insert_stack(&mut stack_states, address, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
             }
-            Instruction::Ret_w(address) => {
-                let address = usize::from(*address);
+            Instruction::Jsr_w(address) => {
+                let Some(next_address) = program_counter.checked_add(1) else {
+                    return Err(InternalError(format!(
+                        "Address overflow: {program_counter} + 1"
+                    )));
+                };
+                insert_stack(&mut stack_states, next_address, &stack)?;
+                create_block_with_parameters(
+                    function_builder,
+                    &stack_states,
+                    next_address,
+                    &mut blocks,
+                );
+
+                let address = usize::try_from(*address)?;
                 insert_stack(&mut stack_states, address, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
             }

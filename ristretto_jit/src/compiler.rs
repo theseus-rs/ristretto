@@ -18,7 +18,7 @@ use crate::instruction::{
     ixor, jsr, jsr_w, l2d, l2f, l2i, ladd, land, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w,
     ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lor, lrem, lreturn, lshl,
     lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr, lxor,
-    monitorenter, monitorexit, nop, pop, pop2, r#return, sipush, swap, wide,
+    monitorenter, monitorexit, nop, pop, pop2, ret, ret_w, r#return, sipush, swap, wide,
 };
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
@@ -512,7 +512,7 @@ impl Compiler {
             Instruction::Jsr(address) => {
                 jsr(function_builder, blocks, stack, program_counter, *address)?;
             }
-            // Instruction::Ret(index) => ret(locals, *index),
+            Instruction::Ret(index) => ret(function_builder, blocks, locals, stack, *index)?,
             // Instruction::Tableswitch {
             //     default,
             //     low,
@@ -579,7 +579,7 @@ impl Compiler {
             Instruction::Iinc_w(index, constant) => {
                 iinc_w(function_builder, locals, *index, *constant)?;
             }
-            // Instruction::Ret_w(index) => ret_w(locals, *index),
+            Instruction::Ret_w(index) => ret_w(function_builder, blocks, locals, stack, *index)?,
             _ => {
                 return Err(UnsupportedInstruction(instruction.clone()));
             }

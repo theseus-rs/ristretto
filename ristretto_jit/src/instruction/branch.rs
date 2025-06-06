@@ -1,8 +1,11 @@
-use crate::Error::InvalidBlockAddress;
+use crate::Error::{InternalError, InvalidBlockAddress};
 use crate::Result;
+use crate::control_flow_graph::append_block_params;
+use crate::instruction::TRAP_INTERNAL_ERROR;
+use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use cranelift::frontend::FunctionBuilder;
-use cranelift::prelude::{Block, InstBuilder, IntCC, Value, types};
+use cranelift::prelude::{Block, InstBuilder, IntCC, TrapCode, Value, types};
 use std::collections::HashMap;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.if_cond>
@@ -474,7 +477,7 @@ pub(crate) fn jsr(
     jsr_w(function_builder, blocks, stack, program_counter, address)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.jsr_w>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.jsr>
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
 pub(crate) fn jsr_w(
     function_builder: &mut FunctionBuilder,
@@ -496,6 +499,72 @@ pub(crate) fn jsr_w(
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let block_arguments = stack.as_block_arguments();
     function_builder.ins().jump(*block, &block_arguments);
+    Ok(())
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ret>
+pub(crate) fn ret(
+    function_builder: &mut FunctionBuilder,
+    blocks: &HashMap<usize, Block>,
+    locals: &LocalVariables,
+    stack: &mut OperandStack,
+    index: u8,
+) -> Result<()> {
+    let index = u16::from(index);
+    ret_w(function_builder, blocks, locals, stack, index)
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ret>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
+pub(crate) fn ret_w(
+    function_builder: &mut FunctionBuilder,
+    blocks: &HashMap<usize, Block>,
+    locals: &LocalVariables,
+    stack: &mut OperandStack,
+    index: u16,
+) -> Result<()> {
+    let index = usize::from(index);
+    let return_address = locals.get_int(function_builder, index)?;
+
+    let mut sorted_block_entries: Vec<(&usize, &Block)> = blocks.iter().collect();
+    sorted_block_entries.sort_by_key(|(address, _)| *address);
+    let block_arguments = stack.as_block_arguments();
+
+    for (index, (address, block)) in sorted_block_entries.iter().enumerate() {
+        // If the address is 0, it means this is the entry block, which should not be used.
+        if **address == 0 {
+            continue;
+        }
+
+        let stack_types = stack.to_type_vec(function_builder);
+        let else_block = function_builder.create_block();
+        append_block_params(function_builder, else_block, &stack_types);
+
+        let address = i64::try_from(**address)?;
+        let block_address = function_builder.ins().iconst(types::I32, address);
+        let condition_value =
+            function_builder
+                .ins()
+                .icmp(IntCC::Equal, return_address, block_address);
+
+        function_builder.ins().brif(
+            condition_value,
+            **block,
+            &block_arguments,
+            else_block,
+            &block_arguments,
+        );
+
+        function_builder.switch_to_block(else_block);
+        // If this is the last block, create a trap, indicating an invalid RET address.
+        if index == sorted_block_entries.len() - 1 {
+            let Some(trap_code) = TrapCode::user(TRAP_INTERNAL_ERROR) else {
+                return Err(InternalError("Failed to create user trap code".to_string()));
+            };
+            function_builder.ins().trap(trap_code);
+        }
+    }
+
     Ok(())
 }
 
