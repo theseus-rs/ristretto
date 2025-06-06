@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/v0.19.2...v0.20.0) - 2025-06-06
+
+### Added
+- add jit support for ret and ret_w
+
+### Fixed
+- [**breaking**] update MaxLocals to correctly handle static/virtual methods and category 2 (long/double) types
+- update Version.supports() to take a reference to self
+- correct stack overflow error in java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;
+- corrected jit bug where float was being treated as a double in ldc and ldc_w instructions
+
+### Other
+- update Cargo.toml dependencies
+- improve attribute code coverage
+- improve classfile documentation
+- stub support for polymorphic intrinsic methods
+- add jit ldc, ldc_w, and ldc2_w error tests
+- improve jit ret_w code coverage
+- stub java.lang.invoke.DirectMethodHandle$Holder
+- rename native_methods module to intrinsic_methods
+
+## `ristretto_vm` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.19.2...ristretto_vm-v0.20.0) - 2025-06-06
+
+### Added
+- add jit support for ret and ret_w
+
+### Fixed
+- correct stack overflow error in java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;
+
+### Other
+- stub java.lang.invoke.DirectMethodHandle$Holder
+- improve classfile documentation
+- stub support for polymorphic intrinsic methods
+- rename native_methods module to intrinsic_methods
+
+## `ristretto_jit` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.19.2...ristretto_jit-v0.20.0) - 2025-06-06
+
+### Added
+- add jit support for ret and ret_w
+
+### Fixed
+- corrected jit bug where float was being treated as a double in ldc and ldc_w instructions
+- [**breaking**] update MaxLocals to correctly handle static/virtual methods and category 2 (long/double) types
+
+### Other
+- add jit ldc, ldc_w, and ldc2_w error tests
+- improve jit ret_w code coverage
+- stub java.lang.invoke.DirectMethodHandle$Holder
+- improve classfile documentation
+- stub support for polymorphic intrinsic methods
+
+## `ristretto_classloader` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.19.2...ristretto_classloader-v0.20.0) - 2025-06-06
+
+### Fixed
+- correct stack overflow error in java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;
+
+### Other
+- improve classfile documentation
+- stub support for polymorphic intrinsic methods
+
+## `ristretto_classfile` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.19.2...ristretto_classfile-v0.20.0) - 2025-06-06
+
+### Fixed
+- [**breaking**] update MaxLocals to correctly handle static/virtual methods and category 2 (long/double) types
+- update Version.supports() to take a reference to self
+
+### Other
+- improve attribute code coverage
+- improve classfile documentation
+
 ## `ristretto_cli` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/v0.19.1...v0.19.2) - 2025-05-27
 
 ### Fixed
