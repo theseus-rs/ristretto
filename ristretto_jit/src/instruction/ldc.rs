@@ -100,3 +100,45 @@ pub(crate) fn ldc2_w(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Compiler;
+    use cranelift::frontend::FunctionBuilderContext;
+    use cranelift::module::Module;
+
+    #[test]
+    fn test_load_constant_error() -> Result<()> {
+        let jit_module = Compiler::jit_module()?;
+        let mut module_context = jit_module.make_context();
+        let mut function_context = FunctionBuilderContext::new();
+        let mut function_builder =
+            FunctionBuilder::new(&mut module_context.func, &mut function_context);
+
+        let mut constant_pool = ConstantPool::new();
+        let index = constant_pool.add_long(42)?;
+        let mut stack = OperandStack::with_capacity(1);
+
+        let result = load_constant(&constant_pool, &mut function_builder, &mut stack, index);
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_ldc2_w_constant_error() -> Result<()> {
+        let jit_module = Compiler::jit_module()?;
+        let mut module_context = jit_module.make_context();
+        let mut function_context = FunctionBuilderContext::new();
+        let mut function_builder =
+            FunctionBuilder::new(&mut module_context.func, &mut function_context);
+
+        let mut constant_pool = ConstantPool::new();
+        let index = constant_pool.add_integer(42)?;
+        let mut stack = OperandStack::with_capacity(1);
+
+        let result = ldc2_w(&constant_pool, &mut function_builder, &mut stack, index);
+        assert!(result.is_err());
+        Ok(())
+    }
+}

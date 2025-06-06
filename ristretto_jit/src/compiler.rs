@@ -57,7 +57,7 @@ impl Compiler {
     }
 
     /// Creates a new JIT module for the compiler.
-    fn jit_module() -> Result<JITModule> {
+    pub(crate) fn jit_module() -> Result<JITModule> {
         let isa_builder = cranelift::native::builder().map_err(UnsupportedTargetISA)?;
         let mut flag_builder = settings::builder();
         let settings = [("opt_level", "speed"), ("enable_verifier", ENABLE_VERIFIER)];
