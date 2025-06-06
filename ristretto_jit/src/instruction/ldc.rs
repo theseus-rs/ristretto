@@ -46,16 +46,7 @@ fn load_constant(
             stack.push_int(function_builder, value)?;
         }
         Constant::Float(value) => {
-            let value = f64::from(*value);
-            let value = function_builder.ins().f64const(value);
-            stack.push_float(function_builder, value)?;
-        }
-        Constant::Long(value) => {
-            let value = function_builder.ins().iconst(types::I64, *value);
-            stack.push_float(function_builder, value)?;
-        }
-        Constant::Double(value) => {
-            let value = function_builder.ins().f64const(*value);
+            let value = function_builder.ins().f32const(*value);
             stack.push_float(function_builder, value)?;
         }
         Constant::String(utf8_index) => {

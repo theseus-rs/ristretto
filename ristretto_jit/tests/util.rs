@@ -4,7 +4,16 @@ use ristretto_jit::{Compiler, Function, Result};
 
 /// Creates a function from the given descriptor and instructions.
 pub fn create_function(descriptor: &str, instructions: &[Instruction]) -> Result<Function> {
-    let mut constant_pool = ConstantPool::default();
+    let constant_pool = ConstantPool::default();
+    create_function_with_constant_pool(constant_pool, descriptor, instructions)
+}
+
+/// Creates a function with the specifid constant pool,from the given descriptor and instructions.
+pub fn create_function_with_constant_pool(
+    mut constant_pool: ConstantPool,
+    descriptor: &str,
+    instructions: &[Instruction],
+) -> Result<Function> {
     let class_name_index = constant_pool.add_class("Test")?;
     let code_index = constant_pool.add_utf8("Code")?;
     let test_name_index = constant_pool.add_utf8("test")?;
@@ -27,7 +36,7 @@ pub fn create_function(descriptor: &str, instructions: &[Instruction]) -> Result
         attributes: Vec::new(),
     });
     let class_file = ClassFile {
-        constant_pool,
+        constant_pool: constant_pool.clone(),
         access_flags: ClassAccessFlags::PUBLIC,
         this_class: class_name_index,
         methods: vec![test_method],
