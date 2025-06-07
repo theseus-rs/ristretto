@@ -119,6 +119,7 @@ impl Configuration {
     }
 }
 
+#[expect(clippy::missing_fields_in_debug)]
 impl Debug for Configuration {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Configuration")
@@ -304,7 +305,8 @@ impl ConfigurationBuilder {
     }
 }
 
-/// Debug implementation for ConfigurationBuilder
+/// Debug implementation for `ConfigurationBuilder`
+#[expect(clippy::missing_fields_in_debug)]
 impl Debug for ConfigurationBuilder {
     /// Format the configuration builder
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

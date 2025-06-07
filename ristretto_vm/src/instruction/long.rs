@@ -195,7 +195,7 @@ pub(crate) fn lastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
             let length = array.capacity()?;
             if index >= length {
                 return Err(ArrayIndexOutOfBoundsException { index, length }.into());
-            };
+            }
             array.set(index, value)?;
             Ok(Continue)
         }

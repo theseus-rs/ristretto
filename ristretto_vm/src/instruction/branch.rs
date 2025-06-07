@@ -142,10 +142,10 @@ pub(crate) fn if_acmpeq(stack: &mut OperandStack, address: u16) -> Result<Execut
 pub(crate) fn if_acmpne(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_object()?;
     let value1 = stack.pop_object()?;
-    if value1 != value2 {
-        Ok(ContinueAtPosition(usize::from(address)))
-    } else {
+    if value1 == value2 {
         Ok(Continue)
+    } else {
+        Ok(ContinueAtPosition(usize::from(address)))
     }
 }
 

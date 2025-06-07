@@ -741,7 +741,7 @@ mod tests {
     }
 
     /// Get all the methods for a given Java version.
-    async fn get_registry_methods(version: &str) -> Result<Vec<String>> {
+    fn get_registry_methods(version: &str) -> Result<Vec<String>> {
         let version_major = version.split_once('.').unwrap_or_default().0;
         let java_major_version: u16 = version_major.parse()?;
         let mut method_registry = MethodRegistry::new(java_major_version);
@@ -762,7 +762,7 @@ mod tests {
     /// Verify that all the native methods are registered for a given runtime
     async fn test_runtime(version: &str) -> Result<()> {
         let intrinsic_methods = get_intrinsic_methods(version).await?;
-        let registry_methods = get_registry_methods(version).await?;
+        let registry_methods = get_registry_methods(version)?;
         // Required methods for ristretto
         #[expect(unused_mut)]
         #[expect(clippy::useless_vec)]
@@ -805,7 +805,7 @@ mod tests {
                 missing_required_methods.len(),
                 missing_required_methods.join("\n"),
             ));
-        };
+        }
         #[cfg(target_os = "macos")]
         if !missing_methods.is_empty() {
             errors.push(format!(
@@ -813,14 +813,14 @@ mod tests {
                 missing_methods.len(),
                 missing_methods.join("\n"),
             ));
-        };
+        }
         if !extra_methods.is_empty() {
             errors.push(format!(
                 "Extra methods {}:\n{}\n",
                 extra_methods.len(),
                 extra_methods.join("\n"),
             ));
-        };
+        }
         let errors = errors.join("\n");
         assert_eq!("", errors);
         Ok(())

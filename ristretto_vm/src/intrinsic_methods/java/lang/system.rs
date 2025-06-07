@@ -186,7 +186,7 @@ async fn arraycopy(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<O
                 "source and destination must be arrays of the same type".to_string(),
             ));
         }
-    };
+    }
     Ok(None)
 }
 

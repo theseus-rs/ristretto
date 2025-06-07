@@ -265,7 +265,7 @@ impl Thread {
         let rust_method = method_registry.method(class_name, method_name, method_descriptor);
         // If the method is not found in the registry, try to JIT compile it.
         let jit_method = if rust_method.is_none() {
-            jit::compile(&vm, class, method).await?
+            jit::compile(&vm, class, method)?
         } else {
             None
         };
@@ -302,7 +302,7 @@ impl Thread {
             let result = rust_method(thread, parameters).await;
             (result, false)
         } else if let Some(jit_method) = jit_method {
-            let result = jit::execute(jit_method, method, parameters);
+            let result = jit::execute(&jit_method, method, parameters);
             (result, false)
         } else if method.is_native() {
             return Err(MethodNotFound {

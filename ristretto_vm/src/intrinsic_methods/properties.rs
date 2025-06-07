@@ -44,7 +44,7 @@ pub(crate) async fn system(thread: &Arc<Thread>) -> Result<HashMap<&'static str,
 /// # Note
 ///
 /// This function is used internally during JVM initialization or when properties need to be exposed
-/// to Java code via System.getProperties().
+/// to Java code via `System.getProperties()`.
 #[expect(clippy::too_many_lines)]
 fn system_properties(vm: &VM) -> Result<HashMap<&'static str, String>> {
     let mut properties = HashMap::new();

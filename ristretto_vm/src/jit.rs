@@ -53,7 +53,7 @@ static FUNCTION_CACHE: LazyLock<DashMap<String, Option<Arc<Function>>>> =
 ///
 /// Successfully compiled functions are cached in order to avoid recompilation. Failed compilation
 /// attempts are also cached (as `None`) to avoid retrying incompatible methods.
-pub(crate) async fn compile(
+pub(crate) fn compile(
     vm: &Arc<VM>,
     class: &Arc<Class>,
     method: &Method,
@@ -130,18 +130,18 @@ pub(crate) async fn compile(
 /// Parameters are converted from VM value representation to JIT value representation before
 /// execution, and the result is converted back from JIT value to VM value.
 pub(crate) fn execute(
-    function: Arc<Function>,
+    function: &Arc<Function>,
     method: &Method,
     mut parameters: Vec<Value>,
 ) -> Result<Option<Value>> {
     if !method.access_flags().contains(MethodAccessFlags::STATIC) {
         // Remove the first parameter (the `this` reference) for non-static methods
         parameters.remove(0);
-    };
+    }
 
-    let arguments = convert_parameters(parameters)?;
+    let arguments = convert_parameters(&parameters)?;
     let result = if let Some(value) = function.execute(arguments)? {
-        let value = convert_to_vm(&value)?;
+        let value = convert_to_vm(&value);
         Some(value)
     } else {
         None
@@ -150,9 +150,9 @@ pub(crate) fn execute(
 }
 
 /// Converts a vector of VM values to a vector of JIT values for passing to a JIT-compiled function.
-fn convert_parameters(parameters: Vec<Value>) -> Result<Vec<ristretto_jit::Value>> {
+fn convert_parameters(parameters: &[Value]) -> Result<Vec<ristretto_jit::Value>> {
     let mut values = Vec::with_capacity(parameters.len());
-    for value in &parameters {
+    for value in parameters {
         let value = convert_to_jit(value)?;
         values.push(value);
     }
@@ -177,14 +177,13 @@ fn convert_to_jit(value: &Value) -> Result<ristretto_jit::Value> {
 }
 
 /// Converts a JIT value returned by a compiled function back to a VM value.
-fn convert_to_vm(jit_value: &ristretto_jit::Value) -> Result<Value> {
-    let value = match jit_value {
+fn convert_to_vm(jit_value: &ristretto_jit::Value) -> Value {
+    match jit_value {
         ristretto_jit::Value::I32(value) => Value::from(*value),
         ristretto_jit::Value::I64(value) => Value::from(*value),
         ristretto_jit::Value::F32(value) => Value::from(*value),
         ristretto_jit::Value::F64(value) => Value::from(*value),
-    };
-    Ok(value)
+    }
 }
 
 #[cfg(test)]
@@ -199,7 +198,7 @@ mod tests {
             Value::Float(3.1),
             Value::Double(4.2),
         ];
-        let values = convert_parameters(parameters)?;
+        let values = convert_parameters(&parameters)?;
         assert_eq!(values.len(), 4);
         assert_eq!(values[0], ristretto_jit::Value::I32(1));
         assert_eq!(values[1], ristretto_jit::Value::I64(2));
@@ -254,34 +253,30 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_vm_i32() -> Result<()> {
+    fn test_convert_to_vm_i32() {
         let value = ristretto_jit::Value::I32(42);
-        let result = convert_to_vm(&value)?;
+        let result = convert_to_vm(&value);
         assert_eq!(result, Value::Int(42));
-        Ok(())
     }
 
     #[test]
-    fn test_convert_to_vm_i64() -> Result<()> {
+    fn test_convert_to_vm_i64() {
         let value = ristretto_jit::Value::I64(42);
-        let result = convert_to_vm(&value)?;
+        let result = convert_to_vm(&value);
         assert_eq!(result, Value::Long(42));
-        Ok(())
     }
 
     #[test]
-    fn test_convert_to_vm_f32() -> Result<()> {
+    fn test_convert_to_vm_f32() {
         let value = ristretto_jit::Value::F32(42.1);
-        let result = convert_to_vm(&value)?;
+        let result = convert_to_vm(&value);
         assert_eq!(result, Value::Float(42.1));
-        Ok(())
     }
 
     #[test]
-    fn test_convert_to_vm_f64() -> Result<()> {
+    fn test_convert_to_vm_f64() {
         let value = ristretto_jit::Value::F64(42.1);
-        let result = convert_to_vm(&value)?;
+        let result = convert_to_vm(&value);
         assert_eq!(result, Value::Double(42.1));
-        Ok(())
     }
 }

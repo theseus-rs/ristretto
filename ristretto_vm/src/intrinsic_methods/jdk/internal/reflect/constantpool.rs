@@ -390,8 +390,8 @@ async fn get_name_and_type_ref_index_at_0(
         | Constant::InvokeDynamic {
             name_and_type_index,
             ..
-        } => name_and_type_index,
-        Constant::MethodRef {
+        }
+        | Constant::MethodRef {
             name_and_type_index,
             ..
         } => name_and_type_index,
@@ -678,7 +678,8 @@ pub(crate) mod tests {
         let parameters = Parameters::new(vec![object, Value::Int(13)]);
         let result = get_double_at(thread, parameters).await?.expect("value");
         let value: f64 = result.try_into()?;
-        assert_eq!(4.0f64, value);
+        let value = value - 4.0f64;
+        assert!(value.abs() < 0.01f64);
         Ok(())
     }
 
@@ -730,7 +731,8 @@ pub(crate) mod tests {
         let parameters = Parameters::new(vec![object, Value::Int(12)]);
         let result = get_float_at(thread, parameters).await?.expect("value");
         let value: f32 = result.try_into()?;
-        assert_eq!(3.0f32, value);
+        let value = value - 3.0f32;
+        assert!(value.abs() < 0.01f32);
         Ok(())
     }
 
