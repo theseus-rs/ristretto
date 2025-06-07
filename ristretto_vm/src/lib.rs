@@ -22,17 +22,20 @@
 //! use ristretto_vm::{VM, Configuration, ConfigurationBuilder};
 //! use ristretto_classloader::ClassPath;
 //!
+//! # #[tokio::main]
+//! # async fn main() -> ristretto_vm::Result<()> {
 //! // Create a VM configuration
 //! let configuration = ConfigurationBuilder::new()
-//!     .class_path("/path/to/classes".into())
+//!     .class_path(ClassPath::from("/path/to/classes"))
 //!     .build()?;
 //!
 //! // Create the VM instance
-//! let mut vm = VM::new(configuration)?;
+//! let mut vm = VM::new(configuration).await?;
 //!
 //! // Execute main method of a class
-//! vm.execute_main("com.example.Main", vec![])?;
-//! # Ok::<(), ristretto_classfile::Error>(())
+//! let _ = vm.invoke_main(Vec::<String>::new()).await?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Safety

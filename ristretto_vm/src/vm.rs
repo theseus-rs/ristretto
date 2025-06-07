@@ -5,7 +5,7 @@ use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use crate::{Configuration, ConfigurationBuilder, Result};
 use dashmap::DashMap;
-use ristretto_classfile::{JAVA_PREVIEW_MINOR_VERSION, Version};
+use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_PREVIEW_MINOR_VERSION, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
     Class, ClassLoader, ClassPath, ClassPathEntry, Object, Reference, Value, runtime,
@@ -17,9 +17,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
 use tracing::debug;
-
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Java Virtual Machine
 #[derive(Debug)]

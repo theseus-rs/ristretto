@@ -3,7 +3,7 @@
 
 use ristretto_classfile::attributes::{Attribute, Instruction, LineNumber, MaxLocals, MaxStack};
 use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, ConstantPool, MethodAccessFlags, Result, Version,
+    ClassAccessFlags, ClassFile, ConstantPool, JAVA_21, MethodAccessFlags, Result,
 };
 use std::fs;
 
@@ -98,7 +98,7 @@ fn main() -> Result<()> {
     methods.push(main_method);
 
     let class_file = ClassFile {
-        version: Version::Java21 { minor: 0 },
+        version: JAVA_21,
         access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER,
         constant_pool,
         this_class,

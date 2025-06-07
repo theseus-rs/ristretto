@@ -18,12 +18,12 @@
 //! ### Creating a Simple Class File
 //!
 //! ```rust
-//! use ristretto_classfile::{ClassFile, ConstantPool, Version};
+//! use ristretto_classfile::{ClassFile, ConstantPool, Version, JAVA_21};
 //!
 //! let mut constant_pool = ConstantPool::default();
 //! let this_class = constant_pool.add_class("Foo")?;
 //! let class_file = ClassFile {
-//!     version: Version::Java21 { minor: 0 },
+//!     version: JAVA_21,
 //!     constant_pool,
 //!     this_class,
 //!     ..Default::default()
@@ -54,7 +54,7 @@
 //! ### Writing a Class File to Bytes
 //!
 //! ```rust,no_run
-//! use ristretto_classfile::{ClassFile, ConstantPool, Version, ClassAccessFlags};
+//! use ristretto_classfile::{ClassFile, ConstantPool, Version, ClassAccessFlags, JAVA_21};
 //! use std::fs;
 //! use std::io::{Cursor, Write};
 //!
@@ -64,7 +64,7 @@
 //! let super_class = constant_pool.add_class("java/lang/Object")?;
 //!
 //! let class_file = ClassFile {
-//!     version: Version::Java21 { minor: 0 },
+//!     version: JAVA_21,
 //!     access_flags: ClassAccessFlags::PUBLIC,
 //!     constant_pool,
 //!     this_class,
@@ -126,4 +126,8 @@ pub use field_type::FieldType;
 pub use method::Method;
 pub use method_access_flags::MethodAccessFlags;
 pub use reference_kind::ReferenceKind;
-pub use version::{JAVA_PREVIEW_MINOR_VERSION, Version};
+pub use version::{
+    JAVA_1_0_2, JAVA_1_1, JAVA_1_2, JAVA_1_3, JAVA_1_4, JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9,
+    JAVA_10, JAVA_11, JAVA_12, JAVA_13, JAVA_14, JAVA_15, JAVA_16, JAVA_17, JAVA_18, JAVA_19,
+    JAVA_20, JAVA_21, JAVA_22, JAVA_23, JAVA_24, JAVA_25, JAVA_PREVIEW_MINOR_VERSION, Version,
+};

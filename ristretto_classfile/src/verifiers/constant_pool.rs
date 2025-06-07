@@ -2,15 +2,11 @@ use crate::Error::{
     BootstrapMethodsNotDefined, InvalidBootstrapMethodIndex, InvalidVersionConstant,
 };
 use crate::Error::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
-use crate::Result;
 use crate::attributes::Attribute;
 use crate::class_file::ClassFile;
 use crate::constant::Constant;
 use crate::reference_kind::ReferenceKind;
-use crate::version::Version;
-
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_9: Version = Version::Java9 { minor: 0 };
+use crate::{JAVA_8, Result};
 
 /// Verify the `ClassFile` `ConstantPool`.
 pub fn verify(class_file: &ClassFile) -> Result<()> {
@@ -180,6 +176,7 @@ mod test {
     use crate::attributes::BootstrapMethod;
     use crate::class_file::ClassFile;
     use crate::constant::Constant;
+    use crate::{JAVA_6, JAVA_10, Version};
     use std::io::Cursor;
 
     fn get_class_file() -> Result<ClassFile> {
@@ -254,13 +251,13 @@ mod test {
 
     #[test]
     fn test_version_constants_method_type() -> Result<()> {
-        test_version_constants_error(Version::Java6 { minor: 0 }, Constant::MethodType(1))
+        test_version_constants_error(JAVA_6, Constant::MethodType(1))
     }
 
     #[test]
     fn test_version_constants_dynamic() -> Result<()> {
         test_version_constants_error(
-            Version::Java10 { minor: 0 },
+            JAVA_10,
             Constant::Dynamic {
                 bootstrap_method_attr_index: 1,
                 name_and_type_index: 2,
@@ -271,7 +268,7 @@ mod test {
     #[test]
     fn test_version_constants_invoke_dynamic() -> Result<()> {
         test_version_constants_error(
-            Version::Java6 { minor: 0 },
+            JAVA_6,
             Constant::InvokeDynamic {
                 bootstrap_method_attr_index: 1,
                 name_and_type_index: 2,
@@ -281,12 +278,12 @@ mod test {
 
     #[test]
     fn test_version_constants_module() -> Result<()> {
-        test_version_constants_error(Version::Java8 { minor: 0 }, Constant::Module(1))
+        test_version_constants_error(JAVA_8, Constant::Module(1))
     }
 
     #[test]
     fn test_version_constants_package() -> Result<()> {
-        test_version_constants_error(Version::Java8 { minor: 0 }, Constant::Package(1))
+        test_version_constants_error(JAVA_8, Constant::Package(1))
     }
 
     fn test_indexes_index_error(mut class_file: ClassFile, constant: Constant) -> Result<()> {
