@@ -1,255 +1,226 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::{Equal, GreaterThan, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/sun/management/internal/OperatingSystemImpl";
-
-/// Register all intrinsic methods for `com.sun.management.internal.OperatingSystemImpl`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "getFreePhysicalMemorySize0",
-            "()J",
-            get_free_physical_memory_size_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getSystemCpuLoad0",
-            "()D",
-            get_system_cpu_load_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getTotalPhysicalMemorySize0",
-            "()J",
-            get_total_physical_memory_size_0,
-        );
-    } else {
-        registry.register(CLASS_NAME, "getCpuLoad0", "()D", get_cpu_load_0);
-        registry.register(
-            CLASS_NAME,
-            "getFreeMemorySize0",
-            "()J",
-            get_free_memory_size_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getTotalMemorySize0",
-            "()J",
-            get_total_memory_size_0,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "getCommittedVirtualMemorySize0",
-        "()J",
-        get_committed_virtual_memory_size_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getFreeSwapSpaceSize0",
-        "()J",
-        get_free_swap_space_size_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getHostConfiguredCpuCount0",
-        "()I",
-        get_host_configured_cpu_count_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getHostOnlineCpuCount0",
-        "()I",
-        get_host_online_cpu_count_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getHostTotalCpuTicks0",
-        "()J",
-        get_host_total_cpu_ticks_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getMaxFileDescriptorCount0",
-        "()J",
-        get_max_file_descriptor_count_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getOpenFileDescriptorCount0",
-        "()J",
-        get_open_file_descriptor_count_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getProcessCpuLoad0",
-        "()D",
-        get_process_cpu_load_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getProcessCpuTime0",
-        "()J",
-        get_process_cpu_time_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getSingleCpuLoad0",
-        "(I)D",
-        get_single_cpu_load_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getTotalSwapSpaceSize0",
-        "()J",
-        get_total_swap_space_size_0,
-    );
-    registry.register(CLASS_NAME, "initialize0", "()V", initialize_0);
-}
-
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getCommittedVirtualMemorySize0()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_committed_virtual_memory_size_0(
+pub(crate) async fn get_committed_virtual_memory_size_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getCommittedVirtualMemorySize0()J")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getCpuLoad0()D",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_cpu_load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_cpu_load_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getCpuLoad0()D")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getFreePhysicalMemorySize0()J",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_free_physical_memory_size_0(
+pub(crate) async fn get_free_physical_memory_size_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getFreePhysicalMemorySize0()J")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getFreeMemorySize0()J",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_free_memory_size_0(
+pub(crate) async fn get_free_memory_size_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getFreeMemorySize0()J")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getFreeSwapSpaceSize0()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_free_swap_space_size_0(
+pub(crate) async fn get_free_swap_space_size_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getFreeSwapSpaceSize0()J")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getHostConfiguredCpuCount0()I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_host_configured_cpu_count_0(
+pub(crate) async fn get_host_configured_cpu_count_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getHostConfiguredCpuCount0()I")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getHostOnlineCpuCount0()I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_host_online_cpu_count_0(
+pub(crate) async fn get_host_online_cpu_count_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getHostOnlineCpuCount0()I")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getHostTotalCpuTicks0()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_host_total_cpu_ticks_0(
+pub(crate) async fn get_host_total_cpu_ticks_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getHostTotalCpuTicks0()J")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getMaxFileDescriptorCount0()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_max_file_descriptor_count_0(
+pub(crate) async fn get_max_file_descriptor_count_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getMaxFileDescriptorCount0()J")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getOpenFileDescriptorCount0()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_open_file_descriptor_count_0(
+pub(crate) async fn get_open_file_descriptor_count_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getOpenFileDescriptorCount0()J")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getProcessCpuLoad0()D",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_process_cpu_load_0(
+pub(crate) async fn get_process_cpu_load_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getProcessCpuLoad0()D")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getProcessCpuTime0()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_process_cpu_time_0(
+pub(crate) async fn get_process_cpu_time_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getProcessCpuTime0()J")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getSingleCpuLoad0(I)D",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_single_cpu_load_0(
+pub(crate) async fn get_single_cpu_load_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getSingleCpuLoad0(I)D")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getSystemCpuLoad0()D",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_system_cpu_load_0(
+pub(crate) async fn get_system_cpu_load_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getSystemCpuLoad0()D")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getTotalMemorySize0()J",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_total_memory_size_0(
+pub(crate) async fn get_total_memory_size_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getTotalMemorySize0()J")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getTotalPhysicalMemorySize0()J",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_total_physical_memory_size_0(
+pub(crate) async fn get_total_physical_memory_size_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getTotalPhysicalMemorySize0()J")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.getTotalSwapSpaceSize0()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_total_swap_space_size_0(
+pub(crate) async fn get_total_swap_space_size_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.management.internal.OperatingSystemImpl.getTotalSwapSpaceSize0()J")
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/OperatingSystemImpl.initialize0()V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn initialize_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn initialize_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 

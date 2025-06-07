@@ -1,25 +1,21 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/loops/FillSpans";
-
-/// Register all intrinsic methods for `sun.java2d.loops.FillSpans`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "FillSpans",
-        "(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IJLsun/java2d/pipe/SpanIterator;)V",
-        fill_spans,
-    );
-}
-
+#[intrinsic_method(
+    "sun/java2d/loops/FillSpans.FillSpans(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IJLsun/java2d/pipe/SpanIterator;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn fill_spans(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn fill_spans(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.java2d.loops.FillSpans.FillSpans(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IJLsun/java2d/pipe/SpanIterator;)V"
     );

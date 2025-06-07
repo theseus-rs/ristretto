@@ -1,147 +1,120 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "apple/laf/JRSUIControl";
-
-/// Register all intrinsic methods for `apple.laf.JRSUIControl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "disposeCFDictionary",
-        "(J)V",
-        dispose_cf_dictionary,
-    );
-    registry.register(CLASS_NAME, "getCFDictionary", "(Z)J", get_cf_dictionary);
-    registry.register(
-        CLASS_NAME,
-        "getNativeHitPart",
-        "(JJJDDDDDD)I",
-        get_native_hit_part,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNativePartBounds",
-        "([DJJJDDDDI)V",
-        get_native_part_bounds,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNativeScrollBarOffsetChange",
-        "(JJJDDDDIII)D",
-        get_native_scroll_bar_offset_change,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getPtrOfBuffer",
-        "(Ljava/nio/ByteBuffer;)J",
-        get_ptr_of_buffer,
-    );
-    registry.register(CLASS_NAME, "initNativeJRSUI", "()I", init_native_jrsui);
-    registry.register(
-        CLASS_NAME,
-        "paintChangesImage",
-        "([IIIJJJDDDDJ)I",
-        paint_changes_image,
-    );
-    registry.register(
-        CLASS_NAME,
-        "paintChangesToCGContext",
-        "(JJJJDDDDJ)I",
-        paint_changes_to_cg_context,
-    );
-    registry.register(CLASS_NAME, "paintImage", "([IIIJJJDDDD)I", paint_image);
-    registry.register(
-        CLASS_NAME,
-        "paintToCGContext",
-        "(JJJJDDDD)I",
-        paint_to_cg_context,
-    );
-    registry.register(CLASS_NAME, "syncChanges", "(JJ)I", sync_changes);
-}
-
+#[intrinsic_method("apple/laf/JRSUIControl.disposeCFDictionary(J)V", Any)]
 #[async_recursion(?Send)]
-async fn dispose_cf_dictionary(
+pub(crate) async fn dispose_cf_dictionary(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.disposeCFDictionary(J)V")
 }
 
+#[intrinsic_method("apple/laf/JRSUIControl.getCFDictionary(Z)J", Any)]
 #[async_recursion(?Send)]
-async fn get_cf_dictionary(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_cf_dictionary(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.getCFDictionary(Z)J")
 }
 
+#[intrinsic_method("apple/laf/JRSUIControl.getNativeHitPart(JJJDDDDDD)I", Any)]
 #[async_recursion(?Send)]
-async fn get_native_hit_part(
+pub(crate) async fn get_native_hit_part(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.getNativeHitPart(JJJDDDDDD)I")
 }
 
+#[intrinsic_method("apple/laf/JRSUIControl.getNativePartBounds([DJJJDDDDI)V", Any)]
 #[async_recursion(?Send)]
-async fn get_native_part_bounds(
+pub(crate) async fn get_native_part_bounds(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.getNativePartBounds([DJJJDDDDI)V")
 }
 
+#[intrinsic_method(
+    "apple/laf/JRSUIControl.getNativeScrollBarOffsetChange(JJJDDDDIII)D",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_native_scroll_bar_offset_change(
+pub(crate) async fn get_native_scroll_bar_offset_change(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.getNativeScrollBarOffsetChange(JJJDDDDIII)D")
 }
 
+#[intrinsic_method("apple/laf/JRSUIControl.getPtrOfBuffer(Ljava/nio/ByteBuffer;)J", Any)]
 #[async_recursion(?Send)]
-async fn get_ptr_of_buffer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_ptr_of_buffer(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.getPtrOfBuffer(Ljava/nio/ByteBuffer;)J")
 }
 
+#[intrinsic_method("apple/laf/JRSUIControl.initNativeJRSUI()I", Any)]
 #[async_recursion(?Send)]
-async fn init_native_jrsui(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_native_jrsui(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.initNativeJRSUI()I")
 }
 
+#[intrinsic_method("apple/laf/JRSUIControl.paintChangesImage([IIIJJJDDDDJ)I", Any)]
 #[async_recursion(?Send)]
-async fn paint_changes_image(
+pub(crate) async fn paint_changes_image(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.paintChangesImage([IIIJJJDDDDJ)I")
 }
 
+#[intrinsic_method("apple/laf/JRSUIControl.paintChangesToCGContext(JJJJDDDDJ)I", Any)]
 #[async_recursion(?Send)]
-async fn paint_changes_to_cg_context(
+pub(crate) async fn paint_changes_to_cg_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.paintChangesToCGContext(JJJJDDDDJ)I")
 }
 
+#[intrinsic_method("apple/laf/JRSUIControl.paintImage([IIIJJJDDDD)I", Any)]
 #[async_recursion(?Send)]
-async fn paint_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn paint_image(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.paintImage([IIIJJJDDDD)I")
 }
 
+#[intrinsic_method("apple/laf/JRSUIControl.paintToCGContext(JJJJDDDD)I", Any)]
 #[async_recursion(?Send)]
-async fn paint_to_cg_context(
+pub(crate) async fn paint_to_cg_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.paintToCGContext(JJJJDDDD)I")
 }
 
+#[intrinsic_method("apple/laf/JRSUIControl.syncChanges(JJ)I", Any)]
 #[async_recursion(?Send)]
-async fn sync_changes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn sync_changes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIControl.syncChanges(JJ)I")
 }
 

@@ -1,56 +1,37 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/apple/eawt/_AppMenuBarHandler";
-
-/// Register all intrinsic methods for `com.apple.eawt._AppMenuBarHandler`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "nativeActivateDefaultMenuBar",
-            "(J)V",
-            native_activate_default_menu_bar,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "nativeSetDefaultMenuBar",
-        "(J)V",
-        native_set_default_menu_bar,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetMenuState",
-        "(IZZ)V",
-        native_set_menu_state,
-    );
-}
-
+#[intrinsic_method(
+    "com/apple/eawt/_AppMenuBarHandler.nativeActivateDefaultMenuBar(J)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn native_activate_default_menu_bar(
+pub(crate) async fn native_activate_default_menu_bar(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMenuBarHandler.nativeActivateDefaultMenuBar(J)V")
 }
 
+#[intrinsic_method("com/apple/eawt/_AppMenuBarHandler.nativeSetDefaultMenuBar(J)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_default_menu_bar(
+pub(crate) async fn native_set_default_menu_bar(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMenuBarHandler.nativeSetDefaultMenuBar(J)V")
 }
 
+#[intrinsic_method("com/apple/eawt/_AppMenuBarHandler.nativeSetMenuState(IZZ)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_menu_state(
+pub(crate) async fn native_set_menu_state(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

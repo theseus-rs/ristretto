@@ -1,39 +1,48 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/foreign/abi/ProgrammableInvoker";
-
-/// Register all intrinsic methods for `jdk.internal.foreign.abi.ProgrammableInvoker`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "generateAdapter",
-        "(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J",
-        generate_adapter,
-    );
-    registry.register(CLASS_NAME, "invokeNative", "(JJ)V", invoke_native);
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-}
-
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn generate_adapter(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn generate_adapter(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "jdk.internal.foreign.abi.ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/ProgrammableInvoker.invokeNative(JJ)V",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn invoke_native(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn invoke_native(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.ProgrammableInvoker.invokeNative(JJ)V")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/ProgrammableInvoker.registerNatives()V",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 

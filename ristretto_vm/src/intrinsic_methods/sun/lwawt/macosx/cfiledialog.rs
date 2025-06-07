@@ -1,25 +1,18 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CFileDialog";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CFileDialog`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeRunFileDialog",
-        "(Ljava/lang/String;IZZZZLjava/lang/String;Ljava/lang/String;)[Ljava/lang/String;",
-        native_run_file_dialog,
-    );
-}
-
+#[intrinsic_method(
+    "sun/lwawt/macosx/CFileDialog.nativeRunFileDialog(Ljava/lang/String;IZZZZLjava/lang/String;Ljava/lang/String;)[Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_run_file_dialog(
+pub(crate) async fn native_run_file_dialog(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

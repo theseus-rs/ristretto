@@ -1,70 +1,62 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/net/Inet6AddressImpl";
-
-/// Register all intrinsic methods for `java.net.Inet6AddressImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "lookupAllHostAddr",
-            "(Ljava/lang/String;)[Ljava/net/InetAddress;",
-            lookup_all_host_addr,
-        );
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "lookupAllHostAddr",
-            "(Ljava/lang/String;I)[Ljava/net/InetAddress;",
-            lookup_all_host_addr,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "getHostByAddr",
-        "([B)Ljava/lang/String;",
-        get_host_by_addr,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getLocalHostName",
-        "()Ljava/lang/String;",
-        get_local_host_name,
-    );
-    registry.register(CLASS_NAME, "isReachable0", "([BII[BII)Z", is_reachable_0);
-}
-
+#[intrinsic_method("java/net/Inet6AddressImpl.getHostByAddr([B)Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
-async fn get_host_by_addr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_host_by_addr(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.Inet6AddressImpl.getHostByAddr([B)Ljava/lang/String;")
 }
 
+#[intrinsic_method("java/net/Inet6AddressImpl.getLocalHostName()Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
-async fn get_local_host_name(
+pub(crate) async fn get_local_host_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.net.Inet6AddressImpl.getLocalHostName()Ljava/lang/String;")
 }
 
+#[intrinsic_method("java/net/Inet6AddressImpl.isReachable0([BII[BII)Z", Any)]
 #[async_recursion(?Send)]
-async fn is_reachable_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_reachable_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.Inet6AddressImpl.isReachable0([BII[BII)Z")
 }
 
+#[intrinsic_method(
+    "java/net/Inet6AddressImpl.lookupAllHostAddr(Ljava/lang/String;)[Ljava/net/InetAddress;",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn lookup_all_host_addr(
+pub(crate) async fn lookup_all_host_addr_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.net.Inet6AddressImpl.lookupAllHostAddr(Ljava/lang/String;)[Ljava/net/InetAddress;")
+}
+
+#[intrinsic_method(
+    "java/net/Inet6AddressImpl.lookupAllHostAddr(Ljava/lang/String;I)[Ljava/net/InetAddress;",
+    GreaterThan(JAVA_17)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn lookup_all_host_addr_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("java.net.Inet6AddressImpl.lookupAllHostAddr(Ljava/lang/String;I)[Ljava/net/InetAddress;")
 }
 
 #[cfg(test)]
@@ -102,8 +94,17 @@ mod tests {
     #[should_panic(
         expected = "not yet implemented: java.net.Inet6AddressImpl.lookupAllHostAddr(Ljava/lang/String;)[Ljava/net/InetAddress;"
     )]
-    async fn test_lookup_all_host_addr() {
+    async fn test_lookup_all_host_addr_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = lookup_all_host_addr(thread, Parameters::default()).await;
+        let _ = lookup_all_host_addr_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.net.Inet6AddressImpl.lookupAllHostAddr(Ljava/lang/String;I)[Ljava/net/InetAddress;"
+    )]
+    async fn test_lookup_all_host_addr_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = lookup_all_host_addr_1(thread, Parameters::default()).await;
     }
 }

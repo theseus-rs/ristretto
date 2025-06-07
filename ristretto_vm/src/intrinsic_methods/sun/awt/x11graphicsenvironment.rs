@@ -1,92 +1,112 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/X11GraphicsEnvironment";
-
-/// Register all intrinsic methods for `sun.awt.X11GraphicsEnvironment`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "checkShmExt", "()I", check_shm_ext);
-    registry.register(
-        CLASS_NAME,
-        "getDefaultScreenNum",
-        "()I",
-        get_default_screen_num,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDisplayString",
-        "()Ljava/lang/String;",
-        get_display_string,
-    );
-    registry.register(CLASS_NAME, "getNumScreens", "()I", get_num_screens);
-    registry.register(
-        CLASS_NAME,
-        "getXineramaCenterPoint",
-        "()Ljava/awt/Point;",
-        get_xinerama_center_point,
-    );
-    registry.register(CLASS_NAME, "initDisplay", "(Z)V", init_display);
-    registry.register(CLASS_NAME, "initGLX", "()Z", init_glx);
-    registry.register(CLASS_NAME, "initXRender", "(ZZ)Z", init_x_render);
-    registry.register(CLASS_NAME, "pRunningXinerama", "()Z", p_running_xinerama);
-}
-
+#[intrinsic_method(
+    "sun/awt/X11GraphicsEnvironment.checkShmExt()I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn check_shm_ext(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn check_shm_ext(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.checkShmExt()I")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsEnvironment.getDefaultScreenNum()I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_default_screen_num(
+pub(crate) async fn get_default_screen_num(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.getDefaultScreenNum()I")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsEnvironment.getDisplayString()Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_display_string(
+pub(crate) async fn get_display_string(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.getDisplayString()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsEnvironment.getNumScreens()I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_num_screens(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_num_screens(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.getNumScreens()I")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsEnvironment.getXineramaCenterPoint()Ljava/awt/Point;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_xinerama_center_point(
+pub(crate) async fn get_xinerama_center_point(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.getXineramaCenterPoint()Ljava/awt/Point;")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsEnvironment.initDisplay(Z)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_display(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_display(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.initDisplay(Z)V")
 }
 
+#[intrinsic_method("sun/awt/X11GraphicsEnvironment.initGLX()Z", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn init_glx(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_glx(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.initGLX()Z")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsEnvironment.initXRender(ZZ)Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_x_render(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_x_render(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsEnvironment.initXRender(ZZ)Z")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsEnvironment.pRunningXinerama()Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn p_running_xinerama(
+pub(crate) async fn p_running_xinerama(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

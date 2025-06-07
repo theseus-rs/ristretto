@@ -1,68 +1,54 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::{
+    Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
+};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CTrayIcon";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CTrayIcon`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "nativeShowNotification",
-            "(JLjava/lang/String;Ljava/lang/String;J)V",
-            native_show_notification,
-        );
-    }
-
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(CLASS_NAME, "setNativeImage", "(JJZ)V", set_native_image);
-    } else {
-        registry.register(CLASS_NAME, "setNativeImage", "(JJZZ)V", set_native_image);
-    }
-
-    registry.register(CLASS_NAME, "nativeCreate", "()J", native_create);
-    registry.register(
-        CLASS_NAME,
-        "nativeGetIconLocation",
-        "(J)Ljava/awt/geom/Point2D;",
-        native_get_icon_location,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetToolTip",
-        "(JLjava/lang/String;)V",
-        native_set_tool_tip,
-    );
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CTrayIcon.nativeCreate()J", Any)]
 #[async_recursion(?Send)]
-async fn native_create(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_create(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CTrayIcon.nativeCreate()J")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CTrayIcon.nativeGetIconLocation(J)Ljava/awt/geom/Point2D;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_get_icon_location(
+pub(crate) async fn native_get_icon_location(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CTrayIcon.nativeGetIconLocation(J)Ljava/awt/geom/Point2D;")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CTrayIcon.nativeSetToolTip(JLjava/lang/String;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_tool_tip(
+pub(crate) async fn native_set_tool_tip(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CTrayIcon.nativeSetToolTip(JLjava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CTrayIcon.nativeShowNotification(JLjava/lang/String;Ljava/lang/String;J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn native_show_notification(
+pub(crate) async fn native_show_notification(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -71,9 +57,28 @@ async fn native_show_notification(
     )
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CTrayIcon.setNativeImage(JJZ)V",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_native_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_native_image_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CTrayIcon.setNativeImage(JJZ)V")
+}
+
+#[intrinsic_method(
+    "sun/lwawt/macosx/CTrayIcon.setNativeImage(JJZZ)V",
+    GreaterThan(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn set_native_image_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.lwawt.macosx.CTrayIcon.setNativeImage(JJZZ)V")
 }
 
 #[cfg(test)]
@@ -118,8 +123,17 @@ mod tests {
     #[should_panic(
         expected = "not yet implemented: sun.lwawt.macosx.CTrayIcon.setNativeImage(JJZ)V"
     )]
-    async fn test_set_native_image() {
+    async fn test_set_native_image_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_native_image(thread, Parameters::default()).await;
+        let _ = set_native_image_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.lwawt.macosx.CTrayIcon.setNativeImage(JJZZ)V"
+    )]
+    async fn test_set_native_image_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = set_native_image_1(thread, Parameters::default()).await;
     }
 }

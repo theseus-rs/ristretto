@@ -1,38 +1,31 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_21;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/foreign/abi/NativeEntryPoint";
-
-/// Register all intrinsic methods for `jdk.internal.foreign.abi.NativeEntryPoint`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(CLASS_NAME, "makeDowncallStub", "(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;ZIZ)J", make_downcall_stub);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "freeDowncallStub0",
-        "(J)Z",
-        free_downcall_stub_0,
-    );
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-}
-
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/NativeEntryPoint.freeDowncallStub0(J)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn free_downcall_stub_0(
+pub(crate) async fn free_downcall_stub_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.NativeEntryPoint.freeDowncallStub0(J)Z")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/NativeEntryPoint.makeDowncallStub(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;ZIZ)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn make_downcall_stub(
+pub(crate) async fn make_downcall_stub(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -41,8 +34,15 @@ async fn make_downcall_stub(
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/NativeEntryPoint.registerNatives()V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 

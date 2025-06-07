@@ -1,105 +1,148 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/NativeSocketAddress";
-
-/// Register all intrinsic methods for `sun.nio.ch.NativeSocketAddress`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "AFINET", "()I", afinet);
-    registry.register(CLASS_NAME, "AFINET6", "()I", afinet_6);
-    registry.register(CLASS_NAME, "offsetFamily", "()I", offset_family);
-    registry.register(CLASS_NAME, "offsetSin4Addr", "()I", offset_sin_4_addr);
-    registry.register(CLASS_NAME, "offsetSin4Port", "()I", offset_sin_4_port);
-    registry.register(CLASS_NAME, "offsetSin6Addr", "()I", offset_sin_6_addr);
-    registry.register(
-        CLASS_NAME,
-        "offsetSin6FlowInfo",
-        "()I",
-        offset_sin_6_flow_info,
-    );
-    registry.register(CLASS_NAME, "offsetSin6Port", "()I", offset_sin_6_port);
-    registry.register(
-        CLASS_NAME,
-        "offsetSin6ScopeId",
-        "()I",
-        offset_sin_6_scope_id,
-    );
-    registry.register(CLASS_NAME, "sizeofFamily", "()I", sizeof_family);
-    registry.register(CLASS_NAME, "sizeofSockAddr4", "()I", sizeof_sock_addr_4);
-    registry.register(CLASS_NAME, "sizeofSockAddr6", "()I", sizeof_sock_addr_6);
-}
-
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.AFINET()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn afinet(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn afinet(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.AF_INET()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.AFINET6()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn afinet_6(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn afinet_6(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.AF_INET6()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.offsetFamily()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn offset_family(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn offset_family(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetFamily()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.offsetSin4Addr()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn offset_sin_4_addr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn offset_sin_4_addr(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin4Addr()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.offsetSin4Port()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn offset_sin_4_port(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn offset_sin_4_port(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin4Port()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.offsetSin6Addr()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn offset_sin_6_addr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn offset_sin_6_addr(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin6Addr()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.offsetSin6FlowInfo()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn offset_sin_6_flow_info(
+pub(crate) async fn offset_sin_6_flow_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin6FlowInfo()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.offsetSin6Port()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn offset_sin_6_port(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn offset_sin_6_port(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin6Port()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.offsetSin6ScopeId()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn offset_sin_6_scope_id(
+pub(crate) async fn offset_sin_6_scope_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.offsetSin6ScopeId()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.sizeofFamily()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn sizeof_family(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn sizeof_family(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.sizeofFamily()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.sizeofSockAddr4()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn sizeof_sock_addr_4(
+pub(crate) async fn sizeof_sock_addr_4(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeSocketAddress.sizeofSockAddr4()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeSocketAddress.sizeofSockAddr6()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn sizeof_sock_addr_6(
+pub(crate) async fn sizeof_sock_addr_6(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

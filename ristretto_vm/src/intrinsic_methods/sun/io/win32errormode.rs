@@ -1,20 +1,18 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/io/Win32ErrorMode";
-
-/// Register all intrinsic methods for `sun.io.Win32ErrorMode`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "setErrorMode", "(J)J", set_error_mode);
-}
-
+#[intrinsic_method("sun/io/Win32ErrorMode.setErrorMode(J)J", Any)]
 #[async_recursion(?Send)]
-async fn set_error_mode(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_error_mode(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let _error_mode = parameters.pop_long()?;
     Ok(Some(Value::Long(0)))
 }

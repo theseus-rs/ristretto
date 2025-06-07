@@ -1,68 +1,22 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Between, LessThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::{Class, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/security/AccessController";
-
-/// Register all intrinsic methods for `java.security.AccessController`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "doPrivileged",
-            "(Ljava/security/PrivilegedAction;)Ljava/lang/Object;",
-            do_privileged_1,
-        );
-        registry.register(
-            CLASS_NAME,
-            "doPrivileged",
-            "(Ljava/security/PrivilegedAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;",
-            do_privileged_2,
-        );
-        registry.register(
-            CLASS_NAME,
-            "doPrivileged",
-            "(Ljava/security/PrivilegedExceptionAction;)Ljava/lang/Object;",
-            do_privileged_3,
-        );
-        registry.register(CLASS_NAME, "doPrivileged", "(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;", do_privileged_4);
-    } else if registry.java_major_version() <= JAVA_21 {
-        registry.register(
-            CLASS_NAME,
-            "ensureMaterializedForStackWalk",
-            "(Ljava/lang/Object;)V",
-            ensure_materialized_for_stack_walk,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getProtectionDomain",
-            "(Ljava/lang/Class;)Ljava/security/ProtectionDomain;",
-            get_protection_domain,
-        );
-    }
-
-    if registry.java_major_version() <= JAVA_21 {
-        registry.register(
-            CLASS_NAME,
-            "getInheritedAccessControlContext",
-            "()Ljava/security/AccessControlContext;",
-            get_inherited_access_control_context,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getStackAccessControlContext",
-            "()Ljava/security/AccessControlContext;",
-            get_stack_access_control_context,
-        );
-    }
-}
-
+#[intrinsic_method(
+    "java/security/AccessController.doPrivileged(Ljava/security/PrivilegedAction;)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn do_privileged_1(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_privileged_1(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
     let class: Arc<Class> = object.class().clone();
     let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
@@ -71,8 +25,15 @@ async fn do_privileged_1(thread: Arc<Thread>, mut parameters: Parameters) -> Res
         .await
 }
 
+#[intrinsic_method(
+    "java/security/AccessController.doPrivileged(Ljava/security/PrivilegedAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn do_privileged_2(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_privileged_2(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let _context = parameters.pop_object()?;
     let object = parameters.pop_object()?;
     let class: Arc<Class> = object.class().clone();
@@ -82,8 +43,15 @@ async fn do_privileged_2(thread: Arc<Thread>, mut parameters: Parameters) -> Res
         .await
 }
 
+#[intrinsic_method(
+    "java/security/AccessController.doPrivileged(Ljava/security/PrivilegedExceptionAction;)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn do_privileged_3(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_privileged_3(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
     let class: Arc<Class> = object.class().clone();
     let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
@@ -92,8 +60,15 @@ async fn do_privileged_3(thread: Arc<Thread>, mut parameters: Parameters) -> Res
         .await
 }
 
+#[intrinsic_method(
+    "java/security/AccessController.doPrivileged(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn do_privileged_4(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_privileged_4(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let _context = parameters.pop_object()?;
     let object = parameters.pop_object()?;
     let class: Arc<Class> = object.class().clone();
@@ -103,16 +78,24 @@ async fn do_privileged_4(thread: Arc<Thread>, mut parameters: Parameters) -> Res
         .await
 }
 
+#[intrinsic_method(
+    "java/security/AccessController.ensureMaterializedForStackWalk(Ljava/lang/Object;)V",
+    Between(JAVA_11, JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ensure_materialized_for_stack_walk(
+pub(crate) async fn ensure_materialized_for_stack_walk(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/security/AccessController.getInheritedAccessControlContext()Ljava/security/AccessControlContext;",
+    LessThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn get_inherited_access_control_context(
+pub(crate) async fn get_inherited_access_control_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -121,8 +104,12 @@ async fn get_inherited_access_control_context(
     )
 }
 
+#[intrinsic_method(
+    "java/security/AccessController.getProtectionDomain(Ljava/lang/Class;)Ljava/security/ProtectionDomain;",
+    Between(JAVA_11, JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn get_protection_domain(
+pub(crate) async fn get_protection_domain(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -131,8 +118,12 @@ async fn get_protection_domain(
     )
 }
 
+#[intrinsic_method(
+    "java/security/AccessController.getStackAccessControlContext()Ljava/security/AccessControlContext;",
+    LessThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn get_stack_access_control_context(
+pub(crate) async fn get_stack_access_control_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

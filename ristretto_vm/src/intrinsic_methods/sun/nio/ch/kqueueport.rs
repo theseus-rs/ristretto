@@ -1,38 +1,46 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/KQueuePort";
-
-/// Register all intrinsic methods for `sun.nio.ch.KQueuePort`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "close0", "(I)V", close_0);
-    registry.register(CLASS_NAME, "drain1", "(I)V", drain_1);
-    registry.register(CLASS_NAME, "interrupt", "(I)V", interrupt);
-    registry.register(CLASS_NAME, "socketpair", "([I)V", socketpair);
-}
-
+#[intrinsic_method("sun/nio/ch/KQueuePort.close0(I)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn close_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueuePort.close0(I)V");
 }
 
+#[intrinsic_method("sun/nio/ch/KQueuePort.drain1(I)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn drain_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn drain_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueuePort.drain1(I)V");
 }
 
+#[intrinsic_method("sun/nio/ch/KQueuePort.interrupt(I)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn interrupt(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn interrupt(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueuePort.interrupt(I)V");
 }
 
+#[intrinsic_method("sun/nio/ch/KQueuePort.socketpair([I)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn socketpair(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socketpair(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueuePort.socketpair([I)V");
 }
 

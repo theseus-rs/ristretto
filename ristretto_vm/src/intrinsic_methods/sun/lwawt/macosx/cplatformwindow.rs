@@ -1,205 +1,76 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CPlatformWindow";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CPlatformWindow`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "nativeSetNSWindowLocationByPlatform",
-            "(J)V",
-            native_set_ns_window_location_by_platform,
-        );
-        registry.register(
-            CLASS_NAME,
-            "nativeSetNSWindowStandardFrame",
-            "(JDDDD)V",
-            native_set_ns_window_standard_frame,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "nativeSetAllowAutomaticTabbingProperty",
-            "(Z)V",
-            native_set_allow_automatic_tabbing_property,
-        );
-        registry.register(
-            CLASS_NAME,
-            "nativeSetNSWindowLocationByPlatform",
-            "(J)V",
-            native_set_ns_window_location_by_platform,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "_toggleFullScreenMode",
-        "(J)V",
-        toggle_full_screen_mode,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeCreateNSWindow",
-        "(JJJDDDD)J",
-        native_create_ns_window,
-    );
-    registry.register(CLASS_NAME, "nativeDispose", "(J)V", native_dispose);
-    registry.register(
-        CLASS_NAME,
-        "nativeEnterFullScreenMode",
-        "(J)V",
-        native_enter_full_screen_mode,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeExitFullScreenMode",
-        "(J)V",
-        native_exit_full_screen_mode,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetNSWindowInsets",
-        "(J)Ljava/awt/Insets;",
-        native_get_ns_window_insets,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetTopmostPlatformWindowUnderMouse",
-        "()Lsun/lwawt/macosx/CPlatformWindow;",
-        native_get_topmost_platform_window_under_mouse,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativePushNSWindowToBack",
-        "(J)V",
-        native_push_ns_window_to_back,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativePushNSWindowToFront",
-        "(J)V",
-        native_push_ns_window_to_front,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeRevalidateNSWindowShadow",
-        "(J)V",
-        native_revalidate_ns_window_shadow,
-    );
-    registry.register(CLASS_NAME, "nativeSetEnabled", "(JZ)V", native_set_enabled);
-    registry.register(
-        CLASS_NAME,
-        "nativeSetNSWindowBounds",
-        "(JDDDD)V",
-        native_set_ns_window_bounds,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetNSWindowMenuBar",
-        "(JJ)V",
-        native_set_ns_window_menu_bar,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetNSWindowMinMax",
-        "(JDDDD)V",
-        native_set_ns_window_min_max,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetNSWindowMinimizedIcon",
-        "(JJ)V",
-        native_set_ns_window_minimized_icon,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetNSWindowRepresentedFilename",
-        "(JLjava/lang/String;)V",
-        native_set_ns_window_represented_filename,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetNSWindowStyleBits",
-        "(JII)V",
-        native_set_ns_window_style_bits,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetNSWindowTitle",
-        "(JLjava/lang/String;)V",
-        native_set_ns_window_title,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSynthesizeMouseEnteredExitedEvents",
-        "()V",
-        native_synthesize_mouse_entered_exited_events_1,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSynthesizeMouseEnteredExitedEvents",
-        "(JI)V",
-        native_synthesize_mouse_entered_exited_events_2,
-    );
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CPlatformWindow._toggleFullScreenMode(J)V", Any)]
 #[async_recursion(?Send)]
-async fn toggle_full_screen_mode(
+pub(crate) async fn toggle_full_screen_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow._toggleFullScreenMode(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeCreateNSWindow(JJJDDDD)J", Any)]
 #[async_recursion(?Send)]
-async fn native_create_ns_window(
+pub(crate) async fn native_create_ns_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeCreateNSWindow(JJJDDDD)J")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeDispose(J)V", Any)]
 #[async_recursion(?Send)]
-async fn native_dispose(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_dispose(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeDispose(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeEnterFullScreenMode(J)V", Any)]
 #[async_recursion(?Send)]
-async fn native_enter_full_screen_mode(
+pub(crate) async fn native_enter_full_screen_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeEnterFullScreenMode(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeExitFullScreenMode(J)V", Any)]
 #[async_recursion(?Send)]
-async fn native_exit_full_screen_mode(
+pub(crate) async fn native_exit_full_screen_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeExitFullScreenMode(J)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeGetNSWindowInsets(J)Ljava/awt/Insets;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_get_ns_window_insets(
+pub(crate) async fn native_get_ns_window_insets(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeGetNSWindowInsets(J)Ljava/awt/Insets;")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeGetTopmostPlatformWindowUnderMouse()Lsun/lwawt/macosx/CPlatformWindow;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_get_topmost_platform_window_under_mouse(
+pub(crate) async fn native_get_topmost_platform_window_under_mouse(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -208,88 +79,120 @@ async fn native_get_topmost_platform_window_under_mouse(
     )
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativePushNSWindowToBack(J)V", Any)]
 #[async_recursion(?Send)]
-async fn native_push_ns_window_to_back(
+pub(crate) async fn native_push_ns_window_to_back(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativePushNSWindowToBack(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativePushNSWindowToFront(J)V", Any)]
 #[async_recursion(?Send)]
-async fn native_push_ns_window_to_front(
+pub(crate) async fn native_push_ns_window_to_front(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativePushNSWindowToFront(J)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeRevalidateNSWindowShadow(J)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_revalidate_ns_window_shadow(
+pub(crate) async fn native_revalidate_ns_window_shadow(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeRevalidateNSWindowShadow(J)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeSetAllowAutomaticTabbingProperty(Z)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn native_set_allow_automatic_tabbing_property(
+pub(crate) async fn native_set_allow_automatic_tabbing_property(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSetAllowAutomaticTabbingProperty(Z)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeSetEnabled(JZ)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_enabled(
+pub(crate) async fn native_set_enabled(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSetEnabled(JZ)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowBounds(JDDDD)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_ns_window_bounds(
+pub(crate) async fn native_set_ns_window_bounds(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowBounds(JDDDD)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowLocationByPlatform(J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn native_set_ns_window_location_by_platform(
+pub(crate) async fn native_set_ns_window_location_by_platform(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowLocationByPlatform(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowMenuBar(JJ)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_ns_window_menu_bar(
+pub(crate) async fn native_set_ns_window_menu_bar(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowMenuBar(JJ)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowMinMax(JDDDD)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_ns_window_min_max(
+pub(crate) async fn native_set_ns_window_min_max(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowMinMax(JDDDD)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowMinimizedIcon(JJ)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_ns_window_minimized_icon(
+pub(crate) async fn native_set_ns_window_minimized_icon(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowMinimizedIcon(JJ)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowRepresentedFilename(JLjava/lang/String;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_ns_window_represented_filename(
+pub(crate) async fn native_set_ns_window_represented_filename(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -298,40 +201,59 @@ async fn native_set_ns_window_represented_filename(
     )
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowStandardFrame(JDDDD)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn native_set_ns_window_standard_frame(
+pub(crate) async fn native_set_ns_window_standard_frame(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowStandardFrame(JDDDD)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowStyleBits(JII)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_ns_window_style_bits(
+pub(crate) async fn native_set_ns_window_style_bits(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowStyleBits(JII)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowTitle(JLjava/lang/String;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_ns_window_title(
+pub(crate) async fn native_set_ns_window_title(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowTitle(JLjava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeSynthesizeMouseEnteredExitedEvents()V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_synthesize_mouse_entered_exited_events_1(
+pub(crate) async fn native_synthesize_mouse_entered_exited_events_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformWindow.nativeSynthesizeMouseEnteredExitedEvents()V")
 }
-
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformWindow.nativeSynthesizeMouseEnteredExitedEvents(JI)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_synthesize_mouse_entered_exited_events_2(
+pub(crate) async fn native_synthesize_mouse_entered_exited_events_2(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

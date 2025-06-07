@@ -1,53 +1,39 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/apple/eawt/_AppEventHandler";
-
-/// Register all intrinsic methods for `com.apple.eawt._AppEventHandler`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeOpenCocoaAboutWindow",
-        "()V",
-        native_open_cocoa_about_window,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeRegisterForNotification",
-        "(I)V",
-        native_register_for_notification,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeReplyToAppShouldTerminate",
-        "(Z)V",
-        native_reply_to_app_should_terminate,
-    );
-}
-
+#[intrinsic_method("com/apple/eawt/_AppEventHandler.nativeOpenCocoaAboutWindow()V", Any)]
 #[async_recursion(?Send)]
-async fn native_open_cocoa_about_window(
+pub(crate) async fn native_open_cocoa_about_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppEventHandler.nativeOpenCocoaAboutWindow()V")
 }
 
+#[intrinsic_method(
+    "com/apple/eawt/_AppEventHandler.nativeRegisterForNotification(I)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_register_for_notification(
+pub(crate) async fn native_register_for_notification(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppEventHandler.nativeRegisterForNotification(I)V")
 }
 
+#[intrinsic_method(
+    "com/apple/eawt/_AppEventHandler.nativeReplyToAppShouldTerminate(Z)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_reply_to_app_should_terminate(
+pub(crate) async fn native_reply_to_app_should_terminate(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

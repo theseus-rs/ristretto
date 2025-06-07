@@ -1,25 +1,21 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/pipe/BufferedMaskBlit";
-
-/// Register all intrinsic methods for `sun.java2d.pipe.BufferedMaskBlit`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "enqueueTile",
-        "(JILsun/java2d/SurfaceData;JI[BIIIIIIIII)I",
-        enqueue_tile,
-    );
-}
-
+#[intrinsic_method(
+    "sun/java2d/pipe/BufferedMaskBlit.enqueueTile(JILsun/java2d/SurfaceData;JI[BIIIIIIIII)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn enqueue_tile(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn enqueue_tile(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.pipe.BufferedMaskBlit.enqueueTile(JILsun/java2d/SurfaceData;JI[BIIIIIIIII)I");
 }
 

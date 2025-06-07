@@ -1,31 +1,28 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/net/SocketOutputStream";
-
-/// Register all intrinsic methods for `java.net.SocketOutputStream`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "init", "()V", init);
-    registry.register(
-        CLASS_NAME,
-        "socketWrite0",
-        "(Ljava/io/FileDescriptor;[BII)V",
-        socket_write_0,
-    );
-}
-
+#[intrinsic_method("java/net/SocketOutputStream.init()V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/net/SocketOutputStream.socketWrite0(Ljava/io/FileDescriptor;[BII)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn socket_write_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_write_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.SocketOutputStream.socketWrite0(Ljava/io/FileDescriptor;[BII)V")
 }
 

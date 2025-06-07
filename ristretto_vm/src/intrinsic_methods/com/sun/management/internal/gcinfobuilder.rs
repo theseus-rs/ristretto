@@ -1,32 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/sun/management/internal/GcInfoBuilder";
-
-/// Register all intrinsic methods for `com.sun.management.internal.GcInfoBuilder`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "fillGcAttributeInfo",
-        "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/String;[C[Ljava/lang/String;)V",
-        fill_gc_attribute_info,
-    );
-    registry.register(CLASS_NAME, "getLastGcInfo0", "(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;", get_last_gc_info_0);
-    registry.register(
-        CLASS_NAME,
-        "getNumGcExtAttributes",
-        "(Ljava/lang/management/GarbageCollectorMXBean;)I",
-        get_num_gc_ext_attributes,
-    );
-}
-
+#[intrinsic_method(
+    "com/sun/management/internal/GcInfoBuilder.fillGcAttributeInfo(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/String;[C[Ljava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn fill_gc_attribute_info(
+pub(crate) async fn fill_gc_attribute_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -35,8 +22,12 @@ async fn fill_gc_attribute_info(
     )
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/GcInfoBuilder.getLastGcInfo0(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_last_gc_info_0(
+pub(crate) async fn get_last_gc_info_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -45,8 +36,12 @@ async fn get_last_gc_info_0(
     )
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/GcInfoBuilder.getNumGcExtAttributes(Ljava/lang/management/GarbageCollectorMXBean;)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_num_gc_ext_attributes(
+pub(crate) async fn get_num_gc_ext_attributes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

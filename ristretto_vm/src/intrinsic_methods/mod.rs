@@ -16,6 +16,8 @@
 mod apple;
 /// Methods from the COM-related packages
 mod com;
+/// Mapping of intrinsic method names to their implementations
+mod intrinsics;
 /// Core Java standard library methods
 mod java;
 /// JDK-specific internal methods
@@ -28,4 +30,4 @@ mod registry;
 mod sun;
 
 /// Re-export the `MethodRegistry` for use by other modules in the VM
-pub(crate) use registry::MethodRegistry;
+pub(crate) use registry::{IntrinsicMethod, MethodRegistry};

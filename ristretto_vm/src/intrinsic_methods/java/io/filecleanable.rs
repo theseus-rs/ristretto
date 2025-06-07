@@ -1,20 +1,22 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/io/FileCleanable";
-
-/// Register all intrinsic methods for `java.io.FileCleanable`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "cleanupClose0", "(IJ)V", cleanup_close_0);
-}
-
+#[intrinsic_method(
+    "java/io/FileCleanable.cleanupClose0(IJ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn cleanup_close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn cleanup_close_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.FileCleanable.cleanupClose0(IJ)V")
 }
 

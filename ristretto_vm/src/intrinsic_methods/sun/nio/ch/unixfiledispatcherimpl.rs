@@ -1,199 +1,223 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_24, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::{JAVA_21, JAVA_24};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/UnixFileDispatcherImpl";
-
-/// Register all intrinsic methods for `sun.nio.ch.UnixFileDispatcherImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_24 {
-        registry.register(
-            CLASS_NAME,
-            "available0",
-            "(Ljava/io/FileDescriptor;)I",
-            available_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "isOther0",
-            "(Ljava/io/FileDescriptor;)Z",
-            is_other_0,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "allocationGranularity0",
-        "()J",
-        allocation_granularity_0,
-    );
-    registry.register(CLASS_NAME, "closeIntFD", "(I)V", close_int_fd);
-    registry.register(
-        CLASS_NAME,
-        "force0",
-        "(Ljava/io/FileDescriptor;Z)I",
-        force_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "lock0",
-        "(Ljava/io/FileDescriptor;ZJJZ)I",
-        lock_0,
-    );
-    registry.register(CLASS_NAME, "map0", "(Ljava/io/FileDescriptor;IJJZ)J", map_0);
-    registry.register(
-        CLASS_NAME,
-        "pread0",
-        "(Ljava/io/FileDescriptor;JIJ)I",
-        pread_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "pwrite0",
-        "(Ljava/io/FileDescriptor;JIJ)I",
-        pwrite_0,
-    );
-    registry.register(CLASS_NAME, "read0", "(Ljava/io/FileDescriptor;JI)I", read_0);
-    registry.register(
-        CLASS_NAME,
-        "readv0",
-        "(Ljava/io/FileDescriptor;JI)J",
-        readv_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "release0",
-        "(Ljava/io/FileDescriptor;JJ)V",
-        release_0,
-    );
-    registry.register(CLASS_NAME, "seek0", "(Ljava/io/FileDescriptor;J)J", seek_0);
-    registry.register(
-        CLASS_NAME,
-        "setDirect0",
-        "(Ljava/io/FileDescriptor;)I",
-        set_direct_0,
-    );
-    registry.register(CLASS_NAME, "size0", "(Ljava/io/FileDescriptor;)J", size_0);
-    registry.register(
-        CLASS_NAME,
-        "truncate0",
-        "(Ljava/io/FileDescriptor;J)I",
-        truncate_0,
-    );
-    registry.register(CLASS_NAME, "unmap0", "(JJ)I", unmap_0);
-    registry.register(
-        CLASS_NAME,
-        "write0",
-        "(Ljava/io/FileDescriptor;JI)I",
-        write_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "writev0",
-        "(Ljava/io/FileDescriptor;JI)J",
-        writev_0,
-    );
-}
-
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.allocationGranularity0()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn allocation_granularity_0(
+pub(crate) async fn allocation_granularity_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.allocationGranularity0()J")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I",
+    GreaterThanOrEqual(JAVA_24)
+)]
 #[async_recursion(?Send)]
-async fn available_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn available_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.closeIntFD(I)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn close_int_fd(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn close_int_fd(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.closeIntFD(I)V")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.force0(Ljava/io/FileDescriptor;Z)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn force_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn force_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.force0(Ljava/io/FileDescriptor;Z)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z",
+    GreaterThanOrEqual(JAVA_24)
+)]
 #[async_recursion(?Send)]
-async fn is_other_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_other_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn lock_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn lock_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn map_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn map_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn pread_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn pread_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.pwrite0(Ljava/io/FileDescriptor;JIJ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn pwrite_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn pwrite_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.pwrite0(Ljava/io/FileDescriptor;JIJ)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.readv0(Ljava/io/FileDescriptor;JI)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn readv_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn readv_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.readv0(Ljava/io/FileDescriptor;JI)J")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn release_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn release_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn seek_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn seek_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn set_direct_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_direct_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn size_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn size_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn truncate_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn truncate_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.unmap0(JJ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn unmap_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn unmap_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.unmap0(JJ)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.write0(Ljava/io/FileDescriptor;JI)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn write_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn write_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.write0(Ljava/io/FileDescriptor;JI)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JI)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn writev_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn writev_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixFileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JI)J")
 }
 

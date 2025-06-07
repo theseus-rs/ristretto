@@ -1,197 +1,163 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/net/MacOSXSocketOptions";
-
-/// Register all intrinsic methods for `jdk.net.MacOSXSocketOptions`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "getTcpkeepAliveProbes0",
-            "(I)I",
-            get_tcpkeep_alive_probes_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setTcpkeepAliveProbes0",
-            "(II)V",
-            set_tcpkeep_alive_probes_0,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(CLASS_NAME, "getSoPeerCred0", "(I)J", get_so_peer_cred_0);
-        registry.register(
-            CLASS_NAME,
-            "getTcpKeepAliveProbes0",
-            "(I)I",
-            get_tcp_keep_alive_probes_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setTcpKeepAliveProbes0",
-            "(II)V",
-            set_tcp_keep_alive_probes_0,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(
-            CLASS_NAME,
-            "getIpDontFragment0",
-            "(IZ)Z",
-            get_ip_dont_fragment_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "ipDontFragmentSupported0",
-            "()Z",
-            ip_dont_fragment_supported_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setIpDontFragment0",
-            "(IZZ)V",
-            set_ip_dont_fragment_0,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "getTcpKeepAliveIntvl0",
-        "(I)I",
-        get_tcp_keep_alive_intvl_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getTcpKeepAliveTime0",
-        "(I)I",
-        get_tcp_keep_alive_time_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "keepAliveOptionsSupported0",
-        "()Z",
-        keep_alive_options_supported_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setTcpKeepAliveIntvl0",
-        "(II)V",
-        set_tcp_keep_alive_intvl_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setTcpKeepAliveTime0",
-        "(II)V",
-        set_tcp_keep_alive_time_0,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.getIpDontFragment0(IZ)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn get_ip_dont_fragment_0(
+pub(crate) async fn get_ip_dont_fragment_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.net.MacOSXSocketOptions.getIpDontFragment0(I)Z")
+    todo!("jdk.net.MacOSXSocketOptions.getIpDontFragment0(IZ)Z")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.getSoPeerCred0(I)J",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_so_peer_cred_0(
+pub(crate) async fn get_so_peer_cred_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.getSoPeerCred0(I)J")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.getTcpKeepAliveIntvl0(I)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_tcp_keep_alive_intvl_0(
+pub(crate) async fn get_tcp_keep_alive_intvl_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.getTcpKeepAliveIntvl0(I)I")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.getTcpKeepAliveProbes0(I)I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_tcp_keep_alive_probes_0(
+pub(crate) async fn get_tcp_keep_alive_probes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.getTcpKeepAliveProbes0(I)I")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.getTcpKeepAliveTime0(I)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_tcp_keep_alive_time_0(
+pub(crate) async fn get_tcp_keep_alive_time_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.getTcpKeepAliveTime0(I)I")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.getTcpkeepAliveProbes0(I)I",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_tcpkeep_alive_probes_0(
+pub(crate) async fn get_tcpkeep_alive_probes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.getTcpkeepAliveProbes0(I)I")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.ipDontFragmentSupported0()Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ip_dont_fragment_supported_0(
+pub(crate) async fn ip_dont_fragment_supported_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.ipDontFragmentSupported0()Z")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.keepAliveOptionsSupported0()Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn keep_alive_options_supported_0(
+pub(crate) async fn keep_alive_options_supported_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.keepAliveOptionsSupported0()Z")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.setIpDontFragment0(IZZ)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn set_ip_dont_fragment_0(
+pub(crate) async fn set_ip_dont_fragment_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.net.MacOSXSocketOptions.setIpDontFragment0(IZ)V")
+    todo!("jdk.net.MacOSXSocketOptions.setIpDontFragment0(IZZ)V")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.setTcpKeepAliveIntvl0(II)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_tcp_keep_alive_intvl_0(
+pub(crate) async fn set_tcp_keep_alive_intvl_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.setTcpKeepAliveIntvl0(II)V")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.setTcpKeepAliveProbes0(II)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_tcp_keep_alive_probes_0(
+pub(crate) async fn set_tcp_keep_alive_probes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.setTcpKeepAliveProbes0(II)V")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.setTcpKeepAliveTime0(II)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_tcp_keep_alive_time_0(
+pub(crate) async fn set_tcp_keep_alive_time_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.net.MacOSXSocketOptions.setTcpKeepAliveTime0(II)V")
 }
 
+#[intrinsic_method(
+    "jdk/net/MacOSXSocketOptions.setTcpkeepAliveProbes0(II)V",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_tcpkeep_alive_probes_0(
+pub(crate) async fn set_tcpkeep_alive_probes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -204,7 +170,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: jdk.net.MacOSXSocketOptions.getIpDontFragment0(I)Z"
+        expected = "not yet implemented: jdk.net.MacOSXSocketOptions.getIpDontFragment0(IZ)Z"
     )]
     async fn test_get_ip_dont_fragment_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -276,7 +242,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: jdk.net.MacOSXSocketOptions.setIpDontFragment0(IZ)V"
+        expected = "not yet implemented: jdk.net.MacOSXSocketOptions.setIpDontFragment0(IZZ)V"
     )]
     async fn test_set_ip_dont_fragment_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

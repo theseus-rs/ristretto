@@ -1,38 +1,31 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_21;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/net/InetAddress";
-
-/// Register all intrinsic methods for `java.net.InetAddress`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(CLASS_NAME, "isIPv4Available", "()Z", is_ipv_4_available);
-        registry.register(CLASS_NAME, "isIPv6Supported", "()Z", is_ipv_6_supported);
-    }
-
-    registry.register(CLASS_NAME, "init", "()V", init);
-}
-
+#[intrinsic_method("java/net/InetAddress.init()V", Any)]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/net/InetAddress.isIPv4Available()Z", GreaterThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn is_ipv_4_available(
+pub(crate) async fn is_ipv_4_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.net.InetAddress.isIPv4Available()Z")
 }
 
+#[intrinsic_method("java/net/InetAddress.isIPv6Supported()Z", GreaterThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn is_ipv_6_supported(
+pub(crate) async fn is_ipv_6_supported(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

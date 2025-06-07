@@ -1,70 +1,55 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Between, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/metal/MTLGraphicsConfig";
-
-/// Register all intrinsic methods for `sun.java2d.metal.MTLGraphicsConfig`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_21 {
-        registry.register(
-            CLASS_NAME,
-            "isMetalFrameworkAvailable",
-            "()Z",
-            is_metal_framework_available,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "getMTLConfigInfo",
-        "(ILjava/lang/String;)J",
-        get_mtl_config_info,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetMaxTextureSize",
-        "()I",
-        native_get_max_texture_size,
-    );
-    registry.register(
-        CLASS_NAME,
-        "tryLoadMetalLibrary",
-        "(ILjava/lang/String;)Z",
-        try_load_metal_library,
-    );
-}
-
+#[intrinsic_method(
+    "sun/java2d/metal/MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_mtl_config_info(
+pub(crate) async fn get_mtl_config_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J")
 }
 
+#[intrinsic_method(
+    "sun/java2d/metal/MTLGraphicsConfig.isMetalFrameworkAvailable()Z",
+    Between(JAVA_17, JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn is_metal_framework_available(
+pub(crate) async fn is_metal_framework_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLGraphicsConfig.isMetalFrameworkAvailable()Z")
 }
 
+#[intrinsic_method(
+    "sun/java2d/metal/MTLGraphicsConfig.nativeGetMaxTextureSize()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn native_get_max_texture_size(
+pub(crate) async fn native_get_max_texture_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLGraphicsConfig.nativeGetMaxTextureSize()I")
 }
 
+#[intrinsic_method(
+    "sun/java2d/metal/MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn try_load_metal_library(
+pub(crate) async fn try_load_metal_library(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

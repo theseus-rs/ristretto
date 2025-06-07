@@ -1,77 +1,51 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CInputMethod";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CInputMethod`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getNativeLocale",
-        "()Ljava/util/Locale;",
-        get_native_locale,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeEndComposition",
-        "(J)V",
-        native_end_composition,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetCurrentInputMethodInfo",
-        "()Ljava/lang/String;",
-        native_get_current_input_method_info,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeHandleEvent",
-        "(Lsun/lwawt/LWComponentPeer;Ljava/awt/AWTEvent;)V",
-        native_handle_event,
-    );
-    registry.register(CLASS_NAME, "nativeInit", "()V", native_init);
-    registry.register(
-        CLASS_NAME,
-        "nativeNotifyPeer",
-        "(JLsun/lwawt/macosx/CInputMethod;)V",
-        native_notify_peer,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setNativeLocale",
-        "(Ljava/lang/String;Z)Z",
-        set_native_locale,
-    );
-}
-
+#[intrinsic_method(
+    "sun/lwawt/macosx/CInputMethod.getNativeLocale()Ljava/util/Locale;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_native_locale(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_native_locale(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CInputMethod.getNativeLocale()Ljava/util/Locale;")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CInputMethod.nativeEndComposition(J)V", Any)]
 #[async_recursion(?Send)]
-async fn native_end_composition(
+pub(crate) async fn native_end_composition(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CInputMethod.nativeEndComposition(J)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CInputMethod.nativeGetCurrentInputMethodInfo()Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_get_current_input_method_info(
+pub(crate) async fn native_get_current_input_method_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CInputMethod.nativeGetCurrentInputMethodInfo()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CInputMethod.nativeHandleEvent(Lsun/lwawt/LWComponentPeer;Ljava/awt/AWTEvent;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_handle_event(
+pub(crate) async fn native_handle_event(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -80,21 +54,36 @@ async fn native_handle_event(
     )
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CInputMethod.nativeInit()V", Any)]
 #[async_recursion(?Send)]
-async fn native_init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_init(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CInputMethod.nativeInit()V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CInputMethod.nativeNotifyPeer(JLsun/lwawt/macosx/CInputMethod;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_notify_peer(
+pub(crate) async fn native_notify_peer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CInputMethod.nativeNotifyPeer(JLsun/lwawt/macosx/CInputMethod;)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CInputMethod.setNativeLocale(Ljava/lang/String;Z)Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn set_native_locale(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_native_locale(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CInputMethod.setNativeLocale(Ljava/lang/String;Z)Z")
 }
 

@@ -1,176 +1,178 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/X11GraphicsDevice";
-
-/// Register all intrinsic methods for `sun.awt.X11GraphicsDevice`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "configDisplayMode",
-        "(IIII)V",
-        config_display_mode,
-    );
-    registry.register(
-        CLASS_NAME,
-        "enterFullScreenExclusive",
-        "(J)V",
-        enter_full_screen_exclusive,
-    );
-    registry.register(
-        CLASS_NAME,
-        "enumDisplayModes",
-        "(ILjava/util/ArrayList;)V",
-        enum_display_modes,
-    );
-    registry.register(
-        CLASS_NAME,
-        "exitFullScreenExclusive",
-        "(J)V",
-        exit_full_screen_exclusive,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getConfigColormap",
-        "(II)I",
-        get_config_colormap,
-    );
-    registry.register(CLASS_NAME, "getConfigDepth", "(II)I", get_config_depth);
-    registry.register(
-        CLASS_NAME,
-        "getConfigVisualId",
-        "(II)I",
-        get_config_visual_id,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getCurrentDisplayMode",
-        "(I)Ljava/awt/DisplayMode;",
-        get_current_display_mode,
-    );
-    registry.register(CLASS_NAME, "getDisplay", "()J", get_display);
-    registry.register(
-        CLASS_NAME,
-        "getDoubleBufferVisuals",
-        "(I)V",
-        get_double_buffer_visuals,
-    );
-    registry.register(CLASS_NAME, "getNumConfigs", "(I)I", get_num_configs);
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(
-        CLASS_NAME,
-        "initXrandrExtension",
-        "()Z",
-        init_xrandr_extension,
-    );
-    registry.register(CLASS_NAME, "isDBESupported", "()Z", is_dbe_supported);
-    registry.register(CLASS_NAME, "resetNativeData", "(I)V", reset_native_data);
-}
-
+#[intrinsic_method(
+    "sun/awt/X11GraphicsDevice.configDisplayMode(IIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn config_display_mode(
+pub(crate) async fn config_display_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.configDisplayMode(IIII)V")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsDevice.enterFullScreenExclusive(J)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn enter_full_screen_exclusive(
+pub(crate) async fn enter_full_screen_exclusive(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.enterFullScreenExclusive(J)V")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsDevice.enumDisplayModes(ILjava/util/ArrayList;)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn enum_display_modes(
+pub(crate) async fn enum_display_modes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.enumDisplayModes(ILjava/util/ArrayList;)V")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsDevice.exitFullScreenExclusive(J)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn exit_full_screen_exclusive(
+pub(crate) async fn exit_full_screen_exclusive(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.exitFullScreenExclusive(J)V")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsDevice.getConfigColormap(II)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_config_colormap(
+pub(crate) async fn get_config_colormap(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getConfigColormap(II)I")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsDevice.getConfigDepth(II)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_config_depth(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_config_depth(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getConfigDepth(II)I")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsDevice.getConfigVisualId(II)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_config_visual_id(
+pub(crate) async fn get_config_visual_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getConfigVisualId(II)I")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsDevice.getCurrentDisplayMode(I)Ljava/awt/DisplayMode;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_current_display_mode(
+pub(crate) async fn get_current_display_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getCurrentDisplayMode(I)Ljava/awt/DisplayMode;")
 }
 
+#[intrinsic_method("sun/awt/X11GraphicsDevice.getDisplay()J", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn get_display(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_display(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getDisplay()J")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsDevice.getDoubleBufferVisuals(I)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_double_buffer_visuals(
+pub(crate) async fn get_double_buffer_visuals(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getDoubleBufferVisuals(I)V")
 }
 
+#[intrinsic_method("sun/awt/X11GraphicsDevice.getNumConfigs(I)I", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn get_num_configs(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_num_configs(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.getNumConfigs(I)I")
 }
 
+#[intrinsic_method("sun/awt/X11GraphicsDevice.initIDs()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsDevice.initXrandrExtension()Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_xrandr_extension(
+pub(crate) async fn init_xrandr_extension(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.initXrandrExtension()Z")
 }
 
+#[intrinsic_method("sun/awt/X11GraphicsDevice.isDBESupported()Z", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn is_dbe_supported(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_dbe_supported(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.isDBESupported()Z")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsDevice.resetNativeData(I)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn reset_native_data(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn reset_native_data(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsDevice.resetNativeData(I)V")
 }
 

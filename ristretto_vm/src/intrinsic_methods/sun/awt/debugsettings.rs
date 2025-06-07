@@ -1,48 +1,33 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/DebugSettings";
-
-/// Register all intrinsic methods for `sun.awt.DebugSettings`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "setCTracingOn", "(Z)V", set_c_tracing_on_1);
-    registry.register(
-        CLASS_NAME,
-        "setCTracingOn",
-        "(ZLjava/lang/String;)V",
-        set_c_tracing_on_2,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setCTracingOn",
-        "(ZLjava/lang/String;I)V",
-        set_c_tracing_on_3,
-    );
-}
-
+#[intrinsic_method("sun/awt/DebugSettings.setCTracingOn(Z)V", Any)]
 #[async_recursion(?Send)]
-async fn set_c_tracing_on_1(
+pub(crate) async fn set_c_tracing_on_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.DebugSettings.setCTracingOn(Z)V")
 }
 
+#[intrinsic_method("sun/awt/DebugSettings.setCTracingOn(ZLjava/lang/String;)V", Any)]
 #[async_recursion(?Send)]
-async fn set_c_tracing_on_2(
+pub(crate) async fn set_c_tracing_on_2(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.DebugSettings.setCTracingOn(ZLjava/lang/String;)V")
 }
 
+#[intrinsic_method("sun/awt/DebugSettings.setCTracingOn(ZLjava/lang/String;I)V", Any)]
 #[async_recursion(?Send)]
-async fn set_c_tracing_on_3(
+pub(crate) async fn set_c_tracing_on_3(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

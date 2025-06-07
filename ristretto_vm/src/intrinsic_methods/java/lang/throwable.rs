@@ -1,42 +1,18 @@
 use crate::Error::InternalError;
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, JAVA_11, MethodRegistry};
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
+use ristretto_classfile::{JAVA_8, JAVA_11};
 use ristretto_classloader::{Object, Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/Throwable";
-
-/// Register all intrinsic methods for `java.lang.Throwable`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(
-            CLASS_NAME,
-            "getStackTraceDepth",
-            "()I",
-            get_stack_trace_depth,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getStackTraceElement",
-            "(I)Ljava/lang/StackTraceElement;",
-            get_stack_trace_element,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "fillInStackTrace",
-        "(I)Ljava/lang/Throwable;",
-        fill_in_stack_trace,
-    );
-}
-
+#[intrinsic_method("java/lang/Throwable.fillInStackTrace(I)Ljava/lang/Throwable;", Any)]
 #[async_recursion(?Send)]
-async fn fill_in_stack_trace(
+pub(crate) async fn fill_in_stack_trace(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,23 +58,28 @@ async fn fill_in_stack_trace(
     let stack_trace = Value::try_from((stack_element_array_class, stack_elements))?;
     throwable.set_value("backtrace", stack_trace)?;
 
-    if vm.java_major_version() >= JAVA_11 {
+    if vm.java_major_version() >= JAVA_11.java() {
         throwable.set_value("depth", Value::Int(depth))?;
     }
 
     Ok(Some(Value::Object(object)))
 }
 
+#[intrinsic_method("java/lang/Throwable.getStackTraceDepth()I", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn get_stack_trace_depth(
+pub(crate) async fn get_stack_trace_depth(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Throwable.getStackTraceDepth()I")
 }
 
+#[intrinsic_method(
+    "java/lang/Throwable.getStackTraceElement(I)Ljava/lang/StackTraceElement;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_stack_trace_element(
+pub(crate) async fn get_stack_trace_element(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

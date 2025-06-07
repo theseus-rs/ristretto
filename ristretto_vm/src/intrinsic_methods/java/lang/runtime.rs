@@ -1,37 +1,18 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::cmp::min;
 use std::sync::Arc;
 use sysinfo::System;
 
-const CLASS_NAME: &str = "java/lang/Runtime";
-
-/// Register all intrinsic methods for `java.lang.Runtime`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "runFinalization0", "()V", run_finalization_0);
-        registry.register(CLASS_NAME, "traceInstructions", "(Z)V", trace_instructions);
-        registry.register(CLASS_NAME, "traceMethodCalls", "(Z)V", trace_method_calls);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "availableProcessors",
-        "()I",
-        available_processors,
-    );
-    registry.register(CLASS_NAME, "freeMemory", "()J", free_memory);
-    registry.register(CLASS_NAME, "gc", "()V", gc);
-    registry.register(CLASS_NAME, "maxMemory", "()J", max_memory);
-    registry.register(CLASS_NAME, "totalMemory", "()J", total_memory);
-}
-
+#[intrinsic_method("java/lang/Runtime.availableProcessors()I", Any)]
 #[async_recursion(?Send)]
-async fn available_processors(
+pub(crate) async fn available_processors(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,8 +21,12 @@ async fn available_processors(
     Ok(Some(Value::Int(cpus)))
 }
 
+#[intrinsic_method("java/lang/Runtime.freeMemory()J", Any)]
 #[async_recursion(?Send)]
-async fn free_memory(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn free_memory(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     let sys = System::new_all();
     let free_memory = sys.total_memory() - sys.used_memory();
     let free_memory = if free_memory > u64::try_from(i64::MAX)? {
@@ -52,45 +37,57 @@ async fn free_memory(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Op
     Ok(Some(Value::Long(free_memory)))
 }
 
+#[intrinsic_method("java/lang/Runtime.gc()V", Any)]
 #[async_recursion(?Send)]
-async fn gc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn gc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/lang/Runtime.maxMemory()J", Any)]
 #[async_recursion(?Send)]
-async fn max_memory(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn max_memory(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     let sys = System::new_all();
     let total_memory = min(sys.total_memory(), u64::try_from(i64::MAX)?);
     let total_memory = i64::try_from(total_memory)?;
     Ok(Some(Value::Long(total_memory)))
 }
 
+#[intrinsic_method("java/lang/Runtime.runFinalization0()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn run_finalization_0(
+pub(crate) async fn run_finalization_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Runtime.runFinalization0()V")
+    Ok(None)
 }
 
+#[intrinsic_method("java/lang/Runtime.traceInstructions(Z)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn trace_instructions(
+pub(crate) async fn trace_instructions(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Runtime.traceInstructions(Z)V")
 }
 
+#[intrinsic_method("java/lang/Runtime.traceMethodCalls(Z)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn trace_method_calls(
+pub(crate) async fn trace_method_calls(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Runtime.traceMethodCalls(Z)V")
 }
 
+#[intrinsic_method("java/lang/Runtime.totalMemory()J", Any)]
 #[async_recursion(?Send)]
-async fn total_memory(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn total_memory(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     // TODO: This is not the correct implementation; should be the total memory of the JVM
     let sys = System::new_all();
     let used_memory = sys.used_memory();
@@ -142,10 +139,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Runtime.runFinalization0()V")]
-    async fn test_run_finalization_0() {
+    async fn test_run_finalization_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = run_finalization_0(thread, Parameters::default()).await;
+        let result = run_finalization_0(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]

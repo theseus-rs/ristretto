@@ -1,36 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/net/spi/DefaultProxySelector";
-
-/// Register all intrinsic methods for `sun.net.spi.DefaultProxySelector`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(
-            CLASS_NAME,
-            "getSystemProxy",
-            "(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;",
-            get_system_proxy,
-        );
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "getSystemProxies",
-            "(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;",
-            get_system_proxies,
-        );
-    }
-
-    registry.register(CLASS_NAME, "init", "()Z", init);
-}
-
+#[intrinsic_method(
+    "sun/net/spi/DefaultProxySelector.getSystemProxies(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;",
+    GreaterThan(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_system_proxies(
+pub(crate) async fn get_system_proxies(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -39,15 +22,23 @@ async fn get_system_proxies(
     )
 }
 
+#[intrinsic_method(
+    "sun/net/spi/DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_system_proxy(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_system_proxy(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.net.spi.DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;"
     )
 }
 
+#[intrinsic_method("sun/net/spi/DefaultProxySelector.init()Z", Any)]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 

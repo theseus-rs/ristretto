@@ -1,31 +1,30 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/awt/AWTEvent";
-
-/// Register all intrinsic methods for `java.awt.AWTEvent`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(
-        CLASS_NAME,
-        "nativeSetSource",
-        "(Ljava/awt/peer/ComponentPeer;)V",
-        native_set_source,
-    );
-}
-
+#[intrinsic_method("java/awt/AWTEvent.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/awt/AWTEvent.nativeSetSource(Ljava/awt/peer/ComponentPeer;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_source(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_set_source(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.awt.AWTEvent.nativeSetSource(Ljava/awt/peer/ComponentPeer;)V")
 }
 

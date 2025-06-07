@@ -1,119 +1,108 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/security/smartcardio/PCSC";
-
-/// Register all intrinsic methods for `sun.security.smartcardio.PCSC`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "SCardBeginTransaction",
-        "(J)V",
-        s_card_begin_transaction,
-    );
-    registry.register(
-        CLASS_NAME,
-        "SCardConnect",
-        "(JLjava/lang/String;II)J",
-        s_card_connect,
-    );
-    registry.register(CLASS_NAME, "SCardControl", "(JI[B)[B", s_card_control);
-    registry.register(CLASS_NAME, "SCardDisconnect", "(JI)V", s_card_disconnect);
-    registry.register(
-        CLASS_NAME,
-        "SCardEndTransaction",
-        "(JI)V",
-        s_card_end_transaction,
-    );
-    registry.register(
-        CLASS_NAME,
-        "SCardEstablishContext",
-        "(I)J",
-        s_card_establish_context,
-    );
-    registry.register(
-        CLASS_NAME,
-        "SCardGetStatusChange",
-        "(JJ[I[Ljava/lang/String;)[I",
-        s_card_get_status_change,
-    );
-    registry.register(
-        CLASS_NAME,
-        "SCardListReaders",
-        "(J)[Ljava/lang/String;",
-        s_card_list_readers,
-    );
-    registry.register(CLASS_NAME, "SCardStatus", "(J[B)[B", s_card_status);
-    registry.register(CLASS_NAME, "SCardTransmit", "(JI[BII)[B", s_card_transmit);
-}
-
+#[intrinsic_method("sun/security/smartcardio/PCSC.SCardBeginTransaction(J)V", Any)]
 #[async_recursion(?Send)]
-async fn s_card_begin_transaction(
+pub(crate) async fn s_card_begin_transaction(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PCSC.SCardBeginTransaction(J)V")
 }
 
+#[intrinsic_method(
+    "sun/security/smartcardio/PCSC.SCardConnect(JLjava/lang/String;II)J",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn s_card_connect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn s_card_connect(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PCSC.SCardConnect(JLjava/lang/String;II)J")
 }
 
+#[intrinsic_method("sun/security/smartcardio/PCSC.SCardControl(JI[B)[B", Any)]
 #[async_recursion(?Send)]
-async fn s_card_control(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn s_card_control(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PCSC.SCardControl(JI[B)[B")
 }
 
+#[intrinsic_method("sun/security/smartcardio/PCSC.SCardDisconnect(JI)V", Any)]
 #[async_recursion(?Send)]
-async fn s_card_disconnect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn s_card_disconnect(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PCSC.SCardDisconnect(JI)V")
 }
 
+#[intrinsic_method("sun/security/smartcardio/PCSC.SCardEndTransaction(JI)V", Any)]
 #[async_recursion(?Send)]
-async fn s_card_end_transaction(
+pub(crate) async fn s_card_end_transaction(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PCSC.SCardEndTransaction(JI)V")
 }
 
+#[intrinsic_method("sun/security/smartcardio/PCSC.SCardEstablishContext(I)J", Any)]
 #[async_recursion(?Send)]
-async fn s_card_establish_context(
+pub(crate) async fn s_card_establish_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PCSC.SCardEstablishContext(I)J")
 }
 
+#[intrinsic_method(
+    "sun/security/smartcardio/PCSC.SCardGetStatusChange(JJ[I[Ljava/lang/String;)[I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn s_card_get_status_change(
+pub(crate) async fn s_card_get_status_change(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PCSC.SCardGetStatusChange(JJ[I[Ljava/lang/String;)[I")
 }
 
+#[intrinsic_method(
+    "sun/security/smartcardio/PCSC.SCardListReaders(J)[Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn s_card_list_readers(
+pub(crate) async fn s_card_list_readers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PCSC.SCardListReaders(J)[Ljava/lang/String;")
 }
 
+#[intrinsic_method("sun/security/smartcardio/PCSC.SCardStatus(J[B)[B", Any)]
 #[async_recursion(?Send)]
-async fn s_card_status(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn s_card_status(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PCSC.SCardStatus(J[B)[B")
 }
 
+#[intrinsic_method("sun/security/smartcardio/PCSC.SCardTransmit(JI[BII)[B", Any)]
 #[async_recursion(?Send)]
-async fn s_card_transmit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn s_card_transmit(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.smartcardio.PCSC.SCardTransmit(JI[BII)[B")
 }
 

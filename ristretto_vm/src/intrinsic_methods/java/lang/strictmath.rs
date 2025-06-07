@@ -1,43 +1,15 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
+use ristretto_classfile::{JAVA_8, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::ops::Rem;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/StrictMath";
-
-/// Register all intrinsic methods for `java.lang.StrictMath`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "cbrt", "(D)D", cbrt);
-        registry.register(CLASS_NAME, "exp", "(D)D", exp);
-        registry.register(CLASS_NAME, "hypot", "(DD)D", hypot);
-        registry.register(CLASS_NAME, "pow", "(DD)D", pow);
-    }
-
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(CLASS_NAME, "IEEEremainder", "(DD)D", ieee_remainder);
-        registry.register(CLASS_NAME, "acos", "(D)D", acos);
-        registry.register(CLASS_NAME, "asin", "(D)D", asin);
-        registry.register(CLASS_NAME, "atan", "(D)D", atan);
-        registry.register(CLASS_NAME, "atan2", "(DD)D", atan_2);
-        registry.register(CLASS_NAME, "cos", "(D)D", cos);
-        registry.register(CLASS_NAME, "cosh", "(D)D", cosh);
-        registry.register(CLASS_NAME, "expm1", "(D)D", expm_1);
-        registry.register(CLASS_NAME, "log", "(D)D", log);
-        registry.register(CLASS_NAME, "log10", "(D)D", log_10);
-        registry.register(CLASS_NAME, "log1p", "(D)D", log_1p);
-        registry.register(CLASS_NAME, "sin", "(D)D", sin);
-        registry.register(CLASS_NAME, "sinh", "(D)D", sinh);
-        registry.register(CLASS_NAME, "sqrt", "(D)D", sqrt);
-        registry.register(CLASS_NAME, "tan", "(D)D", tan);
-        registry.register(CLASS_NAME, "tanh", "(D)D", tanh);
-    }
-}
-
+#[intrinsic_method("java/lang/StrictMath.IEEEremainder(DD)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn ieee_remainder(
     _thread: Arc<Thread>,
@@ -49,6 +21,7 @@ pub(crate) async fn ieee_remainder(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.acos(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn acos(
     _thread: Arc<Thread>,
@@ -59,6 +32,7 @@ pub(crate) async fn acos(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.asin(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn asin(
     _thread: Arc<Thread>,
@@ -69,6 +43,7 @@ pub(crate) async fn asin(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.atan(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn atan(
     _thread: Arc<Thread>,
@@ -79,6 +54,7 @@ pub(crate) async fn atan(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.atan2(DD)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn atan_2(
     _thread: Arc<Thread>,
@@ -90,6 +66,7 @@ pub(crate) async fn atan_2(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.cbrt(D)D", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
 pub(crate) async fn cbrt(
     _thread: Arc<Thread>,
@@ -100,6 +77,7 @@ pub(crate) async fn cbrt(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.cos(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn cos(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let a = parameters.pop_double()?;
@@ -107,6 +85,7 @@ pub(crate) async fn cos(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.cosh(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn cosh(
     _thread: Arc<Thread>,
@@ -117,6 +96,7 @@ pub(crate) async fn cosh(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.exp(D)D", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
 pub(crate) async fn exp(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let a = parameters.pop_double()?;
@@ -124,6 +104,7 @@ pub(crate) async fn exp(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.expm1(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn expm_1(
     _thread: Arc<Thread>,
@@ -134,6 +115,7 @@ pub(crate) async fn expm_1(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.hypot(DD)D", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
 pub(crate) async fn hypot(
     _thread: Arc<Thread>,
@@ -145,6 +127,7 @@ pub(crate) async fn hypot(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.log(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn log(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let a = parameters.pop_double()?;
@@ -152,6 +135,7 @@ pub(crate) async fn log(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.log10(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn log_10(
     _thread: Arc<Thread>,
@@ -162,6 +146,7 @@ pub(crate) async fn log_10(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.log1p(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn log_1p(
     _thread: Arc<Thread>,
@@ -172,6 +157,7 @@ pub(crate) async fn log_1p(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.pow(DD)D", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
 pub(crate) async fn pow(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let b = parameters.pop_double()?;
@@ -180,6 +166,7 @@ pub(crate) async fn pow(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.sin(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn sin(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let a = parameters.pop_double()?;
@@ -187,6 +174,7 @@ pub(crate) async fn sin(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.sinh(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn sinh(
     _thread: Arc<Thread>,
@@ -197,6 +185,7 @@ pub(crate) async fn sinh(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.sqrt(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn sqrt(
     _thread: Arc<Thread>,
@@ -207,6 +196,7 @@ pub(crate) async fn sqrt(
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.tan(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn tan(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let a = parameters.pop_double()?;
@@ -214,6 +204,7 @@ pub(crate) async fn tan(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     Ok(Some(Value::Double(result)))
 }
 
+#[intrinsic_method("java/lang/StrictMath.tanh(D)D", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn tanh(
     _thread: Arc<Thread>,

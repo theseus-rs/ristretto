@@ -1,48 +1,28 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/opengl/CGLSurfaceData";
-
-/// Register all intrinsic methods for `sun.java2d.opengl.CGLSurfaceData`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "createCGLContextOnSurface",
-            "(Lsun/java2d/opengl/CGLSurfaceData;J)J",
-            create_cgl_context_on_surface,
-        );
-        registry.register(CLASS_NAME, "destroyCGLContext", "(J)V", destroy_cgl_context);
-        registry.register(
-            CLASS_NAME,
-            "makeCGLContextCurrentOnSurface",
-            "(Lsun/java2d/opengl/CGLSurfaceData;J)Z",
-            make_cgl_context_current_on_surface,
-        );
-        registry.register(CLASS_NAME, "validate", "(IIIIZ)V", validate);
-    }
-
-    registry.register(CLASS_NAME, "clearWindow", "()V", clear_window);
-    registry.register(
-        CLASS_NAME,
-        "initOps",
-        "(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V",
-        init_ops,
-    );
-}
-
+#[intrinsic_method("sun/java2d/opengl/CGLSurfaceData.clearWindow()V", Any)]
 #[async_recursion(?Send)]
-async fn clear_window(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn clear_window(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLSurfaceData.clearWindow()");
 }
 
+#[intrinsic_method(
+    "sun/java2d/opengl/CGLSurfaceData.createCGLContextOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)J",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn create_cgl_context_on_surface(
+pub(crate) async fn create_cgl_context_on_surface(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -51,21 +31,36 @@ async fn create_cgl_context_on_surface(
     );
 }
 
+#[intrinsic_method(
+    "sun/java2d/opengl/CGLSurfaceData.destroyCGLContext(J)V",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn destroy_cgl_context(
+pub(crate) async fn destroy_cgl_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLSurfaceData.destroyCGLContext(J)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/opengl/CGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn init_ops(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ops(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/opengl/CGLSurfaceData.makeCGLContextCurrentOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)Z",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn make_cgl_context_current_on_surface(
+pub(crate) async fn make_cgl_context_current_on_surface(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -74,8 +69,15 @@ async fn make_cgl_context_current_on_surface(
     );
 }
 
+#[intrinsic_method(
+    "sun/java2d/opengl/CGLSurfaceData.validate(IIIIZ)V",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn validate(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn validate(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLSurfaceData.validate(IIIIZ)V");
 }
 

@@ -1,71 +1,79 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/Compiler";
-
-/// Register all intrinsic methods for `java.lang.Compiler`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "command",
-        "(Ljava/lang/Object;)Ljava/lang/Object;",
-        command,
-    );
-    registry.register(
-        CLASS_NAME,
-        "compileClass",
-        "(Ljava/lang/Class;)Z",
-        compile_class,
-    );
-    registry.register(
-        CLASS_NAME,
-        "compileClasses",
-        "(Ljava/lang/String;)Z",
-        compile_classes,
-    );
-    registry.register(CLASS_NAME, "disable", "()V", disable);
-    registry.register(CLASS_NAME, "enable", "()V", enable);
-    registry.register(CLASS_NAME, "initialize", "()V", initialize);
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-}
-
+#[intrinsic_method(
+    "java/lang/Compiler.command(Ljava/lang/Object;)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn command(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn command(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Compiler.command(Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/Compiler.compileClass(Ljava/lang/Class;)Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn compile_class(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn compile_class(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Compiler.compileClass(Ljava/lang/Class;)Z")
 }
 
+#[intrinsic_method(
+    "java/lang/Compiler.compileClasses(Ljava/lang/String;)Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn compile_classes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn compile_classes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Compiler.compileClasses(Ljava/lang/String;)Z")
 }
 
+#[intrinsic_method("java/lang/Compiler.disable()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn disable(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn disable(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Compiler.disable()V")
 }
 
+#[intrinsic_method("java/lang/Compiler.enable()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn enable(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn enable(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Compiler.enable()V")
 }
 
+#[intrinsic_method("java/lang/Compiler.initialize()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn initialize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn initialize(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/lang/Compiler.registerNatives()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 

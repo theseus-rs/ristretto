@@ -515,6 +515,90 @@ impl fmt::Display for Version {
     }
 }
 
+/// Specifies a rule for matching Java versions.
+///
+/// This enum allows defining conditions for comparing a runtime Java version's major number against
+/// specific criteria.
+///
+/// # Examples
+///
+/// ```rust
+/// use ristretto_classfile::{Version, VersionSpecification, JAVA_17, JAVA_21};
+///
+/// // Matches any Java version
+/// assert!(VersionSpecification::Any.matches(&JAVA_21));
+///
+/// // Matches if the runtime Java version's major is equal to 11
+/// assert!(VersionSpecification::Equal(JAVA_21.clone()).matches(&JAVA_21));
+///
+/// // Matches if the runtime Java version's major is less than 21
+/// assert!(VersionSpecification::LessThan(JAVA_21.clone()).matches(&JAVA_17));
+/// ```
+#[derive(Clone, Debug, PartialEq)]
+pub enum VersionSpecification {
+    /// Matches any Java version.
+    Any,
+    /// Matches if the runtime Java version's major is equal to the specified version's major.
+    Equal(Version),
+    /// Matches if the runtime Java version's major is not equal to the specified version's major.
+    NotEqual(Version),
+    /// Matches if the runtime Java version's major is less than the specified version's major.
+    LessThan(Version),
+    /// Matches if the runtime Java version's major is less than or equal to the specified version's
+    /// major.
+    LessThanOrEqual(Version),
+    /// Matches if the runtime Java version's major is greater than the specified version's major.
+    GreaterThan(Version),
+    /// Matches if the runtime Java version's major is greater than or equal to the specified
+    /// version's major.
+    GreaterThanOrEqual(Version),
+    /// Matches if the runtime Java version's major is between the specified versions' majors
+    /// (inclusive).
+    Between(Version, Version),
+    /// Matches if the runtime Java version's major is in the specified list of versions.
+    In(&'static [Version]),
+}
+
+impl VersionSpecification {
+    /// Checks if a given runtime `Version` matches the specification.
+    ///
+    /// Comparisons are based on the major version number.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Version, VersionSpecification, JAVA_17, JAVA_21};
+    ///
+    /// // Matches any Java version
+    /// assert!(VersionSpecification::Any.matches(&JAVA_21));
+    ///
+    /// // Matches if the runtime Java version's major is equal to 11
+    /// assert!(VersionSpecification::Equal(JAVA_21.clone()).matches(&JAVA_21));
+    ///
+    /// // Matches if the runtime Java version's major is less than 21
+    /// assert!(VersionSpecification::LessThan(JAVA_21.clone()).matches(&JAVA_17));
+    /// ```
+    #[must_use]
+    pub fn matches(&self, version: &Version) -> bool {
+        let major = version.major();
+        match self {
+            VersionSpecification::Any => true,
+            VersionSpecification::Equal(specification) => major == specification.major(),
+            VersionSpecification::NotEqual(specification) => major != specification.major(),
+            VersionSpecification::LessThan(specification) => major < specification.major(),
+            VersionSpecification::LessThanOrEqual(specification) => major <= specification.major(),
+            VersionSpecification::GreaterThan(specification) => major > specification.major(),
+            VersionSpecification::GreaterThanOrEqual(specification) => {
+                major >= specification.major()
+            }
+            VersionSpecification::Between(start_version, end_version) => {
+                major >= start_version.major() && major <= end_version.major()
+            }
+            VersionSpecification::In(versions) => versions.iter().any(|v| v.major() == major),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -628,5 +712,40 @@ mod test {
         let mut bytes = Cursor::new(expected_value.to_be_bytes().to_vec());
         assert_eq!(Ok(version), Version::from_bytes(&mut bytes));
         Ok(())
+    }
+
+    #[test]
+    fn test_version_specification() {
+        assert!(VersionSpecification::Any.matches(&JAVA_11));
+
+        assert!(VersionSpecification::Equal(JAVA_11.clone()).matches(&JAVA_11));
+        assert!(!VersionSpecification::Equal(JAVA_17.clone()).matches(&JAVA_11));
+
+        assert!(!VersionSpecification::NotEqual(JAVA_11.clone()).matches(&JAVA_11));
+        assert!(VersionSpecification::NotEqual(JAVA_17.clone()).matches(&JAVA_11));
+
+        assert!(VersionSpecification::LessThan(JAVA_17.clone()).matches(&JAVA_11));
+        assert!(!VersionSpecification::LessThan(JAVA_11.clone()).matches(&JAVA_11));
+
+        assert!(VersionSpecification::LessThanOrEqual(JAVA_11.clone()).matches(&JAVA_11));
+        assert!(VersionSpecification::LessThanOrEqual(JAVA_17.clone()).matches(&JAVA_11));
+        assert!(!VersionSpecification::LessThanOrEqual(JAVA_17.clone()).matches(&JAVA_21));
+
+        assert!(VersionSpecification::GreaterThan(JAVA_11.clone()).matches(&JAVA_17));
+        assert!(!VersionSpecification::GreaterThan(JAVA_17.clone()).matches(&JAVA_17));
+
+        assert!(VersionSpecification::GreaterThanOrEqual(JAVA_11.clone()).matches(&JAVA_11));
+        assert!(VersionSpecification::GreaterThanOrEqual(JAVA_17.clone()).matches(&JAVA_21));
+        assert!(!VersionSpecification::GreaterThanOrEqual(JAVA_21.clone()).matches(&JAVA_17));
+
+        let between = VersionSpecification::Between(JAVA_11, JAVA_17);
+        assert!(between.matches(&JAVA_11));
+        assert!(between.matches(&JAVA_17));
+        assert!(!between.matches(&JAVA_21));
+
+        let versions_in = VersionSpecification::In(&[JAVA_11, JAVA_21]);
+        assert!(versions_in.matches(&JAVA_11));
+        assert!(versions_in.matches(&JAVA_21));
+        assert!(!versions_in.matches(&JAVA_17));
     }
 }

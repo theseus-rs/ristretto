@@ -1,119 +1,31 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/io/WinNTFileSystem";
-
-/// Register all intrinsic methods for `java.io.WinNTFileSystem`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "getNameMax0",
-            "(Ljava/lang/String;)I",
-            get_name_max_0,
-        );
-    }
-
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "canonicalizeWithPrefix0",
-            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
-            canonicalize_with_prefix_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "checkAccess",
-            "(Ljava/io/File;I)Z",
-            check_access,
-        );
-        registry.register(
-            CLASS_NAME,
-            "createDirectory",
-            "(Ljava/io/File;)Z",
-            create_directory,
-        );
-        registry.register(
-            CLASS_NAME,
-            "createFileExclusively",
-            "(Ljava/lang/String;)Z",
-            create_file_exclusively,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getBooleanAttributes",
-            "(Ljava/io/File;)I",
-            get_boolean_attributes,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getLastModifiedTime",
-            "(Ljava/io/File;)J",
-            get_last_modified_time,
-        );
-        registry.register(CLASS_NAME, "getLength", "(Ljava/io/File;)J", get_length);
-        registry.register(
-            CLASS_NAME,
-            "list",
-            "(Ljava/io/File;)[Ljava/lang/String;",
-            list,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setLastModifiedTime",
-            "(Ljava/io/File;J)Z",
-            set_last_modified_time,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setPermission",
-            "(Ljava/io/File;IZZ)Z",
-            set_permission,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setReadOnly",
-            "(Ljava/io/File;)Z",
-            set_read_only,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "canonicalize0",
-        "(Ljava/lang/String;)Ljava/lang/String;",
-        canonicalize_0,
-    );
-    registry.register(CLASS_NAME, "delete0", "(Ljava/io/File;)Z", delete_0);
-    registry.register(
-        CLASS_NAME,
-        "getDriveDirectory",
-        "(I)Ljava/lang/String;",
-        get_drive_directory,
-    );
-    registry.register(CLASS_NAME, "getSpace0", "(Ljava/io/File;I)J", get_space_0);
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(CLASS_NAME, "listRoots0", "()I", list_roots_0);
-    registry.register(
-        CLASS_NAME,
-        "rename0",
-        "(Ljava/io/File;Ljava/io/File;)Z",
-        rename_0,
-    );
-}
-
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn canonicalize_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn canonicalize_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.canonicalizeWithPrefix0(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn canonicalize_with_prefix_0(
+pub(crate) async fn canonicalize_with_prefix_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -122,103 +34,186 @@ async fn canonicalize_with_prefix_0(
     )
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.checkAccess(Ljava/io/File;I)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn check_access(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn check_access(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.checkAccess(Ljava/io/File;I)Z")
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.createDirectory(Ljava/io/File;)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn create_directory(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn create_directory(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.createDirectory(Ljava/io/File;)Z")
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.createFileExclusively(Ljava/lang/String;)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn create_file_exclusively(
+pub(crate) async fn create_file_exclusively(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.createFileExclusively(Ljava/lang/String;)Z")
 }
 
+#[intrinsic_method("java/io/WinNTFileSystem.delete0(Ljava/io/File;)Z", Any)]
 #[async_recursion(?Send)]
-async fn delete_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn delete_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.delete0(Ljava/io/File;)Z")
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.getBooleanAttributes(Ljava/io/File;)I",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_boolean_attributes(
+pub(crate) async fn get_boolean_attributes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getBooleanAttributes(Ljava/io/File;)I")
 }
 
+#[intrinsic_method("java/io/WinNTFileSystem.getDriveDirectory(I)Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
-async fn get_drive_directory(
+pub(crate) async fn get_drive_directory(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getDriveDirectory(I)Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.getLastModifiedTime(Ljava/io/File;)J",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_last_modified_time(
+pub(crate) async fn get_last_modified_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getLastModifiedTime(Ljava/io/File;)J")
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.getLength(Ljava/io/File;)J",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_length(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_length(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getLength(Ljava/io/File;)J")
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.getNameMax0(Ljava/lang/String;)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_name_max_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_name_max_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getNameMax0(Ljava/lang/String;)I")
 }
 
+#[intrinsic_method("java/io/WinNTFileSystem.getSpace0(Ljava/io/File;I)J", Any)]
 #[async_recursion(?Send)]
-async fn get_space_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_space_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.getSpace0(Ljava/io/File;I)J")
 }
 
+#[intrinsic_method("java/io/WinNTFileSystem.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.list(Ljava/io/File;)[Ljava/lang/String;",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn list(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn list(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.list(Ljava/io/File;)[Ljava/lang/String;")
 }
 
+#[intrinsic_method("java/io/WinNTFileSystem.listRoots0()I", Any)]
 #[async_recursion(?Send)]
-async fn list_roots_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn list_roots_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.listRoots0()I")
 }
 
+#[intrinsic_method("java/io/WinNTFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z", Any)]
 #[async_recursion(?Send)]
-async fn rename_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn rename_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z")
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.setLastModifiedTime(Ljava/io/File;J)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_last_modified_time(
+pub(crate) async fn set_last_modified_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.setLastModifiedTime(Ljava/io/File;J)Z")
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.setPermission(Ljava/io/File;IZZ)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_permission(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_permission(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.setPermission(Ljava/io/File;IZZ)Z")
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.setReadOnly(Ljava/io/File;)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_read_only(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_read_only(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.WinNTFileSystem.setReadOnly(Ljava/io/File;)Z")
 }
 

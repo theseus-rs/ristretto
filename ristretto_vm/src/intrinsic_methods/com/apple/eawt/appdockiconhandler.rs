@@ -1,84 +1,58 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/apple/eawt/_AppDockIconHandler";
-
-/// Register all intrinsic methods for `com.apple.eawt._AppDockIconHandler`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "nativeSetDockIconProgress",
-            "(I)V",
-            native_set_dock_icon_progress,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "nativeGetDockIconImage",
-        "()J",
-        native_get_dock_icon_image,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetDockIconBadge",
-        "(Ljava/lang/String;)V",
-        native_set_dock_icon_badge,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetDockIconImage",
-        "(J)V",
-        native_set_dock_icon_image,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetDockMenu",
-        "(J)V",
-        native_set_dock_menu,
-    );
-}
-
+#[intrinsic_method("com/apple/eawt/_AppDockIconHandler.nativeGetDockIconImage()J", Any)]
 #[async_recursion(?Send)]
-async fn native_get_dock_icon_image(
+pub(crate) async fn native_get_dock_icon_image(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppDockIconHandler.nativeGetDockIconImage()J")
 }
 
+#[intrinsic_method(
+    "com/apple/eawt/_AppDockIconHandler.nativeSetDockIconBadge(Ljava/lang/String;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_dock_icon_badge(
+pub(crate) async fn native_set_dock_icon_badge(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppDockIconHandler.nativeSetDockIconBadge(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method("com/apple/eawt/_AppDockIconHandler.nativeSetDockIconImage(J)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_dock_icon_image(
+pub(crate) async fn native_set_dock_icon_image(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppDockIconHandler.nativeSetDockIconImage(J)V")
 }
 
+#[intrinsic_method(
+    "com/apple/eawt/_AppDockIconHandler.nativeSetDockIconProgress(I)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn native_set_dock_icon_progress(
+pub(crate) async fn native_set_dock_icon_progress(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppDockIconHandler.nativeSetDockIconProgress(I)V")
 }
 
+#[intrinsic_method("com/apple/eawt/_AppDockIconHandler.nativeSetDockMenu(J)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_dock_menu(
+pub(crate) async fn native_set_dock_menu(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

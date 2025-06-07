@@ -1,25 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_24;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/vm/ci/services/Services";
-
-/// Register all intrinsic methods for `jdk.vm.ci.services.Services`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "readSystemPropertiesInfo",
-        "([I)J",
-        read_system_properties_info,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/vm/ci/services/Services.readSystemPropertiesInfo([I)J",
+    GreaterThanOrEqual(JAVA_24)
+)]
 #[async_recursion(?Send)]
-async fn read_system_properties_info(
+pub(crate) async fn read_system_properties_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

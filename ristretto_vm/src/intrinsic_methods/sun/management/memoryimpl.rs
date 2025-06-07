@@ -1,38 +1,18 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/management/MemoryImpl";
-
-/// Register all intrinsic methods for `sun.management.MemoryImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getMemoryManagers0",
-        "()[Ljava/lang/management/MemoryManagerMXBean;",
-        get_memory_managers_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getMemoryPools0",
-        "()[Ljava/lang/management/MemoryPoolMXBean;",
-        get_memory_pools_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getMemoryUsage0",
-        "(Z)Ljava/lang/management/MemoryUsage;",
-        get_memory_usage_0,
-    );
-    registry.register(CLASS_NAME, "setVerboseGC", "(Z)V", set_verbose_gc);
-}
-
+#[intrinsic_method(
+    "sun/management/MemoryImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_memory_managers_0(
+pub(crate) async fn get_memory_managers_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -41,24 +21,36 @@ async fn get_memory_managers_0(
     )
 }
 
+#[intrinsic_method(
+    "sun/management/MemoryImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_memory_pools_0(
+pub(crate) async fn get_memory_pools_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.MemoryImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;")
 }
 
+#[intrinsic_method(
+    "sun/management/MemoryImpl.getMemoryUsage0(Z)Ljava/lang/management/MemoryUsage;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_memory_usage_0(
+pub(crate) async fn get_memory_usage_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.MemoryImpl.getMemoryUsage0(Z)Ljava/lang/management/MemoryUsage;")
 }
 
+#[intrinsic_method("sun/management/MemoryImpl.setVerboseGC(Z)V", Any)]
 #[async_recursion(?Send)]
-async fn set_verbose_gc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_verbose_gc(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.MemoryImpl.setVerboseGC(Z)V")
 }
 

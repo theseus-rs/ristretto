@@ -1,45 +1,33 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CMenuBar";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CMenuBar`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeCreateMenuBar",
-        "()J",
-        native_create_menu_bar,
-    );
-    registry.register(CLASS_NAME, "nativeDelMenu", "(JI)V", native_del_menu);
-    registry.register(
-        CLASS_NAME,
-        "nativeSetHelpMenu",
-        "(JJ)V",
-        native_set_help_menu,
-    );
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CMenuBar.nativeCreateMenuBar()J", Any)]
 #[async_recursion(?Send)]
-async fn native_create_menu_bar(
+pub(crate) async fn native_create_menu_bar(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuBar.nativeCreateMenuBar()J")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CMenuBar.nativeDelMenu(JI)V", Any)]
 #[async_recursion(?Send)]
-async fn native_del_menu(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_del_menu(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuBar.nativeDelMenu(JI)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CMenuBar.nativeSetHelpMenu(JJ)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_help_menu(
+pub(crate) async fn native_set_help_menu(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

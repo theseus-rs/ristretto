@@ -1,127 +1,151 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Equal, LessThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/net/PlainSocketImpl";
-
-/// Register all intrinsic methods for `java.net.PlainSocketImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(CLASS_NAME, "socketCreate", "(Z)V", socket_create);
-    } else {
-        registry.register(CLASS_NAME, "socketCreate", "(ZZ)V", socket_create);
-    }
-
-    registry.register(CLASS_NAME, "initProto", "()V", init_proto);
-    registry.register(
-        CLASS_NAME,
-        "socketAccept",
-        "(Ljava/net/SocketImpl;)V",
-        socket_accept,
-    );
-    registry.register(CLASS_NAME, "socketAvailable", "()I", socket_available);
-    registry.register(
-        CLASS_NAME,
-        "socketBind",
-        "(Ljava/net/InetAddress;I)V",
-        socket_bind,
-    );
-    registry.register(CLASS_NAME, "socketClose0", "(Z)V", socket_close_0);
-    registry.register(
-        CLASS_NAME,
-        "socketConnect",
-        "(Ljava/net/InetAddress;II)V",
-        socket_connect,
-    );
-    registry.register(
-        CLASS_NAME,
-        "socketGetOption",
-        "(ILjava/lang/Object;)I",
-        socket_get_option,
-    );
-    registry.register(CLASS_NAME, "socketListen", "(I)V", socket_listen);
-    registry.register(
-        CLASS_NAME,
-        "socketSendUrgentData",
-        "(I)V",
-        socket_send_urgent_data,
-    );
-    registry.register(
-        CLASS_NAME,
-        "socketSetOption0",
-        "(IZLjava/lang/Object;)V",
-        socket_set_option_0,
-    );
-    registry.register(CLASS_NAME, "socketShutdown", "(I)V", socket_shutdown);
-}
-
+#[intrinsic_method("java/net/PlainSocketImpl.initProto()V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn init_proto(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_proto(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.initProto()V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.socketAccept(Ljava/net/SocketImpl;)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn socket_accept(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_accept(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.socketAccept(Ljava/net/SocketImpl;)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.socketAvailable()I",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn socket_available(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_available(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.socketAvailable()I")
 }
 
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.socketBind(Ljava/net/InetAddress;I)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn socket_bind(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_bind(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.socketBind(Ljava/net/InetAddress;I)V")
 }
 
+#[intrinsic_method("java/net/PlainSocketImpl.socketClose0(Z)V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn socket_close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_close_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.socketClose0(Z)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.socketConnect(Ljava/net/InetAddress;II)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn socket_connect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_connect(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.socketConnect(Ljava/net/InetAddress;II)V")
 }
 
+#[intrinsic_method("java/net/PlainSocketImpl.socketCreate(Z)V", LessThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn socket_create(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_create_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.socketCreate(Z)V")
 }
 
+#[intrinsic_method("java/net/PlainSocketImpl.socketCreate(ZZ)V", Equal(JAVA_17))]
 #[async_recursion(?Send)]
-async fn socket_get_option(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_create_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("java.net.PlainSocketImpl.socketCreate(ZZ)V")
+}
+
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.socketGetOption(ILjava/lang/Object;)I",
+    LessThanOrEqual(JAVA_17)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn socket_get_option(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.socketGetOption(ILjava/lang/Object;)I")
 }
 
+#[intrinsic_method("java/net/PlainSocketImpl.socketListen(I)V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn socket_listen(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_listen(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.socketListen(I)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.socketSendUrgentData(I)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn socket_send_urgent_data(
+pub(crate) async fn socket_send_urgent_data(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.socketSendUrgentData(I)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.socketSetOption0(IZLjava/lang/Object;)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn socket_set_option_0(
+pub(crate) async fn socket_set_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.socketSetOption0(IZLjava/lang/Object;)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.socketShutdown(I)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn socket_shutdown(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_shutdown(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainSocketImpl.socketShutdown(I)V")
 }
 
@@ -179,9 +203,16 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: java.net.PlainSocketImpl.socketCreate(Z)V")]
-    async fn test_socket_create() {
+    async fn test_socket_create_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = socket_create(thread, Parameters::default()).await;
+        let _ = socket_create_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: java.net.PlainSocketImpl.socketCreate(ZZ)V")]
+    async fn test_socket_create_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = socket_create_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]

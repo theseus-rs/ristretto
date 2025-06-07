@@ -1,25 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/FcFontManager";
-
-/// Register all intrinsic methods for `sun.awt.FcFontManager`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getFontPathNative",
-        "(ZZ)Ljava/lang/String;",
-        get_font_path_native,
-    );
-}
-
+#[intrinsic_method(
+    "sun/awt/FcFontManager.getFontPathNative(ZZ)Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_font_path_native(
+pub(crate) async fn get_font_path_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -1,20 +1,18 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/sun/security/auth/module/UnixSystem";
-
-/// Register all intrinsic methods for `com.sun.security.auth.module.UnixSystem`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "getUnixInfo", "()V", get_unix_info);
-}
-
+#[intrinsic_method("com/sun/security/auth/module/UnixSystem.getUnixInfo()V", Any)]
 #[async_recursion(?Send)]
-async fn get_unix_info(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_unix_info(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.security.auth.module.UnixSystem.getUnixInfo()V")
 }
 

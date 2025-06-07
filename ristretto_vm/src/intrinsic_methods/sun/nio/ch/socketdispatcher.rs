@@ -1,56 +1,55 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/SocketDispatcher";
-
-/// Register all intrinsic methods for `sun.nio.ch.SocketDispatcher`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(
-            CLASS_NAME,
-            "write0",
-            "(Ljava/io/FileDescriptor;JI)I",
-            write_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "writev0",
-            "(Ljava/io/FileDescriptor;JI)J",
-            writev_0,
-        );
-    }
-
-    registry.register(CLASS_NAME, "read0", "(Ljava/io/FileDescriptor;JI)I", read_0);
-    registry.register(
-        CLASS_NAME,
-        "readv0",
-        "(Ljava/io/FileDescriptor;JI)J",
-        readv_0,
-    );
-}
-
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn readv_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn readv_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn write_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn write_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn writev_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn writev_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J")
 }
 

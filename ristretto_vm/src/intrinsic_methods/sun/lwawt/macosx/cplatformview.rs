@@ -1,81 +1,54 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CPlatformView";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CPlatformView`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeCreateView",
-        "(IIIIJ)J",
-        native_create_view,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetLocationOnScreen",
-        "(J)Ljava/awt/geom/Rectangle2D;",
-        native_get_location_on_screen,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetNSViewDisplayID",
-        "(J)I",
-        native_get_ns_view_display_id,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeIsViewUnderMouse",
-        "(J)Z",
-        native_is_view_under_mouse,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetAutoResizable",
-        "(JZ)V",
-        native_set_auto_resizable,
-    );
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CPlatformView.nativeCreateView(IIIIJ)J", Any)]
 #[async_recursion(?Send)]
-async fn native_create_view(
+pub(crate) async fn native_create_view(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformView.nativeCreateView(IIIIJ)J")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPlatformView.nativeGetLocationOnScreen(J)Ljava/awt/geom/Rectangle2D;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_get_location_on_screen(
+pub(crate) async fn native_get_location_on_screen(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformView.nativeGetLocationOnScreen(J)Ljava/awt/geom/Rectangle2D;")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformView.nativeGetNSViewDisplayID(J)I", Any)]
 #[async_recursion(?Send)]
-async fn native_get_ns_view_display_id(
+pub(crate) async fn native_get_ns_view_display_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformView.nativeGetNSViewDisplayID(J)I")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformView.nativeIsViewUnderMouse(J)Z", Any)]
 #[async_recursion(?Send)]
-async fn native_is_view_under_mouse(
+pub(crate) async fn native_is_view_under_mouse(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformView.nativeIsViewUnderMouse(J)Z")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformView.nativeSetAutoResizable(JZ)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_auto_resizable(
+pub(crate) async fn native_set_auto_resizable(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

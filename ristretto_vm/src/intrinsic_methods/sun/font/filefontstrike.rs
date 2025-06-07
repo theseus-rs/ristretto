@@ -1,34 +1,30 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/font/FileFontStrike";
-
-/// Register all intrinsic methods for `sun.font.FileFontStrike`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "_getGlyphImageFromWindows",
-        "(Ljava/lang/String;IIIZI)J",
-        get_glyph_image_from_windows,
-    );
-    registry.register(CLASS_NAME, "initNative", "()Z", init_native);
-}
-
+#[intrinsic_method(
+    "sun/font/FileFontStrike._getGlyphImageFromWindows(Ljava/lang/String;IIIZI)J",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_glyph_image_from_windows(
+pub(crate) async fn get_glyph_image_from_windows(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FileFontStrike._getGlyphImageFromWindows(Ljava/lang/String;IIIZI)J")
 }
 
+#[intrinsic_method("sun/font/FileFontStrike.initNative()Z", Any)]
 #[async_recursion(?Send)]
-async fn init_native(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_native(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.FileFontStrike.initNative()Z")
 }
 

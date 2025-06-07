@@ -1,47 +1,45 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/pipe/SpanClipRenderer";
-
-/// Register all intrinsic methods for `sun.java2d.pipe.SpanClipRenderer`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "eraseTile",
-        "(Lsun/java2d/pipe/RegionIterator;[BII[I)V",
-        erase_tile,
-    );
-    registry.register(
-        CLASS_NAME,
-        "fillTile",
-        "(Lsun/java2d/pipe/RegionIterator;[BII[I)V",
-        fill_tile,
-    );
-    registry.register(
-        CLASS_NAME,
-        "initIDs",
-        "(Ljava/lang/Class;Ljava/lang/Class;)V",
-        init_ids,
-    );
-}
-
+#[intrinsic_method(
+    "sun/java2d/pipe/SpanClipRenderer.eraseTile(Lsun/java2d/pipe/RegionIterator;[BII[I)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn erase_tile(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn erase_tile(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.pipe.SpanClipRenderer.eraseTile(Lsun/java2d/pipe/RegionIterator;[BII[I)V")
 }
 
+#[intrinsic_method(
+    "sun/java2d/pipe/SpanClipRenderer.fillTile(Lsun/java2d/pipe/RegionIterator;[BII[I)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn fill_tile(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn fill_tile(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.pipe.SpanClipRenderer.fillTile(Lsun/java2d/pipe/RegionIterator;[BII[I)V")
 }
 
+#[intrinsic_method(
+    "sun/java2d/pipe/SpanClipRenderer.initIDs(Ljava/lang/Class;Ljava/lang/Class;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 

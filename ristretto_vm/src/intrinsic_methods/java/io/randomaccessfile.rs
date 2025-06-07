@@ -1,111 +1,139 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
+use ristretto_classfile::{JAVA_8, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/io/RandomAccessFile";
-
-/// Register all intrinsic methods for `java.io.RandomAccessFile`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "close0", "()V", close_0);
-    }
-
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(CLASS_NAME, "length", "()J", length);
-        registry.register(CLASS_NAME, "readBytes", "([BII)I", read_bytes);
-        registry.register(CLASS_NAME, "setLength", "(J)V", set_length);
-        registry.register(CLASS_NAME, "writeBytes", "([BII)V", write_bytes);
-    } else {
-        registry.register(CLASS_NAME, "length0", "()J", length_0);
-        registry.register(CLASS_NAME, "readBytes0", "([BII)I", read_bytes_0);
-        registry.register(CLASS_NAME, "setLength0", "(J)V", set_length_0);
-        registry.register(CLASS_NAME, "writeBytes0", "([BII)V", write_bytes_0);
-    }
-
-    registry.register(CLASS_NAME, "getFilePointer", "()J", get_file_pointer);
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(CLASS_NAME, "open0", "(Ljava/lang/String;I)V", open_0);
-    registry.register(CLASS_NAME, "read0", "()I", read_0);
-    registry.register(CLASS_NAME, "seek0", "(J)V", seek_0);
-    registry.register(CLASS_NAME, "write0", "(I)V", write_0);
-}
-
+#[intrinsic_method("java/io/RandomAccessFile.close0()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn close_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.close0()V")
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.getFilePointer()J", Any)]
 #[async_recursion(?Send)]
-async fn get_file_pointer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_file_pointer(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.getFilePointer()J")
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.length()J", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn length(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn length(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.length()J")
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.length0()J", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn length_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn length_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.length0()J")
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.open0(Ljava/lang/String;I)V", Any)]
 #[async_recursion(?Send)]
-async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.open0(Ljava/lang/String;I)V")
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.read0()I", Any)]
 #[async_recursion(?Send)]
-async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.read0()I")
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.readBytes([BII)I", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn read_bytes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn read_bytes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.readBytes([BII)I")
 }
 
+#[intrinsic_method(
+    "java/io/RandomAccessFile.readBytes0([BII)I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn read_bytes_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn read_bytes_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.readBytes0([BII)I")
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.seek0(J)V", Any)]
 #[async_recursion(?Send)]
-async fn seek_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn seek_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.seek0(J)V")
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.setLength(J)V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn set_length(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_length(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.setLength(J)V")
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.setLength0(J)V", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn set_length_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_length_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.setLength0(J)V")
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.write0(I)V", Any)]
 #[async_recursion(?Send)]
-async fn write_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn write_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.write0(I)V")
 }
 
+#[intrinsic_method("java/io/RandomAccessFile.writeBytes([BII)V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn write_bytes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn write_bytes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.writeBytes([BII)V")
 }
 
+#[intrinsic_method(
+    "java/io/RandomAccessFile.writeBytes0([BII)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn write_bytes_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn write_bytes_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.RandomAccessFile.writeBytes0([BII)V")
 }
 

@@ -1,120 +1,180 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/x11/X11Renderer";
-
-/// Register all intrinsic methods for `sun.java2d.x11.X11Renderer`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "XDoPath",
-        "(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V",
-        x_do_path,
-    );
-    registry.register(CLASS_NAME, "XDrawArc", "(JJIIIIII)V", x_draw_arc);
-    registry.register(CLASS_NAME, "XDrawLine", "(JJIIII)V", x_draw_line);
-    registry.register(CLASS_NAME, "XDrawOval", "(JJIIII)V", x_draw_oval);
-    registry.register(CLASS_NAME, "XDrawPoly", "(JJII[I[IIZ)V", x_draw_poly);
-    registry.register(CLASS_NAME, "XDrawRect", "(JJIIII)V", x_draw_rect);
-    registry.register(
-        CLASS_NAME,
-        "XDrawRoundRect",
-        "(JJIIIIII)V",
-        x_draw_round_rect,
-    );
-    registry.register(CLASS_NAME, "XFillArc", "(JJIIIIII)V", x_fill_arc);
-    registry.register(CLASS_NAME, "XFillOval", "(JJIIII)V", x_fill_oval);
-    registry.register(CLASS_NAME, "XFillPoly", "(JJII[I[II)V", x_fill_poly);
-    registry.register(CLASS_NAME, "XFillRect", "(JJIIII)V", x_fill_rect);
-    registry.register(
-        CLASS_NAME,
-        "XFillRoundRect",
-        "(JJIIIIII)V",
-        x_fill_round_rect,
-    );
-    registry.register(
-        CLASS_NAME,
-        "XFillSpans",
-        "(JJLsun/java2d/pipe/SpanIterator;JII)V",
-        x_fill_spans,
-    );
-    registry.register(CLASS_NAME, "devCopyArea", "(JJIIIIII)V", dev_copy_area);
-}
-
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XDoPath(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_do_path(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_do_path(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.java2d.x11.X11Renderer.XDoPath(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V"
     );
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XDrawArc(JJIIIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_draw_arc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_draw_arc(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawArc(JJIIIIII)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XDrawLine(JJIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_draw_line(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_draw_line(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawLine(JJIIII)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XDrawOval(JJIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_draw_oval(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_draw_oval(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawOval(JJIIII)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XDrawPoly(JJII[I[IIZ)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_draw_poly(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_draw_poly(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawPoly(JJII[I[IIZ)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XDrawRect(JJIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_draw_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_draw_rect(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawRect(JJIIII)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XDrawRoundRect(JJIIIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_draw_round_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_draw_round_rect(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XDrawRoundRect(JJIIIIII)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XFillArc(JJIIIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_fill_arc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_fill_arc(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillArc(JJIIIIII)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XFillOval(JJIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_fill_oval(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_fill_oval(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillOval(JJIIII)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XFillPoly(JJII[I[II)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_fill_poly(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_fill_poly(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillPoly(JJII[I[II)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XFillRect(JJIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_fill_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_fill_rect(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillRect(JJIIII)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XFillRoundRect(JJIIIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_fill_round_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_fill_round_rect(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillRoundRect(JJIIIIII)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.XFillSpans(JJLsun/java2d/pipe/SpanIterator;JII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_fill_spans(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_fill_spans(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.XFillSpans(JJLsun/java2d/pipe/SpanIterator;JII)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11Renderer.devCopyArea(JJIIIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn dev_copy_area(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn dev_copy_area(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11Renderer.devCopyArea(JJIIIIII)V");
 }
 

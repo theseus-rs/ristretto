@@ -1,15 +1,17 @@
 use crate::Error::InternalError;
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use bitflags::bitflags;
+use ristretto_classfile::VersionSpecification::{
+    Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
+};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::path::PathBuf;
 use std::sync::Arc;
-
-const CLASS_NAME: &str = "java/io/UnixFileSystem";
 
 bitflags! {
     /// Boolean Attribute Flags.
@@ -22,195 +24,102 @@ bitflags! {
     }
 }
 
-/// Register all intrinsic methods for `java.io.UnixFileSystem`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "getNameMax0",
-            "(Ljava/lang/String;)J",
-            get_name_max_0,
-        );
-    }
-
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "checkAccess",
-            "(Ljava/io/File;I)Z",
-            check_access,
-        );
-        registry.register(
-            CLASS_NAME,
-            "createDirectory",
-            "(Ljava/io/File;)Z",
-            create_directory,
-        );
-        registry.register(
-            CLASS_NAME,
-            "createFileExclusively",
-            "(Ljava/lang/String;)Z",
-            create_file_exclusively,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getLastModifiedTime",
-            "(Ljava/io/File;)J",
-            get_last_modified_time,
-        );
-        registry.register(CLASS_NAME, "getLength", "(Ljava/io/File;)J", get_length);
-        registry.register(CLASS_NAME, "getSpace", "(Ljava/io/File;I)J", get_space);
-        registry.register(
-            CLASS_NAME,
-            "list",
-            "(Ljava/io/File;)[Ljava/lang/String;",
-            list,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setLastModifiedTime",
-            "(Ljava/io/File;J)Z",
-            set_last_modified_time,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setPermission",
-            "(Ljava/io/File;IZZ)Z",
-            set_permission,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setReadOnly",
-            "(Ljava/io/File;)Z",
-            set_read_only,
-        );
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "checkAccess0",
-            "(Ljava/io/File;I)Z",
-            check_access_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "createDirectory0",
-            "(Ljava/io/File;)Z",
-            create_directory_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "createFileExclusively0",
-            "(Ljava/lang/String;)Z",
-            create_file_exclusively_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getLastModifiedTime0",
-            "(Ljava/io/File;)J",
-            get_last_modified_time_0,
-        );
-        registry.register(CLASS_NAME, "getLength0", "(Ljava/io/File;)J", get_length_0);
-        registry.register(CLASS_NAME, "getSpace0", "(Ljava/io/File;I)J", get_space_0);
-        registry.register(
-            CLASS_NAME,
-            "list0",
-            "(Ljava/io/File;)[Ljava/lang/String;",
-            list_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setLastModifiedTime0",
-            "(Ljava/io/File;J)Z",
-            set_last_modified_time_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setPermission0",
-            "(Ljava/io/File;IZZ)Z",
-            set_permission_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setReadOnly0",
-            "(Ljava/io/File;)Z",
-            set_read_only_0,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "canonicalize0",
-        "(Ljava/lang/String;)Ljava/lang/String;",
-        canonicalize_0,
-    );
-    registry.register(CLASS_NAME, "delete0", "(Ljava/io/File;)Z", delete_0);
-    registry.register(
-        CLASS_NAME,
-        "getBooleanAttributes0",
-        "(Ljava/io/File;)I",
-        get_boolean_attributes_0,
-    );
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(
-        CLASS_NAME,
-        "rename0",
-        "(Ljava/io/File;Ljava/io/File;)Z",
-        rename_0,
-    );
-}
-
+#[intrinsic_method(
+    "java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn canonicalize_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn canonicalize_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.checkAccess(Ljava/io/File;I)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn check_access(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn check_access(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.checkAccess(Ljava/io/File;I)Z")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.checkAccess0(Ljava/io/File;I)Z",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn check_access_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn check_access_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.checkAccess0(Ljava/io/File;I)Z")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.createDirectory(Ljava/io/File;)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn create_directory(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn create_directory(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.createDirectory(Ljava/io/File;)Z")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.createDirectory0(Ljava/io/File;)Z",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn create_directory_0(
+pub(crate) async fn create_directory_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.createDirectory0(Ljava/io/File;)Z")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.createFileExclusively(Ljava/lang/String;)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn create_file_exclusively(
+pub(crate) async fn create_file_exclusively(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.createFileExclusively(Ljava/lang/String;)Z")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.createFileExclusively0(Ljava/lang/String;)Z",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn create_file_exclusively_0(
+pub(crate) async fn create_file_exclusively_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.createFileExclusively0(Ljava/lang/String;)Z")
 }
 
+#[intrinsic_method("java/io/UnixFileSystem.delete0(Ljava/io/File;)Z", Any)]
 #[async_recursion(?Send)]
-async fn delete_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn delete_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.delete0(Ljava/io/File;)Z")
 }
 
+#[intrinsic_method("java/io/UnixFileSystem.getBooleanAttributes0(Ljava/io/File;)I", Any)]
 #[async_recursion(?Send)]
-async fn get_boolean_attributes_0(
+pub(crate) async fn get_boolean_attributes_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -242,100 +151,195 @@ async fn get_boolean_attributes_0(
     Ok(Some(Value::Int(attributes.bits())))
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.getLastModifiedTime(Ljava/io/File;)J",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_last_modified_time(
+pub(crate) async fn get_last_modified_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.getLastModifiedTime(Ljava/io/File;)J")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.getLastModifiedTime0(Ljava/io/File;)J",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_last_modified_time_0(
+pub(crate) async fn get_last_modified_time_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.getLastModifiedTime0(Ljava/io/File;)J")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.getLength(Ljava/io/File;)J",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_length(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_length(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
     get_length_0(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.getLength0(Ljava/io/File;)J",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_length_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_length_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.getLength0(Ljava/io/File;)J")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.getNameMax0(Ljava/lang/String;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_name_max_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_name_max_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.getNameMax0(Ljava/lang/String;)J")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.getSpace(Ljava/io/File;I)J",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_space(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_space(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
     get_space_0(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.getSpace0(Ljava/io/File;I)J",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_space_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_space_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.getSpace0(Ljava/io/File;I)J")
 }
 
+#[intrinsic_method("java/io/UnixFileSystem.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.list(Ljava/io/File;)[Ljava/lang/String;",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn list(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn list(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     list_0(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn list_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn list_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;")
 }
 
+#[intrinsic_method("java/io/UnixFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z", Any)]
 #[async_recursion(?Send)]
-async fn rename_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn rename_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.setLastModifiedTime(Ljava/io/File;J)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_last_modified_time(
+pub(crate) async fn set_last_modified_time(
     thread: Arc<Thread>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
     set_last_modified_time_0(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.setLastModifiedTime0(Ljava/io/File;J)Z",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_last_modified_time_0(
+pub(crate) async fn set_last_modified_time_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.setLastModifiedTime0(Ljava/io/File;J)Z")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.setPermission(Ljava/io/File;IZZ)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_permission(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_permission(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
     set_permission_0(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.setPermission0(Ljava/io/File;IZZ)Z",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_permission_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_permission_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.setPermission0(Ljava/io/File;IZZ)Z")
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.setReadOnly(Ljava/io/File;)Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_read_only(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_read_only(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
     set_read_only_0(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "java/io/UnixFileSystem.setReadOnly0(Ljava/io/File;)Z",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_read_only_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_read_only_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.UnixFileSystem.setReadOnly0(Ljava/io/File;)Z")
 }
 

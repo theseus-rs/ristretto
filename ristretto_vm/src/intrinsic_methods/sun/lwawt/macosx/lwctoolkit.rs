@@ -1,185 +1,163 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/LWCToolkit";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.LWCToolkit`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "initAppkit",
-            "(Ljava/lang/ThreadGroup;Z)V",
-            init_appkit,
-        );
-        registry.register(
-            CLASS_NAME,
-            "performOnMainThreadAfterDelay",
-            "(Ljava/lang/Runnable;J)V",
-            perform_on_main_thread_after_delay,
-        );
-    }
-
-    if registry.java_major_version() == JAVA_11 {
-        registry.register(CLASS_NAME, "isInAquaSession", "()Z", is_in_aqua_session);
-    }
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(CLASS_NAME, "getMultiClickTime", "()I", get_multi_click_time);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "activateApplicationIgnoringOtherApps",
-        "()V",
-        activate_application_ignoring_other_apps,
-    );
-    registry.register(CLASS_NAME, "beep", "()V", beep);
-    registry.register(
-        CLASS_NAME,
-        "createAWTRunLoopMediator",
-        "()J",
-        create_awt_run_loop_mediator,
-    );
-    registry.register(
-        CLASS_NAME,
-        "doAWTRunLoopImpl",
-        "(JZZ)V",
-        do_awt_run_loop_impl,
-    );
-    registry.register(
-        CLASS_NAME,
-        "flushNativeSelectors",
-        "()V",
-        flush_native_selectors,
-    );
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(
-        CLASS_NAME,
-        "isApplicationActive",
-        "()Z",
-        is_application_active,
-    );
-    registry.register(CLASS_NAME, "isCapsLockOn", "()Z", is_caps_lock_on);
-    registry.register(CLASS_NAME, "isEmbedded", "()Z", is_embedded);
-    registry.register(
-        CLASS_NAME,
-        "loadNativeColors",
-        "([I[I)V",
-        load_native_colors,
-    );
-    registry.register(CLASS_NAME, "nativeSyncQueue", "(J)Z", native_sync_queue);
-    registry.register(CLASS_NAME, "stopAWTRunLoop", "(J)V", stop_awt_run_loop);
-}
-
+#[intrinsic_method(
+    "sun/lwawt/macosx/LWCToolkit.activateApplicationIgnoringOtherApps()V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn activate_application_ignoring_other_apps(
+pub(crate) async fn activate_application_ignoring_other_apps(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.activateApplicationIgnoringOtherApps()V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.beep()V", Any)]
 #[async_recursion(?Send)]
-async fn beep(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn beep(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.beep()V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.createAWTRunLoopMediator()J", Any)]
 #[async_recursion(?Send)]
-async fn create_awt_run_loop_mediator(
+pub(crate) async fn create_awt_run_loop_mediator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.createAWTRunLoopMediator()J")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.doAWTRunLoopImpl(JZZ)V", Any)]
 #[async_recursion(?Send)]
-async fn do_awt_run_loop_impl(
+pub(crate) async fn do_awt_run_loop_impl(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.doAWTRunLoopImpl(JZZ)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.flushNativeSelectors()V", Any)]
 #[async_recursion(?Send)]
-async fn flush_native_selectors(
+pub(crate) async fn flush_native_selectors(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.flushNativeSelectors()V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/LWCToolkit.getMultiClickTime()I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_multi_click_time(
+pub(crate) async fn get_multi_click_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.getMultiClickTime()I")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/LWCToolkit.initAppkit(Ljava/lang/ThreadGroup;Z)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn init_appkit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_appkit(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.initAppkit(Ljava/lang/ThreadGroup;Z)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isApplicationActive()Z", Any)]
 #[async_recursion(?Send)]
-async fn is_application_active(
+pub(crate) async fn is_application_active(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.isApplicationActive()Z")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isCapsLockOn()Z", Any)]
 #[async_recursion(?Send)]
-async fn is_caps_lock_on(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_caps_lock_on(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.isCapsLockOn()Z")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isEmbedded()Z", Any)]
 #[async_recursion(?Send)]
-async fn is_embedded(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_embedded(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.isEmbedded()Z")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isInAquaSession()Z", Equal(JAVA_11))]
 #[async_recursion(?Send)]
-async fn is_in_aqua_session(
+pub(crate) async fn is_in_aqua_session(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.isInAquaSession()Z")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.loadNativeColors([I[I)V", Any)]
 #[async_recursion(?Send)]
-async fn load_native_colors(
+pub(crate) async fn load_native_colors(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.loadNativeColors([I[I)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.nativeSyncQueue(J)Z", Any)]
 #[async_recursion(?Send)]
-async fn native_sync_queue(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_sync_queue(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.nativeSyncQueue(J)Z")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/LWCToolkit.performOnMainThreadAfterDelay(Ljava/lang/Runnable;J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn perform_on_main_thread_after_delay(
+pub(crate) async fn perform_on_main_thread_after_delay(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.performOnMainThreadAfterDelay(Ljava/lang/Runnable;J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/LWCToolkit.stopAWTRunLoop(J)V", Any)]
 #[async_recursion(?Send)]
-async fn stop_awt_run_loop(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn stop_awt_run_loop(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.stopAWTRunLoop(J)V")
 }
 

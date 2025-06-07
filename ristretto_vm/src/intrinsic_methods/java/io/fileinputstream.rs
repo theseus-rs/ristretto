@@ -1,86 +1,94 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, JAVA_17, JAVA_24, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
+use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_24};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/io/FileInputStream";
-
-/// Register all intrinsic methods for `java.io.FileInputStream`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "close0", "()V", close_0);
-    } else if registry.java_major_version() >= JAVA_17 {
-        registry.register(CLASS_NAME, "length0", "()J", length_0);
-        registry.register(CLASS_NAME, "position0", "()J", position_0);
-    }
-
-    if registry.java_major_version() >= JAVA_24 {
-        registry.register(
-            CLASS_NAME,
-            "isRegularFile0",
-            "(Ljava/io/FileDescriptor;)Z",
-            is_regular_file_0,
-        );
-    }
-
-    registry.register(CLASS_NAME, "available0", "()I", available_0);
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(CLASS_NAME, "open0", "(Ljava/lang/String;)V", open_0);
-    registry.register(CLASS_NAME, "read0", "()I", read_0);
-    registry.register(CLASS_NAME, "readBytes", "([BII)I", read_bytes);
-    registry.register(CLASS_NAME, "skip0", "(J)J", skip_0);
-}
-
+#[intrinsic_method("java/io/FileInputStream.available0()I", Any)]
 #[async_recursion(?Send)]
-async fn available_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn available_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.available0()I")
 }
 
+#[intrinsic_method("java/io/FileInputStream.close0()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn close_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.close0()V")
 }
 
+#[intrinsic_method("java/io/FileInputStream.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/io/FileInputStream.isRegularFile0(Ljava/io/FileDescriptor;)Z",
+    GreaterThanOrEqual(JAVA_24)
+)]
 #[async_recursion(?Send)]
-async fn is_regular_file_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_regular_file_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.isRegularFile0(Ljava/io/FileDescriptor;)Z")
 }
 
+#[intrinsic_method("java/io/FileInputStream.length0()J", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn length_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn length_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.length0()J")
 }
 
+#[intrinsic_method("java/io/FileInputStream.open0(Ljava/lang/String;)V", Any)]
 #[async_recursion(?Send)]
-async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.open0(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method("java/io/FileInputStream.position0()J", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn position_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn position_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.position0()J")
 }
 
+#[intrinsic_method("java/io/FileInputStream.read0()I", Any)]
 #[async_recursion(?Send)]
-async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.read0()I")
 }
 
+#[intrinsic_method("java/io/FileInputStream.readBytes([BII)I", Any)]
 #[async_recursion(?Send)]
-async fn read_bytes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn read_bytes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.readBytes([BII)I")
 }
 
+#[intrinsic_method("java/io/FileInputStream.skip0(J)J", Any)]
 #[async_recursion(?Send)]
-async fn skip_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn skip_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileInputStream.skip0(J)J")
 }
 

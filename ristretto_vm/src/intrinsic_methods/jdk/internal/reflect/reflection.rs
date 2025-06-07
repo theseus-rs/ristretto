@@ -1,42 +1,31 @@
 use crate::Error::InternalError;
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/reflect/Reflection";
-
-/// Register all intrinsic methods for `jdk.internal.reflect.Reflection`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "areNestMates",
-        "(Ljava/lang/Class;Ljava/lang/Class;)Z",
-        are_nest_mates,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getCallerClass",
-        "()Ljava/lang/Class;",
-        get_caller_class,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getClassAccessFlags",
-        "(Ljava/lang/Class;)I",
-        get_class_access_flags,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn are_nest_mates(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn are_nest_mates(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.reflect.Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z")
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/Reflection.getCallerClass()Ljava/lang/Class;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_caller_class(
     thread: Arc<Thread>,
@@ -59,8 +48,12 @@ pub(crate) async fn get_caller_class(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/Reflection.getClassAccessFlags(Ljava/lang/Class;)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_class_access_flags(
+pub(crate) async fn get_class_access_flags(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

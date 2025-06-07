@@ -1,72 +1,82 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/DatagramChannelImpl";
-
-/// Register all intrinsic methods for `sun.nio.ch.DatagramChannelImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-        registry.register(
-            CLASS_NAME,
-            "receive0",
-            "(Ljava/io/FileDescriptor;JIZ)I",
-            receive_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "send0",
-            "(ZLjava/io/FileDescriptor;JILjava/net/InetAddress;I)I",
-            send_0,
-        );
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "receive0",
-            "(Ljava/io/FileDescriptor;JIJZ)I",
-            receive_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "send0",
-            "(Ljava/io/FileDescriptor;JIJI)I",
-            send_0,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "disconnect0",
-        "(Ljava/io/FileDescriptor;Z)V",
-        disconnect_0,
-    );
-}
-
+#[intrinsic_method(
+    "sun/nio/ch/DatagramChannelImpl.disconnect0(Ljava/io/FileDescriptor;Z)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn disconnect_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn disconnect_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramChannelImpl.disconnect0(Ljava/io/FileDescriptor;Z)V");
 }
 
+#[intrinsic_method("sun/nio/ch/DatagramChannelImpl.initIDs()V", LessThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/DatagramChannelImpl.receive0(Ljava/io/FileDescriptor;JIZ)I",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn receive_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn receive_0_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramChannelImpl.receive0(Ljava/io/FileDescriptor;JIZ)I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/DatagramChannelImpl.receive0(Ljava/io/FileDescriptor;JIJZ)I",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn send_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn receive_0_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.nio.ch.DatagramChannelImpl.receive0(Ljava/io/FileDescriptor;JIJZ)I");
+}
+
+#[intrinsic_method(
+    "sun/nio/ch/DatagramChannelImpl.send0(ZLjava/io/FileDescriptor;JILjava/net/InetAddress;I)I",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn send_0_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.nio.ch.DatagramChannelImpl.send0(ZLjava/io/FileDescriptor;JILjava/net/InetAddress;I)I"
     );
+}
+
+#[intrinsic_method(
+    "sun/nio/ch/DatagramChannelImpl.send0(Ljava/io/FileDescriptor;JIJI)I",
+    GreaterThan(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn send_0_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.nio.ch.DatagramChannelImpl.send0(Ljava/io/FileDescriptor;JIJI)I");
 }
 
 #[cfg(test)]
@@ -94,17 +104,35 @@ mod tests {
     #[should_panic(
         expected = "not yet implemented: sun.nio.ch.DatagramChannelImpl.receive0(Ljava/io/FileDescriptor;JIZ)I"
     )]
-    async fn test_receive_0() {
+    async fn test_receive_0_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = receive_0(thread, Parameters::default()).await;
+        let _ = receive_0_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.nio.ch.DatagramChannelImpl.receive0(Ljava/io/FileDescriptor;JIJZ)I"
+    )]
+    async fn test_receive_0_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = receive_0_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
     #[should_panic(
         expected = "not yet implemented: sun.nio.ch.DatagramChannelImpl.send0(ZLjava/io/FileDescriptor;JILjava/net/InetAddress;I)I"
     )]
-    async fn test_send_0() {
+    async fn test_send_0_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = send_0(thread, Parameters::default()).await;
+        let _ = send_0_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.nio.ch.DatagramChannelImpl.send0(Ljava/io/FileDescriptor;JIJI)I"
+    )]
+    async fn test_send_0_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = send_0_1(thread, Parameters::default()).await;
     }
 }

@@ -1,77 +1,70 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_24, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_24;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CClipboard";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CClipboard`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_24 {
-        registry.register(CLASS_NAME, "writeFileObjects", "([B)V", write_file_objects);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "checkPasteboardWithoutNotification",
-        "()Z",
-        check_pasteboard_without_notification,
-    );
-    registry.register(
-        CLASS_NAME,
-        "declareTypes",
-        "([JLsun/awt/datatransfer/SunClipboard;)V",
-        declare_types,
-    );
-    registry.register(CLASS_NAME, "getClipboardData", "(J)[B", get_clipboard_data);
-    registry.register(
-        CLASS_NAME,
-        "getClipboardFormats",
-        "()[J",
-        get_clipboard_formats,
-    );
-    registry.register(CLASS_NAME, "setData", "([BJ)V", set_data);
-}
-
+#[intrinsic_method(
+    "sun/lwawt/macosx/CClipboard.checkPasteboardWithoutNotification()Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn check_pasteboard_without_notification(
+pub(crate) async fn check_pasteboard_without_notification(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CClipboard.checkPasteboardWithoutNotification()Z")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CClipboard.declareTypes([JLsun/awt/datatransfer/SunClipboard;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn declare_types(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn declare_types(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CClipboard.declareTypes([JLsun/awt/datatransfer/SunClipboard;)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CClipboard.getClipboardData(J)[B", Any)]
 #[async_recursion(?Send)]
-async fn get_clipboard_data(
+pub(crate) async fn get_clipboard_data(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CClipboard.getClipboardData(J)[B")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CClipboard.getClipboardFormats()[J", Any)]
 #[async_recursion(?Send)]
-async fn get_clipboard_formats(
+pub(crate) async fn get_clipboard_formats(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CClipboard.getClipboardFormats()[J")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CClipboard.setData([BJ)V", Any)]
 #[async_recursion(?Send)]
-async fn set_data(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_data(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CClipboard.setData([BJ)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CClipboard.writeFileObjects([B)V",
+    GreaterThanOrEqual(JAVA_24)
+)]
 #[async_recursion(?Send)]
-async fn write_file_objects(
+pub(crate) async fn write_file_objects(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

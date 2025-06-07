@@ -1,36 +1,33 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/image/DataBufferNative";
-
-/// Register all intrinsic methods for `sun.awt.image.DataBufferNative`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getElem",
-        "(IILsun/java2d/SurfaceData;)I",
-        get_elem,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setElem",
-        "(IIILsun/java2d/SurfaceData;)V",
-        set_elem,
-    );
-}
-
+#[intrinsic_method(
+    "sun/awt/image/DataBufferNative.getElem(IILsun/java2d/SurfaceData;)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_elem(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_elem(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.image.DataBufferNative.getElem(IILsun/java2d/SurfaceData;)I")
 }
 
+#[intrinsic_method(
+    "sun/awt/image/DataBufferNative.setElem(IIILsun/java2d/SurfaceData;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn set_elem(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_elem(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.image.DataBufferNative.setElem(IIILsun/java2d/SurfaceData;)V")
 }
 

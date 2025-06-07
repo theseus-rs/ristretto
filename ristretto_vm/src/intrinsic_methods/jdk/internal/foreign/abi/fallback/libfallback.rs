@@ -1,210 +1,357 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_21;
+use ristretto_classfile::VersionSpecification::{GreaterThan, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/foreign/abi/fallback/LibFallback";
-
-/// Register all intrinsic methods for `jdk.internal.foreign.abi.fallback.LibFallback`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_21 {
-        registry.register(CLASS_NAME, "doDowncall", "(JJJJJI)V", do_downcall);
-    } else {
-        registry.register(CLASS_NAME, "alignof_double", "()I", alignof_double);
-        registry.register(CLASS_NAME, "alignof_long_long", "()I", alignof_long_long);
-        registry.register(
-            CLASS_NAME,
-            "doDowncall",
-            "(JJJJLjava/lang/Object;JI[Ljava/lang/Object;I)V",
-            do_downcall,
-        );
-        registry.register(CLASS_NAME, "ffi_sizeof_int", "()I", ffi_sizeof_int);
-        registry.register(CLASS_NAME, "ffi_sizeof_long", "()I", ffi_sizeof_long);
-        registry.register(CLASS_NAME, "ffi_sizeof_short", "()I", ffi_sizeof_short);
-        registry.register(CLASS_NAME, "ffi_sizeof_wchar", "()I", ffi_sizeof_wchar);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "createClosure",
-        "(JLjava/lang/Object;[J)I",
-        create_closure,
-    );
-    registry.register(CLASS_NAME, "ffi_default_abi", "()I", ffi_default_abi);
-    registry.register(
-        CLASS_NAME,
-        "ffi_get_struct_offsets",
-        "(IJJ)I",
-        ffi_get_struct_offsets,
-    );
-    registry.register(CLASS_NAME, "ffi_prep_cif", "(JIIJJ)I", ffi_prep_cif);
-    registry.register(
-        CLASS_NAME,
-        "ffi_prep_cif_var",
-        "(JIIIJJ)I",
-        ffi_prep_cif_var,
-    );
-    registry.register(CLASS_NAME, "ffi_type_double", "()J", ffi_type_double);
-    registry.register(CLASS_NAME, "ffi_type_float", "()J", ffi_type_float);
-    registry.register(CLASS_NAME, "ffi_type_pointer", "()J", ffi_type_pointer);
-    registry.register(CLASS_NAME, "ffi_type_sint16", "()J", ffi_type_sint_16);
-    registry.register(CLASS_NAME, "ffi_type_sint32", "()J", ffi_type_sint_32);
-    registry.register(CLASS_NAME, "ffi_type_sint64", "()J", ffi_type_sint_64);
-    registry.register(CLASS_NAME, "ffi_type_sint8", "()J", ffi_type_sint_8);
-    registry.register(CLASS_NAME, "ffi_type_struct", "()S", ffi_type_struct);
-    registry.register(CLASS_NAME, "ffi_type_uint16", "()J", ffi_type_uint_16);
-    registry.register(CLASS_NAME, "ffi_type_uint32", "()J", ffi_type_uint_32);
-    registry.register(CLASS_NAME, "ffi_type_uint64", "()J", ffi_type_uint_64);
-    registry.register(CLASS_NAME, "ffi_type_uint8", "()J", ffi_type_uint_8);
-    registry.register(CLASS_NAME, "ffi_type_void", "()J", ffi_type_void);
-    registry.register(CLASS_NAME, "freeClosure", "(JJ)V", free_closure);
-    registry.register(CLASS_NAME, "init", "()Z", init);
-    registry.register(CLASS_NAME, "sizeofCif", "()J", sizeof_cif);
-}
-
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.alignof_double()I",
+    GreaterThan(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn alignof_double(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn alignof_double(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.alignof_double()I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.alignof_long_long()I",
+    GreaterThan(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn alignof_long_long(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn alignof_long_long(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.alignof_long_long()I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.createClosure(JLjava/lang/Object;[J)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn create_closure(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn create_closure(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.createClosure(JLjava/lang/Object;[J)I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.doDowncall(JJJJJI)V",
+    LessThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn do_downcall(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJJ[I)V")
+pub(crate) async fn do_downcall_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJJI)V")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.doDowncall(JJJJLjava/lang/Object;JI[Ljava/lang/Object;I)V",
+    GreaterThan(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_default_abi(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_downcall_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!(
+        "jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJLjava/lang/Object;JI[Ljava/lang/Object;I)V"
+    )
+}
+
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_default_abi()I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn ffi_default_abi(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_default_abi()I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_get_struct_offsets(IJJ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_get_struct_offsets(
+pub(crate) async fn ffi_get_struct_offsets(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_get_struct_offsets(IJJ)I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_prep_cif(JIIJJ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_prep_cif(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_prep_cif(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif(JIIJJ)I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_prep_cif_var(JIIIJJ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_prep_cif_var(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_prep_cif_var(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif_var(JIIIJJ)I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_sizeof_int()I",
+    GreaterThan(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_sizeof_int(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_sizeof_int(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_int()I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_sizeof_long()I",
+    GreaterThan(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_sizeof_long(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_sizeof_long(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_long()I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_sizeof_short()I",
+    GreaterThan(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_sizeof_short(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_sizeof_short(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_short()I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_sizeof_wchar()I",
+    GreaterThan(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_sizeof_wchar(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_sizeof_wchar(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_wchar()I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_double()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_double(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_double(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_double()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_float()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_float(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_float(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_float()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_pointer()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_pointer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_pointer(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_pointer()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_sint16()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_sint_16(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_sint_16(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint16()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_sint32()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_sint_32(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_sint_32(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint32()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_sint64()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_sint_64(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_sint_64(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint64()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_sint8()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_sint_8(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_sint_8(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint8()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_struct()S",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_struct(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_struct(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_struct()S")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_uint16()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_uint_16(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_uint_16(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint16()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_uint32()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_uint_32(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_uint_32(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint32()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_uint64()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_uint_64(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_uint_64(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint64()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_uint8()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_uint_8(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_uint_8(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint8()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_void()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ffi_type_void(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ffi_type_void(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_void()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.freeClosure(JJ)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn free_closure(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn free_closure(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.freeClosure(JJ)V")
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.init()Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.init()Z")
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+    Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/fallback/LibFallback.sizeofCif()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn sizeof_cif(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn sizeof_cif(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.foreign.abi.fallback.LibFallback.sizeofCif()J")
 }
 
@@ -241,11 +388,20 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJJ[I)V"
+        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJJI)V"
     )]
-    async fn test_do_downcall() {
+    async fn test_do_downcall_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = do_downcall(thread, Parameters::default()).await;
+        let _ = do_downcall_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJLjava/lang/Object;JI[Ljava/lang/Object;I)V"
+    )]
+    async fn test_do_downcall_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = do_downcall_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -447,12 +603,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.init()Z"
-    )]
-    async fn test_init() {
+    async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init(thread, Parameters::default()).await;
+        let result = init(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]

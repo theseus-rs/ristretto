@@ -1,44 +1,33 @@
 use crate::Error::InternalError;
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/Object";
-
-/// Register all intrinsic methods for `java.lang.Object`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-    }
-
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(CLASS_NAME, "wait", "(J)V", wait);
-    } else {
-        registry.register(CLASS_NAME, "wait0", "(J)V", wait_0);
-    }
-
-    registry.register(CLASS_NAME, "clone", "()Ljava/lang/Object;", clone);
-    registry.register(CLASS_NAME, "getClass", "()Ljava/lang/Class;", get_class);
-    registry.register(CLASS_NAME, "hashCode", "()I", hash_code);
-    registry.register(CLASS_NAME, "notify", "()V", notify);
-    registry.register(CLASS_NAME, "notifyAll", "()V", notify_all);
-}
-
+#[intrinsic_method("java/lang/Object.clone()Ljava/lang/Object;", Any)]
 #[async_recursion(?Send)]
-async fn clone(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn clone(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let value = parameters.pop()?;
     let cloned_value = value.deep_clone()?;
     Ok(Some(cloned_value))
 }
 
+#[intrinsic_method("java/lang/Object.getClass()Ljava/lang/Class;", Any)]
 #[async_recursion(?Send)]
-async fn get_class(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_class(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let Some(object) = parameters.pop_reference()? else {
         return Err(InternalError("no object reference defined".to_string()));
     };
@@ -50,8 +39,12 @@ async fn get_class(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Op
     Ok(Some(class))
 }
 
+#[intrinsic_method("java/lang/Object.hashCode()I", Any)]
 #[async_recursion(?Send)]
-async fn hash_code(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn hash_code(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let Some(object) = parameters.pop_reference()? else {
         return Err(InternalError("no object reference defined".to_string()));
     };
@@ -69,28 +62,39 @@ pub(crate) fn object_hash_code(object: &Reference) -> i32 {
     hash_code
 }
 
+#[intrinsic_method("java/lang/Object.notify()V", Any)]
 #[async_recursion(?Send)]
-async fn notify(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn notify(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Object.notify()V")
 }
 
+#[intrinsic_method("java/lang/Object.notifyAll()V", Any)]
 #[async_recursion(?Send)]
-async fn notify_all(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn notify_all(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/lang/Object.registerNatives()V", LessThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/lang/Object.wait(J)V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn wait(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn wait(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Object.wait(J)V")
 }
 
+#[intrinsic_method("java/lang/Object.wait0(J)V", GreaterThan(JAVA_17))]
 #[async_recursion(?Send)]
-async fn wait_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn wait_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Object.wait0(J)V")
 }
 

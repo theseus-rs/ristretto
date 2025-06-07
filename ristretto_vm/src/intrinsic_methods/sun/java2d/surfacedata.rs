@@ -1,31 +1,30 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/SurfaceData";
-
-/// Register all intrinsic methods for `sun.java2d.SurfaceData`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(
-        CLASS_NAME,
-        "isOpaqueGray",
-        "(Ljava/awt/image/IndexColorModel;)Z",
-        is_opaque_gray,
-    );
-}
-
+#[intrinsic_method("sun/java2d/SurfaceData.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/java2d/SurfaceData.isOpaqueGray(Ljava/awt/image/IndexColorModel;)Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn is_opaque_gray(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_opaque_gray(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.SurfaceData.isOpaqueGray(Ljava/awt/image/IndexColorModel;)Z")
 }
 

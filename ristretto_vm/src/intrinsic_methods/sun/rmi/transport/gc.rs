@@ -1,25 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/rmi/transport/GC";
-
-/// Register all intrinsic methods for `sun.rmi.transport.GC`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "maxObjectInspectionAge",
-        "()J",
-        max_object_inspection_age,
-    );
-}
-
+#[intrinsic_method(
+    "sun/rmi/transport/GC.maxObjectInspectionAge()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn max_object_inspection_age(
+pub(crate) async fn max_object_inspection_age(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

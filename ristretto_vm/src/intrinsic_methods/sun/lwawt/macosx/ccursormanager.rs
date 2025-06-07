@@ -1,67 +1,51 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CCursorManager";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CCursorManager`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeGetCursorPosition",
-        "()Ljava/awt/geom/Point2D;",
-        native_get_cursor_position,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetAllowsCursorSetInBackground",
-        "(Z)V",
-        native_set_allows_cursor_set_in_background,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetBuiltInCursor",
-        "(ILjava/lang/String;)V",
-        native_set_built_in_cursor,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetCustomCursor",
-        "(JDD)V",
-        native_set_custom_cursor,
-    );
-}
-
+#[intrinsic_method(
+    "sun/lwawt/macosx/CCursorManager.nativeGetCursorPosition()Ljava/awt/geom/Point2D;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_get_cursor_position(
+pub(crate) async fn native_get_cursor_position(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CCursorManager.nativeGetCursorPosition()Ljava/awt/geom/Point2D;")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CCursorManager.nativeSetAllowsCursorSetInBackground(Z)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_allows_cursor_set_in_background(
+pub(crate) async fn native_set_allows_cursor_set_in_background(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CCursorManager.nativeSetAllowsCursorSetInBackground(Z)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CCursorManager.nativeSetBuiltInCursor(ILjava/lang/String;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_built_in_cursor(
+pub(crate) async fn native_set_built_in_cursor(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CCursorManager.nativeSetBuiltInCursor(ILjava/lang/String;)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CCursorManager.nativeSetCustomCursor(JDD)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_custom_cursor(
+pub(crate) async fn native_set_custom_cursor(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

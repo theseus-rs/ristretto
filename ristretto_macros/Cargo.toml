@@ -1,0 +1,20 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "Ristretto Macros for Java Virtual Machine"
+edition.workspace = true
+keywords = ["java", "jvm", "macros"]
+license.workspace = true
+name = "ristretto_macros"
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.20.0" }
+syn = { workspace = true, features = ["full"] }

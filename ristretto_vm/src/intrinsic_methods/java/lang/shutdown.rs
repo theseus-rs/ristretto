@@ -1,26 +1,27 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/Shutdown";
-
-/// Register all intrinsic methods for `java.lang.Shutdown`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "beforeHalt", "()V", before_halt);
-    registry.register(CLASS_NAME, "halt0", "(I)V", halt_0);
-}
-
+#[intrinsic_method("java/lang/Shutdown.beforeHalt()V", Any)]
 #[async_recursion(?Send)]
-async fn before_halt(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn before_halt(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/lang/Shutdown.halt0(I)V", Any)]
 #[async_recursion(?Send)]
-async fn halt_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn halt_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let code = parameters.pop_int()?;
     std::process::exit(code);
 }

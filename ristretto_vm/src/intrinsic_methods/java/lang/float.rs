@@ -1,26 +1,15 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/Float";
-
-/// Register all intrinsic methods for `java.lang.Float`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "floatToRawIntBits",
-        "(F)I",
-        float_to_raw_int_bits,
-    );
-    registry.register(CLASS_NAME, "intBitsToFloat", "(I)F", int_bits_to_float);
-}
-
+#[intrinsic_method("java/lang/Float.floatToRawIntBits(F)I", Any)]
 #[async_recursion(?Send)]
-async fn float_to_raw_int_bits(
+pub(crate) async fn float_to_raw_int_bits(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,8 +19,9 @@ async fn float_to_raw_int_bits(
     Ok(Some(Value::Int(bits)))
 }
 
+#[intrinsic_method("java/lang/Float.intBitsToFloat(I)F", Any)]
 #[async_recursion(?Send)]
-async fn int_bits_to_float(
+pub(crate) async fn int_bits_to_float(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

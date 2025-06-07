@@ -1,64 +1,80 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CRobot";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CRobot`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "mouseEvent", "(IIIIZZ)V", mouse_event);
-        registry.register(
-            CLASS_NAME,
-            "nativeGetScreenPixels",
-            "(IIII[I)V",
-            native_get_screen_pixels,
-        );
-    } else {
-        registry.register(CLASS_NAME, "mouseEvent", "(IIIZZ)V", mouse_event);
-        registry.register(
-            CLASS_NAME,
-            "nativeGetScreenPixels",
-            "(IIIID[I)V",
-            native_get_screen_pixels,
-        );
-    }
-
-    registry.register(CLASS_NAME, "initRobot", "()V", init_robot);
-    registry.register(CLASS_NAME, "keyEvent", "(IZ)V", key_event);
-    registry.register(CLASS_NAME, "mouseWheel", "(I)V", mouse_wheel);
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CRobot.initRobot()V", Any)]
 #[async_recursion(?Send)]
-async fn init_robot(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_robot(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CRobot.initRobot()V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CRobot.keyEvent(IZ)V", Any)]
 #[async_recursion(?Send)]
-async fn key_event(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn key_event(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CRobot.keyEvent(IZ)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CRobot.mouseEvent(IIIIZZ)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn mouse_event(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn mouse_event_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CRobot.mouseEvent(IIIIZZ)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CRobot.mouseEvent(IIIZZ)V", GreaterThan(JAVA_8))]
 #[async_recursion(?Send)]
-async fn mouse_wheel(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn mouse_event_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.lwawt.macosx.CRobot.mouseEvent(IIIZZ)V")
+}
+
+#[intrinsic_method("sun/lwawt/macosx/CRobot.mouseWheel(I)V", Any)]
+#[async_recursion(?Send)]
+pub(crate) async fn mouse_wheel(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CRobot.mouseWheel(I)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CRobot.nativeGetScreenPixels(IIII[I)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_get_screen_pixels(
+pub(crate) async fn native_get_screen_pixels_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CRobot.nativeGetScreenPixels(IIII[I)V")
+}
+
+#[intrinsic_method(
+    "sun/lwawt/macosx/CRobot.nativeGetScreenPixels(IIIID[I)V",
+    GreaterThan(JAVA_8)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn native_get_screen_pixels_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.lwawt.macosx.CRobot.nativeGetScreenPixels(IIIID[I)V")
 }
 
 #[cfg(test)]
@@ -81,9 +97,16 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CRobot.mouseEvent(IIIIZZ)V")]
-    async fn test_mouse_event() {
+    async fn test_mouse_event_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = mouse_event(thread, Parameters::default()).await;
+        let _ = mouse_event_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CRobot.mouseEvent(IIIZZ)V")]
+    async fn test_mouse_event_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = mouse_event_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -97,8 +120,17 @@ mod tests {
     #[should_panic(
         expected = "not yet implemented: sun.lwawt.macosx.CRobot.nativeGetScreenPixels(IIII[I)V"
     )]
-    async fn test_native_get_screen_pixels() {
+    async fn test_native_get_screen_pixels_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_screen_pixels(thread, Parameters::default()).await;
+        let _ = native_get_screen_pixels_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.lwawt.macosx.CRobot.nativeGetScreenPixels(IIIID[I)V"
+    )]
+    async fn test_native_get_screen_pixels_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = native_get_screen_pixels_1(thread, Parameters::default()).await;
     }
 }

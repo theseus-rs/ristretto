@@ -1,21 +1,23 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_21;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::env::consts::ARCH;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/util/concurrent/atomic/AtomicLong";
-
-/// Register all intrinsic methods for `java.util.concurrent.atomic.AtomicLong`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "VMSupportsCS8", "()Z", vm_supports_cs_8);
-}
-
+#[intrinsic_method(
+    "java/util/concurrent/atomic/AtomicLong.VMSupportsCS8()Z",
+    LessThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn vm_supports_cs_8(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn vm_supports_cs_8(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     // See "Atomic accesses to read-only memory" in `core::sync::atomic` for more information.
     let atomic_8_bytes = matches!(
         ARCH,

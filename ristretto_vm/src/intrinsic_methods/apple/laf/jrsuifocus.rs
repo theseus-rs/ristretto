@@ -1,29 +1,27 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "apple/laf/JRSUIFocus";
-
-/// Register all intrinsic methods for `apple.laf.JRSUIFocus`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "beginNativeFocus", "(JI)I", begin_native_focus);
-    registry.register(CLASS_NAME, "endNativeFocus", "(J)I", end_native_focus);
-}
-
+#[intrinsic_method("apple/laf/JRSUIFocus.beginNativeFocus(JI)I", Any)]
 #[async_recursion(?Send)]
-async fn begin_native_focus(
+pub(crate) async fn begin_native_focus(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIFocus.beginNativeFocus(JI)I")
 }
 
+#[intrinsic_method("apple/laf/JRSUIFocus.endNativeFocus(J)I", Any)]
 #[async_recursion(?Send)]
-async fn end_native_focus(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn end_native_focus(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.laf.JRSUIFocus.endNativeFocus(J)I")
 }
 

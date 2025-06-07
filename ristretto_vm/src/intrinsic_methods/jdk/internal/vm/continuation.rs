@@ -1,63 +1,67 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_21;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/vm/Continuation";
-
-/// Register all intrinsic methods for `jdk.internal.vm.Continuation`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(CLASS_NAME, "doYield", "()I", do_yield);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "enterSpecial",
-        "(Ljdk/internal/vm/Continuation;ZZ)V",
-        enter_special,
-    );
-    registry.register(
-        CLASS_NAME,
-        "isPinned0",
-        "(Ljdk/internal/vm/ContinuationScope;)I",
-        is_pinned_0,
-    );
-    registry.register(CLASS_NAME, "pin", "()V", pin);
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-    registry.register(CLASS_NAME, "unpin", "()V", unpin);
-}
-
+#[intrinsic_method("jdk/internal/vm/Continuation.doYield()I", GreaterThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn do_yield(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_yield(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.doYield()I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/vm/Continuation.enterSpecial(Ljdk/internal/vm/Continuation;ZZ)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn enter_special(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn enter_special(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.enterSpecial(Ljdk/internal/vm/Continuation;ZZ)V")
 }
 
+#[intrinsic_method(
+    "jdk/internal/vm/Continuation.isPinned0(Ljdk/internal/vm/ContinuationScope;)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn is_pinned_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_pinned_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.isPinned0(Ljdk/internal/vm/ContinuationScope;)I")
 }
 
+#[intrinsic_method("jdk/internal/vm/Continuation.pin()V", GreaterThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn pin(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn pin(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.pin()V")
 }
 
+#[intrinsic_method(
+    "jdk/internal/vm/Continuation.registerNatives()V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("jdk/internal/vm/Continuation.unpin()V", GreaterThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn unpin(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn unpin(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.unpin()V")
 }
 

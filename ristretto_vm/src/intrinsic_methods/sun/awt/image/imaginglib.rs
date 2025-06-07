@@ -1,82 +1,66 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/image/ImagingLib";
-
-/// Register all intrinsic methods for `sun.awt.image.ImagingLib`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "convolveBI",
-        "(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;Ljava/awt/image/Kernel;I)I",
-        convolve_bi,
-    );
-    registry.register(
-        CLASS_NAME,
-        "convolveRaster",
-        "(Ljava/awt/image/Raster;Ljava/awt/image/Raster;Ljava/awt/image/Kernel;I)I",
-        convolve_raster,
-    );
-    registry.register(CLASS_NAME, "init", "()Z", init);
-    registry.register(
-        CLASS_NAME,
-        "lookupByteBI",
-        "(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;[[B)I",
-        lookup_byte_bi,
-    );
-    registry.register(
-        CLASS_NAME,
-        "lookupByteRaster",
-        "(Ljava/awt/image/Raster;Ljava/awt/image/Raster;[[B)I",
-        lookup_byte_raster,
-    );
-    registry.register(
-        CLASS_NAME,
-        "transformBI",
-        "(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;[DI)I",
-        transform_bi,
-    );
-    registry.register(
-        CLASS_NAME,
-        "transformRaster",
-        "(Ljava/awt/image/Raster;Ljava/awt/image/Raster;[DI)I",
-        transform_raster,
-    );
-}
-
+#[intrinsic_method(
+    "sun/awt/image/ImagingLib.convolveBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;Ljava/awt/image/Kernel;I)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn convolve_bi(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn convolve_bi(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.awt.image.ImagingLib.convolveBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;Ljava/awt/image/Kernel;I)I"
     )
 }
 
+#[intrinsic_method(
+    "sun/awt/image/ImagingLib.convolveRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;Ljava/awt/image/Kernel;I)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn convolve_raster(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn convolve_raster(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.awt.image.ImagingLib.convolveRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;Ljava/awt/image/Kernel;I)I"
     )
 }
 
+#[intrinsic_method("sun/awt/image/ImagingLib.init()Z", Any)]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.image.ImagingLib.init()Z")
 }
 
+#[intrinsic_method(
+    "sun/awt/image/ImagingLib.lookupByteBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;[[B)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn lookup_byte_bi(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn lookup_byte_bi(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.awt.image.ImagingLib.lookupByteBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;[[B)I"
     )
 }
 
+#[intrinsic_method(
+    "sun/awt/image/ImagingLib.lookupByteRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;[[B)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn lookup_byte_raster(
+pub(crate) async fn lookup_byte_raster(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -85,15 +69,29 @@ async fn lookup_byte_raster(
     )
 }
 
+#[intrinsic_method(
+    "sun/awt/image/ImagingLib.transformBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;[DI)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn transform_bi(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn transform_bi(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.awt.image.ImagingLib.transformBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;[DI)I"
     )
 }
 
+#[intrinsic_method(
+    "sun/awt/image/ImagingLib.transformRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;[DI)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn transform_raster(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn transform_raster(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.awt.image.ImagingLib.transformRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;[DI)I"
     )

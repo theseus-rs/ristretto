@@ -1,25 +1,18 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/security/krb5/Config";
-
-/// Register all intrinsic methods for `sun.security.krb5.Config`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getWindowsDirectory",
-        "(Z)Ljava/lang/String;",
-        get_windows_directory,
-    );
-}
-
+#[intrinsic_method(
+    "sun/security/krb5/Config.getWindowsDirectory(Z)Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_windows_directory(
+pub(crate) async fn get_windows_directory(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

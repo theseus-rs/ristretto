@@ -1,84 +1,100 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/perf/Perf";
-
-/// Register all intrinsic methods for `jdk.internal.perf.Perf`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "attach",
-            "(Ljava/lang/String;II)Ljava/nio/ByteBuffer;",
-            attach,
-        );
-    } else {
-        registry.register(CLASS_NAME, "attach0", "(I)Ljava/nio/ByteBuffer;", attach_0);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "createByteArray",
-        "(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
-        create_byte_array,
-    );
-    registry.register(
-        CLASS_NAME,
-        "createLong",
-        "(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
-        create_long,
-    );
-    registry.register(CLASS_NAME, "detach", "(Ljava/nio/ByteBuffer;)V", detach);
-    registry.register(CLASS_NAME, "highResCounter", "()J", high_res_counter);
-    registry.register(CLASS_NAME, "highResFrequency", "()J", high_res_frequency);
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-}
-
+#[intrinsic_method(
+    "jdk/internal/perf/Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;",
+    Between(JAVA_11, JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn attach(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn attach(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.perf.Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;")
 }
 
+#[intrinsic_method(
+    "jdk/internal/perf/Perf.attach0(I)Ljava/nio/ByteBuffer;",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn attach_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn attach_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.perf.Perf.attach0(I)Ljava/nio/ByteBuffer;")
 }
 
+#[intrinsic_method(
+    "jdk/internal/perf/Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn create_byte_array(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn create_byte_array(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.perf.Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;")
 }
 
+#[intrinsic_method(
+    "jdk/internal/perf/Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn create_long(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn create_long(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.perf.Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;")
 }
 
+#[intrinsic_method(
+    "jdk/internal/perf/Perf.detach(Ljava/nio/ByteBuffer;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn detach(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn detach(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.perf.Perf.detach(Ljava/nio/ByteBuffer;)V")
 }
 
+#[intrinsic_method(
+    "jdk/internal/perf/Perf.highResCounter()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn high_res_counter(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn high_res_counter(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.perf.Perf.highResCounter()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/perf/Perf.highResFrequency()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn high_res_frequency(
+pub(crate) async fn high_res_frequency(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.perf.Perf.highResFrequency()J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/perf/Perf.registerNatives()V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 

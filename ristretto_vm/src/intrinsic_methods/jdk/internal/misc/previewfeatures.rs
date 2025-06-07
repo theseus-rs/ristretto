@@ -1,20 +1,22 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_21;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/misc/PreviewFeatures";
-
-/// Register all intrinsic methods for `jdk.internal.misc.PreviewFeatures`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "isPreviewEnabled", "()Z", is_preview_enabled);
-}
-
+#[intrinsic_method(
+    "jdk/internal/misc/PreviewFeatures.isPreviewEnabled()Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn is_preview_enabled(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_preview_enabled(
+    thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     let configuration = vm.configuration();
     let preview_features = configuration.preview_features();

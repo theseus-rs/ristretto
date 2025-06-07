@@ -1,57 +1,57 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CMenuItem";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CMenuItem`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "nativeCreate", "(JZ)J", native_create);
-    registry.register(CLASS_NAME, "nativeSetEnabled", "(JZ)V", native_set_enabled);
-    registry.register(CLASS_NAME, "nativeSetImage", "(JJ)V", native_set_image);
-    registry.register(
-        CLASS_NAME,
-        "nativeSetLabel",
-        "(JLjava/lang/String;CII)V",
-        native_set_label,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetTooltip",
-        "(JLjava/lang/String;)V",
-        native_set_tooltip,
-    );
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CMenuItem.nativeCreate(JZ)J", Any)]
 #[async_recursion(?Send)]
-async fn native_create(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_create(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuItem.nativeCreate(JZ)J")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CMenuItem.nativeSetEnabled(JZ)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_enabled(
+pub(crate) async fn native_set_enabled(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuItem.nativeSetEnabled(JZ)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CMenuItem.nativeSetImage(JJ)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_set_image(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuItem.nativeSetImage(JJ)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CMenuItem.nativeSetLabel(JLjava/lang/String;CII)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_label(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_set_label(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenuItem.nativeSetLabel(JLjava/lang/String;CII)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CMenuItem.nativeSetTooltip(JLjava/lang/String;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_set_tooltip(
+pub(crate) async fn native_set_tooltip(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

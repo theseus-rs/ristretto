@@ -1,809 +1,880 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, JAVA_21, JAVA_24, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{
+    Between, Equal, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
+};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_24};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/jfr/internal/JVM";
-
-/// Register all intrinsic methods for `jdk.jfr.internal.JVM`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "emitOldObjectSamples",
-            "(JZ)V",
-            emit_old_object_samples,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getClassIdNonIntrinsic",
-            "(Ljava/lang/Class;)J",
-            get_class_id_non_intrinsic,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setMethodSamplingInterval",
-            "(JJ)V",
-            set_method_sampling_interval,
-        );
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "emitOldObjectSamples",
-            "(JZZ)V",
-            emit_old_object_samples,
-        );
-        registry.register(CLASS_NAME, "exclude", "(Ljava/lang/Thread;)V", exclude);
-        registry.register(CLASS_NAME, "flush", "()V", flush);
-        registry.register(
-            CLASS_NAME,
-            "getChunkStartNanos",
-            "()J",
-            get_chunk_start_nanos,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getTypeId",
-            "(Ljava/lang/String;)J",
-            get_type_id,
-        );
-        registry.register(CLASS_NAME, "include", "(Ljava/lang/Thread;)V", include);
-        registry.register(
-            CLASS_NAME,
-            "isExcluded",
-            "(Ljava/lang/Thread;)Z",
-            is_excluded,
-        );
-        registry.register(CLASS_NAME, "isRecording", "()Z", is_recording);
-        registry.register(
-            CLASS_NAME,
-            "logEvent",
-            "(I[Ljava/lang/String;Z)V",
-            log_event,
-        );
-        registry.register(CLASS_NAME, "markChunkFinal", "()V", mark_chunk_final);
-        registry.register(CLASS_NAME, "setThrottle", "(JJJ)Z", set_throttle);
-    }
-
-    if registry.java_major_version() != JAVA_11 {
-        registry.register(CLASS_NAME, "setThrottle", "(JJJ)Z", set_throttle);
-    }
-
-    if registry.java_major_version() >= JAVA_11 && registry.java_major_version() <= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "flush",
-            "(Ljdk/jfr/internal/EventWriter;II)Z",
-            flush,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getEventWriter",
-            "()Ljava/lang/Object;",
-            get_event_writer,
-        );
-        registry.register(
-            CLASS_NAME,
-            "newEventWriter",
-            "()Ljdk/jfr/internal/EventWriter;",
-            new_event_writer,
-        );
-        registry.register(CLASS_NAME, "setSampleThreads", "(Z)V", set_sample_threads);
-    }
-
-    if registry.java_major_version() == JAVA_17 {
-        registry.register(CLASS_NAME, "emitDataLoss", "(J)V", emit_data_loss);
-    }
-
-    if registry.java_major_version() == JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "getHandler",
-            "(Ljava/lang/Class;)Ljava/lang/Object;",
-            get_handler,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setHandler",
-            "(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z",
-            set_handler,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "setMethodSamplingPeriod",
-            "(JJ)V",
-            set_method_sampling_period,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(CLASS_NAME, "commit", "(J)J", commit);
-        registry.register(CLASS_NAME, "emitDataLoss", "(J)V", emit_data_loss);
-        registry.register(
-            CLASS_NAME,
-            "flush",
-            "(Ljdk/jfr/internal/event/EventWriter;II)V",
-            flush,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getConfiguration",
-            "(Ljava/lang/Class;)Ljava/lang/Object;",
-            get_configuration,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getDumpPath",
-            "()Ljava/lang/String;",
-            get_dump_path,
-        );
-        registry.register(CLASS_NAME, "hostTotalMemory", "()J", host_total_memory);
-        registry.register(
-            CLASS_NAME,
-            "setDumpPath",
-            "(Ljava/lang/String;)V",
-            set_dump_path,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getEventWriter",
-            "()Ljdk/jfr/internal/event/EventWriter;",
-            get_event_writer,
-        );
-        registry.register(CLASS_NAME, "isContainerized", "()Z", is_containerized);
-        registry.register(
-            CLASS_NAME,
-            "isExcluded",
-            "(Ljava/lang/Class;)Z",
-            is_excluded,
-        );
-        registry.register(
-            CLASS_NAME,
-            "isExcluded",
-            "(Ljava/lang/Thread;)Z",
-            is_excluded,
-        );
-        registry.register(
-            CLASS_NAME,
-            "isInstrumented",
-            "(Ljava/lang/Class;)Z",
-            is_instrumented,
-        );
-        registry.register(CLASS_NAME, "isRecording", "()Z", is_recording);
-        registry.register(
-            CLASS_NAME,
-            "newEventWriter",
-            "()Ljdk/jfr/internal/event/EventWriter;",
-            new_event_writer,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setConfiguration",
-            "(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z",
-            set_configuration,
-        );
-    }
-
-    if registry.java_major_version() <= JAVA_21 {
-        registry.register(CLASS_NAME, "getStackTraceId", "(I)J", get_stack_trace_id);
-    } else {
-        registry.register(CLASS_NAME, "getStackTraceId", "(IJ)J", get_stack_trace_id);
-    }
-
-    if registry.java_major_version() >= JAVA_24 {
-        registry.register(
-            CLASS_NAME,
-            "registerStackFilter",
-            "([Ljava/lang/String;[Ljava/lang/String;)J",
-            register_stack_filter,
-        );
-        registry.register(CLASS_NAME, "setMiscellaneous", "(JJ)V", set_miscellaneous);
-        registry.register(
-            CLASS_NAME,
-            "unregisterStackFilter",
-            "(J)V",
-            unregister_stack_filter,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_24 {
-        registry.register(
-            CLASS_NAME,
-            "hostTotalSwapMemory",
-            "()J",
-            host_total_swap_memory,
-        );
-        registry.register(CLASS_NAME, "nanosNow", "()J", nanos_now);
-    }
-
-    registry.register(CLASS_NAME, "abort", "(Ljava/lang/String;)V", abort);
-    registry.register(
-        CLASS_NAME,
-        "addStringConstant",
-        "(JLjava/lang/String;)Z",
-        add_string_constant,
-    );
-    registry.register(CLASS_NAME, "beginRecording", "()V", begin_recording);
-    registry.register(CLASS_NAME, "counterTime", "()J", counter_time);
-    registry.register(CLASS_NAME, "createJFR", "(Z)Z", create_jfr);
-    registry.register(CLASS_NAME, "destroyJFR", "()Z", destroy_jfr);
-    registry.register(CLASS_NAME, "emitEvent", "(JJJ)Z", emit_event);
-    registry.register(CLASS_NAME, "endRecording", "()V", end_recording);
-    registry.register(
-        CLASS_NAME,
-        "getAllEventClasses",
-        "()Ljava/util/List;",
-        get_all_event_classes,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAllowedToDoEventRetransforms",
-        "()Z",
-        get_allowed_to_do_event_retransforms,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getClassId",
-        "(Ljava/lang/Class;)J",
-        get_class_id,
-    );
-    registry.register(CLASS_NAME, "getPid", "()Ljava/lang/String;", get_pid);
-    registry.register(
-        CLASS_NAME,
-        "getThreadId",
-        "(Ljava/lang/Thread;)J",
-        get_thread_id,
-    );
-    registry.register(CLASS_NAME, "getTicksFrequency", "()J", get_ticks_frequency);
-    registry.register(
-        CLASS_NAME,
-        "getTimeConversionFactor",
-        "()D",
-        get_time_conversion_factor,
-    );
-    registry.register(CLASS_NAME, "getTypeId", "(Ljava/lang/Class;)J", get_type_id);
-    registry.register(
-        CLASS_NAME,
-        "getUnloadedEventClassCount",
-        "()J",
-        get_unloaded_event_class_count,
-    );
-    registry.register(CLASS_NAME, "isAvailable", "()Z", is_available);
-    registry.register(CLASS_NAME, "log", "(IILjava/lang/String;)V", log);
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-    registry.register(
-        CLASS_NAME,
-        "retransformClasses",
-        "([Ljava/lang/Class;)V",
-        retransform_classes,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setCompressedIntegers",
-        "(Z)V",
-        set_compressed_integers,
-    );
-    registry.register(CLASS_NAME, "setCutoff", "(JJ)Z", set_cutoff);
-    registry.register(CLASS_NAME, "setEnabled", "(JZ)V", set_enabled);
-    registry.register(
-        CLASS_NAME,
-        "setFileNotification",
-        "(J)V",
-        set_file_notification,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setForceInstrumentation",
-        "(Z)V",
-        set_force_instrumentation,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setGlobalBufferCount",
-        "(J)V",
-        set_global_buffer_count,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setGlobalBufferSize",
-        "(J)V",
-        set_global_buffer_size,
-    );
-    registry.register(CLASS_NAME, "setMemorySize", "(J)V", set_memory_size);
-    registry.register(CLASS_NAME, "setOutput", "(Ljava/lang/String;)V", set_output);
-    registry.register(
-        CLASS_NAME,
-        "setRepositoryLocation",
-        "(Ljava/lang/String;)V",
-        set_repository_location,
-    );
-    registry.register(CLASS_NAME, "setStackDepth", "(I)V", set_stack_depth);
-    registry.register(
-        CLASS_NAME,
-        "setStackTraceEnabled",
-        "(JZ)V",
-        set_stack_trace_enabled,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setThreadBufferSize",
-        "(J)V",
-        set_thread_buffer_size,
-    );
-    registry.register(CLASS_NAME, "setThreshold", "(JJ)Z", set_threshold);
-    registry.register(CLASS_NAME, "shouldRotateDisk", "()Z", should_rotate_disk);
-    registry.register(
-        CLASS_NAME,
-        "storeMetadataDescriptor",
-        "([B)V",
-        store_metadata_descriptor,
-    );
-    registry.register(
-        CLASS_NAME,
-        "subscribeLogLevel",
-        "(Ljdk/jfr/internal/LogTag;I)V",
-        subscribe_log_level,
-    );
-    registry.register(
-        CLASS_NAME,
-        "uncaughtException",
-        "(Ljava/lang/Thread;Ljava/lang/Throwable;)V",
-        uncaught_exception,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.abort(Ljava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn abort(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn abort(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.abort(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.addStringConstant(JLjava/lang/String;)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn add_string_constant(
+pub(crate) async fn add_string_constant(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.addStringConstant(JLjava/lang/String;)Z")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.beginRecording()V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn begin_recording(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn begin_recording(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.beginRecording()V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.commit(J)J", GreaterThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn commit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn commit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.commit(J)J")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.counterTime()J", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn counter_time(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn counter_time(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.counterTime()J")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.createJFR(Z)Z", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn create_jfr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn create_jfr(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.createJFR(Z)Z")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.destroyJFR()Z", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn destroy_jfr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn destroy_jfr(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.destroyJFR()Z")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.emitDataLoss(J)V", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn emit_data_loss(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn emit_data_loss(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.emitDataLoss(J)V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.emitEvent(JJJ)Z", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn emit_event(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn emit_event(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.emitEvent(JJJ)Z")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.emitOldObjectSamples(JZ)V", Equal(JAVA_11))]
 #[async_recursion(?Send)]
-async fn emit_old_object_samples(
+pub(crate) async fn emit_old_object_samples_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.emitOldObjectSamples(JZ)V")
+}
+
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.emitOldObjectSamples(JZZ)V",
+    GreaterThan(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn emit_old_object_samples_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.emitOldObjectSamples(JZZ)V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.endRecording()V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn end_recording(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn end_recording(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.endRecording()V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.exclude(Ljava/lang/Thread;)V",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn exclude(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn exclude(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.exclude(Ljava/lang/Thread;)V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.flush()V", GreaterThan(JAVA_11))]
 #[async_recursion(?Send)]
-async fn flush(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.jfr.internal.JVM.flush()")
+pub(crate) async fn flush_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.flush()V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.flush(Ljdk/jfr/internal/EventWriter;II)Z",
+    Between(JAVA_11, JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_all_event_classes(
+pub(crate) async fn flush_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.flush(Ljdk/jfr/internal/EventWriter;II)Z")
+}
+
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.flush(Ljdk/jfr/internal/event/EventWriter;II)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn flush_2(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.flush(Ljdk/jfr/internal/event/EventWriter;II)V")
+}
+
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getAllEventClasses()Ljava/util/List;",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn get_all_event_classes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getAllEventClasses()Ljava/util/List;")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getAllowedToDoEventRetransforms()Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_allowed_to_do_event_retransforms(
+pub(crate) async fn get_allowed_to_do_event_retransforms(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getAllowedToDoEventRetransforms()Z")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.getChunkStartNanos()J", GreaterThan(JAVA_11))]
 #[async_recursion(?Send)]
-async fn get_chunk_start_nanos(
+pub(crate) async fn get_chunk_start_nanos(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getChunkStartNanos()J")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getClassId(Ljava/lang/Class;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_class_id(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_class_id(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getClassId(Ljava/lang/Class;)J")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getClassIdNonIntrinsic(Ljava/lang/Class;)J",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_class_id_non_intrinsic(
+pub(crate) async fn get_class_id_non_intrinsic(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getClassIdNonIntrinsic(Ljava/lang/Class;)J")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getConfiguration(Ljava/lang/Class;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn get_configuration(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_configuration(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getConfiguration(Ljava/lang/Class;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getDumpPath()Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn get_dump_path(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_dump_path(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getDumpPath()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getEventWriter()Ljava/lang/Object;",
+    Between(JAVA_11, JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_event_writer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_event_writer_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getEventWriter()Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getEventWriter()Ljdk/jfr/internal/event/EventWriter;",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn get_handler(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.jfr.internal.JVM.getHandler(Ljava/lang/Class;)Ljava/lang")
+pub(crate) async fn get_event_writer_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.getEventWriter()Ljdk/jfr/internal/event/EventWriter;")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getHandler(Ljava/lang/Class;)Ljava/lang/Object;",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_pid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_handler(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.getHandler(Ljava/lang/Class;)Ljava/lang/Object;")
+}
+
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getPid()Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn get_pid(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getPid()Ljava/lang/String;")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.getStackTraceId(I)J", LessThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn get_stack_trace_id(
+pub(crate) async fn get_stack_trace_id_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.getStackTraceId(I)J")
+}
+
+#[intrinsic_method("jdk/jfr/internal/JVM.getStackTraceId(IJ)J", GreaterThan(JAVA_21))]
+#[async_recursion(?Send)]
+pub(crate) async fn get_stack_trace_id_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getStackTraceId(IJ)J")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getThreadId(Ljava/lang/Thread;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_thread_id(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_thread_id(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getThreadId(Ljava/lang/Thread;)J")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getTicksFrequency()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_ticks_frequency(
+pub(crate) async fn get_ticks_frequency(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getTicksFrequency()J")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getTimeConversionFactor()D",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_time_conversion_factor(
+pub(crate) async fn get_time_conversion_factor(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getTimeConversionFactor()D")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getTypeId(Ljava/lang/String;)J",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_type_id(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_type_id_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getTypeId(Ljava/lang/String;)J")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getTypeId(Ljava/lang/Class;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_unloaded_event_class_count(
+pub(crate) async fn get_type_id_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.getTypeId(Ljava/lang/Class;)J")
+}
+
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.getUnloadedEventClassCount()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn get_unloaded_event_class_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.getUnloadedEventClassCount()J")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.hostTotalMemory()J", GreaterThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn host_total_memory(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn host_total_memory(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.hostTotalMemory()J")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.hostTotalSwapMemory()J",
+    GreaterThanOrEqual(JAVA_24)
+)]
 #[async_recursion(?Send)]
-async fn host_total_swap_memory(
+pub(crate) async fn host_total_swap_memory(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.hostTotalSwapMemory()J")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.include(Ljava/lang/Thread;)V",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn include(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn include(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.include(Ljava/lang/Thread;)V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.isAvailable()Z", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn is_available(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_available(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.isAvailable()Z")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.isContainerized()Z", GreaterThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn is_containerized(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_containerized(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.isContainerized()Z")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.isExcluded(Ljava/lang/Thread;)Z",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn is_excluded(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_excluded_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.isExcluded(Ljava/lang/Thread;)Z")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.isExcluded(Ljava/lang/Class;)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn is_instrumented(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_excluded_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.isExcluded(Ljava/lang/Class;)Z")
+}
+
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.isInstrumented(Ljava/lang/Class;)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn is_instrumented(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.isInstrumented(Ljava/lang/Class;)Z")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.isRecording()Z", GreaterThan(JAVA_11))]
 #[async_recursion(?Send)]
-async fn is_recording(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_recording(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.isRecording()Z")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.log(IILjava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn log(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn log(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.log(IILjava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.logEvent(I[Ljava/lang/String;Z)V",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn log_event(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn log_event(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.logEvent(I[Ljava/lang/String;Z)V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.markChunkFinal()V", GreaterThan(JAVA_11))]
 #[async_recursion(?Send)]
-async fn mark_chunk_final(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn mark_chunk_final(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.markChunkFinal()V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.nanosNow()J", GreaterThanOrEqual(JAVA_24))]
 #[async_recursion(?Send)]
-async fn nanos_now(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn nanos_now(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.nanosNow()J")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.newEventWriter()Ljdk/jfr/internal/EventWriter;",
+    Between(JAVA_11, JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn new_event_writer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn new_event_writer_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.newEventWriter()Ljdk/jfr/internal/EventWriter;")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.newEventWriter()Ljdk/jfr/internal/event/EventWriter;",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn new_event_writer_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.newEventWriter()Ljdk/jfr/internal/event/EventWriter;")
+}
+
+#[intrinsic_method("jdk/jfr/internal/JVM.registerNatives()V", GreaterThanOrEqual(JAVA_11))]
+#[async_recursion(?Send)]
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.registerStackFilter([Ljava/lang/String;[Ljava/lang/String;)J",
+    GreaterThanOrEqual(JAVA_24)
+)]
 #[async_recursion(?Send)]
-async fn register_stack_filter(
+pub(crate) async fn register_stack_filter(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.registerStackFilter([Ljava/lang/String;[Ljava/lang/String;)J")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.retransformClasses([Ljava/lang/Class;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn retransform_classes(
+pub(crate) async fn retransform_classes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.retransformClasses([Ljava/lang/Class;)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setCompressedIntegers(Z)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_compressed_integers(
+pub(crate) async fn set_compressed_integers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setCompressedIntegers(Z)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setConfiguration(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn set_configuration(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_configuration(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "jdk.jfr.internal.JVM.setConfiguration(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z"
     )
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.setCutoff(JJ)Z", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn set_cutoff(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_cutoff(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setCutoff(JJ)Z")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setDumpPath(Ljava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn set_dump_path(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_dump_path(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setDumpPath(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.setEnabled(JZ)V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn set_enabled(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_enabled(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setEnabled(JZ)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setFileNotification(J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_file_notification(
+pub(crate) async fn set_file_notification(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setFileNotification(J)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setForceInstrumentation(Z)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_force_instrumentation(
+pub(crate) async fn set_force_instrumentation(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setForceInstrumentation(Z)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setGlobalBufferCount(J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_global_buffer_count(
+pub(crate) async fn set_global_buffer_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setGlobalBufferCount(J)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setGlobalBufferSize(J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_global_buffer_size(
+pub(crate) async fn set_global_buffer_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setGlobalBufferSize(J)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setHandler(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_handler(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_handler(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "jdk.jfr.internal.JVM.setHandler(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z"
     )
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.setMemorySize(J)V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn set_memory_size(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_memory_size(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setMemorySize(J)V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.setMethodSamplingInterval(JJ)V", Equal(JAVA_11))]
 #[async_recursion(?Send)]
-async fn set_method_sampling_interval(
+pub(crate) async fn set_method_sampling_interval(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setMethodSamplingInterval(JJ)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setMethodSamplingPeriod(JJ)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_method_sampling_period(
+pub(crate) async fn set_method_sampling_period(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setMethodSamplingPeriod(JJ)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setMiscellaneous(JJ)V",
+    GreaterThanOrEqual(JAVA_24)
+)]
 #[async_recursion(?Send)]
-async fn set_miscellaneous(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_miscellaneous(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setMiscellaneous(JJ)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setOutput(Ljava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_output(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_output(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setOutput(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setRepositoryLocation(Ljava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_repository_location(
+pub(crate) async fn set_repository_location(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setRepositoryLocation(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.setSampleThreads(Z)V", Between(JAVA_11, JAVA_17))]
 #[async_recursion(?Send)]
-async fn set_sample_threads(
+pub(crate) async fn set_sample_threads(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setSampleThreads(Z)V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.setStackDepth(I)V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn set_stack_depth(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_stack_depth(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setStackDepth(I)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setStackTraceEnabled(JZ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_stack_trace_enabled(
+pub(crate) async fn set_stack_trace_enabled(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setStackTraceEnabled(JZ)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setThreadBufferSize(J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_thread_buffer_size(
+pub(crate) async fn set_thread_buffer_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setThreadBufferSize(J)V")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.setThreshold(JJ)Z", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn set_threshold(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_threshold(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setThreshold(JJ)Z")
 }
 
+#[intrinsic_method("jdk/jfr/internal/JVM.setThrottle(JJJ)Z", GreaterThan(JAVA_11))]
 #[async_recursion(?Send)]
-async fn set_throttle(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_throttle(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.setThrottle(JJJ)Z")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.shouldRotateDisk()Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn should_rotate_disk(
+pub(crate) async fn should_rotate_disk(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.shouldRotateDisk()Z")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.storeMetadataDescriptor([B)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn store_metadata_descriptor(
+pub(crate) async fn store_metadata_descriptor(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.storeMetadataDescriptor([B)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.subscribeLogLevel(Ljdk/jfr/internal/LogTag;I)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn subscribe_log_level(
+pub(crate) async fn subscribe_log_level(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.subscribeLogLevel(Ljdk/jfr/internal/LogTag;I)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.uncaughtException(Ljava/lang/Thread;Ljava/lang/Throwable;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn uncaught_exception(
+pub(crate) async fn uncaught_exception(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.uncaughtException(Ljava/lang/Thread;Ljava/lang/Throwable;)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.unregisterStackFilter(J)V",
+    GreaterThanOrEqual(JAVA_24)
+)]
 #[async_recursion(?Send)]
-async fn unregister_stack_filter(
+pub(crate) async fn unregister_stack_filter(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -883,11 +954,20 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.emitOldObjectSamples(JZ)V"
+    )]
+    async fn test_emit_old_object_samples_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = emit_old_object_samples_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
         expected = "not yet implemented: jdk.jfr.internal.JVM.emitOldObjectSamples(JZZ)V"
     )]
-    async fn test_emit_old_object_samples() {
+    async fn test_emit_old_object_samples_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = emit_old_object_samples(thread, Parameters::default()).await;
+        let _ = emit_old_object_samples_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -907,10 +987,28 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.flush()")]
-    async fn test_flush() {
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.flush()V")]
+    async fn test_flush_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = flush(thread, Parameters::default()).await;
+        let _ = flush_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.flush(Ljdk/jfr/internal/EventWriter;II)Z"
+    )]
+    async fn test_flush_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = flush_1(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.flush(Ljdk/jfr/internal/event/EventWriter;II)V"
+    )]
+    async fn test_flush_2() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = flush_2(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -978,9 +1076,18 @@ mod tests {
     #[should_panic(
         expected = "not yet implemented: jdk.jfr.internal.JVM.getEventWriter()Ljava/lang/Object;"
     )]
-    async fn test_get_event_writer() {
+    async fn test_get_event_writer_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_event_writer(thread, Parameters::default()).await;
+        let _ = get_event_writer_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getEventWriter()Ljdk/jfr/internal/event/EventWriter;"
+    )]
+    async fn test_get_event_writer_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_event_writer_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1002,10 +1109,17 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.getStackTraceId(IJ)J")]
-    async fn test_get_stack_trace_id() {
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.getStackTraceId(I)J")]
+    async fn test_get_stack_trace_id_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_stack_trace_id(thread, Parameters::default()).await;
+        let _ = get_stack_trace_id_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.jfr.internal.JVM.getStackTraceId(IJ)J")]
+    async fn test_get_stack_trace_id_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_stack_trace_id_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1037,9 +1151,18 @@ mod tests {
     #[should_panic(
         expected = "not yet implemented: jdk.jfr.internal.JVM.getTypeId(Ljava/lang/String;)J"
     )]
-    async fn test_get_type_id() {
+    async fn test_get_type_id_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_type_id(thread, Parameters::default()).await;
+        let _ = get_type_id_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.getTypeId(Ljava/lang/Class;)J"
+    )]
+    async fn test_get_type_id_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_type_id_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1092,9 +1215,18 @@ mod tests {
     #[should_panic(
         expected = "not yet implemented: jdk.jfr.internal.JVM.isExcluded(Ljava/lang/Thread;)Z"
     )]
-    async fn test_is_excluded() {
+    async fn test_is_excluded_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_excluded(thread, Parameters::default()).await;
+        let _ = is_excluded_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.isExcluded(Ljava/lang/Class;)Z"
+    )]
+    async fn test_is_excluded_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = is_excluded_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1149,9 +1281,18 @@ mod tests {
     #[should_panic(
         expected = "not yet implemented: jdk.jfr.internal.JVM.newEventWriter()Ljdk/jfr/internal/EventWriter;"
     )]
-    async fn test_new_event_writer() {
+    async fn test_new_event_writer_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = new_event_writer(thread, Parameters::default()).await;
+        let _ = new_event_writer_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.jfr.internal.JVM.newEventWriter()Ljdk/jfr/internal/event/EventWriter;"
+    )]
+    async fn test_new_event_writer_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = new_event_writer_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]

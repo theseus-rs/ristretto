@@ -1,31 +1,31 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/invoke/NativeEntryPoint";
-
-/// Register all intrinsic methods for `jdk.internal.invoke.NativeEntryPoint`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-    registry.register(
-        CLASS_NAME,
-        "vmStorageToVMReg",
-        "(II)J",
-        vm_storage_to_vm_reg,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/internal/invoke/NativeEntryPoint.registerNatives()V",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/invoke/NativeEntryPoint.vmStorageToVMReg(II)J",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn vm_storage_to_vm_reg(
+pub(crate) async fn vm_storage_to_vm_reg(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

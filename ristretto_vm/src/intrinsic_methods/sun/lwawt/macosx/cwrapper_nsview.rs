@@ -1,63 +1,63 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CWrapper$NSView";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CWrapper$NSView`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "addSubview", "(JJ)V", add_subview);
-    registry.register(
-        CLASS_NAME,
-        "removeFromSuperview",
-        "(J)V",
-        remove_from_superview,
-    );
-    registry.register(CLASS_NAME, "setFrame", "(JIIII)V", set_frame);
-    registry.register(CLASS_NAME, "setHidden", "(JZ)V", set_hidden);
-    registry.register(
-        CLASS_NAME,
-        "setToolTip",
-        "(JLjava/lang/String;)V",
-        set_tool_tip,
-    );
-    registry.register(CLASS_NAME, "window", "(J)J", window);
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CWrapper$NSView.addSubview(JJ)V", Any)]
 #[async_recursion(?Send)]
-async fn add_subview(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn add_subview(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.addSubview(JJ)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CWrapper$NSView.removeFromSuperview(J)V", Any)]
 #[async_recursion(?Send)]
-async fn remove_from_superview(
+pub(crate) async fn remove_from_superview(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.removeFromSuperview(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CWrapper$NSView.setFrame(JIIII)V", Any)]
 #[async_recursion(?Send)]
-async fn set_frame(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_frame(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.setFrame(JIIII)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CWrapper$NSView.setHidden(JZ)V", Any)]
 #[async_recursion(?Send)]
-async fn set_hidden(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_hidden(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.setHidden(JZ)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CWrapper$NSView.setToolTip(JLjava/lang/String;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn set_tool_tip(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_tool_tip(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.setToolTip(JLjava/lang/String;)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CWrapper$NSView.window(J)J", Any)]
 #[async_recursion(?Send)]
-async fn window(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn window(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSView.window(J)J")
 }
 

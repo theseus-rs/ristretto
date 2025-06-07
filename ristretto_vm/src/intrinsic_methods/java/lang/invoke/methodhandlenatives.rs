@@ -1,14 +1,16 @@
 use crate::Error::InternalError;
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use bitflags::bitflags;
+use ristretto_classfile::VersionSpecification::{
+    Any, Between, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
+};
+use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::{Class, Object, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
-
-const CLASS_NAME: &str = "java/lang/invoke/MethodHandleNatives";
 
 bitflags! {
     /// Method name flags.
@@ -43,114 +45,12 @@ bitflags! {
     }
 }
 
-/// Register all intrinsic methods for `java.lang.invoke.MethodHandleNatives`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "getConstant", "(I)I", get_constant);
-        registry.register(
-            CLASS_NAME,
-            "resolve",
-            "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;",
-            resolve_0,
-        );
-    } else {
-        if registry.java_major_version() <= JAVA_21 {
-            registry.register(
-                CLASS_NAME,
-                "clearCallSiteContext",
-                "(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V",
-                clear_call_site_context,
-            );
-        }
-
-        registry.register(
-            CLASS_NAME,
-            "copyOutBootstrapArguments",
-            "(Ljava/lang/Class;[III[Ljava/lang/Object;IZLjava/lang/Object;)V",
-            copy_out_bootstrap_arguments,
-        );
-    }
-
-    if registry.java_major_version() == JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "resolve",
-            "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;Z)Ljava/lang/invoke/MemberName;",
-            resolve_1,
-        );
-    }
-
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(CLASS_NAME, "getMembers", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I", get_members);
-    }
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "resolve",
-            "(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName;",
-            resolve_2,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "expand",
-        "(Ljava/lang/invoke/MemberName;)V",
-        expand,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getMemberVMInfo",
-        "(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
-        get_member_vm_info,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNamedCon",
-        "(I[Ljava/lang/Object;)I",
-        get_named_con,
-    );
-    registry.register(
-        CLASS_NAME,
-        "init",
-        "(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V",
-        init,
-    );
-    registry.register(
-        CLASS_NAME,
-        "objectFieldOffset",
-        "(Ljava/lang/invoke/MemberName;)J",
-        object_field_offset,
-    );
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-    registry.register(
-        CLASS_NAME,
-        "setCallSiteTargetNormal",
-        "(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
-        set_call_site_target_normal,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setCallSiteTargetVolatile",
-        "(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
-        set_call_site_target_volatile,
-    );
-    registry.register(
-        CLASS_NAME,
-        "staticFieldBase",
-        "(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
-        static_field_base,
-    );
-    registry.register(
-        CLASS_NAME,
-        "staticFieldOffset",
-        "(Ljava/lang/invoke/MemberName;)J",
-        static_field_offset,
-    );
-}
-
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.clearCallSiteContext(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V",
+    Between(JAVA_11, JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn clear_call_site_context(
+pub(crate) async fn clear_call_site_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -159,8 +59,12 @@ async fn clear_call_site_context(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.copyOutBootstrapArguments(Ljava/lang/Class;[III[Ljava/lang/Object;IZLjava/lang/Object;)V",
+    GreaterThan(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn copy_out_bootstrap_arguments(
+pub(crate) async fn copy_out_bootstrap_arguments(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -169,18 +73,33 @@ async fn copy_out_bootstrap_arguments(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.expand(Ljava/lang/invoke/MemberName;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn expand(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn expand(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.expand(Ljava/lang/invoke/MemberName;)V")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.getConstant(I)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_constant(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_constant(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.getConstant(I)I")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.getMemberVMInfo(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_member_vm_info(
+pub(crate) async fn get_member_vm_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -189,25 +108,47 @@ async fn get_member_vm_info(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.getMembers(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_members(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_members(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "java.lang.invoke.MethodHandleNatives.getMembers(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I"
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.getNamedCon(I[Ljava/lang/Object;)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_named_con(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_named_con(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandleNatives.getNamedCon(I[Ljava/lang/Object;)I")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn object_field_offset(
+pub(crate) async fn object_field_offset(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -220,12 +161,16 @@ async fn object_field_offset(
     Ok(Some(Value::Long(offset)))
 }
 
+#[intrinsic_method("java/lang/invoke/MethodHandleNatives.registerNatives()V", Any)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
-async fn resolve(
+pub(crate) async fn resolve(
     thread: Arc<Thread>,
     member_self: Object,
     _caller: Option<Arc<Class>>,
@@ -279,8 +224,15 @@ async fn resolve(
     }
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn resolve_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn resolve_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     // Correct parameter order: pop MemberName first, then caller (Class)
     let member_self = parameters.pop_object()?;
     let caller = match parameters.pop_object() {
@@ -293,8 +245,15 @@ async fn resolve_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Op
     resolve(thread, member_self, caller, -1, true).await
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;Z)Ljava/lang/invoke/MemberName;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn resolve_1(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn resolve_1(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let speculative_resolve = parameters.pop_bool()?;
     let caller = match parameters.pop_object() {
         Ok(caller) => {
@@ -307,8 +266,15 @@ async fn resolve_1(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Op
     resolve(thread, member_self, caller, -1, speculative_resolve).await
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName;",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn resolve_2(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn resolve_2(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let speculative_resolve = parameters.pop_bool()?;
     let lookup_mode = parameters.pop_int()?;
     let caller = match parameters.pop_object() {
@@ -329,8 +295,12 @@ async fn resolve_2(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Op
     .await
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.setCallSiteTargetNormal(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn set_call_site_target_normal(
+pub(crate) async fn set_call_site_target_normal(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -340,8 +310,12 @@ async fn set_call_site_target_normal(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.setCallSiteTargetVolatile(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn set_call_site_target_volatile(
+pub(crate) async fn set_call_site_target_volatile(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -351,8 +325,12 @@ async fn set_call_site_target_volatile(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.staticFieldBase(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn static_field_base(
+pub(crate) async fn static_field_base(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -361,8 +339,12 @@ async fn static_field_base(
     Ok(Some(class))
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn static_field_offset(
+pub(crate) async fn static_field_offset(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -1,28 +1,34 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/io/ObjectInputStream";
-
-/// Register all intrinsic methods for `java.io.ObjectInputStream`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= 11 {
-        registry.register(CLASS_NAME, "bytesToDoubles", "([BI[DII)V", bytes_to_doubles);
-        registry.register(CLASS_NAME, "bytesToFloats", "([BI[FII)V", bytes_to_floats);
-    }
-}
-
+#[intrinsic_method(
+    "java/io/ObjectInputStream.bytesToDoubles([BI[DII)V",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn bytes_to_doubles(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn bytes_to_doubles(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.ObjectInputStream.bytesToDoubles([BI[DII)V")
 }
 
+#[intrinsic_method(
+    "java/io/ObjectInputStream.bytesToFloats([BI[FII)V",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn bytes_to_floats(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn bytes_to_floats(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.ObjectInputStream.bytesToFloats([BI[FII)V")
 }
 

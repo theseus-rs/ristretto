@@ -1,39 +1,27 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/util/TimeZone";
-
-/// Register all intrinsic methods for `java.util.TimeZone`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getSystemGMTOffsetID",
-        "()Ljava/lang/String;",
-        get_system_gmt_offset_id,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getSystemTimeZoneID",
-        "(Ljava/lang/String;)Ljava/lang/String;",
-        get_system_time_zone_id,
-    );
-}
-
+#[intrinsic_method("java/util/TimeZone.getSystemGMTOffsetID()Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
-async fn get_system_gmt_offset_id(
+pub(crate) async fn get_system_gmt_offset_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.util.TimeZone.getSystemGMTOffsetID()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "java/util/TimeZone.getSystemTimeZoneID(Ljava/lang/String;)Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_system_time_zone_id(
+pub(crate) async fn get_system_time_zone_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

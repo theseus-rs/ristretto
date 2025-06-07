@@ -1,90 +1,99 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/x11/XSurfaceData";
-
-/// Register all intrinsic methods for `sun.java2d.x11.XSurfaceData`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "XCreateGC", "(J)J", x_create_gc);
-    registry.register(CLASS_NAME, "XResetClip", "(J)V", x_reset_clip);
-    registry.register(
-        CLASS_NAME,
-        "XSetClip",
-        "(JIIIILsun/java2d/pipe/Region;)V",
-        x_set_clip,
-    );
-    registry.register(
-        CLASS_NAME,
-        "XSetGraphicsExposures",
-        "(JZ)V",
-        x_set_graphics_exposures,
-    );
-    registry.register(
-        CLASS_NAME,
-        "flushNativeSurface",
-        "()V",
-        flush_native_surface,
-    );
-    registry.register(
-        CLASS_NAME,
-        "initOps",
-        "(Lsun/awt/X11ComponentPeer;Lsun/awt/X11GraphicsConfig;I)V",
-        init_ops,
-    );
-    registry.register(CLASS_NAME, "isDrawableValid", "()Z", is_drawable_valid);
-    registry.register(CLASS_NAME, "setInvalid", "()V", set_invalid);
-}
-
+#[intrinsic_method("sun/java2d/x11/XSurfaceData.XCreateGC(J)J", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn x_create_gc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_create_gc(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.XCreateGC(J)J");
 }
 
+#[intrinsic_method("sun/java2d/x11/XSurfaceData.XResetClip(J)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn x_reset_clip(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_reset_clip(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.XResetClip(J)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/XSurfaceData.XSetClip(JIIIILsun/java2d/pipe/Region;)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_set_clip(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_set_clip(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.XSetClip(JIIIILsun/java2d/pipe/Region;)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/XSurfaceData.XSetGraphicsExposures(JZ)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_set_graphics_exposures(
+pub(crate) async fn x_set_graphics_exposures(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.XSetGraphicsExposures(JZ)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/XSurfaceData.flushNativeSurface()V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn flush_native_surface(
+pub(crate) async fn flush_native_surface(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.flushNativeSurface()V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/XSurfaceData.initOps(Lsun/awt/X11ComponentPeer;Lsun/awt/X11GraphicsConfig;I)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_ops(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ops(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.java2d.x11.XSurfaceData.initOps(Lsun/awt/X11ComponentPeer;Lsun/awt/X11GraphicsConfig;I)V"
     );
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/XSurfaceData.isDrawableValid()Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn is_drawable_valid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_drawable_valid(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.isDrawableValid()Z");
 }
 
+#[intrinsic_method("sun/java2d/x11/XSurfaceData.setInvalid()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn set_invalid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_invalid(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.XSurfaceData.setInvalid()V");
 }
 

@@ -1,127 +1,124 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/util/zip/Deflater";
-
-/// Register all intrinsic methods for `java.util.zip.Deflater`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "deflateBytes", "(J[BIII)I", deflate_bytes);
-        registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "deflateBufferBuffer",
-            "(JJIJIII)J",
-            deflate_buffer_buffer,
-        );
-        registry.register(
-            CLASS_NAME,
-            "deflateBufferBytes",
-            "(JJI[BIIII)J",
-            deflate_buffer_bytes,
-        );
-        registry.register(
-            CLASS_NAME,
-            "deflateBytesBuffer",
-            "(J[BIIJIII)J",
-            deflate_bytes_buffer,
-        );
-        registry.register(
-            CLASS_NAME,
-            "deflateBytesBytes",
-            "(J[BII[BIIII)J",
-            deflate_bytes_bytes,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setDictionaryBuffer",
-            "(JJI)V",
-            set_dictionary_buffer,
-        );
-    }
-
-    registry.register(CLASS_NAME, "end", "(J)V", end);
-    registry.register(CLASS_NAME, "getAdler", "(J)I", get_adler);
-    registry.register(CLASS_NAME, "init", "(IIZ)J", init);
-    registry.register(CLASS_NAME, "reset", "(J)V", reset);
-    registry.register(CLASS_NAME, "setDictionary", "(J[BII)V", set_dictionary);
-}
-
+#[intrinsic_method(
+    "java/util/zip/Deflater.deflateBytes(J[BIII)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn deflate_bytes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn deflate_bytes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.util.zip.Deflater.deflateBytes(J[BIII)I")
 }
 
+#[intrinsic_method(
+    "java/util/zip/Deflater.deflateBufferBuffer(JJIJIII)J",
+    GreaterThan(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn deflate_buffer_buffer(
+pub(crate) async fn deflate_buffer_buffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.util.zip.Deflater.deflateBufferBuffer(JJIJIII)J")
 }
 
+#[intrinsic_method(
+    "java/util/zip/Deflater.deflateBufferBytes(JJI[BIIII)J",
+    GreaterThan(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn deflate_buffer_bytes(
+pub(crate) async fn deflate_buffer_bytes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.util.zip.Deflater.deflateBufferBytes(JJI[BIIII)J")
 }
 
+#[intrinsic_method(
+    "java/util/zip/Deflater.deflateBytesBuffer(J[BIIJIII)J",
+    GreaterThan(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn deflate_bytes_buffer(
+pub(crate) async fn deflate_bytes_buffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.util.zip.Deflater.deflateBytesBuffer(J[BIIJIII)J")
 }
 
+#[intrinsic_method(
+    "java/util/zip/Deflater.deflateBytesBytes(J[BII[BIIII)J",
+    GreaterThan(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn deflate_bytes_bytes(
+pub(crate) async fn deflate_bytes_bytes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.util.zip.Deflater.deflateBytesBytes(J[BII[BIIII)J")
 }
 
+#[intrinsic_method("java/util/zip/Deflater.end(J)V", Any)]
 #[async_recursion(?Send)]
-async fn end(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn end(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.Deflater.end(J)V")
 }
 
+#[intrinsic_method("java/util/zip/Deflater.getAdler(J)I", Any)]
 #[async_recursion(?Send)]
-async fn get_adler(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_adler(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.util.zip.Deflater.getAdler(J)I")
 }
 
+#[intrinsic_method("java/util/zip/Deflater.init(IIZ)J", Any)]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.Deflater.init(IIZ)J")
 }
 
+#[intrinsic_method("java/util/zip/Deflater.initIDs()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/util/zip/Deflater.reset(J)V", Any)]
 #[async_recursion(?Send)]
-async fn reset(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn reset(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.Deflater.reset(J)V")
 }
 
+#[intrinsic_method("java/util/zip/Deflater.setDictionary(J[BII)V", Any)]
 #[async_recursion(?Send)]
-async fn set_dictionary(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_dictionary(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.util.zip.Deflater.setDictionary(J[BII)V")
 }
 
+#[intrinsic_method(
+    "java/util/zip/Deflater.setDictionaryBuffer(JJI)V",
+    GreaterThan(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn set_dictionary_buffer(
+pub(crate) async fn set_dictionary_buffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

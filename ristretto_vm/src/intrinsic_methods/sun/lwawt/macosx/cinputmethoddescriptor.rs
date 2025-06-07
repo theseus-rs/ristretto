@@ -1,34 +1,30 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CInputMethodDescriptor";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CInputMethodDescriptor`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeGetAvailableLocales",
-        "()Ljava/util/List;",
-        native_get_available_locales,
-    );
-    registry.register(CLASS_NAME, "nativeInit", "()V", native_init);
-}
-
+#[intrinsic_method(
+    "sun/lwawt/macosx/CInputMethodDescriptor.nativeGetAvailableLocales()Ljava/util/List;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_get_available_locales(
+pub(crate) async fn native_get_available_locales(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CInputMethodDescriptor.nativeGetAvailableLocales()Ljava/util/List;")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CInputMethodDescriptor.nativeInit()V", Any)]
 #[async_recursion(?Send)]
-async fn native_init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_init(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CInputMethodDescriptor.nativeInit()V")
 }
 

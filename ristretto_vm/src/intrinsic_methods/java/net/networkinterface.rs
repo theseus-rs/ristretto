@@ -1,92 +1,52 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/net/NetworkInterface";
-
-/// Register all intrinsic methods for `java.net.NetworkInterface`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "boundInetAddress0",
-            "(Ljava/net/InetAddress;)Z",
-            bound_inet_address_0,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "getAll",
-        "()[Ljava/net/NetworkInterface;",
-        get_all,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getByIndex0",
-        "(I)Ljava/net/NetworkInterface;",
-        get_by_index_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getByInetAddress0",
-        "(Ljava/net/InetAddress;)Ljava/net/NetworkInterface;",
-        get_by_inet_address_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getByName0",
-        "(Ljava/lang/String;)Ljava/net/NetworkInterface;",
-        get_by_name_0,
-    );
-    registry.register(CLASS_NAME, "getMTU0", "(Ljava/lang/String;I)I", get_mtu_0);
-    registry.register(
-        CLASS_NAME,
-        "getMacAddr0",
-        "([BLjava/lang/String;I)[B",
-        get_mac_addr_0,
-    );
-    registry.register(CLASS_NAME, "init", "()V", init);
-    registry.register(
-        CLASS_NAME,
-        "isLoopback0",
-        "(Ljava/lang/String;I)Z",
-        is_loopback_0,
-    );
-    registry.register(CLASS_NAME, "isP2P0", "(Ljava/lang/String;I)Z", is_p2p_0);
-    registry.register(CLASS_NAME, "isUp0", "(Ljava/lang/String;I)Z", is_up_0);
-    registry.register(
-        CLASS_NAME,
-        "supportsMulticast0",
-        "(Ljava/lang/String;I)Z",
-        supports_multicast_0,
-    );
-}
-
+#[intrinsic_method(
+    "java/net/NetworkInterface.boundInetAddress0(Ljava/net/InetAddress;)Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn bound_inet_address_0(
+pub(crate) async fn bound_inet_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.net.NetworkInterface.boundInetAddress0(Ljava/net/InetAddress;)Z")
 }
 
+#[intrinsic_method("java/net/NetworkInterface.getAll()[Ljava/net/NetworkInterface;", Any)]
 #[async_recursion(?Send)]
-async fn get_all(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_all(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.NetworkInterface.getAll()[Ljava/net/NetworkInterface;")
 }
 
+#[intrinsic_method(
+    "java/net/NetworkInterface.getByIndex0(I)Ljava/net/NetworkInterface;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_by_index_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_by_index_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.NetworkInterface.getByIndex0(I)Ljava/net/NetworkInterface;")
 }
 
+#[intrinsic_method(
+    "java/net/NetworkInterface.getByInetAddress0(Ljava/net/InetAddress;)Ljava/net/NetworkInterface;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_by_inet_address_0(
+pub(crate) async fn get_by_inet_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,43 +55,75 @@ async fn get_by_inet_address_0(
     )
 }
 
+#[intrinsic_method(
+    "java/net/NetworkInterface.getByName0(Ljava/lang/String;)Ljava/net/NetworkInterface;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_by_name_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_by_name_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.NetworkInterface.getByName0(Ljava/lang/String;)Ljava/net/NetworkInterface;")
 }
 
+#[intrinsic_method("java/net/NetworkInterface.getMTU0(Ljava/lang/String;I)I", Any)]
 #[async_recursion(?Send)]
-async fn get_mtu_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_mtu_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.NetworkInterface.getMTU0(Ljava/lang/String;I)I")
 }
 
+#[intrinsic_method("java/net/NetworkInterface.getMacAddr0([BLjava/lang/String;I)[B", Any)]
 #[async_recursion(?Send)]
-async fn get_mac_addr_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_mac_addr_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.NetworkInterface.getMacAddr0([BLjava/lang/String;I)[B")
 }
 
+#[intrinsic_method("java/net/NetworkInterface.init()V", Any)]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/net/NetworkInterface.isLoopback0(Ljava/lang/String;I)Z", Any)]
 #[async_recursion(?Send)]
-async fn is_loopback_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_loopback_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.NetworkInterface.isLoopback0(Ljava/lang/String;I)Z")
 }
 
+#[intrinsic_method("java/net/NetworkInterface.isP2P0(Ljava/lang/String;I)Z", Any)]
 #[async_recursion(?Send)]
-async fn is_p2p_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_p2p_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.NetworkInterface.isP2P0(Ljava/lang/String;I)Z")
 }
 
+#[intrinsic_method("java/net/NetworkInterface.isUp0(Ljava/lang/String;I)Z", Any)]
 #[async_recursion(?Send)]
-async fn is_up_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_up_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.NetworkInterface.isUp0(Ljava/lang/String;I)Z")
 }
 
+#[intrinsic_method(
+    "java/net/NetworkInterface.supportsMulticast0(Ljava/lang/String;I)Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn supports_multicast_0(
+pub(crate) async fn supports_multicast_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

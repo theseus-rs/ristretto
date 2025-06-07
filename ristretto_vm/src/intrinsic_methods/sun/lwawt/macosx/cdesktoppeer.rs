@@ -1,36 +1,27 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CDesktopPeer";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CDesktopPeer`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "_lsOpenFile",
-        "(Ljava/lang/String;Z)I",
-        ls_open_file,
-    );
-    registry.register(
-        CLASS_NAME,
-        "_lsOpenURI",
-        "(Ljava/lang/String;)I",
-        ls_open_uri,
-    );
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CDesktopPeer._lsOpenFile(Ljava/lang/String;Z)I", Any)]
 #[async_recursion(?Send)]
-async fn ls_open_file(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ls_open_file(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDesktopPeer._lsOpenFile(Ljava/lang/String;Z)I")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CDesktopPeer._lsOpenURI(Ljava/lang/String;)I", Any)]
 #[async_recursion(?Send)]
-async fn ls_open_uri(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ls_open_uri(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDesktopPeer._lsOpenURI(Ljava/lang/String;)I")
 }
 

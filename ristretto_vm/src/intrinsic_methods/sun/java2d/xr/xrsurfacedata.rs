@@ -1,38 +1,55 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/xr/XRSurfaceData";
-
-/// Register all intrinsic methods for `sun.java2d.xr.XRSurfaceData`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "XRInitSurface", "(IIIJI)V", xr_init_surface);
-    registry.register(CLASS_NAME, "freeXSDOPicture", "(J)V", free_xsdo_picture);
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(CLASS_NAME, "initXRPicture", "(JI)V", init_xr_picture);
-}
-
+#[intrinsic_method(
+    "sun/java2d/xr/XRSurfaceData.XRInitSurface(IIIJI)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn xr_init_surface(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn xr_init_surface(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.xr.XRSurfaceData.XRInitSurface(IIIJI)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/xr/XRSurfaceData.freeXSDOPicture(J)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn free_xsdo_picture(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn free_xsdo_picture(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.xr.XRSurfaceData.freeXSDOPicture(J)V");
 }
 
+#[intrinsic_method("sun/java2d/xr/XRSurfaceData.initIDs()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/java2d/xr/XRSurfaceData.initXRPicture(JI)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_xr_picture(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_xr_picture(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.xr.XRSurfaceData.initXRPicture(JI)V");
 }
 

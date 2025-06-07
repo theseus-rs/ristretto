@@ -1,110 +1,136 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/X11GraphicsConfig";
-
-/// Register all intrinsic methods for `sun.awt.X11GraphicsConfig`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "createBackBuffer", "(JI)J", create_back_buffer);
-    registry.register(CLASS_NAME, "destroyBackBuffer", "(J)V", destroy_back_buffer);
-    registry.register(CLASS_NAME, "dispose", "(J)V", dispose);
-    registry.register(CLASS_NAME, "getNumColors", "()I", get_num_colors);
-    registry.register(CLASS_NAME, "getXResolution", "(I)D", get_x_resolution);
-    registry.register(CLASS_NAME, "getYResolution", "(I)D", get_y_resolution);
-    registry.register(CLASS_NAME, "init", "(II)V", init);
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(
-        CLASS_NAME,
-        "isTranslucencyCapable",
-        "(J)Z",
-        is_translucency_capable,
-    );
-    registry.register(
-        CLASS_NAME,
-        "makeColorModel",
-        "()Ljava/awt/image/ColorModel;",
-        make_color_model,
-    );
-    registry.register(
-        CLASS_NAME,
-        "pGetBounds",
-        "(I)Ljava/awt/Rectangle;",
-        p_get_bounds,
-    );
-    registry.register(CLASS_NAME, "swapBuffers", "(JI)V", swap_buffers);
-}
-
+#[intrinsic_method(
+    "sun/awt/X11GraphicsConfig.createBackBuffer(JI)J",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn create_back_buffer(
+pub(crate) async fn create_back_buffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.createBackBuffer(JI)J")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsConfig.destroyBackBuffer(J)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn destroy_back_buffer(
+pub(crate) async fn destroy_back_buffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.destroyBackBuffer(J)V")
 }
 
+#[intrinsic_method("sun/awt/X11GraphicsConfig.dispose(J)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn dispose(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn dispose(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.dispose(J)V")
 }
 
+#[intrinsic_method("sun/awt/X11GraphicsConfig.getNumColors()I", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn get_num_colors(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_num_colors(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.getNumColors()I")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsConfig.getXResolution(I)D",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_x_resolution(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_x_resolution(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.getXResolution(I)D")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsConfig.getYResolution(I)D",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_y_resolution(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_y_resolution(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.getYResolution(I)D")
 }
 
+#[intrinsic_method("sun/awt/X11GraphicsConfig.init(II)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.init(II)V")
 }
 
+#[intrinsic_method("sun/awt/X11GraphicsConfig.initIDs()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsConfig.isTranslucencyCapable(J)Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn is_translucency_capable(
+pub(crate) async fn is_translucency_capable(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.isTranslucencyCapable(J)Z")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsConfig.makeColorModel()Ljava/awt/image/ColorModel;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn make_color_model(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn make_color_model(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.makeColorModel()Ljava/awt/image/ColorModel;")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11GraphicsConfig.pGetBounds(I)Ljava/awt/Rectangle;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn p_get_bounds(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn p_get_bounds(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.pGetBounds(I)Ljava/awt/Rectangle;")
 }
 
+#[intrinsic_method("sun/awt/X11GraphicsConfig.swapBuffers(JI)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn swap_buffers(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn swap_buffers(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.swapBuffers(JI)V")
 }
 

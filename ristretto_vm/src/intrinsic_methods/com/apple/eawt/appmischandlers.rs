@@ -1,81 +1,57 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/apple/eawt/_AppMiscHandlers";
-
-/// Register all intrinsic methods for `com.apple.eawt._AppMiscHandlers`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeDisableSuddenTermination",
-        "()V",
-        native_disable_sudden_termination,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeEnableSuddenTermination",
-        "()V",
-        native_enable_sudden_termination,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeOpenHelpViewer",
-        "()V",
-        native_open_help_viewer,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeRequestActivation",
-        "(Z)V",
-        native_request_activation,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeRequestUserAttention",
-        "(Z)V",
-        native_request_user_attention,
-    );
-}
-
+#[intrinsic_method(
+    "com/apple/eawt/_AppMiscHandlers.nativeDisableSuddenTermination()V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_disable_sudden_termination(
+pub(crate) async fn native_disable_sudden_termination(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMiscHandlers.nativeDisableSuddenTermination()V")
 }
 
+#[intrinsic_method(
+    "com/apple/eawt/_AppMiscHandlers.nativeEnableSuddenTermination()V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_enable_sudden_termination(
+pub(crate) async fn native_enable_sudden_termination(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMiscHandlers.nativeEnableSuddenTermination()V")
 }
 
+#[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeOpenHelpViewer()V", Any)]
 #[async_recursion(?Send)]
-async fn native_open_help_viewer(
+pub(crate) async fn native_open_help_viewer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMiscHandlers.nativeOpenHelpViewer()V")
 }
 
+#[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeRequestActivation(Z)V", Any)]
 #[async_recursion(?Send)]
-async fn native_request_activation(
+pub(crate) async fn native_request_activation(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eawt._AppMiscHandlers.nativeRequestActivation(Z)V")
 }
 
+#[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeRequestUserAttention(Z)V", Any)]
 #[async_recursion(?Send)]
-async fn native_request_user_attention(
+pub(crate) async fn native_request_user_attention(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

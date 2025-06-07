@@ -1,25 +1,18 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/apple/eawt/Application";
-
-/// Register all intrinsic methods for `com.apple.eawt.Application`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeInitializeApplicationDelegate",
-        "()V",
-        native_initialize_application_delegate,
-    );
-}
-
+#[intrinsic_method(
+    "com/apple/eawt/Application.nativeInitializeApplicationDelegate()V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_initialize_application_delegate(
+pub(crate) async fn native_initialize_application_delegate(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

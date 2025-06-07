@@ -1,133 +1,133 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CAccessible";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CAccessible`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(CLASS_NAME, "titleChanged", "(J)V", title_changed);
-    }
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "selectedCellsChanged",
-            "(J)V",
-            selected_cells_changed,
-        );
-        registry.register(
-            CLASS_NAME,
-            "tableContentCacheClear",
-            "(J)V",
-            table_content_cache_clear,
-        );
-        registry.register(CLASS_NAME, "titleChanged", "(J)V", title_changed);
-        registry.register(CLASS_NAME, "treeNodeCollapsed", "(J)V", tree_node_collapsed);
-        registry.register(CLASS_NAME, "treeNodeExpanded", "(J)V", tree_node_expanded);
-    }
-
-    registry.register(CLASS_NAME, "menuClosed", "(J)V", menu_closed);
-    registry.register(CLASS_NAME, "menuItemSelected", "(J)V", menu_item_selected);
-    registry.register(CLASS_NAME, "menuOpened", "(J)V", menu_opened);
-    registry.register(
-        CLASS_NAME,
-        "selectedTextChanged",
-        "(J)V",
-        selected_text_changed,
-    );
-    registry.register(CLASS_NAME, "selectionChanged", "(J)V", selection_changed);
-    registry.register(
-        CLASS_NAME,
-        "unregisterFromCocoaAXSystem",
-        "(J)V",
-        unregister_from_cocoa_ax_system,
-    );
-    registry.register(CLASS_NAME, "valueChanged", "(J)V", value_changed);
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CAccessible.menuClosed(J)V", Any)]
 #[async_recursion(?Send)]
-async fn menu_closed(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn menu_closed(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.menuClosed(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CAccessible.menuItemSelected(J)V", Any)]
 #[async_recursion(?Send)]
-async fn menu_item_selected(
+pub(crate) async fn menu_item_selected(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.menuItemSelected(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CAccessible.menuOpened(J)V", Any)]
 #[async_recursion(?Send)]
-async fn menu_opened(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn menu_opened(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.menuOpened(J)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CAccessible.selectedCellsChanged(J)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn selected_cells_changed(
+pub(crate) async fn selected_cells_changed(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.selectedCellsChanged(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CAccessible.selectedTextChanged(J)V", Any)]
 #[async_recursion(?Send)]
-async fn selected_text_changed(
+pub(crate) async fn selected_text_changed(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.selectedTextChanged(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CAccessible.selectionChanged(J)V", Any)]
 #[async_recursion(?Send)]
-async fn selection_changed(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn selection_changed(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.selectionChanged(J)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CAccessible.tableContentCacheClear(J)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn table_content_cache_clear(
+pub(crate) async fn table_content_cache_clear(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.tableContentCacheClear(J)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CAccessible.titleChanged(J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn title_changed(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn title_changed(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.titleChanged(J)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CAccessible.treeNodeCollapsed(J)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn tree_node_collapsed(
+pub(crate) async fn tree_node_collapsed(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.treeNodeCollapsed(J)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CAccessible.treeNodeExpanded(J)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn tree_node_expanded(
+pub(crate) async fn tree_node_expanded(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.treeNodeExpanded(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CAccessible.unregisterFromCocoaAXSystem(J)V", Any)]
 #[async_recursion(?Send)]
-async fn unregister_from_cocoa_ax_system(
+pub(crate) async fn unregister_from_cocoa_ax_system(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.unregisterFromCocoaAXSystem(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CAccessible.valueChanged(J)V", Any)]
 #[async_recursion(?Send)]
-async fn value_changed(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn value_changed(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessible.valueChanged(J)V")
 }
 

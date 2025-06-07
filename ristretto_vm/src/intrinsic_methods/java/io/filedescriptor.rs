@@ -1,38 +1,31 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{
+    Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
+};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/io/FileDescriptor";
-
-/// Register all intrinsic methods for `java.io.FileDescriptor`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(CLASS_NAME, "close0", "()V", close_0);
-        registry.register(CLASS_NAME, "getAppend", "(I)Z", get_append);
-        registry.register(CLASS_NAME, "getHandle", "(I)J", get_handle);
-    }
-
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(CLASS_NAME, "sync", "()V", sync);
-    } else {
-        registry.register(CLASS_NAME, "sync0", "()V", sync_0);
-    }
-
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-}
-
+#[intrinsic_method("java/io/FileDescriptor.close0()V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn close_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.FileDescriptor.close0()V")
 }
 
+#[intrinsic_method("java/io/FileDescriptor.getAppend(I)Z", GreaterThanOrEqual(JAVA_11))]
 #[expect(clippy::match_same_arms)]
 #[async_recursion(?Send)]
-async fn get_append(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_append(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let handle = parameters.pop_int()?;
     let append = match handle {
         0 => {
@@ -52,25 +45,35 @@ async fn get_append(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<
     Ok(Some(Value::from(append)))
 }
 
+#[intrinsic_method("java/io/FileDescriptor.getHandle(I)J", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn get_handle(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_handle(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let handle = parameters.pop_int()?;
     let handle = i64::from(handle);
     Ok(Some(Value::Long(handle)))
 }
 
+#[intrinsic_method("java/io/FileDescriptor.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/io/FileDescriptor.sync()V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn sync(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn sync(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     sync_0(thread, parameters).await
 }
 
+#[intrinsic_method("java/io/FileDescriptor.sync0()V", GreaterThan(JAVA_17))]
 #[async_recursion(?Send)]
-async fn sync_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn sync_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileDescriptor.sync0()V")
 }
 

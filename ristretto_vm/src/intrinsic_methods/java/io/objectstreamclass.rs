@@ -1,34 +1,30 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/io/ObjectStreamClass";
-
-/// Register all intrinsic methods for `java.io.ObjectStreamClass`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "hasStaticInitializer",
-        "(Ljava/lang/Class;)Z",
-        has_static_initializer,
-    );
-    registry.register(CLASS_NAME, "initNative", "()V", init_native);
-}
-
+#[intrinsic_method(
+    "java/io/ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn has_static_initializer(
+pub(crate) async fn has_static_initializer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z")
 }
 
+#[intrinsic_method("java/io/ObjectStreamClass.initNative()V", Any)]
 #[async_recursion(?Send)]
-async fn init_native(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_native(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 

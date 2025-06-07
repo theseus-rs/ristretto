@@ -1,193 +1,224 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Between, LessThanOrEqual};
+use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/net/PlainDatagramSocketImpl";
-
-/// Register all intrinsic methods for `java.net.PlainDatagramSocketImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "send", "(Ljava/net/DatagramPacket;)V", send);
-    } else {
-        registry.register(CLASS_NAME, "send0", "(Ljava/net/DatagramPacket;)V", send_0);
-    }
-
-    registry.register(CLASS_NAME, "bind0", "(ILjava/net/InetAddress;)V", bind_0);
-    registry.register(
-        CLASS_NAME,
-        "connect0",
-        "(Ljava/net/InetAddress;I)V",
-        connect_0,
-    );
-    registry.register(CLASS_NAME, "dataAvailable", "()I", data_available);
-    registry.register(
-        CLASS_NAME,
-        "datagramSocketClose",
-        "()V",
-        datagram_socket_close,
-    );
-    registry.register(
-        CLASS_NAME,
-        "datagramSocketCreate",
-        "()V",
-        datagram_socket_create,
-    );
-    registry.register(CLASS_NAME, "disconnect0", "(I)V", disconnect_0);
-    registry.register(CLASS_NAME, "getTTL", "()B", get_ttl);
-    registry.register(CLASS_NAME, "getTimeToLive", "()I", get_time_to_live);
-    registry.register(CLASS_NAME, "init", "()V", init);
-    registry.register(
-        CLASS_NAME,
-        "join",
-        "(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
-        join,
-    );
-    registry.register(
-        CLASS_NAME,
-        "leave",
-        "(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
-        leave,
-    );
-    registry.register(CLASS_NAME, "peek", "(Ljava/net/InetAddress;)I", peek);
-    registry.register(
-        CLASS_NAME,
-        "peekData",
-        "(Ljava/net/DatagramPacket;)I",
-        peek_data,
-    );
-    registry.register(
-        CLASS_NAME,
-        "receive0",
-        "(Ljava/net/DatagramPacket;)V",
-        receive_0,
-    );
-    registry.register(CLASS_NAME, "setTTL", "(B)V", set_ttl);
-    registry.register(CLASS_NAME, "setTimeToLive", "(I)V", set_time_to_live);
-    registry.register(
-        CLASS_NAME,
-        "socketGetOption",
-        "(I)Ljava/lang/Object;",
-        socket_get_option,
-    );
-    registry.register(
-        CLASS_NAME,
-        "socketSetOption0",
-        "(ILjava/lang/Object;)V",
-        socket_set_option_0,
-    );
-}
-
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.bind0(ILjava/net/InetAddress;)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.bind0(ILjava/net/InetAddress;)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.connect0(Ljava/net/InetAddress;I)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn connect_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn connect_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.connect0(Ljava/net/InetAddress;I)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.dataAvailable()I",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn data_available(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn data_available(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.dataAvailable()I")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.datagramSocketClose()V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn datagram_socket_close(
+pub(crate) async fn datagram_socket_close(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.datagramSocketClose()V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.datagramSocketCreate()V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn datagram_socket_create(
+pub(crate) async fn datagram_socket_create(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.datagramSocketCreate()V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.disconnect0(I)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn disconnect_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn disconnect_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.disconnect0(I)V")
 }
 
+#[intrinsic_method("java/net/PlainDatagramSocketImpl.getTTL()B", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn get_ttl(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_ttl(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.getTTL()B")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.getTimeToLive()I",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_time_to_live(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_time_to_live(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.getTimeToLive()I")
 }
 
+#[intrinsic_method("java/net/PlainDatagramSocketImpl.init()V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.join(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn join(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn join(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "java.net.PlainDatagramSocketImpl.join(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V"
     )
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.leave(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn leave(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn leave(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "java.net.PlainDatagramSocketImpl.leave(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V"
     )
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.peek(Ljava/net/InetAddress;)I",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn peek(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn peek(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.peek(Ljava/net/InetAddress;)I")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.peekData(Ljava/net/DatagramPacket;)I",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn peek_data(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn peek_data(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.peekData(Ljava/net/DatagramPacket;)I")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.receive0(Ljava/net/DatagramPacket;)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn receive_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn receive_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.receive0(Ljava/net/DatagramPacket;)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.send(Ljava/net/DatagramPacket;)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn send(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn send(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.send(Ljava/net/DatagramPacket;)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.send0(Ljava/net/DatagramPacket;)V",
+    Between(JAVA_11, JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn send_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn send_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.send0(Ljava/net/DatagramPacket;)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.setTTL(B)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_ttl(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_ttl(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.setTTL(B)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.setTimeToLive(I)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_time_to_live(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_time_to_live(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.setTimeToLive(I)V")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.socketGetOption(I)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn socket_get_option(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_get_option(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.socketGetOption(I)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/net/PlainDatagramSocketImpl.socketSetOption0(ILjava/lang/Object;)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn socket_set_option_0(
+pub(crate) async fn socket_set_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

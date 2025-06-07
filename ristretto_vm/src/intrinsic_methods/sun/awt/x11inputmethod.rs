@@ -1,71 +1,73 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/X11InputMethod";
-
-/// Register all intrinsic methods for `sun.awt.X11InputMethod`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "disposeXIC", "()V", dispose_xic);
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(
-        CLASS_NAME,
-        "isCompositionEnabledNative",
-        "()Z",
-        is_composition_enabled_native,
-    );
-    registry.register(CLASS_NAME, "resetXIC", "()Ljava/lang/String;", reset_xic);
-    registry.register(
-        CLASS_NAME,
-        "setCompositionEnabledNative",
-        "(Z)Z",
-        set_composition_enabled_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "turnoffStatusWindow",
-        "()V",
-        turnoff_status_window,
-    );
-}
-
+#[intrinsic_method("sun/awt/X11InputMethod.disposeXIC()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn dispose_xic(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn dispose_xic(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11InputMethod.disposeXIC()V")
 }
 
+#[intrinsic_method("sun/awt/X11InputMethod.initIDs()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/awt/X11InputMethod.isCompositionEnabledNative()Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn is_composition_enabled_native(
+pub(crate) async fn is_composition_enabled_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11InputMethod.isCompositionEnabledNative()Z")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11InputMethod.resetXIC()Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn reset_xic(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn reset_xic(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.X11InputMethod.resetXIC()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11InputMethod.setCompositionEnabledNative(Z)Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn set_composition_enabled_native(
+pub(crate) async fn set_composition_enabled_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.X11InputMethod.setCompositionEnabledNative(Z)Z")
 }
 
+#[intrinsic_method(
+    "sun/awt/X11InputMethod.turnoffStatusWindow()V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn turnoff_status_window(
+pub(crate) async fn turnoff_status_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

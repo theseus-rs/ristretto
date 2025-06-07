@@ -1,36 +1,34 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/x11/X11PMBlitLoops";
-
-/// Register all intrinsic methods for `sun.java2d.x11.X11PMBlitLoops`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeBlit",
-        "(JJJLsun/java2d/pipe/Region;IIIIII)V",
-        native_blit,
-    );
-    registry.register(
-        CLASS_NAME,
-        "updateBitmask",
-        "(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V",
-        update_bitmask,
-    );
-}
-
+#[intrinsic_method(
+    "sun/java2d/x11/X11PMBlitLoops.nativeBlit(JJJLsun/java2d/pipe/Region;IIIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_blit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_blit(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11PMBlitLoops.nativeBlit(JJJLsun/java2d/pipe/Region;IIIIII)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11PMBlitLoops.updateBitmask(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn update_bitmask(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn update_bitmask(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.java2d.x11.X11PMBlitLoops.updateBitmask(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V"
     );

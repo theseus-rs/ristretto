@@ -1,107 +1,117 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::{
+    Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
+};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/InheritedChannel";
-
-/// Register all intrinsic methods for `sun.nio.ch.InheritedChannel`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    }
-
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(CLASS_NAME, "open0", "(Ljava/lang/String;I)I", open_0);
-        registry.register(
-            CLASS_NAME,
-            "peerAddress0",
-            "(I)Ljava/net/InetAddress;",
-            peer_address_0,
-        );
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "inetPeerAddress0",
-            "(I)Ljava/net/InetAddress;",
-            inet_peer_address_0,
-        );
-        registry.register(CLASS_NAME, "addressFamily", "(I)I", address_family);
-        registry.register(CLASS_NAME, "isConnected", "(I)Z", is_connected);
-        registry.register(CLASS_NAME, "open0", "(Ljava/lang/String;I)I", open_0);
-        registry.register(CLASS_NAME, "unixPeerAddress0", "(I)[B", unix_peer_address_0);
-    }
-
-    registry.register(CLASS_NAME, "close0", "(I)V", close_0);
-    registry.register(CLASS_NAME, "dup", "(I)I", dup);
-    registry.register(CLASS_NAME, "dup2", "(II)V", dup_2);
-    registry.register(CLASS_NAME, "peerPort0", "(I)I", peer_port_0);
-    registry.register(CLASS_NAME, "soType0", "(I)I", so_type_0);
-}
-
+#[intrinsic_method("sun/nio/ch/InheritedChannel.addressFamily(I)I", GreaterThan(JAVA_11))]
 #[async_recursion(?Send)]
-async fn address_family(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn address_family(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.addressFamily(I)I");
 }
 
+#[intrinsic_method("sun/nio/ch/InheritedChannel.close0(I)V", Any)]
 #[async_recursion(?Send)]
-async fn close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn close_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.close0(I)V");
 }
 
+#[intrinsic_method("sun/nio/ch/InheritedChannel.dup(I)I", Any)]
 #[async_recursion(?Send)]
-async fn dup(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn dup(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.dup(I)I");
 }
 
+#[intrinsic_method("sun/nio/ch/InheritedChannel.dup2(II)V", Any)]
 #[async_recursion(?Send)]
-async fn dup_2(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn dup_2(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.dup2(II)V");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/InheritedChannel.inetPeerAddress0(I)Ljava/net/InetAddress;",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn inet_peer_address_0(
+pub(crate) async fn inet_peer_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.inetPeerAddress0(I)Ljava/net/InetAddress;");
 }
 
+#[intrinsic_method("sun/nio/ch/InheritedChannel.initIDs()V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("sun/nio/ch/InheritedChannel.isConnected(I)Z", GreaterThan(JAVA_11))]
 #[async_recursion(?Send)]
-async fn is_connected(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_connected(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.isConnected(I)Z");
 }
 
+#[intrinsic_method("sun/nio/ch/InheritedChannel.open0(Ljava/lang/String;I)I", Any)]
 #[async_recursion(?Send)]
-async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.open0(Ljava/lang/String;I)I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/InheritedChannel.peerAddress0(I)Ljava/net/InetAddress;",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn peer_address_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn peer_address_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.peerAddress0(I)Ljava/net/InetAddress;");
 }
 
+#[intrinsic_method("sun/nio/ch/InheritedChannel.peerPort0(I)I", Any)]
 #[async_recursion(?Send)]
-async fn peer_port_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn peer_port_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.peerPort0(I)I");
 }
 
+#[intrinsic_method("sun/nio/ch/InheritedChannel.soType0(I)I", Any)]
 #[async_recursion(?Send)]
-async fn so_type_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn so_type_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.soType0(I)I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/InheritedChannel.unixPeerAddress0(I)[B",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn unix_peer_address_0(
+pub(crate) async fn unix_peer_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

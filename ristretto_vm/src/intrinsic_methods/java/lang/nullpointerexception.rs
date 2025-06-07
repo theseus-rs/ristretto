@@ -1,25 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/NullPointerException";
-
-/// Register all intrinsic methods for `java.lang.NullPointerException`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getExtendedNPEMessage",
-        "()Ljava/lang/String;",
-        get_extended_npe_message,
-    );
-}
-
+#[intrinsic_method(
+    "java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_extended_npe_message(
+pub(crate) async fn get_extended_npe_message(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

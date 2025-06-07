@@ -1,20 +1,18 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/management/ClassLoadingImpl";
-
-/// Register all intrinsic methods for `sun.management.ClassLoadingImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "setVerboseClass", "(Z)V", set_verbose_class);
-}
-
+#[intrinsic_method("sun/management/ClassLoadingImpl.setVerboseClass(Z)V", Any)]
 #[async_recursion(?Send)]
-async fn set_verbose_class(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_verbose_class(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.ClassLoadingImpl.setVerboseClass(Z)V")
 }
 

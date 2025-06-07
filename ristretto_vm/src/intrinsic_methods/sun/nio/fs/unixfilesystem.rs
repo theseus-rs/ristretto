@@ -1,20 +1,22 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_21;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/fs/UnixFileSystem";
-
-/// Register all intrinsic methods for `sun.nio.fs.UnixFileSystem`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "bufferedCopy0", "(IIJIJ)V", buffered_copy_0);
-}
-
+#[intrinsic_method(
+    "sun/nio/fs/UnixFileSystem.bufferedCopy0(IIJIJ)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn buffered_copy_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn buffered_copy_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.fs.UnixFileSystem.bufferedCopy0(IIJIJ)V");
 }
 
