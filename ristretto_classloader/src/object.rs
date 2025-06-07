@@ -1,12 +1,10 @@
 use crate::Error::{FieldNotFound, InvalidValueType, ParseError};
 use crate::Reference::{ByteArray, CharArray};
 use crate::{Class, Field, Reference, Result, Value};
-use ristretto_classfile::{FieldAccessFlags, Version, mutf8};
+use ristretto_classfile::{FieldAccessFlags, JAVA_8, mutf8};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
-
-const JAVA_8: Version = Version::Java8 { minor: 0 };
 
 /// Represents an object in the Ristretto VM.
 #[derive(Clone)]

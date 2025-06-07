@@ -4,6 +4,59 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
 
+/// Constants representing the Java version 1.0.2.
+pub const JAVA_1_0_2: Version = Version::Java1_0_2 { minor: 0 };
+/// Constants representing the Java version 1.1.
+pub const JAVA_1_1: Version = Version::Java1_1 { minor: 0 };
+/// Constants representing the Java version 1.2.
+pub const JAVA_1_2: Version = Version::Java1_2 { minor: 0 };
+/// Constants representing the Java version 1.3.
+pub const JAVA_1_3: Version = Version::Java1_3 { minor: 0 };
+/// Constants representing the Java version 1.4.
+pub const JAVA_1_4: Version = Version::Java1_4 { minor: 0 };
+/// Constants representing the Java version 5.0.
+pub const JAVA_5: Version = Version::Java5 { minor: 0 };
+/// Constants representing the Java version 6.
+pub const JAVA_6: Version = Version::Java6 { minor: 0 };
+/// Constants representing the Java version 7.
+pub const JAVA_7: Version = Version::Java7 { minor: 0 };
+/// Constants representing the Java version 8.
+pub const JAVA_8: Version = Version::Java8 { minor: 0 };
+/// Constants representing the Java version 9.
+pub const JAVA_9: Version = Version::Java9 { minor: 0 };
+/// Constants representing the Java version 10.
+pub const JAVA_10: Version = Version::Java10 { minor: 0 };
+/// Constants representing the Java version 11.
+pub const JAVA_11: Version = Version::Java11 { minor: 0 };
+/// Constants representing the Java version 12.
+pub const JAVA_12: Version = Version::Java12 { minor: 0 };
+/// Constants representing the Java version 13.
+pub const JAVA_13: Version = Version::Java13 { minor: 0 };
+/// Constants representing the Java version 14.
+pub const JAVA_14: Version = Version::Java14 { minor: 0 };
+/// Constants representing the Java version 15.
+pub const JAVA_15: Version = Version::Java15 { minor: 0 };
+/// Constants representing the Java version 16.
+pub const JAVA_16: Version = Version::Java16 { minor: 0 };
+/// Constants representing the Java version 17.
+pub const JAVA_17: Version = Version::Java17 { minor: 0 };
+/// Constants representing the Java version 18.
+pub const JAVA_18: Version = Version::Java18 { minor: 0 };
+/// Constants representing the Java version 19.
+pub const JAVA_19: Version = Version::Java19 { minor: 0 };
+/// Constants representing the Java version 20.
+pub const JAVA_20: Version = Version::Java20 { minor: 0 };
+/// Constants representing the Java version 21.
+pub const JAVA_21: Version = Version::Java21 { minor: 0 };
+/// Constants representing the Java version 22.
+pub const JAVA_22: Version = Version::Java22 { minor: 0 };
+/// Constants representing the Java version 23.
+pub const JAVA_23: Version = Version::Java23 { minor: 0 };
+/// Constants representing the Java version 24.
+pub const JAVA_24: Version = Version::Java24 { minor: 0 };
+/// Constants representing the Java version 25.
+pub const JAVA_25: Version = Version::Java25 { minor: 0 };
+
 /// Minor version number that indicates a Java preview release.
 ///
 /// The value 65535 (0xFFFF) is used to indicate a preview version of Java.
@@ -57,7 +110,7 @@ pub enum Version {
     Java1_2 { minor: u16 },
     Java1_3 { minor: u16 },
     Java1_4 { minor: u16 },
-    Java5_0 { minor: u16 },
+    Java5 { minor: u16 },
     Java6 { minor: u16 },
     Java7 { minor: u16 },
     Java8 { minor: u16 },
@@ -89,7 +142,7 @@ impl Version {
     /// # Examples
     ///
     /// ```rust
-    /// use ristretto_classfile::Version;
+    /// use ristretto_classfile::{JAVA_PREVIEW_MINOR_VERSION, Version};
     ///
     /// // Create Java 17 version
     /// let java17 = Version::from(61, 0)?;
@@ -97,7 +150,7 @@ impl Version {
     /// assert_eq!(java17.minor(), 0);
     ///
     /// // Create Java 21 preview version
-    /// let java21_preview = Version::from(65, 65535)?;
+    /// let java21_preview = Version::from(65, JAVA_PREVIEW_MINOR_VERSION)?;
     /// assert!(java21_preview.is_preview());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
@@ -114,7 +167,7 @@ impl Version {
             46 => Version::Java1_2 { minor },
             47 => Version::Java1_3 { minor },
             48 => Version::Java1_4 { minor },
-            49 => Version::Java5_0 { minor },
+            49 => Version::Java5 { minor },
             50 => Version::Java6 { minor },
             51 => Version::Java7 { minor },
             52 => Version::Java8 { minor },
@@ -162,7 +215,7 @@ impl Version {
             Version::Java1_2 { .. } => 46,
             Version::Java1_3 { .. } => 47,
             Version::Java1_4 { .. } => 48,
-            Version::Java5_0 { .. } => 49,
+            Version::Java5 { .. } => 49,
             Version::Java6 { .. } => 50,
             Version::Java7 { .. } => 51,
             Version::Java8 { .. } => 52,
@@ -210,7 +263,7 @@ impl Version {
             | Version::Java1_2 { minor, .. }
             | Version::Java1_3 { minor, .. }
             | Version::Java1_4 { minor, .. }
-            | Version::Java5_0 { minor, .. }
+            | Version::Java5 { minor, .. }
             | Version::Java6 { minor, .. }
             | Version::Java7 { minor, .. }
             | Version::Java8 { minor, .. }
@@ -421,7 +474,7 @@ impl fmt::Display for Version {
     /// assert_eq!(java1_2.to_string(), "Java 1.2");
     ///
     /// let java5 = Version::from(49, 0)?;
-    /// assert_eq!(java5.to_string(), "Java 5.0");
+    /// assert_eq!(java5.to_string(), "Java 5");
     ///
     /// let java8 = Version::from(52, 0)?;
     /// assert_eq!(java8.to_string(), "Java 8");
@@ -435,7 +488,7 @@ impl fmt::Display for Version {
             Version::Java1_2 { .. } => write!(f, "Java 1.2"),
             Version::Java1_3 { .. } => write!(f, "Java 1.3"),
             Version::Java1_4 { .. } => write!(f, "Java 1.4"),
-            Version::Java5_0 { .. } => write!(f, "Java 5.0"),
+            Version::Java5 { .. } => write!(f, "Java 5"),
             Version::Java6 { .. } => write!(f, "Java 6"),
             Version::Java7 { .. } => write!(f, "Java 7"),
             Version::Java8 { .. } => write!(f, "Java 8"),
@@ -471,32 +524,9 @@ mod test {
     #[test]
     fn all_known_versions() -> Result<()> {
         let versions = [
-            Version::Java1_0_2 { minor: 0 },
-            Version::Java1_1 { minor: 0 },
-            Version::Java1_2 { minor: 0 },
-            Version::Java1_3 { minor: 0 },
-            Version::Java1_4 { minor: 0 },
-            Version::Java5_0 { minor: 0 },
-            Version::Java6 { minor: 0 },
-            Version::Java7 { minor: 0 },
-            Version::Java8 { minor: 0 },
-            Version::Java9 { minor: 0 },
-            Version::Java10 { minor: 0 },
-            Version::Java11 { minor: 0 },
-            Version::Java12 { minor: 0 },
-            Version::Java13 { minor: 0 },
-            Version::Java14 { minor: 0 },
-            Version::Java15 { minor: 0 },
-            Version::Java16 { minor: 0 },
-            Version::Java17 { minor: 0 },
-            Version::Java18 { minor: 0 },
-            Version::Java19 { minor: 0 },
-            Version::Java20 { minor: 0 },
-            Version::Java21 { minor: 0 },
-            Version::Java22 { minor: 0 },
-            Version::Java23 { minor: 0 },
-            Version::Java24 { minor: 0 },
-            Version::Java25 { minor: 0 },
+            JAVA_1_0_2, JAVA_1_1, JAVA_1_2, JAVA_1_3, JAVA_1_4, JAVA_5, JAVA_6, JAVA_7, JAVA_8,
+            JAVA_9, JAVA_10, JAVA_11, JAVA_12, JAVA_13, JAVA_14, JAVA_15, JAVA_16, JAVA_17,
+            JAVA_18, JAVA_19, JAVA_20, JAVA_21, JAVA_22, JAVA_23, JAVA_24, JAVA_25,
         ];
 
         for (index, version) in versions.iter().enumerate() {
@@ -549,8 +579,7 @@ mod test {
 
     #[test]
     fn test_major() {
-        let version = Version::Java21 { minor: 0 };
-        assert_eq!(version.major(), 65);
+        assert_eq!(JAVA_21.major(), 65);
     }
 
     #[test]
@@ -562,13 +591,13 @@ mod test {
 
     #[test]
     fn test_supports() {
-        assert!(Version::Java11 { minor: 0 }.supports(&Version::Java5_0 { minor: 0 }));
-        assert!(!Version::Java5_0 { minor: 0 }.supports(&Version::Java11 { minor: 0 }));
+        assert!(JAVA_11.supports(&JAVA_5));
+        assert!(!JAVA_5.supports(&JAVA_11));
     }
 
     #[test]
     fn test_is_preview() {
-        assert!(!Version::Java11 { minor: 0 }.is_preview());
+        assert!(!JAVA_11.is_preview());
         assert!(
             Version::Java21 {
                 minor: JAVA_PREVIEW_MINOR_VERSION
@@ -580,7 +609,7 @@ mod test {
     #[test]
     fn test_default() {
         let version = Version::default();
-        assert_eq!(version, Version::Java1_0_2 { minor: 0 });
+        assert_eq!(version, JAVA_1_0_2);
     }
 
     #[test]

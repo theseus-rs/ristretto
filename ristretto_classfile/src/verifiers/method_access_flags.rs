@@ -1,12 +1,12 @@
 use crate::Error::InvalidMethodAccessFlags;
-use crate::Result;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
 use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
 use crate::version::Version;
+use crate::{JAVA_8, Result};
 
-const VERSION_52_0: Version = Version::Java8 { minor: 0 };
+const VERSION_52_0: Version = JAVA_8;
 
 /// Verify the method `MethodAccessFlags`.
 pub fn verify(class_file: &ClassFile, method: &Method) -> Result<()> {
@@ -55,6 +55,10 @@ pub fn verify(class_file: &ClassFile, method: &Method) -> Result<()> {
 mod test {
     use super::*;
     use crate::class_file::ClassFile;
+    use crate::{
+        JAVA_1_2, JAVA_1_3, JAVA_1_4, JAVA_5, JAVA_6, JAVA_7, JAVA_9, JAVA_10, JAVA_11, JAVA_12,
+        JAVA_13, JAVA_14, JAVA_15, JAVA_16,
+    };
 
     #[test]
     fn test_method_success() {
@@ -139,20 +143,20 @@ mod test {
 
     #[test]
     fn test_strict_version_errors() {
-        test_strict_version_error(Version::Java1_2 { minor: 0 });
-        test_strict_version_error(Version::Java1_3 { minor: 0 });
-        test_strict_version_error(Version::Java1_4 { minor: 0 });
-        test_strict_version_error(Version::Java5_0 { minor: 0 });
-        test_strict_version_error(Version::Java6 { minor: 0 });
-        test_strict_version_error(Version::Java7 { minor: 0 });
-        test_strict_version_error(Version::Java8 { minor: 0 });
-        test_strict_version_error(Version::Java9 { minor: 0 });
-        test_strict_version_error(Version::Java10 { minor: 0 });
-        test_strict_version_error(Version::Java11 { minor: 0 });
-        test_strict_version_error(Version::Java12 { minor: 0 });
-        test_strict_version_error(Version::Java13 { minor: 0 });
-        test_strict_version_error(Version::Java14 { minor: 0 });
-        test_strict_version_error(Version::Java15 { minor: 0 });
-        test_strict_version_error(Version::Java16 { minor: 0 });
+        test_strict_version_error(JAVA_1_2);
+        test_strict_version_error(JAVA_1_3);
+        test_strict_version_error(JAVA_1_4);
+        test_strict_version_error(JAVA_5);
+        test_strict_version_error(JAVA_6);
+        test_strict_version_error(JAVA_7);
+        test_strict_version_error(JAVA_8);
+        test_strict_version_error(JAVA_9);
+        test_strict_version_error(JAVA_10);
+        test_strict_version_error(JAVA_11);
+        test_strict_version_error(JAVA_12);
+        test_strict_version_error(JAVA_13);
+        test_strict_version_error(JAVA_14);
+        test_strict_version_error(JAVA_15);
+        test_strict_version_error(JAVA_16);
     }
 }

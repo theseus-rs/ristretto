@@ -220,7 +220,7 @@ impl ClassFile {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use ristretto_classfile::{ClassFile, ConstantPool, Version, ClassAccessFlags};
+    /// use ristretto_classfile::{ClassFile, ConstantPool, Version, ClassAccessFlags, JAVA_21};
     /// use std::fs;
     /// use std::io::{Cursor, Write};
     ///
@@ -230,7 +230,7 @@ impl ClassFile {
     /// let super_class = constant_pool.add_class("java/lang/Object")?;
     ///
     /// let class_file = ClassFile {
-    ///     version: Version::Java21 { minor: 0 },
+    ///     version: JAVA_21,
     ///     access_flags: ClassAccessFlags::PUBLIC,
     ///     constant_pool,
     ///     this_class,
@@ -398,9 +398,9 @@ impl fmt::Display for ClassFile {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::Constant;
     use crate::Error::{InvalidConstantPoolIndexType, IoError};
     use crate::error::Result;
+    use crate::{Constant, JAVA_8, JAVA_21};
     use indoc::indoc;
 
     #[test]
@@ -457,7 +457,7 @@ mod test {
         // Add an invalid constant to trigger a verification error.
         constant_pool.push(Constant::Class(u16::MAX));
         let class_file = ClassFile {
-            version: Version::Java21 { minor: 0 },
+            version: JAVA_21,
             constant_pool: constant_pool.clone(),
             this_class,
             ..Default::default()
@@ -526,7 +526,7 @@ mod test {
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
 
-        assert_eq!(Version::Java8 { minor: 0 }, class_file.version);
+        assert_eq!(JAVA_8, class_file.version);
         assert_eq!(
             ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER,
             class_file.access_flags
@@ -545,7 +545,7 @@ mod test {
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
 
-        assert_eq!(Version::Java8 { minor: 0 }, class_file.version);
+        assert_eq!(JAVA_8, class_file.version);
         assert_eq!(
             ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER,
             class_file.access_flags

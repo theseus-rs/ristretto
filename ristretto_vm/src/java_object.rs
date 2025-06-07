@@ -1,11 +1,8 @@
 use crate::Error::InternalError;
 use crate::{Result, VM};
-use ristretto_classfile::{Version, mutf8};
+use ristretto_classfile::{JAVA_8, JAVA_17, mutf8};
 use ristretto_classloader::{Class, ConcurrentVec, Object, Reference, Value};
 use std::sync::Arc;
-
-const JAVA_8: Version = Version::Java8 { minor: 0 };
-const JAVA_17: Version = Version::Java17 { minor: 0 };
 
 /// Trait for converting a Rust value to a Java object.  Converts to objects of the primitive
 /// wrapper, classes, and strings.

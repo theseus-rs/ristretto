@@ -1,17 +1,17 @@
 use crate::error::Error::InvalidConstantTag;
 use crate::error::Result;
-use crate::mutf8;
 use crate::reference_kind::ReferenceKind;
 use crate::version::Version;
+use crate::{JAVA_1_0_2, JAVA_7, JAVA_9, JAVA_11, mutf8};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::{Cursor, Read};
 
-const VERSION_45_0: Version = Version::Java1_0_2 { minor: 0 };
+const VERSION_45_0: Version = JAVA_1_0_2;
 const VERSION_45_3: Version = Version::Java1_0_2 { minor: 3 };
-const VERSION_51_0: Version = Version::Java7 { minor: 0 };
-const VERSION_53_0: Version = Version::Java9 { minor: 0 };
-const VERSION_55_0: Version = Version::Java11 { minor: 0 };
+const VERSION_51_0: Version = JAVA_7;
+const VERSION_53_0: Version = JAVA_9;
+const VERSION_55_0: Version = JAVA_11;
 
 /// Constant
 ///
@@ -25,7 +25,7 @@ const VERSION_55_0: Version = Version::Java11 { minor: 0 };
 /// Creating different types of constants and working with them:
 ///
 /// ```rust
-/// use ristretto_classfile::{Constant, ReferenceKind, Version};
+/// use ristretto_classfile::{Constant, ReferenceKind, Version, JAVA_11, JAVA_7};
 /// use std::io::Cursor;
 ///
 /// // Create some constants
@@ -41,18 +41,14 @@ const VERSION_55_0: Version = Version::Java11 { minor: 0 };
 /// let mut buffer = Vec::new();
 /// utf8_constant.to_bytes(&mut buffer)?;
 ///
-/// // Check if constant is valid for a specific Java version
-/// let java7 = Version::Java7 { minor: 0 };
-/// let java11 = Version::Java11 { minor: 0 };
-///
-/// assert!(utf8_constant.valid_for_version(&java7));
+/// assert!(utf8_constant.valid_for_version(&JAVA_7));
 ///
 /// let dynamic_constant = Constant::Dynamic {
 ///     bootstrap_method_attr_index: 1,
 ///     name_and_type_index: 2,
 /// };
-/// assert!(!dynamic_constant.valid_for_version(&java7)); // Dynamic was added in Java 11
-/// assert!(dynamic_constant.valid_for_version(&java11));
+/// assert!(!dynamic_constant.valid_for_version(&JAVA_7)); // Dynamic was added in Java 11
+/// assert!(dynamic_constant.valid_for_version(&JAVA_11));
 ///
 /// // Deserialize a constant from bytes
 /// // For example, deserializing an Integer constant:
@@ -179,18 +175,16 @@ impl Constant {
     /// # Example
     ///
     /// ```rust
-    /// use ristretto_classfile::{Constant, ReferenceKind, Version};
+    /// use ristretto_classfile::{Constant, ReferenceKind, Version, JAVA_6, JAVA_7};
     ///
     /// let constant = Constant::Utf8("Hello, world!".to_string());
-    /// let java7 = Version::Java7 { minor: 0 };
-    /// assert!(constant.valid_for_version(&java7));
+    /// assert!(constant.valid_for_version(&JAVA_7));
     ///
     /// let constant = Constant::MethodHandle {
     ///     reference_kind: ReferenceKind::GetField,
     ///     reference_index: 1,
     /// };
-    /// let java6 = Version::Java6 { minor: 0 };
-    /// assert!(!constant.valid_for_version(&java6)); // MethodHandle was introduced in Java 7
+    /// assert!(!constant.valid_for_version(&JAVA_6)); // MethodHandle was introduced in Java 7
     /// ```
     #[must_use]
     pub fn valid_for_version(&self, version: &Version) -> bool {

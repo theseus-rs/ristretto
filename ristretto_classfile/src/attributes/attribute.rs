@@ -14,23 +14,23 @@ use crate::constant_pool::ConstantPool;
 use crate::display::indent_lines;
 use crate::error::Error::{InvalidAttributeLength, InvalidAttributeNameIndex};
 use crate::error::Result;
-use crate::mutf8;
 use crate::version::Version;
+use crate::{JAVA_1_0_2, JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_11, JAVA_16, JAVA_17, mutf8};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::collections::HashMap;
 use std::fmt;
 use std::io::{Cursor, Read};
 
-const VERSION_45_0: Version = Version::Java1_0_2 { minor: 0 };
+const VERSION_45_0: Version = JAVA_1_0_2;
 const VERSION_45_3: Version = Version::Java1_0_2 { minor: 3 };
-const VERSION_49_0: Version = Version::Java5_0 { minor: 0 };
-const VERSION_50_0: Version = Version::Java6 { minor: 0 };
-const VERSION_51_0: Version = Version::Java7 { minor: 0 };
-const VERSION_52_0: Version = Version::Java8 { minor: 0 };
-const VERSION_53_0: Version = Version::Java9 { minor: 0 };
-const VERSION_55_0: Version = Version::Java11 { minor: 0 };
-const VERSION_60_0: Version = Version::Java16 { minor: 0 };
-const VERSION_61_0: Version = Version::Java17 { minor: 0 };
+const VERSION_49_0: Version = JAVA_5;
+const VERSION_50_0: Version = JAVA_6;
+const VERSION_51_0: Version = JAVA_7;
+const VERSION_52_0: Version = JAVA_8;
+const VERSION_53_0: Version = JAVA_9;
+const VERSION_55_0: Version = JAVA_11;
+const VERSION_60_0: Version = JAVA_16;
+const VERSION_61_0: Version = JAVA_17;
 
 /// Attribute.
 ///

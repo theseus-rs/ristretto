@@ -19,13 +19,13 @@ supported, but is still a work in progress.
 # Examples
 
 ```rust
-use ristretto_classfile::{ClassFile, ConstantPool, Result, Version};
+use ristretto_classfile::{ClassFile, ConstantPool, Result, Version, JAVA_21};
 
 fn main() -> Result<()> {
     let mut constant_pool = ConstantPool::default();
     let this_class = constant_pool.add_class("Foo")?;
     let class_file = ClassFile {
-        version: Version::Java21 { minor: 0 },
+        version: JAVA_21,
         constant_pool,
         this_class,
         ..Default::default()
