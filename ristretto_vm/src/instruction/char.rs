@@ -40,7 +40,7 @@ pub(crate) fn castore(stack: &mut OperandStack) -> Result<ExecutionResult> {
             let length = array.capacity()?;
             if index >= length {
                 return Err(ArrayIndexOutOfBoundsException { index, length }.into());
-            };
+            }
             array.set(index, u16::try_from(value)?)?;
             Ok(Continue)
         }

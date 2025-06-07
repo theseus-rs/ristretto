@@ -187,7 +187,7 @@ pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
             let length = array.capacity()?;
             if index >= length {
                 return Err(ArrayIndexOutOfBoundsException { index, length }.into());
-            };
+            }
             // TODO: validate object type is compatible with array type
             // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aastore
             array.set(index, value)?;

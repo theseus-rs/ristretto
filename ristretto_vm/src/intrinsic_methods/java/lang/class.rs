@@ -555,6 +555,7 @@ async fn get_declared_fields_0(
     Ok(Some(fields))
 }
 
+#[expect(clippy::too_many_lines)]
 #[async_recursion(?Send)]
 async fn get_declared_methods_0(
     thread: Arc<Thread>,
@@ -587,16 +588,13 @@ async fn get_declared_methods_0(
             parameters.push(class.to_object(&vm).await?);
         }
         let parameter_types = Value::try_from((class_array.clone(), parameters))?;
-        let return_type = match method.return_type() {
-            Some(return_type) => {
-                let class_name = return_type.class_name();
-                let class = thread.class(class_name).await?;
-                class.to_object(&vm).await?
-            }
-            None => {
-                let class = thread.class("void").await?;
-                class.to_object(&vm).await?
-            }
+        let return_type = if let Some(return_type) = method.return_type() {
+            let class_name = return_type.class_name();
+            let class = thread.class(class_name).await?;
+            class.to_object(&vm).await?
+        } else {
+            let class = thread.class("void").await?;
+            class.to_object(&vm).await?
         };
         let checked_exceptions = get_exceptions(&thread, &class, method).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
@@ -625,7 +623,7 @@ async fn get_declared_methods_0(
                     for annotation in runtime_annotations {
                         annotation.to_bytes(&mut method_annotations)?;
                     }
-                    annotations = Value::from(method_annotations)
+                    annotations = Value::from(method_annotations);
                 }
                 Attribute::RuntimeVisibleParameterAnnotations {
                     parameter_annotations: runtime_parameter_annotations,
@@ -643,7 +641,7 @@ async fn get_declared_methods_0(
                 Attribute::AnnotationDefault { element, .. } => {
                     let mut method_annotation_default = Vec::new();
                     element.to_bytes(&mut method_annotation_default)?;
-                    annotation_default = Value::from(method_annotation_default)
+                    annotation_default = Value::from(method_annotation_default);
                 }
                 _ => {}
             }

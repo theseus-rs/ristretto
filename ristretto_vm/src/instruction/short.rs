@@ -40,7 +40,7 @@ pub(crate) fn sastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
             let length = array.capacity()?;
             if index >= length {
                 return Err(ArrayIndexOutOfBoundsException { index, length }.into());
-            };
+            }
             array.set(index, i16::try_from(value)?)?;
             Ok(Continue)
         }

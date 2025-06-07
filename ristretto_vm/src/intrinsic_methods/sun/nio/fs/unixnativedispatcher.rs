@@ -32,6 +32,7 @@ bitflags! {
 }
 
 /// Register all intrinsic methods for `sun.nio.fs.UnixNativeDispatcher`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     if registry.java_major_version() <= JAVA_8 {
         registry.register(CLASS_NAME, "close", "(I)V", fclose);

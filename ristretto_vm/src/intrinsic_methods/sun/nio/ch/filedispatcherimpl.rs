@@ -9,6 +9,7 @@ use std::sync::Arc;
 const CLASS_NAME: &str = "sun/nio/ch/FileDispatcherImpl";
 
 /// Register all intrinsic methods for `sun.nio.ch.FileDispatcherImpl`.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn register(registry: &mut MethodRegistry) {
     if registry.java_major_version() >= JAVA_11 && registry.java_major_version() <= JAVA_17 {
         registry.register(

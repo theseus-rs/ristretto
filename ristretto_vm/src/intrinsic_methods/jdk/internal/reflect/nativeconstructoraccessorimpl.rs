@@ -40,7 +40,7 @@ pub(crate) async fn new_instance_0(
         } else {
             let parameter_type = format!("L{};", parameter_type_class.name());
             descriptor.push_str(parameter_type.as_str());
-        };
+        }
     }
 
     let result = thread.object(class_name, descriptor, arguments).await?;

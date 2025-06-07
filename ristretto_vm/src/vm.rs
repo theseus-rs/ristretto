@@ -101,7 +101,7 @@ impl VM {
                         if let Some(jar_main_class) = manifest.attribute(MAIN_CLASS) {
                             main_class_name = Some(jar_main_class.to_string());
                             break;
-                        };
+                        }
                     }
                 }
             }
@@ -217,7 +217,7 @@ impl VM {
         let id = self.next_thread_id.fetch_add(1, Ordering::SeqCst);
         if id == 0 {
             return Err(InternalError("Thread identifier overflow".to_string()));
-        };
+        }
         Ok(id)
     }
 

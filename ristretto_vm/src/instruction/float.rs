@@ -201,7 +201,7 @@ pub(crate) fn fastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
             let length = array.capacity()?;
             if index >= length {
                 return Err(ArrayIndexOutOfBoundsException { index, length }.into());
-            };
+            }
             array.set(index, value)?;
             Ok(Continue)
         }
@@ -247,7 +247,7 @@ pub(crate) fn fdiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
     if value2 == 0.0 {
         return Err(ArithmeticException("/ by zero".to_string()).into());
-    };
+    }
 
     stack.push_float(value1 / value2)?;
     Ok(Continue)
@@ -261,7 +261,7 @@ pub(crate) fn frem(stack: &mut OperandStack) -> Result<ExecutionResult> {
 
     if value2 == 0.0 {
         return Err(ArithmeticException("/ by zero".to_string()).into());
-    };
+    }
 
     stack.push_float(value1 % value2)?;
     Ok(Continue)

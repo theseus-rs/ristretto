@@ -44,7 +44,7 @@ pub(crate) async fn invoke_0(
         } else {
             let parameter_type = format!("L{};", parameter_type_class.name());
             parameters.push_str(parameter_type.as_str());
-        };
+        }
     }
 
     let return_type: Object = method.value("returnType")?.try_into()?;
