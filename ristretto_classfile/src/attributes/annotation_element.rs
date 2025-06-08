@@ -5,55 +5,131 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
 
-/// Implementation of `AnnotationElement`.
+/// Represents the value of an element in an annotation.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.16>
+/// This enum corresponds to the `element_value` structure in the JVM specification. Each variant
+/// represents a different type of value that an annotation element can have.
+///
+/// See the [JVM Specification §4.7.16.1](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.16.1)
+/// for more details on the `element_value` structure.
+///
+/// # Examples
+///
+/// ```rust
+/// use ristretto_classfile::attributes::{AnnotationElement, Annotation};
+/// use std::io::Cursor;
+///
+/// // Integer element
+/// let int_element = AnnotationElement::Int { const_value_index: 10 };
+///
+/// // String element
+/// let string_element = AnnotationElement::String { const_value_index: 20 };
+///
+/// // Enum element
+/// let enum_element = AnnotationElement::Enum {
+///     type_name_index: 30, // Index to Utf8 for enum type name
+///     const_name_index: 31, // Index to Utf8 for enum constant name
+/// };
+///
+/// // Array element
+/// let array_element = AnnotationElement::Array {
+///     values: vec![
+///         AnnotationElement::Char { const_value_index: 5 },
+///         AnnotationElement::Boolean { const_value_index: 6 },
+///     ]
+/// };
+///
+/// // Nested Annotation element
+/// let nested_annotation = AnnotationElement::Annotation {
+///     annotation: Annotation {
+///         type_index: 40,
+///         elements: vec![],
+///     }
+/// };
+///
+/// // Serialize and deserialize an element (e.g., Int)
+/// let mut bytes = Vec::new();
+/// int_element.to_bytes(&mut bytes)?;
+///
+/// let mut cursor = Cursor::new(bytes);
+/// let deserialized_element = AnnotationElement::from_bytes(&mut cursor)?;
+/// assert_eq!(int_element, deserialized_element);
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 pub enum AnnotationElement {
-    Byte {
-        const_value_index: u16,
-    },
-    Char {
-        const_value_index: u16,
-    },
-    Double {
-        const_value_index: u16,
-    },
-    Float {
-        const_value_index: u16,
-    },
-    Int {
-        const_value_index: u16,
-    },
-    Long {
-        const_value_index: u16,
-    },
-    Short {
-        const_value_index: u16,
-    },
-    Boolean {
-        const_value_index: u16,
-    },
-    String {
-        const_value_index: u16,
-    },
+    /// A `byte` constant value.
+    /// The `const_value_index` is an index into the `constant_pool` table to a
+    /// `CONSTANT_Integer_info` structure which represents the `byte` value.
+    Byte { const_value_index: u16 },
+    /// A `char` constant value.
+    /// The `const_value_index` is an index into the `constant_pool` table to a
+    /// `CONSTANT_Integer_info` structure which represents the `char` value.
+    Char { const_value_index: u16 },
+    /// A `double` constant value.
+    /// The `const_value_index` is an index into the `constant_pool` table to a
+    /// `CONSTANT_Double_info` structure.
+    Double { const_value_index: u16 },
+    /// A `float` constant value.
+    /// The `const_value_index` is an index into the `constant_pool` table to a
+    /// `CONSTANT_Float_info` structure.
+    Float { const_value_index: u16 },
+    /// An `int` constant value.
+    /// The `const_value_index` is an index into the `constant_pool` table to a
+    /// `CONSTANT_Integer_info` structure.
+    Int { const_value_index: u16 },
+    /// A `long` constant value.
+    /// The `const_value_index` is an index into the `constant_pool` table to a
+    /// `CONSTANT_Long_info` structure.
+    Long { const_value_index: u16 },
+    /// A `short` constant value.
+    /// The `const_value_index` is an index into the `constant_pool` table to a
+    /// `CONSTANT_Integer_info` structure
+    /// which represents the `short` value.
+    Short { const_value_index: u16 },
+    /// A `boolean` constant value.
+    /// The `const_value_index` is an index into the `constant_pool` table to a
+    /// `CONSTANT_Integer_info` structure which represents the `boolean` value (0 for false, 1 for
+    /// true).
+    Boolean { const_value_index: u16 },
+    /// A `String` constant value.
+    /// The `const_value_index` is an index into the `constant_pool` table to a
+    /// `CONSTANT_Utf8_info` structure.
+    String { const_value_index: u16 },
+    /// An enum constant value.
+    /// `type_name_index` points to a `CONSTANT_Utf8_info` for the enum type's binary name.
+    /// `const_name_index` points to a `CONSTANT_Utf8_info` for the enum constant's simple name.
     Enum {
         type_name_index: u16,
         const_name_index: u16,
     },
-    Class {
-        class_info_index: u16,
-    },
-    Annotation {
-        annotation: Annotation,
-    },
-    Array {
-        values: Vec<AnnotationElement>,
-    },
+    /// A class literal value.
+    /// `class_info_index` points to a `CONSTANT_Utf8_info` for the return descriptor of the class.
+    Class { class_info_index: u16 },
+    /// A nested annotation value.
+    /// Contains another `Annotation` structure.
+    Annotation { annotation: Annotation },
+    /// An array value, where each element is an `AnnotationElement`.
+    Array { values: Vec<AnnotationElement> },
 }
 
 impl AnnotationElement {
-    /// Return the tag for the annotation element.
+    /// Returns the single byte tag that identifies the type of this annotation element.
+    ///
+    /// Each variant of `AnnotationElement` has a corresponding tag character as defined in the JVM
+    /// specification (e.g., 'B' for Byte, 'I' for Int, '[' for Array).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::AnnotationElement;
+    ///
+    /// let byte_element = AnnotationElement::Byte { const_value_index: 1 };
+    /// assert_eq!(byte_element.tag(), b'B');
+    ///
+    /// let array_element = AnnotationElement::Array { values: vec![] };
+    /// assert_eq!(array_element.tag(), b'[');
+    /// ```
     #[must_use]
     pub fn tag(&self) -> u8 {
         match self {
@@ -73,11 +149,43 @@ impl AnnotationElement {
         }
     }
 
-    /// Deserialize the annotation element from bytes.
+    /// Deserializes an `AnnotationElement` from a byte stream.
+    ///
+    /// The method first reads a tag byte to determine the type of the element, then deserializes
+    /// the specific data for that element type.
+    ///
+    /// The `bytes` cursor should be positioned at the start of the `element_value` structure.
     ///
     /// # Errors
     ///
-    /// Returns an error if the tag is invalid.
+    /// Returns an `Error::InvalidAnnotationElementTag` if the tag byte read from the stream does
+    /// not correspond to any known annotation element type. Also propagates I/O errors or errors
+    /// from deserializing nested structures (like `Annotation` or inner `AnnotationElement`s for
+    /// arrays).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::AnnotationElement;
+    /// use std::io::Cursor;
+    ///
+    /// // Byte representation of AnnotationElement::Int { const_value_index: 100 }
+    /// // Tag 'I' (73), const_value_index: 0x0064
+    /// let data = vec![b'I', 0, 100];
+    /// let mut cursor = Cursor::new(data);
+    ///
+    /// let element = AnnotationElement::from_bytes(&mut cursor)?;
+    /// match element {
+    ///     AnnotationElement::Int { const_value_index } => assert_eq!(const_value_index, 100),
+    ///     _ => panic!("Deserialized to incorrect type"),
+    /// }
+    ///
+    /// // Example of an invalid tag
+    /// let invalid_data = vec![0xFF]; // 0xFF is not a valid tag
+    /// let mut cursor = Cursor::new(invalid_data);
+    /// assert!(AnnotationElement::from_bytes(&mut cursor).is_err());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<AnnotationElement> {
         let tag = bytes.read_u8()?;
 
@@ -134,11 +242,39 @@ impl AnnotationElement {
         Ok(element)
     }
 
-    /// Serialize the annotation element to bytes.
+    /// Serializes the `AnnotationElement` to a byte vector.
+    ///
+    /// This method writes the element's tag byte first, followed by the specific data for the
+    /// element's type.
     ///
     /// # Errors
     ///
-    /// If there are more than 65,534 values in the array.
+    /// - If the number of `values` in an `Array` variant exceeds 65,535.
+    /// - Propagates I/O errors or errors from serializing nested structures.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::AnnotationElement;
+    ///
+    /// let element = AnnotationElement::Boolean { const_value_index: 1 }; // true
+    /// let mut bytes = Vec::new();
+    /// element.to_bytes(&mut bytes)?;
+    ///
+    /// // Expected: Tag 'Z' (90), const_value_index: 0x0001
+    /// assert_eq!(bytes, vec![b'Z', 0, 1]);
+    ///
+    /// let array_element = AnnotationElement::Array {
+    ///     values: vec![AnnotationElement::Int { const_value_index: 5 }]
+    /// };
+    /// let mut array_bytes = Vec::new();
+    /// array_element.to_bytes(&mut array_bytes)?;
+    ///
+    /// // Expected: Tag '[' (91), num_values: 0x0001
+    /// //           Element 0: Tag 'I' (73), const_value_index: 0x0005
+    /// assert_eq!(array_bytes, vec![b'[', 0, 1, b'I', 0, 5]);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u8(self.tag())?;
         match self {
@@ -180,6 +316,22 @@ impl AnnotationElement {
 }
 
 impl fmt::Display for AnnotationElement {
+    /// Implements the `Display` trait for `AnnotationElement` to provide a human-readable string
+    /// representation of annotation elements.
+    ///
+    /// This is useful for debugging, logging, and visualization of annotation data in a more
+    /// readable format than the debug representation.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::AnnotationElement;
+    ///
+    /// let string_element = AnnotationElement::String { const_value_index: 42 };
+    ///
+    /// let output = string_element.to_string();
+    /// assert_eq!(output, "String { const_value_index: 42 }");
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             AnnotationElement::Byte { const_value_index } => {

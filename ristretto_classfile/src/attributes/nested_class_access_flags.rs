@@ -5,9 +5,43 @@ use std::fmt;
 use std::io::Cursor;
 
 bitflags! {
-    /// Nest class access flags.
+    /// Access flags for nested classes in a Java class file.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.6-300-D.1-D.1>
+    /// These flags determine the accessibility, mutability, and other properties of nested classes.
+    /// Each flag is represented by a specific bit in a 16-bit value, following the Java Virtual
+    /// Machine specification.
+    ///
+    /// # Usage
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::NestedClassAccessFlags;
+    /// use std::io::Cursor;
+    ///
+    /// // Create flags for a public final nested class
+    /// let flags = NestedClassAccessFlags::PUBLIC | NestedClassAccessFlags::FINAL;
+    ///
+    /// // Test if specific flags are set
+    /// assert!(flags.contains(NestedClassAccessFlags::PUBLIC));
+    /// assert!(flags.contains(NestedClassAccessFlags::FINAL));
+    /// assert!(!flags.contains(NestedClassAccessFlags::ABSTRACT));
+    ///
+    /// // Convert flags to a string representation
+    /// assert_eq!(flags.to_string(), "(0x0011) ACC_PUBLIC, ACC_FINAL");
+    ///
+    /// // Serialize to bytes and back
+    /// let mut bytes = Vec::new();
+    /// flags.to_bytes(&mut bytes)?;
+    /// assert_eq!(bytes, vec![0x00, 0x11]);
+    ///
+    /// let mut cursor = Cursor::new(bytes);
+    /// let deserialized = NestedClassAccessFlags::from_bytes(&mut cursor)?;
+    /// assert_eq!(deserialized, flags);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.6](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.6)
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct NestedClassAccessFlags: u16 {
         /// Declared public; may be accessed from outside its package.
@@ -45,6 +79,18 @@ impl NestedClassAccessFlags {
     /// # Errors
     ///
     /// Should not occur; reserved for future use.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::NestedClassAccessFlags;
+    /// use std::io::Cursor;
+    ///
+    /// let mut bytes = Cursor::new(vec![0x00, 0x01]);
+    /// let flags = NestedClassAccessFlags::from_bytes(&mut bytes)?;
+    /// assert_eq!(flags, NestedClassAccessFlags::PUBLIC);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<NestedClassAccessFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let access_flags = NestedClassAccessFlags::from_bits_truncate(access_flags);
@@ -56,6 +102,18 @@ impl NestedClassAccessFlags {
     /// # Errors
     ///
     /// Should not occur; reserved for future use.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::NestedClassAccessFlags;
+    ///
+    /// let flags = NestedClassAccessFlags::PUBLIC | NestedClassAccessFlags::FINAL;
+    /// let mut bytes = Vec::new();
+    /// flags.to_bytes(&mut bytes)?;
+    /// assert_eq!(bytes, vec![0x00, 0x11]);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.bits())?;
         Ok(())
@@ -63,6 +121,22 @@ impl NestedClassAccessFlags {
 }
 
 impl fmt::Display for NestedClassAccessFlags {
+    /// Formats the `NestedClassAccessFlags` for display purposes.
+    ///
+    /// The output format consists of:
+    /// - The hexadecimal value of the flags in parentheses (e.g., `(0x0011)`)
+    /// - Followed by a space-separated list of named flags that are set (e.g., `ACC_PUBLIC, ACC_FINAL`)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::NestedClassAccessFlags;
+    ///
+    /// let flags = NestedClassAccessFlags::PUBLIC | NestedClassAccessFlags::STATIC;
+    ///
+    /// let output = flags.to_string();
+    /// assert_eq!(output, "(0x0009) ACC_PUBLIC, ACC_STATIC");
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut access_flags = Vec::new();
         if self.contains(NestedClassAccessFlags::PUBLIC) {

@@ -7,7 +7,44 @@ use std::io::Cursor;
 
 /// Implementation of `Record`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.30>
+/// # Examples
+///
+/// ```rust
+/// use ristretto_classfile::attributes::{Attribute, Record};
+/// use ristretto_classfile::{ConstantPool, Result};
+/// use std::io::Cursor;
+///
+/// let attribute = Attribute::ConstantValue {
+///     name_index: 1, // Index in constant pool for "ConstantValue"
+///     constant_value_index: 42, // Index in constant pool for the actual constant
+/// };
+/// let mut constant_pool = ConstantPool::default();
+/// // Add necessary constants for the attribute to be valid during serialization,
+/// // especially if the attribute itself needs to resolve names from the pool.
+/// // For ConstantValue, name_index refers to "ConstantValue" UTF8 string.
+/// let _name_idx = constant_pool.add_utf8("ConstantValue")?;
+///
+/// let record = Record {
+///     name_index: 2, // Index to a Utf8 for record component name
+///     descriptor_index: 3, // Index to a Utf8 for record component descriptor
+///     attributes: vec![attribute.clone()],
+/// };
+///
+/// // Serialize
+/// let mut bytes = Vec::new();
+/// record.to_bytes(&mut bytes)?;
+///
+/// // Deserialize
+/// let mut cursor = Cursor::new(bytes);
+/// let deserialized_record = Record::from_bytes(&constant_pool, &mut cursor)?;
+///
+/// assert_eq!(record, deserialized_record);
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+/// # References
+///
+/// - [JVM Specification §4.7.30](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.30)
 #[derive(Clone, Debug, PartialEq)]
 pub struct Record {
     pub name_index: u16,
@@ -18,9 +55,37 @@ pub struct Record {
 impl Record {
     /// Deserialize the record from bytes.
     ///
+    /// This function reads a Record structure from a byte stream according to the
+    /// Java class file format specification.
+    ///
     /// # Errors
     ///
-    /// Should not occur; reserved for future use.
+    /// If the byte stream does not contain enough data to read a complete Record.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::Record;
+    /// use ristretto_classfile::ConstantPool;
+    /// use std::io::Cursor;
+    ///
+    /// let mut constant_pool = ConstantPool::default();
+    /// // Create a byte array representing a serialized Record
+    /// let bytes = vec![
+    ///     0, 5,             // name_index (5)
+    ///     0, 10,            // descriptor_index (10)
+    ///     0, 0              // attributes_count (0)
+    /// ];
+    /// let mut cursor = Cursor::new(bytes);
+    ///
+    /// // Deserialize the Record
+    /// let record = Record::from_bytes(&constant_pool, &mut cursor)?;
+    ///
+    /// assert_eq!(record.name_index, 5);
+    /// assert_eq!(record.descriptor_index, 10);
+    /// assert!(record.attributes.is_empty());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     pub fn from_bytes(constant_pool: &ConstantPool, bytes: &mut Cursor<Vec<u8>>) -> Result<Record> {
         let name_index = bytes.read_u16::<BigEndian>()?;
         let descriptor_index = bytes.read_u16::<BigEndian>()?;
@@ -40,10 +105,40 @@ impl Record {
 
     /// Serialize the record to bytes.
     ///
+    /// This function writes the Record structure to a byte array according to the
+    /// Java class file format specification.
+    ///
     /// # Errors
     ///
-    /// - If the number of attributes exceeds 65,534.
-    /// - If an attribute fails to serialize.
+    /// If the number of attributes exceeds `u16::MAX`, or if the indices are out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::{Attribute, Record};
+    /// use ristretto_classfile::ConstantPool;
+    ///
+    /// // Create a Record instance
+    /// let record = Record {
+    ///     name_index: 5,
+    ///     descriptor_index: 10,
+    ///     attributes: vec![],
+    /// };
+    ///
+    /// // Serialize to bytes
+    /// let mut bytes = Vec::new();
+    /// record.to_bytes(&mut bytes)?;
+    ///
+    /// // Expected serialized format
+    /// let expected = vec![
+    ///     0, 5,             // name_index (5)
+    ///     0, 10,            // descriptor_index (10)
+    ///     0, 0              // attributes_count (0)
+    /// ];
+    ///
+    /// assert_eq!(bytes, expected);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.name_index)?;
         bytes.write_u16::<BigEndian>(self.descriptor_index)?;
@@ -59,6 +154,26 @@ impl Record {
 }
 
 impl fmt::Display for Record {
+    /// Implementation of the Display trait for Record.
+    ///
+    /// This allows a Record to be formatted as a string in a human-readable form.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::{Attribute, Record};
+    ///
+    /// # fn main() {
+    /// let record = Record {
+    ///     name_index: 5,
+    ///     descriptor_index: 10,
+    ///     attributes: vec![],
+    /// };
+    ///
+    /// let output = record.to_string();
+    /// assert_eq!(output, "Record[name_index=5, descriptor_index=10, attributes=[]]");
+    /// # }
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
