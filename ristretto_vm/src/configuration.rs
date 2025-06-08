@@ -268,6 +268,7 @@ impl ConfigurationBuilder {
     /// Build the configuration
     ///
     /// # Errors
+    ///
     /// An error will be returned if the configuration cannot be built.
     pub fn build(self) -> Result<Configuration> {
         let class_path = if let Some(class_path) = self.class_path {

@@ -53,6 +53,10 @@ impl Field {
     /// `Field` struct. It reads access flags, name and descriptor indices, parses the field type,
     /// and reads all attributes associated with the field.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if the bytes do not represent a valid Field.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -81,9 +85,6 @@ impl Field {
     /// assert_eq!(field.descriptor_index, descriptor_index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// Returns an error if the bytes do not represent a valid Field.
     pub fn from_bytes(constant_pool: &ConstantPool, bytes: &mut Cursor<Vec<u8>>) -> Result<Field> {
         let access_flags = FieldAccessFlags::from_bytes(bytes)?;
         let name_index = bytes.read_u16::<BigEndian>()?;
@@ -163,7 +164,7 @@ impl fmt::Display for Field {
     /// - Field type
     /// - Attributes (indented)
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{BaseType, ConstantPool, Field, FieldAccessFlags, FieldType};

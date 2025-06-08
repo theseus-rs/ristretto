@@ -225,7 +225,7 @@ impl Frame {
     /// implementation is not constrained by the 32-bit limit, so second slot is reserved and should
     /// not be used for accessing variables.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```text
     /// // Before adjustment: [Int(1), Long(2), Float(3.0)]
@@ -263,10 +263,10 @@ impl Frame {
     /// # Debug Output
     ///
     /// The method logs the following information:
-    /// * Class name, method name, method descriptor, and source file with line number (if available)
-    /// * Contents of the local variables array
-    /// * Current operand stack contents and remaining stack size
-    /// * Current program counter and formatted instruction string
+    /// - Class name, method name, method descriptor, and source file with line number (if available)
+    /// - Contents of the local variables array
+    /// - Current operand stack contents and remaining stack size
+    /// - Current program counter and formatted instruction string
     ///
     /// # Implementation Note
     ///

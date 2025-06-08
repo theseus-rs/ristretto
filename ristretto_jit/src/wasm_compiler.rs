@@ -16,6 +16,7 @@ impl Compiler {
     /// Compiles the given bytecode into wasm code.
     ///
     /// # Errors
+    ///
     /// always returns an error as this is a no-op compiler.
     pub fn compile(&self, _class_file: &ClassFile, _method: &Method) -> Result<Function> {
         Err(crate::Error::InternalError("Not implemented".to_string()))

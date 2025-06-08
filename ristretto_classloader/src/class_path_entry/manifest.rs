@@ -33,6 +33,7 @@ impl FromStr for Manifest {
     /// Parse the manifest from a string.
     ///
     /// # Errors
+    ///
     /// if the manifest cannot be deserialized.
     fn from_str(value: &str) -> Result<Self> {
         let manifest = serde_plain::from_str::<Manifest>(value)
@@ -124,6 +125,7 @@ impl Display for Manifest {
     /// Display the manifest.
     ///
     /// # Errors
+    ///
     /// if the manifest cannot be serialized.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let value = serde_plain::to_string(self).map_err(|_| fmt::Error)?;

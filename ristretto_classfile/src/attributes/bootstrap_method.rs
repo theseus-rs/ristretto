@@ -16,6 +16,7 @@ impl BootstrapMethod {
     /// Deserialize the bootstrap method from bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<BootstrapMethod> {
         let bootstrap_method_ref = bytes.read_u16::<BigEndian>()?;
@@ -34,6 +35,7 @@ impl BootstrapMethod {
     /// Serialize the bootstrap method to bytes.
     ///
     /// # Errors
+    ///
     /// If there are more than 65,534 arguments.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.bootstrap_method_ref)?;

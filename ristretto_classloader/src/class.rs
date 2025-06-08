@@ -85,6 +85,7 @@ impl Class {
     /// Create a new named class.
     ///
     /// # Errors
+    ///
     /// if the class name cannot be added to the constant pool
     pub fn new_named<S: AsRef<str>>(name: S) -> Result<Arc<Self>> {
         let name = name.as_ref().to_string();
@@ -112,6 +113,7 @@ impl Class {
     /// Create a new class from the given class file.
     ///
     /// # Errors
+    ///
     /// if the class file cannot be read.
     pub fn from(class_file: ClassFile) -> Result<Arc<Self>> {
         let name = class_file.class_name()?.clone();
@@ -264,6 +266,8 @@ impl Class {
     /// Get the parent class.
     ///
     /// # Errors
+    ///
+    /// if the parent class cannot be accessed due to a poisoned lock.
     pub fn parent(&self) -> Result<Option<Arc<Class>>> {
         let parent_guard = self
             .parent
@@ -278,6 +282,8 @@ impl Class {
     /// Set the parent class.
     ///
     /// # Errors
+    ///
+    /// if the parent class cannot be set due to a poisoned lock.
     pub fn set_parent(&self, parent: Option<Arc<Class>>) -> Result<()> {
         let mut parent_guard = self
             .parent
@@ -290,6 +296,8 @@ impl Class {
     /// Get the class interfaces.
     ///
     /// # Errors
+    ///
+    /// if the interfaces cannot be accessed due to a poisoned lock.
     pub fn interfaces(&self) -> Result<Vec<Arc<Class>>> {
         let parent_guard = self
             .interfaces
@@ -302,6 +310,8 @@ impl Class {
     /// Set the class interfaces.
     ///
     /// # Errors
+    ///
+    /// if the interfaces cannot be set due to a poisoned lock.
     pub fn set_interfaces(&self, interfaces: Vec<Arc<Class>>) -> Result<()> {
         let mut interfaces_guard = self
             .interfaces
@@ -332,6 +342,7 @@ impl Class {
     /// Get a static field by name.
     ///
     /// # Errors
+    ///
     /// if the field is not found.
     pub fn static_field<S: AsRef<str>>(&self, name: S) -> Result<Arc<Field>> {
         let name = name.as_ref();
@@ -364,6 +375,7 @@ impl Class {
     /// Get a list of field names in the class hierarchy.
     ///
     /// # Errors
+    ///
     /// if there is an issue accessing the parent class.
     fn field_names(&self) -> Result<Vec<String>> {
         let mut field_names = Vec::new();
@@ -385,6 +397,7 @@ impl Class {
     /// offset.
     ///
     /// # Errors
+    ///
     /// if the field is not found.
     pub fn field_offset<S: AsRef<str>>(&self, name: S) -> Result<usize> {
         let name = name.as_ref().to_string();
@@ -404,6 +417,7 @@ impl Class {
     /// references fields by offset.
     ///
     /// # Errors
+    ///
     /// if the field is not found.
     pub fn field_name(&self, offset: usize) -> Result<String> {
         let field_names = self.field_names()?;
@@ -482,6 +496,7 @@ impl Class {
     /// Get a method by name and descriptor.
     ///
     /// # Errors
+    ///
     /// if the method is not found.
     pub fn try_get_method<N, D>(&self, name: N, descriptor: D) -> Result<Arc<Method>>
     where
@@ -503,6 +518,8 @@ impl Class {
     /// Get the object for the class.
     ///
     /// # Errors
+    ///
+    /// if the object cannot be accessed due to a poisoned lock.
     pub fn object(&self) -> Result<Option<Object>> {
         let object_guard = self
             .object
@@ -517,6 +534,8 @@ impl Class {
     /// Set the object for the class.
     ///
     /// # Errors
+    ///
+    /// if the object cannot be set due to a poisoned lock.
     pub fn set_object(&self, object: Option<Object>) -> Result<()> {
         let mut object_guard = self
             .object
@@ -529,6 +548,7 @@ impl Class {
     /// Determine if this class is assignable from the given class.
     ///
     /// # Errors
+    ///
     /// if classes or interfaces cannot be accessed.
     pub fn is_assignable_from(&self, class: &Arc<Class>) -> Result<bool> {
         if self.name == class.name() || self.name == "java/lang/Object" {

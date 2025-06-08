@@ -29,6 +29,7 @@ impl OpensFlags {
     /// Deserialize the `OpensFlags` from bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<OpensFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
@@ -39,6 +40,7 @@ impl OpensFlags {
     /// Serialize the `OpensFlags` to bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.bits())?;

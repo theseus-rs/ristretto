@@ -282,6 +282,7 @@ impl Attribute {
     /// Deserialize the Attribute from bytes.
     ///
     /// # Errors
+    ///
     /// - If the attribute name index is invalid.
     /// - If the attribute length is invalid.
     #[expect(clippy::too_many_lines)]
@@ -786,6 +787,7 @@ impl Attribute {
     /// Serialize the Attribute to bytes.
     ///
     /// # Errors
+    ///
     /// If there is an issue serializing an attribute
     #[expect(clippy::too_many_lines)]
     #[expect(clippy::match_same_arms)]

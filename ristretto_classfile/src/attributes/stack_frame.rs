@@ -78,6 +78,7 @@ impl StackFrame {
     /// Deserialize the stack frame from bytes.
     ///
     /// # Errors
+    ///
     /// Returns an error if the frame type is invalid.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<StackFrame> {
         let frame_type = bytes.read_u8()?;
@@ -154,6 +155,7 @@ impl StackFrame {
     /// Serialize the stack frame to bytes.
     ///
     /// # Errors
+    ///
     /// - If the number of locals or stack items exceeds 65,534.
     /// - If a stack frame fails to serialize.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {

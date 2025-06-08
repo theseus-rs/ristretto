@@ -13,7 +13,7 @@
 //! This module provides bidirectional conversion between Rust strings (which use standard UTF-8)
 //! and Java's Modified UTF-8 format.
 //!
-//! # Example
+//! # Examples
 //!
 //! ```rust
 //! use ristretto_classfile::mutf8;
@@ -47,6 +47,10 @@ use crate::Result;
 ///    single-byte 0x00
 /// 2. Supplementary characters are represented as surrogate pairs
 ///
+/// # Errors
+///
+/// Should not occur; reserved for future use.
+///
 /// # Examples
 ///
 /// ```rust
@@ -65,9 +69,6 @@ use crate::Result;
 /// let result = mutf8::to_bytes(mixed)?;
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-///
-/// # Errors
-/// Should not occur; reserved for future use.
 pub fn to_bytes<S: AsRef<str>>(data: S) -> Result<Vec<u8>> {
     let data = data.as_ref();
     let mut encoded = Vec::with_capacity(data.len());

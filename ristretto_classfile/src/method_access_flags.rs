@@ -102,6 +102,10 @@ impl MethodAccessFlags {
     /// This method reads a 16-bit big-endian value from the provided byte cursor and constructs a
     /// `MethodAccessFlags` value from it.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if reading from the byte cursor fails.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -117,9 +121,6 @@ impl MethodAccessFlags {
     /// assert_eq!(flags.bits(), 0x0009);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// Returns an error if reading from the byte cursor fails.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<MethodAccessFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let method_access_flags = MethodAccessFlags::from_bits_truncate(access_flags);

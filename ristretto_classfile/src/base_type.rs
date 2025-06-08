@@ -104,6 +104,10 @@ impl BaseType {
     /// This function takes a single character from a field or method descriptor and converts it to
     /// the appropriate `BaseType` enum variant.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if the code is invalid.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -120,9 +124,6 @@ impl BaseType {
     /// assert!(BaseType::parse('X').is_err());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// Returns an error if the code is invalid.
     pub fn parse(code: char) -> Result<BaseType> {
         let base_type = match code {
             'Z' => BaseType::Boolean,

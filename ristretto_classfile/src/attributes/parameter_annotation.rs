@@ -16,6 +16,7 @@ impl ParameterAnnotation {
     /// Deserialize the parameter annotation from bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ParameterAnnotation> {
         let annotations_count = bytes.read_u16::<BigEndian>()? as usize;
@@ -33,6 +34,7 @@ impl ParameterAnnotation {
     /// Serialize the parameter annotation to bytes.
     ///
     /// # Errors
+    ///
     /// - If the number of annotations exceeds 65,534.
     /// - If an annotation fails to serialize.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {

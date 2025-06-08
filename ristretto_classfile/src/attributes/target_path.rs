@@ -16,6 +16,7 @@ impl TargetPath {
     /// Deserialize the target path from bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<TargetPath> {
         let type_path_kind = bytes.read_u8()?;
@@ -31,6 +32,7 @@ impl TargetPath {
     /// Serialize the target path to bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u8(self.type_path_kind)?;

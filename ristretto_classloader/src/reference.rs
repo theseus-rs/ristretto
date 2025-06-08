@@ -40,6 +40,7 @@ impl Reference {
     /// Get the class of the reference
     ///
     /// # Errors
+    ///
     /// if the class cannot be created
     pub fn class(&self) -> Result<Arc<Class>> {
         let class = match self {
@@ -63,6 +64,7 @@ impl Reference {
     /// Returns the reference as a `Vec<i8>`.
     ///
     /// # Errors
+    ///
     /// if the value is not a `ByteArray`.
     pub fn to_byte_vec(&self) -> Result<Vec<i8>> {
         match self {
@@ -74,6 +76,7 @@ impl Reference {
     /// Returns the reference as a `Vec<char>`.
     ///
     /// # Errors
+    ///
     /// if the value is not a `CharArray`.
     pub fn to_char_vec(&self) -> Result<Vec<u16>> {
         match self {
@@ -85,6 +88,7 @@ impl Reference {
     /// Returns the reference as a `Vec<i16>`.
     ///
     /// # Errors
+    ///
     /// if the value is not a `ShortArray`.
     pub fn to_short_vec(&self) -> Result<Vec<i16>> {
         match self {
@@ -96,6 +100,7 @@ impl Reference {
     /// Returns the reference as a `Vec<i32>`.
     ///
     /// # Errors
+    ///
     /// if the value is not a `IntArray`.
     pub fn to_int_vec(&self) -> Result<Vec<i32>> {
         match self {
@@ -107,6 +112,7 @@ impl Reference {
     /// Returns the reference as a `Vec<i64>`.
     ///
     /// # Errors
+    ///
     /// if the value is not a `LongArray`.
     pub fn to_long_vec(&self) -> Result<Vec<i64>> {
         match self {
@@ -118,6 +124,7 @@ impl Reference {
     /// Returns the reference as a `Vec<f32>`.
     ///
     /// # Errors
+    ///
     /// if the value is not a `FloatArray`.
     pub fn to_float_vec(&self) -> Result<Vec<f32>> {
         match self {
@@ -129,6 +136,7 @@ impl Reference {
     /// Returns the reference as a `Vec<f64>`.
     ///
     /// # Errors
+    ///
     /// if the value is not a `DoubleArray`.
     pub fn to_double_vec(&self) -> Result<Vec<f64>> {
         match self {
@@ -140,6 +148,7 @@ impl Reference {
     /// Returns the reference as a `Vec<Option<Reference>>`.
     ///
     /// # Errors
+    ///
     /// if the value is not an `Array`.
     pub fn to_class_vec(&self) -> Result<(Arc<Class>, Vec<Option<Reference>>)> {
         match self {
@@ -151,6 +160,7 @@ impl Reference {
     /// Returns the reference as an `Object`.
     ///
     /// # Errors
+    ///
     /// if the value is not an Object.
     pub fn to_object(&self) -> Result<Object> {
         match self {
@@ -162,6 +172,7 @@ impl Reference {
     /// Returns a deep clone of the reference.
     ///
     /// # Errors
+    ///
     /// if the reference cannot be cloned.
     pub fn deep_clone(&self) -> Result<Reference> {
         let value = match self {

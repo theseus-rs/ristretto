@@ -11,7 +11,7 @@ use crate::{BaseType, ConstantPool, FieldType, Method, MethodAccessFlags, Result
 ///
 /// This value is used in the JVM to allocate the correct frame size when executing methods.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```rust
 /// use ristretto_classfile::{ConstantPool, Method, MethodAccessFlags};
@@ -56,8 +56,11 @@ pub trait MaxLocals {
     /// - Method parameters (with `long` and `double` types taking two slots each)
     /// - Local variables used within the method body
     ///
+    /// # Errors
     ///
-    /// # Example
+    /// if the locals size exceeds `u16::MAX`
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{ConstantPool, Method, MethodAccessFlags};
@@ -89,9 +92,6 @@ pub trait MaxLocals {
     /// assert_eq!(max_locals, 6); // Slots 0-5 are used (6 total slots)
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// if the locals size exceeds `u16::MAX`
     fn max_locals(&self, constant_pool: &ConstantPool, method: &Method) -> Result<u16>;
 }
 

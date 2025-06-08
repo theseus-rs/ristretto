@@ -93,6 +93,10 @@ impl ClassAccessFlags {
     /// Reads a u16 value from the provided byte cursor and converts it to a `ClassAccessFlags`
     /// bitflag set. Any unrecognized bits are silently truncated.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if reading from the byte source fails.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -112,10 +116,6 @@ impl ClassAccessFlags {
     /// assert_eq!(flags.bits(), 0x0011);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if reading from the byte source fails.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ClassAccessFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let access_flags = ClassAccessFlags::from_bits_truncate(access_flags);

@@ -12,7 +12,7 @@ use std::{fmt, io};
 /// interface names, field names, and other constants that are referred to within the `ClassFile`
 /// structure and its substructures.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```rust
 /// use ristretto_classfile::{Constant, ConstantPool};
@@ -36,7 +36,7 @@ impl ConstantPool {
     ///
     /// Creates an empty constant pool with a placeholder entry at index 0.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -57,7 +57,7 @@ impl ConstantPool {
     /// Adds a constant to the pool without returning its index. For Long and Double constants, an
     /// additional placeholder entry is added.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -76,7 +76,11 @@ impl ConstantPool {
 
     /// Add a constant to the pool and return the index.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -86,10 +90,6 @@ impl ConstantPool {
     /// assert_eq!(1, index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     pub fn add(&mut self, constant: Constant) -> Result<u16> {
         // Logically the index is self.len() + 1.  However, since the constant pool is one based a
         // placeholder is added as the first entry, we can just use the length of the constants
@@ -103,7 +103,7 @@ impl ConstantPool {
     ///
     /// Returns None if the index is out of bounds.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -127,7 +127,7 @@ impl ConstantPool {
     ///
     /// Returns an error if the index is out of bounds.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool, Error};
@@ -155,7 +155,7 @@ impl ConstantPool {
 
     /// Get the number of constants in the pool.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -172,7 +172,7 @@ impl ConstantPool {
 
     /// Check if the pool is empty.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -189,7 +189,7 @@ impl ConstantPool {
 
     /// Get an iterator over the constants in the pool.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -210,7 +210,11 @@ impl ConstantPool {
 
     /// Deserialize the `ConstantPool` from bytes.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// Returns an error if the bytes are not a valid constant pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -222,10 +226,6 @@ impl ConstantPool {
     /// assert_eq!(1, constant_pool.len());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the bytes are not a valid constant pool.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ConstantPool> {
         let mut constant_pool = ConstantPool::default();
         let constant_pool_count =
@@ -245,7 +245,7 @@ impl ConstantPool {
 
     /// Serialize the `ConstantPool` to bytes.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -275,7 +275,11 @@ impl ConstantPool {
 
     /// Add a UTF-8 constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -285,10 +289,6 @@ impl ConstantPool {
     /// assert_eq!(1, index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -300,7 +300,7 @@ impl ConstantPool {
 
     /// Get a UTF-8 constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -327,7 +327,11 @@ impl ConstantPool {
 
     /// Add an integer constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -338,10 +342,6 @@ impl ConstantPool {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
-    ///
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
@@ -351,7 +351,7 @@ impl ConstantPool {
 
     /// Get an integer constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -378,7 +378,11 @@ impl ConstantPool {
 
     /// Add a float constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -389,10 +393,6 @@ impl ConstantPool {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
-    ///
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
@@ -402,7 +402,7 @@ impl ConstantPool {
 
     /// Get a float constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -431,7 +431,11 @@ impl ConstantPool {
     ///
     /// Note: Long constants take up two entries in the constant pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -443,10 +447,6 @@ impl ConstantPool {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
-    ///
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
@@ -456,7 +456,7 @@ impl ConstantPool {
 
     /// Get a long constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -485,7 +485,11 @@ impl ConstantPool {
     ///
     /// Note: Double constants take up two entries in the constant pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -497,10 +501,6 @@ impl ConstantPool {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
-    ///
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
@@ -510,7 +510,7 @@ impl ConstantPool {
 
     /// Get a double constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -537,7 +537,11 @@ impl ConstantPool {
 
     /// Add a class constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -547,10 +551,6 @@ impl ConstantPool {
     /// assert_eq!(2, index); // Index 1 is the UTF-8 constant, 2 is the class
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -562,7 +562,7 @@ impl ConstantPool {
 
     /// Get a class constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -589,7 +589,11 @@ impl ConstantPool {
 
     /// Add a string constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -599,10 +603,6 @@ impl ConstantPool {
     /// assert_eq!(2, index); // Index 1 is the UTF-8 constant, 2 is the string
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -614,7 +614,7 @@ impl ConstantPool {
 
     /// Get a string constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -641,7 +641,11 @@ impl ConstantPool {
 
     /// Add a field reference constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -651,10 +655,6 @@ impl ConstantPool {
     /// let index = constant_pool.add_field_ref(class_index, "out", "Ljava/io/PrintStream;")?;
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -674,7 +674,7 @@ impl ConstantPool {
 
     /// Get a field constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -706,7 +706,11 @@ impl ConstantPool {
 
     /// Add a method reference constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -716,10 +720,6 @@ impl ConstantPool {
     /// let index = constant_pool.add_method_ref(class_index, "println", "(Ljava/lang/String;)V")?;
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -739,7 +739,7 @@ impl ConstantPool {
 
     /// Get a method constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -771,7 +771,11 @@ impl ConstantPool {
 
     /// Add an interface method reference constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -782,10 +786,6 @@ impl ConstantPool {
     /// assert_eq!(6, index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -805,7 +805,7 @@ impl ConstantPool {
 
     /// Get an interface method constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -838,7 +838,11 @@ impl ConstantPool {
 
     /// Add a name and type constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -848,10 +852,6 @@ impl ConstantPool {
     /// assert_eq!(3, index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -867,7 +867,7 @@ impl ConstantPool {
 
     /// Get a name and type constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -900,7 +900,11 @@ impl ConstantPool {
 
     /// Add a method handle constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{ConstantPool, ReferenceKind};
@@ -912,10 +916,6 @@ impl ConstantPool {
     /// assert_eq!(7, index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -933,7 +933,7 @@ impl ConstantPool {
 
     /// Get a method handle constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool, ReferenceKind};
@@ -967,7 +967,11 @@ impl ConstantPool {
 
     /// Add a method type constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -977,10 +981,6 @@ impl ConstantPool {
     /// assert_eq!(2, index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -992,7 +992,7 @@ impl ConstantPool {
 
     /// Get a method type constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -1022,7 +1022,11 @@ impl ConstantPool {
 
     /// Add a dynamic constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -1033,10 +1037,6 @@ impl ConstantPool {
     /// assert_eq!(4, index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -1056,7 +1056,7 @@ impl ConstantPool {
 
     /// Get a dynamic constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -1088,7 +1088,11 @@ impl ConstantPool {
 
     /// Add a invoke dynamic constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -1099,10 +1103,6 @@ impl ConstantPool {
     /// assert_eq!(4, index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -1122,7 +1122,7 @@ impl ConstantPool {
 
     /// Get an invoke dynamic constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -1155,7 +1155,11 @@ impl ConstantPool {
 
     /// Add a module constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -1165,10 +1169,6 @@ impl ConstantPool {
     /// assert_eq!(2, index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -1180,7 +1180,7 @@ impl ConstantPool {
 
     /// Get a module constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -1208,7 +1208,11 @@ impl ConstantPool {
 
     /// Add a package constant to the pool.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 constants in the pool.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -1218,10 +1222,6 @@ impl ConstantPool {
     /// assert_eq!(2, index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// If there are more than 65,534 constants in the pool.
     ///
     /// # References
     ///
@@ -1233,7 +1233,7 @@ impl ConstantPool {
 
     /// Get a package constant from the pool by index; indexes are 1-based.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -1264,7 +1264,11 @@ impl ConstantPool {
     /// Returns a human-readable string representation of the constant at the given index.
     /// This is useful for debugging and displaying constant pool entries.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// Returns an error if the index is out of bounds
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -1275,10 +1279,6 @@ impl ConstantPool {
     /// assert_eq!("Class java/lang/Object", formatted);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the index is out of bounds
     pub fn try_get_formatted_string(&self, index: u16) -> Result<String> {
         let value = match self.try_get(index)? {
             Constant::Utf8(value) => value.to_string(),
@@ -1379,7 +1379,7 @@ impl Default for ConstantPool {
     ///
     /// This is equivalent to calling `ConstantPool::new()`.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
@@ -1407,7 +1407,7 @@ impl Default for ConstantPool {
 /// 1. The 0 index position (since constant pool is 1-based)
 /// 2. The slot following a long or double constant
 ///
-/// # Example
+/// # Examples
 ///
 /// ```rust
 /// use ristretto_classfile::{Constant, ConstantPool};
@@ -1443,7 +1443,7 @@ impl fmt::Display for ConstantEntry {
     /// - For a `Constant` entry, delegates to the `Display` implementation of the inner `Constant`
     /// - For a `Placeholder` entry, produces an empty string
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -1479,7 +1479,7 @@ impl fmt::Display for ConstantEntry {
 /// This struct provides a convenient way to iterate over all constants in a constant pool, skipping
 /// placeholder entries automatically.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```rust
 /// use ristretto_classfile::{Constant, ConstantPool};
@@ -1519,7 +1519,7 @@ impl<'a> ConstantPoolIterator<'a> {
     /// constant pool, including the initial placeholder at index 0 and any placeholders following
     /// long and double constants.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -1562,7 +1562,7 @@ impl<'a> Iterator for ConstantPoolIterator<'a> {
     /// automatically skipping any placeholder entries. It returns `None` when there are no more
     /// constants to iterate over.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};
@@ -1630,7 +1630,7 @@ impl fmt::Display for ConstantPool {
     ///
     /// Placeholder entries are skipped in the output.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ConstantPool};

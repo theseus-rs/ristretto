@@ -22,7 +22,7 @@
 //! - `instruction`: Transforms Java bytecode instructions to Cranelift IR
 //! - `type_stack`: Tracks operand types throughout control flow
 //!
-//! ## Example
+//! ## Examples
 //!
 //! Java byte code for `Integer.max(II)I`:
 //! ```rust

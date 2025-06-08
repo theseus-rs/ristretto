@@ -74,6 +74,7 @@ impl TargetType {
     /// Deserialize the `TargetType` from bytes.
     ///
     /// # Errors
+    ///
     /// If the target type is not a valid `TargetType`.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<TargetType> {
         let target_type = bytes.read_u8()?;
@@ -170,6 +171,7 @@ impl TargetType {
     /// Serialize the `TargetType` to bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         match self {

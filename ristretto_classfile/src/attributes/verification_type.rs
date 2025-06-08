@@ -40,6 +40,7 @@ impl VerificationType {
     /// Deserialize the verification type from bytes.
     ///
     /// # Errors
+    ///
     /// Returns an error if the tag is invalid.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<VerificationType> {
         let tag = bytes.read_u8()?;
@@ -66,6 +67,7 @@ impl VerificationType {
     /// Serialize the verification type to bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u8(self.tag())?;

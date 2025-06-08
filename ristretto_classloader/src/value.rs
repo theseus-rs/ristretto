@@ -20,6 +20,7 @@ impl Value {
     /// Returns the value as an `i32`.
     ///
     /// # Errors
+    ///
     /// if the value is not an `Int`.
     pub fn to_int(&self) -> Result<i32> {
         match self {
@@ -31,6 +32,7 @@ impl Value {
     /// Returns the value as an `i64`.
     ///
     /// # Errors
+    ///
     /// if the value is not a `Long`
     pub fn to_long(&self) -> Result<i64> {
         match self {
@@ -42,6 +44,7 @@ impl Value {
     /// Returns the value as an `f32`.
     ///
     /// # Errors
+    ///
     /// if the value is not a `Float`
     pub fn to_float(&self) -> Result<f32> {
         match self {
@@ -53,6 +56,7 @@ impl Value {
     /// Returns the value as an `f64`.
     ///
     /// # Errors
+    ///
     /// if the value is not a `Double`
     pub fn to_double(&self) -> Result<f64> {
         match self {
@@ -64,6 +68,7 @@ impl Value {
     /// Returns the value as an `Option<Reference>`.
     ///
     /// # Errors
+    ///
     /// if the value is not a `Reference`
     pub fn to_reference(&self) -> Result<Option<Reference>> {
         match self {
@@ -87,6 +92,7 @@ impl Value {
     /// Returns a deep clone of the value.
     ///
     /// # Errors
+    ///
     /// if the value cannot be cloned.
     pub fn deep_clone(&self) -> Result<Self> {
         let value = match self {

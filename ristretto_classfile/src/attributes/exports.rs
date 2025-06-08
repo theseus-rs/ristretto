@@ -18,6 +18,7 @@ impl Exports {
     /// Deserialize the exports from bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Exports> {
         let index = bytes.read_u16::<BigEndian>()?;
@@ -38,6 +39,7 @@ impl Exports {
     /// Serialize the exports to bytes.
     ///
     /// # Errors
+    ///
     /// If there are more than 65,534 `to_index` values.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.index)?;

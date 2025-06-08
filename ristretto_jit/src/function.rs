@@ -15,6 +15,7 @@ impl Function {
     /// Calls the function with the given arguments
     ///
     /// # Errors
+    ///
     /// if the function fails to execute
     pub fn execute(&self, arguments: Vec<Value>) -> Result<Option<Value>> {
         let arguments = arguments

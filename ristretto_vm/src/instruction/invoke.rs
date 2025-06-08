@@ -42,6 +42,7 @@ pub(crate) async fn invokevirtual(
 /// Get a virtual method by name and descriptor.
 ///
 /// # Errors
+///
 /// if the method is not found.
 fn try_get_virtual_method<S: AsRef<str>>(
     class: &Arc<Class>,
@@ -120,6 +121,7 @@ pub(crate) async fn invokespecial(
 /// Get a special method by name and descriptor.
 ///
 /// # Errors
+///
 /// if the method is not found.
 fn try_get_special_method<S: AsRef<str>>(
     class: &Arc<Class>,
@@ -209,6 +211,7 @@ pub(crate) async fn invokeinterface(
 /// Invoke the method at the specified index
 ///
 /// # Errors
+///
 /// if the method is not found
 #[inline]
 async fn invoke_method(

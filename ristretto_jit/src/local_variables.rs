@@ -16,6 +16,7 @@ impl LocalVariables {
     /// Get a value from the local variables.
     ///
     /// # Errors
+    ///
     /// if the local variable at the given index was not found.
     #[expect(clippy::unused_self)]
     pub fn get(&self, function_builder: &mut FunctionBuilder, index: usize) -> Result<Value> {
@@ -29,6 +30,7 @@ impl LocalVariables {
     /// Get a type from the local variables.
     ///
     /// # Errors
+    ///
     /// if the local variable at the given index was not found or if the value is not an int.
     fn get_type(
         &self,
@@ -49,6 +51,7 @@ impl LocalVariables {
     /// Get an int from the local variables.
     ///
     /// # Errors
+    ///
     /// if the local variable at the given index was not found or if the value is not an int.
     pub fn get_int(&self, function_builder: &mut FunctionBuilder, index: usize) -> Result<Value> {
         self.get_type(function_builder, types::I32, index)
@@ -57,6 +60,7 @@ impl LocalVariables {
     /// Get a long from the local variables.
     ///
     /// # Errors
+    ///
     /// if the local variable at the given index was not found or if the value is not a long.
     pub fn get_long(&self, function_builder: &mut FunctionBuilder, index: usize) -> Result<Value> {
         self.get_type(function_builder, types::I64, index)
@@ -65,6 +69,7 @@ impl LocalVariables {
     /// Get a float from the local variables.
     ///
     /// # Errors
+    ///
     /// if the local variable at the given index was not found or if the value is not a float.
     pub fn get_float(&self, function_builder: &mut FunctionBuilder, index: usize) -> Result<Value> {
         self.get_type(function_builder, types::F32, index)
@@ -73,6 +78,7 @@ impl LocalVariables {
     /// Get a double from the local variables.
     ///
     /// # Errors
+    ///
     /// if the local variable at the given index was not found or if the value is not a double.
     pub fn get_double(
         &self,
@@ -85,6 +91,7 @@ impl LocalVariables {
     /// Set a value in the local variables.
     ///
     /// # Errors
+    ///
     /// if the index is out of bounds.
     #[expect(clippy::unused_self)]
     pub fn set(
@@ -109,6 +116,7 @@ impl LocalVariables {
     /// Set an expected type in the local variables.
     ///
     /// # Errors
+    ///
     /// if the index is out of bounds or if the value is not an int.
     fn set_type(
         &mut self,
@@ -129,6 +137,7 @@ impl LocalVariables {
     /// Set an int in the local variables.
     ///
     /// # Errors
+    ///
     /// if the index is out of bounds or if the value is not an int.
     pub fn set_int(
         &mut self,
@@ -142,6 +151,7 @@ impl LocalVariables {
     /// Set a long in the local variables.
     ///
     /// # Errors
+    ///
     /// if the index is out of bounds or if the value is not a long.
     pub fn set_long(
         &mut self,
@@ -155,6 +165,7 @@ impl LocalVariables {
     /// Set a float in the local variables.
     ///
     /// # Errors
+    ///
     /// if the index is out of bounds or if the value is not a float.
     pub fn set_float(
         &mut self,
@@ -168,6 +179,7 @@ impl LocalVariables {
     /// Set a double in the local variables.
     ///
     /// # Errors
+    ///
     /// if the index is out of bounds or if the value is not a double.
     pub fn set_double(
         &mut self,

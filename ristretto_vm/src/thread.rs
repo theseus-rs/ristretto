@@ -55,6 +55,7 @@ impl Thread {
     /// Get the virtual machine that owns the thread.
     ///
     /// # Errors
+    ///
     /// if the virtual machine cannot be accessed.
     pub fn vm(&self) -> Result<Arc<VM>> {
         match self.vm.upgrade() {
@@ -91,6 +92,7 @@ impl Thread {
     /// Get the frames in the thread.
     ///
     /// # Errors
+    ///
     /// if the frames cannot be accessed.
     pub async fn frames(&self) -> Result<Vec<Arc<Frame>>> {
         let frames = self.frames.read().await;
@@ -100,6 +102,7 @@ impl Thread {
     /// Get the current frame in the thread.
     ///
     /// # Errors
+    ///
     /// if the current frame cannot be accessed.
     pub async fn current_frame(&self) -> Result<Arc<Frame>> {
         let frames = self.frames.read().await;
@@ -112,6 +115,7 @@ impl Thread {
     /// See: <https://docs.oracle.com/javase/specs/jls/se24/html/jls-12.html#jls-12.4.1>
     ///
     /// # Errors
+    ///
     /// if the class cannot be loaded
     #[expect(clippy::multiple_bound_locations)]
     #[async_recursion(?Send)]
@@ -165,6 +169,7 @@ impl Thread {
     /// Prepare class initialization.
     ///
     /// # Errors
+    ///
     /// if the class cannot be resolved
     async fn prepare_class_initialization(&self, class: &Arc<Class>) -> Result<Vec<Arc<Class>>> {
         let vm = self.vm()?;
@@ -235,6 +240,7 @@ impl Thread {
     /// Register a class.
     ///
     /// # Errors
+    ///
     /// if the class cannot be registered
     pub(crate) async fn register_class(&self, class: Arc<Class>) -> Result<()> {
         debug!("register class: {class}");
@@ -249,6 +255,7 @@ impl Thread {
     /// reference, the object reference must be the first parameter in the parameters vector.
     ///
     /// # Errors
+    ///
     /// if the method cannot be invoked.
     pub async fn execute(
         &self,
@@ -355,6 +362,7 @@ impl Thread {
     /// reference, the object reference must be the first parameter in the parameters vector.
     ///
     /// # Errors
+    ///
     /// if the method cannot be invoked.
     pub async fn try_execute(
         &self,
@@ -372,6 +380,7 @@ impl Thread {
     /// Create a new VM Object by invoking the constructor of the specified class.
     ///
     /// # Errors
+    ///
     /// if the object cannot be created
     pub async fn object<C, M>(
         &self,

@@ -33,6 +33,7 @@ impl Directory {
     /// Read a class from the directory.
     ///
     /// # Errors
+    ///
     /// if the class file is not found or cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
     pub fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
@@ -55,6 +56,7 @@ impl Directory {
     /// Get the class names in the directory.
     ///
     /// # Errors
+    ///
     /// if the class names cannot be read.
     #[expect(clippy::unused_async)]
     pub async fn class_names(&self) -> Result<Vec<String>> {

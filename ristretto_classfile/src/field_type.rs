@@ -198,6 +198,11 @@ impl FieldType {
 
     /// Parse a field descriptor string and return the corresponding `FieldType`.
     ///
+    /// # Errors
+    ///
+    /// - Returns an error if the code is invalid.
+    /// - Returns an error if the descriptor is invalid.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -225,10 +230,6 @@ impl FieldType {
     /// );
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// - Returns an error if the code is invalid.
-    /// - Returns an error if the descriptor is invalid.
     pub fn parse(descriptor: &String) -> Result<FieldType> {
         let mut chars = descriptor.chars();
         let code = chars.next().unwrap_or_default();
@@ -351,6 +352,7 @@ impl FieldType {
     /// field types from a method descriptor string.
     ///
     /// # Errors
+    ///
     /// if the field type cannot be parsed
     fn parse_field_type<I>(descriptor: &str, chars: &mut I) -> Result<FieldType>
     where

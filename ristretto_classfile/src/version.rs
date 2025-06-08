@@ -139,6 +139,10 @@ impl Version {
     /// The major version determines the Java version, while the minor version typically
     /// indicates incremental updates or preview status.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if the major and minor version are invalid.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -154,9 +158,6 @@ impl Version {
     /// assert!(java21_preview.is_preview());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// Returns an error if the major and minor version are invalid.
     pub fn from(major: u16, minor: u16) -> Result<Self> {
         if major >= 56 && minor != 0 && minor != JAVA_PREVIEW_MINOR_VERSION {
             return Err(InvalidVersion { major, minor });
@@ -407,6 +408,10 @@ impl Version {
     /// |     31 30 29 .. 16    |     15 14 13 .. 0     |
     /// ```
     ///
+    /// # Errors
+    ///
+    /// Returns an error if writing to the byte vector fails.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -424,9 +429,6 @@ impl Version {
     /// assert_eq!(cursor.read_u16::<BigEndian>()?, 55); // major version
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// Returns an error if writing to the byte vector fails.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.minor())?;
         bytes.write_u16::<BigEndian>(self.major())?;

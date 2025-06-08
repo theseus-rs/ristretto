@@ -45,6 +45,7 @@ impl VM {
     /// Create a new VM
     ///
     /// # Errors
+    ///
     /// if the VM cannot be created
     pub async fn new(configuration: Configuration) -> Result<Arc<Self>> {
         let (java_home, java_version, bootstrap_class_loader) =
@@ -151,6 +152,7 @@ impl VM {
     /// Create a new VM with the default configuration
     ///
     /// # Errors
+    ///
     /// if the VM cannot be created
     pub async fn default() -> Result<Arc<VM>> {
         let configuration = ConfigurationBuilder::default().build()?;
@@ -212,6 +214,7 @@ impl VM {
     /// Get the next thread ID
     ///
     /// # Errors
+    ///
     /// if the thread identifier overflows
     pub(crate) fn next_thread_id(&self) -> Result<u64> {
         let id = self.next_thread_id.fetch_add(1, Ordering::SeqCst);
@@ -238,6 +241,7 @@ impl VM {
     /// Create a new thread
     ///
     /// # Errors
+    ///
     /// if the thread cannot be created
     pub(crate) fn new_thread(&self) -> Result<Arc<Thread>> {
         let thread = Thread::new(&self.vm)?;
@@ -248,6 +252,7 @@ impl VM {
     /// Initialize the VM
     ///
     /// # Errors
+    ///
     /// if the VM cannot be initialized
     async fn initialize(&self) -> Result<()> {
         self.initialize_primordial_thread().await?;
@@ -292,6 +297,7 @@ impl VM {
     /// Initialize the primordial thread
     ///
     /// # Errors
+    ///
     /// if the primordial thread cannot be initialized
     async fn initialize_primordial_thread(&self) -> Result<()> {
         let thread = self.new_thread()?;
@@ -341,6 +347,7 @@ impl VM {
     /// Get the primordial thread
     ///
     /// # Errors
+    ///
     /// if the primordial thread cannot be found
     fn primordial_thread(&self) -> Result<Arc<Thread>> {
         let thread = self.threads.get(&1).map(|entry| entry.value().clone());
@@ -353,6 +360,7 @@ impl VM {
     /// Load a class (e.g. "java.lang.Object").
     ///
     /// # Errors
+    ///
     /// if the class cannot be loaded
     pub async fn class<S: AsRef<str>>(&self, class_name: S) -> Result<Arc<Class>> {
         let thread = self.primordial_thread()?;
@@ -363,9 +371,10 @@ impl VM {
     /// the signature `public static void main(String[] args)`.
     ///
     /// # Errors
-    /// * if the main class is not specified
-    /// * if the main class does not specify a main method
-    /// * if the main method cannot be invoked
+    ///
+    /// - if the main class is not specified
+    /// - if the main class does not specify a main method
+    /// - if the main method cannot be invoked
     pub async fn invoke_main<S: AsRef<str>>(&self, parameters: Vec<S>) -> Result<Option<Value>> {
         let Some(main_class_name) = &self.main_class else {
             return Err(InternalError("No main class specified".into()));
@@ -400,6 +409,7 @@ impl VM {
     /// the first parameter in the parameters vector.
     ///
     /// # Errors
+    ///
     /// if the method cannot be invoked
     pub async fn invoke<C, M, D>(
         &self,
@@ -423,6 +433,7 @@ impl VM {
     /// the first parameter in the parameters vector.
     ///
     /// # Errors
+    ///
     /// if the method cannot be invoked
     pub async fn try_invoke<C, M, D>(
         &self,
@@ -445,6 +456,7 @@ impl VM {
     /// Create a new VM Object by invoking the constructor of the specified class.
     ///
     /// # Errors
+    ///
     /// if the object cannot be created
     pub async fn object<C, M>(
         &self,

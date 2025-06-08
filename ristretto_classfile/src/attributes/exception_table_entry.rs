@@ -21,6 +21,7 @@ impl ExceptionTableEntry {
     /// Deserialize the code exception from bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ExceptionTableEntry> {
         let start_pc = bytes.read_u16::<BigEndian>()?;
@@ -39,6 +40,7 @@ impl ExceptionTableEntry {
     /// Serialize the code exception to bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.range_pc.start)?;

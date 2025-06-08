@@ -76,6 +76,10 @@ pub enum ReferenceKind {
 impl ReferenceKind {
     /// Deserialize the `ReferenceKind` from bytes.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if the bytes do not represent a valid `ReferenceKind`.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -93,9 +97,6 @@ impl ReferenceKind {
     /// assert!(result.is_err());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// Returns an error if the bytes do not represent a valid `ReferenceKind`.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ReferenceKind> {
         let reference_kind = match bytes.read_u8()? {
             1 => ReferenceKind::GetField,

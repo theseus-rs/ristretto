@@ -36,6 +36,7 @@ impl Field {
     /// Create a new class field with the given definition.
     ///
     /// # Errors
+    ///
     /// if the field name cannot be read.
     pub fn from(class_file: &ClassFile, definition: &ristretto_classfile::Field) -> Result<Self> {
         let constant_pool = &class_file.constant_pool;
@@ -99,6 +100,8 @@ impl Field {
     /// Get the field value.
     ///
     /// # Errors
+    ///
+    /// if the lock is poisoned.
     pub fn value(&self) -> Result<Value> {
         let value = self
             .value
@@ -110,7 +113,10 @@ impl Field {
     /// Set the field value.
     ///
     /// # Errors
-    /// if the field is final.
+    ///
+    /// - if the field is final.
+    /// - if the value is not permissible for the field type.
+    /// - if the lock is poisoned.
     pub fn set_value(&self, value: Value) -> Result<()> {
         let mut guarded_value = self
             .value
@@ -176,7 +182,8 @@ impl Field {
     /// Set the field value without checking field permissions or type.
     ///
     /// # Errors
-    /// if the field is final.
+    ///
+    /// if the lock is poisoned.
     pub fn unsafe_set_value(&self, value: Value) -> Result<()> {
         let mut guarded_value = self
             .value
@@ -195,6 +202,7 @@ impl Field {
     /// Deep clone the field.
     ///
     /// # Errors
+    ///
     /// if the field value cannot be cloned.
     pub fn deep_clone(&self) -> Result<Self> {
         let value = self.value()?;

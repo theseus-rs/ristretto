@@ -90,7 +90,7 @@ impl MethodRegistry {
     ///
     /// # Arguments
     ///
-    /// * `java_major_version` - The major Java version number (e.g., 8, 11, 17, 21, 24)
+    /// `java_major_version` - The major Java version number (e.g., 8, 11, 17, 21, 24)
     ///
     /// # Returns
     ///
