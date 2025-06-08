@@ -34,6 +34,7 @@ static USER_AGENT: LazyLock<String> = LazyLock::new(|| {
 /// returned.
 ///
 /// # Errors
+///
 /// An error will be returned if the request fails or if the version requirement is not supported.
 #[instrument(level = "debug")]
 pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String, Vec<u8>)> {
@@ -70,6 +71,7 @@ pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String
 /// Download a runtime archive for the given version.
 ///
 /// # Errors
+///
 /// An error will be returned if the request fails
 #[instrument(level = "debug")]
 async fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
@@ -128,6 +130,7 @@ async fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
 /// Returns a vector of release versions sorted in descending order.
 ///
 /// # Errors
+///
 /// An error will be returned if the request fails
 #[instrument(level = "debug")]
 async fn get_release_versions(major_version: &str) -> Result<Vec<String>> {

@@ -27,6 +27,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Push a value onto the vector.
     ///
     /// # Errors
+    ///
     /// if the lock is poisoned.
     pub fn push(&self, value: T) -> Result<()> {
         let mut vec = self
@@ -40,6 +41,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Pop a value from the vector.
     ///
     /// # Errors
+    ///
     /// if the lock is poisoned.
     pub fn pop(&self) -> Result<Option<T>> {
         let mut vec = self
@@ -52,6 +54,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Get a value from the vector.
     ///
     /// # Errors
+    ///
     /// if the lock is poisoned.
     pub fn get(&self, index: usize) -> Result<Option<T>>
     where
@@ -67,6 +70,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Set a value in the vector.
     ///
     /// # Errors
+    ///
     /// if the lock is poisoned.
     pub fn set(&self, index: usize, value: T) -> Result<Option<T>> {
         let mut vec = self
@@ -84,6 +88,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Get the length of the vector.
     ///
     /// # Errors
+    ///
     /// if the lock is poisoned.
     pub fn len(&self) -> Result<usize> {
         let vec = self
@@ -96,6 +101,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Check if the vector is empty.
     ///
     /// # Errors
+    ///
     /// if the lock is poisoned.
     pub fn is_empty(&self) -> Result<bool> {
         Ok(self.len()? == 0)
@@ -104,6 +110,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Get the capacity of the vector.
     ///
     /// # Errors
+    ///
     /// if the lock is poisoned.
     pub fn capacity(&self) -> Result<usize> {
         let vec = self
@@ -116,6 +123,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Remove a value from the vector.
     ///
     /// # Errors
+    ///
     /// if the lock is poisoned.
     pub fn remove(&self, index: usize) -> Result<Option<T>> {
         let mut vec = self
@@ -133,6 +141,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Convert to a vector.
     ///
     /// # Errors
+    ///
     /// if the lock is poisoned.
     pub fn to_vec(&self) -> Result<Vec<T>> {
         let vec = self
@@ -145,6 +154,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Deep clone the concurrent vector.
     ///
     /// # Errors
+    ///
     /// if the lock is poisoned.
     pub fn deep_clone(&self) -> Result<Self> {
         let vec = self.to_vec()?;

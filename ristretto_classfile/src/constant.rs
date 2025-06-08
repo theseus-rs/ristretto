@@ -133,7 +133,7 @@ impl Constant {
     /// The tag is a single-byte identifier used to differentiate between different constant types
     /// in a class file.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::Constant;
@@ -172,7 +172,7 @@ impl Constant {
     /// Different constant types were introduced in different Java versions. This method verifies
     /// whether the constant is supported in the given version.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Constant, ReferenceKind, Version, JAVA_6, JAVA_7};
@@ -203,7 +203,14 @@ impl Constant {
     /// Reads a constant pool entry from the provided byte buffer according to the Java class file
     /// format specification.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The tag is invalid
+    /// - There's not enough data to read
+    /// - The data is malformed
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::Constant;
@@ -218,13 +225,6 @@ impl Constant {
     /// assert_eq!(constant, Constant::Utf8("Hello".to_string()));
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - The tag is invalid
-    /// - There's not enough data to read
-    /// - The data is malformed
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Constant> {
         let tag = bytes.read_u8()?;
         let constant = match tag {
@@ -282,7 +282,7 @@ impl Constant {
     /// Writes the constant pool entry to the provided byte buffer according to the Java class file
     /// format specification.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::Constant;
@@ -380,7 +380,7 @@ impl Constant {
 impl fmt::Display for Constant {
     /// Formats the `Constant` for display purposes.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::Constant;

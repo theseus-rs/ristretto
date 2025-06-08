@@ -19,6 +19,7 @@ impl LocalVariableTable {
     /// Deserialize the local variable table from bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<LocalVariableTable> {
         let start_pc = bytes.read_u16::<BigEndian>()?;
@@ -40,6 +41,7 @@ impl LocalVariableTable {
     /// Serialize the local variable table to bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.start_pc)?;

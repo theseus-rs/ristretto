@@ -17,6 +17,7 @@ impl AnnotationValuePair {
     /// Deserialize the annotation value pair from bytes.
     ///
     /// # Errors
+    ///
     /// If the annotation element cannot be deserialized.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<AnnotationValuePair> {
         let name_index = bytes.read_u16::<BigEndian>()?;
@@ -29,6 +30,7 @@ impl AnnotationValuePair {
     /// Serialize the annotation element to bytes.
     ///
     /// # Errors
+    ///
     /// If the annotation element cannot be serialized.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.name_index)?;

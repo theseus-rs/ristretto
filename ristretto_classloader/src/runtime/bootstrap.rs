@@ -13,6 +13,7 @@ pub const DEFAULT_JAVA_VERSION: &str = "21.0.7.6.1";
 /// archive will be downloaded and extracted.
 ///
 /// # Errors
+///
 /// An error will be returned if the class loader cannot be created.
 pub async fn default_class_loader() -> Result<(PathBuf, String, ClassLoader)> {
     version_class_loader(DEFAULT_JAVA_VERSION).await
@@ -21,6 +22,7 @@ pub async fn default_class_loader() -> Result<(PathBuf, String, ClassLoader)> {
 /// Get a class loader for the given Java home.
 ///
 /// # Errors
+///
 /// An error will be returned if the class loader cannot be created.
 #[instrument(level = "debug")]
 pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, ClassLoader)> {
@@ -68,6 +70,7 @@ pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, 
 /// or a `*` to get the latest LTS release supported by the runtime.
 ///
 /// # Errors
+///
 /// An error will be returned if the class loader cannot be created.
 #[instrument(level = "debug")]
 pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, ClassLoader)> {
@@ -95,6 +98,7 @@ pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Cla
 /// Get the class path for the given version.
 ///
 /// # Errors
+///
 /// An error will be returned if the class path cannot be determined.
 fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
     let class_path = if util::parse_major_version(version) <= 8 {
@@ -127,6 +131,7 @@ fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
 /// Extract the archive to the installation directory.
 ///
 /// # Errors
+///
 /// An error will be returned if the archive cannot be extracted.
 #[instrument(level = "debug", skip(archive))]
 async fn extract_archive(

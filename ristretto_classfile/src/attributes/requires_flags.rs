@@ -35,6 +35,7 @@ impl RequiresFlags {
     /// Deserialize the `RequiresFlags` from bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<RequiresFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
@@ -45,6 +46,7 @@ impl RequiresFlags {
     /// Serialize the `RequiresFlags` to bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.bits())?;

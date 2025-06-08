@@ -49,8 +49,9 @@ impl Compiler {
     /// Creates a new instance of the compiler for the host machine.
     ///
     /// # Errors
-    /// * If the target ISA is not supported
-    /// * If the target ISA cannot be created
+    ///
+    /// - If the target ISA is not supported
+    /// - If the target ISA cannot be created
     pub fn new() -> Result<Self> {
         let compiler = Compiler {};
         Ok(compiler)
@@ -78,6 +79,7 @@ impl Compiler {
     /// Compiles the given bytecode into native code.
     ///
     /// # Errors
+    ///
     /// if the Java byte code cannot be compiled to native code
     pub fn compile(&self, class_file: &ClassFile, method: &Method) -> Result<Function> {
         let mut jit_module = Self::jit_module()?;
@@ -208,6 +210,7 @@ impl Compiler {
     /// Retrieves the function pointers from the function builder.
     ///
     /// # Errors
+    ///
     /// If the function pointers cannot be retrieved
     fn function_pointers(
         function_builder: &mut FunctionBuilder,
@@ -234,6 +237,7 @@ impl Compiler {
     /// Creates a new locals array for the function.
     ///
     /// # Errors
+    ///
     /// If the locals array cannot be created
     fn locals(
         descriptor: &str,
@@ -281,6 +285,7 @@ impl Compiler {
     /// Creates a new native type from the given field type.
     ///
     /// # Errors
+    ///
     /// If the field type is not supported
     fn native_type(field_type: &FieldType) -> Result<Type> {
         match field_type {

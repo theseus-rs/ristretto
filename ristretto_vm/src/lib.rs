@@ -16,7 +16,7 @@
 //! - Configurable VM parameters
 //! - Basic JIT compilation capabilities
 //!
-//! ## Example
+//! ## Examples
 //!
 //! ```rust,no_run
 //! use ristretto_vm::{VM, Configuration, ConfigurationBuilder};

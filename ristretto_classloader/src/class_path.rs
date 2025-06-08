@@ -24,6 +24,7 @@ impl ClassPath {
     /// Creates a new `ClassPath` from a string.
     ///
     /// # Errors
+    ///
     /// if the class path is not valid.
     pub fn from<S: AsRef<str>>(class_path: S) -> Self {
         let class_path = class_path.as_ref();
@@ -47,6 +48,7 @@ impl ClassPath {
     /// Read a class from the class path.
     ///
     /// # Errors
+    ///
     /// if the class file is not found or cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
@@ -65,6 +67,7 @@ impl ClassPath {
     /// Get the class names in the class path.
     ///
     /// # Errors
+    ///
     /// if the class names cannot be read.
     pub async fn class_names(&self) -> Result<Vec<String>> {
         let mut classes = Vec::new();

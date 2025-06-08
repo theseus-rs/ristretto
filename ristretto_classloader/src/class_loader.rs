@@ -56,6 +56,7 @@ impl ClassLoader {
     /// Load a class by name.
     ///
     /// # Errors
+    ///
     /// if the class file cannot be read.
     pub async fn load<S: AsRef<str>>(&self, name: S) -> Result<Arc<Class>> {
         self.load_with_status(name).await.map(|(class, _)| class)
@@ -64,6 +65,7 @@ impl ClassLoader {
     /// Load a class by name with a boolean status indicating if the class was loaded previously.
     ///
     /// # Errors
+    ///
     /// if the class file cannot be read.
     pub async fn load_with_status<S: AsRef<str>>(
         &self,
@@ -107,6 +109,7 @@ impl ClassLoader {
     /// Register a class with the class loader.
     ///
     /// # Errors
+    ///
     /// if the class cannot be registered.
     pub async fn register(&self, class: Arc<Class>) -> Result<()> {
         let mut classes = self.classes.write().await;

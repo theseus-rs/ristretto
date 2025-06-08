@@ -753,8 +753,9 @@ impl Instruction {
     /// maximum stack size required for a method.
     ///
     /// # Errors
-    /// * if a method is not a valid method reference
-    /// * if a data type cannot be converted
+    ///
+    /// - if a method is not a valid method reference
+    /// - if a data type cannot be converted
     #[expect(clippy::too_many_lines)]
     pub fn stack_delta(&self, constant_pool: &ConstantPool) -> Result<i16> {
         let delta = match self {
@@ -951,7 +952,8 @@ impl Instruction {
     /// calculating the maximum locals size required for a method.
     ///
     /// # Errors
-    /// * if a data type cannot be converted
+    ///
+    /// if a data type cannot be converted
     #[expect(clippy::match_same_arms)]
     pub fn max_locals_index(&self) -> Result<Option<u16>> {
         let index = match self {
@@ -1028,6 +1030,7 @@ impl Instruction {
     /// Deserialize the `Instruction` from bytes.
     ///
     /// # Errors
+    ///
     /// Returns an error if the instruction is invalid.
     #[expect(clippy::too_many_lines)]
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Instruction> {
@@ -1331,6 +1334,7 @@ impl Instruction {
     /// Read a signed 16-bit offset from the bytes.
     ///
     /// # Errors
+    ///
     /// Returns an error if the offset is invalid.
     fn read_offset(bytes: &mut Cursor<Vec<u8>>, current_position: i32) -> Result<u16> {
         let offset = bytes.read_i16::<BigEndian>()?;
@@ -1341,6 +1345,7 @@ impl Instruction {
     /// Serialize the `Instruction` to bytes.
     ///
     /// # Errors
+    ///
     /// If an instruction cannot be serialized to bytes.
     #[expect(clippy::too_many_lines)]
     pub fn to_bytes(&self, bytes: &mut Cursor<Vec<u8>>) -> Result<()> {
@@ -1510,6 +1515,7 @@ impl Instruction {
     /// Write a signed 16-bit offset to the bytes.
     ///
     /// # Errors
+    ///
     /// Returns an error if the offset is invalid.
     fn write_offset(bytes: &mut Cursor<Vec<u8>>, offset: u16) -> Result<()> {
         let current_position = i32::try_from(bytes.position())? - 1;
@@ -1521,6 +1527,7 @@ impl Instruction {
     /// Get a formatted string representation of the instruction.
     ///
     /// # Errors
+    ///
     /// Returns an error if the constant pool index is invalid.
     pub fn to_formatted_string(&self, constant_pool: &ConstantPool) -> Result<String> {
         let value = match self {

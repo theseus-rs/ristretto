@@ -94,6 +94,10 @@ impl FieldAccessFlags {
     /// Reads a u16 value from the given cursor in big-endian order and constructs
     /// a `FieldAccessFlags` instance from it.
     ///
+    /// # Errors
+    ///
+    /// Should not occur; reserved for future use.
+    ///
     /// # Examples
     ///
     /// ```
@@ -110,9 +114,6 @@ impl FieldAccessFlags {
     /// assert!(flags.contains(FieldAccessFlags::STATIC));
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// Should not occur; reserved for future use.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<FieldAccessFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let access_flags = FieldAccessFlags::from_bits_truncate(access_flags);

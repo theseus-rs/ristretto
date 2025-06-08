@@ -36,7 +36,7 @@ use tracing::{debug, error, info};
 /// not automatically evicted, which could potentially lead to high memory usage in long-running
 /// applications that load many classes.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```text
 /// "java/lang/String.length()I" => Some(Arc<Function>)

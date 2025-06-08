@@ -17,6 +17,7 @@ impl Annotation {
     /// Deserialize the annotation from bytes.
     ///
     /// # Errors
+    ///
     /// If there is an issue deserializing an `AnnotationValuePair`.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Annotation> {
         let type_index = bytes.read_u16::<BigEndian>()?;
@@ -36,6 +37,7 @@ impl Annotation {
     /// Serialize the annotation to bytes.
     ///
     /// # Errors
+    ///
     /// - If there are more than 65,534 elements.
     /// - If there is an issue serializing an `AnnotationValuePair`.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {

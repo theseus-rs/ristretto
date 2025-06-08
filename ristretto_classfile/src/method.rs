@@ -60,7 +60,11 @@ impl Method {
     /// Reads a `Method` structure from the provided bytes cursor according to the Java Virtual
     /// Machine Specification.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// Returns an error if the bytes do not represent a valid Method.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{ConstantPool, Method};
@@ -84,9 +88,6 @@ impl Method {
     /// assert_eq!(method.descriptor_index, 6);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// Returns an error if the bytes do not represent a valid Method.
     pub fn from_bytes(constant_pool: &ConstantPool, bytes: &mut Cursor<Vec<u8>>) -> Result<Method> {
         let access_flags = MethodAccessFlags::from_bytes(bytes)?;
         let name_index = bytes.read_u16::<BigEndian>()?;
@@ -113,7 +114,11 @@ impl Method {
     /// Writes the `Method` structure to the provided byte vector according to the Java Virtual
     /// Machine Specification.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// If there are more than 65,534 attributes, an error is returned.
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{Method, MethodAccessFlags};
@@ -139,9 +144,6 @@ impl Method {
     /// ]);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// If there are more than 65,534 attributes, an error is returned.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         self.access_flags.to_bytes(bytes)?;
         bytes.write_u16::<BigEndian>(self.name_index)?;
@@ -162,7 +164,7 @@ impl fmt::Display for Method {
     /// Provides a human-readable representation of the method, including its access flags, name
     /// index, descriptor index, and attributes.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// # use ristretto_classfile::{Method, MethodAccessFlags};

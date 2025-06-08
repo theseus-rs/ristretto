@@ -21,6 +21,7 @@ impl Method {
     /// Create a new class method with the given definition.
     ///
     /// # Errors
+    ///
     /// if the method name cannot be read.
     pub fn from(class_file: &ClassFile, definition: &ristretto_classfile::Method) -> Result<Self> {
         let constant_pool = &class_file.constant_pool;
@@ -154,6 +155,7 @@ impl Method {
     /// Get the line number for a given program counter.
     ///
     /// # Errors
+    ///
     /// if the program counter does not index into a valid line number
     #[must_use]
     pub fn line_number(&self, program_counter: usize) -> usize {

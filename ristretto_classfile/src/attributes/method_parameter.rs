@@ -17,6 +17,7 @@ impl MethodParameter {
     /// Deserialize the method parameters from bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<MethodParameter> {
         let name_index = bytes.read_u16::<BigEndian>()?;
@@ -31,6 +32,7 @@ impl MethodParameter {
     /// Serialize the method parameters to bytes.
     ///
     /// # Errors
+    ///
     /// If method access flags cannot be serialized.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u16::<BigEndian>(self.name_index)?;

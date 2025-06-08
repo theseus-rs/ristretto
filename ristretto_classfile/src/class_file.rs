@@ -29,7 +29,7 @@ const MAGIC: u32 = 0xCAFE_BABE;
 /// - Fields and methods of the class
 /// - Class attributes
 ///
-/// # Example
+/// # Examples
 ///
 /// ```rust,no_run
 /// use ristretto_classfile::ClassFile;
@@ -67,7 +67,11 @@ pub struct ClassFile {
 impl ClassFile {
     /// Get the fully qualified class name.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// Returns an error if the class name is not found.
+    ///
+    /// # Examples
     ///
     /// ```rust,no_run
     /// # use ristretto_classfile::ClassFile;
@@ -78,9 +82,6 @@ impl ClassFile {
     /// println!("Class name: {class_name}"); // e.g., "java.lang.String"
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// Returns an error if the class name is not found.
     pub fn class_name(&self) -> Result<&String> {
         self.constant_pool.try_get_class(self.this_class)
     }
@@ -90,7 +91,7 @@ impl ClassFile {
     /// This method checks that the class file is well-formed according to the JVM specification.
     /// It validates the constant pool entries, method definitions, and other aspects of the class.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust,no_run
     /// use ristretto_classfile::ClassFile;
@@ -135,7 +136,14 @@ impl ClassFile {
     /// - Methods
     /// - Attributes
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The bytes do not start with the correct magic number
+    /// - The class file format is invalid
+    /// - There are IO errors when reading the bytes
+    ///
+    /// # Examples
     ///
     /// ```rust,no_run
     /// use ristretto_classfile::ClassFile;
@@ -153,12 +161,6 @@ impl ClassFile {
     /// println!("Class version: {}", class_file.version);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// Returns an error if:
-    /// - The bytes do not start with the correct magic number
-    /// - The class file format is invalid
-    /// - There are IO errors when reading the bytes
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ClassFile> {
         let magic = bytes.read_u32::<BigEndian>()?;
         if magic != MAGIC {
@@ -217,7 +219,7 @@ impl ClassFile {
     /// This function converts a `ClassFile` instance into its binary representation according to
     /// the Java class file format specification.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust,no_run
     /// use ristretto_classfile::{ClassFile, ConstantPool, Version, ClassAccessFlags, JAVA_21};
@@ -307,7 +309,7 @@ impl fmt::Display for ClassFile {
     ///
     /// This format is similar to the output of the `javap -v` command.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust,no_run
     /// use ristretto_classfile::ClassFile;

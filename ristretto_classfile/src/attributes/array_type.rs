@@ -38,6 +38,7 @@ impl ArrayType {
     /// Deserialize the array type from bytes.
     ///
     /// # Errors
+    ///
     /// If the code is not a valid array type code.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ArrayType> {
         let code = bytes.read_u8()?;
@@ -59,6 +60,7 @@ impl ArrayType {
     /// Serialize the array type to bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn to_bytes(&self, bytes: &mut Cursor<Vec<u8>>) -> Result<()> {
         bytes.write_u8(self.code())?;

@@ -31,6 +31,7 @@ pub(crate) async fn ldc_w(
 /// Load the constant at the specified index onto the stack
 ///
 /// # Errors
+///
 /// if the constant is not an integer, float, string or class
 async fn load_constant(
     frame: &Frame,

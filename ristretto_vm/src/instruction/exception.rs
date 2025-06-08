@@ -66,6 +66,7 @@ pub(crate) async fn process_throwable(
 /// Convert native Rust errors to Java throwable.
 ///
 /// # Errors
+///
 /// if the error cannot be converted to a throwable
 pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Result<Object> {
     let (class_name, message) = match error {

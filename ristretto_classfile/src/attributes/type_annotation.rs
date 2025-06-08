@@ -19,6 +19,7 @@ impl TypeAnnotation {
     /// Deserialize the type annotation from bytes.
     ///
     /// # Errors
+    ///
     /// - If the target type fails to deserialize.
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<TypeAnnotation> {
         let target_type = TargetType::from_bytes(bytes)?;
@@ -52,6 +53,7 @@ impl TypeAnnotation {
     /// Serialize the type annotation to bytes.
     ///
     /// # Errors
+    ///
     /// If an annotation fails to serialize.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         self.target_type.to_bytes(bytes)?;

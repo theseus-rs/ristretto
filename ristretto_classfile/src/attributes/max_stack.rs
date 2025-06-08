@@ -8,7 +8,7 @@ use crate::{ConstantPool, Result};
 /// be reached during execution. The maximum stack size is a required value in the JVM class file
 /// format's Code attribute for methods.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```rust
 /// use ristretto_classfile::attributes::{Instruction, MaxStack};
@@ -37,7 +37,11 @@ use crate::{ConstantPool, Result};
 pub trait MaxStack {
     /// Calculates the maximum stack size required by the instructions.
     ///
-    /// # Example
+    /// # Errors
+    ///
+    /// if the stack size exceeds `u16::MAX`
+    ///
+    /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::{Instruction, MaxStack};
@@ -59,9 +63,6 @@ pub trait MaxStack {
     /// assert_eq!(max_size, 2); // Maximum depth was 2 (after Iconst_1)
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    ///
-    /// # Errors
-    /// if the stack size exceeds `u16::MAX`
     fn max_stack(&self, constant_pool: &ConstantPool) -> Result<u16>;
 }
 

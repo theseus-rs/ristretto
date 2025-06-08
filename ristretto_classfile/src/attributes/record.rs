@@ -19,6 +19,7 @@ impl Record {
     /// Deserialize the record from bytes.
     ///
     /// # Errors
+    ///
     /// Should not occur; reserved for future use.
     pub fn from_bytes(constant_pool: &ConstantPool, bytes: &mut Cursor<Vec<u8>>) -> Result<Record> {
         let name_index = bytes.read_u16::<BigEndian>()?;
@@ -40,6 +41,7 @@ impl Record {
     /// Serialize the record to bytes.
     ///
     /// # Errors
+    ///
     /// - If the number of attributes exceeds 65,534.
     /// - If an attribute fails to serialize.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {

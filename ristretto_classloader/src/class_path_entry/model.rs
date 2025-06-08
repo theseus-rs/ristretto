@@ -42,6 +42,7 @@ impl ClassPathEntry {
     /// Read a class from the class path entry.
     ///
     /// # Errors
+    ///
     /// if the class file cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
@@ -54,6 +55,7 @@ impl ClassPathEntry {
     /// Get the class names in the class path entry.
     ///
     /// # Errors
+    ///
     /// if the class names cannot be read.
     pub async fn class_names(&self) -> Result<Vec<String>> {
         match self {

@@ -63,6 +63,7 @@ impl Jar {
     /// Get the manifest of the jar.
     ///
     /// # Errors
+    ///
     /// if the manifest cannot be read.
     pub async fn manifest(&self) -> Result<Manifest> {
         let file_name = "META-INF/MANIFEST.MF";
@@ -77,6 +78,7 @@ impl Jar {
     /// Read a file from the jar.
     ///
     /// # Errors
+    ///
     /// if the file is not found or cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
     pub async fn read_file<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
@@ -87,6 +89,7 @@ impl Jar {
     /// Read a class from the jar.
     ///
     /// # Errors
+    ///
     /// if the class file is not found or cannot be read.
     #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
@@ -107,6 +110,7 @@ impl Jar {
     /// Get the class names in the jar.
     ///
     /// # Errors
+    ///
     /// if the class names cannot be read.
     pub async fn class_names(&self) -> Result<Vec<String>> {
         let mut archive = self.archive.write().await;
@@ -179,6 +183,7 @@ impl Archive {
     /// Create a new archive source from bytes.
     ///
     /// # Errors
+    ///
     /// if the bytes cannot be read.
     fn from_bytes(bytes: Vec<u8>) -> Self {
         Self {
@@ -193,6 +198,7 @@ impl Archive {
     /// Create a new archive source from a path.
     ///
     /// # Errors
+    ///
     /// if the archive cannot be read.
     async fn zip_archive(&mut self) -> Result<&mut ZipArchive<io::Cursor<Vec<u8>>>> {
         if let Some(ref mut zip_archive) = self.zip_archive {
@@ -228,6 +234,7 @@ impl Archive {
     /// Load class file from a jar.
     ///
     /// # Errors
+    ///
     /// if the jar cannot be read or the class file cannot be loaded.
     #[instrument(level = "trace")]
     async fn load_class_file(&mut self, class_name: &str) -> Result<Option<ClassFile>> {
@@ -245,6 +252,7 @@ impl Archive {
     /// Load file from a jar.
     ///
     /// # Errors
+    ///
     /// if the jar cannot be read or the class file cannot be loaded.
     #[instrument(level = "trace")]
     async fn load_file(&mut self, file_name: &str) -> Result<Option<Vec<u8>>> {
@@ -262,6 +270,7 @@ impl Archive {
     /// Check if the archive is a module.
     ///
     /// # Errors
+    ///
     /// if the module information cannot be read.
     async fn is_module(&mut self) -> Result<bool> {
         if let Some(is_module) = self.is_module {

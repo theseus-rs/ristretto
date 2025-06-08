@@ -17,6 +17,7 @@ impl Object {
     /// Create a new object with the given class.
     ///
     /// # Errors
+    ///
     /// if the fields of the class cannot be read.
     pub fn new(class: Arc<Class>) -> Result<Self> {
         let mut fields = HashMap::new();
@@ -54,6 +55,7 @@ impl Object {
     /// Check if the object is an instance of the given class.
     ///
     /// # Errors
+    ///
     /// if the parent class cannot be read.
     pub fn instance_of(&self, class: &Arc<Class>) -> Result<bool> {
         class.is_assignable_from(&self.class)
@@ -68,6 +70,7 @@ impl Object {
     /// Get field by name.
     ///
     /// # Errors
+    ///
     /// if the field cannot be found.
     pub fn field<S: AsRef<str>>(&self, name: S) -> Result<&Field> {
         let name = name.as_ref();
@@ -83,6 +86,7 @@ impl Object {
     /// Get value for a field.
     ///
     /// # Errors
+    ///
     /// if the field cannot be found.
     pub fn value<S: AsRef<str>>(&self, name: S) -> Result<Value> {
         let field = self.field(name)?;
@@ -92,6 +96,7 @@ impl Object {
     /// Sets value for field.
     ///
     /// # Errors
+    ///
     /// if the field cannot be found.
     pub fn set_value<S: AsRef<str>>(&self, name: S, value: Value) -> Result<()> {
         let field = self.field(name)?;
@@ -101,6 +106,7 @@ impl Object {
     /// Check if the object is an instance of the given class and return the "value".
     ///
     /// # Errors
+    ///
     /// if the value is not a string Object
     fn class_value(&self, expected_class_name: &str) -> Result<Value> {
         let class_name = self.class().name();
@@ -209,6 +215,7 @@ impl Object {
     /// Deep clone the object.
     ///
     /// # Errors
+    ///
     /// if the fields cannot be cloned.
     pub fn deep_clone(&self) -> Result<Self> {
         let mut fields = HashMap::new();
