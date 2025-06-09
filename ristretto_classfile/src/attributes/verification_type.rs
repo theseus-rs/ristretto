@@ -4,9 +4,53 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::Cursor;
 
-/// Implementation of `VerificationType`.
+/// Represents a verification type used in the Java Virtual Machine's type checking system.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.4>
+/// Verification types are used during bytecode verification to track the types of values on the
+/// operand stack and in local variables. They are primarily used in the `StackMapTable` attribute,
+/// which helps the JVM perform type checking during class loading.
+///
+/// # Examples
+///
+/// ```rust
+/// use ristretto_classfile::attributes::VerificationType;
+///
+/// // Create primitive verification types
+/// let top_type = VerificationType::Top;
+/// let int_type = VerificationType::Integer;
+/// let float_type = VerificationType::Float;
+/// let double_type = VerificationType::Double;
+/// let long_type = VerificationType::Long;
+/// let null_type = VerificationType::Null;
+/// let uninit_this = VerificationType::UninitializedThis;
+///
+/// // Create reference verification types
+/// let object_type = VerificationType::Object { cpool_index: 15 };
+/// let uninit_type = VerificationType::Uninitialized { offset: 42 };
+/// ```
+///
+/// Serializing and deserializing verification types:
+///
+/// ```rust
+/// use ristretto_classfile::attributes::VerificationType;
+/// use std::io::Cursor;
+///
+/// // Serialize an Object verification type
+/// let object_type = VerificationType::Object { cpool_index: 15 };
+/// let mut bytes = Vec::new();
+/// object_type.to_bytes(&mut bytes)?;
+/// assert_eq!(bytes, vec![0x07, 0x00, 0x0F]); // Tag 7 + index 15 (big-endian)
+///
+/// // Deserialize back from bytes
+/// let mut cursor = Cursor::new(bytes);
+/// let deserialized = VerificationType::from_bytes(&mut cursor)?;
+/// assert_eq!(deserialized, object_type);
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+/// # References
+///
+/// - [JVM Specification §4.7.4](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.4)
 #[derive(Clone, Debug, PartialEq)]
 pub enum VerificationType {
     Top,
@@ -22,6 +66,20 @@ pub enum VerificationType {
 
 impl VerificationType {
     /// Return the tag for the verification type.
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-VerificationTypeInfo>
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::VerificationType;
+    ///
+    /// let top_type = VerificationType::Top;
+    /// assert_eq!(top_type.tag(), 0);
+    ///
+    /// let int_type = VerificationType::Integer;
+    /// assert_eq!(int_type.tag(), 1);
+    /// ```
     #[must_use]
     pub fn tag(&self) -> u8 {
         match self {
@@ -42,6 +100,19 @@ impl VerificationType {
     /// # Errors
     ///
     /// Returns an error if the tag is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::VerificationType;
+    /// use std::io::Cursor;
+    ///
+    /// let bytes = vec![0x07, 0x00, 0x0A]; // Object type with cpool_index 10
+    /// let mut cursor = Cursor::new(bytes);
+    /// let verification_type = VerificationType::from_bytes(&mut cursor)?;
+    /// assert_eq!(verification_type, VerificationType::Object { cpool_index: 10 });
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<VerificationType> {
         let tag = bytes.read_u8()?;
 
@@ -69,6 +140,18 @@ impl VerificationType {
     /// # Errors
     ///
     /// Should not occur; reserved for future use.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::VerificationType;
+    ///
+    /// let object_type = VerificationType::Object { cpool_index: 10 };
+    /// let mut bytes = Vec::new();
+    /// object_type.to_bytes(&mut bytes)?;
+    /// assert_eq!(bytes, vec![0x07, 0x00, 0x0A]);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u8(self.tag())?;
         match self {
@@ -83,6 +166,19 @@ impl VerificationType {
 }
 
 impl fmt::Display for VerificationType {
+    /// Implements the `Display` trait for `VerificationType`, providing a human-readable string
+    /// representation of each verification type.
+    ///
+    /// # Examples
+    ///
+    /// Using the `Display` trait to format verification types as strings:
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::VerificationType;
+    ///
+    /// let output = VerificationType::Top.to_string();
+    /// assert_eq!(output, "top");
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             VerificationType::Top => write!(f, "top"),

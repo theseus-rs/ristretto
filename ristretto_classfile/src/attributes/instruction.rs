@@ -10,7 +10,9 @@ use std::io::Cursor;
 
 /// Implementation of `Instruction`.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5>
+/// # References
+///
+/// - [JVM Specification §6.5](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5)
 #[expect(non_camel_case_types)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Instruction {

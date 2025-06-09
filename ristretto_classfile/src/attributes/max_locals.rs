@@ -3,93 +3,143 @@ use crate::{BaseType, ConstantPool, FieldType, Method, MethodAccessFlags, Result
 
 /// Trait for calculating the maximum number of local variables needed by a method.
 ///
-/// The maximum locals value represents the number of local variable slots required by a method,
-/// including:
-/// - The `this` reference for instance methods (not present in static methods)
-/// - Method parameters (with `long` and `double` types taking two slots each)
-/// - Local variables used within the method body
+/// The `max_locals` value is a crucial part of a method's `Code` attribute. It specifies the
+/// number values required in the local variable array of the method's stack frame.
 ///
-/// This value is used in the JVM to allocate the correct frame size when executing methods.
+/// This count includes:
+///
+/// 1.  The `this` reference for instance (non-static) methods (occupies slot `0`).
+/// 2.  All method parameters. `long` and `double` parameters each occupy two slots;
+///     all other types occupy one slot.
+/// 3.  Any additional local variables declared and used within the method body.
+///     Again, `long` and `double` types will use two slots.
+///
+/// The JVM uses `max_locals` to determine the size of the local variable array when a new
+/// stack frame is created for a method invocation.
+///
+/// # Calculation Logic
+///
+/// The calculation proceeds as follows:
+/// - Initialize `max_locals` to 1 if it's an instance method (for `this`), or 0 if static.
+/// - Add the number of slots required for method parameters based on their types.
+/// - Iterate through all instructions in the method's code:
+///   - If an instruction accesses a local variable (e.g., `iload`, `istore`, `lload`, `lstore`, `iinc`),
+///     determine the highest local variable index it uses.
+///   - Update `max_locals` if this instruction uses a higher index than currently recorded.
+///     For `long` and `double` types use `index` and `index + 1`.
 ///
 /// # Examples
 ///
 /// ```rust
 /// use ristretto_classfile::{ConstantPool, Method, MethodAccessFlags};
 /// use ristretto_classfile::attributes::{Instruction, MaxLocals};
+/// use std::collections::HashMap;
 ///
-/// // Create a constant pool and add a method descriptor
+/// // Create a constant pool and add a method descriptor for a method like:
+/// // public void exampleMethod(int p1, long p2)
 /// let mut constant_pool = ConstantPool::new();
 /// let descriptor_index = constant_pool.add_utf8("(IJ)V")?;
 ///
-/// // Create a non-static method (includes 'this' reference)
+/// // Define an instance method (non-static)
 /// let method = Method {
-///     access_flags: MethodAccessFlags::empty(), // instance method
-///     name_index: 0, // Not relevant for this example
+///     access_flags: MethodAccessFlags::PUBLIC,
+///     name_index: constant_pool.add_utf8("exampleMethod")?,
 ///     descriptor_index,
-///     attributes: vec![],
+///     attributes: vec![], // Code attribute would normally be here
 /// };
 ///
-/// // Create instructions that use local variables
+/// // Instructions for the method body:
+/// // Assume 'this' is at slot 0.
+/// // int p1 is at slot 1.
+/// // long p2 is at slots 2 and 3.
 /// let instructions = [
-///     Instruction::Iload_0, // Load 'this' reference
-///     Instruction::Iload_1, // Load int parameter
-///     Instruction::Lload_2, // Load long parameter (takes slots 2 and 3)
-///     Instruction::Istore(5), // Store value in local variable 5
+///     Instruction::Iload_1,     // Load p1 (uses slot 1)
+///     Instruction::Lload_2,     // Load p2 (uses slots 2, 3)
+///     Instruction::Iconst_5,    // Push 5
+///     Instruction::Istore(4),   // Store into new local variable at slot 4
+///     Instruction::Lconst_1,
+///     Instruction::Lstore(5),   // Store into new long local variable at slots 5, 6
 ///     Instruction::Return,
 /// ];
 ///
 /// // Calculate max locals
-/// let max_locals = instructions.max_locals(&constant_pool, &method)?;
-/// assert_eq!(max_locals, 6); // Slots 0-5 are used (6 total slots)
+/// // Slot 0: this
+/// // Slot 1: p1 (int)
+/// // Slots 2, 3: p2 (long)
+/// // Slot 4: istore(4) - int
+/// // Slots 5, 6: lstore(5) - long
+/// // Highest index used is 6. So, max_locals should be 7 (0-6).
+/// let max_locals_val = instructions.max_locals(&constant_pool, &method)?;
+/// assert_eq!(max_locals_val, 7);
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
 ///
 /// # References
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3>
+/// - [JVM Specification §2.6.1](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6.1)
+/// - [JVM Specification §4.7.3](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3)
 pub trait MaxLocals {
-    /// Calculates the maximum number of local variable slots required by a method.
+    /// Calculates the maximum number of local variable slots required by the method's code.
     ///
-    /// This method analyzes both the method signature and its bytecode instructions to determine
-    /// the maximum number of local variable slots that will be used:
-    /// - The `this` reference for instance methods (not present in static methods)
-    /// - Method parameters (with `long` and `double` types taking two slots each)
-    /// - Local variables used within the method body
+    /// This value accounts for the `this` reference (for instance methods), method parameters,
+    /// and any local variables used by the instructions in the method body.
+    /// `long` and `double` types are correctly handled as occupying two local variable slots.
+    ///
+    /// # Arguments
+    ///
+    /// * `constant_pool`: A reference to the `ConstantPool` of the class file, used to parse
+    ///   the method descriptor for parameter types.
+    /// * `method`: A reference to the `Method` structure, used to access its access flags
+    ///   (to determine if it's static) and its descriptor index.
     ///
     /// # Errors
     ///
-    /// if the locals size exceeds `u16::MAX`
+    /// Returns an error if:
+    /// - The method descriptor index in the `method` is invalid or does not point to a
+    ///   `CONSTANT_Utf8_info` in the `constant_pool`.
+    /// - Parsing the method descriptor fails.
+    /// - Any instruction's `max_locals_index()` method returns an error (e.g., type conversion).
+    /// - The calculated `max_locals` value would exceed `u16::MAX` (although this is unlikely
+    ///   as individual local indices are `u16`).
     ///
     /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::{ConstantPool, Method, MethodAccessFlags};
     /// use ristretto_classfile::attributes::{Instruction, MaxLocals};
+    /// use std::collections::HashMap;
     ///
-    /// // Create a constant pool and add a method descriptor
     /// let mut constant_pool = ConstantPool::new();
-    /// let descriptor_index = constant_pool.add_utf8("(IJ)V")?;
+    /// let descriptor_idx = constant_pool.add_utf8("(Ljava/lang/String;I)V")?;
     ///
-    /// // Create a non-static method (includes 'this' reference)
-    /// let method = Method {
-    ///     access_flags: MethodAccessFlags::empty(), // instance method
-    ///     name_index: 0, // Not relevant for this example
-    ///     descriptor_index,
+    /// let instance_method = Method {
+    ///     access_flags: MethodAccessFlags::PUBLIC,
+    ///     name_index: constant_pool.add_utf8("myMethod")?,
+    ///     descriptor_index: descriptor_idx,
     ///     attributes: vec![],
     /// };
     ///
-    /// // Create instructions that use local variables
-    /// let instructions = [
-    ///     Instruction::Iload_0, // Load 'this' reference
-    ///     Instruction::Iload_1, // Load int parameter
-    ///     Instruction::Lload_2, // Load long parameter (takes slots 2 and 3)
-    ///     Instruction::Istore(5), // Store value in local variable 5
-    ///     Instruction::Return,
-    /// ];
+    /// // `this` (slot 0), String (slot 1), int (slot 2)
+    /// // Instructions use up to slot 3 for an additional int.
+    /// let instructions = [Instruction::Aload_1, Instruction::Iload_2, Instruction::Istore(3)];
+    /// // Max index used by params: 0 (this) + 1 (String) + 1 (int) = 3 slots (0,1,2)
+    /// // Max index by instructions: istore(3) uses slot 3.
+    /// // So, total slots needed = 4 (indices 0, 1, 2, 3)
+    /// assert_eq!(instructions.max_locals(&constant_pool, &instance_method)?, 4);
     ///
-    /// // Calculate max locals
-    /// let max_locals = instructions.max_locals(&constant_pool, &method)?;
-    /// assert_eq!(max_locals, 6); // Slots 0-5 are used (6 total slots)
+    /// let static_method = Method {
+    ///     access_flags: MethodAccessFlags::STATIC | MethodAccessFlags::PUBLIC,
+    ///     name_index: constant_pool.add_utf8("staticMethod")?,
+    ///     descriptor_index: descriptor_idx,
+    ///     attributes: vec![],
+    /// };
+    /// // String (slot 0), int (slot 1)
+    /// // Instructions use up to slot 2 for an additional int.
+    /// let static_instructions = [Instruction::Aload_0, Instruction::Iload_1, Instruction::Istore(2)];
+    /// // Max index used by params: 1 (String) + 1 (int) = 2 slots (0,1)
+    /// // Max index by instructions: istore(2) uses slot 2.
+    /// // So, total slots needed = 3 (indices 0, 1, 2)
+    /// assert_eq!(static_instructions.max_locals(&constant_pool, &static_method)?, 3);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     fn max_locals(&self, constant_pool: &ConstantPool, method: &Method) -> Result<u16>;

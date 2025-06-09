@@ -32,17 +32,71 @@ const VERSION_55_0: Version = JAVA_11;
 const VERSION_60_0: Version = JAVA_16;
 const VERSION_61_0: Version = JAVA_17;
 
-/// Attribute.
+/// Represents a class file attribute as defined in the Java Virtual Machine Specification.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7>
+/// Attributes are used to provide additional information about class files, fields, methods, and code.
+/// Each attribute has a name and specific data related to its purpose. The JVM specification defines
+/// standard attributes, but custom attributes can also be created.
+///
+/// # Examples
+///
+/// Creating a `SourceFile` attribute:
+///
+/// ```
+/// use ristretto_classfile::attributes::Attribute;
+/// use ristretto_classfile::ConstantPool;
+///
+/// // Assuming we have a constant pool with a UTF8 entry for "SourceFile" at index 1
+/// // and a UTF8 entry for the source file name at index 2
+/// let source_file_attr = Attribute::SourceFile {
+///     name_index: 1,
+///     source_file_index: 2,
+/// };
+/// ```
+///
+/// Serializing an attribute to bytes:
+///
+/// ```
+/// use ristretto_classfile::attributes::Attribute;
+/// use ristretto_classfile::Result;
+///
+/// let source_file_attr = Attribute::SourceFile {
+///     name_index: 1,
+///     source_file_index: 2,
+/// };
+///
+/// let mut bytes = Vec::new();
+/// source_file_attr.to_bytes(&mut bytes)?;
+/// # Ok::<(), ristretto_classfile::Error>(())
+/// ```
+///
+/// # References
+///
+/// - [JVM Specification §4.7](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7)
 #[derive(Clone, Debug, PartialEq)]
 pub enum Attribute {
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.2>
+    /// Represents a constant value for a field.
+    ///
+    /// This attribute is used for fields that have a constant value. The `constant_value_index`
+    /// points to the constant pool entry containing the value.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.2](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.2)
     ConstantValue {
         name_index: u16,
         constant_value_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3>
+
+    /// Contains the bytecode and auxiliary information for a method implementation.
+    ///
+    /// The Code attribute contains the instructions, exception handlers, and additional attributes
+    /// needed to execute a method. It also specifies the maximum stack size and local variable
+    /// count.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.3](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3)
     Code {
         name_index: u16,
         max_stack: u16,
@@ -51,107 +105,304 @@ pub enum Attribute {
         exception_table: Vec<ExceptionTableEntry>,
         attributes: Vec<Attribute>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.4>
+
+    /// Represents a stack map table for type checking during bytecode verification.
+    ///
+    /// The `StackMapTable` attribute is used by the Java Virtual Machine's bytecode verifier to
+    /// type check code without requiring the loading of referenced classes. It contains information
+    /// about the state of the operand stack and local variables at specific offsets in the code.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.4](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.4)
     StackMapTable {
         name_index: u16,
         frames: Vec<StackFrame>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.5>
+
+    /// Lists the checked exceptions that a method may throw.
+    ///
+    /// The Exceptions attribute indicates which checked exceptions a method can throw. Each entry
+    /// in the `exception_indexes` list points to a `CONSTANT_Class_info` structure representing a
+    /// class type that this method is declared to throw.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.5](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.5)
     Exceptions {
         name_index: u16,
         exception_indexes: Vec<u16>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.6>
+
+    /// Records the inner classes and interfaces of a class or interface.
+    ///
+    /// This attribute provides information about the inner classes and interfaces declared within a
+    /// class. For each inner class or interface, it specifies the class name, enclosing class,
+    /// inner name, and access flags.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.6](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.6)
     InnerClasses {
         name_index: u16,
         classes: Vec<InnerClass>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.7>
+
+    /// Indicates that a class is a local or anonymous class.
+    ///
+    /// The `EnclosingMethod` attribute provides information about the enclosing context of a local
+    /// or anonymous class. It identifies the class within which the local or anonymous class is
+    /// declared, and may optionally specify the method within that class.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.7](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.7)
     EnclosingMethod {
         name_index: u16,
         class_index: u16,
         method_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.8>
+
+    /// Indicates that a class, field, or method was generated by the compiler and does not appear
+    /// in source code.
+    ///
+    /// The `Synthetic` attribute marks a class member that does not have a corresponding construct
+    /// in the source code. It is used to denote members that were introduced by the compiler during
+    /// compilation.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.8](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.8)
     Synthetic { name_index: u16 },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.9>
+
+    /// Stores generic signature information for a class, field, or method.
+    ///
+    /// The Signature attribute records generic signature information for a class, interface,
+    /// constructor, method, or field declaration when that signature includes type variables or
+    /// parameterized types.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.9](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.9)
     Signature {
         name_index: u16,
         signature_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.10>
+
+    /// Indicates the source file from which a class file was compiled.
+    ///
+    /// The `SourceFile` attribute points to a `CONSTANT_Utf8_info` structure in the constant pool
+    /// that contains the name of the source file from which this class file was compiled.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.10](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.10)
     SourceFile {
         name_index: u16,
         source_file_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.11>
+
+    /// Provides additional debugging information not included in the standard source file.
+    ///
+    /// The `SourceDebugExtension` attribute is an optional attribute that contains additional
+    /// debugging information which tools can use to implement source-level debugging. The attribute
+    /// typically stores information for non-Java source files.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.11](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.11)
     SourceDebugExtension {
         name_index: u16,
         debug_extension: String,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.12>
+
+    /// Maps bytecode instruction offsets to source code line numbers.
+    ///
+    /// The `LineNumberTable` attribute maps bytecode instruction offsets to line numbers in the
+    /// original source file. This attribute is used by debuggers to determine which line of source
+    /// is being executed and by exception handlers to display line numbers.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.12](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.12)
     LineNumberTable {
         name_index: u16,
         line_numbers: Vec<LineNumber>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.13>
+
+    /// Maps ranges of bytecode to information about local variables.
+    ///
+    /// The `LocalVariableTable` attribute records information about the local variables in a
+    /// method, allowing debuggers to determine the value of a given local variable during
+    /// execution. Each entry maps a range of bytecode to a specific local variable.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.13](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.13)
     LocalVariableTable {
         name_index: u16,
         variables: Vec<LocalVariableTable>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.14>
+
+    /// Provides type information for generic local variables.
+    ///
+    /// The `LocalVariableTypeTable` attribute records signature information for local variables in
+    /// generic code, allowing debuggers to display and interact with generic types. It complements
+    /// the `LocalVariableTable` by providing generic type information.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.14](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.14)
     LocalVariableTypeTable {
         name_index: u16,
         variable_types: Vec<LocalVariableTypeTable>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.15>
+
+    /// Indicates that a class, field, or method is deprecated.
+    ///
+    /// The Deprecated attribute indicates that a class, interface, method, or field is deprecated
+    /// and should no longer be used. It corresponds to the @Deprecated annotation in Java source
+    /// code.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.15](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.15)
     Deprecated { name_index: u16 },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.16>
+
+    /// Stores annotations that are visible at runtime.
+    ///
+    /// The `RuntimeVisibleAnnotations` attribute records the annotations on a program element that
+    /// are visible to the reflection API at runtime. These correspond to annotations without a
+    /// `RetentionPolicy.SOURCE` or `RetentionPolicy.CLASS`.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.16](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.16)
     RuntimeVisibleAnnotations {
         name_index: u16,
         annotations: Vec<Annotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.17>
+
+    /// Stores annotations that are not visible at runtime.
+    ///
+    /// The `RuntimeInvisibleAnnotations` attribute records the annotations on a program element
+    /// that are not visible to the reflection API at runtime. These correspond to annotations with
+    /// `RetentionPolicy.CLASS`.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.17](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.17)
     RuntimeInvisibleAnnotations {
         name_index: u16,
         annotations: Vec<Annotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.18>
+
+    /// Stores runtime-visible annotations on method parameters.
+    ///
+    /// The `RuntimeVisibleParameterAnnotations` attribute records annotations on method parameters
+    /// that are visible to the reflection API at runtime. Each parameter can have multiple
+    /// annotations.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.18](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.18)
     RuntimeVisibleParameterAnnotations {
         name_index: u16,
         parameter_annotations: Vec<ParameterAnnotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.19>
+
+    /// Stores runtime-invisible annotations on method parameters.
+    ///
+    /// The `RuntimeInvisibleParameterAnnotations` attribute records annotations on method
+    /// parameters that are not visible to the reflection API at runtime. These correspond to
+    /// annotations with `RetentionPolicy.CLASS`.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.19](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.19)
     RuntimeInvisibleParameterAnnotations {
         name_index: u16,
         parameter_annotations: Vec<ParameterAnnotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.20>
+
+    /// Stores runtime-visible type annotations.
+    ///
+    /// The `RuntimeVisibleTypeAnnotations` attribute records type annotations that are visible to
+    /// the reflection API at runtime. Type annotations can target a wider range of program elements
+    /// than traditional annotations, including type uses and type declarations.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.20](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.20)
     RuntimeVisibleTypeAnnotations {
         name_index: u16,
         type_annotations: Vec<TypeAnnotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.21>
+
+    /// Stores runtime-invisible type annotations.
+    ///
+    /// The `RuntimeInvisibleTypeAnnotations` attribute records type annotations that are not
+    /// visible to the reflection API at runtime. These correspond to type annotations with
+    /// `RetentionPolicy.CLASS`.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.21](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.21)
     RuntimeInvisibleTypeAnnotations {
         name_index: u16,
         type_annotations: Vec<TypeAnnotation>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.22>
+
+    /// Specifies the default value for an annotation type element.
+    ///
+    /// The `AnnotationDefault` attribute defines the default value for an element in an annotation
+    /// type. It appears in methods of annotation interfaces that provide default values.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.22](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.22)
     AnnotationDefault {
         name_index: u16,
         element: AnnotationElement,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.23>
+
+    /// Stores bootstrap method references used by invokedynamic instructions.
+    ///
+    /// The `BootstrapMethods` attribute records bootstrap methods referenced by invokedynamic
+    /// instructions. Each method entry contains a reference to the bootstrap method and its
+    /// static arguments, which are used for dynamic method invocation.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.23](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.23)
     BootstrapMethods {
         name_index: u16,
         methods: Vec<BootstrapMethod>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.24>
+
+    /// Provides information about method parameters, including names and access flags.
+    ///
+    /// The `MethodParameters` attribute records information about the formal parameters of a
+    /// method, including names and access flags. This allows for reflection on method parameter
+    /// names and modifiers (such as final or synthetic parameters).
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.24](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.24)
     MethodParameters {
         name_index: u16,
         parameters: Vec<MethodParameter>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.25>
+
+    /// Defines a module, its dependencies, exports, and services.
+    ///
+    /// The Module attribute describes a module, including its name, requirements (dependencies),
+    /// exports, opens, uses, and provides declarations. It appears in module-info class files
+    /// and is part of the Java Platform Module System.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.25](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.25)
     Module {
         name_index: u16,
         module_name_index: u16,
@@ -163,42 +414,126 @@ pub enum Attribute {
         uses: Vec<u16>,
         provides: Vec<Provides>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.26>
+
+    /// Lists all packages exported or opened by a module.
+    ///
+    /// The `ModulePackages` attribute records all packages that are exported or opened by a module.
+    /// This information is used by various tools and APIs that need to know the complete set of
+    /// packages belonging to a module.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.26](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.26)
     ModulePackages {
         name_index: u16,
         package_indexes: Vec<u16>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.27>
+
+    /// Specifies the main class of a module.
+    ///
+    /// The `ModuleMainClass` attribute indicates the main class of a module, which is the class
+    /// containing the main method that should be executed when the module is run directly.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.27](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.27)
     ModuleMainClass {
         name_index: u16,
         main_class_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.28>
+
+    /// Identifies the host class of a nested class.
+    ///
+    /// The `NestHost` attribute records the top-level class that serves as the nest host for a nest
+    /// member class. This attribute helps implement the new nesting-based access control in Java,
+    /// which allows nested classes to access each other's private members.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.28](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.28)
     NestHost {
         name_index: u16,
         host_class_index: u16,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.29>
+
+    /// Lists the member classes of a nest.
+    ///
+    /// The `NestMembers` attribute appears in the nest host class and records all the classes that
+    /// are members of the nest. This attribute works with `NestHost` to implement nesting-based
+    /// access control in Java.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.29](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.29)
     NestMembers {
         name_index: u16,
         class_indexes: Vec<u16>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.30>
+
+    /// Describes the components of a record class.
+    ///
+    /// The Record attribute stores information about the components of a record class, including
+    /// their names, descriptors, and attributes. This attribute is used to implement the record
+    /// feature introduced in Java 16.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.30](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.30)
     Record {
         name_index: u16,
         records: Vec<Record>,
     },
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.31>
+
+    /// Lists the permitted direct subclasses of a sealed class.
+    ///
+    /// The `PermittedSubclasses` attribute records the classes that are permitted to extend a
+    /// sealed class or implement a sealed interface. It is used to implement the sealed classes
+    /// feature introduced in Java 17.
+    ///
+    /// # References
+    ///
+    /// - [JVM Specification §4.7.31](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.31)
     PermittedSubclasses {
         name_index: u16,
         class_indexes: Vec<u16>,
     },
+
     /// Used to support reading future classes where the structure is not known beforehand.
+    ///
+    /// This variant allows the parser to handle unknown attribute types gracefully by storing the
+    /// raw bytes of the attribute.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::Attribute;
+    ///
+    /// let unknown_attr = Attribute::Unknown {
+    ///     name_index: 1,  // Index in constant pool pointing to the attribute name
+    ///     info: vec![0, 1, 2, 3],  // Raw attribute data
+    /// };
+    /// ```
     Unknown { name_index: u16, info: Vec<u8> },
 }
 
 impl Attribute {
-    /// Get the name of the Attribute.
+    /// Returns the name of the Attribute as a static string.
+    ///
+    /// This method returns the standard name of the attribute type
+    /// regardless of the actual name used in the class file.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::Attribute;
+    ///
+    /// let attr = Attribute::SourceFile {
+    ///     name_index: 1,
+    ///     source_file_index: 2,
+    /// };
+    ///
+    /// assert_eq!(attr.name(), "SourceFile");
+    /// ```
     #[must_use]
     pub fn name(&self) -> &'static str {
         match self {
@@ -240,7 +575,32 @@ impl Attribute {
         }
     }
 
-    /// Check if the Attribute is valid for the given version.
+    /// Checks if the Attribute is valid for the given Java version.
+    ///
+    /// Each attribute type was introduced in a specific Java version. This method checks if the
+    /// attribute is supported in the specified version.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::Attribute;
+    /// use ristretto_classfile::{Version, JAVA_8};
+    ///
+    /// let attr = Attribute::SourceFile {
+    ///     name_index: 1,
+    ///     source_file_index: 2,
+    /// };
+    ///
+    /// // SourceFile was introduced early and is supported in Java 8
+    /// assert!(attr.valid_for_version(&JAVA_8));
+    ///
+    /// // NestMembers was introduced in Java 11 and wouldn't be valid in Java 8
+    /// let nest_members = Attribute::NestMembers {
+    ///     name_index: 1,
+    ///     class_indexes: vec![2],
+    /// };
+    /// assert!(!nest_members.valid_for_version(&JAVA_8));
+    /// ```
     #[expect(clippy::match_same_arms)]
     #[must_use]
     pub fn valid_for_version(&self, version: &Version) -> bool {
@@ -279,12 +639,49 @@ impl Attribute {
         }
     }
 
-    /// Deserialize the Attribute from bytes.
+    /// Deserializes an Attribute from bytes.
+    ///
+    /// This method reads an attribute from the provided bytes cursor, using the constant pool to
+    /// resolve attribute names.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::Attribute;
+    /// use ristretto_classfile::ConstantPool;
+    /// use std::io::Cursor;
+    /// use byteorder::{BigEndian, WriteBytesExt};
+    ///
+    /// // Create a constant pool with the necessary entries
+    /// let mut constant_pool = ConstantPool::new();
+    /// let name_index = constant_pool.add_utf8("SourceFile")?;
+    /// let source_file_index = constant_pool.add_utf8("MyClass.java")?;
+    ///
+    /// // Create bytes representing a SourceFile attribute
+    /// let mut bytes = Vec::new();
+    /// bytes.write_u16::<BigEndian>(name_index)?;        // name_index
+    /// bytes.write_u32::<BigEndian>(2)?;                 // attribute_length
+    /// bytes.write_u16::<BigEndian>(source_file_index)?; // source_file_index
+    ///
+    /// // Deserialize the attribute
+    /// let mut cursor = Cursor::new(bytes);
+    /// let attribute = Attribute::from_bytes(&constant_pool, &mut cursor)?;
+    ///
+    /// // Verify the deserialized attribute
+    /// if let Attribute::SourceFile { name_index: attr_name_idx, source_file_index: attr_source_idx } = attribute {
+    ///     assert_eq!(attr_name_idx, name_index);
+    ///     assert_eq!(attr_source_idx, source_file_index);
+    /// } else {
+    ///     panic!("Expected SourceFile attribute");
+    /// }
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     ///
     /// # Errors
     ///
-    /// - If the attribute name index is invalid.
-    /// - If the attribute length is invalid.
+    /// - Returns `InvalidAttributeNameIndex` if the name index is invalid in the constant pool.
+    /// - Returns `InvalidAttributeLength` if the attribute length doesn't match the expected length.
+    /// - Returns other errors if deserialization of specific attribute types fails.
     #[expect(clippy::too_many_lines)]
     pub fn from_bytes(
         constant_pool: &ConstantPool,
@@ -786,9 +1183,30 @@ impl Attribute {
 
     /// Serialize the Attribute to bytes.
     ///
+    /// This method writes the attribute to the provided byte vector in the format expected by the
+    /// JVM specification.
+    ///
     /// # Errors
     ///
-    /// If there is an issue serializing an attribute
+    /// - Returns an error if serialization of any part of the attribute fails.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::Attribute;
+    /// use ristretto_classfile::Result;
+    ///
+    /// let source_file = Attribute::SourceFile {
+    ///     name_index: 1,
+    ///     source_file_index: 2,
+    /// };
+    ///
+    /// let mut bytes = Vec::new();
+    /// source_file.to_bytes(&mut bytes)?;
+    ///
+    /// assert_eq!(bytes, vec![0, 1, 0, 0, 0, 2, 0, 2]);
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     #[expect(clippy::too_many_lines)]
     #[expect(clippy::match_same_arms)]
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
@@ -1151,6 +1569,20 @@ impl Attribute {
         Ok(())
     }
 
+    /// Serializes the attributes of a Code attribute to bytes, handling special cases.
+    ///
+    /// This method is used internally by the `to_bytes` method when serializing a Code attribute.
+    /// It handles the conversion of instruction offsets to byte offsets for attributes that contain
+    /// instruction references (like `LineNumberTable` and `StackMapTable`).
+    ///
+    /// # Note
+    ///
+    /// This method is necessary because the JVM uses byte offsets in class files, but our in-memory
+    /// representation uses instruction offsets for easier manipulation.
+    ///
+    /// # Errors
+    ///
+    /// - Returns an error if any instruction offset cannot be mapped to a byte offset.
     #[expect(clippy::too_many_lines)]
     fn to_bytes_code_attributes(
         attributes: &Vec<Attribute>,
@@ -1289,6 +1721,50 @@ impl Attribute {
 }
 
 impl fmt::Display for Attribute {
+    /// Implements the `Display` trait for `Attribute` to provide human-readable output.
+    ///
+    /// This implementation provides specialized formatting for certain attribute types:
+    /// - `Code` attributes show detailed bytecode instructions with line numbers and offsets
+    /// - `StackMapTable` attributes display frames in a structured format
+    /// - Other attributes fall back to a Debug-like representation
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::attributes::{Attribute, LineNumber};
+    /// use ristretto_classfile::attributes::Instruction;
+    ///
+    /// // Create a LineNumberTable attribute
+    /// let line_number_table = Attribute::LineNumberTable {
+    ///     name_index: 1,
+    ///     line_numbers: vec![
+    ///         LineNumber { start_pc: 0, line_number: 1 },
+    ///         LineNumber { start_pc: 5, line_number: 2 },
+    ///     ],
+    /// };
+    ///
+    /// // Display the attribute as a string
+    /// let output = line_number_table.to_string();
+    /// assert!(output.contains("LineNumberTable"));
+    /// assert!(output.contains("start_pc: 0"));
+    /// assert!(output.contains("line_number: 1"));
+    ///
+    /// // Code attributes have special formatting
+    /// let code_attribute = Attribute::Code {
+    ///     name_index: 1,
+    ///     max_stack: 2,
+    ///     max_locals: 1,
+    ///     code: vec![Instruction::Iconst_1, Instruction::Ireturn],
+    ///     exception_table: vec![],
+    ///     attributes: vec![],
+    /// };
+    ///
+    /// let output = code_attribute.to_string();
+    /// assert!(output.contains("Code:"));
+    /// assert!(output.contains("stack=2, locals=1"));
+    /// assert!(output.contains("iconst_1"));
+    /// assert!(output.contains("ireturn"));
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Attribute::Code {

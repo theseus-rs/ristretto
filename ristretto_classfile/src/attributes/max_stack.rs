@@ -31,9 +31,10 @@ use crate::{ConstantPool, Result};
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
 ///
+///
 /// # References
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3>
+/// - [JVM Specification §4.7.3](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3)
 pub trait MaxStack {
     /// Calculates the maximum stack size required by the instructions.
     ///
