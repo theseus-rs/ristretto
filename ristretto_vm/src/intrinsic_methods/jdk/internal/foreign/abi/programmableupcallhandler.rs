@@ -1,28 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/foreign/abi/ProgrammableUpcallHandler";
-
-/// Register all intrinsic methods for `jdk.internal.foreign.abi.ProgrammableUpcallHandler`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "allocateOptimizedUpcallStub", "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J", allocate_optimized_upcall_stub);
-    registry.register(CLASS_NAME, "allocateUpcallStub", "(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J", allocate_upcall_stub);
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-    registry.register(
-        CLASS_NAME,
-        "supportsOptimizedUpcalls",
-        "()Z",
-        supports_optimized_upcalls,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/ProgrammableUpcallHandler.allocateOptimizedUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn allocate_optimized_upcall_stub(
+pub(crate) async fn allocate_optimized_upcall_stub(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,8 +22,12 @@ async fn allocate_optimized_upcall_stub(
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/ProgrammableUpcallHandler.allocateUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn allocate_upcall_stub(
+pub(crate) async fn allocate_upcall_stub(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -41,13 +36,24 @@ async fn allocate_upcall_stub(
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/ProgrammableUpcallHandler.registerNatives()V",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/ProgrammableUpcallHandler.supportsOptimizedUpcalls()Z",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn supports_optimized_upcalls(
+pub(crate) async fn supports_optimized_upcalls(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

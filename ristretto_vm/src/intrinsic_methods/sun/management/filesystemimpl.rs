@@ -1,25 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/management/FileSystemImpl";
-
-/// Register all intrinsic methods for `sun.management.FileSystemImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "isAccessUserOnly0",
-        "(Ljava/lang/String;)Z",
-        is_access_user_only_0,
-    );
-}
-
+#[intrinsic_method(
+    "sun/management/FileSystemImpl.isAccessUserOnly0(Ljava/lang/String;)Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn is_access_user_only_0(
+pub(crate) async fn is_access_user_only_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

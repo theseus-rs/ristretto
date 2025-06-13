@@ -1,25 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/vm/ci/runtime/JVMCI";
-
-/// Register all intrinsic methods for `jdk.vm.ci.runtime.JVMCI`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "initializeRuntime",
-        "()Ljdk/vm/ci/runtime/JVMCIRuntime;",
-        initialize_runtime,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/vm/ci/runtime/JVMCI.initializeRuntime()Ljdk/vm/ci/runtime/JVMCIRuntime;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn initialize_runtime(
+pub(crate) async fn initialize_runtime(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

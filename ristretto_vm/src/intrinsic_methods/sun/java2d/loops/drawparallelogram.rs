@@ -1,25 +1,18 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/loops/DrawParallelogram";
-
-/// Register all intrinsic methods for `sun.java2d.loops.DrawParallelogram`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "DrawParallelogram",
-        "(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;DDDDDDDD)V",
-        draw_parallelogram,
-    );
-}
-
+#[intrinsic_method(
+    "sun/java2d/loops/DrawParallelogram.DrawParallelogram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;DDDDDDDD)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn draw_parallelogram(
+pub(crate) async fn draw_parallelogram(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

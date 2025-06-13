@@ -1,220 +1,22 @@
 use crate::Error::InternalError;
 use crate::JavaError::{ClassNotFoundException, NullPointerException};
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodRegistry};
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use byteorder::{BigEndian, WriteBytesExt};
+use ristretto_classfile::VersionSpecification::{
+    Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
+};
 use ristretto_classfile::attributes::{Attribute, InnerClass};
-use ristretto_classfile::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use ristretto_classfile::{
+    ClassAccessFlags, FieldAccessFlags, JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodAccessFlags,
+};
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
-
-const CLASS_NAME: &str = "java/lang/Class";
-
-/// Register all intrinsic methods for `java.lang.Class`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(
-            CLASS_NAME,
-            "getConstantPool",
-            "()Lsun/reflect/ConstantPool;",
-            get_constant_pool,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getComponentType",
-            "()Ljava/lang/Class;",
-            get_component_type,
-        );
-        registry.register(CLASS_NAME, "getName0", "()Ljava/lang/String;", get_name_0);
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "getConstantPool",
-            "()Ljdk/internal/reflect/ConstantPool;",
-            get_constant_pool,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getNestHost0",
-            "()Ljava/lang/Class;",
-            get_nest_host_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getNestMembers0",
-            "()[Ljava/lang/Class;",
-            get_nest_members_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getSimpleBinaryName0",
-            "()Ljava/lang/String;",
-            get_simple_binary_name_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "initClassName",
-            "()Ljava/lang/String;",
-            init_class_name,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "getPermittedSubclasses0",
-            "()[Ljava/lang/Class;",
-            get_permitted_subclasses_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getRecordComponents0",
-            "()[Ljava/lang/reflect/RecordComponent;",
-            get_record_components_0,
-        );
-        registry.register(CLASS_NAME, "isHidden", "()Z", is_hidden);
-        registry.register(CLASS_NAME, "isRecord0", "()Z", is_record_0);
-    }
-
-    if registry.java_major_version() <= JAVA_21 {
-        registry.register(
-            CLASS_NAME,
-            "getSigners",
-            "()[Ljava/lang/Object;",
-            get_signers,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setSigners",
-            "([Ljava/lang/Object;)V",
-            set_signers,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(
-            CLASS_NAME,
-            "getClassAccessFlagsRaw0",
-            "()I",
-            get_class_access_flags_raw_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getClassFileVersion0",
-            "()I",
-            get_class_file_version_0,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "desiredAssertionStatus0",
-        "(Ljava/lang/Class;)Z",
-        desired_assertion_status_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "forName0",
-        "(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;",
-        for_name_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDeclaredClasses0",
-        "()[Ljava/lang/Class;",
-        get_declared_classes_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDeclaredConstructors0",
-        "(Z)[Ljava/lang/reflect/Constructor;",
-        get_declared_constructors_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDeclaredFields0",
-        "(Z)[Ljava/lang/reflect/Field;",
-        get_declared_fields_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDeclaredMethods0",
-        "(Z)[Ljava/lang/reflect/Method;",
-        get_declared_methods_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDeclaringClass0",
-        "()Ljava/lang/Class;",
-        get_declaring_class_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getEnclosingMethod0",
-        "()[Ljava/lang/Object;",
-        get_enclosing_method_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getGenericSignature0",
-        "()Ljava/lang/String;",
-        get_generic_signature_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getInterfaces0",
-        "()[Ljava/lang/Class;",
-        get_interfaces_0,
-    );
-    registry.register(CLASS_NAME, "getModifiers", "()I", get_modifiers);
-    registry.register(
-        CLASS_NAME,
-        "getPrimitiveClass",
-        "(Ljava/lang/String;)Ljava/lang/Class;",
-        get_primitive_class,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getProtectionDomain0",
-        "()Ljava/security/ProtectionDomain;",
-        get_protection_domain_0,
-    );
-    registry.register(CLASS_NAME, "getRawAnnotations", "()[B", get_raw_annotations);
-    registry.register(
-        CLASS_NAME,
-        "getRawTypeAnnotations",
-        "()[B",
-        get_raw_type_annotations,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getSuperclass",
-        "()Ljava/lang/Class;",
-        get_superclass,
-    );
-    registry.register(CLASS_NAME, "isArray", "()Z", is_array);
-    registry.register(
-        CLASS_NAME,
-        "isAssignableFrom",
-        "(Ljava/lang/Class;)Z",
-        is_assignable_from,
-    );
-    registry.register(
-        CLASS_NAME,
-        "isInstance",
-        "(Ljava/lang/Object;)Z",
-        is_instance,
-    );
-    registry.register(CLASS_NAME, "isInterface", "()Z", is_interface);
-    registry.register(CLASS_NAME, "isPrimitive", "()Z", is_primitive);
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-}
 
 pub async fn get_class(thread: &Thread, object: &Object) -> Result<Arc<Class>> {
     let class = object.class();
@@ -226,16 +28,24 @@ pub async fn get_class(thread: &Thread, object: &Object) -> Result<Arc<Class>> {
     Ok(Arc::clone(class))
 }
 
+#[intrinsic_method("java/lang/Class.desiredAssertionStatus0(Ljava/lang/Class;)Z", Any)]
 #[async_recursion(?Send)]
-async fn desired_assertion_status_0(
+pub(crate) async fn desired_assertion_status_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
 
+#[intrinsic_method(
+    "java/lang/Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn for_name_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn for_name_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     // TODO: Add support for unused parameters
     let _caller = parameters.pop_reference()?;
     let _class_loader = parameters.pop_reference()?;
@@ -255,8 +65,12 @@ async fn for_name_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<O
     Ok(Some(class_object))
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getClassAccessFlagsRaw0()I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn get_class_access_flags_raw_0(
+pub(crate) async fn get_class_access_flags_raw_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -269,8 +83,9 @@ async fn get_class_access_flags_raw_0(
     Ok(Some(Value::Int(class_access_flags)))
 }
 
+#[intrinsic_method("java/lang/Class.getClassFileVersion0()I", GreaterThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn get_class_file_version_0(
+pub(crate) async fn get_class_file_version_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -286,8 +101,12 @@ async fn get_class_file_version_0(
     Ok(Some(Value::Int(class_file_version)))
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getComponentType()Ljava/lang/Class;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_component_type(
+pub(crate) async fn get_component_type(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -307,8 +126,24 @@ async fn get_component_type(
     Ok(Some(class_object))
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getConstantPool()Lsun/reflect/ConstantPool;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_constant_pool(
+pub(crate) async fn get_constant_pool_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("java.lang.Class.getConstantPool()Lsun/reflect/ConstantPool;")
+}
+
+#[intrinsic_method(
+    "java/lang/Class.getConstantPool()Ljdk/internal/reflect/ConstantPool;",
+    GreaterThan(JAVA_8)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn get_constant_pool_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -319,8 +154,9 @@ async fn get_constant_pool(
     Ok(Some(Value::from(constant_pool)))
 }
 
+#[intrinsic_method("java/lang/Class.getDeclaredClasses0()[Ljava/lang/Class;", Any)]
 #[async_recursion(?Send)]
-async fn get_declared_classes_0(
+pub(crate) async fn get_declared_classes_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -361,8 +197,12 @@ async fn get_declared_classes_0(
     Ok(Some(declared_classes))
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_declared_constructors_0(
+pub(crate) async fn get_declared_constructors_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -460,8 +300,9 @@ async fn get_declared_constructors_0(
     Ok(Some(constructors))
 }
 
+#[intrinsic_method("java/lang/Class.getDeclaredFields0(Z)[Ljava/lang/reflect/Field;", Any)]
 #[async_recursion(?Send)]
-async fn get_declared_fields_0(
+pub(crate) async fn get_declared_fields_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -515,7 +356,7 @@ async fn get_declared_fields_0(
             }
         }
 
-        let (descriptor, parameters) = if vm.java_major_version() <= JAVA_11 {
+        let (descriptor, parameters) = if vm.java_major_version() <= JAVA_11.java() {
             (
                 "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IILjava/lang/String;[B",
                 vec![
@@ -555,9 +396,13 @@ async fn get_declared_fields_0(
     Ok(Some(fields))
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method;",
+    Any
+)]
 #[expect(clippy::too_many_lines)]
 #[async_recursion(?Send)]
-async fn get_declared_methods_0(
+pub(crate) async fn get_declared_methods_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -673,8 +518,9 @@ async fn get_declared_methods_0(
     Ok(Some(methods))
 }
 
+#[intrinsic_method("java/lang/Class.getDeclaringClass0()Ljava/lang/Class;", Any)]
 #[async_recursion(?Send)]
-async fn get_declaring_class_0(
+pub(crate) async fn get_declaring_class_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -700,8 +546,9 @@ async fn get_declaring_class_0(
     }
 }
 
+#[intrinsic_method("java/lang/Class.getEnclosingMethod0()[Ljava/lang/Object;", Any)]
 #[async_recursion(?Send)]
-async fn get_enclosing_method_0(
+pub(crate) async fn get_enclosing_method_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -743,7 +590,7 @@ async fn get_enclosing_method_0(
 }
 
 /// Get the exceptions declared by a method.
-async fn get_exceptions(
+pub(crate) async fn get_exceptions(
     thread: &Arc<Thread>,
     class: &Arc<Class>,
     method: &Arc<Method>,
@@ -770,16 +617,18 @@ async fn get_exceptions(
     Ok(exceptions)
 }
 
+#[intrinsic_method("java/lang/Class.getGenericSignature0()Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
-async fn get_generic_signature_0(
+pub(crate) async fn get_generic_signature_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Class.getGenericSignature0()Ljava/lang/String;")
 }
 
+#[intrinsic_method("java/lang/Class.getInterfaces0()[Ljava/lang/Class;", Any)]
 #[async_recursion(?Send)]
-async fn get_interfaces_0(
+pub(crate) async fn get_interfaces_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -799,8 +648,12 @@ async fn get_interfaces_0(
     Ok(Some(interfaces))
 }
 
+#[intrinsic_method("java/lang/Class.getModifiers()I", Any)]
 #[async_recursion(?Send)]
-async fn get_modifiers(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_modifiers(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
@@ -814,8 +667,15 @@ async fn get_modifiers(thread: Arc<Thread>, mut parameters: Parameters) -> Resul
     Ok(Some(Value::Int(modifiers)))
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getName0()Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_name_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_name_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_name = class.name().replace('/', ".");
@@ -824,21 +684,33 @@ async fn get_name_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<O
     Ok(Some(value))
 }
 
+#[intrinsic_method("java/lang/Class.getNestHost0()Ljava/lang/Class;", GreaterThan(JAVA_8))]
 #[async_recursion(?Send)]
-async fn get_nest_host_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_nest_host_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Class.getNestHost0()Ljava/lang/Class;")
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getNestMembers0()[Ljava/lang/Class;",
+    GreaterThan(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_nest_members_0(
+pub(crate) async fn get_nest_members_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Class.getNestMembers0()[Ljava/lang/Class;")
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getPermittedSubclasses0()[Ljava/lang/Class;",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_permitted_subclasses_0(
+pub(crate) async fn get_permitted_subclasses_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -848,8 +720,12 @@ async fn get_permitted_subclasses_0(
     Ok(Some(Value::Object(None)))
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getPrimitiveClass(Ljava/lang/String;)Ljava/lang/Class;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_primitive_class(
+pub(crate) async fn get_primitive_class(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -861,16 +737,21 @@ async fn get_primitive_class(
     Ok(Some(class))
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_protection_domain_0(
+pub(crate) async fn get_protection_domain_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Class.getProtectionDomain0()Ljava/security/ProtectionDomain;")
 }
 
+#[intrinsic_method("java/lang/Class.getRawAnnotations()[B", Any)]
 #[async_recursion(?Send)]
-async fn get_raw_annotations(
+pub(crate) async fn get_raw_annotations(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -891,8 +772,9 @@ async fn get_raw_annotations(
     Ok(Some(Value::from(bytes)))
 }
 
+#[intrinsic_method("java/lang/Class.getRawTypeAnnotations()[B", Any)]
 #[async_recursion(?Send)]
-async fn get_raw_type_annotations(
+pub(crate) async fn get_raw_type_annotations(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -916,22 +798,37 @@ async fn get_raw_type_annotations(
     Ok(Some(Value::from(bytes)))
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_record_components_0(
+pub(crate) async fn get_record_components_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;")
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getSigners()[Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn get_signers(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_signers(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     // TODO: Implement get_signers
     Ok(Some(Value::Object(None)))
 }
 
+#[intrinsic_method(
+    "java/lang/Class.getSimpleBinaryName0()Ljava/lang/String;",
+    GreaterThan(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_simple_binary_name_0(
+pub(crate) async fn get_simple_binary_name_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -950,8 +847,12 @@ async fn get_simple_binary_name_0(
     Ok(Some(value))
 }
 
+#[intrinsic_method("java/lang/Class.getSuperclass()Ljava/lang/Class;", Any)]
 #[async_recursion(?Send)]
-async fn get_superclass(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_superclass(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     if class.is_primitive() || class.is_interface() {
@@ -970,8 +871,15 @@ async fn get_superclass(thread: Arc<Thread>, mut parameters: Parameters) -> Resu
     }
 }
 
+#[intrinsic_method(
+    "java/lang/Class.initClassName()Ljava/lang/String;",
+    GreaterThan(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_class_name(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_class_name(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     // TODO: implement support for hidden classes
     let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
@@ -981,8 +889,12 @@ async fn init_class_name(thread: Arc<Thread>, mut parameters: Parameters) -> Res
     Ok(Some(value))
 }
 
+#[intrinsic_method("java/lang/Class.isArray()Z", Any)]
 #[async_recursion(?Send)]
-async fn is_array(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_array(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     if class.is_array() {
@@ -992,8 +904,9 @@ async fn is_array(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Opt
     }
 }
 
+#[intrinsic_method("java/lang/Class.isAssignableFrom(Ljava/lang/Class;)Z", Any)]
 #[async_recursion(?Send)]
-async fn is_assignable_from(
+pub(crate) async fn is_assignable_from(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1014,14 +927,22 @@ async fn is_assignable_from(
     }
 }
 
+#[intrinsic_method("java/lang/Class.isHidden()Z", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn is_hidden(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_hidden(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     // TODO: implement support for hidden classes
     Ok(Some(Value::from(false)))
 }
 
+#[intrinsic_method("java/lang/Class.isInstance(Ljava/lang/Object;)Z", Any)]
 #[async_recursion(?Send)]
-async fn is_instance(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_instance(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let Ok(compare_object) = parameters.pop_object() else {
         return Ok(Some(Value::from(false)));
     };
@@ -1035,8 +956,12 @@ async fn is_instance(thread: Arc<Thread>, mut parameters: Parameters) -> Result<
     }
 }
 
+#[intrinsic_method("java/lang/Class.isInterface()Z", Any)]
 #[async_recursion(?Send)]
-async fn is_interface(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_interface(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     if class.is_interface() {
@@ -1046,8 +971,12 @@ async fn is_interface(thread: Arc<Thread>, mut parameters: Parameters) -> Result
     }
 }
 
+#[intrinsic_method("java/lang/Class.isPrimitive()Z", Any)]
 #[async_recursion(?Send)]
-async fn is_primitive(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_primitive(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     if class.is_primitive() {
@@ -1057,18 +986,33 @@ async fn is_primitive(thread: Arc<Thread>, mut parameters: Parameters) -> Result
     }
 }
 
+#[intrinsic_method("java/lang/Class.isRecord0()Z", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn is_record_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_record_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Class.isRecord0()Z")
 }
 
+#[intrinsic_method("java/lang/Class.registerNatives()V", Any)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/lang/Class.setSigners([Ljava/lang/Object;)V",
+    LessThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn set_signers(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_signers(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     // TODO: Implement set_signers
     Ok(None)
 }
@@ -1183,12 +1127,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_constant_pool() -> Result<()> {
+    #[should_panic(
+        expected = "not yet implemented: java.lang.Class.getConstantPool()Lsun/reflect/ConstantPool;"
+    )]
+    async fn test_get_constant_pool_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_constant_pool_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_get_constant_pool_1() -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
         let class = vm.class("java.lang.String").await?;
         let class_object = class.to_object(&vm).await?;
         let parameters = Parameters::new(vec![class_object]);
-        let constant_pool: Object = get_constant_pool(thread, parameters)
+        let constant_pool: Object = get_constant_pool_1(thread, parameters)
             .await?
             .expect("constant pool")
             .try_into()?;

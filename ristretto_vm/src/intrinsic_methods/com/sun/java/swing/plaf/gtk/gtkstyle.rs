@@ -1,49 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/sun/java/swing/plaf/gtk/GTKStyle";
-
-/// Register all intrinsic methods for `com.sun.java.swing.plaf.gtk.GTKStyle`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeGetClassValue",
-        "(ILjava/lang/String;)Ljava/lang/Object;",
-        native_get_class_value,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetColorForState",
-        "(III)I",
-        native_get_color_for_state,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetPangoFontName",
-        "(I)Ljava/lang/String;",
-        native_get_pango_font_name,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetXThickness",
-        "(I)I",
-        native_get_x_thickness,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetYThickness",
-        "(I)I",
-        native_get_y_thickness,
-    );
-}
-
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKStyle.nativeGetClassValue(ILjava/lang/String;)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_get_class_value(
+pub(crate) async fn native_get_class_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -52,32 +22,48 @@ async fn native_get_class_value(
     )
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKStyle.nativeGetColorForState(III)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_get_color_for_state(
+pub(crate) async fn native_get_color_for_state(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetColorForState(III)I")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKStyle.nativeGetPangoFontName(I)Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_get_pango_font_name(
+pub(crate) async fn native_get_pango_font_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetPangoFontName(I)Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKStyle.nativeGetXThickness(I)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_get_x_thickness(
+pub(crate) async fn native_get_x_thickness(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKStyle.nativeGetXThickness(I)I")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKStyle.nativeGetYThickness(I)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_get_y_thickness(
+pub(crate) async fn native_get_y_thickness(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

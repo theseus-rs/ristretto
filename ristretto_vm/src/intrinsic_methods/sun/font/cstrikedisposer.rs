@@ -1,39 +1,24 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/font/CStrikeDisposer";
-
-/// Register all intrinsic methods for `sun.font.CStrikeDisposer`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "freeNativeScalerContext",
-        "(J)V",
-        free_native_scaler_context,
-    );
-    registry.register(
-        CLASS_NAME,
-        "removeGlyphInfoFromCache",
-        "(J)V",
-        remove_glyph_info_from_cache,
-    );
-}
-
+#[intrinsic_method("sun/font/CStrikeDisposer.freeNativeScalerContext(J)V", Any)]
 #[async_recursion(?Send)]
-async fn free_native_scaler_context(
+pub(crate) async fn free_native_scaler_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrikeDisposer.freeNativeScalerContext(J)V")
 }
 
+#[intrinsic_method("sun/font/CStrikeDisposer.removeGlyphInfoFromCache(J)V", Any)]
 #[async_recursion(?Send)]
-async fn remove_glyph_info_from_cache(
+pub(crate) async fn remove_glyph_info_from_cache(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

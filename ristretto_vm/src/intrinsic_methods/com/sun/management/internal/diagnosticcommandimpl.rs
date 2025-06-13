@@ -1,43 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/sun/management/internal/DiagnosticCommandImpl";
-
-/// Register all intrinsic methods for `com.sun.management.internal.DiagnosticCommandImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "executeDiagnosticCommand",
-        "(Ljava/lang/String;)Ljava/lang/String;",
-        execute_diagnostic_command,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDiagnosticCommandInfo",
-        "([Ljava/lang/String;)[Lcom/sun/management/internal/DiagnosticCommandInfo;",
-        get_diagnostic_command_info,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDiagnosticCommands",
-        "()[Ljava/lang/String;",
-        get_diagnostic_commands,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setNotificationEnabled",
-        "(Z)V",
-        set_notification_enabled,
-    );
-}
-
+#[intrinsic_method(
+    "com/sun/management/internal/DiagnosticCommandImpl.executeDiagnosticCommand(Ljava/lang/String;)Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn execute_diagnostic_command(
+pub(crate) async fn execute_diagnostic_command(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -46,8 +22,12 @@ async fn execute_diagnostic_command(
     )
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/DiagnosticCommandImpl.getDiagnosticCommandInfo([Ljava/lang/String;)[Lcom/sun/management/internal/DiagnosticCommandInfo;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_diagnostic_command_info(
+pub(crate) async fn get_diagnostic_command_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -56,8 +36,12 @@ async fn get_diagnostic_command_info(
     )
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/DiagnosticCommandImpl.getDiagnosticCommands()[Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_diagnostic_commands(
+pub(crate) async fn get_diagnostic_commands(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +50,12 @@ async fn get_diagnostic_commands(
     )
 }
 
+#[intrinsic_method(
+    "com/sun/management/internal/DiagnosticCommandImpl.setNotificationEnabled(Z)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_notification_enabled(
+pub(crate) async fn set_notification_enabled(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

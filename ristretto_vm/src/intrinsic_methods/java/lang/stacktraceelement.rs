@@ -1,42 +1,20 @@
 use crate::Error::InternalError;
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/StackTraceElement";
-
-/// Register all intrinsic methods for `java.lang.StackTraceElement`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "initStackTraceElements",
-            "([Ljava/lang/StackTraceElement;Ljava/lang/Throwable;)V",
-            init_stack_trace_elements,
-        );
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "initStackTraceElements",
-            "([Ljava/lang/StackTraceElement;Ljava/lang/Object;I)V",
-            init_stack_trace_elements,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "initStackTraceElement",
-        "(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V",
-        init_stack_trace_element,
-    );
-}
-
+#[intrinsic_method(
+    "java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn init_stack_trace_element(
+pub(crate) async fn init_stack_trace_element(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -45,8 +23,24 @@ async fn init_stack_trace_element(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/StackTraceElement.initStackTraceElements([Ljava/lang/StackTraceElement;Ljava/lang/Throwable;)V",
+    Between(JAVA_11, JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn init_stack_trace_elements(
+pub(crate) async fn init_stack_trace_elements_0(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    init_stack_trace_elements_1(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "java/lang/StackTraceElement.initStackTraceElements([Ljava/lang/StackTraceElement;Ljava/lang/Object;I)V",
+    GreaterThan(JAVA_17)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn init_stack_trace_elements_1(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

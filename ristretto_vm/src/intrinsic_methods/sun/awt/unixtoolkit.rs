@@ -1,80 +1,91 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/UNIXToolkit";
-
-/// Register all intrinsic methods for `sun.awt.UNIXToolkit`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "check_gtk", "(I)Z", check_gtk);
-    registry.register(CLASS_NAME, "get_gtk_version", "()I", get_gtk_version);
-    registry.register(
-        CLASS_NAME,
-        "gtkCheckVersionImpl",
-        "(III)Z",
-        gtk_check_version_impl,
-    );
-    registry.register(CLASS_NAME, "load_gtk", "(IZ)Z", load_gtk);
-    registry.register(
-        CLASS_NAME,
-        "load_gtk_icon",
-        "(Ljava/lang/String;)Z",
-        load_gtk_icon,
-    );
-    registry.register(
-        CLASS_NAME,
-        "load_stock_icon",
-        "(ILjava/lang/String;IILjava/lang/String;)Z",
-        load_stock_icon,
-    );
-    registry.register(CLASS_NAME, "nativeSync", "()V", native_sync);
-    registry.register(CLASS_NAME, "unload_gtk", "()Z", unload_gtk);
-}
-
+#[intrinsic_method("sun/awt/UNIXToolkit.check_gtk(I)Z", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn check_gtk(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn check_gtk(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.UNIXToolkit.check_gtk(I)Z")
 }
 
+#[intrinsic_method("sun/awt/UNIXToolkit.get_gtk_version()I", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn get_gtk_version(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_gtk_version(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.UNIXToolkit.get_gtk_version()I")
 }
 
+#[intrinsic_method(
+    "sun/awt/UNIXToolkit.gtkCheckVersionImpl(III)Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn gtk_check_version_impl(
+pub(crate) async fn gtk_check_version_impl(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.UNIXToolkit.gtkCheckVersionImpl(III)Z")
 }
 
+#[intrinsic_method("sun/awt/UNIXToolkit.load_gtk(IZ)Z", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn load_gtk(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn load_gtk(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.UNIXToolkit.load_gtk(IZ)Z")
 }
 
+#[intrinsic_method(
+    "sun/awt/UNIXToolkit.load_gtk_icon(Ljava/lang/String;)Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn load_gtk_icon(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn load_gtk_icon(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.UNIXToolkit.load_gtk_icon(Ljava/lang/String;)Z")
 }
 
+#[intrinsic_method(
+    "sun/awt/UNIXToolkit.load_stock_icon(ILjava/lang/String;IILjava/lang/String;)Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn load_stock_icon(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn load_stock_icon(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.UNIXToolkit.load_stock_icon(ILjava/lang/String;IILjava/lang/String;)Z")
 }
 
+#[intrinsic_method("sun/awt/UNIXToolkit.nativeSync()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn native_sync(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_sync(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.UNIXToolkit.nativeSync()V")
 }
 
+#[intrinsic_method("sun/awt/UNIXToolkit.unload_gtk()Z", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn unload_gtk(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn unload_gtk(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.UNIXToolkit.unload_gtk()Z")
 }
 

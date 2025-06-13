@@ -1,25 +1,15 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/reflect/Field";
-
-/// Register all intrinsic methods for `java.lang.reflect.Field`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getTypeAnnotationBytes0",
-        "()[B",
-        get_type_annotation_bytes_0,
-    );
-}
-
+#[intrinsic_method("java/lang/reflect/Field.getTypeAnnotationBytes0()[B", Any)]
 #[async_recursion(?Send)]
-async fn get_type_annotation_bytes_0(
+pub(crate) async fn get_type_annotation_bytes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

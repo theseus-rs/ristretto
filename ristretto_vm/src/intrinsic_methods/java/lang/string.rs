@@ -1,20 +1,18 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/String";
-
-/// Register all intrinsic methods for `java.lang.String`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "intern", "()Ljava/lang/String;", intern);
-}
-
+#[intrinsic_method("java/lang/String.intern()Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
-async fn intern(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn intern(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let value = parameters.pop()?;
     // TODO: implement string interning
     Ok(Some(value))

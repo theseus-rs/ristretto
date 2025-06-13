@@ -1,39 +1,24 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CPopupMenu";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CPopupMenu`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeCreatePopupMenu",
-        "()J",
-        native_create_popup_menu,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeShowPopupMenu",
-        "(JII)J",
-        native_show_popup_menu,
-    );
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CPopupMenu.nativeCreatePopupMenu()J", Any)]
 #[async_recursion(?Send)]
-async fn native_create_popup_menu(
+pub(crate) async fn native_create_popup_menu(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPopupMenu.nativeCreatePopupMenu()J")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPopupMenu.nativeShowPopupMenu(JII)J", Any)]
 #[async_recursion(?Send)]
-async fn native_show_popup_menu(
+pub(crate) async fn native_show_popup_menu(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

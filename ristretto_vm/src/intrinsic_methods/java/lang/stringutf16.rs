@@ -1,20 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Between;
+use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/StringUTF16";
-
-/// Register all intrinsic methods for `java.lang.StringUTF16`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "isBigEndian", "()Z", is_big_endian);
-}
-
+#[intrinsic_method("java/lang/StringUTF16.isBigEndian()Z", Between(JAVA_11, JAVA_21))]
 #[async_recursion(?Send)]
-async fn is_big_endian(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_big_endian(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(Some(Value::from(true)))
 }
 

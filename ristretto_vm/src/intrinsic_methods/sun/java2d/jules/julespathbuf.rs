@@ -1,39 +1,31 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/jules/JulesPathBuf";
-
-/// Register all intrinsic methods for `sun.java2d.jules.JulesPathBuf`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "tesselateFillNative",
-        "([I[BII[IIIIIII)[I",
-        tesselate_fill_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "tesselateStrokeNative",
-        "([I[BII[IIDIID[DIDDDDDDDIIII)[I",
-        tesselate_stroke_native,
-    );
-}
-
+#[intrinsic_method(
+    "sun/java2d/jules/JulesPathBuf.tesselateFillNative([I[BII[IIIIIII)[I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn tesselate_fill_native(
+pub(crate) async fn tesselate_fill_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.jules.JulesPathBuf.tesselateFillNative([I[BII[IIIIIII)[I")
 }
 
+#[intrinsic_method(
+    "sun/java2d/jules/JulesPathBuf.tesselateStrokeNative([I[BII[IIDIID[DIDDDDDDDIIII)[I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn tesselate_stroke_native(
+pub(crate) async fn tesselate_stroke_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -1,63 +1,55 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/CGraphicsEnvironment";
-
-/// Register all intrinsic methods for `sun.awt.CGraphicsEnvironment`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "initCocoa", "()V", init_cocoa);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "deregisterDisplayReconfiguration",
-        "(J)V",
-        deregister_display_reconfiguration,
-    );
-    registry.register(CLASS_NAME, "getDisplayIDs", "()[I", get_display_i_ds);
-    registry.register(CLASS_NAME, "getMainDisplayID", "()I", get_main_display_id);
-    registry.register(
-        CLASS_NAME,
-        "registerDisplayReconfiguration",
-        "()J",
-        register_display_reconfiguration,
-    );
-}
-
+#[intrinsic_method(
+    "sun/awt/CGraphicsEnvironment.deregisterDisplayReconfiguration(J)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn deregister_display_reconfiguration(
+pub(crate) async fn deregister_display_reconfiguration(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsEnvironment.deregisterDisplayReconfiguration(J)V")
 }
 
+#[intrinsic_method("sun/awt/CGraphicsEnvironment.getDisplayIDs()[I", Any)]
 #[async_recursion(?Send)]
-async fn get_display_i_ds(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_display_i_ds(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsEnvironment.getDisplayIDs()[I")
 }
 
+#[intrinsic_method("sun/awt/CGraphicsEnvironment.getMainDisplayID()I", Any)]
 #[async_recursion(?Send)]
-async fn get_main_display_id(
+pub(crate) async fn get_main_display_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsEnvironment.getMainDisplayID()I")
 }
 
+#[intrinsic_method("sun/awt/CGraphicsEnvironment.initCocoa()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn init_cocoa(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_cocoa(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsEnvironment.initCocoa()V")
 }
 
+#[intrinsic_method("sun/awt/CGraphicsEnvironment.registerDisplayReconfiguration()J", Any)]
 #[async_recursion(?Send)]
-async fn register_display_reconfiguration(
+pub(crate) async fn register_display_reconfiguration(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

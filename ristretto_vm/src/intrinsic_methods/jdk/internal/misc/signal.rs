@@ -1,28 +1,23 @@
 use crate::Error::InternalError;
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/misc/Signal";
-
-/// Register all intrinsic methods for `jdk.internal.misc.Signal`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "findSignal0",
-        "(Ljava/lang/String;)I",
-        find_signal_0,
-    );
-    registry.register(CLASS_NAME, "handle0", "(IJ)J", handle_0);
-    registry.register(CLASS_NAME, "raise0", "(I)V", raise_0);
-}
-
+#[intrinsic_method(
+    "jdk/internal/misc/Signal.findSignal0(Ljava/lang/String;)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn find_signal_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn find_signal_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let signal_name: String = parameters.pop_object()?.try_into()?;
 
     // See: https://github.com/torvalds/linux/blob/master/arch/x86/include/uapi/asm/signal.h
@@ -65,16 +60,24 @@ async fn find_signal_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Resu
     Ok(Some(Value::Int(signal)))
 }
 
+#[intrinsic_method("jdk/internal/misc/Signal.handle0(IJ)J", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn handle_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn handle_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let _handler = parameters.pop_long()?;
     let _signal = parameters.pop_int()?;
     // TODO: implement signal handling
     Ok(Some(Value::Long(0)))
 }
 
+#[intrinsic_method("jdk/internal/misc/Signal.raise0(I)V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn raise_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn raise_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Signal.raise0(I)V")
 }
 

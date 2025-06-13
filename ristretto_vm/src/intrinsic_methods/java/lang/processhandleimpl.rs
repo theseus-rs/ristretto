@@ -1,39 +1,25 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::process;
 use std::sync::Arc;
 use std::time::Duration;
 use sysinfo::{Pid, ProcessesToUpdate, Signal, System};
 
-const CLASS_NAME: &str = "java/lang/ProcessHandleImpl";
-
-/// Register all intrinsic methods for `java.lang.ProcessHandleImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "destroy0", "(JJZ)Z", destroy_0);
-    registry.register(CLASS_NAME, "getCurrentPid0", "()J", get_current_pid_0);
-    registry.register(
-        CLASS_NAME,
-        "getProcessPids0",
-        "(J[J[J[J)I",
-        get_process_pids_0,
-    );
-    registry.register(CLASS_NAME, "initNative", "()V", init_native);
-    registry.register(CLASS_NAME, "isAlive0", "(J)J", is_alive_0);
-    registry.register(CLASS_NAME, "parent0", "(JJ)J", parent_0);
-    registry.register(
-        CLASS_NAME,
-        "waitForProcessExit0",
-        "(JZ)I",
-        wait_for_process_exit_0,
-    );
-}
-
+#[intrinsic_method(
+    "java/lang/ProcessHandleImpl.destroy0(JJZ)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn destroy_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn destroy_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let force = parameters.pop_bool()?;
     let _start_time = parameters.pop_long()?;
     let pid = parameters.pop_long()?;
@@ -52,15 +38,26 @@ async fn destroy_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<O
     Ok(Some(Value::from(signal_without_error)))
 }
 
+#[intrinsic_method(
+    "java/lang/ProcessHandleImpl.getCurrentPid0()J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_current_pid_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_current_pid_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     let pid = i64::from(process::id());
     Ok(Some(Value::Long(pid)))
 }
 
+#[intrinsic_method(
+    "java/lang/ProcessHandleImpl.getProcessPids0(J[J[J[J)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[expect(clippy::similar_names)]
 #[async_recursion(?Send)]
-async fn get_process_pids_0(
+pub(crate) async fn get_process_pids_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -121,13 +118,27 @@ async fn get_process_pids_0(
     Ok(Some(Value::Int(processes_length)))
 }
 
+#[intrinsic_method(
+    "java/lang/ProcessHandleImpl.initNative()V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn init_native(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_native(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/lang/ProcessHandleImpl.isAlive0(J)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn is_alive_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_alive_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let pid = parameters.pop_long()?;
     let pid = usize::try_from(pid)?;
     let pid = Pid::from(pid);
@@ -145,8 +156,15 @@ async fn is_alive_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<
     Ok(Some(Value::Long(alive)))
 }
 
+#[intrinsic_method(
+    "java/lang/ProcessHandleImpl.parent0(JJ)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn parent_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn parent_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let _start_time = parameters.pop_long()?;
     let pid = parameters.pop_long()?;
     let pid = usize::try_from(pid)?;
@@ -166,8 +184,12 @@ async fn parent_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Op
     Ok(Some(Value::Long(parent_pid)))
 }
 
+#[intrinsic_method(
+    "java/lang/ProcessHandleImpl.waitForProcessExit0(JZ)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn wait_for_process_exit_0(
+pub(crate) async fn wait_for_process_exit_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

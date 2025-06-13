@@ -1,39 +1,27 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/apple/laf/ScreenMenu";
-
-/// Register all intrinsic methods for `com.apple.laf.ScreenMenu`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "addMenuListeners",
-        "(Lcom/apple/laf/ScreenMenu;J)J",
-        add_menu_listeners,
-    );
-    registry.register(
-        CLASS_NAME,
-        "removeMenuListeners",
-        "(J)V",
-        remove_menu_listeners,
-    );
-}
-
+#[intrinsic_method(
+    "com/apple/laf/ScreenMenu.addMenuListeners(Lcom/apple/laf/ScreenMenu;J)J",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn add_menu_listeners(
+pub(crate) async fn add_menu_listeners(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.ScreenMenu.addMenuListeners(Lcom/apple/laf/ScreenMenu;J)J")
 }
 
+#[intrinsic_method("com/apple/laf/ScreenMenu.removeMenuListeners(J)V", Any)]
 #[async_recursion(?Send)]
-async fn remove_menu_listeners(
+pub(crate) async fn remove_menu_listeners(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

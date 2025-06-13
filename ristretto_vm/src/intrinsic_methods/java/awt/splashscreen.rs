@@ -1,89 +1,84 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/awt/SplashScreen";
-
-/// Register all intrinsic methods for `java.awt.SplashScreen`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "_close", "(J)V", close);
-    registry.register(
-        CLASS_NAME,
-        "_getBounds",
-        "(J)Ljava/awt/Rectangle;",
-        get_bounds,
-    );
-    registry.register(
-        CLASS_NAME,
-        "_getImageFileName",
-        "(J)Ljava/lang/String;",
-        get_image_file_name,
-    );
-    registry.register(
-        CLASS_NAME,
-        "_getImageJarName",
-        "(J)Ljava/lang/String;",
-        get_image_jar_name,
-    );
-    registry.register(CLASS_NAME, "_getInstance", "()J", get_instance);
-    registry.register(CLASS_NAME, "_getScaleFactor", "(J)F", get_scale_factor);
-    registry.register(CLASS_NAME, "_isVisible", "(J)Z", is_visible);
-    registry.register(CLASS_NAME, "_setImageData", "(J[B)Z", set_image_data);
-    registry.register(CLASS_NAME, "_update", "(J[IIIIII)V", update);
-}
-
+#[intrinsic_method("java/awt/SplashScreen._close(J)V", Any)]
 #[async_recursion(?Send)]
-async fn close(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn close(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_close(J)V");
 }
 
+#[intrinsic_method("java/awt/SplashScreen._getBounds(J)Ljava/awt/Rectangle;", Any)]
 #[async_recursion(?Send)]
-async fn get_bounds(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_bounds(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_getBounds(J)Ljava/awt/Rectangle;");
 }
 
+#[intrinsic_method("java/awt/SplashScreen._getImageFileName(J)Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
-async fn get_image_file_name(
+pub(crate) async fn get_image_file_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_getImageFileName(J)Ljava/lang/String;");
 }
 
+#[intrinsic_method("java/awt/SplashScreen._getImageJarName(J)Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
-async fn get_image_jar_name(
+pub(crate) async fn get_image_jar_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_getImageJarName(J)Ljava/lang/String;");
 }
 
+#[intrinsic_method("java/awt/SplashScreen._getInstance()J", Any)]
 #[async_recursion(?Send)]
-async fn get_instance(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_instance(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_getInstance()J");
 }
 
+#[intrinsic_method("java/awt/SplashScreen._getScaleFactor(J)F", Any)]
 #[async_recursion(?Send)]
-async fn get_scale_factor(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_scale_factor(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_getScaleFactor(J)F");
 }
 
+#[intrinsic_method("java/awt/SplashScreen._isVisible(J)Z", Any)]
 #[async_recursion(?Send)]
-async fn is_visible(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_visible(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_isVisible(J)Z");
 }
 
+#[intrinsic_method("java/awt/SplashScreen._setImageData(J[B)Z", Any)]
 #[async_recursion(?Send)]
-async fn set_image_data(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_image_data(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_setImageData(J[B)Z");
 }
 
+#[intrinsic_method("java/awt/SplashScreen._update(J[IIIIII)V", Any)]
 #[async_recursion(?Send)]
-async fn update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.awt.SplashScreen::_update(J[IIIIII)V");
 }
 

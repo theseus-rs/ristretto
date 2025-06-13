@@ -1,112 +1,97 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/CRenderer";
-
-/// Register all intrinsic methods for `sun.java2d.CRenderer`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "doArc",
-        "(Lsun/java2d/SurfaceData;FFFFFFIZ)V",
-        do_arc,
-    );
-    registry.register(
-        CLASS_NAME,
-        "doImage",
-        "(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V",
-        do_image,
-    );
-    registry.register(
-        CLASS_NAME,
-        "doLine",
-        "(Lsun/java2d/SurfaceData;FFFF)V",
-        do_line,
-    );
-    registry.register(
-        CLASS_NAME,
-        "doOval",
-        "(Lsun/java2d/SurfaceData;FFFFZ)V",
-        do_oval,
-    );
-    registry.register(
-        CLASS_NAME,
-        "doPoly",
-        "(Lsun/java2d/SurfaceData;[I[IIZZ)V",
-        do_poly,
-    );
-    registry.register(
-        CLASS_NAME,
-        "doRect",
-        "(Lsun/java2d/SurfaceData;FFFFZ)V",
-        do_rect,
-    );
-    registry.register(
-        CLASS_NAME,
-        "doRoundRect",
-        "(Lsun/java2d/SurfaceData;FFFFFFZ)V",
-        do_round_rect,
-    );
-    registry.register(
-        CLASS_NAME,
-        "doShape",
-        "(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V",
-        do_shape,
-    );
-    registry.register(CLASS_NAME, "init", "()V", init);
-}
-
+#[intrinsic_method("sun/java2d/CRenderer.doArc(Lsun/java2d/SurfaceData;FFFFFFIZ)V", Any)]
 #[async_recursion(?Send)]
-async fn do_arc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_arc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.CRenderer.doArc(Lsun/java2d/SurfaceData;FFFFFFIZ)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/CRenderer.doImage(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn do_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_image(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.java2d.CRenderer.doImage(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V"
     );
 }
 
+#[intrinsic_method("sun/java2d/CRenderer.doLine(Lsun/java2d/SurfaceData;FFFF)V", Any)]
 #[async_recursion(?Send)]
-async fn do_line(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_line(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.CRenderer.doLine(Lsun/java2d/SurfaceData;FFFF)V");
 }
 
+#[intrinsic_method("sun/java2d/CRenderer.doOval(Lsun/java2d/SurfaceData;FFFFZ)V", Any)]
 #[async_recursion(?Send)]
-async fn do_oval(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_oval(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.CRenderer.doOval(Lsun/java2d/SurfaceData;FFFFZ)V");
 }
 
+#[intrinsic_method("sun/java2d/CRenderer.doPoly(Lsun/java2d/SurfaceData;[I[IIZZ)V", Any)]
 #[async_recursion(?Send)]
-async fn do_poly(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_poly(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.CRenderer.doPoly(Lsun/java2d/SurfaceData;[I[IIZZ)V");
 }
 
+#[intrinsic_method("sun/java2d/CRenderer.doRect(Lsun/java2d/SurfaceData;FFFFZ)V", Any)]
 #[async_recursion(?Send)]
-async fn do_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_rect(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.CRenderer.doRect(Lsun/java2d/SurfaceData;FFFFZ)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/CRenderer.doRoundRect(Lsun/java2d/SurfaceData;FFFFFFZ)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn do_round_rect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_round_rect(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.CRenderer.doRoundRect(Lsun/java2d/SurfaceData;FFFFFFZ)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/CRenderer.doShape(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn do_shape(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_shape(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.java2d.CRenderer.doShape(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V"
     );
 }
 
+#[intrinsic_method("sun/java2d/CRenderer.init()V", Any)]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 

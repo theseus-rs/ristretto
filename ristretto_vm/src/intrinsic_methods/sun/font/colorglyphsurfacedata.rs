@@ -1,26 +1,34 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/font/ColorGlyphSurfaceData";
-
-/// Register all intrinsic methods for `sun.font.ColorGlyphSurfaceData`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "initOps", "()V", init_ops);
-    registry.register(CLASS_NAME, "setCurrentGlyph", "(J)V", set_current_glyph);
-}
-
+#[intrinsic_method(
+    "sun/font/ColorGlyphSurfaceData.initOps()V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn init_ops(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ops(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.ColorGlyphSurfaceData.initOps()V")
 }
 
+#[intrinsic_method(
+    "sun/font/ColorGlyphSurfaceData.setCurrentGlyph(J)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn set_current_glyph(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_current_glyph(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.ColorGlyphSurfaceData.setCurrentGlyph(J)V")
 }
 

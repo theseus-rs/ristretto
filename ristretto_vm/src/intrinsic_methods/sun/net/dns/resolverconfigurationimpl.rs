@@ -1,39 +1,34 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/net/dns/ResolverConfigurationImpl";
-
-/// Register all intrinsic methods for `sun.net.dns.ResolverConfigurationImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "localDomain0",
-            "()Ljava/lang/String;",
-            local_domain_0,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "fallbackDomain0",
-        "()Ljava/lang/String;",
-        fallback_domain_0,
-    );
-}
-
+#[intrinsic_method(
+    "sun/net/dns/ResolverConfigurationImpl.fallbackDomain0()Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn fallback_domain_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn fallback_domain_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.net.dns.ResolverConfigurationImpl.fallbackDomain0()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "sun/net/dns/ResolverConfigurationImpl.localDomain0()Ljava/lang/String;",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn local_domain_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn local_domain_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.net.dns.ResolverConfigurationImpl.localDomain0()Ljava/lang/String;")
 }
 

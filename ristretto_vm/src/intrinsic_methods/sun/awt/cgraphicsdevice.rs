@@ -1,147 +1,100 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThan, NotEqual};
+use ristretto_classfile::{JAVA_8, JAVA_11};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/CGraphicsDevice";
-
-/// Register all intrinsic methods for `sun.awt.CGraphicsDevice`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(
-            CLASS_NAME,
-            "nativeResetDisplayMode",
-            "()V",
-            native_reset_display_mode,
-        );
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "nativeGetBounds",
-            "(I)Ljava/awt/geom/Rectangle2D;",
-            native_get_bounds,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "nativeResetDisplayMode",
-            "()V",
-            native_reset_display_mode,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "nativeGetDisplayMode",
-        "(I)Ljava/awt/DisplayMode;",
-        native_get_display_mode,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetDisplayModes",
-        "(I)[Ljava/awt/DisplayMode;",
-        native_get_display_modes,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetScaleFactor",
-        "(I)D",
-        native_get_scale_factor,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetScreenInsets",
-        "(I)Ljava/awt/Insets;",
-        native_get_screen_insets,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetXResolution",
-        "(I)D",
-        native_get_x_resolution,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeGetYResolution",
-        "(I)D",
-        native_get_y_resolution,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetDisplayMode",
-        "(IIIII)V",
-        native_set_display_mode,
-    );
-}
-
+#[intrinsic_method(
+    "sun/awt/CGraphicsDevice.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;",
+    GreaterThan(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_get_bounds(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_get_bounds(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;")
 }
 
+#[intrinsic_method(
+    "sun/awt/CGraphicsDevice.nativeGetDisplayMode(I)Ljava/awt/DisplayMode;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_get_display_mode(
+pub(crate) async fn native_get_display_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetDisplayMode(I)Ljava/awt/DisplayMode;")
 }
 
+#[intrinsic_method(
+    "sun/awt/CGraphicsDevice.nativeGetDisplayModes(I)[Ljava/awt/DisplayMode;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_get_display_modes(
+pub(crate) async fn native_get_display_modes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetDisplayModes(I)[Ljava/awt/DisplayMode;")
 }
 
+#[intrinsic_method("sun/awt/CGraphicsDevice.nativeGetScaleFactor(I)D", Any)]
 #[async_recursion(?Send)]
-async fn native_get_scale_factor(
+pub(crate) async fn native_get_scale_factor(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetScaleFactor(I)D")
 }
 
+#[intrinsic_method(
+    "sun/awt/CGraphicsDevice.nativeGetScreenInsets(I)Ljava/awt/Insets;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_get_screen_insets(
+pub(crate) async fn native_get_screen_insets(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetScreenInsets(I)Ljava/awt/Insets;")
 }
 
+#[intrinsic_method("sun/awt/CGraphicsDevice.nativeGetXResolution(I)D", Any)]
 #[async_recursion(?Send)]
-async fn native_get_x_resolution(
+pub(crate) async fn native_get_x_resolution(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetXResolution(I)D")
 }
 
+#[intrinsic_method("sun/awt/CGraphicsDevice.nativeGetYResolution(I)D", Any)]
 #[async_recursion(?Send)]
-async fn native_get_y_resolution(
+pub(crate) async fn native_get_y_resolution(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeGetYResolution(I)D")
 }
 
+#[intrinsic_method("sun/awt/CGraphicsDevice.nativeResetDisplayMode()V", NotEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn native_reset_display_mode(
+pub(crate) async fn native_reset_display_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.awt.CGraphicsDevice.nativeResetDisplayMode()V")
 }
 
+#[intrinsic_method("sun/awt/CGraphicsDevice.nativeSetDisplayMode(IIIII)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_display_mode(
+pub(crate) async fn native_set_display_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

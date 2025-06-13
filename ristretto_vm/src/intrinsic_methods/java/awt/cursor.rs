@@ -1,26 +1,27 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/awt/Cursor";
-
-/// Register all intrinsic methods for `java.awt.Cursor`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "finalizeImpl", "(J)V", finalize_impl);
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-}
-
+#[intrinsic_method("java/awt/Cursor.finalizeImpl(J)V", Any)]
 #[async_recursion(?Send)]
-async fn finalize_impl(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn finalize_impl(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.awt.Cursor.finalizeImpl(J)V")
 }
 
+#[intrinsic_method("java/awt/Cursor.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 

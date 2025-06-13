@@ -1,103 +1,100 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/management/Flag";
-
-/// Register all intrinsic methods for `sun.management.Flag`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getAllFlagNames",
-        "()[Ljava/lang/String;",
-        get_all_flag_names,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getFlags",
-        "([Ljava/lang/String;[Lsun/management/Flag;I)I",
-        get_flags,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getInternalFlagCount",
-        "()I",
-        get_internal_flag_count,
-    );
-    registry.register(CLASS_NAME, "initialize", "()V", initialize);
-    registry.register(
-        CLASS_NAME,
-        "setBooleanValue",
-        "(Ljava/lang/String;Z)V",
-        set_boolean_value,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setDoubleValue",
-        "(Ljava/lang/String;D)V",
-        set_double_value,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setLongValue",
-        "(Ljava/lang/String;J)V",
-        set_long_value,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setStringValue",
-        "(Ljava/lang/String;Ljava/lang/String;)V",
-        set_string_value,
-    );
-}
-
+#[intrinsic_method(
+    "sun/management/Flag.getAllFlagNames()[Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_all_flag_names(
+pub(crate) async fn get_all_flag_names(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.Flag.getAllFlagNames()[Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "sun/management/Flag.getFlags([Ljava/lang/String;[Lsun/management/Flag;I)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_flags(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_flags(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.Flag.getFlags([Ljava/lang/String;[Lsun/management/Flag;I)I")
 }
 
+#[intrinsic_method("sun/management/Flag.getInternalFlagCount()I", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn get_internal_flag_count(
+pub(crate) async fn get_internal_flag_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.Flag.getInternalFlagCount()I")
 }
 
+#[intrinsic_method("sun/management/Flag.initialize()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn initialize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("sun.management.Flag.initialize()V")
+pub(crate) async fn initialize(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/management/Flag.setBooleanValue(Ljava/lang/String;Z)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn set_boolean_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_boolean_value(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.Flag.setBooleanValue(Ljava/lang/String;Z)V")
 }
 
+#[intrinsic_method(
+    "sun/management/Flag.setDoubleValue(Ljava/lang/String;D)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn set_double_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_double_value(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.Flag.setDoubleValue(Ljava/lang/String;D)V")
 }
 
+#[intrinsic_method(
+    "sun/management/Flag.setLongValue(Ljava/lang/String;J)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn set_long_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_long_value(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.Flag.setLongValue(Ljava/lang/String;J)V")
 }
 
+#[intrinsic_method(
+    "sun/management/Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn set_string_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_string_value(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V")
 }
 
@@ -131,10 +128,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.management.Flag.initialize()V")]
-    async fn test_initialize() {
+    async fn test_initialize() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = initialize(thread, Parameters::default()).await;
+        let result = initialize(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]

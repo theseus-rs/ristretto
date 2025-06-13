@@ -1,153 +1,41 @@
 use crate::JavaError::NullPointerException;
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, JAVA_21, JAVA_24, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual, LessThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_24};
 use ristretto_classloader::{Object, Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 use std::time::Duration;
 
-const CLASS_NAME: &str = "java/lang/Thread";
-
-/// Register all intrinsic methods for `java.lang.Thread`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(CLASS_NAME, "countStackFrames", "()I", count_stack_frames);
-        registry.register(CLASS_NAME, "isInterrupted", "(Z)Z", is_interrupted);
-    }
-
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(CLASS_NAME, "isAlive", "()Z", is_alive);
-    }
-
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "clearInterruptEvent",
-            "()V",
-            clear_interrupt_event,
-        );
-    }
-
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(CLASS_NAME, "resume0", "()V", resume_0);
-        registry.register(CLASS_NAME, "sleep", "(J)V", sleep);
-        registry.register(CLASS_NAME, "stop0", "(Ljava/lang/Object;)V", stop_0);
-        registry.register(CLASS_NAME, "suspend0", "()V", suspend_0);
-        registry.register(CLASS_NAME, "yield", "()V", r#yield);
-    }
-
-    if registry.java_major_version() == JAVA_21 {
-        registry.register(CLASS_NAME, "sleep0", "(J)V", sleep_0);
-    }
-
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(
-            CLASS_NAME,
-            "currentCarrierThread",
-            "()Ljava/lang/Thread;",
-            current_carrier_thread,
-        );
-        registry.register(
-            CLASS_NAME,
-            "ensureMaterializedForStackWalk",
-            "(Ljava/lang/Object;)V",
-            ensure_materialized_for_stack_walk,
-        );
-        registry.register(
-            CLASS_NAME,
-            "findScopedValueBindings",
-            "()Ljava/lang/Object;",
-            find_scoped_value_bindings,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getNextThreadIdOffset",
-            "()J",
-            get_next_thread_id_offset,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getStackTrace0",
-            "()Ljava/lang/Object;",
-            get_stack_trace_0,
-        );
-
-        registry.register(
-            CLASS_NAME,
-            "setCurrentThread",
-            "(Ljava/lang/Thread;)V",
-            set_current_thread,
-        );
-        registry.register(
-            CLASS_NAME,
-            "scopedValueCache",
-            "()[Ljava/lang/Object;",
-            scoped_value_cache,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setScopedValueCache",
-            "([Ljava/lang/Object;)V",
-            set_scoped_value_cache,
-        );
-        registry.register(CLASS_NAME, "yield0", "()V", yield_0);
-    }
-
-    if registry.java_major_version() >= JAVA_24 {
-        registry.register(CLASS_NAME, "sleepNanos0", "(J)V", sleep_nanos_0);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "currentThread",
-        "()Ljava/lang/Thread;",
-        current_thread,
-    );
-    registry.register(
-        CLASS_NAME,
-        "dumpThreads",
-        "([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;",
-        dump_threads,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getThreads",
-        "()[Ljava/lang/Thread;",
-        get_threads,
-    );
-    registry.register(CLASS_NAME, "holdsLock", "(Ljava/lang/Object;)Z", holds_lock);
-    registry.register(CLASS_NAME, "interrupt0", "()V", interrupt_0);
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-    registry.register(
-        CLASS_NAME,
-        "setNativeName",
-        "(Ljava/lang/String;)V",
-        set_native_name,
-    );
-    registry.register(CLASS_NAME, "setPriority0", "(I)V", set_priority_0);
-    registry.register(CLASS_NAME, "start0", "()V", start_0);
-}
-
+#[intrinsic_method("java/lang/Thread.clearInterruptEvent()V", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn clear_interrupt_event(
+pub(crate) async fn clear_interrupt_event(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/lang/Thread.countStackFrames()I", LessThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn count_stack_frames(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn count_stack_frames(
+    thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
     let frames = i32::try_from(frames.len())?;
     Ok(Some(Value::Int(frames)))
 }
 
+#[intrinsic_method(
+    "java/lang/Thread.currentCarrierThread()Ljava/lang/Thread;",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn current_carrier_thread(
+pub(crate) async fn current_carrier_thread(
     thread: Arc<Thread>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -155,35 +43,58 @@ async fn current_carrier_thread(
     current_thread(thread, parameters).await
 }
 
+#[intrinsic_method("java/lang/Thread.currentThread()Ljava/lang/Thread;", Any)]
 #[async_recursion(?Send)]
-async fn current_thread(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn current_thread(
+    thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     let thread = thread.java_object().await;
     Ok(Some(thread))
 }
 
+#[intrinsic_method(
+    "java/lang/Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn dump_threads(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn dump_threads(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;")
 }
 
+#[intrinsic_method(
+    "java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ensure_materialized_for_stack_walk(
+pub(crate) async fn ensure_materialized_for_stack_walk(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V")
 }
 
+#[intrinsic_method(
+    "java/lang/Thread.findScopedValueBindings()Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn find_scoped_value_bindings(
+pub(crate) async fn find_scoped_value_bindings(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Thread.findScopedValueBindings()Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/Thread.getNextThreadIdOffset()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn get_next_thread_id_offset(
+pub(crate) async fn get_next_thread_id_offset(
     thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -193,67 +104,114 @@ async fn get_next_thread_id_offset(
     Ok(Some(Value::from(thread_id)))
 }
 
+#[intrinsic_method(
+    "java/lang/Thread.getStackTrace0()Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn get_stack_trace_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_stack_trace_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Thread.getStackTrace0()Ljava/lang/Object;")
 }
 
+#[intrinsic_method("java/lang/Thread.getThreads()[Ljava/lang/Thread;", Any)]
 #[async_recursion(?Send)]
-async fn get_threads(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_threads(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Thread.getThreads()[Ljava/lang/Thread;")
 }
 
+#[intrinsic_method("java/lang/Thread.holdsLock(Ljava/lang/Object;)Z", Any)]
 #[async_recursion(?Send)]
-async fn holds_lock(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn holds_lock(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Thread.holdsLock(Ljava/lang/Object;)Z")
 }
 
+#[intrinsic_method("java/lang/Thread.interrupt0()V", Any)]
 #[async_recursion(?Send)]
-async fn interrupt_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn interrupt_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Thread.interrupt0()V")
 }
 
+#[intrinsic_method("java/lang/Thread.isAlive()Z", LessThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn is_alive(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_alive(
+    thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     let object: Object = thread.java_object().await.try_into()?;
     let eetop = object.value("eetop")?.to_long()?;
     let is_alive = eetop != 0;
     Ok(Some(Value::from(is_alive)))
 }
 
+#[intrinsic_method("java/lang/Thread.isInterrupted(Z)Z", LessThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn is_interrupted(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_interrupted(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Thread.isInterrupted(Z)Z")
 }
 
+#[intrinsic_method("java/lang/Thread.registerNatives()V", Any)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/lang/Thread.resume0()V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn resume_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn resume_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Thread.resume0()V")
 }
 
+#[intrinsic_method(
+    "java/lang/Thread.scopedValueCache()[Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn scoped_value_cache(
+pub(crate) async fn scoped_value_cache(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Thread.scopedValueCache()[Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/Thread.setCurrentThread(Ljava/lang/Thread;)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn set_current_thread(
+pub(crate) async fn set_current_thread(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Thread.setCurrentThread(Ljava/lang/Thread;)V")
 }
 
+#[intrinsic_method("java/lang/Thread.setNativeName(Ljava/lang/String;)V", Any)]
 #[async_recursion(?Send)]
-async fn set_native_name(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_native_name(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let Some(Reference::Object(name)) = parameters.pop_reference()? else {
         return Err(NullPointerException("name cannot be null".to_string()).into());
     };
@@ -262,23 +220,35 @@ async fn set_native_name(thread: Arc<Thread>, mut parameters: Parameters) -> Res
     Ok(None)
 }
 
+#[intrinsic_method("java/lang/Thread.setPriority0(I)V", Any)]
 #[async_recursion(?Send)]
-async fn set_priority_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_priority_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let _new_priority = parameters.pop_int()?;
     // TODO: implement priority if/when tokio supports it
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/lang/Thread.setScopedValueCache([Ljava/lang/Object;)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn set_scoped_value_cache(
+pub(crate) async fn set_scoped_value_cache(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Thread.setScopedValueCache([Ljava/lang/Object;)V")
 }
 
+#[intrinsic_method("java/lang/Thread.sleep(J)V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn sleep(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn sleep(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let millis = parameters.pop_long()?;
     let millis = u64::try_from(millis)?;
     let duration = Duration::from_millis(millis);
@@ -289,13 +259,18 @@ async fn sleep(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Optio
     Ok(None)
 }
 
+#[intrinsic_method("java/lang/Thread.sleep0(J)V", Equal(JAVA_21))]
 #[async_recursion(?Send)]
-async fn sleep_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn sleep_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     sleep(thread, parameters).await
 }
 
+#[intrinsic_method("java/lang/Thread.sleepNanos0(J)V", GreaterThanOrEqual(JAVA_24))]
 #[async_recursion(?Send)]
-async fn sleep_nanos_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn sleep_nanos_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let nanos = parameters.pop_long()?;
     let nanos = u64::try_from(nanos)?;
     let duration = Duration::from_nanos(nanos);
@@ -306,26 +281,39 @@ async fn sleep_nanos_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Resu
     Ok(None)
 }
 
+#[intrinsic_method("java/lang/Thread.start0()V", Any)]
 #[async_recursion(?Send)]
-async fn start_0(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn start_0(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let thread_id = i64::try_from(thread.id())?;
     let object: Object = thread.java_object().await.try_into()?;
     object.set_value("eetop", Value::from(thread_id))?;
     Ok(None)
 }
 
+#[intrinsic_method(
+    "java/lang/Thread.stop0(Ljava/lang/Object;)V",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn stop_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn stop_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.Thread.stop0(Ljava/lang/Object;)V")
 }
 
+#[intrinsic_method("java/lang/Thread.suspend0()V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn suspend_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn suspend_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.Thread.suspend0()V")
 }
 
+#[intrinsic_method("java/lang/Thread.yield()V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn r#yield(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn r#yield(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     #[cfg(not(target_family = "wasm"))]
     tokio::task::yield_now().await;
     #[cfg(target_family = "wasm")]
@@ -333,8 +321,9 @@ async fn r#yield(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option
     Ok(None)
 }
 
+#[intrinsic_method("java/lang/Thread.yield0()V", GreaterThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn yield_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn yield_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     r#yield(thread, parameters).await
 }
 

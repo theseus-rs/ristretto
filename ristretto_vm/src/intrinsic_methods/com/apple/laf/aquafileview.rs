@@ -1,76 +1,63 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/apple/laf/AquaFileView";
-
-/// Register all intrinsic methods for `com.apple.laf.AquaFileView`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getNativeDisplayName",
-        "([BZ)Ljava/lang/String;",
-        get_native_display_name,
-    );
-    registry.register(CLASS_NAME, "getNativeLSInfo", "([BZ)I", get_native_ls_info);
-    registry.register(
-        CLASS_NAME,
-        "getNativeMachineName",
-        "()Ljava/lang/String;",
-        get_native_machine_name,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNativePathForResolvedAlias",
-        "([BZ)Ljava/lang/String;",
-        get_native_path_for_resolved_alias,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNativePathToSharedJDKBundle",
-        "()Ljava/lang/String;",
-        get_native_path_to_shared_jdk_bundle,
-    );
-}
-
+#[intrinsic_method(
+    "com/apple/laf/AquaFileView.getNativeDisplayName([BZ)Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_native_display_name(
+pub(crate) async fn get_native_display_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.AquaFileView.getNativeDisplayName([BZ)Ljava/lang/String;")
 }
 
+#[intrinsic_method("com/apple/laf/AquaFileView.getNativeLSInfo([BZ)I", Any)]
 #[async_recursion(?Send)]
-async fn get_native_ls_info(
+pub(crate) async fn get_native_ls_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.AquaFileView.getNativeLSInfo([BZ)I")
 }
 
+#[intrinsic_method(
+    "com/apple/laf/AquaFileView.getNativeMachineName()Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_native_machine_name(
+pub(crate) async fn get_native_machine_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.AquaFileView.getNativeMachineName()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "com/apple/laf/AquaFileView.getNativePathForResolvedAlias([BZ)Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_native_path_for_resolved_alias(
+pub(crate) async fn get_native_path_for_resolved_alias(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.laf.AquaFileView.getNativePathForResolvedAlias([BZ)Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "com/apple/laf/AquaFileView.getNativePathToSharedJDKBundle()Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_native_path_to_shared_jdk_bundle(
+pub(crate) async fn get_native_path_to_shared_jdk_bundle(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

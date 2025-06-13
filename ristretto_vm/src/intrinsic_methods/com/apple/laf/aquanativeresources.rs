@@ -1,25 +1,15 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/apple/laf/AquaNativeResources";
-
-/// Register all intrinsic methods for `com.apple.laf.AquaNativeResources`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getWindowBackgroundColor",
-        "()J",
-        get_window_background_color,
-    );
-}
-
+#[intrinsic_method("com/apple/laf/AquaNativeResources.getWindowBackgroundColor()J", Any)]
 #[async_recursion(?Send)]
-async fn get_window_background_color(
+pub(crate) async fn get_window_background_color(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

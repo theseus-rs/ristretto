@@ -1,38 +1,23 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/reflect/Reflection";
-
-/// Register all intrinsic methods for `sun.reflect.Reflection`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getCallerClass",
-        "()Ljava/lang/Class;",
-        get_caller_class_1,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getCallerClass",
-        "(I)Ljava/lang/Class;",
-        get_caller_class_2,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getClassAccessFlags",
-        "(Ljava/lang/Class;)I",
-        get_class_access_flags,
-    );
-}
-
+#[intrinsic_method(
+    "sun/reflect/Reflection.getCallerClass()Ljava/lang/Class;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_caller_class_1(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_caller_class_1(
+    thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
     let Some(frame) = frames.last() else {
         return Ok(Some(Value::Object(None)));
@@ -45,16 +30,24 @@ async fn get_caller_class_1(thread: Arc<Thread>, _parameters: Parameters) -> Res
     Ok(Some(class))
 }
 
+#[intrinsic_method(
+    "sun/reflect/Reflection.getCallerClass(I)Ljava/lang/Class;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_caller_class_2(
+pub(crate) async fn get_caller_class_2(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.reflect.Reflection.getCallerClass(I)Ljava/lang/Class;")
 }
 
+#[intrinsic_method(
+    "sun/reflect/Reflection.getClassAccessFlags(Ljava/lang/Class;)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_class_access_flags(
+pub(crate) async fn get_class_access_flags(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

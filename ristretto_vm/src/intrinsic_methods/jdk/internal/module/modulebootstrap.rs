@@ -1,20 +1,18 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/module/ModuleBootstrap";
-
-/// Register all intrinsic methods for `jdk.internal.module.ModuleBootstrap`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "boot", "()Ljava/lang/ModuleLayer;", boot);
-}
-
+#[intrinsic_method(
+    "jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn boot(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn boot(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // TODO: correctly populate the ModuleLayer
     let empty_list = thread
         .object("java/util/ArrayList", "", Vec::<Value>::new())

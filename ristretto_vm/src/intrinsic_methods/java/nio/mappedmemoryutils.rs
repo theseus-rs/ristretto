@@ -1,52 +1,61 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_24, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::{JAVA_17, JAVA_24};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/nio/MappedMemoryUtils";
-
-/// Register all intrinsic methods for `java.nio.MappedMemoryUtils`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_24 {
-        registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "force0",
-        "(Ljava/io/FileDescriptor;JJ)V",
-        force_0,
-    );
-    registry.register(CLASS_NAME, "isLoaded0", "(JJJ)Z", is_loaded_0);
-    registry.register(CLASS_NAME, "load0", "(JJ)V", load_0);
-    registry.register(CLASS_NAME, "unload0", "(JJ)V", unload_0);
-}
-
+#[intrinsic_method(
+    "java/nio/MappedMemoryUtils.force0(Ljava/io/FileDescriptor;JJ)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn force_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn force_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.nio.MappedMemoryUtils.force0(Ljava/io/FileDescriptor;JJ)V")
 }
 
+#[intrinsic_method(
+    "java/nio/MappedMemoryUtils.isLoaded0(JJJ)Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn is_loaded_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_loaded_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.nio.MappedMemoryUtils.isLoaded0(JJJ)Z")
 }
 
+#[intrinsic_method("java/nio/MappedMemoryUtils.load0(JJ)V", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.nio.MappedMemoryUtils.load0(JJ)V")
 }
 
+#[intrinsic_method(
+    "java/nio/MappedMemoryUtils.registerNatives()V",
+    GreaterThanOrEqual(JAVA_24)
+)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/nio/MappedMemoryUtils.unload0(JJ)V", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn unload_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn unload_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.nio.MappedMemoryUtils.unload0(JJ)V")
 }
 

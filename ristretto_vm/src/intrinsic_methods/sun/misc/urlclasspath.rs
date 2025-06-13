@@ -1,37 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/misc/URLClassPath";
-
-/// Register all intrinsic methods for `sun.misc.URLClassPath`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getLookupCacheForClassLoader",
-        "(Ljava/lang/ClassLoader;Ljava/lang/String;)[I",
-        get_lookup_cache_for_class_loader,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getLookupCacheURLs",
-        "(Ljava/lang/ClassLoader;)[Ljava/net/URL;",
-        get_lookup_cache_urls,
-    );
-    registry.register(
-        CLASS_NAME,
-        "knownToNotExist0",
-        "(Ljava/lang/ClassLoader;Ljava/lang/String;)Z",
-        known_to_not_exist_0,
-    );
-}
-
+#[intrinsic_method(
+    "sun/misc/URLClassPath.getLookupCacheForClassLoader(Ljava/lang/ClassLoader;Ljava/lang/String;)[I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_lookup_cache_for_class_loader(
+pub(crate) async fn get_lookup_cache_for_class_loader(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,16 +22,24 @@ async fn get_lookup_cache_for_class_loader(
     )
 }
 
+#[intrinsic_method(
+    "sun/misc/URLClassPath.getLookupCacheURLs(Ljava/lang/ClassLoader;)[Ljava/net/URL;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_lookup_cache_urls(
+pub(crate) async fn get_lookup_cache_urls(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.misc.URLClassPath.getLookupCacheURLs(Ljava/lang/ClassLoader;)[Ljava/net/URL;")
 }
 
+#[intrinsic_method(
+    "sun/misc/URLClassPath.knownToNotExist0(Ljava/lang/ClassLoader;Ljava/lang/String;)Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn known_to_not_exist_0(
+pub(crate) async fn known_to_not_exist_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

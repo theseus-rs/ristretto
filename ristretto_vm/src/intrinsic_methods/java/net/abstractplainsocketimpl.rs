@@ -1,27 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Between;
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/net/AbstractPlainSocketImpl";
-
-/// Register all intrinsic methods for `java.net.AbstractPlainSocketImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 && registry.java_major_version() <= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "isReusePortAvailable0",
-            "()Z",
-            is_reuse_port_available_0,
-        );
-    }
-}
-
+#[intrinsic_method(
+    "java/net/AbstractPlainSocketImpl.isReusePortAvailable0()Z",
+    Between(JAVA_11, JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn is_reuse_port_available_0(
+pub(crate) async fn is_reuse_port_available_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

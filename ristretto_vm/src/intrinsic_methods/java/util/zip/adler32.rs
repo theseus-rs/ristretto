@@ -1,40 +1,33 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/util/zip/Adler32";
-
-/// Register all intrinsic methods for `java.util.zip.Adler32`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "update", "(II)I", update);
-    registry.register(
-        CLASS_NAME,
-        "updateByteBuffer",
-        "(IJII)I",
-        update_byte_buffer,
-    );
-    registry.register(CLASS_NAME, "updateBytes", "(I[BII)I", update_bytes);
-}
-
+#[intrinsic_method("java/util/zip/Adler32.update(II)I", Any)]
 #[async_recursion(?Send)]
-async fn update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.Adler32.update(II)I")
 }
 
+#[intrinsic_method("java/util/zip/Adler32.updateByteBuffer(IJII)I", Any)]
 #[async_recursion(?Send)]
-async fn update_byte_buffer(
+pub(crate) async fn update_byte_buffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.util.zip.Adler32.updateByteBuffer(IJII)I")
 }
 
+#[intrinsic_method("java/util/zip/Adler32.updateBytes(I[BII)I", Any)]
 #[async_recursion(?Send)]
-async fn update_bytes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn update_bytes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.util.zip.Adler32.updateBytes(I[BII)I")
 }
 

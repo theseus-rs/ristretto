@@ -1,57 +1,49 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/misc/Version";
-
-/// Register all intrinsic methods for `sun.misc.Version`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getJdkSpecialVersion",
-        "()Ljava/lang/String;",
-        get_jdk_special_version,
-    );
-    registry.register(CLASS_NAME, "getJdkVersionInfo", "()V", get_jdk_version_info);
-    registry.register(
-        CLASS_NAME,
-        "getJvmSpecialVersion",
-        "()Ljava/lang/String;",
-        get_jvm_special_version,
-    );
-    registry.register(CLASS_NAME, "getJvmVersionInfo", "()Z", get_jvm_version_info);
-}
-
+#[intrinsic_method(
+    "sun/misc/Version.getJdkSpecialVersion()Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_jdk_special_version(
+pub(crate) async fn get_jdk_special_version(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.misc.Version.getJdkSpecialVersion()Ljava/lang/String;")
 }
 
+#[intrinsic_method("sun/misc/Version.getJdkVersionInfo()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn get_jdk_version_info(
+pub(crate) async fn get_jdk_version_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.misc.Version.getJdkVersionInfo()V")
 }
 
+#[intrinsic_method(
+    "sun/misc/Version.getJvmSpecialVersion()Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_jvm_special_version(
+pub(crate) async fn get_jvm_special_version(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.misc.Version.getJvmSpecialVersion()Ljava/lang/String;")
 }
 
+#[intrinsic_method("sun/misc/Version.getJvmVersionInfo()Z", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn get_jvm_version_info(
+pub(crate) async fn get_jvm_version_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

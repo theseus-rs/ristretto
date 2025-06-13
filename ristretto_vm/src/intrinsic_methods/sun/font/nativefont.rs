@@ -1,69 +1,79 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/font/NativeFont";
-
-/// Register all intrinsic methods for `sun.font.NativeFont`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "countGlyphs", "([BI)I", count_glyphs);
-    registry.register(CLASS_NAME, "fontExists", "([B)Z", font_exists);
-    registry.register(
-        CLASS_NAME,
-        "getFontMetrics",
-        "(J)Lsun/font/StrikeMetrics;",
-        get_font_metrics,
-    );
-    registry.register(CLASS_NAME, "getGlyphAdvance", "(JI)F", get_glyph_advance);
-    registry.register(CLASS_NAME, "getGlyphImage", "(JI)J", get_glyph_image);
-    registry.register(
-        CLASS_NAME,
-        "getGlyphImageNoDefault",
-        "(JI)J",
-        get_glyph_image_no_default,
-    );
-    registry.register(CLASS_NAME, "haveBitmapFonts", "([B)Z", have_bitmap_fonts);
-}
-
+#[intrinsic_method("sun/font/NativeFont.countGlyphs([BI)I", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn count_glyphs(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn count_glyphs(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.countGlyphs([BI)I")
 }
 
+#[intrinsic_method("sun/font/NativeFont.fontExists([B)Z", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn font_exists(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn font_exists(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.fontExists([B)Z")
 }
 
+#[intrinsic_method(
+    "sun/font/NativeFont.getFontMetrics(J)Lsun/font/StrikeMetrics;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_font_metrics(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_font_metrics(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.getFontMetrics(J)Lsun/font/StrikeMetrics;")
 }
 
+#[intrinsic_method("sun/font/NativeFont.getGlyphAdvance(JI)F", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn get_glyph_advance(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_glyph_advance(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.getGlyphAdvance(JI)F")
 }
 
+#[intrinsic_method("sun/font/NativeFont.getGlyphImage(JI)J", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn get_glyph_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_glyph_image(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.getGlyphImage(JI)J")
 }
 
+#[intrinsic_method(
+    "sun/font/NativeFont.getGlyphImageNoDefault(JI)J",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_glyph_image_no_default(
+pub(crate) async fn get_glyph_image_no_default(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.getGlyphImageNoDefault(JI)J")
 }
 
+#[intrinsic_method("sun/font/NativeFont.haveBitmapFonts([B)Z", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn have_bitmap_fonts(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn have_bitmap_fonts(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.NativeFont.haveBitmapFonts([B)Z")
 }
 

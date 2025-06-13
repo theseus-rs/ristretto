@@ -1,379 +1,288 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/management/VMManagementImpl";
-
-/// Register all intrinsic methods for `sun.management.VMManagementImpl`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getAvailableProcessors",
-        "()I",
-        get_available_processors,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getClassInitializationTime",
-        "()J",
-        get_class_initialization_time,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getClassLoadingTime",
-        "()J",
-        get_class_loading_time,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getClassVerificationTime",
-        "()J",
-        get_class_verification_time,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDaemonThreadCount",
-        "()I",
-        get_daemon_thread_count,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getInitializedClassCount",
-        "()J",
-        get_initialized_class_count,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getLiveThreadCount",
-        "()I",
-        get_live_thread_count,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getLoadedClassSize",
-        "()J",
-        get_loaded_class_size,
-    );
-    registry.register(CLASS_NAME, "getMethodDataSize", "()J", get_method_data_size);
-    registry.register(
-        CLASS_NAME,
-        "getPeakThreadCount",
-        "()I",
-        get_peak_thread_count,
-    );
-    registry.register(CLASS_NAME, "getProcessId", "()I", get_process_id);
-    registry.register(CLASS_NAME, "getSafepointCount", "()J", get_safepoint_count);
-    registry.register(
-        CLASS_NAME,
-        "getSafepointSyncTime",
-        "()J",
-        get_safepoint_sync_time,
-    );
-    registry.register(CLASS_NAME, "getStartupTime", "()J", get_startup_time);
-    registry.register(
-        CLASS_NAME,
-        "getTotalApplicationNonStoppedTime",
-        "()J",
-        get_total_application_non_stopped_time,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getTotalClassCount",
-        "()J",
-        get_total_class_count,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getTotalCompileTime",
-        "()J",
-        get_total_compile_time,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getTotalSafepointTime",
-        "()J",
-        get_total_safepoint_time,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getTotalThreadCount",
-        "()J",
-        get_total_thread_count,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getUnloadedClassCount",
-        "()J",
-        get_unloaded_class_count,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getUnloadedClassSize",
-        "()J",
-        get_unloaded_class_size,
-    );
-    registry.register(CLASS_NAME, "getUptime0", "()J", get_uptime_0);
-    registry.register(CLASS_NAME, "getVerboseClass", "()Z", get_verbose_class);
-    registry.register(CLASS_NAME, "getVerboseGC", "()Z", get_verbose_gc);
-    registry.register(
-        CLASS_NAME,
-        "getVersion0",
-        "()Ljava/lang/String;",
-        get_version_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getVmArguments0",
-        "()[Ljava/lang/String;",
-        get_vm_arguments_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "initOptionalSupportFields",
-        "()V",
-        init_optional_support_fields,
-    );
-    registry.register(
-        CLASS_NAME,
-        "isThreadAllocatedMemoryEnabled",
-        "()Z",
-        is_thread_allocated_memory_enabled,
-    );
-    registry.register(
-        CLASS_NAME,
-        "isThreadContentionMonitoringEnabled",
-        "()Z",
-        is_thread_contention_monitoring_enabled,
-    );
-    registry.register(
-        CLASS_NAME,
-        "isThreadCpuTimeEnabled",
-        "()Z",
-        is_thread_cpu_time_enabled,
-    );
-}
-
+#[intrinsic_method("sun/management/VMManagementImpl.getAvailableProcessors()I", Any)]
 #[async_recursion(?Send)]
-async fn get_available_processors(
+pub(crate) async fn get_available_processors(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getAvailableProcessors()I")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getClassInitializationTime()J", Any)]
 #[async_recursion(?Send)]
-async fn get_class_initialization_time(
+pub(crate) async fn get_class_initialization_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getClassInitializationTime()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getClassLoadingTime()J", Any)]
 #[async_recursion(?Send)]
-async fn get_class_loading_time(
+pub(crate) async fn get_class_loading_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getClassLoadingTime()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getClassVerificationTime()J", Any)]
 #[async_recursion(?Send)]
-async fn get_class_verification_time(
+pub(crate) async fn get_class_verification_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getClassVerificationTime()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getDaemonThreadCount()I", Any)]
 #[async_recursion(?Send)]
-async fn get_daemon_thread_count(
+pub(crate) async fn get_daemon_thread_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getDaemonThreadCount()I")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getInitializedClassCount()J", Any)]
 #[async_recursion(?Send)]
-async fn get_initialized_class_count(
+pub(crate) async fn get_initialized_class_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getInitializedClassCount()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getLiveThreadCount()I", Any)]
 #[async_recursion(?Send)]
-async fn get_live_thread_count(
+pub(crate) async fn get_live_thread_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getLiveThreadCount()I")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getLoadedClassSize()J", Any)]
 #[async_recursion(?Send)]
-async fn get_loaded_class_size(
+pub(crate) async fn get_loaded_class_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getLoadedClassSize()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getMethodDataSize()J", Any)]
 #[async_recursion(?Send)]
-async fn get_method_data_size(
+pub(crate) async fn get_method_data_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getMethodDataSize()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getPeakThreadCount()I", Any)]
 #[async_recursion(?Send)]
-async fn get_peak_thread_count(
+pub(crate) async fn get_peak_thread_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getPeakThreadCount()I")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getProcessId()I", Any)]
 #[async_recursion(?Send)]
-async fn get_process_id(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_process_id(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getProcessId()I")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getSafepointCount()J", Any)]
 #[async_recursion(?Send)]
-async fn get_safepoint_count(
+pub(crate) async fn get_safepoint_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getSafepointCount()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getSafepointSyncTime()J", Any)]
 #[async_recursion(?Send)]
-async fn get_safepoint_sync_time(
+pub(crate) async fn get_safepoint_sync_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getSafepointSyncTime()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getStartupTime()J", Any)]
 #[async_recursion(?Send)]
-async fn get_startup_time(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_startup_time(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getStartupTime()J")
 }
 
+#[intrinsic_method(
+    "sun/management/VMManagementImpl.getTotalApplicationNonStoppedTime()J",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_total_application_non_stopped_time(
+pub(crate) async fn get_total_application_non_stopped_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getTotalApplicationNonStoppedTime()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getTotalClassCount()J", Any)]
 #[async_recursion(?Send)]
-async fn get_total_class_count(
+pub(crate) async fn get_total_class_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getTotalClassCount()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getTotalCompileTime()J", Any)]
 #[async_recursion(?Send)]
-async fn get_total_compile_time(
+pub(crate) async fn get_total_compile_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getTotalCompileTime()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getTotalSafepointTime()J", Any)]
 #[async_recursion(?Send)]
-async fn get_total_safepoint_time(
+pub(crate) async fn get_total_safepoint_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getTotalSafepointTime()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getTotalThreadCount()J", Any)]
 #[async_recursion(?Send)]
-async fn get_total_thread_count(
+pub(crate) async fn get_total_thread_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getTotalThreadCount()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getUnloadedClassCount()J", Any)]
 #[async_recursion(?Send)]
-async fn get_unloaded_class_count(
+pub(crate) async fn get_unloaded_class_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getUnloadedClassCount()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getUnloadedClassSize()J", Any)]
 #[async_recursion(?Send)]
-async fn get_unloaded_class_size(
+pub(crate) async fn get_unloaded_class_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getUnloadedClassSize()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getUptime0()J", Any)]
 #[async_recursion(?Send)]
-async fn get_uptime_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_uptime_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getUptime0()J")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getVerboseClass()Z", Any)]
 #[async_recursion(?Send)]
-async fn get_verbose_class(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_verbose_class(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getVerboseClass()Z")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getVerboseGC()Z", Any)]
 #[async_recursion(?Send)]
-async fn get_verbose_gc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_verbose_gc(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getVerboseGC()Z")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.getVersion0()Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
-async fn get_version_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_version_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getVersion0()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "sun/management/VMManagementImpl.getVmArguments0()[Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_vm_arguments_0(
+pub(crate) async fn get_vm_arguments_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.getVmArguments0()[Ljava/lang/String;")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.initOptionalSupportFields()V", Any)]
 #[async_recursion(?Send)]
-async fn init_optional_support_fields(
+pub(crate) async fn init_optional_support_fields(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.initOptionalSupportFields()V")
 }
 
+#[intrinsic_method(
+    "sun/management/VMManagementImpl.isThreadAllocatedMemoryEnabled()Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn is_thread_allocated_memory_enabled(
+pub(crate) async fn is_thread_allocated_memory_enabled(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.isThreadAllocatedMemoryEnabled()Z")
 }
 
+#[intrinsic_method(
+    "sun/management/VMManagementImpl.isThreadContentionMonitoringEnabled()Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn is_thread_contention_monitoring_enabled(
+pub(crate) async fn is_thread_contention_monitoring_enabled(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.management.VMManagementImpl.isThreadContentionMonitoringEnabled()Z")
 }
 
+#[intrinsic_method("sun/management/VMManagementImpl.isThreadCpuTimeEnabled()Z", Any)]
 #[async_recursion(?Send)]
-async fn is_thread_cpu_time_enabled(
+pub(crate) async fn is_thread_cpu_time_enabled(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

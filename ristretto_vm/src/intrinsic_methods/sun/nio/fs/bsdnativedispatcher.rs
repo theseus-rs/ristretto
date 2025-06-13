@@ -1,70 +1,94 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_21;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/fs/BsdNativeDispatcher";
-
-/// Register all intrinsic methods for `sun.nio.fs.BsdNativeDispatcher`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(CLASS_NAME, "clonefile0", "(JJI)I", clonefile_0);
-        registry.register(CLASS_NAME, "fsetattrlist0", "(IIJJJJ)V", fsetattrlist_0);
-        registry.register(CLASS_NAME, "setattrlist0", "(JIJJJJ)V", setattrlist_0);
-    }
-
-    registry.register(CLASS_NAME, "endfsstat", "(J)V", endfsstat);
-    registry.register(
-        CLASS_NAME,
-        "fsstatEntry",
-        "(JLsun/nio/fs/UnixMountEntry;)I",
-        fsstat_entry,
-    );
-    registry.register(CLASS_NAME, "getfsstat", "()J", getfsstat);
-    registry.register(CLASS_NAME, "getmntonname0", "(J)[B", getmntonname_0);
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-}
-
+#[intrinsic_method(
+    "sun/nio/fs/BsdNativeDispatcher.clonefile0(JJI)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn clonefile_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn clonefile_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.fs.BsdNativeDispatcher.clonefile0(JJI)I");
 }
 
+#[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.endfsstat(J)V", Any)]
 #[async_recursion(?Send)]
-async fn endfsstat(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn endfsstat(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.fs.BsdNativeDispatcher.endfsstat(J)V");
 }
 
+#[intrinsic_method(
+    "sun/nio/fs/BsdNativeDispatcher.fsetattrlist0(IIJJJJ)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn fsetattrlist_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn fsetattrlist_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.fs.BsdNativeDispatcher.fsetattrlist0(IIJJJJ)V");
 }
 
+#[intrinsic_method(
+    "sun/nio/fs/BsdNativeDispatcher.fsstatEntry(JLsun/nio/fs/UnixMountEntry;)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn fsstat_entry(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn fsstat_entry(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.fs.BsdNativeDispatcher.fsstatEntry(JLsun/nio/fs/UnixMountEntry;)I");
 }
 
+#[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.getfsstat()J", Any)]
 #[async_recursion(?Send)]
-async fn getfsstat(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn getfsstat(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.fs.BsdNativeDispatcher.getfsstat()J");
 }
 
+#[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.getmntonname0(J)[B", Any)]
 #[async_recursion(?Send)]
-async fn getmntonname_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn getmntonname_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.fs.BsdNativeDispatcher.getmntonname0(J)[B");
 }
 
+#[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/nio/fs/BsdNativeDispatcher.setattrlist0(JIJJJJ)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn setattrlist_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn setattrlist_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.fs.BsdNativeDispatcher.setattrlist0(JIJJJJ)V");
 }
 

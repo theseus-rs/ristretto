@@ -1,74 +1,58 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/opengl/CGLGraphicsConfig";
-
-/// Register all intrinsic methods for `sun.java2d.opengl.CGLGraphicsConfig`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "getCGLConfigInfo",
-            "(III)J",
-            get_cgl_config_info_1,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(CLASS_NAME, "getCGLConfigInfo", "()J", get_cgl_config_info_0);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "getOGLCapabilities",
-        "(J)I",
-        get_ogl_capabilities,
-    );
-    registry.register(CLASS_NAME, "initCGL", "()Z", init_cgl);
-    registry.register(
-        CLASS_NAME,
-        "nativeGetMaxTextureSize",
-        "()I",
-        native_get_max_texture_size,
-    );
-}
-
+#[intrinsic_method(
+    "sun/java2d/opengl/CGLGraphicsConfig.getCGLConfigInfo()J",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_cgl_config_info_0(
+pub(crate) async fn get_cgl_config_info_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo()J")
 }
 
+#[intrinsic_method(
+    "sun/java2d/opengl/CGLGraphicsConfig.getCGLConfigInfo(III)J",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_cgl_config_info_1(
+pub(crate) async fn get_cgl_config_info_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo(III)J")
 }
 
+#[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.getOGLCapabilities(J)I", Any)]
 #[async_recursion(?Send)]
-async fn get_ogl_capabilities(
+pub(crate) async fn get_ogl_capabilities(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLGraphicsConfig.getOGLCapabilities(J)I")
 }
 
+#[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.initCGL()Z", Any)]
 #[async_recursion(?Send)]
-async fn init_cgl(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_cgl(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLGraphicsConfig.initCGL()Z")
 }
 
+#[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.nativeGetMaxTextureSize()I", Any)]
 #[async_recursion(?Send)]
-async fn native_get_max_texture_size(
+pub(crate) async fn native_get_max_texture_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

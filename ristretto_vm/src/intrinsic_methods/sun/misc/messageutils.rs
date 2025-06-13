@@ -1,26 +1,34 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/misc/MessageUtils";
-
-/// Register all intrinsic methods for `sun.misc.MessageUtils`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "toStderr", "(Ljava/lang/String;)V", to_stderr);
-    registry.register(CLASS_NAME, "toStdout", "(Ljava/lang/String;)V", to_stdout);
-}
-
+#[intrinsic_method(
+    "sun/misc/MessageUtils.toStderr(Ljava/lang/String;)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn to_stderr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn to_stderr(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.misc.MessageUtils.toStderr(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "sun/misc/MessageUtils.toStdout(Ljava/lang/String;)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn to_stdout(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn to_stdout(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.misc.MessageUtils.toStdout(Ljava/lang/String;)V")
 }
 

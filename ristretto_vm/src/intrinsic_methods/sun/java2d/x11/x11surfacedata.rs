@@ -1,56 +1,91 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/x11/X11SurfaceData";
-
-/// Register all intrinsic methods for `sun.java2d.x11.X11SurfaceData`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "XSetCopyMode", "(J)V", x_set_copy_mode);
-    registry.register(CLASS_NAME, "XSetForeground", "(JI)V", x_set_foreground);
-    registry.register(CLASS_NAME, "XSetXorMode", "(J)V", x_set_xor_mode);
-    registry.register(CLASS_NAME, "initIDs", "(Ljava/lang/Class;Z)V", init_ids);
-    registry.register(CLASS_NAME, "initSurface", "(IIIJ)V", init_surface);
-    registry.register(CLASS_NAME, "isDgaAvailable", "()Z", is_dga_available);
-    registry.register(CLASS_NAME, "isShmPMAvailable", "()Z", is_shm_pm_available);
-}
-
+#[intrinsic_method(
+    "sun/java2d/x11/X11SurfaceData.XSetCopyMode(J)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_set_copy_mode(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_set_copy_mode(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11SurfaceData.XSetCopyMode(J)V")
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11SurfaceData.XSetForeground(JI)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_set_foreground(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_set_foreground(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11SurfaceData.XSetForeground(JI)V")
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11SurfaceData.XSetXorMode(J)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn x_set_xor_mode(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn x_set_xor_mode(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11SurfaceData.XSetXorMode(J)V")
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11SurfaceData.initIDs(Ljava/lang/Class;Z)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11SurfaceData.initSurface(IIIJ)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_surface(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_surface(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11SurfaceData.initSurface(IIIJ)V")
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11SurfaceData.isDgaAvailable()Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn is_dga_available(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn is_dga_available(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.x11.X11SurfaceData.isDgaAvailable()Z")
 }
 
+#[intrinsic_method(
+    "sun/java2d/x11/X11SurfaceData.isShmPMAvailable()Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn is_shm_pm_available(
+pub(crate) async fn is_shm_pm_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -1,31 +1,28 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/misc/VM";
-
-/// Register all intrinsic methods for `sun.misc.VM`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "initialize", "()V", initialize);
-    registry.register(
-        CLASS_NAME,
-        "latestUserDefinedLoader0",
-        "()Ljava/lang/ClassLoader;",
-        latest_user_defined_loader_0,
-    );
-}
-
+#[intrinsic_method("sun/misc/VM.initialize()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn initialize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn initialize(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/misc/VM.latestUserDefinedLoader0()Ljava/lang/ClassLoader;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn latest_user_defined_loader_0(
+pub(crate) async fn latest_user_defined_loader_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -1,37 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/loader/BootLoader";
-
-/// Register all intrinsic methods for `jdk.internal.loader.BootLoader`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getSystemPackageLocation",
-        "(Ljava/lang/String;)Ljava/lang/String;",
-        get_system_package_location,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getSystemPackageNames",
-        "()[Ljava/lang/String;",
-        get_system_package_names,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setBootLoaderUnnamedModule0",
-        "(Ljava/lang/Module;)V",
-        set_boot_loader_unnamed_module_0,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_system_package_location(
+pub(crate) async fn get_system_package_location(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,16 +22,24 @@ async fn get_system_package_location(
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_system_package_names(
+pub(crate) async fn get_system_package_names(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.loader.BootLoader.getSystemPackageNames()[Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "jdk/internal/loader/BootLoader.setBootLoaderUnnamedModule0(Ljava/lang/Module;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_boot_loader_unnamed_module_0(
+pub(crate) async fn set_boot_loader_unnamed_module_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

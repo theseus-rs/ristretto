@@ -1,105 +1,103 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/invoke/MethodHandle";
-
-/// Register all intrinsic methods for `java.lang.invoke.MethodHandle`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "linkToNative",
-            "([Ljava/lang/Object;)Ljava/lang/Object;",
-            link_to_native,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "invoke",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        invoke,
-    );
-    registry.register(
-        CLASS_NAME,
-        "invokeBasic",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        invoke_basic,
-    );
-    registry.register(
-        CLASS_NAME,
-        "invokeExact",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        invoke_exact,
-    );
-    registry.register(
-        CLASS_NAME,
-        "linkToInterface",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        link_to_interface,
-    );
-    registry.register(
-        CLASS_NAME,
-        "linkToSpecial",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        link_to_special,
-    );
-    registry.register(
-        CLASS_NAME,
-        "linkToStatic",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        link_to_static,
-    );
-    registry.register(
-        CLASS_NAME,
-        "linkToVirtual",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        link_to_virtual,
-    );
-}
-
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn invoke(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn invoke(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn invoke_basic(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn invoke_basic(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn invoke_exact(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn invoke_exact(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandle.linkToInterface([Ljava/lang/Object;)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn link_to_interface(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn link_to_interface(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandle.linkToInterface([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandle.linkToNative([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn link_to_native(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn link_to_native(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandle.linkToNative([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandle.linkToSpecial([Ljava/lang/Object;)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn link_to_special(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn link_to_special(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandle.linkToSpecial([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandle.linkToStatic([Ljava/lang/Object;)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn link_to_static(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn link_to_static(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandle.linkToStatic([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/MethodHandle.linkToVirtual([Ljava/lang/Object;)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn link_to_virtual(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn link_to_virtual(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.MethodHandle.linkToVirtual([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 

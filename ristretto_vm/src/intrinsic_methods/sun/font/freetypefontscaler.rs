@@ -1,135 +1,40 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/font/FreetypeFontScaler";
-
-/// Register all intrinsic methods for `sun.font.FreetypeFontScaler`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(
-            CLASS_NAME,
-            "getLayoutTableCacheNative",
-            "(J)J",
-            get_layout_table_cache_native,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "createScalerContextNative",
-        "(J[DIIFF)J",
-        create_scaler_context_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "disposeNativeScaler",
-        "(Lsun/font/Font2D;J)V",
-        dispose_native_scaler,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getFontMetricsNative",
-        "(Lsun/font/Font2D;JJ)Lsun/font/StrikeMetrics;",
-        get_font_metrics_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getGlyphAdvanceNative",
-        "(Lsun/font/Font2D;JJI)F",
-        get_glyph_advance_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getGlyphCodeNative",
-        "(Lsun/font/Font2D;JC)I",
-        get_glyph_code_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getGlyphImageNative",
-        "(Lsun/font/Font2D;JJI)J",
-        get_glyph_image_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getGlyphMetricsNative",
-        "(Lsun/font/Font2D;JJILjava/awt/geom/Point2D$Float;)V",
-        get_glyph_metrics_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getGlyphOutlineBoundsNative",
-        "(Lsun/font/Font2D;JJI)Ljava/awt/geom/Rectangle2D$Float;",
-        get_glyph_outline_bounds_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getGlyphOutlineNative",
-        "(Lsun/font/Font2D;JJIFF)Ljava/awt/geom/GeneralPath;",
-        get_glyph_outline_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getGlyphPointNative",
-        "(Lsun/font/Font2D;JJII)Ljava/awt/geom/Point2D$Float;",
-        get_glyph_point_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getGlyphVectorOutlineNative",
-        "(Lsun/font/Font2D;JJ[IIFF)Ljava/awt/geom/GeneralPath;",
-        get_glyph_vector_outline_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getMissingGlyphCodeNative",
-        "(J)I",
-        get_missing_glyph_code_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNumGlyphsNative",
-        "(J)I",
-        get_num_glyphs_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getUnitsPerEMNative",
-        "(J)J",
-        get_units_per_em_native,
-    );
-    registry.register(CLASS_NAME, "initIDs", "(Ljava/lang/Class;)V", init_ids);
-    registry.register(
-        CLASS_NAME,
-        "initNativeScaler",
-        "(Lsun/font/Font2D;IIZI)J",
-        init_native_scaler,
-    );
-}
-
+#[intrinsic_method("sun/font/FreetypeFontScaler.createScalerContextNative(J[DIIFF)J", Any)]
 #[async_recursion(?Send)]
-async fn create_scaler_context_native(
+pub(crate) async fn create_scaler_context_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.createScalerContextNative(J[DIIFF)J")
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.disposeNativeScaler(Lsun/font/Font2D;J)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn dispose_native_scaler(
+pub(crate) async fn dispose_native_scaler(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.disposeNativeScaler(Lsun/font/Font2D;J)V")
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.getFontMetricsNative(Lsun/font/Font2D;JJ)Lsun/font/StrikeMetrics;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_font_metrics_native(
+pub(crate) async fn get_font_metrics_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -138,32 +43,48 @@ async fn get_font_metrics_native(
     )
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.getGlyphAdvanceNative(Lsun/font/Font2D;JJI)F",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_glyph_advance_native(
+pub(crate) async fn get_glyph_advance_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getGlyphAdvanceNative(Lsun/font/Font2D;JJI)F")
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.getGlyphCodeNative(Lsun/font/Font2D;JC)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_glyph_code_native(
+pub(crate) async fn get_glyph_code_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getGlyphCodeNative(Lsun/font/Font2D;JC)I")
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.getGlyphImageNative(Lsun/font/Font2D;JJI)J",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_glyph_image_native(
+pub(crate) async fn get_glyph_image_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getGlyphImageNative(Lsun/font/Font2D;JJI)J")
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.getGlyphMetricsNative(Lsun/font/Font2D;JJILjava/awt/geom/Point2D$Float;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_glyph_metrics_native(
+pub(crate) async fn get_glyph_metrics_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -172,8 +93,12 @@ async fn get_glyph_metrics_native(
     )
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.getGlyphOutlineBoundsNative(Lsun/font/Font2D;JJI)Ljava/awt/geom/Rectangle2D$Float;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_glyph_outline_bounds_native(
+pub(crate) async fn get_glyph_outline_bounds_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -182,8 +107,12 @@ async fn get_glyph_outline_bounds_native(
     )
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.getGlyphOutlineNative(Lsun/font/Font2D;JJIFF)Ljava/awt/geom/GeneralPath;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_glyph_outline_native(
+pub(crate) async fn get_glyph_outline_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -192,8 +121,12 @@ async fn get_glyph_outline_native(
     )
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.getGlyphPointNative(Lsun/font/Font2D;JJII)Ljava/awt/geom/Point2D$Float;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_glyph_point_native(
+pub(crate) async fn get_glyph_point_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -202,8 +135,12 @@ async fn get_glyph_point_native(
     )
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.getGlyphVectorOutlineNative(Lsun/font/Font2D;JJ[IIFF)Ljava/awt/geom/GeneralPath;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_glyph_vector_outline_native(
+pub(crate) async fn get_glyph_vector_outline_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -212,45 +149,60 @@ async fn get_glyph_vector_outline_native(
     )
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.getLayoutTableCacheNative(J)J",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_layout_table_cache_native(
+pub(crate) async fn get_layout_table_cache_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getLayoutTableCacheNative(J)J")
 }
 
+#[intrinsic_method("sun/font/FreetypeFontScaler.getMissingGlyphCodeNative(J)I", Any)]
 #[async_recursion(?Send)]
-async fn get_missing_glyph_code_native(
+pub(crate) async fn get_missing_glyph_code_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getMissingGlyphCodeNative(J)I")
 }
 
+#[intrinsic_method("sun/font/FreetypeFontScaler.getNumGlyphsNative(J)I", Any)]
 #[async_recursion(?Send)]
-async fn get_num_glyphs_native(
+pub(crate) async fn get_num_glyphs_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getNumGlyphsNative(J)I")
 }
 
+#[intrinsic_method("sun/font/FreetypeFontScaler.getUnitsPerEMNative(J)J", Any)]
 #[async_recursion(?Send)]
-async fn get_units_per_em_native(
+pub(crate) async fn get_units_per_em_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.FreetypeFontScaler.getUnitsPerEMNative(J)J")
 }
 
+#[intrinsic_method("sun/font/FreetypeFontScaler.initIDs(Ljava/lang/Class;)V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/font/FreetypeFontScaler.initNativeScaler(Lsun/font/Font2D;IIZI)J",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn init_native_scaler(
+pub(crate) async fn init_native_scaler(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

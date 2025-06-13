@@ -1,25 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/util/jar/JarFile";
-
-/// Register all intrinsic methods for `java.util.jar.JarFile`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getMetaInfEntryNames",
-        "()[Ljava/lang/String;",
-        get_meta_inf_entry_names,
-    );
-}
-
+#[intrinsic_method(
+    "java/util/jar/JarFile.getMetaInfEntryNames()[Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_meta_inf_entry_names(
+pub(crate) async fn get_meta_inf_entry_names(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

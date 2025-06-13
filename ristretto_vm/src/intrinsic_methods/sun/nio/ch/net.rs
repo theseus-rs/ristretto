@@ -1,430 +1,384 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/Net";
-
-/// Register all intrinsic methods for `sun.nio.ch.Net`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "isReusePortAvailable0",
-            "()Z",
-            is_reuse_port_available_0,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "accept",
-            "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I",
-            accept,
-        );
-        registry.register(
-            CLASS_NAME,
-            "available",
-            "(Ljava/io/FileDescriptor;)I",
-            available,
-        );
-        registry.register(
-            CLASS_NAME,
-            "canUseIPv6OptionsWithIPv4LocalAddress0",
-            "()Z",
-            can_use_ipv6_options_with_ipv4_local_address_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "discardOOB",
-            "(Ljava/io/FileDescriptor;)Z",
-            discard_oob,
-        );
-        registry.register(
-            CLASS_NAME,
-            "pollConnect",
-            "(Ljava/io/FileDescriptor;J)Z",
-            poll_connect,
-        );
-        registry.register(
-            CLASS_NAME,
-            "sendOOB",
-            "(Ljava/io/FileDescriptor;B)I",
-            send_oob,
-        );
-        registry.register(
-            CLASS_NAME,
-            "shouldSetBothIPv4AndIPv6Options0",
-            "()Z",
-            should_set_both_ipv4_and_ipv6_options_0,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "bind0",
-        "(Ljava/io/FileDescriptor;ZZLjava/net/InetAddress;I)V",
-        bind_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "blockOrUnblock4",
-        "(ZLjava/io/FileDescriptor;III)I",
-        block_or_unblock_4,
-    );
-    registry.register(
-        CLASS_NAME,
-        "blockOrUnblock6",
-        "(ZLjava/io/FileDescriptor;[BI[B)I",
-        block_or_unblock_6,
-    );
-    registry.register(
-        CLASS_NAME,
-        "canIPv6SocketJoinIPv4Group0",
-        "()Z",
-        can_ipv6_socket_join_ipv4_group_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "canJoin6WithIPv4Group0",
-        "()Z",
-        can_join_6_with_ipv4_group_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "connect0",
-        "(ZLjava/io/FileDescriptor;Ljava/net/InetAddress;I)I",
-        connect_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getIntOption0",
-        "(Ljava/io/FileDescriptor;ZII)I",
-        get_int_option_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getInterface4",
-        "(Ljava/io/FileDescriptor;)I",
-        get_interface_4,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getInterface6",
-        "(Ljava/io/FileDescriptor;)I",
-        get_interface_6,
-    );
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(
-        CLASS_NAME,
-        "isExclusiveBindAvailable",
-        "()I",
-        is_exclusive_bind_available,
-    );
-    registry.register(CLASS_NAME, "isIPv6Available0", "()Z", is_ipv6_available_0);
-    registry.register(
-        CLASS_NAME,
-        "joinOrDrop4",
-        "(ZLjava/io/FileDescriptor;III)I",
-        join_or_drop_4,
-    );
-    registry.register(
-        CLASS_NAME,
-        "joinOrDrop6",
-        "(ZLjava/io/FileDescriptor;[BI[B)I",
-        join_or_drop_6,
-    );
-    registry.register(CLASS_NAME, "listen", "(Ljava/io/FileDescriptor;I)V", listen);
-    registry.register(
-        CLASS_NAME,
-        "localInetAddress",
-        "(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;",
-        local_inet_address,
-    );
-    registry.register(
-        CLASS_NAME,
-        "localPort",
-        "(Ljava/io/FileDescriptor;)I",
-        local_port,
-    );
-    registry.register(CLASS_NAME, "poll", "(Ljava/io/FileDescriptor;IJ)I", poll);
-    registry.register(CLASS_NAME, "pollconnValue", "()S", pollconn_value);
-    registry.register(CLASS_NAME, "pollerrValue", "()S", pollerr_value);
-    registry.register(CLASS_NAME, "pollhupValue", "()S", pollhup_value);
-    registry.register(CLASS_NAME, "pollinValue", "()S", pollin_value);
-    registry.register(CLASS_NAME, "pollnvalValue", "()S", pollnval_value);
-    registry.register(CLASS_NAME, "polloutValue", "()S", pollout_value);
-    registry.register(
-        CLASS_NAME,
-        "remoteInetAddress",
-        "(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;",
-        remote_inet_address,
-    );
-    registry.register(
-        CLASS_NAME,
-        "remotePort",
-        "(Ljava/io/FileDescriptor;)I",
-        remote_port,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setIntOption0",
-        "(Ljava/io/FileDescriptor;ZIIIZ)V",
-        set_int_option_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setInterface4",
-        "(Ljava/io/FileDescriptor;I)V",
-        set_interface_4,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setInterface6",
-        "(Ljava/io/FileDescriptor;I)V",
-        set_interface_6,
-    );
-    registry.register(
-        CLASS_NAME,
-        "shutdown",
-        "(Ljava/io/FileDescriptor;I)V",
-        shutdown,
-    );
-    registry.register(CLASS_NAME, "socket0", "(ZZZZ)I", socket_0);
-}
-
+#[intrinsic_method(
+    "sun/nio/ch/Net.accept(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn accept(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn accept(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "sun.nio.ch.Net.accept(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I"
     )
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/Net.available(Ljava/io/FileDescriptor;)I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn available(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn available(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.available(Ljava/io/FileDescriptor;)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/Net.bind0(Ljava/io/FileDescriptor;ZZLjava/net/InetAddress;I)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.bind0(Ljava/io/FileDescriptor;ZZLjava/net/InetAddress;I)V")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.blockOrUnblock4(ZLjava/io/FileDescriptor;III)I", Any)]
 #[async_recursion(?Send)]
-async fn block_or_unblock_4(
+pub(crate) async fn block_or_unblock_4(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.blockOrUnblock4(ZLjava/io/FileDescriptor;III)I")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.blockOrUnblock6(ZLjava/io/FileDescriptor;[BI[B)I", Any)]
 #[async_recursion(?Send)]
-async fn block_or_unblock_6(
+pub(crate) async fn block_or_unblock_6(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.blockOrUnblock6(ZLjava/io/FileDescriptor;[BI[B)I")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.canIPv6SocketJoinIPv4Group0()Z", Any)]
 #[async_recursion(?Send)]
-async fn can_ipv6_socket_join_ipv4_group_0(
+pub(crate) async fn can_ipv6_socket_join_ipv4_group_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.canIPv6SocketJoinIPv4Group0()Z")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.canJoin6WithIPv4Group0()Z", Any)]
 #[async_recursion(?Send)]
-async fn can_join_6_with_ipv4_group_0(
+pub(crate) async fn can_join_6_with_ipv4_group_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.canJoin6WithIPv4Group0()Z")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/Net.canUseIPv6OptionsWithIPv4LocalAddress0()Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn can_use_ipv6_options_with_ipv4_local_address_0(
+pub(crate) async fn can_use_ipv6_options_with_ipv4_local_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.canUseIPv6OptionsWithIPv4LocalAddress0()Z")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/Net.connect0(ZLjava/io/FileDescriptor;Ljava/net/InetAddress;I)I",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn connect_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn connect_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.connect0(ZLjava/io/FileDescriptor;Ljava/net/InetAddress;I)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/Net.discardOOB(Ljava/io/FileDescriptor;)Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn discard_oob(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn discard_oob(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.discardOOB(Ljava/io/FileDescriptor;)Z")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.getIntOption0(Ljava/io/FileDescriptor;ZII)I", Any)]
 #[async_recursion(?Send)]
-async fn get_int_option_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_int_option_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.getIntOption0(Ljava/io/FileDescriptor;ZII)I")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.getInterface4(Ljava/io/FileDescriptor;)I", Any)]
 #[async_recursion(?Send)]
-async fn get_interface_4(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_interface_4(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.getInterface4(Ljava/io/FileDescriptor;)I")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.getInterface6(Ljava/io/FileDescriptor;)I", Any)]
 #[async_recursion(?Send)]
-async fn get_interface_6(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_interface_6(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.getInterface6(Ljava/io/FileDescriptor;)I")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("sun/nio/ch/Net.isExclusiveBindAvailable()I", Any)]
 #[async_recursion(?Send)]
-async fn is_exclusive_bind_available(
+pub(crate) async fn is_exclusive_bind_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.isExclusiveBindAvailable()I")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.isIPv6Available0()Z", Any)]
 #[async_recursion(?Send)]
-async fn is_ipv6_available_0(
+pub(crate) async fn is_ipv6_available_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.isIPv6Available0()Z")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.isReusePortAvailable0()Z", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn is_reuse_port_available_0(
+pub(crate) async fn is_reuse_port_available_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.isReusePortAvailable0()Z")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.joinOrDrop4(ZLjava/io/FileDescriptor;III)I", Any)]
 #[async_recursion(?Send)]
-async fn join_or_drop_4(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn join_or_drop_4(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.joinOrDrop4(ZLjava/io/FileDescriptor;III)I")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.joinOrDrop6(ZLjava/io/FileDescriptor;[BI[B)I", Any)]
 #[async_recursion(?Send)]
-async fn join_or_drop_6(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn join_or_drop_6(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.joinOrDrop6(ZLjava/io/FileDescriptor;[BI[B)I")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.listen(Ljava/io/FileDescriptor;I)V", Any)]
 #[async_recursion(?Send)]
-async fn listen(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn listen(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.listen(Ljava/io/FileDescriptor;I)V")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/Net.localInetAddress(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn local_inet_address(
+pub(crate) async fn local_inet_address(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.localInetAddress(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.localPort(Ljava/io/FileDescriptor;)I", Any)]
 #[async_recursion(?Send)]
-async fn local_port(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn local_port(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.localPort(Ljava/io/FileDescriptor;)I")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.poll(Ljava/io/FileDescriptor;IJ)I", Any)]
 #[async_recursion(?Send)]
-async fn poll(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn poll(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.poll(Ljava/io/FileDescriptor;IJ)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/Net.pollConnect(Ljava/io/FileDescriptor;J)Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn poll_connect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn poll_connect(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollConnect(Ljava/io/FileDescriptor;J)Z")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.pollconnValue()S", Any)]
 #[async_recursion(?Send)]
-async fn pollconn_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn pollconn_value(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollconnValue()S")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.pollerrValue()S", Any)]
 #[async_recursion(?Send)]
-async fn pollerr_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn pollerr_value(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollerrValue()S")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.pollhupValue()S", Any)]
 #[async_recursion(?Send)]
-async fn pollhup_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn pollhup_value(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollhupValue()S")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.pollinValue()S", Any)]
 #[async_recursion(?Send)]
-async fn pollin_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn pollin_value(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollinValue()S")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.pollnvalValue()S", Any)]
 #[async_recursion(?Send)]
-async fn pollnval_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn pollnval_value(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.pollnvalValue()S")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.polloutValue()S", Any)]
 #[async_recursion(?Send)]
-async fn pollout_value(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn pollout_value(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.polloutValue()S")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/Net.remoteInetAddress(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn remote_inet_address(
+pub(crate) async fn remote_inet_address(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.remoteInetAddress(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.remotePort(Ljava/io/FileDescriptor;)I", Any)]
 #[async_recursion(?Send)]
-async fn remote_port(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn remote_port(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.remotePort(Ljava/io/FileDescriptor;)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/Net.sendOOB(Ljava/io/FileDescriptor;B)I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn send_oob(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn send_oob(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.sendOOB(Ljava/io/FileDescriptor;B)I")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.setIntOption0(Ljava/io/FileDescriptor;ZIIIZ)V", Any)]
 #[async_recursion(?Send)]
-async fn set_int_option_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_int_option_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.setIntOption0(Ljava/io/FileDescriptor;ZIIIZ)V")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.setInterface4(Ljava/io/FileDescriptor;I)V", Any)]
 #[async_recursion(?Send)]
-async fn set_interface_4(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_interface_4(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.setInterface4(Ljava/io/FileDescriptor;I)V")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.setInterface6(Ljava/io/FileDescriptor;I)V", Any)]
 #[async_recursion(?Send)]
-async fn set_interface_6(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_interface_6(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.setInterface6(Ljava/io/FileDescriptor;I)V")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/Net.shouldSetBothIPv4AndIPv6Options0()Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn should_set_both_ipv4_and_ipv6_options_0(
+pub(crate) async fn should_set_both_ipv4_and_ipv6_options_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.shouldSetBothIPv4AndIPv6Options0()Z")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.shutdown(Ljava/io/FileDescriptor;I)V", Any)]
 #[async_recursion(?Send)]
-async fn shutdown(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn shutdown(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.shutdown(Ljava/io/FileDescriptor;I)V")
 }
 
+#[intrinsic_method("sun/nio/ch/Net.socket0(ZZZZ)I", Any)]
 #[async_recursion(?Send)]
-async fn socket_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.socket0(ZZZZ)I")
 }
 

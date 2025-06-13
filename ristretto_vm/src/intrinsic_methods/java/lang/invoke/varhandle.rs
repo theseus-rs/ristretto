@@ -1,209 +1,31 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/invoke/VarHandle";
-
-/// Register all intrinsic methods for `java.lang.invoke.VarHandle`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "compareAndExchange",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        compare_and_exchange,
-    );
-    registry.register(
-        CLASS_NAME,
-        "compareAndExchangeAcquire",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        compare_and_exchange_acquire,
-    );
-    registry.register(
-        CLASS_NAME,
-        "compareAndExchangeRelease",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        compare_and_exchange_release,
-    );
-    registry.register(
-        CLASS_NAME,
-        "compareAndSet",
-        "([Ljava/lang/Object;)Z",
-        compare_and_set,
-    );
-    registry.register(
-        CLASS_NAME,
-        "get",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAcquire",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_acquire,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndAdd",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_add,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndAddAcquire",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_add_acquire,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndAddRelease",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_add_release,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndBitwiseAnd",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_bitwise_and,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndBitwiseAndAcquire",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_bitwise_and_acquire,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndBitwiseAndRelease",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_bitwise_and_release,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndBitwiseOr",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_bitwise_or,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndBitwiseOrAcquire",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_bitwise_or_acquire,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndBitwiseOrRelease",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_bitwise_or_release,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndBitwiseXor",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_bitwise_xor,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndBitwiseXorAcquire",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_bitwise_xor_acquire,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndBitwiseXorRelease",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_bitwise_xor_release,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndSet",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_set,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndSetAcquire",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_set_acquire,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAndSetRelease",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_and_set_release,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getOpaque",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_opaque,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getVolatile",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-        get_volatile,
-    );
-    registry.register(CLASS_NAME, "set", "([Ljava/lang/Object;)V", set);
-    registry.register(
-        CLASS_NAME,
-        "setOpaque",
-        "([Ljava/lang/Object;)V",
-        set_opaque,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setRelease",
-        "([Ljava/lang/Object;)V",
-        set_release,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setVolatile",
-        "([Ljava/lang/Object;)V",
-        set_volatile,
-    );
-    registry.register(
-        CLASS_NAME,
-        "weakCompareAndSet",
-        "([Ljava/lang/Object;)Z",
-        weak_compare_and_set,
-    );
-    registry.register(
-        CLASS_NAME,
-        "weakCompareAndSetAcquire",
-        "([Ljava/lang/Object;)Z",
-        weak_compare_and_set_acquire,
-    );
-    registry.register(
-        CLASS_NAME,
-        "weakCompareAndSetPlain",
-        "([Ljava/lang/Object;)Z",
-        weak_compare_and_set_plain,
-    );
-    registry.register(
-        CLASS_NAME,
-        "weakCompareAndSetRelease",
-        "([Ljava/lang/Object;)Z",
-        weak_compare_and_set_release,
-    );
-}
-
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.compareAndExchange([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn compare_and_exchange(
+pub(crate) async fn compare_and_exchange(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.compareAndExchange([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.compareAndExchangeAcquire([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn compare_and_exchange_acquire(
+pub(crate) async fn compare_and_exchange_acquire(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -212,8 +34,12 @@ async fn compare_and_exchange_acquire(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.compareAndExchangeRelease([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn compare_and_exchange_release(
+pub(crate) async fn compare_and_exchange_release(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -222,52 +48,93 @@ async fn compare_and_exchange_release(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.compareAndSet([Ljava/lang/Object;)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn compare_and_set(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn compare_and_set(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.compareAndSet([Ljava/lang/Object;)Z")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.get([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.get([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAcquire([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_acquire(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_acquire(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getAcquire([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndAdd([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_add(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_and_add(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getAndAdd([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndAddAcquire([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_add_acquire(
+pub(crate) async fn get_and_add_acquire(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getAndAddAcquire([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndAddRelease([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_add_release(
+pub(crate) async fn get_and_add_release(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getAndAddRelease([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndBitwiseAnd([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_bitwise_and(
+pub(crate) async fn get_and_bitwise_and(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getAndBitwiseAnd([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndBitwiseAndAcquire([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_bitwise_and_acquire(
+pub(crate) async fn get_and_bitwise_and_acquire(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -276,8 +143,12 @@ async fn get_and_bitwise_and_acquire(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndBitwiseAndRelease([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_bitwise_and_release(
+pub(crate) async fn get_and_bitwise_and_release(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -286,16 +157,24 @@ async fn get_and_bitwise_and_release(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndBitwiseOr([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_bitwise_or(
+pub(crate) async fn get_and_bitwise_or(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getAndBitwiseOr([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndBitwiseOrAcquire([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_bitwise_or_acquire(
+pub(crate) async fn get_and_bitwise_or_acquire(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -304,8 +183,12 @@ async fn get_and_bitwise_or_acquire(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndBitwiseOrRelease([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_bitwise_or_release(
+pub(crate) async fn get_and_bitwise_or_release(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -314,16 +197,24 @@ async fn get_and_bitwise_or_release(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndBitwiseXor([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_bitwise_xor(
+pub(crate) async fn get_and_bitwise_xor(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getAndBitwiseXor([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndBitwiseXorAcquire([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_bitwise_xor_acquire(
+pub(crate) async fn get_and_bitwise_xor_acquire(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -332,8 +223,12 @@ async fn get_and_bitwise_xor_acquire(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndBitwiseXorRelease([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_bitwise_xor_release(
+pub(crate) async fn get_and_bitwise_xor_release(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -342,83 +237,153 @@ async fn get_and_bitwise_xor_release(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndSet([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_set(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_and_set(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getAndSet([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndSetAcquire([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_set_acquire(
+pub(crate) async fn get_and_set_acquire(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getAndSetAcquire([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getAndSetRelease([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_set_release(
+pub(crate) async fn get_and_set_release(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getAndSetRelease([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getOpaque([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_opaque(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_opaque(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getOpaque([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.getVolatile([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_volatile(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_volatile(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.getVolatile([Ljava/lang/Object;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.set([Ljava/lang/Object;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.set([Ljava/lang/Object;)V")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.setOpaque([Ljava/lang/Object;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_opaque(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_opaque(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.setOpaque([Ljava/lang/Object;)V")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.setRelease([Ljava/lang/Object;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_release(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_release(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.setRelease([Ljava/lang/Object;)V")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.setVolatile([Ljava/lang/Object;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_volatile(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_volatile(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.setVolatile([Ljava/lang/Object;)V")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.weakCompareAndSet([Ljava/lang/Object;)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn weak_compare_and_set(
+pub(crate) async fn weak_compare_and_set(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.weakCompareAndSet([Ljava/lang/Object;)Z")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.weakCompareAndSetAcquire([Ljava/lang/Object;)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn weak_compare_and_set_acquire(
+pub(crate) async fn weak_compare_and_set_acquire(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.weakCompareAndSetAcquire([Ljava/lang/Object;)Z")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.weakCompareAndSetPlain([Ljava/lang/Object;)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn weak_compare_and_set_plain(
+pub(crate) async fn weak_compare_and_set_plain(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.invoke.VarHandle.weakCompareAndSetPlain([Ljava/lang/Object;)Z")
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/VarHandle.weakCompareAndSetRelease([Ljava/lang/Object;)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn weak_compare_and_set_release(
+pub(crate) async fn weak_compare_and_set_release(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

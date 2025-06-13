@@ -1,44 +1,61 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/KQueueArrayWrapper";
-
-/// Register all intrinsic methods for `sun.nio.ch.KQueueArrayWrapper`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "init", "()I", init);
-    registry.register(CLASS_NAME, "initStructSizes", "()V", init_struct_sizes);
-    registry.register(CLASS_NAME, "interrupt", "(I)V", interrupt);
-    registry.register(CLASS_NAME, "kevent0", "(IJIJ)I", kevent_0);
-    registry.register(CLASS_NAME, "register0", "(IIII)V", register_0);
-}
-
+#[intrinsic_method("sun/nio/ch/KQueueArrayWrapper.init()I", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueueArrayWrapper.init()I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/KQueueArrayWrapper.initStructSizes()V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_struct_sizes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_struct_sizes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueueArrayWrapper.initStructSizes()V");
 }
 
+#[intrinsic_method("sun/nio/ch/KQueueArrayWrapper.interrupt(I)V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn interrupt(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn interrupt(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueueArrayWrapper.interrupt(I)V");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/KQueueArrayWrapper.kevent0(IJIJ)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn kevent_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn kevent_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueueArrayWrapper.kevent0(IJIJ)I");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/KQueueArrayWrapper.register0(IIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn register_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueueArrayWrapper.register0(IIII)V");
 }
 

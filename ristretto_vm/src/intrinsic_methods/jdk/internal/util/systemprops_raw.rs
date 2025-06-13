@@ -1,35 +1,23 @@
 use crate::Error::InternalError;
 use crate::Result;
 use crate::intrinsic_methods::properties;
-use crate::intrinsic_methods::registry::{JAVA_17, JAVA_21, MethodRegistry};
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/util/SystemProps$Raw";
-
-/// Register all intrinsic methods for `jdk.internal.util.SystemProps$Raw`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "platformProperties",
-        "()[Ljava/lang/String;",
-        platform_properties,
-    );
-    registry.register(
-        CLASS_NAME,
-        "vmProperties",
-        "()[Ljava/lang/String;",
-        vm_properties,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/internal/util/SystemProps$Raw.platformProperties()[Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn platform_properties(
+pub(crate) async fn platform_properties(
     thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -67,7 +55,7 @@ async fn platform_properties(
     push_property(system_properties, &mut properties, "socksNonProxyHosts")?;
     push_property(system_properties, &mut properties, "socksProxyHost")?;
     push_property(system_properties, &mut properties, "socksProxyPort")?;
-    if java_version >= JAVA_21 {
+    if java_version >= JAVA_21.java() {
         push_property(system_properties, &mut properties, "stderr.encoding")?;
         push_property(system_properties, &mut properties, "stdout.encoding")?;
     }
@@ -82,7 +70,7 @@ async fn platform_properties(
     )?;
     push_property(system_properties, &mut properties, "sun.jnu.encoding")?;
     push_property(system_properties, &mut properties, "sun.os.patch.level")?;
-    if java_version <= JAVA_17 {
+    if java_version <= JAVA_17.java() {
         push_property(system_properties, &mut properties, "sun.stderr.encoding")?;
         push_property(system_properties, &mut properties, "sun.stdout.encoding")?;
     }
@@ -109,8 +97,15 @@ fn push_property(
     Ok(())
 }
 
+#[intrinsic_method(
+    "jdk/internal/util/SystemProps$Raw.vmProperties()[Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn vm_properties(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn vm_properties(
+    thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     let java_home = vm.java_home();
     let class_path = vm.configuration().class_path().to_string();

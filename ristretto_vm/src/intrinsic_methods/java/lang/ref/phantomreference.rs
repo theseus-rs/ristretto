@@ -1,34 +1,31 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_24, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_24;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/ref/PhantomReference";
-
-/// Register all intrinsic methods for `java.lang.ref.PhantomReference`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_24 {
-        registry.register(CLASS_NAME, "clear0", "()V", clear_0);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "refersTo0",
-        "(Ljava/lang/Object;)Z",
-        refers_to_0,
-    );
-}
-
+#[intrinsic_method(
+    "java/lang/ref/PhantomReference.clear0()V",
+    GreaterThanOrEqual(JAVA_24)
+)]
 #[async_recursion(?Send)]
-async fn clear_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn clear_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.ref.PhantomReference.clear0()V")
 }
 
+#[intrinsic_method("java/lang/ref/PhantomReference.refersTo0(Ljava/lang/Object;)Z", Any)]
 #[async_recursion(?Send)]
-async fn refers_to_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn refers_to_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.ref.PhantomReference.refersTo0(Ljava/lang/Object;)Z")
 }
 

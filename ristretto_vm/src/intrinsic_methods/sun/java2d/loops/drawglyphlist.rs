@@ -1,36 +1,38 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::{GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/loops/DrawGlyphList";
-
-/// Register all intrinsic methods for `sun.java2d.loops.DrawGlyphList`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "DrawGlyphList",
-            "(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Lsun/font/GlyphList;)V",
-            draw_glyph_list,
-        );
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "DrawGlyphList",
-            "(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Lsun/font/GlyphList;II)V",
-            draw_glyph_list,
-        );
-    }
-}
-
+#[intrinsic_method(
+    "sun/java2d/loops/DrawGlyphList.DrawGlyphList(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Lsun/font/GlyphList;)V",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn draw_glyph_list(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn draw_glyph_list_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.java2d.loops.DrawGlyphList.DrawGlyphList(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Lsun/font/GlyphList;)V"
+    );
+}
+
+#[intrinsic_method(
+    "sun/java2d/loops/DrawGlyphList.DrawGlyphList(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Lsun/font/GlyphList;II)V",
+    GreaterThan(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn draw_glyph_list_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!(
+        "sun.java2d.loops.DrawGlyphList.DrawGlyphList(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Lsun/font/GlyphList;II)V"
     );
 }
 
@@ -42,8 +44,17 @@ mod tests {
     #[should_panic(
         expected = "not yet implemented: sun.java2d.loops.DrawGlyphList.DrawGlyphList(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Lsun/font/GlyphList;)V"
     )]
-    async fn test_draw_glyph_list() {
+    async fn test_draw_glyph_list_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = draw_glyph_list(thread, Parameters::default()).await;
+        let _ = draw_glyph_list_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.java2d.loops.DrawGlyphList.DrawGlyphList(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Lsun/font/GlyphList;II)V"
+    )]
+    async fn test_draw_glyph_list_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = draw_glyph_list_1(thread, Parameters::default()).await;
     }
 }

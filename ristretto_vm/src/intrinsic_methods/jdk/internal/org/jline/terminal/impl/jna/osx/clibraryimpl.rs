@@ -1,74 +1,85 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_21;
+use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl";
-
-/// Register all intrinsic methods for `jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() != JAVA_21 {
-        return;
-    }
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(
-        CLASS_NAME,
-        "ioctl0",
-        "(IJLjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$winsize;)V",
-        ioctl_0,
-    );
-    registry.register(CLASS_NAME, "isatty", "(I)I", isatty);
-    registry.register(
-        CLASS_NAME,
-        "tcgetattr",
-        "(ILjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$termios;)V",
-        tcgetattr,
-    );
-    registry.register(
-        CLASS_NAME,
-        "tcsetattr",
-        "(IILjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$termios;)V",
-        tcsetattr,
-    );
-    registry.register(CLASS_NAME, "ttyname_r", "(I[BI)V", ttyname_r);
-}
-
+#[intrinsic_method(
+    "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.initIDs()V",
+    Equal(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.ioctl0(IJLjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$winsize;)V",
+    Equal(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ioctl_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ioctl_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ioctl0(IJLjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$winsize;)V"
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.isatty(I)I",
+    Equal(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn isatty(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn isatty(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.isatty(I)I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.tcgetattr(ILjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$termios;)V",
+    Equal(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn tcgetattr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn tcgetattr(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcgetattr(ILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.tcsetattr(IILjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$termios;)V",
+    Equal(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn tcsetattr(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn tcsetattr(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcsetattr(IILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.ttyname_r(I[BI)V",
+    Equal(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn ttyname_r(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ttyname_r(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ttyname_r(I[BI)V")
 }
 

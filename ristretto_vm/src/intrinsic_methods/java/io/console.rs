@@ -1,39 +1,35 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_17, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use console::Term;
+use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
+use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/io/Console";
-
-/// Register all intrinsic methods for `java.io.Console`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(CLASS_NAME, "echo", "(Z)Z", echo);
-    }
-
-    if registry.java_major_version() <= JAVA_21 {
-        registry.register(CLASS_NAME, "encoding", "()Ljava/lang/String;", encoding);
-    }
-
-    registry.register(CLASS_NAME, "istty", "()Z", istty);
-}
-
+#[intrinsic_method("java/io/Console.echo(Z)Z", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn echo(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn echo(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.Console.echo(Z)Z")
 }
 
+#[intrinsic_method(
+    "java/io/Console.encoding()Ljava/lang/String;",
+    LessThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn encoding(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn encoding(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(Some(Value::Object(None)))
 }
 
+#[intrinsic_method("java/io/Console.istty()Z", Any)]
 #[async_recursion(?Send)]
-async fn istty(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn istty(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let terminal = Term::stdout();
     let is_terminal = terminal.is_term();
     Ok(Some(Value::from(is_terminal)))

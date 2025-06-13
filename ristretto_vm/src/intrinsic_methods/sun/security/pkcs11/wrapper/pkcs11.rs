@@ -1,417 +1,285 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/security/pkcs11/wrapper/PKCS11";
-
-/// Register all intrinsic methods for `sun.security.pkcs11.wrapper.PKCS11`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "C_GCMDecryptInitWithRetry",
-            "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
-            c_gcm_decrypt_init_with_retry,
-        );
-        registry.register(
-            CLASS_NAME,
-            "C_GCMEncryptInitWithRetry",
-            "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
-            c_gcm_encrypt_init_with_retry,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_11 && registry.java_major_version() <= JAVA_17 {
-        registry.register(
-            CLASS_NAME,
-            "connect",
-            "(Ljava/lang/String;Ljava/lang/String;)V",
-            connect,
-        );
-    }
-
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(CLASS_NAME, "disconnect", "()V", disconnect);
-    } else {
-        registry.register(CLASS_NAME, "disconnect", "(J)V", disconnect);
-    }
-
-    if registry.java_major_version() <= JAVA_21 {
-        registry.register(CLASS_NAME, "freeMechanism", "(J)J", free_mechanism);
-    }
-
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(
-            CLASS_NAME,
-            "C_GCMDecryptInitWithRetry",
-            "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
-            c_gcm_decrypt_init_with_retry,
-        );
-        registry.register(
-            CLASS_NAME,
-            "C_GCMEncryptInitWithRetry",
-            "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
-            c_gcm_encrypt_init_with_retry,
-        );
-        registry.register(CLASS_NAME, "C_SessionCancel", "(JJ)V", c_session_cancel);
-        registry.register(
-            CLASS_NAME,
-            "connect",
-            "(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;",
-            connect,
-        );
-    }
-
-    registry.register(CLASS_NAME, "C_CloseSession", "(J)V", c_close_session);
-    registry.register(
-        CLASS_NAME,
-        "C_CopyObject",
-        "(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
-        c_copy_object,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_CreateObject",
-        "(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
-        c_create_object,
-    );
-    registry.register(CLASS_NAME, "C_Decrypt", "(JJ[BIIJ[BII)I", c_decrypt);
-    registry.register(CLASS_NAME, "C_DecryptFinal", "(JJ[BII)I", c_decrypt_final);
-    registry.register(
-        CLASS_NAME,
-        "C_DecryptInit",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
-        c_decrypt_init,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_DecryptUpdate",
-        "(JJ[BIIJ[BII)I",
-        c_decrypt_update,
-    );
-    registry.register(CLASS_NAME, "C_DeriveKey", "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J", c_derive_key);
-    registry.register(CLASS_NAME, "C_DestroyObject", "(JJ)V", c_destroy_object);
-    registry.register(CLASS_NAME, "C_DigestFinal", "(J[BII)I", c_digest_final);
-    registry.register(
-        CLASS_NAME,
-        "C_DigestInit",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;)V",
-        c_digest_init,
-    );
-    registry.register(CLASS_NAME, "C_DigestKey", "(JJ)V", c_digest_key);
-    registry.register(
-        CLASS_NAME,
-        "C_DigestSingle",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[BII[BII)I",
-        c_digest_single,
-    );
-    registry.register(CLASS_NAME, "C_DigestUpdate", "(JJ[BII)V", c_digest_update);
-    registry.register(CLASS_NAME, "C_Encrypt", "(JJ[BIIJ[BII)I", c_encrypt);
-    registry.register(CLASS_NAME, "C_EncryptFinal", "(JJ[BII)I", c_encrypt_final);
-    registry.register(
-        CLASS_NAME,
-        "C_EncryptInit",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
-        c_encrypt_init,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_EncryptUpdate",
-        "(JJ[BIIJ[BII)I",
-        c_encrypt_update,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_Finalize",
-        "(Ljava/lang/Object;)V",
-        c_finalize,
-    );
-    registry.register(CLASS_NAME, "C_FindObjects", "(JJ)[J", c_find_objects);
-    registry.register(
-        CLASS_NAME,
-        "C_FindObjectsFinal",
-        "(J)V",
-        c_find_objects_final,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_FindObjectsInit",
-        "(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V",
-        c_find_objects_init,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_GenerateKey",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
-        c_generate_key,
-    );
-    registry.register(CLASS_NAME, "C_GenerateKeyPair", "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)[J", c_generate_key_pair);
-    registry.register(CLASS_NAME, "C_GenerateRandom", "(J[B)V", c_generate_random);
-    registry.register(
-        CLASS_NAME,
-        "C_GetAttributeValue",
-        "(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V",
-        c_get_attribute_value,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_GetInfo",
-        "()Lsun/security/pkcs11/wrapper/CK_INFO;",
-        c_get_info,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_GetMechanismInfo",
-        "(JJ)Lsun/security/pkcs11/wrapper/CK_MECHANISM_INFO;",
-        c_get_mechanism_info,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_GetMechanismList",
-        "(J)[J",
-        c_get_mechanism_list,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_GetOperationState",
-        "(J)[B",
-        c_get_operation_state,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_GetSessionInfo",
-        "(J)Lsun/security/pkcs11/wrapper/CK_SESSION_INFO;",
-        c_get_session_info,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_GetSlotInfo",
-        "(J)Lsun/security/pkcs11/wrapper/CK_SLOT_INFO;",
-        c_get_slot_info,
-    );
-    registry.register(CLASS_NAME, "C_GetSlotList", "(Z)[J", c_get_slot_list);
-    registry.register(
-        CLASS_NAME,
-        "C_GetTokenInfo",
-        "(J)Lsun/security/pkcs11/wrapper/CK_TOKEN_INFO;",
-        c_get_token_info,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_Initialize",
-        "(Ljava/lang/Object;)V",
-        c_initialize,
-    );
-    registry.register(CLASS_NAME, "C_Login", "(JJ[C)V", c_login);
-    registry.register(CLASS_NAME, "C_Logout", "(J)V", c_logout);
-    registry.register(
-        CLASS_NAME,
-        "C_OpenSession",
-        "(JJLjava/lang/Object;Lsun/security/pkcs11/wrapper/CK_NOTIFY;)J",
-        c_open_session,
-    );
-    registry.register(CLASS_NAME, "C_SeedRandom", "(J[B)V", c_seed_random);
-    registry.register(
-        CLASS_NAME,
-        "C_SetAttributeValue",
-        "(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V",
-        c_set_attribute_value,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_SetOperationState",
-        "(J[BJJ)V",
-        c_set_operation_state,
-    );
-    registry.register(CLASS_NAME, "C_Sign", "(J[B)[B", c_sign);
-    registry.register(CLASS_NAME, "C_SignFinal", "(JI)[B", c_sign_final);
-    registry.register(
-        CLASS_NAME,
-        "C_SignInit",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
-        c_sign_init,
-    );
-    registry.register(CLASS_NAME, "C_SignRecover", "(J[BII[BII)I", c_sign_recover);
-    registry.register(
-        CLASS_NAME,
-        "C_SignRecoverInit",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
-        c_sign_recover_init,
-    );
-    registry.register(CLASS_NAME, "C_SignUpdate", "(JJ[BII)V", c_sign_update);
-    registry.register(CLASS_NAME, "C_UnwrapKey", "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[B[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J", c_unwrap_key);
-    registry.register(CLASS_NAME, "C_Verify", "(J[B[B)V", c_verify);
-    registry.register(CLASS_NAME, "C_VerifyFinal", "(J[B)V", c_verify_final);
-    registry.register(
-        CLASS_NAME,
-        "C_VerifyInit",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
-        c_verify_init,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_VerifyRecover",
-        "(J[BII[BII)I",
-        c_verify_recover,
-    );
-    registry.register(
-        CLASS_NAME,
-        "C_VerifyRecoverInit",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
-        c_verify_recover_init,
-    );
-    registry.register(CLASS_NAME, "C_VerifyUpdate", "(JJ[BII)V", c_verify_update);
-    registry.register(
-        CLASS_NAME,
-        "C_WrapKey",
-        "(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JJ)[B",
-        c_wrap_key,
-    );
-    registry.register(
-        CLASS_NAME,
-        "createNativeKey",
-        "(J[BJLsun/security/pkcs11/wrapper/CK_MECHANISM;)J",
-        create_native_key,
-    );
-    registry.register(CLASS_NAME, "finalizeLibrary", "()V", finalize_library);
-    registry.register(
-        CLASS_NAME,
-        "getNativeKeyInfo",
-        "(JJJLsun/security/pkcs11/wrapper/CK_MECHANISM;)[B",
-        get_native_key_info,
-    );
-    registry.register(CLASS_NAME, "initializeLibrary", "(Z)V", initialize_library);
-}
-
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_CloseSession(J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_close_session(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_close_session(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_CloseSession(J)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_CopyObject(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_copy_object(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_copy_object(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_CopyObject(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_CreateObject(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_create_object(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_create_object(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_CreateObject(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_Decrypt(JJ[BIIJ[BII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_decrypt(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_decrypt(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_Decrypt(JJ[BIIJ[BII)I")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_DecryptFinal(JJ[BII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_decrypt_final(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_decrypt_final(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_DecryptFinal(JJ[BII)I")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_DecryptInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_decrypt_init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_decrypt_init(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_DecryptInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_DecryptUpdate(JJ[BIIJ[BII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_decrypt_update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_decrypt_update(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_DecryptUpdate(JJ[BIIJ[BII)I")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_DeriveKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_derive_key(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_derive_key(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_DeriveKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_DestroyObject(JJ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_destroy_object(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_destroy_object(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_DestroyObject(JJ)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_DigestFinal(J[BII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_digest_final(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_digest_final(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_DigestFinal(J[BII)I")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_DigestInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_digest_init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_digest_init(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_DigestInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;)V"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_DigestKey(JJ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_digest_key(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_digest_key(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_DigestKey(JJ)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_DigestSingle(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[BII[BII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_digest_single(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_digest_single(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_DigestSingle(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[BII[BII)I"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_DigestUpdate(JJ[BII)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_digest_update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_digest_update(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_DigestUpdate(JJ[BII)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_Encrypt(JJ[BIIJ[BII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_encrypt(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_encrypt(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_Encrypt(JJ[BIIJ[BII)I")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_EncryptFinal(JJ[BII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_encrypt_final(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_encrypt_final(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_EncryptFinal(JJ[BII)I")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_EncryptInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_encrypt_init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_encrypt_init(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_EncryptInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_EncryptUpdate(JJ[BIIJ[BII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_encrypt_update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_encrypt_update(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_EncryptUpdate(JJ[BIIJ[BII)I")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_Finalize(Ljava/lang/Object;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_finalize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_finalize(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_Finalize(Ljava/lang/Object;)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_FindObjects(JJ)[J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_find_objects(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_find_objects(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_FindObjects(JJ)[J")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_FindObjectsFinal(J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_find_objects_final(
+pub(crate) async fn c_find_objects_final(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_FindObjectsFinal(J)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_FindObjectsInit(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_find_objects_init(
+pub(crate) async fn c_find_objects_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -420,8 +288,12 @@ async fn c_find_objects_init(
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GCMDecryptInitWithRetry(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_gcm_decrypt_init_with_retry(
+pub(crate) async fn c_gcm_decrypt_init_with_retry(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -430,8 +302,12 @@ async fn c_gcm_decrypt_init_with_retry(
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GCMEncryptInitWithRetry(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_gcm_encrypt_init_with_retry(
+pub(crate) async fn c_gcm_encrypt_init_with_retry(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -440,15 +316,26 @@ async fn c_gcm_encrypt_init_with_retry(
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GenerateKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_generate_key(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_generate_key(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_GenerateKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GenerateKeyPair(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)[J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_generate_key_pair(
+pub(crate) async fn c_generate_key_pair(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -457,13 +344,24 @@ async fn c_generate_key_pair(
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GenerateRandom(J[B)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_generate_random(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_generate_random(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_GenerateRandom(J[B)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GetAttributeValue(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_get_attribute_value(
+pub(crate) async fn c_get_attribute_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -472,13 +370,24 @@ async fn c_get_attribute_value(
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GetInfo()Lsun/security/pkcs11/wrapper/CK_INFO;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_get_info(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_get_info(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_GetInfo()Lsun/security/pkcs11/wrapper/CK_INFO;")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GetMechanismInfo(JJ)Lsun/security/pkcs11/wrapper/CK_MECHANISM_INFO;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_get_mechanism_info(
+pub(crate) async fn c_get_mechanism_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -487,24 +396,36 @@ async fn c_get_mechanism_info(
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GetMechanismList(J)[J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_get_mechanism_list(
+pub(crate) async fn c_get_mechanism_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_GetMechanismList(J)[J")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GetOperationState(J)[B",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_get_operation_state(
+pub(crate) async fn c_get_operation_state(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_GetOperationState(J)[B")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GetSessionInfo(J)Lsun/security/pkcs11/wrapper/CK_SESSION_INFO;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_get_session_info(
+pub(crate) async fn c_get_session_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -513,59 +434,126 @@ async fn c_get_session_info(
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GetSlotInfo(J)Lsun/security/pkcs11/wrapper/CK_SLOT_INFO;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_get_slot_info(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_get_slot_info(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_GetSlotInfo(J)Lsun/security/pkcs11/wrapper/CK_SLOT_INFO;"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GetSlotList(Z)[J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_get_slot_list(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_get_slot_list(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_GetSlotList(Z)[J")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_GetTokenInfo(J)Lsun/security/pkcs11/wrapper/CK_TOKEN_INFO;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_get_token_info(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_get_token_info(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_GetTokenInfo(J)Lsun/security/pkcs11/wrapper/CK_TOKEN_INFO;"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_Initialize(Ljava/lang/Object;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_initialize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_initialize(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_Initialize(Ljava/lang/Object;)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_Login(JJ[C)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_login(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_login(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_Login(JJ[C)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_Logout(J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_logout(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_logout(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_Logout(J)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_OpenSession(JJLjava/lang/Object;Lsun/security/pkcs11/wrapper/CK_NOTIFY;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_open_session(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_open_session(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_OpenSession(JJLjava/lang/Object;Lsun/security/pkcs11/wrapper/CK_NOTIFY;)J"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_SeedRandom(J[B)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_seed_random(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_seed_random(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_SeedRandom(J[B)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_SessionCancel(JJ)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn c_session_cancel(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_session_cancel(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_SessionCancel(JJ)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_SetAttributeValue(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_set_attribute_value(
+pub(crate) async fn c_set_attribute_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -574,38 +562,71 @@ async fn c_set_attribute_value(
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_SetOperationState(J[BJJ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_set_operation_state(
+pub(crate) async fn c_set_operation_state(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_SetOperationState(J[BJJ)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_Sign(J[B)[B",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_sign(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_sign(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_Sign(J[B)[B")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_SignFinal(JI)[B",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_sign_final(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_sign_final(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_SignFinal(JI)[B")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_SignInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_sign_init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_sign_init(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_SignInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_SignRecover(J[BII[BII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_sign_recover(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_sign_recover(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_SignRecover(J[BII[BII)I")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_SignRecoverInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_sign_recover_init(
+pub(crate) async fn c_sign_recover_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -614,42 +635,88 @@ async fn c_sign_recover_init(
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_SignUpdate(JJ[BII)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_sign_update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_sign_update(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_SignUpdate(JJ[BII)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_UnwrapKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[B[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_unwrap_key(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_unwrap_key(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_UnwrapKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[B[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_Verify(J[B[B)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_verify(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_verify(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_Verify(J[B[B)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_VerifyFinal(J[B)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_verify_final(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_verify_final(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_VerifyFinal(J[B)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_VerifyInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_verify_init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_verify_init(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_VerifyInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_VerifyRecover(J[BII[BII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_verify_recover(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_verify_recover(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_VerifyRecover(J[BII[BII)I")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_VerifyRecoverInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_verify_recover_init(
+pub(crate) async fn c_verify_recover_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -658,49 +725,126 @@ async fn c_verify_recover_init(
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_VerifyUpdate(JJ[BII)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_verify_update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_verify_update(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_VerifyUpdate(JJ[BII)V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.C_WrapKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JJ)[B",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn c_wrap_key(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn c_wrap_key(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.C_WrapKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JJ)[B"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.connect(Ljava/lang/String;Ljava/lang/String;)V",
+    Between(JAVA_11, JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn connect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn connect_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.security.pkcs11.wrapper.PKCS11.connect(Ljava/lang/String;Ljava/lang/String;)V")
+}
+
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.connect(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn connect_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.connect(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.createNativeKey(J[BJLsun/security/pkcs11/wrapper/CK_MECHANISM;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn create_native_key(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn create_native_key(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.security.pkcs11.wrapper.PKCS11.createNativeKey(J[BJLsun/security/pkcs11/wrapper/CK_MECHANISM;)J"
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.disconnect()V",
+    Between(JAVA_11, JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn disconnect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn disconnect_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.disconnect()V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.disconnect(J)V",
+    GreaterThan(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn finalize_library(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn disconnect_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.security.pkcs11.wrapper.PKCS11.disconnect(J)V")
+}
+
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.finalizeLibrary()V",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn finalize_library(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.finalizeLibrary()V")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.freeMechanism(J)J",
+    Between(JAVA_11, JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn free_mechanism(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn free_mechanism(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.freeMechanism(J)J")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.getNativeKeyInfo(JJJLsun/security/pkcs11/wrapper/CK_MECHANISM;)[B",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_native_key_info(
+pub(crate) async fn get_native_key_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -709,8 +853,12 @@ async fn get_native_key_info(
     )
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/wrapper/PKCS11.initializeLibrary(Z)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn initialize_library(
+pub(crate) async fn initialize_library(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1245,11 +1393,20 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
+        expected = "not yet implemented: sun.security.pkcs11.wrapper.PKCS11.connect(Ljava/lang/String;Ljava/lang/String;)V"
+    )]
+    async fn test_connect_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = connect_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
         expected = "not yet implemented: sun.security.pkcs11.wrapper.PKCS11.connect(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;"
     )]
-    async fn test_connect() {
+    async fn test_connect_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = connect(thread, Parameters::default()).await;
+        let _ = connect_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
@@ -1265,9 +1422,18 @@ mod tests {
     #[should_panic(
         expected = "not yet implemented: sun.security.pkcs11.wrapper.PKCS11.disconnect()V"
     )]
-    async fn test_disconnect() {
+    async fn test_disconnect_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = disconnect(thread, Parameters::default()).await;
+        let _ = disconnect_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.security.pkcs11.wrapper.PKCS11.disconnect(J)V"
+    )]
+    async fn test_disconnect_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = disconnect_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]

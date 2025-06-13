@@ -1,34 +1,27 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CPlatformComponent";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CPlatformComponent`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeCreateComponent",
-        "(J)J",
-        native_create_component,
-    );
-    registry.register(CLASS_NAME, "nativeSetBounds", "(JIIII)V", native_set_bounds);
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CPlatformComponent.nativeCreateComponent(J)J", Any)]
 #[async_recursion(?Send)]
-async fn native_create_component(
+pub(crate) async fn native_create_component(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformComponent.nativeCreateComponent(J)J")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CPlatformComponent.nativeSetBounds(JIIII)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_bounds(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_set_bounds(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPlatformComponent.nativeSetBounds(JIIII)V")
 }
 

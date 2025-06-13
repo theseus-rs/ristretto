@@ -1,92 +1,76 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/NSEvent";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.NSEvent`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "nsToJavaChar", "(CI)C", ns_to_java_char);
-        registry.register(
-            CLASS_NAME,
-            "nsToJavaKeyModifiers",
-            "(I)I",
-            ns_to_java_key_modifiers,
-        );
-        registry.register(
-            CLASS_NAME,
-            "nsToJavaMouseModifiers",
-            "(II)I",
-            ns_to_java_mouse_modifiers,
-        );
-    } else {
-        registry.register(CLASS_NAME, "nsToJavaChar", "(CIZ)C", ns_to_java_char);
-        registry.register(
-            CLASS_NAME,
-            "nsToJavaModifiers",
-            "(I)I",
-            ns_to_java_modifiers,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "nsKeyModifiersToJavaKeyInfo",
-        "([I[I)V",
-        ns_key_modifiers_to_java_key_info,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nsToJavaKeyInfo",
-        "([I[I)Z",
-        ns_to_java_key_info,
-    );
-}
-
+#[intrinsic_method("sun/lwawt/macosx/NSEvent.nsKeyModifiersToJavaKeyInfo([I[I)V", Any)]
 #[async_recursion(?Send)]
-async fn ns_key_modifiers_to_java_key_info(
+pub(crate) async fn ns_key_modifiers_to_java_key_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.NSEvent.nsKeyModifiersToJavaKeyInfo([I[I)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/NSEvent.nsToJavaChar(CI)C", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn ns_to_java_char(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn ns_to_java_char_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.lwawt.macosx.NSEvent.nsToJavaChar(CI)C")
+}
+
+#[intrinsic_method("sun/lwawt/macosx/NSEvent.nsToJavaChar(CIZ)C", GreaterThan(JAVA_8))]
+#[async_recursion(?Send)]
+pub(crate) async fn ns_to_java_char_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.NSEvent.nsToJavaChar(CIZ)C")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/NSEvent.nsToJavaKeyInfo([I[I)Z", Any)]
 #[async_recursion(?Send)]
-async fn ns_to_java_key_info(
+pub(crate) async fn ns_to_java_key_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.NSEvent.nsToJavaKeyInfo([I[I)Z")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/NSEvent.nsToJavaKeyModifiers(I)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn ns_to_java_key_modifiers(
+pub(crate) async fn ns_to_java_key_modifiers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.NSEvent.nsToJavaKeyModifiers(I)I")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/NSEvent.nsToJavaModifiers(I)I", GreaterThan(JAVA_8))]
 #[async_recursion(?Send)]
-async fn ns_to_java_modifiers(
+pub(crate) async fn ns_to_java_modifiers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.NSEvent.nsToJavaModifiers(I)I")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/NSEvent.nsToJavaMouseModifiers(II)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn ns_to_java_mouse_modifiers(
+pub(crate) async fn ns_to_java_mouse_modifiers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -107,10 +91,17 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.NSEvent.nsToJavaChar(CIZ)C")]
-    async fn test_ns_to_java_char() {
+    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.NSEvent.nsToJavaChar(CI)C")]
+    async fn test_ns_to_java_char_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ns_to_java_char(thread, Parameters::default()).await;
+        let _ = ns_to_java_char_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.NSEvent.nsToJavaChar(CIZ)C")]
+    async fn test_ns_to_java_char_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = ns_to_java_char_1(thread, Parameters::default()).await;
     }
 
     #[tokio::test]

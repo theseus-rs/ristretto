@@ -1,20 +1,22 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/xr/XRMaskBlit";
-
-/// Register all intrinsic methods for `sun.java2d.xr.XRMaskBlit`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "maskBlit", "(JJIIIIIIIII[B)V", mask_blit);
-}
-
+#[intrinsic_method(
+    "sun/java2d/xr/XRMaskBlit.maskBlit(JJIIIIIIIII[B)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn mask_blit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn mask_blit(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.xr.XRMaskBlit.maskBlit(JJIIIIIIIII[B)V");
 }
 

@@ -1,74 +1,20 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/misc/CDS";
-
-/// Register all intrinsic methods for `jdk.internal.misc.CDS`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_21 {
-        registry.register(CLASS_NAME, "isDumpingArchive0", "()Z", is_dumping_archive_0);
-        registry.register(
-            CLASS_NAME,
-            "isDumpingClassList0",
-            "()Z",
-            is_dumping_class_list_0,
-        );
-        registry.register(CLASS_NAME, "isSharingEnabled0", "()Z", is_sharing_enabled_0);
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "getCDSConfigStatus",
-            "()I",
-            get_cds_config_status,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "defineArchivedModules",
-        "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",
-        define_archived_modules,
-    );
-    registry.register(
-        CLASS_NAME,
-        "dumpClassList",
-        "(Ljava/lang/String;)V",
-        dump_class_list,
-    );
-    registry.register(
-        CLASS_NAME,
-        "dumpDynamicArchive",
-        "(Ljava/lang/String;)V",
-        dump_dynamic_archive,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getRandomSeedForDumping",
-        "()J",
-        get_random_seed_for_dumping,
-    );
-    registry.register(
-        CLASS_NAME,
-        "initializeFromArchive",
-        "(Ljava/lang/Class;)V",
-        initialize_from_archive,
-    );
-    registry.register(
-        CLASS_NAME,
-        "logLambdaFormInvoker",
-        "(Ljava/lang/String;)V",
-        log_lambda_form_invoker,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/internal/misc/CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn define_archived_modules(
+pub(crate) async fn define_archived_modules(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -77,30 +23,46 @@ async fn define_archived_modules(
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/CDS.dumpClassList(Ljava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn dump_class_list(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn dump_class_list(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.CDS.dumpClassList(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/CDS.dumpDynamicArchive(Ljava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn dump_dynamic_archive(
+pub(crate) async fn dump_dynamic_archive(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.CDS.dumpDynamicArchive(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method("jdk/internal/misc/CDS.getCDSConfigStatus()I", GreaterThan(JAVA_21))]
 #[async_recursion(?Send)]
-async fn get_cds_config_status(
+pub(crate) async fn get_cds_config_status(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::Int(0)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/CDS.getRandomSeedForDumping()J",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[expect(clippy::cast_possible_wrap)]
 #[async_recursion(?Send)]
-async fn get_random_seed_for_dumping(
+pub(crate) async fn get_random_seed_for_dumping(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -111,8 +73,12 @@ async fn get_random_seed_for_dumping(
     Ok(Some(Value::Long(hash)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/CDS.initializeFromArchive(Ljava/lang/Class;)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn initialize_from_archive(
+pub(crate) async fn initialize_from_archive(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -120,32 +86,48 @@ async fn initialize_from_archive(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/CDS.isDumpingArchive0()Z",
+    Between(JAVA_17, JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn is_dumping_archive_0(
+pub(crate) async fn is_dumping_archive_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/CDS.isDumpingClassList0()Z",
+    Between(JAVA_17, JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn is_dumping_class_list_0(
+pub(crate) async fn is_dumping_class_list_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/CDS.isSharingEnabled0()Z",
+    Between(JAVA_17, JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn is_sharing_enabled_0(
+pub(crate) async fn is_sharing_enabled_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(Some(Value::from(false)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/CDS.logLambdaFormInvoker(Ljava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn log_lambda_form_invoker(
+pub(crate) async fn log_lambda_form_invoker(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

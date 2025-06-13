@@ -1,39 +1,31 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/misc/VMSupport";
-
-/// Register all intrinsic methods for `sun.misc.VMSupport`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getVMTemporaryDirectory",
-        "()Ljava/lang/String;",
-        get_vm_temporary_directory,
-    );
-    registry.register(
-        CLASS_NAME,
-        "initAgentProperties",
-        "(Ljava/util/Properties;)Ljava/util/Properties;",
-        init_agent_properties,
-    );
-}
-
+#[intrinsic_method(
+    "sun/misc/VMSupport.getVMTemporaryDirectory()Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_vm_temporary_directory(
+pub(crate) async fn get_vm_temporary_directory(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.misc.VMSupport.getVMTemporaryDirectory()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "sun/misc/VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_agent_properties(
+pub(crate) async fn init_agent_properties(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

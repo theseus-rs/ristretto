@@ -1,20 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/net/InetAddressImplFactory";
-
-/// Register all intrinsic methods for `java.net.InetAddressImplFactory`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "isIPv6Supported", "()Z", is_ipv_6_supported);
-}
-
+#[intrinsic_method(
+    "java/net/InetAddressImplFactory.isIPv6Supported()Z",
+    LessThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn is_ipv_6_supported(
+pub(crate) async fn is_ipv_6_supported(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -1,75 +1,70 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/security/pkcs11/Secmod";
-
-/// Register all intrinsic methods for `sun.security.pkcs11.Secmod`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nssGetLibraryHandle",
-        "(Ljava/lang/String;)J",
-        nss_get_library_handle,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nssGetModuleList",
-        "(JLjava/lang/String;)Ljava/lang/Object;",
-        nss_get_module_list,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nssInitialize",
-        "(Ljava/lang/String;JLjava/lang/String;Z)Z",
-        nss_initialize,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nssLoadLibrary",
-        "(Ljava/lang/String;)J",
-        nss_load_library,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nssVersionCheck",
-        "(JLjava/lang/String;)Z",
-        nss_version_check,
-    );
-}
-
+#[intrinsic_method(
+    "sun/security/pkcs11/Secmod.nssGetLibraryHandle(Ljava/lang/String;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn nss_get_library_handle(
+pub(crate) async fn nss_get_library_handle(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.Secmod.nssGetLibraryHandle(Ljava/lang/String;)J")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/Secmod.nssGetModuleList(JLjava/lang/String;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn nss_get_module_list(
+pub(crate) async fn nss_get_module_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.Secmod.nssGetModuleList(JLjava/lang/String;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/Secmod.nssInitialize(Ljava/lang/String;JLjava/lang/String;Z)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn nss_initialize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn nss_initialize(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.Secmod.nssInitialize(Ljava/lang/String;JLjava/lang/String;Z)Z")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/Secmod.nssLoadLibrary(Ljava/lang/String;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn nss_load_library(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn nss_load_library(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.Secmod.nssLoadLibrary(Ljava/lang/String;)J")
 }
 
+#[intrinsic_method(
+    "sun/security/pkcs11/Secmod.nssVersionCheck(JLjava/lang/String;)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn nss_version_check(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn nss_version_check(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.Secmod.nssVersionCheck(JLjava/lang/String;)Z")
 }
 

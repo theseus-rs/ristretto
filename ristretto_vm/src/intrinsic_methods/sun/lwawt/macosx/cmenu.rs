@@ -1,83 +1,64 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CMenu";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CMenu`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "nativeAddSeparator",
-            "(J)V",
-            native_add_separator,
-        );
-    }
-
-    registry.register(CLASS_NAME, "nativeCreateMenu", "(JZI)J", native_create_menu);
-    registry.register(
-        CLASS_NAME,
-        "nativeCreateSubMenu",
-        "(J)J",
-        native_create_sub_menu,
-    );
-    registry.register(CLASS_NAME, "nativeDeleteItem", "(JI)V", native_delete_item);
-    registry.register(CLASS_NAME, "nativeGetNSMenu", "(J)J", native_get_ns_menu);
-    registry.register(
-        CLASS_NAME,
-        "nativeSetMenuTitle",
-        "(JLjava/lang/String;)V",
-        native_set_menu_title,
-    );
-}
-
+#[intrinsic_method(
+    "sun/lwawt/macosx/CMenu.nativeAddSeparator(J)V",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn native_add_separator(
+pub(crate) async fn native_add_separator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenu.nativeAddSeparator(J)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CMenu.nativeCreateMenu(JZI)J", Any)]
 #[async_recursion(?Send)]
-async fn native_create_menu(
+pub(crate) async fn native_create_menu(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenu.nativeCreateMenu(JZI)J")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CMenu.nativeCreateSubMenu(J)J", Any)]
 #[async_recursion(?Send)]
-async fn native_create_sub_menu(
+pub(crate) async fn native_create_sub_menu(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenu.nativeCreateSubMenu(J)J")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CMenu.nativeDeleteItem(JI)V", Any)]
 #[async_recursion(?Send)]
-async fn native_delete_item(
+pub(crate) async fn native_delete_item(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenu.nativeDeleteItem(JI)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CMenu.nativeGetNSMenu(J)J", Any)]
 #[async_recursion(?Send)]
-async fn native_get_ns_menu(
+pub(crate) async fn native_get_ns_menu(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CMenu.nativeGetNSMenu(J)J")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CMenu.nativeSetMenuTitle(JLjava/lang/String;)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_menu_title(
+pub(crate) async fn native_set_menu_title(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

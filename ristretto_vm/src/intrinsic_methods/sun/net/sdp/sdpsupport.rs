@@ -1,26 +1,27 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/net/sdp/SdpSupport";
-
-/// Register all intrinsic methods for `sun.net.sdp.SdpSupport`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "convert0", "(I)V", convert_0);
-    registry.register(CLASS_NAME, "create0", "()I", create_0);
-}
-
+#[intrinsic_method("sun/net/sdp/SdpSupport.convert0(I)V", Any)]
 #[async_recursion(?Send)]
-async fn convert_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn convert_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.net.sdp.SdpSupport.convert0(I)V")
 }
 
+#[intrinsic_method("sun/net/sdp/SdpSupport.create0()I", Any)]
 #[async_recursion(?Send)]
-async fn create_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn create_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.net.sdp.SdpSupport.create0()I")
 }
 

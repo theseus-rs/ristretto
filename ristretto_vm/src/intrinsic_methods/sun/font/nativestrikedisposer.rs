@@ -1,25 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/font/NativeStrikeDisposer";
-
-/// Register all intrinsic methods for `sun.font.NativeStrikeDisposer`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "freeNativeScalerContext",
-        "(J)V",
-        free_native_scaler_context,
-    );
-}
-
+#[intrinsic_method(
+    "sun/font/NativeStrikeDisposer.freeNativeScalerContext(J)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn free_native_scaler_context(
+pub(crate) async fn free_native_scaler_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

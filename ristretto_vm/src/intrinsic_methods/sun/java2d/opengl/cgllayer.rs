@@ -1,46 +1,48 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/opengl/CGLLayer";
-
-/// Register all intrinsic methods for `sun.java2d.opengl.CGLLayer`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "blitTexture", "(J)V", blit_texture);
-    registry.register(CLASS_NAME, "nativeCreateLayer", "()J", native_create_layer);
-    registry.register(CLASS_NAME, "nativeSetScale", "(JD)V", native_set_scale);
-    registry.register(
-        CLASS_NAME,
-        "validate",
-        "(JLsun/java2d/opengl/CGLSurfaceData;)V",
-        validate,
-    );
-}
-
+#[intrinsic_method("sun/java2d/opengl/CGLLayer.blitTexture(J)V", Any)]
 #[async_recursion(?Send)]
-async fn blit_texture(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn blit_texture(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLLayer.blitTexture(J)V");
 }
 
+#[intrinsic_method("sun/java2d/opengl/CGLLayer.nativeCreateLayer()J", Any)]
 #[async_recursion(?Send)]
-async fn native_create_layer(
+pub(crate) async fn native_create_layer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLLayer.nativeCreateLayer()J");
 }
 
+#[intrinsic_method("sun/java2d/opengl/CGLLayer.nativeSetScale(JD)V", Any)]
 #[async_recursion(?Send)]
-async fn native_set_scale(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_set_scale(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLLayer.nativeSetScale(JD)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/opengl/CGLLayer.validate(JLsun/java2d/opengl/CGLSurfaceData;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn validate(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn validate(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.CGLLayer.validate(JLsun/java2d/opengl/CGLSurfaceData;)V");
 }
 

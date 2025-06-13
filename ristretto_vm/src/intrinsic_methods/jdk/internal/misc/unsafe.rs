@@ -1,375 +1,17 @@
 use crate::Error::{InternalError, InvalidOperand};
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use byteorder::{BigEndian, ReadBytesExt};
-use ristretto_classfile::BaseType;
+use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, GreaterThanOrEqual};
+use ristretto_classfile::{BaseType, JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::io::Cursor;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/misc/Unsafe";
-
-/// Register all intrinsic methods for `jdk.internal.misc.Unsafe`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(CLASS_NAME, "addressSize0", "()I", address_size_0);
-        registry.register(
-            CLASS_NAME,
-            "compareAndExchangeObject",
-            "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-            compare_and_exchange_object,
-        );
-        registry.register(
-            CLASS_NAME,
-            "compareAndSetObject",
-            "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
-            compare_and_set_object,
-        );
-        registry.register(
-            CLASS_NAME,
-            "defineAnonymousClass0",
-            "(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;",
-            define_anonymous_class_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getObject",
-            "(Ljava/lang/Object;J)Ljava/lang/Object;",
-            get_object,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getObjectVolatile",
-            "(Ljava/lang/Object;J)Ljava/lang/Object;",
-            get_object_volatile,
-        );
-        registry.register(CLASS_NAME, "isBigEndian0", "()Z", is_big_endian_0);
-        registry.register(CLASS_NAME, "pageSize", "()I", page_size);
-        registry.register(
-            CLASS_NAME,
-            "putObject",
-            "(Ljava/lang/Object;JLjava/lang/Object;)V",
-            put_object,
-        );
-        registry.register(
-            CLASS_NAME,
-            "putObjectVolatile",
-            "(Ljava/lang/Object;JLjava/lang/Object;)V",
-            put_object_volatile,
-        );
-        registry.register(CLASS_NAME, "unalignedAccess0", "()Z", unaligned_access_0);
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "compareAndExchangeReference",
-            "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-            compare_and_exchange_reference,
-        );
-        registry.register(
-            CLASS_NAME,
-            "compareAndSetReference",
-            "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
-            compare_and_set_reference,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getReference",
-            "(Ljava/lang/Object;J)Ljava/lang/Object;",
-            get_reference,
-        );
-        registry.register(
-            CLASS_NAME,
-            "getReferenceVolatile",
-            "(Ljava/lang/Object;J)Ljava/lang/Object;",
-            get_reference_volatile,
-        );
-        registry.register(
-            CLASS_NAME,
-            "putReference",
-            "(Ljava/lang/Object;JLjava/lang/Object;)V",
-            put_reference,
-        );
-        registry.register(
-            CLASS_NAME,
-            "putReferenceVolatile",
-            "(Ljava/lang/Object;JLjava/lang/Object;)V",
-            put_reference_volatile,
-        );
-        registry.register(CLASS_NAME, "writeback0", "(J)V", writeback_0);
-        registry.register(
-            CLASS_NAME,
-            "writebackPostSync0",
-            "()V",
-            writeback_post_sync_0,
-        );
-        registry.register(CLASS_NAME, "writebackPreSync0", "()V", writeback_pre_sync_0);
-    }
-
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(CLASS_NAME, "loadFence", "()V", load_fence);
-        registry.register(CLASS_NAME, "storeFence", "()V", store_fence);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "allocateInstance",
-        "(Ljava/lang/Class;)Ljava/lang/Object;",
-        allocate_instance,
-    );
-    registry.register(CLASS_NAME, "allocateMemory0", "(J)J", allocate_memory_0);
-    registry.register(
-        CLASS_NAME,
-        "arrayBaseOffset0",
-        "(Ljava/lang/Class;)I",
-        array_base_offset_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "arrayIndexScale0",
-        "(Ljava/lang/Class;)I",
-        array_index_scale_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "compareAndExchangeInt",
-        "(Ljava/lang/Object;JII)I",
-        compare_and_exchange_int,
-    );
-    registry.register(
-        CLASS_NAME,
-        "compareAndExchangeLong",
-        "(Ljava/lang/Object;JJJ)J",
-        compare_and_exchange_long,
-    );
-    registry.register(
-        CLASS_NAME,
-        "compareAndSetInt",
-        "(Ljava/lang/Object;JII)Z",
-        compare_and_set_int,
-    );
-    registry.register(
-        CLASS_NAME,
-        "compareAndSetLong",
-        "(Ljava/lang/Object;JJJ)Z",
-        compare_and_set_long,
-    );
-    registry.register(
-        CLASS_NAME,
-        "copyMemory0",
-        "(Ljava/lang/Object;JLjava/lang/Object;JJ)V",
-        copy_memory_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "copySwapMemory0",
-        "(Ljava/lang/Object;JLjava/lang/Object;JJJ)V",
-        copy_swap_memory_0,
-    );
-    registry.register(CLASS_NAME, "defineClass0", "(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;", define_class_0);
-    registry.register(
-        CLASS_NAME,
-        "ensureClassInitialized0",
-        "(Ljava/lang/Class;)V",
-        ensure_class_initialized_0,
-    );
-    registry.register(CLASS_NAME, "freeMemory0", "(J)V", free_memory_0);
-    registry.register(CLASS_NAME, "fullFence", "()V", full_fence);
-    registry.register(
-        CLASS_NAME,
-        "getBoolean",
-        "(Ljava/lang/Object;J)Z",
-        get_boolean,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getBooleanVolatile",
-        "(Ljava/lang/Object;J)Z",
-        get_boolean_volatile,
-    );
-    registry.register(CLASS_NAME, "getByte", "(Ljava/lang/Object;J)B", get_byte);
-    registry.register(
-        CLASS_NAME,
-        "getByteVolatile",
-        "(Ljava/lang/Object;J)B",
-        get_byte_volatile,
-    );
-    registry.register(CLASS_NAME, "getChar", "(Ljava/lang/Object;J)C", get_char);
-    registry.register(
-        CLASS_NAME,
-        "getCharVolatile",
-        "(Ljava/lang/Object;J)C",
-        get_char_volatile,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDouble",
-        "(Ljava/lang/Object;J)D",
-        get_double,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDoubleVolatile",
-        "(Ljava/lang/Object;J)D",
-        get_double_volatile,
-    );
-    registry.register(CLASS_NAME, "getFloat", "(Ljava/lang/Object;J)F", get_float);
-    registry.register(
-        CLASS_NAME,
-        "getFloatVolatile",
-        "(Ljava/lang/Object;J)F",
-        get_float_volatile,
-    );
-    registry.register(CLASS_NAME, "getInt", "(Ljava/lang/Object;J)I", get_int);
-    registry.register(
-        CLASS_NAME,
-        "getIntVolatile",
-        "(Ljava/lang/Object;J)I",
-        get_int_volatile,
-    );
-    registry.register(CLASS_NAME, "getLoadAverage0", "([DI)I", get_load_average_0);
-    registry.register(CLASS_NAME, "getLong", "(Ljava/lang/Object;J)J", get_long);
-    registry.register(
-        CLASS_NAME,
-        "getLongVolatile",
-        "(Ljava/lang/Object;J)J",
-        get_long_volatile,
-    );
-    registry.register(CLASS_NAME, "getShort", "(Ljava/lang/Object;J)S", get_short);
-    registry.register(
-        CLASS_NAME,
-        "getShortVolatile",
-        "(Ljava/lang/Object;J)S",
-        get_short_volatile,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getUncompressedObject",
-        "(J)Ljava/lang/Object;",
-        get_uncompressed_object,
-    );
-    registry.register(
-        CLASS_NAME,
-        "objectFieldOffset0",
-        "(Ljava/lang/reflect/Field;)J",
-        object_field_offset_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "objectFieldOffset1",
-        "(Ljava/lang/Class;Ljava/lang/String;)J",
-        object_field_offset_1,
-    );
-    registry.register(CLASS_NAME, "park", "(ZJ)V", park);
-    registry.register(
-        CLASS_NAME,
-        "putBoolean",
-        "(Ljava/lang/Object;JZ)V",
-        put_boolean,
-    );
-    registry.register(
-        CLASS_NAME,
-        "putBooleanVolatile",
-        "(Ljava/lang/Object;JZ)V",
-        put_boolean_volatile,
-    );
-    registry.register(CLASS_NAME, "putByte", "(Ljava/lang/Object;JB)V", put_byte);
-    registry.register(
-        CLASS_NAME,
-        "putByteVolatile",
-        "(Ljava/lang/Object;JB)V",
-        put_byte_volatile,
-    );
-    registry.register(CLASS_NAME, "putChar", "(Ljava/lang/Object;JC)V", put_char);
-    registry.register(
-        CLASS_NAME,
-        "putCharVolatile",
-        "(Ljava/lang/Object;JC)V",
-        put_char_volatile,
-    );
-    registry.register(
-        CLASS_NAME,
-        "putDouble",
-        "(Ljava/lang/Object;JD)V",
-        put_double,
-    );
-    registry.register(
-        CLASS_NAME,
-        "putDoubleVolatile",
-        "(Ljava/lang/Object;JD)V",
-        put_double_volatile,
-    );
-    registry.register(CLASS_NAME, "putFloat", "(Ljava/lang/Object;JF)V", put_float);
-    registry.register(
-        CLASS_NAME,
-        "putFloatVolatile",
-        "(Ljava/lang/Object;JF)V",
-        put_float_volatile,
-    );
-    registry.register(CLASS_NAME, "putInt", "(Ljava/lang/Object;JI)V", put_int);
-    registry.register(
-        CLASS_NAME,
-        "putIntVolatile",
-        "(Ljava/lang/Object;JI)V",
-        put_int_volatile,
-    );
-    registry.register(CLASS_NAME, "putLong", "(Ljava/lang/Object;JJ)V", put_long);
-    registry.register(
-        CLASS_NAME,
-        "putLongVolatile",
-        "(Ljava/lang/Object;JJ)V",
-        put_long_volatile,
-    );
-    registry.register(CLASS_NAME, "putShort", "(Ljava/lang/Object;JS)V", put_short);
-    registry.register(
-        CLASS_NAME,
-        "putShortVolatile",
-        "(Ljava/lang/Object;JS)V",
-        put_short_volatile,
-    );
-    registry.register(
-        CLASS_NAME,
-        "reallocateMemory0",
-        "(JJ)J",
-        reallocate_memory_0,
-    );
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-    registry.register(
-        CLASS_NAME,
-        "setMemory0",
-        "(Ljava/lang/Object;JJB)V",
-        set_memory_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "shouldBeInitialized0",
-        "(Ljava/lang/Class;)Z",
-        should_be_initialized_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "staticFieldBase0",
-        "(Ljava/lang/reflect/Field;)Ljava/lang/Object;",
-        static_field_base_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "staticFieldOffset0",
-        "(Ljava/lang/reflect/Field;)J",
-        static_field_offset_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "throwException",
-        "(Ljava/lang/Throwable;)V",
-        throw_exception,
-    );
-    registry.register(CLASS_NAME, "unpark", "(Ljava/lang/Object;)V", unpark);
-}
-
+#[intrinsic_method("jdk/internal/misc/Unsafe.addressSize0()I", Equal(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn address_size_0(
     _thread: Arc<Thread>,
@@ -378,6 +20,10 @@ pub(crate) async fn address_size_0(
     Ok(Some(Value::Int(8))) // 64-bit pointers
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.allocateInstance(Ljava/lang/Class;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn allocate_instance(
     _thread: Arc<Thread>,
@@ -386,6 +32,10 @@ pub(crate) async fn allocate_instance(
     todo!("jdk.internal.misc.Unsafe.allocateInstance(Ljava/lang/Class;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.allocateMemory0(J)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn allocate_memory_0(
     _thread: Arc<Thread>,
@@ -394,6 +44,10 @@ pub(crate) async fn allocate_memory_0(
     todo!("jdk.internal.misc.Unsafe.allocateMemory0(J)J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.arrayBaseOffset0(Ljava/lang/Class;)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn array_base_offset_0(
     _thread: Arc<Thread>,
@@ -402,6 +56,10 @@ pub(crate) async fn array_base_offset_0(
     Ok(Some(Value::Int(0)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.arrayIndexScale0(Ljava/lang/Class;)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn array_index_scale_0(
     _thread: Arc<Thread>,
@@ -410,6 +68,10 @@ pub(crate) async fn array_index_scale_0(
     Ok(Some(Value::Int(1)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.compareAndExchangeInt(Ljava/lang/Object;JII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_int(
     _thread: Arc<Thread>,
@@ -418,6 +80,10 @@ pub(crate) async fn compare_and_exchange_int(
     todo!("jdk.internal.misc.Unsafe.compareAndExchangeInt(Ljava/lang/Object;JII)I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.compareAndExchangeLong(Ljava/lang/Object;JJJ)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_long(
     _thread: Arc<Thread>,
@@ -426,6 +92,10 @@ pub(crate) async fn compare_and_exchange_long(
     todo!("jdk.internal.misc.Unsafe.compareAndExchangeLong(Ljava/lang/Object;JJJ)J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.compareAndExchangeObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_object(
     _thread: Arc<Thread>,
@@ -436,6 +106,10 @@ pub(crate) async fn compare_and_exchange_object(
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.compareAndExchangeReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_exchange_reference(
     _thread: Arc<Thread>,
@@ -446,6 +120,10 @@ pub(crate) async fn compare_and_exchange_reference(
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.compareAndSetInt(Ljava/lang/Object;JII)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_set_int(
     _thread: Arc<Thread>,
@@ -483,6 +161,10 @@ pub(crate) async fn compare_and_set_int(
     Ok(Some(Value::Int(result)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.compareAndSetLong(Ljava/lang/Object;JJJ)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_set_long(
     _thread: Arc<Thread>,
@@ -520,6 +202,10 @@ pub(crate) async fn compare_and_set_long(
     Ok(Some(Value::Int(result)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.compareAndSetObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_set_object(
     thread: Arc<Thread>,
@@ -528,6 +214,10 @@ pub(crate) async fn compare_and_set_object(
     compare_and_set_reference(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.compareAndSetReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_set_reference(
     _thread: Arc<Thread>,
@@ -587,6 +277,10 @@ pub(crate) async fn compare_and_set_reference(
     Ok(Some(Value::Int(result)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.copyMemory0(Ljava/lang/Object;JLjava/lang/Object;JJ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn copy_memory_0(
     _thread: Arc<Thread>,
@@ -607,6 +301,10 @@ pub(crate) async fn copy_memory_0(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.copySwapMemory0(Ljava/lang/Object;JLjava/lang/Object;JJJ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn copy_swap_memory_0(
     _thread: Arc<Thread>,
@@ -615,6 +313,10 @@ pub(crate) async fn copy_swap_memory_0(
     todo!("jdk.internal.misc.Unsafe.copySwapMemory0(Ljava/lang/Object;JLjava/lang/Object;JJJ)V")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.defineAnonymousClass0(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn define_anonymous_class_0(
     _thread: Arc<Thread>,
@@ -625,6 +327,10 @@ pub(crate) async fn define_anonymous_class_0(
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.defineClass0(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn define_class_0(
     _thread: Arc<Thread>,
@@ -635,6 +341,10 @@ pub(crate) async fn define_class_0(
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.ensureClassInitialized0(Ljava/lang/Class;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn ensure_class_initialized_0(
     _thread: Arc<Thread>,
@@ -643,6 +353,10 @@ pub(crate) async fn ensure_class_initialized_0(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.freeMemory0(J)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn free_memory_0(
     _thread: Arc<Thread>,
@@ -651,6 +365,7 @@ pub(crate) async fn free_memory_0(
     Ok(None)
 }
 
+#[intrinsic_method("jdk/internal/misc/Unsafe.fullFence()V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn full_fence(
     _thread: Arc<Thread>,
@@ -795,6 +510,10 @@ fn get_reference_type(
     Ok(Some(value))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getBoolean(Ljava/lang/Object;J)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_boolean(
     thread: Arc<Thread>,
@@ -803,6 +522,10 @@ pub(crate) async fn get_boolean(
     get_boolean_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getBooleanVolatile(Ljava/lang/Object;J)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_boolean_volatile(
     thread: Arc<Thread>,
@@ -811,11 +534,19 @@ pub(crate) async fn get_boolean_volatile(
     get_reference_type(thread, parameters, Some(BaseType::Boolean))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getByte(Ljava/lang/Object;J)B",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_byte(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     get_byte_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getByteVolatile(Ljava/lang/Object;J)B",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_byte_volatile(
     thread: Arc<Thread>,
@@ -824,11 +555,19 @@ pub(crate) async fn get_byte_volatile(
     get_reference_type(thread, parameters, Some(BaseType::Byte))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getChar(Ljava/lang/Object;J)C",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_char(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     get_char_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getCharVolatile(Ljava/lang/Object;J)C",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_char_volatile(
     thread: Arc<Thread>,
@@ -837,6 +576,10 @@ pub(crate) async fn get_char_volatile(
     get_reference_type(thread, parameters, Some(BaseType::Char))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getDouble(Ljava/lang/Object;J)D",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_double(
     thread: Arc<Thread>,
@@ -845,6 +588,10 @@ pub(crate) async fn get_double(
     get_double_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getDoubleVolatile(Ljava/lang/Object;J)D",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_double_volatile(
     thread: Arc<Thread>,
@@ -853,6 +600,10 @@ pub(crate) async fn get_double_volatile(
     get_reference_type(thread, parameters, Some(BaseType::Double))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getFloat(Ljava/lang/Object;J)F",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_float(
     thread: Arc<Thread>,
@@ -861,6 +612,10 @@ pub(crate) async fn get_float(
     get_float_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getFloatVolatile(Ljava/lang/Object;J)F",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_float_volatile(
     thread: Arc<Thread>,
@@ -869,11 +624,19 @@ pub(crate) async fn get_float_volatile(
     get_reference_type(thread, parameters, Some(BaseType::Float))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getInt(Ljava/lang/Object;J)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_int(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     get_int_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getIntVolatile(Ljava/lang/Object;J)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_int_volatile(
     thread: Arc<Thread>,
@@ -882,6 +645,10 @@ pub(crate) async fn get_int_volatile(
     get_reference_type(thread, parameters, Some(BaseType::Int))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getLoadAverage0([DI)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_load_average_0(
     _thread: Arc<Thread>,
@@ -890,11 +657,19 @@ pub(crate) async fn get_load_average_0(
     todo!("jdk.internal.misc.Unsafe.getLoadAverage0([DI)I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getLong(Ljava/lang/Object;J)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_long(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     get_long_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getLongVolatile(Ljava/lang/Object;J)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_long_volatile(
     thread: Arc<Thread>,
@@ -903,6 +678,10 @@ pub(crate) async fn get_long_volatile(
     get_reference_type(thread, parameters, Some(BaseType::Long))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getObject(Ljava/lang/Object;J)Ljava/lang/Object;",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_object(
     thread: Arc<Thread>,
@@ -911,6 +690,10 @@ pub(crate) async fn get_object(
     get_object_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getObjectVolatile(Ljava/lang/Object;J)Ljava/lang/Object;",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_object_volatile(
     thread: Arc<Thread>,
@@ -919,6 +702,10 @@ pub(crate) async fn get_object_volatile(
     get_reference_type(thread, parameters, None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getReference(Ljava/lang/Object;J)Ljava/lang/Object;",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_reference(
     thread: Arc<Thread>,
@@ -927,6 +714,10 @@ pub(crate) async fn get_reference(
     get_reference_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getReferenceVolatile(Ljava/lang/Object;J)Ljava/lang/Object;",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_reference_volatile(
     thread: Arc<Thread>,
@@ -935,6 +726,10 @@ pub(crate) async fn get_reference_volatile(
     get_reference_type(thread, parameters, None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getShort(Ljava/lang/Object;J)S",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_short(
     thread: Arc<Thread>,
@@ -943,6 +738,10 @@ pub(crate) async fn get_short(
     get_short_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getShortVolatile(Ljava/lang/Object;J)S",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_short_volatile(
     thread: Arc<Thread>,
@@ -951,6 +750,10 @@ pub(crate) async fn get_short_volatile(
     get_reference_type(thread, parameters, Some(BaseType::Short))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.getUncompressedObject(J)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_uncompressed_object(
     _thread: Arc<Thread>,
@@ -959,6 +762,7 @@ pub(crate) async fn get_uncompressed_object(
     todo!("jdk.internal.misc.Unsafe.getUncompressedObject(J)Ljava/lang/Object;")
 }
 
+#[intrinsic_method("jdk/internal/misc/Unsafe.isBigEndian0()Z", Equal(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn is_big_endian_0(
     _thread: Arc<Thread>,
@@ -967,6 +771,7 @@ pub(crate) async fn is_big_endian_0(
     Ok(Some(Value::from(true)))
 }
 
+#[intrinsic_method("jdk/internal/misc/Unsafe.loadFence()V", Between(JAVA_11, JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn load_fence(
     _thread: Arc<Thread>,
@@ -975,6 +780,10 @@ pub(crate) async fn load_fence(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.objectFieldOffset0(Ljava/lang/reflect/Field;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn object_field_offset_0(
     _thread: Arc<Thread>,
@@ -983,6 +792,10 @@ pub(crate) async fn object_field_offset_0(
     Ok(Some(Value::Long(0)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.objectFieldOffset1(Ljava/lang/Class;Ljava/lang/String;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn object_field_offset_1(
     thread: Arc<Thread>,
@@ -1010,6 +823,7 @@ pub(crate) async fn object_field_offset_1(
     Ok(Some(Value::Long(offset)))
 }
 
+#[intrinsic_method("jdk/internal/misc/Unsafe.pageSize()I", Equal(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn page_size(
     _thread: Arc<Thread>,
@@ -1018,11 +832,16 @@ pub(crate) async fn page_size(
     todo!("jdk.internal.misc.Unsafe.pageSize()I")
 }
 
+#[intrinsic_method("jdk/internal/misc/Unsafe.park(ZJ)V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn park(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.park(ZJ)V")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putBoolean(Ljava/lang/Object;JZ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_boolean(
     thread: Arc<Thread>,
@@ -1031,6 +850,10 @@ pub(crate) async fn put_boolean(
     put_boolean_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putBooleanVolatile(Ljava/lang/Object;JZ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_boolean_volatile(
     _thread: Arc<Thread>,
@@ -1046,11 +869,19 @@ pub(crate) async fn put_boolean_volatile(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putByte(Ljava/lang/Object;JB)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_byte(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     put_byte_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putByteVolatile(Ljava/lang/Object;JB)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_byte_volatile(
     _thread: Arc<Thread>,
@@ -1066,11 +897,19 @@ pub(crate) async fn put_byte_volatile(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putChar(Ljava/lang/Object;JC)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_char(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     put_char_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putCharVolatile(Ljava/lang/Object;JC)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_char_volatile(
     _thread: Arc<Thread>,
@@ -1090,6 +929,10 @@ pub(crate) async fn put_char_volatile(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putDouble(Ljava/lang/Object;JD)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_double(
     thread: Arc<Thread>,
@@ -1098,6 +941,10 @@ pub(crate) async fn put_double(
     put_double_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putDoubleVolatile(Ljava/lang/Object;JD)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_double_volatile(
     _thread: Arc<Thread>,
@@ -1113,6 +960,10 @@ pub(crate) async fn put_double_volatile(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putFloat(Ljava/lang/Object;JF)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_float(
     thread: Arc<Thread>,
@@ -1121,6 +972,10 @@ pub(crate) async fn put_float(
     put_float_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putFloatVolatile(Ljava/lang/Object;JF)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_float_volatile(
     _thread: Arc<Thread>,
@@ -1136,11 +991,19 @@ pub(crate) async fn put_float_volatile(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putInt(Ljava/lang/Object;JI)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_int(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     put_int_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putIntVolatile(Ljava/lang/Object;JI)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_int_volatile(
     _thread: Arc<Thread>,
@@ -1156,11 +1019,19 @@ pub(crate) async fn put_int_volatile(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putLong(Ljava/lang/Object;JJ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_long(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     put_long_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putLongVolatile(Ljava/lang/Object;JJ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_long_volatile(
     _thread: Arc<Thread>,
@@ -1176,6 +1047,10 @@ pub(crate) async fn put_long_volatile(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putObject(Ljava/lang/Object;JLjava/lang/Object;)V",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_object(
     thread: Arc<Thread>,
@@ -1184,6 +1059,10 @@ pub(crate) async fn put_object(
     put_object_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putObjectVolatile(Ljava/lang/Object;JLjava/lang/Object;)V",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_object_volatile(
     thread: Arc<Thread>,
@@ -1192,6 +1071,10 @@ pub(crate) async fn put_object_volatile(
     put_reference_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putReference(Ljava/lang/Object;JLjava/lang/Object;)V",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_reference(
     thread: Arc<Thread>,
@@ -1200,6 +1083,10 @@ pub(crate) async fn put_reference(
     put_reference_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putReferenceVolatile(Ljava/lang/Object;JLjava/lang/Object;)V",
+    GreaterThan(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_reference_volatile(
     _thread: Arc<Thread>,
@@ -1231,6 +1118,10 @@ pub(crate) async fn put_reference_volatile(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putShort(Ljava/lang/Object;JS)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_short(
     thread: Arc<Thread>,
@@ -1239,6 +1130,10 @@ pub(crate) async fn put_short(
     put_short_volatile(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.putShortVolatile(Ljava/lang/Object;JS)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn put_short_volatile(
     _thread: Arc<Thread>,
@@ -1254,6 +1149,10 @@ pub(crate) async fn put_short_volatile(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.reallocateMemory0(JJ)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn reallocate_memory_0(
     _thread: Arc<Thread>,
@@ -1262,6 +1161,10 @@ pub(crate) async fn reallocate_memory_0(
     todo!("jdk.internal.misc.Unsafe.reallocateMemory0(JJ)J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.registerNatives()V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn register_natives(
     thread: Arc<Thread>,
@@ -1277,6 +1180,10 @@ pub(crate) async fn register_natives(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.setMemory0(Ljava/lang/Object;JJB)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn set_memory_0(
     _thread: Arc<Thread>,
@@ -1285,6 +1192,10 @@ pub(crate) async fn set_memory_0(
     todo!("jdk.internal.misc.Unsafe.setMemory0(Ljava/lang/Object;JJB)V")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.shouldBeInitialized0(Ljava/lang/Class;)Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn should_be_initialized_0(
     _thread: Arc<Thread>,
@@ -1294,6 +1205,10 @@ pub(crate) async fn should_be_initialized_0(
     Ok(Some(Value::from(false)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn static_field_base_0(
     _thread: Arc<Thread>,
@@ -1302,6 +1217,10 @@ pub(crate) async fn static_field_base_0(
     todo!("jdk.internal.misc.Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn static_field_offset_0(
     _thread: Arc<Thread>,
@@ -1310,6 +1229,7 @@ pub(crate) async fn static_field_offset_0(
     todo!("jdk.internal.misc.Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J")
 }
 
+#[intrinsic_method("jdk/internal/misc/Unsafe.storeFence()V", Between(JAVA_11, JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn store_fence(
     _thread: Arc<Thread>,
@@ -1318,6 +1238,10 @@ pub(crate) async fn store_fence(
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.throwException(Ljava/lang/Throwable;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn throw_exception(
     _thread: Arc<Thread>,
@@ -1326,6 +1250,7 @@ pub(crate) async fn throw_exception(
     todo!("jdk.internal.misc.Unsafe.throwException(Ljava/lang/Throwable;)V")
 }
 
+#[intrinsic_method("jdk/internal/misc/Unsafe.unalignedAccess0()Z", Equal(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn unaligned_access_0(
     _thread: Arc<Thread>,
@@ -1334,11 +1259,16 @@ pub(crate) async fn unaligned_access_0(
     Ok(Some(Value::from(false)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.unpark(Ljava/lang/Object;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn unpark(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.Unsafe.unpark(Ljava/lang/Object;)V")
 }
 
+#[intrinsic_method("jdk/internal/misc/Unsafe.writeback0(J)V", GreaterThan(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn writeback_0(
     _thread: Arc<Thread>,
@@ -1347,6 +1277,7 @@ pub(crate) async fn writeback_0(
     todo!("jdk.internal.misc.Unsafe.writeback0(J)V")
 }
 
+#[intrinsic_method("jdk/internal/misc/Unsafe.writebackPostSync0()V", GreaterThan(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn writeback_post_sync_0(
     _thread: Arc<Thread>,
@@ -1355,6 +1286,7 @@ pub(crate) async fn writeback_post_sync_0(
     todo!("jdk.internal.misc.Unsafe.writebackPostSync0()V")
 }
 
+#[intrinsic_method("jdk/internal/misc/Unsafe.writebackPreSync0()V", GreaterThan(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn writeback_pre_sync_0(
     _thread: Arc<Thread>,

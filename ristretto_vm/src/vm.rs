@@ -120,8 +120,7 @@ impl VM {
             None
         };
 
-        let mut method_registry = MethodRegistry::new(java_major_version);
-        method_registry.initialize();
+        let method_registry = MethodRegistry::new(java_major_version);
 
         let compiler = match Compiler::new() {
             Ok(compiler) => Some(compiler),

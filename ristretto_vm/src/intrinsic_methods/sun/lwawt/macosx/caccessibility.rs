@@ -1,31 +1,30 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CAccessibility";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CAccessibility`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "focusChanged", "()V", focus_changed);
-    registry.register(
-        CLASS_NAME,
-        "roleKey",
-        "(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;",
-        role_key,
-    );
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CAccessibility.focusChanged()V", Any)]
 #[async_recursion(?Send)]
-async fn focus_changed(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn focus_changed(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CAccessibility.focusChanged()V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CAccessibility.roleKey(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn role_key(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn role_key(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.lwawt.macosx.CAccessibility.roleKey(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;"
     )

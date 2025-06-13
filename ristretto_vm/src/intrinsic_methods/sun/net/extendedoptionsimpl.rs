@@ -1,147 +1,137 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/net/ExtendedOptionsImpl";
-
-/// Register all intrinsic methods for `sun.net.ExtendedOptionsImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "flowSupported", "()Z", flow_supported);
-    registry.register(
-        CLASS_NAME,
-        "getFlowOption",
-        "(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V",
-        get_flow_option,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getTcpKeepAliveIntvl",
-        "(Ljava/io/FileDescriptor;)I",
-        get_tcp_keep_alive_intvl,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getTcpKeepAliveProbes",
-        "(Ljava/io/FileDescriptor;)I",
-        get_tcp_keep_alive_probes,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getTcpKeepAliveTime",
-        "(Ljava/io/FileDescriptor;)I",
-        get_tcp_keep_alive_time,
-    );
-    registry.register(CLASS_NAME, "init", "()V", init);
-    registry.register(
-        CLASS_NAME,
-        "keepAliveOptionsSupported",
-        "()Z",
-        keep_alive_options_supported,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setFlowOption",
-        "(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V",
-        set_flow_option,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setTcpKeepAliveIntvl",
-        "(Ljava/io/FileDescriptor;I)V",
-        set_tcp_keep_alive_intvl,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setTcpKeepAliveProbes",
-        "(Ljava/io/FileDescriptor;I)V",
-        set_tcp_keep_alive_probes,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setTcpKeepAliveTime",
-        "(Ljava/io/FileDescriptor;I)V",
-        set_tcp_keep_alive_time,
-    );
-}
-
+#[intrinsic_method(
+    "sun/net/ExtendedOptionsImpl.flowSupported()Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn flow_supported(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn flow_supported(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.flowSupported()Z")
 }
 
+#[intrinsic_method(
+    "sun/net/ExtendedOptionsImpl.getFlowOption(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_flow_option(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_flow_option(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.net.ExtendedOptionsImpl.getFlowOption(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V"
     )
 }
 
+#[intrinsic_method(
+    "sun/net/ExtendedOptionsImpl.getTcpKeepAliveIntvl(Ljava/io/FileDescriptor;)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_tcp_keep_alive_intvl(
+pub(crate) async fn get_tcp_keep_alive_intvl(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.getTcpKeepAliveIntvl(Ljava/io/FileDescriptor;)I")
 }
 
+#[intrinsic_method(
+    "sun/net/ExtendedOptionsImpl.getTcpKeepAliveProbes(Ljava/io/FileDescriptor;)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_tcp_keep_alive_probes(
+pub(crate) async fn get_tcp_keep_alive_probes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.getTcpKeepAliveProbes(Ljava/io/FileDescriptor;)I")
 }
 
+#[intrinsic_method(
+    "sun/net/ExtendedOptionsImpl.getTcpKeepAliveTime(Ljava/io/FileDescriptor;)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_tcp_keep_alive_time(
+pub(crate) async fn get_tcp_keep_alive_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.getTcpKeepAliveTime(Ljava/io/FileDescriptor;)I")
 }
 
+#[intrinsic_method("sun/net/ExtendedOptionsImpl.init()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "sun/net/ExtendedOptionsImpl.keepAliveOptionsSupported()Z",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn keep_alive_options_supported(
+pub(crate) async fn keep_alive_options_supported(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.keepAliveOptionsSupported()Z")
 }
 
+#[intrinsic_method(
+    "sun/net/ExtendedOptionsImpl.setFlowOption(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn set_flow_option(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_flow_option(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.net.ExtendedOptionsImpl.setFlowOption(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V"
     )
 }
 
+#[intrinsic_method(
+    "sun/net/ExtendedOptionsImpl.setTcpKeepAliveIntvl(Ljava/io/FileDescriptor;I)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn set_tcp_keep_alive_intvl(
+pub(crate) async fn set_tcp_keep_alive_intvl(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.setTcpKeepAliveIntvl(Ljava/io/FileDescriptor;I)V")
 }
 
+#[intrinsic_method(
+    "sun/net/ExtendedOptionsImpl.setTcpKeepAliveProbes(Ljava/io/FileDescriptor;I)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn set_tcp_keep_alive_probes(
+pub(crate) async fn set_tcp_keep_alive_probes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.net.ExtendedOptionsImpl.setTcpKeepAliveProbes(Ljava/io/FileDescriptor;I)V")
 }
 
+#[intrinsic_method(
+    "sun/net/ExtendedOptionsImpl.setTcpKeepAliveTime(Ljava/io/FileDescriptor;I)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn set_tcp_keep_alive_time(
+pub(crate) async fn set_tcp_keep_alive_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

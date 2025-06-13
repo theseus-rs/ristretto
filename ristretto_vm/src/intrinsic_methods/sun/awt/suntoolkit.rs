@@ -1,20 +1,15 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/SunToolkit";
-
-/// Register all intrinsic methods for `sun.awt.SunToolkit`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "closeSplashScreen", "()V", close_splash_screen);
-}
-
+#[intrinsic_method("sun/awt/SunToolkit.closeSplashScreen()V", Any)]
 #[async_recursion(?Send)]
-async fn close_splash_screen(
+pub(crate) async fn close_splash_screen(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

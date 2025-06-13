@@ -1,31 +1,24 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/font/NullFontScaler";
-
-/// Register all intrinsic methods for `sun.font.NullFontScaler`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "getGlyphImage", "(JI)J", get_glyph_image);
-    registry.register(
-        CLASS_NAME,
-        "getNullScalerContext",
-        "()J",
-        get_null_scaler_context,
-    );
-}
-
+#[intrinsic_method("sun/font/NullFontScaler.getGlyphImage(JI)J", Any)]
 #[async_recursion(?Send)]
-async fn get_glyph_image(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_glyph_image(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.NullFontScaler.getGlyphImage(JI)J")
 }
 
+#[intrinsic_method("sun/font/NullFontScaler.getNullScalerContext()J", Any)]
 #[async_recursion(?Send)]
-async fn get_null_scaler_context(
+pub(crate) async fn get_null_scaler_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

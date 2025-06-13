@@ -1,21 +1,16 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::mutf8;
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/ProcessEnvironment";
-
-/// Register all intrinsic methods for `java.lang.ProcessEnvironment`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "environ", "()[[B", environ);
-}
-
+#[intrinsic_method("java/lang/ProcessEnvironment.environ()[[B", Any)]
 #[async_recursion(?Send)]
-async fn environ(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn environ(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let mut values = Vec::new();
     for (key, value) in std::env::vars() {
         let key = Some(Reference::from(mutf8::to_bytes(key)?));

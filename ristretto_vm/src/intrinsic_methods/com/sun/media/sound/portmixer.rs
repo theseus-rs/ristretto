@@ -1,116 +1,102 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/sun/media/sound/PortMixer";
-
-/// Register all intrinsic methods for `com.sun.media.sound.PortMixer`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "nClose", "(J)V", n_close);
-    registry.register(
-        CLASS_NAME,
-        "nControlGetFloatValue",
-        "(J)F",
-        n_control_get_float_value,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nControlGetIntValue",
-        "(J)I",
-        n_control_get_int_value,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nControlSetFloatValue",
-        "(JF)V",
-        n_control_set_float_value,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nControlSetIntValue",
-        "(JI)V",
-        n_control_set_int_value,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nGetControls",
-        "(JILjava/util/Vector;)V",
-        n_get_controls,
-    );
-    registry.register(CLASS_NAME, "nGetPortCount", "(J)I", n_get_port_count);
-    registry.register(
-        CLASS_NAME,
-        "nGetPortName",
-        "(JI)Ljava/lang/String;",
-        n_get_port_name,
-    );
-    registry.register(CLASS_NAME, "nGetPortType", "(JI)I", n_get_port_type);
-    registry.register(CLASS_NAME, "nOpen", "(I)J", n_open);
-}
-
+#[intrinsic_method("com/sun/media/sound/PortMixer.nClose(J)V", Any)]
 #[async_recursion(?Send)]
-async fn n_close(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn n_close(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nClose(J)V")
 }
 
+#[intrinsic_method("com/sun/media/sound/PortMixer.nControlGetFloatValue(J)F", Any)]
 #[async_recursion(?Send)]
-async fn n_control_get_float_value(
+pub(crate) async fn n_control_get_float_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nControlGetFloatValue(J)F")
 }
 
+#[intrinsic_method("com/sun/media/sound/PortMixer.nControlGetIntValue(J)I", Any)]
 #[async_recursion(?Send)]
-async fn n_control_get_int_value(
+pub(crate) async fn n_control_get_int_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nControlGetIntValue(J)I")
 }
 
+#[intrinsic_method("com/sun/media/sound/PortMixer.nControlSetFloatValue(JF)V", Any)]
 #[async_recursion(?Send)]
-async fn n_control_set_float_value(
+pub(crate) async fn n_control_set_float_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nControlSetFloatValue(JF)V")
 }
 
+#[intrinsic_method("com/sun/media/sound/PortMixer.nControlSetIntValue(JI)V", Any)]
 #[async_recursion(?Send)]
-async fn n_control_set_int_value(
+pub(crate) async fn n_control_set_int_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nControlSetIntValue(JI)V")
 }
 
+#[intrinsic_method(
+    "com/sun/media/sound/PortMixer.nGetControls(JILjava/util/Vector;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn n_get_controls(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn n_get_controls(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nGetControls(JILjava/util/Vector;)V")
 }
 
+#[intrinsic_method("com/sun/media/sound/PortMixer.nGetPortCount(J)I", Any)]
 #[async_recursion(?Send)]
-async fn n_get_port_count(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn n_get_port_count(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nGetPortCount(J)I")
 }
 
+#[intrinsic_method(
+    "com/sun/media/sound/PortMixer.nGetPortName(JI)Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn n_get_port_name(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn n_get_port_name(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nGetPortName(JI)Ljava/lang/String;")
 }
 
+#[intrinsic_method("com/sun/media/sound/PortMixer.nGetPortType(JI)I", Any)]
 #[async_recursion(?Send)]
-async fn n_get_port_type(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn n_get_port_type(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nGetPortType(JI)I")
 }
 
+#[intrinsic_method("com/sun/media/sound/PortMixer.nOpen(I)J", Any)]
 #[async_recursion(?Send)]
-async fn n_open(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn n_open(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.PortMixer.nOpen(I)J")
 }
 

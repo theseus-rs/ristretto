@@ -1,136 +1,114 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/apple/eio/FileManager";
-
-/// Register all intrinsic methods for `com.apple.eio.FileManager`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "_findFolder",
-        "(SIZ)Ljava/lang/String;",
-        find_folder,
-    );
-    registry.register(
-        CLASS_NAME,
-        "_getFileCreator",
-        "(Ljava/lang/String;)I",
-        get_file_creator,
-    );
-    registry.register(
-        CLASS_NAME,
-        "_getFileType",
-        "(Ljava/lang/String;)I",
-        get_file_type,
-    );
-    registry.register(
-        CLASS_NAME,
-        "_moveToTrash",
-        "(Ljava/lang/String;)Z",
-        move_to_trash,
-    );
-    registry.register(CLASS_NAME, "_openURL", "(Ljava/lang/String;)V", open_url);
-    registry.register(
-        CLASS_NAME,
-        "_revealInFinder",
-        "(Ljava/lang/String;)Z",
-        reveal_in_finder,
-    );
-    registry.register(
-        CLASS_NAME,
-        "_setFileCreator",
-        "(Ljava/lang/String;I)V",
-        set_file_creator,
-    );
-    registry.register(
-        CLASS_NAME,
-        "_setFileType",
-        "(Ljava/lang/String;I)V",
-        set_file_type,
-    );
-    registry.register(
-        CLASS_NAME,
-        "_setFileTypeAndCreator",
-        "(Ljava/lang/String;II)V",
-        set_file_type_and_creator,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNativePathToApplicationBundle",
-        "()Ljava/lang/String;",
-        get_native_path_to_application_bundle,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNativeResourceFromBundle",
-        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
-        get_native_resource_from_bundle,
-    );
-}
-
+#[intrinsic_method("com/apple/eio/FileManager._findFolder(SIZ)Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
-async fn find_folder(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn find_folder(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.apple.eio.FileManager._findFolder(SIZ)Ljava/lang/String;")
 }
 
+#[intrinsic_method("com/apple/eio/FileManager._getFileCreator(Ljava/lang/String;)I", Any)]
 #[async_recursion(?Send)]
-async fn get_file_creator(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_file_creator(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.apple.eio.FileManager._getFileCreator(Ljava/lang/String;)I")
 }
 
+#[intrinsic_method("com/apple/eio/FileManager._getFileType(Ljava/lang/String;)I", Any)]
 #[async_recursion(?Send)]
-async fn get_file_type(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_file_type(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.apple.eio.FileManager._getFileType(Ljava/lang/String;)I")
 }
 
+#[intrinsic_method("com/apple/eio/FileManager._moveToTrash(Ljava/lang/String;)Z", Any)]
 #[async_recursion(?Send)]
-async fn move_to_trash(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn move_to_trash(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.apple.eio.FileManager._moveToTrash(Ljava/lang/String;)Z")
 }
 
+#[intrinsic_method("com/apple/eio/FileManager._openURL(Ljava/lang/String;)V", Any)]
 #[async_recursion(?Send)]
-async fn open_url(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn open_url(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.apple.eio.FileManager._openURL(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method("com/apple/eio/FileManager._revealInFinder(Ljava/lang/String;)Z", Any)]
 #[async_recursion(?Send)]
-async fn reveal_in_finder(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn reveal_in_finder(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.apple.eio.FileManager._revealInFinder(Ljava/lang/String;)Z")
 }
 
+#[intrinsic_method("com/apple/eio/FileManager._setFileCreator(Ljava/lang/String;I)V", Any)]
 #[async_recursion(?Send)]
-async fn set_file_creator(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_file_creator(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.apple.eio.FileManager._setFileCreator(Ljava/lang/String;I)V")
 }
 
+#[intrinsic_method("com/apple/eio/FileManager._setFileType(Ljava/lang/String;I)V", Any)]
 #[async_recursion(?Send)]
-async fn set_file_type(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_file_type(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.apple.eio.FileManager._setFileType(Ljava/lang/String;I)V")
 }
 
+#[intrinsic_method(
+    "com/apple/eio/FileManager._setFileTypeAndCreator(Ljava/lang/String;II)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn set_file_type_and_creator(
+pub(crate) async fn set_file_type_and_creator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eio.FileManager._setFileTypeAndCreator(Ljava/lang/String;II)V")
 }
 
+#[intrinsic_method(
+    "com/apple/eio/FileManager.getNativePathToApplicationBundle()Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_native_path_to_application_bundle(
+pub(crate) async fn get_native_path_to_application_bundle(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.apple.eio.FileManager.getNativePathToApplicationBundle()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "com/apple/eio/FileManager.getNativeResourceFromBundle(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_native_resource_from_bundle(
+pub(crate) async fn get_native_resource_from_bundle(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

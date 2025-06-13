@@ -1,67 +1,72 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/UnixDomainSockets";
-
-/// Register all intrinsic methods for `sun.nio.ch.UnixDomainSockets`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "accept0",
-        "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/lang/Object;)I",
-        accept_0,
-    );
-    registry.register(CLASS_NAME, "bind0", "(Ljava/io/FileDescriptor;[B)V", bind_0);
-    registry.register(
-        CLASS_NAME,
-        "connect0",
-        "(Ljava/io/FileDescriptor;[B)I",
-        connect_0,
-    );
-    registry.register(CLASS_NAME, "init", "()Z", init);
-    registry.register(
-        CLASS_NAME,
-        "localAddress0",
-        "(Ljava/io/FileDescriptor;)[B",
-        local_address_0,
-    );
-    registry.register(CLASS_NAME, "socket0", "()I", socket_0);
-}
-
+#[intrinsic_method(
+    "sun/nio/ch/UnixDomainSockets.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/lang/Object;)I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn accept_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn accept_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.nio.ch.UnixDomainSockets.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/lang/Object;)I"
     );
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixDomainSockets.bind0(Ljava/io/FileDescriptor;[B)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.bind0(Ljava/io/FileDescriptor;[B)V");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixDomainSockets.connect0(Ljava/io/FileDescriptor;[B)I",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn connect_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn connect_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.connect0(Ljava/io/FileDescriptor;[B)I");
 }
 
+#[intrinsic_method("sun/nio/ch/UnixDomainSockets.init()Z", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.init()Z");
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/UnixDomainSockets.localAddress0(Ljava/io/FileDescriptor;)[B",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn local_address_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn local_address_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.localAddress0(Ljava/io/FileDescriptor;)[B");
 }
 
+#[intrinsic_method("sun/nio/ch/UnixDomainSockets.socket0()I", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn socket_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.socket0()I");
 }
 

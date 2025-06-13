@@ -1,31 +1,27 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CPrinterSurfaceData";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CPrinterSurfaceData`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "_flush", "()V", flush);
-    registry.register(
-        CLASS_NAME,
-        "initOps",
-        "(JLjava/nio/ByteBuffer;[Ljava/lang/Object;II)V",
-        init_ops,
-    );
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CPrinterSurfaceData._flush()V", Any)]
 #[async_recursion(?Send)]
-async fn flush(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn flush(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPrinterSurfaceData._flush()V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CPrinterSurfaceData.initOps(JLjava/nio/ByteBuffer;[Ljava/lang/Object;II)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn init_ops(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ops(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.lwawt.macosx.CPrinterSurfaceData.initOps(JLjava/nio/ByteBuffer;[Ljava/lang/Object;II)V"
     )

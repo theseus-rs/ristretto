@@ -1,50 +1,42 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CDataTransferer";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CDataTransferer`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "formatForIndex",
-        "(J)Ljava/lang/String;",
-        format_for_index,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeDragQueryFile",
-        "([B)[Ljava/lang/String;",
-        native_drag_query_file,
-    );
-    registry.register(
-        CLASS_NAME,
-        "registerFormatWithPasteboard",
-        "(Ljava/lang/String;)J",
-        register_format_with_pasteboard,
-    );
-}
-
+#[intrinsic_method(
+    "sun/lwawt/macosx/CDataTransferer.formatForIndex(J)Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn format_for_index(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn format_for_index(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDataTransferer.formatForIndex(J)Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CDataTransferer.nativeDragQueryFile([B)[Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn native_drag_query_file(
+pub(crate) async fn native_drag_query_file(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDataTransferer.nativeDragQueryFile([B)[Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CDataTransferer.registerFormatWithPasteboard(Ljava/lang/String;)J",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn register_format_with_pasteboard(
+pub(crate) async fn register_format_with_pasteboard(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

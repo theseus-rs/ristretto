@@ -1,122 +1,94 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/util/prefs/MacOSXPreferencesFile";
-
-/// Register all intrinsic methods for `java.util.prefs.MacOSXPreferencesFile`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "addChildToNode",
-        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Z",
-        add_child_to_node,
-    );
-    registry.register(
-        CLASS_NAME,
-        "addKeyToNode",
-        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
-        add_key_to_node,
-    );
-    registry.register(
-        CLASS_NAME,
-        "addNode",
-        "(Ljava/lang/String;Ljava/lang/String;JJ)Z",
-        add_node,
-    );
-    registry.register(CLASS_NAME, "anyHost", "()J", any_host);
-    registry.register(CLASS_NAME, "anyUser", "()J", any_user);
-    registry.register(CLASS_NAME, "currentHost", "()J", current_host);
-    registry.register(CLASS_NAME, "currentUser", "()J", current_user);
-    registry.register(
-        CLASS_NAME,
-        "getChildrenForNode",
-        "(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;",
-        get_children_for_node,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getKeyFromNode",
-        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Ljava/lang/String;",
-        get_key_from_node,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getKeysForNode",
-        "(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;",
-        get_keys_for_node,
-    );
-    registry.register(
-        CLASS_NAME,
-        "removeChildFromNode",
-        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
-        remove_child_from_node,
-    );
-    registry.register(
-        CLASS_NAME,
-        "removeKeyFromNode",
-        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
-        remove_key_from_node,
-    );
-    registry.register(
-        CLASS_NAME,
-        "removeNode",
-        "(Ljava/lang/String;Ljava/lang/String;JJ)V",
-        remove_node,
-    );
-    registry.register(
-        CLASS_NAME,
-        "synchronize",
-        "(Ljava/lang/String;JJ)Z",
-        synchronize,
-    );
-}
-
+#[intrinsic_method(
+    "java/util/prefs/MacOSXPreferencesFile.addChildToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn add_child_to_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn add_child_to_node(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "java.util.prefs.MacOSXPreferencesFile.addChildToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Z"
     )
 }
 
+#[intrinsic_method(
+    "java/util/prefs/MacOSXPreferencesFile.addKeyToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn add_key_to_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn add_key_to_node(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "java.util.prefs.MacOSXPreferencesFile.addKeyToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V"
     )
 }
 
+#[intrinsic_method(
+    "java/util/prefs/MacOSXPreferencesFile.addNode(Ljava/lang/String;Ljava/lang/String;JJ)Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn add_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn add_node(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.addNode(Ljava/lang/String;Ljava/lang/String;JJ)Z")
 }
 
+#[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.anyHost()J", Any)]
 #[async_recursion(?Send)]
-async fn any_host(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn any_host(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.anyHost()J")
 }
 
+#[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.anyUser()J", Any)]
 #[async_recursion(?Send)]
-async fn any_user(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn any_user(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.anyUser()J")
 }
 
+#[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.currentHost()J", Any)]
 #[async_recursion(?Send)]
-async fn current_host(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn current_host(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.currentHost()J")
 }
 
+#[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.currentUser()J", Any)]
 #[async_recursion(?Send)]
-async fn current_user(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn current_user(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.currentUser()J")
 }
 
+#[intrinsic_method(
+    "java/util/prefs/MacOSXPreferencesFile.getChildrenForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_children_for_node(
+pub(crate) async fn get_children_for_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -125,22 +97,40 @@ async fn get_children_for_node(
     )
 }
 
+#[intrinsic_method(
+    "java/util/prefs/MacOSXPreferencesFile.getKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_key_from_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_key_from_node(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "java.util.prefs.MacOSXPreferencesFile.getKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Ljava/lang/String;"
     )
 }
 
+#[intrinsic_method(
+    "java/util/prefs/MacOSXPreferencesFile.getKeysForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_keys_for_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_keys_for_node(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "java.util.prefs.MacOSXPreferencesFile.getKeysForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;"
     )
 }
 
+#[intrinsic_method(
+    "java/util/prefs/MacOSXPreferencesFile.removeChildFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn remove_child_from_node(
+pub(crate) async fn remove_child_from_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -149,8 +139,12 @@ async fn remove_child_from_node(
     )
 }
 
+#[intrinsic_method(
+    "java/util/prefs/MacOSXPreferencesFile.removeKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn remove_key_from_node(
+pub(crate) async fn remove_key_from_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -159,15 +153,29 @@ async fn remove_key_from_node(
     )
 }
 
+#[intrinsic_method(
+    "java/util/prefs/MacOSXPreferencesFile.removeNode(Ljava/lang/String;Ljava/lang/String;JJ)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn remove_node(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn remove_node(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "java.util.prefs.MacOSXPreferencesFile.removeNode(Ljava/lang/String;Ljava/lang/String;JJ)V"
     )
 }
 
+#[intrinsic_method(
+    "java/util/prefs/MacOSXPreferencesFile.synchronize(Ljava/lang/String;JJ)Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn synchronize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn synchronize(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.util.prefs.MacOSXPreferencesFile.synchronize(Ljava/lang/String;JJ)Z")
 }
 

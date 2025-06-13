@@ -1,106 +1,75 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/font/CStrike";
-
-/// Register all intrinsic methods for `sun.font.CStrike`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "createNativeStrikePtr",
-        "(J[D[DII)J",
-        create_native_strike_ptr,
-    );
-    registry.register(
-        CLASS_NAME,
-        "disposeNativeStrikePtr",
-        "(J)V",
-        dispose_native_strike_ptr,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getFontMetrics",
-        "(J)Lsun/font/StrikeMetrics;",
-        get_font_metrics,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getGlyphImagePtrsNative",
-        "(J[J[II)V",
-        get_glyph_image_ptrs_native,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNativeGlyphAdvance",
-        "(JI)F",
-        get_native_glyph_advance,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNativeGlyphImageBounds",
-        "(JILjava/awt/geom/Rectangle2D$Float;DD)V",
-        get_native_glyph_image_bounds,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNativeGlyphOutline",
-        "(JIDD)Ljava/awt/geom/GeneralPath;",
-        get_native_glyph_outline,
-    );
-}
-
+#[intrinsic_method("sun/font/CStrike.createNativeStrikePtr(J[D[DII)J", Any)]
 #[async_recursion(?Send)]
-async fn create_native_strike_ptr(
+pub(crate) async fn create_native_strike_ptr(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.createNativeStrikePtr(J[D[DII)J")
 }
 
+#[intrinsic_method("sun/font/CStrike.disposeNativeStrikePtr(J)V", Any)]
 #[async_recursion(?Send)]
-async fn dispose_native_strike_ptr(
+pub(crate) async fn dispose_native_strike_ptr(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.disposeNativeStrikePtr(J)V")
 }
 
+#[intrinsic_method("sun/font/CStrike.getFontMetrics(J)Lsun/font/StrikeMetrics;", Any)]
 #[async_recursion(?Send)]
-async fn get_font_metrics(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_font_metrics(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.getFontMetrics(J)Lsun/font/StrikeMetrics;")
 }
 
+#[intrinsic_method("sun/font/CStrike.getGlyphImagePtrsNative(J[J[II)V", Any)]
 #[async_recursion(?Send)]
-async fn get_glyph_image_ptrs_native(
+pub(crate) async fn get_glyph_image_ptrs_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.getGlyphImagePtrsNative(J[J[II)V")
 }
 
+#[intrinsic_method("sun/font/CStrike.getNativeGlyphAdvance(JI)F", Any)]
 #[async_recursion(?Send)]
-async fn get_native_glyph_advance(
+pub(crate) async fn get_native_glyph_advance(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.getNativeGlyphAdvance(JI)F")
 }
 
+#[intrinsic_method(
+    "sun/font/CStrike.getNativeGlyphImageBounds(JILjava/awt/geom/Rectangle2D$Float;DD)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_native_glyph_image_bounds(
+pub(crate) async fn get_native_glyph_image_bounds(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.font.CStrike.getNativeGlyphImageBounds(JILjava/awt/geom/Rectangle2D$Float;DD)V")
 }
 
+#[intrinsic_method(
+    "sun/font/CStrike.getNativeGlyphOutline(JIDD)Ljava/awt/geom/GeneralPath;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_native_glyph_outline(
+pub(crate) async fn get_native_glyph_outline(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

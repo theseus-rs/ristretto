@@ -1,71 +1,82 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/metal/MTLSurfaceData";
-
-/// Register all intrinsic methods for `sun.java2d.metal.MTLSurfaceData`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "clearWindow", "()V", clear_window);
-    registry.register(
-        CLASS_NAME,
-        "getMTLTexturePointer",
-        "(J)J",
-        get_mtl_texture_pointer,
-    );
-    registry.register(
-        CLASS_NAME,
-        "initFlipBackbuffer",
-        "(J)Z",
-        init_flip_backbuffer,
-    );
-    registry.register(
-        CLASS_NAME,
-        "initOps",
-        "(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V",
-        init_ops,
-    );
-    registry.register(CLASS_NAME, "initRTexture", "(JZII)Z", init_r_texture);
-    registry.register(CLASS_NAME, "initTexture", "(JZII)Z", init_texture);
-}
-
+#[intrinsic_method(
+    "sun/java2d/metal/MTLSurfaceData.clearWindow()V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn clear_window(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn clear_window(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLSurfaceData.clearWindow()V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/metal/MTLSurfaceData.getMTLTexturePointer(J)J",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn get_mtl_texture_pointer(
+pub(crate) async fn get_mtl_texture_pointer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLSurfaceData.getMTLTexturePointer(J)J");
 }
 
+#[intrinsic_method(
+    "sun/java2d/metal/MTLSurfaceData.initFlipBackbuffer(J)Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn init_flip_backbuffer(
+pub(crate) async fn init_flip_backbuffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLSurfaceData.initFlipBackbuffer(J)Z");
 }
 
+#[intrinsic_method(
+    "sun/java2d/metal/MTLSurfaceData.initOps(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn init_ops(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ops(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLSurfaceData.initOps(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V");
 }
 
+#[intrinsic_method(
+    "sun/java2d/metal/MTLSurfaceData.initRTexture(JZII)Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn init_r_texture(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_r_texture(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLSurfaceData.initRTexture(JZII)Z");
 }
 
+#[intrinsic_method(
+    "sun/java2d/metal/MTLSurfaceData.initTexture(JZII)Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn init_texture(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_texture(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.metal.MTLSurfaceData.initTexture(JZII)Z");
 }
 

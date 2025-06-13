@@ -1,25 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/apple/laf/ScreenPopupFactory";
-
-/// Register all intrinsic methods for `com.apple.laf.ScreenPopupFactory`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "_getHeavyWeightPopup",
-        "(Ljava/awt/Component;Ljava/awt/Component;II)Ljavax/swing/Popup;",
-        get_heavy_weight_popup,
-    );
-}
-
+#[intrinsic_method(
+    "com/apple/laf/ScreenPopupFactory._getHeavyWeightPopup(Ljava/awt/Component;Ljava/awt/Component;II)Ljavax/swing/Popup;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_heavy_weight_popup(
+pub(crate) async fn get_heavy_weight_popup(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

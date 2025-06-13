@@ -1,57 +1,52 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/sun/media/sound/Platform";
-
-/// Register all intrinsic methods for `com.sun.media.sound.Platform`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(
-            CLASS_NAME,
-            "nGetExtraLibraries",
-            "()Ljava/lang/String;",
-            n_get_extra_libraries,
-        );
-        registry.register(
-            CLASS_NAME,
-            "nGetLibraryForFeature",
-            "(I)I",
-            n_get_library_for_feature,
-        );
-        registry.register(CLASS_NAME, "nIsSigned8", "()Z", n_is_signed_8);
-    }
-
-    registry.register(CLASS_NAME, "nIsBigEndian", "()Z", n_is_big_endian);
-}
-
+#[intrinsic_method(
+    "com/sun/media/sound/Platform.nGetExtraLibraries()Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn n_get_extra_libraries(
+pub(crate) async fn n_get_extra_libraries(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.Platform.nGetExtraLibraries()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "com/sun/media/sound/Platform.nGetLibraryForFeature(I)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn n_get_library_for_feature(
+pub(crate) async fn n_get_library_for_feature(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.Platform.nGetLibraryForFeature(I)I")
 }
 
+#[intrinsic_method("com/sun/media/sound/Platform.nIsBigEndian()Z", Any)]
 #[async_recursion(?Send)]
-async fn n_is_big_endian(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn n_is_big_endian(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.Platform.nIsBigEndian()Z")
 }
 
+#[intrinsic_method("com/sun/media/sound/Platform.nIsSigned8()Z", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn n_is_signed_8(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn n_is_signed_8(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.Platform.nIsSigned8()Z")
 }
 

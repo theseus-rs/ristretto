@@ -1,114 +1,43 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/instrument/InstrumentationImpl";
-
-/// Register all intrinsic methods for `sun.instrument.InstrumentationImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "loadAgent0",
-            "(Ljava/lang/String;)V",
-            load_agent_0,
-        );
-        registry.register(
-            CLASS_NAME,
-            "setHasTransformers",
-            "(JZ)V",
-            set_has_transformers,
-        );
-    }
-
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(CLASS_NAME, "jarFile", "(J)Ljava/lang/String;", jar_file);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "appendToClassLoaderSearch0",
-        "(JLjava/lang/String;Z)V",
-        append_to_class_loader_search_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getAllLoadedClasses0",
-        "(J)[Ljava/lang/Class;",
-        get_all_loaded_classes_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getInitiatedClasses0",
-        "(JLjava/lang/ClassLoader;)[Ljava/lang/Class;",
-        get_initiated_classes_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getObjectSize0",
-        "(JLjava/lang/Object;)J",
-        get_object_size_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "isModifiableClass0",
-        "(JLjava/lang/Class;)Z",
-        is_modifiable_class_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "isRetransformClassesSupported0",
-        "(J)Z",
-        is_retransform_classes_supported_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "redefineClasses0",
-        "(J[Ljava/lang/instrument/ClassDefinition;)V",
-        redefine_classes_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "retransformClasses0",
-        "(J[Ljava/lang/Class;)V",
-        retransform_classes_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setHasRetransformableTransformers",
-        "(JZ)V",
-        set_has_retransformable_transformers,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setNativeMethodPrefixes",
-        "(J[Ljava/lang/String;Z)V",
-        set_native_method_prefixes,
-    );
-}
-
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.appendToClassLoaderSearch0(JLjava/lang/String;Z)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn append_to_class_loader_search_0(
+pub(crate) async fn append_to_class_loader_search_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.appendToClassLoaderSearch0(JLjava/lang/String;Z)V")
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.getAllLoadedClasses0(J)[Ljava/lang/Class;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_all_loaded_classes_0(
+pub(crate) async fn get_all_loaded_classes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.getAllLoadedClasses0(J)[Ljava/lang/Class;")
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.getInitiatedClasses0(JLjava/lang/ClassLoader;)[Ljava/lang/Class;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_initiated_classes_0(
+pub(crate) async fn get_initiated_classes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -117,39 +46,72 @@ async fn get_initiated_classes_0(
     )
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.getObjectSize0(JLjava/lang/Object;)J",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get_object_size_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_object_size_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.getObjectSize0(JLjava/lang/Object;)J")
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.isModifiableClass0(JLjava/lang/Class;)Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn is_modifiable_class_0(
+pub(crate) async fn is_modifiable_class_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.isModifiableClass0(JLjava/lang/Class;)Z")
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.isRetransformClassesSupported0(J)Z",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn is_retransform_classes_supported_0(
+pub(crate) async fn is_retransform_classes_supported_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.isRetransformClassesSupported0(J)Z")
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.jarFile(J)Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn jar_file(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn jar_file(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.jarFile(J)Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.loadAgent0(Ljava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn load_agent_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn load_agent_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.loadAgent0(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.redefineClasses0(J[Ljava/lang/instrument/ClassDefinition;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn redefine_classes_0(
+pub(crate) async fn redefine_classes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -158,32 +120,48 @@ async fn redefine_classes_0(
     )
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.retransformClasses0(J[Ljava/lang/Class;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn retransform_classes_0(
+pub(crate) async fn retransform_classes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.retransformClasses0(J[Ljava/lang/Class;)V")
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.setHasRetransformableTransformers(JZ)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn set_has_retransformable_transformers(
+pub(crate) async fn set_has_retransformable_transformers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.setHasRetransformableTransformers(JZ)V")
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.setHasTransformers(JZ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn set_has_transformers(
+pub(crate) async fn set_has_transformers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.instrument.InstrumentationImpl.setHasTransformers(JZ)V")
 }
 
+#[intrinsic_method(
+    "sun/instrument/InstrumentationImpl.setNativeMethodPrefixes(J[Ljava/lang/String;Z)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn set_native_method_prefixes(
+pub(crate) async fn set_native_method_prefixes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

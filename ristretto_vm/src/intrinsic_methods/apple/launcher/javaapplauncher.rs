@@ -1,39 +1,31 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "apple/launcher/JavaAppLauncher";
-
-/// Register all intrinsic methods for `apple.launcher.JavaAppLauncher`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeConvertAndRelease",
-        "(J)Ljava/lang/Object;",
-        native_convert_and_release,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeInvokeNonPublic",
-        "(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V",
-        native_invoke_non_public,
-    );
-}
-
+#[intrinsic_method(
+    "apple/launcher/JavaAppLauncher.nativeConvertAndRelease(J)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_convert_and_release(
+pub(crate) async fn native_convert_and_release(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.launcher.JavaAppLauncher.nativeConvertAndRelease(J)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "apple/launcher/JavaAppLauncher.nativeInvokeNonPublic(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_invoke_non_public(
+pub(crate) async fn native_invoke_non_public(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -1,124 +1,19 @@
 use crate::Error::InternalError;
 use crate::intrinsic_methods::java::lang::class;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
 use async_recursion::async_recursion;
-use ristretto_classfile::{Constant, FieldType};
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::{Constant, FieldType, JAVA_11};
 use ristretto_classloader::{Object, Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/reflect/ConstantPool";
-
-/// Register all intrinsic methods for `jdk.internal.reflect.ConstantPool`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getClassAt0",
-        "(Ljava/lang/Object;I)Ljava/lang/Class;",
-        get_class_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getClassAtIfLoaded0",
-        "(Ljava/lang/Object;I)Ljava/lang/Class;",
-        get_class_at_if_loaded_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getClassRefIndexAt0",
-        "(Ljava/lang/Object;I)I",
-        get_class_ref_index_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getDoubleAt0",
-        "(Ljava/lang/Object;I)D",
-        get_double_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getFieldAt0",
-        "(Ljava/lang/Object;I)Ljava/lang/reflect/Field;",
-        get_field_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getFieldAtIfLoaded0",
-        "(Ljava/lang/Object;I)Ljava/lang/reflect/Field;",
-        get_field_at_if_loaded_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getFloatAt0",
-        "(Ljava/lang/Object;I)F",
-        get_float_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getIntAt0",
-        "(Ljava/lang/Object;I)I",
-        get_int_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getLongAt0",
-        "(Ljava/lang/Object;I)J",
-        get_long_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getMemberRefInfoAt0",
-        "(Ljava/lang/Object;I)[Ljava/lang/String;",
-        get_member_ref_info_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getMethodAt0",
-        "(Ljava/lang/Object;I)Ljava/lang/reflect/Member;",
-        get_method_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getMethodAtIfLoaded0",
-        "(Ljava/lang/Object;I)Ljava/lang/reflect/Member;",
-        get_method_at_if_loaded_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNameAndTypeRefIndexAt0",
-        "(Ljava/lang/Object;I)I",
-        get_name_and_type_ref_index_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getNameAndTypeRefInfoAt0",
-        "(Ljava/lang/Object;I)[Ljava/lang/String;",
-        get_name_and_type_ref_info_at_0,
-    );
-    registry.register(CLASS_NAME, "getSize0", "(Ljava/lang/Object;)I", get_size_0);
-    registry.register(
-        CLASS_NAME,
-        "getStringAt0",
-        "(Ljava/lang/Object;I)Ljava/lang/String;",
-        get_string_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getTagAt0",
-        "(Ljava/lang/Object;I)B",
-        get_tag_at_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getUTF8At0",
-        "(Ljava/lang/Object;I)Ljava/lang/String;",
-        get_utf_8_at_0,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getClassAt0(Ljava/lang/Object;I)Ljava/lang/Class;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_class_at_0(
     thread: Arc<Thread>,
@@ -135,6 +30,10 @@ pub(crate) async fn get_class_at_0(
     Ok(Some(result))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getClassAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/Class;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_class_at_if_loaded_0(
     thread: Arc<Thread>,
@@ -151,8 +50,12 @@ pub(crate) async fn get_class_at_if_loaded_0(
     Ok(Some(result))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getClassRefIndexAt0(Ljava/lang/Object;I)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_class_ref_index_at_0(
+pub(crate) async fn get_class_ref_index_at_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -174,6 +77,10 @@ async fn get_class_ref_index_at_0(
     Ok(Some(Value::Int(class_index)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getDoubleAt0(Ljava/lang/Object;I)D",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_double_at_0(
     thread: Arc<Thread>,
@@ -187,6 +94,10 @@ pub(crate) async fn get_double_at_0(
     Ok(Some(Value::Double(*double)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getFieldAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_field_at_0(
     thread: Arc<Thread>,
@@ -216,6 +127,10 @@ pub(crate) async fn get_field_at_0(
     Ok(field)
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getFieldAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_field_at_if_loaded_0(
     thread: Arc<Thread>,
@@ -224,6 +139,10 @@ pub(crate) async fn get_field_at_if_loaded_0(
     get_field_at_0(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getFloatAt0(Ljava/lang/Object;I)F",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_float_at_0(
     thread: Arc<Thread>,
@@ -237,6 +156,10 @@ pub(crate) async fn get_float_at_0(
     Ok(Some(Value::Float(*float)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getIntAt0(Ljava/lang/Object;I)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_int_at_0(
     thread: Arc<Thread>,
@@ -250,6 +173,10 @@ pub(crate) async fn get_int_at_0(
     Ok(Some(Value::Int(*integer)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getLongAt0(Ljava/lang/Object;I)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_long_at_0(
     thread: Arc<Thread>,
@@ -263,6 +190,10 @@ pub(crate) async fn get_long_at_0(
     Ok(Some(Value::Long(*long)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getMemberRefInfoAt0(Ljava/lang/Object;I)[Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_member_ref_info_at_0(
     thread: Arc<Thread>,
@@ -305,6 +236,10 @@ pub(crate) async fn get_member_ref_info_at_0(
     Ok(Some(Value::from(results)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getMethodAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_method_at_0(
     thread: Arc<Thread>,
@@ -357,6 +292,10 @@ pub(crate) async fn get_method_at_0(
     Ok(method)
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getMethodAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_method_at_if_loaded_0(
     thread: Arc<Thread>,
@@ -365,8 +304,12 @@ pub(crate) async fn get_method_at_if_loaded_0(
     get_method_at_0(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getNameAndTypeRefIndexAt0(Ljava/lang/Object;I)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_name_and_type_ref_index_at_0(
+pub(crate) async fn get_name_and_type_ref_index_at_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -405,8 +348,12 @@ async fn get_name_and_type_ref_index_at_0(
     Ok(Some(Value::Int(name_and_type_index)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getNameAndTypeRefInfoAt0(Ljava/lang/Object;I)[Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_name_and_type_ref_info_at_0(
+pub(crate) async fn get_name_and_type_ref_info_at_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -453,6 +400,10 @@ async fn get_name_and_type_ref_info_at_0(
     Ok(Some(Value::from(results)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getSize0(Ljava/lang/Object;)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_size_0(
     thread: Arc<Thread>,
@@ -465,6 +416,10 @@ pub(crate) async fn get_size_0(
     Ok(Some(Value::from(size)))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getStringAt0(Ljava/lang/Object;I)Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_string_at_0(
     thread: Arc<Thread>,
@@ -480,8 +435,15 @@ pub(crate) async fn get_string_at_0(
     Ok(Some(result))
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getTagAt0(Ljava/lang/Object;I)B",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_tag_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_tag_at_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object: Object = parameters.pop()?.try_into()?;
     let class = class::get_class(&thread, &object).await?;
@@ -499,6 +461,10 @@ async fn get_tag_at_0(thread: Arc<Thread>, mut parameters: Parameters) -> Result
     Ok(tag)
 }
 
+#[intrinsic_method(
+    "jdk/internal/reflect/ConstantPool.getUTF8At0(Ljava/lang/Object;I)Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_utf_8_at_0(
     thread: Arc<Thread>,

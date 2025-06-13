@@ -1,20 +1,19 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/awt/PlatformGraphicsInfo";
-
-/// Register all intrinsic methods for `sun.awt.PlatformGraphicsInfo`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "isInAquaSession", "()Z", is_in_aqua_session);
-}
-
+#[intrinsic_method(
+    "sun/awt/PlatformGraphicsInfo.isInAquaSession()Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn is_in_aqua_session(
+pub(crate) async fn is_in_aqua_session(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

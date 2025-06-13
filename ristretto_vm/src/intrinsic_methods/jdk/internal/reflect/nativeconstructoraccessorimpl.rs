@@ -1,24 +1,18 @@
 use crate::Result;
 use crate::intrinsic_methods::java::lang::class;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Between;
+use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::{Object, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/reflect/NativeConstructorAccessorImpl";
-
-/// Register all intrinsic methods for `jdk.internal.reflect.NativeConstructorAccessorImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "newInstance0",
-        "(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;",
-        new_instance_0,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/internal/reflect/NativeConstructorAccessorImpl.newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;",
+    Between(JAVA_11, JAVA_21)
+)]
 #[async_recursion(?Send)]
 pub(crate) async fn new_instance_0(
     thread: Arc<Thread>,

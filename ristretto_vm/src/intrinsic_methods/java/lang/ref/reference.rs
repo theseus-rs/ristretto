@@ -1,68 +1,55 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/ref/Reference";
-
-/// Register all intrinsic methods for `java.lang.ref.Reference`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_17 {
-        registry.register(CLASS_NAME, "clear0", "()V", clear_0);
-        registry.register(
-            CLASS_NAME,
-            "refersTo0",
-            "(Ljava/lang/Object;)Z",
-            refers_to_0,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "getAndClearReferencePendingList",
-        "()Ljava/lang/ref/Reference;",
-        get_and_clear_reference_pending_list,
-    );
-    registry.register(
-        CLASS_NAME,
-        "hasReferencePendingList",
-        "()Z",
-        has_reference_pending_list,
-    );
-    registry.register(
-        CLASS_NAME,
-        "waitForReferencePendingList",
-        "()V",
-        wait_for_reference_pending_list,
-    );
-}
-
+#[intrinsic_method("java/lang/ref/Reference.clear0()V", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn clear_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn clear_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.ref.Reference.clear0()V")
 }
 
+#[intrinsic_method(
+    "java/lang/ref/Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_and_clear_reference_pending_list(
+pub(crate) async fn get_and_clear_reference_pending_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.ref.Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;")
 }
 
+#[intrinsic_method(
+    "java/lang/ref/Reference.hasReferencePendingList()Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn has_reference_pending_list(
+pub(crate) async fn has_reference_pending_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.ref.Reference.hasReferencePendingList()Z")
 }
 
+#[intrinsic_method(
+    "java/lang/ref/Reference.refersTo0(Ljava/lang/Object;)Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn refers_to_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn refers_to_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let object_parameter = parameters.pop_reference()?;
     let object = parameters.pop_object()?;
     let refers_to = if let Some(Reference::Object(object_parameter)) = object_parameter {
@@ -74,8 +61,12 @@ async fn refers_to_0(_thread: Arc<Thread>, mut parameters: Parameters) -> Result
     Ok(Some(Value::from(refers_to)))
 }
 
+#[intrinsic_method(
+    "java/lang/ref/Reference.waitForReferencePendingList()V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn wait_for_reference_pending_list(
+pub(crate) async fn wait_for_reference_pending_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

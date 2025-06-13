@@ -1,26 +1,15 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/Double";
-
-/// Register all intrinsic methods for `java.lang.Double`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "doubleToRawLongBits",
-        "(D)J",
-        double_to_raw_long_bits,
-    );
-    registry.register(CLASS_NAME, "longBitsToDouble", "(J)D", long_bits_to_double);
-}
-
+#[intrinsic_method("java/lang/Double.doubleToRawLongBits(D)J", Any)]
 #[async_recursion(?Send)]
-async fn double_to_raw_long_bits(
+pub(crate) async fn double_to_raw_long_bits(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,8 +19,9 @@ async fn double_to_raw_long_bits(
     Ok(Some(Value::Long(bits)))
 }
 
+#[intrinsic_method("java/lang/Double.longBitsToDouble(J)D", Any)]
 #[async_recursion(?Send)]
-async fn long_bits_to_double(
+pub(crate) async fn long_bits_to_double(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -1,86 +1,106 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/tools/attach/VirtualMachineImpl";
-
-/// Register all intrinsic methods for `sun.tools.attach.VirtualMachineImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "checkPermissions",
-        "(Ljava/lang/String;)V",
-        check_permissions,
-    );
-    registry.register(CLASS_NAME, "close", "(I)V", close);
-    registry.register(CLASS_NAME, "connect", "(ILjava/lang/String;)V", connect);
-    registry.register(
-        CLASS_NAME,
-        "createAttachFile0",
-        "(Ljava/lang/String;)V",
-        create_attach_file_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getTempDir",
-        "()Ljava/lang/String;",
-        get_temp_dir,
-    );
-    registry.register(CLASS_NAME, "read", "(I[BII)I", read);
-    registry.register(CLASS_NAME, "sendQuitTo", "(I)V", send_quit_to);
-    registry.register(CLASS_NAME, "socket", "()I", socket);
-    registry.register(CLASS_NAME, "write", "(I[BII)V", write);
-}
-
+#[intrinsic_method(
+    "sun/tools/attach/VirtualMachineImpl.checkPermissions(Ljava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn check_permissions(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn check_permissions(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.checkPermissions(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "sun/tools/attach/VirtualMachineImpl.close(I)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn close(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn close(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.close(I)V")
 }
 
+#[intrinsic_method(
+    "sun/tools/attach/VirtualMachineImpl.connect(ILjava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn connect(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn connect(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.connect(ILjava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "sun/tools/attach/VirtualMachineImpl.createAttachFile0(Ljava/lang/String;)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn create_attach_file_0(
+pub(crate) async fn create_attach_file_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.createAttachFile0(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "sun/tools/attach/VirtualMachineImpl.getTempDir()Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_temp_dir(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_temp_dir(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.getTempDir()Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "sun/tools/attach/VirtualMachineImpl.read(I[BII)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn read(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn read(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.read(I[BII)I")
 }
 
+#[intrinsic_method(
+    "sun/tools/attach/VirtualMachineImpl.sendQuitTo(I)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn send_quit_to(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn send_quit_to(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.sendQuitTo(I)V")
 }
 
+#[intrinsic_method(
+    "sun/tools/attach/VirtualMachineImpl.socket()I",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn socket(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn socket(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.socket()I")
 }
 
+#[intrinsic_method(
+    "sun/tools/attach/VirtualMachineImpl.write(I[BII)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn write(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn write(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.write(I[BII)V")
 }
 

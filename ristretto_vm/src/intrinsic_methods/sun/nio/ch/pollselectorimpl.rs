@@ -1,20 +1,16 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/PollSelectorImpl";
-
-/// Register all intrinsic methods for `sun.nio.ch.PollSelectorImpl`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "poll", "(JII)I", poll);
-}
-
+#[intrinsic_method("sun/nio/ch/PollSelectorImpl.poll(JII)I", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn poll(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn poll(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.PollSelectorImpl.poll(JII)I")
 }
 

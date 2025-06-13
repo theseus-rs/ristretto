@@ -1,48 +1,73 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/ClassLoader$NativeLibrary";
-
-/// Register all intrinsic methods for `java.lang.ClassLoader$NativeLibrary`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;Z)V", unload);
-        registry.register(CLASS_NAME, "find", "(Ljava/lang/String;)J", find);
-        registry.register(CLASS_NAME, "load", "(Ljava/lang/String;Z)V", load);
-    } else {
-        registry.register(CLASS_NAME, "findEntry", "(Ljava/lang/String;)J", find_entry);
-        registry.register(CLASS_NAME, "load0", "(Ljava/lang/String;ZZ)Z", load_0);
-        registry.register(CLASS_NAME, "unload", "(Ljava/lang/String;ZJ)V", unload);
-    }
-}
-
+#[intrinsic_method(
+    "java/lang/ClassLoader$NativeLibrary.find(Ljava/lang/String;)J",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn find(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn find(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.find(Ljava/lang/String;)J")
 }
 
+#[intrinsic_method(
+    "java/lang/ClassLoader$NativeLibrary.findEntry(Ljava/lang/String;)J",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn find_entry(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn find_entry(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.findEntry(Ljava/lang/String;)J")
 }
 
+#[intrinsic_method(
+    "java/lang/ClassLoader$NativeLibrary.load(Ljava/lang/String;Z)V",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn load(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn load(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.load(Ljava/lang/String;Z)V")
 }
 
+#[intrinsic_method(
+    "java/lang/ClassLoader$NativeLibrary.load0(Ljava/lang/String;ZZ)Z",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.load0(Ljava/lang/String;ZZ)Z")
 }
 
+#[intrinsic_method(
+    "java/lang/ClassLoader$NativeLibrary.unload(Ljava/lang/String;Z)V",
+    LessThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn unload(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn unload_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("java.lang.ClassLoader$NativeLibrary.unload(Ljava/lang/String;Z)V")
+}
+
+#[intrinsic_method(
+    "java/lang/ClassLoader$NativeLibrary.unload(Ljava/lang/String;ZJ)V",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn unload_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.unload(Ljava/lang/String;ZJ)V")
 }
 
@@ -88,10 +113,19 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
+        expected = "not yet implemented: java.lang.ClassLoader$NativeLibrary.unload(Ljava/lang/String;Z)V"
+    )]
+    async fn test_unload_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = unload_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
         expected = "not yet implemented: java.lang.ClassLoader$NativeLibrary.unload(Ljava/lang/String;ZJ)V"
     )]
-    async fn test_unload() {
+    async fn test_unload_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unload(thread, Parameters::default()).await;
+        let _ = unload_1(thread, Parameters::default()).await;
     }
 }

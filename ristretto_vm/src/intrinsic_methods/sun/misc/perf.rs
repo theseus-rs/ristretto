@@ -1,74 +1,79 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/misc/Perf";
-
-/// Register all intrinsic methods for `sun.misc.Perf`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "attach",
-        "(Ljava/lang/String;II)Ljava/nio/ByteBuffer;",
-        attach,
-    );
-    registry.register(
-        CLASS_NAME,
-        "createByteArray",
-        "(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
-        create_byte_array,
-    );
-    registry.register(
-        CLASS_NAME,
-        "createLong",
-        "(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
-        create_long,
-    );
-    registry.register(CLASS_NAME, "detach", "(Ljava/nio/ByteBuffer;)V", detach);
-    registry.register(CLASS_NAME, "highResCounter", "()J", high_res_counter);
-    registry.register(CLASS_NAME, "highResFrequency", "()J", high_res_frequency);
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-}
-
+#[intrinsic_method(
+    "sun/misc/Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn attach(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn attach(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;")
 }
 
+#[intrinsic_method(
+    "sun/misc/Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn create_byte_array(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn create_byte_array(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.misc.Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;")
 }
 
+#[intrinsic_method(
+    "sun/misc/Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn create_long(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn create_long(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.misc.Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;")
 }
 
+#[intrinsic_method(
+    "sun/misc/Perf.detach(Ljava/nio/ByteBuffer;)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn detach(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn detach(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.misc.Perf.detach(Ljava/nio/ByteBuffer;)V")
 }
 
+#[intrinsic_method("sun/misc/Perf.highResCounter()J", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn high_res_counter(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn high_res_counter(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.misc.Perf.highResCounter()J")
 }
 
+#[intrinsic_method("sun/misc/Perf.highResFrequency()J", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn high_res_frequency(
+pub(crate) async fn high_res_frequency(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.misc.Perf.highResFrequency()J")
 }
 
+#[intrinsic_method("sun/misc/Perf.registerNatives()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 

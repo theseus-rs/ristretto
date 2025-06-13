@@ -1,45 +1,64 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_17, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Equal, GreaterThan, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/misc/ScopedMemoryAccess";
-
-/// Register all intrinsic methods for `jdk.internal.misc.ScopedMemoryAccess`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(CLASS_NAME, "closeScope0", "(Ljdk/internal/misc/ScopedMemoryAccess$Scope;Ljdk/internal/misc/ScopedMemoryAccess$Scope$ScopedAccessError;)Z", close_scope_0);
-    } else if registry.java_major_version() <= JAVA_21 {
-        registry.register(
-            CLASS_NAME,
-            "closeScope0",
-            "(Ljdk/internal/foreign/MemorySessionImpl;)Z",
-            close_scope_0,
-        );
-    } else {
-        registry.register(
-            CLASS_NAME,
-            "closeScope0",
-            "(Ljdk/internal/foreign/MemorySessionImpl;Ljdk/internal/misc/ScopedMemoryAccess$ScopedAccessError;)V",
-            close_scope_0,
-        );
-    }
-
-    registry.register(CLASS_NAME, "registerNatives", "()V", register_natives);
-}
-
+#[intrinsic_method(
+    "jdk/internal/misc/ScopedMemoryAccess.closeScope0(Ljdk/internal/misc/ScopedMemoryAccess$Scope;Ljdk/internal/misc/ScopedMemoryAccess$Scope$ScopedAccessError;)Z",
+    Equal(JAVA_17)
+)]
 #[async_recursion(?Send)]
-async fn close_scope_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn close_scope_0_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/misc/ScopedMemoryAccess$Scope;Ljdk/internal/misc/ScopedMemoryAccess$Scope$ScopedAccessError;)Z"
     )
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;)Z",
+    Equal(JAVA_21)
+)]
 #[async_recursion(?Send)]
-async fn register_natives(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn close_scope_0_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!(
+        "jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;)Z"
+    )
+}
+
+#[intrinsic_method(
+    "jdk/internal/misc/ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;Ljdk/internal/misc/ScopedMemoryAccess$ScopedAccessError;)V",
+    GreaterThan(JAVA_21)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn close_scope_0_2(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!(
+        "jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;Ljdk/internal/misc/ScopedMemoryAccess$ScopedAccessError;)V"
+    )
+}
+
+#[intrinsic_method(
+    "jdk/internal/misc/ScopedMemoryAccess.registerNatives()V",
+    GreaterThanOrEqual(JAVA_17)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn register_natives(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
@@ -51,9 +70,27 @@ mod tests {
     #[should_panic(
         expected = "not yet implemented: jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/misc/ScopedMemoryAccess$Scope;Ljdk/internal/misc/ScopedMemoryAccess$Scope$ScopedAccessError;)Z"
     )]
-    async fn test_close_scope_0() {
+    async fn test_close_scope_0_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_scope_0(thread, Parameters::default()).await;
+        let _ = close_scope_0_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;)Z"
+    )]
+    async fn test_close_scope_0_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = close_scope_0_1(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;Ljdk/internal/misc/ScopedMemoryAccess$ScopedAccessError;)V"
+    )]
+    async fn test_close_scope_0_2() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = close_scope_0_2(thread, Parameters::default()).await;
     }
 
     #[tokio::test]

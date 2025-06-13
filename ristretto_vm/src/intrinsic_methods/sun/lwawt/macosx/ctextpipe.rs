@@ -1,60 +1,59 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CTextPipe";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CTextPipe`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "doDrawGlyphs",
-        "(Lsun/java2d/SurfaceData;JLjava/awt/font/GlyphVector;FF)V",
-        do_draw_glyphs,
-    );
-    registry.register(
-        CLASS_NAME,
-        "doDrawString",
-        "(Lsun/java2d/SurfaceData;JLjava/lang/String;DD)V",
-        do_draw_string,
-    );
-    registry.register(
-        CLASS_NAME,
-        "doOneUnicode",
-        "(Lsun/java2d/SurfaceData;JCFF)V",
-        do_one_unicode,
-    );
-    registry.register(
-        CLASS_NAME,
-        "doUnicodes",
-        "(Lsun/java2d/SurfaceData;J[CIIFF)V",
-        do_unicodes,
-    );
-}
-
+#[intrinsic_method(
+    "sun/lwawt/macosx/CTextPipe.doDrawGlyphs(Lsun/java2d/SurfaceData;JLjava/awt/font/GlyphVector;FF)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn do_draw_glyphs(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_draw_glyphs(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!(
         "sun.lwawt.macosx.CTextPipe.doDrawGlyphs(Lsun/java2d/SurfaceData;JLjava/awt/font/GlyphVector;FF)V"
     )
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CTextPipe.doDrawString(Lsun/java2d/SurfaceData;JLjava/lang/String;DD)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn do_draw_string(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_draw_string(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CTextPipe.doDrawString(Lsun/java2d/SurfaceData;JLjava/lang/String;DD)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CTextPipe.doOneUnicode(Lsun/java2d/SurfaceData;JCFF)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn do_one_unicode(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_one_unicode(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CTextPipe.doOneUnicode(Lsun/java2d/SurfaceData;JCFF)V")
 }
 
+#[intrinsic_method(
+    "sun/lwawt/macosx/CTextPipe.doUnicodes(Lsun/java2d/SurfaceData;J[CIIFF)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn do_unicodes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn do_unicodes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CTextPipe.doUnicodes(Lsun/java2d/SurfaceData;J[CIIFF)V")
 }
 

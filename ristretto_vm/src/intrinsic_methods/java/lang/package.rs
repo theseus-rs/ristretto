@@ -1,39 +1,31 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/lang/Package";
-
-/// Register all intrinsic methods for `java.lang.Package`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "getSystemPackage0",
-        "(Ljava/lang/String;)Ljava/lang/String;",
-        get_system_package_0,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getSystemPackages0",
-        "()[Ljava/lang/String;",
-        get_system_packages_0,
-    );
-}
-
+#[intrinsic_method(
+    "java/lang/Package.getSystemPackage0(Ljava/lang/String;)Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_system_package_0(
+pub(crate) async fn get_system_package_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("java.lang.Package.getSystemPackage0(Ljava/lang/String;)Ljava/lang/String;")
 }
 
+#[intrinsic_method(
+    "java/lang/Package.getSystemPackages0()[Ljava/lang/String;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_system_packages_0(
+pub(crate) async fn get_system_packages_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

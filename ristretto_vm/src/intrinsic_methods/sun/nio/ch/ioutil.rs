@@ -1,105 +1,112 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, JAVA_21, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/IOUtil";
-
-/// Register all intrinsic methods for `sun.nio.ch.IOUtil`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() >= JAVA_11 {
-        registry.register(CLASS_NAME, "drain1", "(I)I", drain_1);
-        registry.register(CLASS_NAME, "write1", "(IB)I", write_1);
-    }
-
-    if registry.java_major_version() >= JAVA_21 {
-        registry.register(CLASS_NAME, "writevMax", "()J", writev_max);
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "configureBlocking",
-        "(Ljava/io/FileDescriptor;Z)V",
-        configure_blocking,
-    );
-    registry.register(CLASS_NAME, "drain", "(I)Z", drain);
-    registry.register(CLASS_NAME, "fdLimit", "()I", fd_limit);
-    registry.register(CLASS_NAME, "fdVal", "(Ljava/io/FileDescriptor;)I", fd_val);
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(CLASS_NAME, "iovMax", "()I", iov_max);
-    registry.register(CLASS_NAME, "makePipe", "(Z)J", make_pipe);
-    registry.register(CLASS_NAME, "randomBytes", "([B)Z", random_bytes);
-    registry.register(
-        CLASS_NAME,
-        "setfdVal",
-        "(Ljava/io/FileDescriptor;I)V",
-        setfd_val,
-    );
-}
-
+#[intrinsic_method("sun/nio/ch/IOUtil.configureBlocking(Ljava/io/FileDescriptor;Z)V", Any)]
 #[async_recursion(?Send)]
-async fn configure_blocking(
+pub(crate) async fn configure_blocking(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.configureBlocking(Ljava/io/FileDescriptor;Z)V");
 }
 
+#[intrinsic_method("sun/nio/ch/IOUtil.drain(I)Z", Any)]
 #[async_recursion(?Send)]
-async fn drain(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn drain(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.drain(I)Z");
 }
 
+#[intrinsic_method("sun/nio/ch/IOUtil.drain1(I)I", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn drain_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn drain_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.drain1(I)I");
 }
 
+#[intrinsic_method("sun/nio/ch/IOUtil.fdLimit()I", Any)]
 #[async_recursion(?Send)]
-async fn fd_limit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn fd_limit(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.fdLimit()I");
 }
 
+#[intrinsic_method("sun/nio/ch/IOUtil.fdVal(Ljava/io/FileDescriptor;)I", Any)]
 #[async_recursion(?Send)]
-async fn fd_val(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn fd_val(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.fdVal(Ljava/io/FileDescriptor;)I");
 }
 
+#[intrinsic_method("sun/nio/ch/IOUtil.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("sun/nio/ch/IOUtil.iovMax()I", Any)]
 #[async_recursion(?Send)]
-async fn iov_max(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn iov_max(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(Some(Value::Int(16)))
 }
 
+#[intrinsic_method("sun/nio/ch/IOUtil.makePipe(Z)J", Any)]
 #[async_recursion(?Send)]
-async fn make_pipe(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn make_pipe(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.makePipe(Z)J");
 }
 
+#[intrinsic_method("sun/nio/ch/IOUtil.randomBytes([B)Z", Any)]
 #[async_recursion(?Send)]
-async fn random_bytes(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn random_bytes(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.randomBytes([B)Z");
 }
 
+#[intrinsic_method("sun/nio/ch/IOUtil.setfdVal(Ljava/io/FileDescriptor;I)V", Any)]
 #[async_recursion(?Send)]
-async fn setfd_val(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn setfd_val(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.setfdVal(Ljava/io/FileDescriptor;I)V");
 }
 
+#[intrinsic_method("sun/nio/ch/IOUtil.write1(IB)I", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn write_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn write_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.IOUtil.write1(IB)I");
 }
 
+#[intrinsic_method("sun/nio/ch/IOUtil.writevMax()J", GreaterThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
-async fn writev_max(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn writev_max(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     #[cfg(target_os = "windows")]
     {
         Ok(Some(Value::Long(i64::MAX)))

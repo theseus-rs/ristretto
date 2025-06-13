@@ -1,293 +1,251 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "com/sun/java/swing/plaf/gtk/GTKEngine";
-
-/// Register all intrinsic methods for `com.sun.java.swing.plaf.gtk.GTKEngine`.
-#[expect(clippy::too_many_lines)]
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "nativeFinishPainting",
-        "([III)I",
-        native_finish_painting,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeSetRangeValue",
-        "(IDDDD)V",
-        native_set_range_value,
-    );
-    registry.register(
-        CLASS_NAME,
-        "nativeStartPainting",
-        "(II)V",
-        native_start_painting,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_get_gtk_setting",
-        "(I)Ljava/lang/Object;",
-        native_get_gtk_setting,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_arrow",
-        "(IIILjava/lang/String;IIIII)V",
-        native_paint_arrow,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_background",
-        "(IIIIII)V",
-        native_paint_background,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_box",
-        "(IIILjava/lang/String;IIIIII)V",
-        native_paint_box,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_box_gap",
-        "(IIILjava/lang/String;IIIIIII)V",
-        native_paint_box_gap,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_check",
-        "(IILjava/lang/String;IIII)V",
-        native_paint_check,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_expander",
-        "(IILjava/lang/String;IIIII)V",
-        native_paint_expander,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_extension",
-        "(IIILjava/lang/String;IIIII)V",
-        native_paint_extension,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_flat_box",
-        "(IIILjava/lang/String;IIIIZ)V",
-        native_paint_flat_box,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_focus",
-        "(IILjava/lang/String;IIII)V",
-        native_paint_focus,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_handle",
-        "(IIILjava/lang/String;IIIII)V",
-        native_paint_handle,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_hline",
-        "(IILjava/lang/String;IIII)V",
-        native_paint_hline,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_option",
-        "(IILjava/lang/String;IIII)V",
-        native_paint_option,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_shadow",
-        "(IIILjava/lang/String;IIIIII)V",
-        native_paint_shadow,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_slider",
-        "(IIILjava/lang/String;IIIIIZ)V",
-        native_paint_slider,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_paint_vline",
-        "(IILjava/lang/String;IIII)V",
-        native_paint_vline,
-    );
-    registry.register(
-        CLASS_NAME,
-        "native_switch_theme",
-        "()V",
-        native_switch_theme,
-    );
-}
-
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.nativeFinishPainting([III)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_finish_painting(
+pub(crate) async fn native_finish_painting(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativeFinishPainting([III)I")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.nativeSetRangeValue(IDDDD)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_set_range_value(
+pub(crate) async fn native_set_range_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativeSetRangeValue(IDDDD)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.nativeStartPainting(II)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_start_painting(
+pub(crate) async fn native_start_painting(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativeStartPainting(II)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_get_gtk_setting(I)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_get_gtk_setting(
+pub(crate) async fn native_get_gtk_setting(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativeGetGTKSetting(I)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_arrow(IIILjava/lang/String;IIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_arrow(
+pub(crate) async fn native_paint_arrow(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintArrow(IIILjava/lang/String;IIIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_background(IIIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_background(
+pub(crate) async fn native_paint_background(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintBackground(IIIIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_box(IIILjava/lang/String;IIIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_box(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn native_paint_box(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintBox(IIILjava/lang/String;IIIIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_box_gap(IIILjava/lang/String;IIIIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_box_gap(
+pub(crate) async fn native_paint_box_gap(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintBoxGap(IIILjava/lang/String;IIIIIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_check(IILjava/lang/String;IIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_check(
+pub(crate) async fn native_paint_check(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintCheck(IILjava/lang/String;IIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_expander(IILjava/lang/String;IIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_expander(
+pub(crate) async fn native_paint_expander(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintExpander(IILjava/lang/String;IIIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_extension(IIILjava/lang/String;IIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_extension(
+pub(crate) async fn native_paint_extension(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintExtension(IIILjava/lang/String;IIIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_flat_box(IIILjava/lang/String;IIIIZ)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_flat_box(
+pub(crate) async fn native_paint_flat_box(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintFlatBox(IIILjava/lang/String;IIIIZ)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_focus(IILjava/lang/String;IIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_focus(
+pub(crate) async fn native_paint_focus(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintFocus(IILjava/lang/String;IIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_handle(IIILjava/lang/String;IIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_handle(
+pub(crate) async fn native_paint_handle(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintHandle(IIILjava/lang/String;IIIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_hline(IILjava/lang/String;IIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_hline(
+pub(crate) async fn native_paint_hline(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintHline(IILjava/lang/String;IIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_option(IILjava/lang/String;IIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_option(
+pub(crate) async fn native_paint_option(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintOption(IILjava/lang/String;IIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_shadow(IIILjava/lang/String;IIIIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_shadow(
+pub(crate) async fn native_paint_shadow(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintShadow(IIILjava/lang/String;IIIIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_slider(IIILjava/lang/String;IIIIIZ)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_slider(
+pub(crate) async fn native_paint_slider(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintSlider(IIILjava/lang/String;IIIIIZ)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_vline(IILjava/lang/String;IIII)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_paint_vline(
+pub(crate) async fn native_paint_vline(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativePaintVline(IILjava/lang/String;IIII)V")
 }
 
+#[intrinsic_method(
+    "com/sun/java/swing/plaf/gtk/GTKEngine.native_switch_theme()V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn native_switch_theme(
+pub(crate) async fn native_switch_theme(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.java.swing.plaf.gtk.GTKEngine.nativeSwitchTheme()V")
+    todo!("com.sun.java.swing.plaf.gtk.GTKEngine.native_switch_theme()V")
 }
 
 #[cfg(test)]
@@ -467,7 +425,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: com.sun.java.swing.plaf.gtk.GTKEngine.nativeSwitchTheme()V"
+        expected = "not yet implemented: com.sun.java.swing.plaf.gtk.GTKEngine.native_switch_theme()V"
     )]
     async fn test_native_switch_theme() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

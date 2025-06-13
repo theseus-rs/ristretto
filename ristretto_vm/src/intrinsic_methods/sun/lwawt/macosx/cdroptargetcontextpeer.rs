@@ -1,32 +1,36 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/lwawt/macosx/CDropTargetContextPeer";
-
-/// Register all intrinsic methods for `sun.lwawt.macosx.CDropTargetContextPeer`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "addTransfer", "(JJJ)V", add_transfer);
-    registry.register(CLASS_NAME, "dropDone", "(JJZZI)V", drop_done);
-    registry.register(CLASS_NAME, "startTransfer", "(JJ)J", start_transfer);
-}
-
+#[intrinsic_method("sun/lwawt/macosx/CDropTargetContextPeer.addTransfer(JJJ)V", Any)]
 #[async_recursion(?Send)]
-async fn add_transfer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn add_transfer(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDropTargetContextPeer.addTransfer(JJJ)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CDropTargetContextPeer.dropDone(JJZZI)V", Any)]
 #[async_recursion(?Send)]
-async fn drop_done(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn drop_done(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDropTargetContextPeer.dropDone(JJZZI)V")
 }
 
+#[intrinsic_method("sun/lwawt/macosx/CDropTargetContextPeer.startTransfer(JJ)J", Any)]
 #[async_recursion(?Send)]
-async fn start_transfer(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn start_transfer(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CDropTargetContextPeer.startTransfer(JJ)J")
 }
 

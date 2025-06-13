@@ -1,48 +1,46 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_17, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/nio/ch/NativeThread";
-
-/// Register all intrinsic methods for `sun.nio.ch.NativeThread`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_17 {
-        registry.register(CLASS_NAME, "current", "()J", current);
-        registry.register(CLASS_NAME, "signal", "(J)V", signal);
-    } else {
-        registry.register(CLASS_NAME, "current0", "()J", current_0);
-        registry.register(CLASS_NAME, "signal0", "(J)V", signal_0);
-    }
-
-    registry.register(CLASS_NAME, "init", "()V", init);
-}
-
+#[intrinsic_method("sun/nio/ch/NativeThread.current()J", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn current(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn current(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeThread.current()J");
 }
 
+#[intrinsic_method("sun/nio/ch/NativeThread.current0()J", GreaterThan(JAVA_17))]
 #[async_recursion(?Send)]
-async fn current_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn current_0(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
     current(thread, parameters).await
 }
 
+#[intrinsic_method("sun/nio/ch/NativeThread.init()V", Any)]
 #[async_recursion(?Send)]
-async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("sun/nio/ch/NativeThread.signal(J)V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-async fn signal(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn signal(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.NativeThread.signal(J)V");
 }
 
+#[intrinsic_method("sun/nio/ch/NativeThread.signal0(J)V", GreaterThan(JAVA_17))]
 #[async_recursion(?Send)]
-async fn signal_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn signal_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     signal(thread, parameters).await
 }
 

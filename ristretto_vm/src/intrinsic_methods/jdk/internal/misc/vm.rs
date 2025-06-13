@@ -1,100 +1,94 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_11, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_11;
+use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "jdk/internal/misc/VM";
-
-/// Register all intrinsic methods for `jdk.internal.misc.VM`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_11 {
-        registry.register(
-            CLASS_NAME,
-            "initializeFromArchive",
-            "(Ljava/lang/Class;)V",
-            initialize_from_archive,
-        );
-    }
-
-    registry.register(
-        CLASS_NAME,
-        "getNanoTimeAdjustment",
-        "(J)J",
-        get_nano_time_adjustment,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getRuntimeArguments",
-        "()[Ljava/lang/String;",
-        get_runtime_arguments,
-    );
-    registry.register(CLASS_NAME, "getegid", "()J", getegid);
-    registry.register(CLASS_NAME, "geteuid", "()J", geteuid);
-    registry.register(CLASS_NAME, "getgid", "()J", getgid);
-    registry.register(CLASS_NAME, "getuid", "()J", getuid);
-    registry.register(CLASS_NAME, "initialize", "()V", initialize);
-    registry.register(
-        CLASS_NAME,
-        "latestUserDefinedLoader0",
-        "()Ljava/lang/ClassLoader;",
-        latest_user_defined_loader_0,
-    );
-}
-
+#[intrinsic_method(
+    "jdk/internal/misc/VM.getNanoTimeAdjustment(J)J",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_nano_time_adjustment(
+pub(crate) async fn get_nano_time_adjustment(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.VM.getNanoTimeAdjustment(J)J")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/VM.getRuntimeArguments()[Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn get_runtime_arguments(
+pub(crate) async fn get_runtime_arguments(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.VM.getRuntimeArguments()[Ljava/lang/String;")
 }
 
+#[intrinsic_method("jdk/internal/misc/VM.getegid()J", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn getegid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn getegid(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.VM.getegid()J")
 }
 
+#[intrinsic_method("jdk/internal/misc/VM.geteuid()J", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn geteuid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn geteuid(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.VM.geteuid()J")
 }
 
+#[intrinsic_method("jdk/internal/misc/VM.getgid()J", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn getgid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn getgid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.VM.getgid()J")
 }
 
+#[intrinsic_method("jdk/internal/misc/VM.getuid()J", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn getuid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn getuid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.VM.getuid()J")
 }
 
+#[intrinsic_method("jdk/internal/misc/VM.initialize()V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-async fn initialize(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    Ok(None)
-}
-
-#[async_recursion(?Send)]
-async fn initialize_from_archive(
+pub(crate) async fn initialize(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/VM.initializeFromArchive(Ljava/lang/Class;)V",
+    Equal(JAVA_11)
+)]
 #[async_recursion(?Send)]
-async fn latest_user_defined_loader_0(
+pub(crate) async fn initialize_from_archive(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "jdk/internal/misc/VM.latestUserDefinedLoader0()Ljava/lang/ClassLoader;",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn latest_user_defined_loader_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

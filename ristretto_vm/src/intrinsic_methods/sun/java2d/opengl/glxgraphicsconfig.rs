@@ -1,43 +1,46 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "sun/java2d/opengl/GLXGraphicsConfig";
-
-/// Register all intrinsic methods for `sun.java2d.opengl.GLXGraphicsConfig`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(CLASS_NAME, "getGLXConfigInfo", "(II)J", get_glx_config_info);
-    registry.register(
-        CLASS_NAME,
-        "getOGLCapabilities",
-        "(J)I",
-        get_ogl_capabilities,
-    );
-    registry.register(CLASS_NAME, "initConfig", "(JJ)V", init_config);
-}
-
+#[intrinsic_method(
+    "sun/java2d/opengl/GLXGraphicsConfig.getGLXConfigInfo(II)J",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_glx_config_info(
+pub(crate) async fn get_glx_config_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.GLXGraphicsConfig.getGLXConfigInfo(II)J")
 }
 
+#[intrinsic_method(
+    "sun/java2d/opengl/GLXGraphicsConfig.getOGLCapabilities(J)I",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn get_ogl_capabilities(
+pub(crate) async fn get_ogl_capabilities(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.GLXGraphicsConfig.getOGLCapabilities(J)I")
 }
 
+#[intrinsic_method(
+    "sun/java2d/opengl/GLXGraphicsConfig.initConfig(JJ)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_config(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_config(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("sun.java2d.opengl.GLXGraphicsConfig.initConfig(JJ)V")
 }
 

@@ -1,79 +1,82 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "apple/applescript/AppleScriptEngine";
-
-/// Register all intrinsic methods for `apple.applescript.AppleScriptEngine`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "createContextFrom",
-        "(Ljava/lang/Object;)J",
-        create_context_from,
-    );
-    registry.register(
-        CLASS_NAME,
-        "createObjectFrom",
-        "(J)Ljava/lang/Object;",
-        create_object_from,
-    );
-    registry.register(CLASS_NAME, "disposeContext", "(J)V", dispose_context);
-    registry.register(
-        CLASS_NAME,
-        "evalScript",
-        "(Ljava/lang/String;J)J",
-        eval_script,
-    );
-    registry.register(
-        CLASS_NAME,
-        "evalScriptFromURL",
-        "(Ljava/lang/String;J)J",
-        eval_script_from_url,
-    );
-    registry.register(CLASS_NAME, "initNative", "()V", init_native);
-}
-
+#[intrinsic_method(
+    "apple/applescript/AppleScriptEngine.createContextFrom(Ljava/lang/Object;)J",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn create_context_from(
+pub(crate) async fn create_context_from(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.applescript.AppleScriptEngine.createContextFrom(Ljava/lang/Object;)J")
 }
 
+#[intrinsic_method(
+    "apple/applescript/AppleScriptEngine.createObjectFrom(J)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn create_object_from(
+pub(crate) async fn create_object_from(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.applescript.AppleScriptEngine.createObjectFrom(J)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "apple/applescript/AppleScriptEngine.disposeContext(J)V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn dispose_context(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn dispose_context(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.applescript.AppleScriptEngine.disposeContext(J)V")
 }
 
+#[intrinsic_method(
+    "apple/applescript/AppleScriptEngine.evalScript(Ljava/lang/String;J)J",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn eval_script(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn eval_script(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("apple.applescript.AppleScriptEngine.evalScript(Ljava/lang/String;J)J")
 }
 
+#[intrinsic_method(
+    "apple/applescript/AppleScriptEngine.evalScriptFromURL(Ljava/lang/String;J)J",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn eval_script_from_url(
+pub(crate) async fn eval_script_from_url(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("apple.applescript.AppleScriptEngine.evalScriptFromURL(Ljava/lang/String;J)J")
 }
 
+#[intrinsic_method(
+    "apple/applescript/AppleScriptEngine.initNative()V",
+    LessThanOrEqual(JAVA_8)
+)]
 #[async_recursion(?Send)]
-async fn init_native(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_native(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 

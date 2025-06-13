@@ -1,77 +1,11 @@
 use crate::Result;
-use crate::intrinsic_methods::registry::MethodRegistry;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::{Object, Reference, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
-
-const CLASS_NAME: &str = "java/lang/reflect/Array";
-
-/// Register all intrinsic methods for `java.lang.reflect.Array`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    registry.register(
-        CLASS_NAME,
-        "get",
-        "(Ljava/lang/Object;I)Ljava/lang/Object;",
-        get,
-    );
-    registry.register(
-        CLASS_NAME,
-        "getBoolean",
-        "(Ljava/lang/Object;I)Z",
-        get_boolean,
-    );
-    registry.register(CLASS_NAME, "getByte", "(Ljava/lang/Object;I)B", get_byte);
-    registry.register(CLASS_NAME, "getChar", "(Ljava/lang/Object;I)C", get_char);
-    registry.register(
-        CLASS_NAME,
-        "getDouble",
-        "(Ljava/lang/Object;I)D",
-        get_double,
-    );
-    registry.register(CLASS_NAME, "getFloat", "(Ljava/lang/Object;I)F", get_float);
-    registry.register(CLASS_NAME, "getInt", "(Ljava/lang/Object;I)I", get_int);
-    registry.register(CLASS_NAME, "getLength", "(Ljava/lang/Object;)I", get_length);
-    registry.register(CLASS_NAME, "getLong", "(Ljava/lang/Object;I)J", get_long);
-    registry.register(CLASS_NAME, "getShort", "(Ljava/lang/Object;I)S", get_short);
-    registry.register(
-        CLASS_NAME,
-        "multiNewArray",
-        "(Ljava/lang/Class;[I)Ljava/lang/Object;",
-        multi_new_array,
-    );
-    registry.register(
-        CLASS_NAME,
-        "newArray",
-        "(Ljava/lang/Class;I)Ljava/lang/Object;",
-        new_array,
-    );
-    registry.register(
-        CLASS_NAME,
-        "set",
-        "(Ljava/lang/Object;ILjava/lang/Object;)V",
-        set,
-    );
-    registry.register(
-        CLASS_NAME,
-        "setBoolean",
-        "(Ljava/lang/Object;IZ)V",
-        set_boolean,
-    );
-    registry.register(CLASS_NAME, "setByte", "(Ljava/lang/Object;IB)V", set_byte);
-    registry.register(CLASS_NAME, "setChar", "(Ljava/lang/Object;IC)V", set_char);
-    registry.register(
-        CLASS_NAME,
-        "setDouble",
-        "(Ljava/lang/Object;ID)V",
-        set_double,
-    );
-    registry.register(CLASS_NAME, "setFloat", "(Ljava/lang/Object;IF)V", set_float);
-    registry.register(CLASS_NAME, "setInt", "(Ljava/lang/Object;II)V", set_int);
-    registry.register(CLASS_NAME, "setLong", "(Ljava/lang/Object;IJ)V", set_long);
-    registry.register(CLASS_NAME, "setShort", "(Ljava/lang/Object;IS)V", set_short);
-}
 
 fn get_class_name(value: Value) -> Result<String> {
     let component_type: Object = value.try_into()?;
@@ -79,63 +13,117 @@ fn get_class_name(value: Value) -> Result<String> {
     Ok(class_name)
 }
 
+#[intrinsic_method(
+    "java/lang/reflect/Array.get(Ljava/lang/Object;I)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn get(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.get(Ljava/lang/Object;I)Ljava/lang/Object;")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.getBoolean(Ljava/lang/Object;I)Z", Any)]
 #[async_recursion(?Send)]
-async fn get_boolean(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_boolean(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getBoolean(Ljava/lang/Object;I)Z")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.getByte(Ljava/lang/Object;I)B", Any)]
 #[async_recursion(?Send)]
-async fn get_byte(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_byte(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getByte(Ljava/lang/Object;I)B")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.getChar(Ljava/lang/Object;I)C", Any)]
 #[async_recursion(?Send)]
-async fn get_char(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_char(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getChar(Ljava/lang/Object;I)C")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.getDouble(Ljava/lang/Object;I)D", Any)]
 #[async_recursion(?Send)]
-async fn get_double(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_double(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getDouble(Ljava/lang/Object;I)D")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.getFloat(Ljava/lang/Object;I)F", Any)]
 #[async_recursion(?Send)]
-async fn get_float(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_float(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getFloat(Ljava/lang/Object;I)F")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.getInt(Ljava/lang/Object;I)I", Any)]
 #[async_recursion(?Send)]
-async fn get_int(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_int(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getInt(Ljava/lang/Object;I)I")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.getLength(Ljava/lang/Object;)I", Any)]
 #[async_recursion(?Send)]
-async fn get_length(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_length(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getLength(Ljava/lang/Object;)I")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.getLong(Ljava/lang/Object;I)J", Any)]
 #[async_recursion(?Send)]
-async fn get_long(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_long(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getLong(Ljava/lang/Object;I)J")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.getShort(Ljava/lang/Object;I)S", Any)]
 #[async_recursion(?Send)]
-async fn get_short(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn get_short(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.getShort(Ljava/lang/Object;I)S")
 }
 
+#[intrinsic_method(
+    "java/lang/reflect/Array.multiNewArray(Ljava/lang/Class;[I)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn multi_new_array(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn multi_new_array(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.multiNewArray(Ljava/lang/Class;[I)Ljava/lang/Object;")
 }
 
+#[intrinsic_method(
+    "java/lang/reflect/Array.newArray(Ljava/lang/Class;I)Ljava/lang/Object;",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn new_array(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn new_array(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let length = usize::try_from(parameters.pop_int()?)?;
     let class_name = get_class_name(parameters.pop()?)?;
 
@@ -158,48 +146,84 @@ async fn new_array(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Op
     Ok(Some(value))
 }
 
+#[intrinsic_method(
+    "java/lang/reflect/Array.set(Ljava/lang/Object;ILjava/lang/Object;)V",
+    Any
+)]
 #[async_recursion(?Send)]
-async fn set(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.set(Ljava/lang/Object;ILjava/lang/Object;)V")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.setBoolean(Ljava/lang/Object;IZ)V", Any)]
 #[async_recursion(?Send)]
-async fn set_boolean(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_boolean(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setBoolean(Ljava/lang/Object;IZ)V")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.setByte(Ljava/lang/Object;IB)V", Any)]
 #[async_recursion(?Send)]
-async fn set_byte(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_byte(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setByte(Ljava/lang/Object;IB)V")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.setChar(Ljava/lang/Object;IC)V", Any)]
 #[async_recursion(?Send)]
-async fn set_char(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_char(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setChar(Ljava/lang/Object;IC)V")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.setDouble(Ljava/lang/Object;ID)V", Any)]
 #[async_recursion(?Send)]
-async fn set_double(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_double(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setDouble(Ljava/lang/Object;ID)V")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.setFloat(Ljava/lang/Object;IF)V", Any)]
 #[async_recursion(?Send)]
-async fn set_float(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_float(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setFloat(Ljava/lang/Object;IF)V")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.setInt(Ljava/lang/Object;II)V", Any)]
 #[async_recursion(?Send)]
-async fn set_int(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_int(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setInt(Ljava/lang/Object;II)V")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.setLong(Ljava/lang/Object;IJ)V", Any)]
 #[async_recursion(?Send)]
-async fn set_long(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_long(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setLong(Ljava/lang/Object;IJ)V")
 }
 
+#[intrinsic_method("java/lang/reflect/Array.setShort(Ljava/lang/Object;IS)V", Any)]
 #[async_recursion(?Send)]
-async fn set_short(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn set_short(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.lang.reflect.Array.setShort(Ljava/lang/Object;IS)V")
 }
 

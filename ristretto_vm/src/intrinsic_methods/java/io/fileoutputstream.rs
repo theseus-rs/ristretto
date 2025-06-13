@@ -1,48 +1,50 @@
 use crate::Error::InternalError;
 use crate::Result;
-use crate::intrinsic_methods::registry::{JAVA_8, MethodRegistry};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::{Object, Value};
+use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-const CLASS_NAME: &str = "java/io/FileOutputStream";
-
-/// Register all intrinsic methods for `java.io.FileOutputStream`.
-pub(crate) fn register(registry: &mut MethodRegistry) {
-    if registry.java_major_version() <= JAVA_8 {
-        registry.register(CLASS_NAME, "close0", "()V", close_0);
-    }
-
-    registry.register(CLASS_NAME, "initIDs", "()V", init_ids);
-    registry.register(CLASS_NAME, "open0", "(Ljava/lang/String;Z)V", open_0);
-    registry.register(CLASS_NAME, "write", "(IZ)V", write);
-    registry.register(CLASS_NAME, "writeBytes", "([BIIZ)V", write_bytes);
-}
-
+#[intrinsic_method("java/io/FileOutputStream.close0()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
-async fn close_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn close_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     todo!("java.io.FileOutputStream.close0()V")
 }
 
+#[intrinsic_method("java/io/FileOutputStream.initIDs()V", Any)]
 #[async_recursion(?Send)]
-async fn init_ids(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
     Ok(None)
 }
 
+#[intrinsic_method("java/io/FileOutputStream.open0(Ljava/lang/String;Z)V", Any)]
 #[async_recursion(?Send)]
-async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileOutputStream.open0(Ljava/lang/String;Z)V")
 }
 
+#[intrinsic_method("java/io/FileOutputStream.write(IZ)V", Any)]
 #[async_recursion(?Send)]
-async fn write(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn write(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.io.FileOutputStream.write(IZ)V")
 }
 
+#[intrinsic_method("java/io/FileOutputStream.writeBytes([BIIZ)V", Any)]
 #[async_recursion(?Send)]
-async fn write_bytes(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn write_bytes(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
     let _append = parameters.pop_bool()?;
     let length = usize::try_from(parameters.pop_int()?)?;
     let offset = usize::try_from(parameters.pop_int()?)?;
