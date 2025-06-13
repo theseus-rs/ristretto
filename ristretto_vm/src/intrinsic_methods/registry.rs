@@ -2,7 +2,7 @@ use crate::Result;
 use crate::intrinsic_methods::intrinsics;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_24};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_24, Version};
 use ristretto_classloader::Value;
 use std::future::Future;
 use std::pin::Pin;
@@ -50,7 +50,6 @@ pub type IntrinsicMethod = fn(
 /// This forms a fully qualified method signature like `java/lang/Object.hashCode()I`.
 #[derive(Debug)]
 pub struct MethodRegistry {
-    java_major_version: u16,
     methods: &'static phf::Map<&'static str, IntrinsicMethod>,
 }
 
@@ -68,7 +67,8 @@ impl MethodRegistry {
     /// # Returns
     ///
     /// A new empty `MethodRegistry` configured for the specified Java version.
-    pub fn new(java_major_version: u16) -> Self {
+    pub fn new(version: &Version) -> Self {
+        let java_major_version = version.java();
         let methods = if java_major_version >= JAVA_24.java() {
             &intrinsics::JAVA_24
         } else if java_major_version >= JAVA_21.java() {
@@ -80,22 +80,7 @@ impl MethodRegistry {
         } else {
             &intrinsics::JAVA_8
         };
-        MethodRegistry {
-            java_major_version,
-            methods,
-        }
-    }
-
-    /// Returns the major Java version this registry is configured for.
-    ///
-    /// This method provides access to the major Java version (e.g., 8, 11, 17, 21, 24) that the
-    /// registry is configured for.
-    ///
-    /// # Returns
-    ///
-    /// The major Java version number as a u16.
-    pub fn java_major_version(&self) -> u16 {
-        self.java_major_version
+        MethodRegistry { methods }
     }
 
     /// Returns a reference to the map of all registered intrinsic methods.
@@ -135,11 +120,12 @@ impl MethodRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::vm;
     use ristretto_classloader::runtime;
 
     #[tokio::test]
     async fn test_method() -> Result<()> {
-        let method_registry = MethodRegistry::new(JAVA_21.java());
+        let method_registry = MethodRegistry::new(&JAVA_21);
         let result = method_registry.method("java/lang/Object", "hashCode", "()I");
         assert!(result.is_some());
         Ok(())
@@ -147,7 +133,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_method_not_found() -> Result<()> {
-        let method_registry = MethodRegistry::new(JAVA_21.java());
+        let method_registry = MethodRegistry::new(&JAVA_21);
         let result = method_registry.method("foo", "hashCode", "()I");
         assert!(result.is_none());
         Ok(())
@@ -185,7 +171,8 @@ mod tests {
     fn get_registry_methods(version: &str) -> Result<Vec<String>> {
         let version_major = version.split_once('.').unwrap_or_default().0;
         let java_major_version: u16 = version_major.parse()?;
-        let method_registry = MethodRegistry::new(java_major_version);
+        let version = Version::from(java_major_version + vm::CLASS_FILE_MAJOR_VERSION_OFFSET, 0)?;
+        let method_registry = MethodRegistry::new(&version);
         let mut registry_methods = method_registry
             .methods()
             .keys()
