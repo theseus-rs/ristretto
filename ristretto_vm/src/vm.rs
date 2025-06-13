@@ -18,6 +18,11 @@ use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
 use tracing::debug;
 
+/// The offset to add to the major version to get the class file version.  Java 1.0 has a class
+/// file major version of 45, so the class file major version is the Java version (1) + the
+/// class file offset version (44) = the Java 1 class file version (45).
+pub(crate) const CLASS_FILE_MAJOR_VERSION_OFFSET: u16 = 44;
+
 /// Java Virtual Machine
 #[derive(Debug)]
 pub struct VM {
@@ -37,11 +42,6 @@ pub struct VM {
 
 /// VM
 impl VM {
-    /// The offset to add to the major version to get the class file version.  Java 1.0 has a class
-    /// file major version of 45, so the class file major version is the Java version (1) + the
-    /// class file offset version (44) = the Java 1 class file version (45).
-    const CLASS_FILE_MAJOR_VERSION_OFFSET: u16 = 44;
-
     /// Create a new VM
     ///
     /// # Errors
@@ -74,7 +74,7 @@ impl VM {
             0
         };
         let java_class_file_version = Version::from(
-            java_major_version + Self::CLASS_FILE_MAJOR_VERSION_OFFSET,
+            java_major_version + CLASS_FILE_MAJOR_VERSION_OFFSET,
             class_file_minor_version,
         )?;
         debug!("Class file version {java_class_file_version}");
@@ -120,7 +120,7 @@ impl VM {
             None
         };
 
-        let method_registry = MethodRegistry::new(java_major_version);
+        let method_registry = MethodRegistry::new(&java_class_file_version);
 
         let compiler = match Compiler::new() {
             Ok(compiler) => Some(compiler),
