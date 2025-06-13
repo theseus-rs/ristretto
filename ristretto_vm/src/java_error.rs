@@ -9,6 +9,10 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ArrayIndexOutOfBoundsException.html>
     #[error("Index {index} out of bounds for length {length}")]
     ArrayIndexOutOfBoundsException { index: usize, length: usize },
+    /// `BootstrapMethodError`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/BootstrapMethodError.html>
+    #[error("{0}")]
+    BootstrapMethodError(String),
     /// `ClassCastException`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ClassCastException.html>
     #[error("class {source_class_name} cannot be cast to class {target_class_name}")]
@@ -51,6 +55,7 @@ impl JavaError {
                 "java.lang.ArrayIndexOutOfBoundsException"
             }
             JavaError::ArithmeticException(_) => "java.lang.ArithmeticException",
+            JavaError::BootstrapMethodError(_) => "java.lang.BootstrapMethodError",
             JavaError::ClassCastException { .. } => "java.lang.ClassCastException",
             JavaError::ClassFormatError(_) => "java.lang.ClassFormatError",
             JavaError::ClassNotFoundException(_) => "java.lang.ClassNotFoundException",
@@ -90,6 +95,13 @@ mod tests {
             "java.lang.ArrayIndexOutOfBoundsException"
         );
         assert_eq!(error.message(), "Index 5 out of bounds for length 3");
+    }
+
+    #[test]
+    fn test_bootstrap_method_error() {
+        let error = JavaError::BootstrapMethodError("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.BootstrapMethodError");
+        assert_eq!(error.message(), "foo");
     }
 
     #[test]
