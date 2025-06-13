@@ -74,12 +74,10 @@ pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, 
 /// An error will be returned if the class loader cannot be created.
 #[instrument(level = "debug")]
 pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, ClassLoader)> {
-    let current_dir = env::current_dir().unwrap_or_default();
-
     #[cfg(target_family = "wasm")]
-    let home_dir = current_dir;
+    let home_dir = env::current_dir().unwrap_or_default();
     #[cfg(not(target_family = "wasm"))]
-    let home_dir = { env::home_dir().unwrap_or(current_dir) };
+    let home_dir = env::home_dir().unwrap_or_else(|| env::current_dir().unwrap_or_default());
 
     let base_path = home_dir.join(".ristretto");
     let mut installation_dir = base_path.join(version);
