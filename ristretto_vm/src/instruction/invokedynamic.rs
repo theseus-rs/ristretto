@@ -32,7 +32,7 @@
 //! 1.2 Extract the constant pool index from the instruction operand;
 //!     occurs when the `ClassFile` is read and `Instruction::Invokedynamic` is created
 //!
-//! 1.3 Resolve the `CONSTANT_Dynamic_info` or `CONSTANT_InvokeDynamic_info` entry at that index
+//! 1.3 Resolve the `CONSTANT_InvokeDynamic_info` entry at that index
 //!
 //! 1.4 Validate that the entry contains: (e.g. `ClassFile.verify()`, also occurs at runtime)
 //!   - bootstrap_method_attr_index (points to BootstrapMethods attribute)
@@ -161,42 +161,28 @@ use ristretto_classloader::{Class, ConcurrentVec, Method, Reference, Value};
 use std::sync::Arc;
 use tracing::debug;
 
-/// **Step 1.3** Resolve the `CONSTANT_Dynamic_info` or `CONSTANT_InvokeDynamic_info` entry at that
-/// index
+/// **Step 1.3** Resolve the `CONSTANT_InvokeDynamic_info` entry at that index
 ///
 /// Extracts bootstrap method information from the constant pool for dynamic invocation.
 ///
 /// This function retrieves the bootstrap method attribute index and name/type index from the
-/// constant pool entry referenced by `method_index`. It handles both `Constant::Dynamic` and
-/// `Constant::InvokeDynamic` constant types.
+/// constant pool entry referenced by `method_index`.
 fn get_bootstrap_method_attribute_name_and_type(
     constant_pool: &ConstantPool,
     method_index: u16,
 ) -> Result<(u16, u16)> {
-    let (bootstrap_method_attr_index, name_and_type_index) =
-        match constant_pool.try_get(method_index)? {
-            Constant::Dynamic {
-                bootstrap_method_attr_index,
-                name_and_type_index,
-            } => {
-                // Field descriptor: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.3.2
-                (*bootstrap_method_attr_index, *name_and_type_index)
-            }
-            Constant::InvokeDynamic {
-                bootstrap_method_attr_index,
-                name_and_type_index,
-            } => {
-                // Method descriptor: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.3.3
-                (*bootstrap_method_attr_index, *name_and_type_index)
-            } // Method
-            _ => {
-                return Err(BootstrapMethodError(format!(
-                    "Invalid constant pool index for invokedynamic: {method_index}"
-                ))
-                .into());
-            }
-        };
-    Ok((bootstrap_method_attr_index, name_and_type_index))
+    if let Constant::InvokeDynamic {
+        bootstrap_method_attr_index,
+        name_and_type_index,
+    } = constant_pool.try_get(method_index)?
+    {
+        Ok((*bootstrap_method_attr_index, *name_and_type_index))
+    } else {
+        Err(BootstrapMethodError(format!(
+            "Invalid constant pool index for invokedynamic: {method_index}"
+        ))
+        .into())
+    }
 }
 
 /// **Step 2.1** Use bootstrap_method_attr_index to locate the specific bootstrap method entry
@@ -382,7 +368,7 @@ async fn resolve_method_handle(vm: &VM, thread: &Thread, frame: &Frame) -> Resul
     let lookup_class = thread
         .class("java.lang.invoke.MethodHandles$Lookup")
         .await?;
-    let _find_method = if method_name == "<init>" {
+    let find_method = if method_name == "<init>" {
         lookup_class.try_get_method(
             "findConstructor",
             "(Ljava/lang/Class;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
@@ -402,30 +388,9 @@ async fn resolve_method_handle(vm: &VM, thread: &Thread, frame: &Frame) -> Resul
     };
 
     arguments.insert(0, lookup);
-    // TODO: fix error
-    // Exception java/lang/InternalError: Method not found: java/lang/invoke/DirectMethodHandle$Holder.invokeStatic(DD)V
-    //     at java/lang/Error.<init>(Error.java:67)
-    //     at java/lang/VirtualMachineError.<init>(VirtualMachineError.java:54)
-    //     at java/lang/InternalError.<init>(InternalError.java:51)
-    //     at java/lang/invoke/MemberName$Factory.resolve(MemberName.java:962)
-    //     at java/lang/invoke/MemberName$Factory.resolveOrNull(MemberName.java:1006)
-    //     at java/lang/invoke/InvokerBytecodeGenerator.resolveFrom(InvokerBytecodeGenerator.java:647)
-    //     at java/lang/invoke/InvokerBytecodeGenerator.lookupPregenerated(InvokerBytecodeGenerator.java:699)
-    //     at java/lang/invoke/InvokerBytecodeGenerator.generateCustomizedCode(InvokerBytecodeGenerator.java:708)
-    //     at java/lang/invoke/LambdaForm.compileToBytecode(LambdaForm.java:849)
-    //     at java/lang/invoke/DirectMethodHandle.makePreparedLambdaForm(DirectMethodHandle.java:303)
-    //     at java/lang/invoke/DirectMethodHandle.preparedLambdaForm(DirectMethodHandle.java:231)
-    //     at java/lang/invoke/DirectMethodHandle.preparedLambdaForm(DirectMethodHandle.java:216)
-    //     at java/lang/invoke/DirectMethodHandle.preparedLambdaForm(DirectMethodHandle.java:225)
-    //     at java/lang/invoke/DirectMethodHandle.make(DirectMethodHandle.java:106)
-    //     at java/lang/invoke/MethodHandles$Lookup.getDirectMethodCommon(MethodHandles.java:4109)
-    //     at java/lang/invoke/MethodHandles$Lookup.getDirectMethod(MethodHandles.java:4053)
-    //     at java/lang/invoke/MethodHandles$Lookup.findStatic(MethodHandles.java:2676)
-    //     at HelloWorld.main(HelloWorld.java:4)
-    // let method_handle = thread
-    //     .try_execute(&lookup_class, &find_method, arguments)
-    //     .await?;
-    let method_handle = Value::Object(None);
+    let method_handle = thread
+        .try_execute(&lookup_class, &find_method, arguments)
+        .await?;
     Ok(method_handle)
 }
 

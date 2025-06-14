@@ -18,6 +18,7 @@ use ristretto_classloader::{Class, Method, Object, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
+/// Get the class of an object, handling special cases for `java/lang/Class`.
 pub async fn get_class(thread: &Thread, object: &Object) -> Result<Arc<Class>> {
     let class = object.class();
     if class.name() == "java/lang/Class" {

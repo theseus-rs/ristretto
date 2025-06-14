@@ -71,6 +71,7 @@ const POLYMORPHIC_METHODS: &[(&str, &str, &str)] = &[
 #[expect(clippy::struct_field_names)]
 #[derive(Debug)]
 pub struct Class {
+    name: String,
     source_file: Option<String>,
     class_file: ClassFile,
     parent: Arc<RwLock<Option<Arc<Class>>>>,
@@ -95,14 +96,14 @@ impl Class {
             this_class: class_index,
             ..Default::default()
         };
-        let methods = HashMap::new();
         let class = Arc::new(Self {
+            name,
             source_file: None,
             class_file,
             parent: Arc::new(RwLock::new(None)),
             interfaces: Arc::new(RwLock::new(Vec::new())),
             fields: IndexMap::new(),
-            methods,
+            methods: HashMap::new(),
             object: Arc::new(RwLock::new(None)),
         });
         Ok(class)
@@ -113,7 +114,7 @@ impl Class {
     /// # Errors
     ///
     /// if the class file cannot be read.
-    pub fn from(class_file: ClassFile) -> Result<Arc<Self>> {
+    pub fn from(mut class_file: ClassFile) -> Result<Arc<Self>> {
         let mut source_file = None;
 
         for attribute in &class_file.attributes {
@@ -142,7 +143,12 @@ impl Class {
             methods.insert(method_identifier, Arc::new(method));
         }
 
+        if class_file.class_name()? == "java/lang/invoke/DirectMethodHandle$Holder" {
+            Self::add_trampoline_methods(&mut class_file, &mut methods)?;
+        }
+
         let class = Arc::new(Self {
+            name: class_file.class_name()?.to_string(),
             source_file,
             class_file,
             parent: Arc::new(RwLock::new(None)),
@@ -157,7 +163,7 @@ impl Class {
     /// Get the class name.
     #[must_use]
     pub fn name(&self) -> &str {
-        self.class_file.class_name().unwrap_or_default()
+        &self.name
     }
 
     /// Transform the class name to a descriptor.
@@ -314,6 +320,42 @@ impl Class {
             .write()
             .map_err(|error| PoisonedLock(error.to_string()))?;
         *interfaces_guard = interfaces;
+        Ok(())
+    }
+
+    /// Add trampoline methods for `java.lang.invoke.DirectMethodHandle$Holder`.  Method signatures
+    /// are typically expected to be added dynamically at runtime during
+    /// `java/lang/invoke/MethodHandleNatives.resolve(...)`, but for the sake of simplicity, and to
+    /// avoid needing put `methods` in an `Arc<RwLock<>>`, we add them here for now.
+    fn add_trampoline_methods(
+        class_file: &mut ClassFile,
+        methods: &mut HashMap<String, Arc<Method>>,
+    ) -> Result<()> {
+        let method_signatures = [
+            ("invokeInterface", "([Ljava/lang/Object;)Ljava/lang/Object;"),
+            ("invokeSpecial", "([Ljava/lang/Object;)Ljava/lang/Object;"),
+            ("invokeStatic", "([Ljava/lang/Object;)Ljava/lang/Object;"),
+            ("invokeVirtual", "([Ljava/lang/Object;)Ljava/lang/Object;"),
+        ];
+        for (name, descriptor) in method_signatures {
+            let constant_pool = &mut class_file.constant_pool;
+            let method_index =
+                constant_pool.add_method_ref(class_file.this_class, name, descriptor)?;
+            let (_class_index, name_and_type_index) =
+                constant_pool.try_get_method_ref(method_index)?;
+            let (name_index, descriptor_index) =
+                constant_pool.try_get_name_and_type(*name_and_type_index)?;
+            let access_flags =
+                MethodAccessFlags::PRIVATE | MethodAccessFlags::STATIC | MethodAccessFlags::NATIVE;
+            let method = ristretto_classfile::Method {
+                name_index: *name_index,
+                descriptor_index: *descriptor_index,
+                access_flags,
+                attributes: vec![],
+            };
+            let method = Method::from(class_file, &method)?;
+            methods.insert(method.identifier(), Arc::new(method));
+        }
         Ok(())
     }
 
