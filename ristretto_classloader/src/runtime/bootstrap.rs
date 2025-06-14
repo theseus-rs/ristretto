@@ -74,23 +74,27 @@ pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, 
 /// An error will be returned if the class loader cannot be created.
 #[instrument(level = "debug")]
 pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, ClassLoader)> {
+    let mut version = version.to_string();
     #[cfg(target_family = "wasm")]
     let home_dir = env::current_dir().unwrap_or_default();
     #[cfg(not(target_family = "wasm"))]
     let home_dir = env::home_dir().unwrap_or_else(|| env::current_dir().unwrap_or_default());
 
     let base_path = home_dir.join(".ristretto");
-    let mut installation_dir = base_path.join(version);
+    let mut installation_dir = base_path.join(&version);
     if !installation_dir.exists() {
-        let (version, file_name, archive) = util::get_runtime_archive(version).await?;
+        let (extracted_version, file_name, archive) = util::get_runtime_archive(&version).await?;
         installation_dir =
             extract_archive(version.as_str(), file_name.as_str(), &archive, &base_path).await?;
+        version = extracted_version;
     }
 
     #[cfg(target_os = "macos")]
     let installation_dir = installation_dir.join("Contents").join("Home");
 
-    home_class_loader(&installation_dir).await
+    let class_path = get_class_path(&version, &installation_dir)?;
+    let class_loader = ClassLoader::new("bootstrap", class_path);
+    Ok((installation_dir, version, class_loader))
 }
 
 /// Get the class path for the given version.
