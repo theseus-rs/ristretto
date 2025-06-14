@@ -8,7 +8,7 @@ use ristretto_classfile::VersionSpecification::{
     Any, Between, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21};
-use ristretto_classloader::{Class, Object, Value};
+use ristretto_classloader::{Class, Method, Object, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -161,6 +161,21 @@ pub(crate) async fn object_field_offset(
     Ok(Some(Value::Long(offset)))
 }
 
+/// Resolves a method handle for the `DirectMethodHandle$Holder` class; this is a special case that
+/// handles the method resolution for direct method handles in the JVM.
+fn resolve_direct_method_handle_holder(
+    class: Arc<Class>,
+    method_name: &str,
+    method_descriptor: &str,
+) -> Result<Arc<Method>> {
+    if let Ok(method) = class.try_get_method(method_name, method_descriptor) {
+        return Ok(method);
+    }
+    let method_descriptor = "([Ljava/lang/Object;)Ljava/lang/Object;";
+    let method = class.try_get_method(method_name, method_descriptor)?;
+    Ok(method)
+}
+
 #[intrinsic_method("java/lang/invoke/MethodHandleNatives.registerNatives()V", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn register_natives(
@@ -197,13 +212,18 @@ pub(crate) async fn resolve(
             let descriptor = Class::to_descriptor(&class_name);
             parameter_descriptors.push(descriptor);
         }
+        let class_name: String = class_object.value("name")?.try_into()?;
         let return_type: Object = method_type.value("rtype")?.try_into()?;
         let return_class_name: String = return_type.value("name")?.try_into()?;
         let return_descriptor = Class::to_descriptor(&return_class_name);
 
         let method_name: String = name.try_into()?;
         let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
-        let method = class.try_get_method(method_name, method_descriptor)?;
+        let method = if &class_name == "java.lang.invoke.DirectMethodHandle$Holder" {
+            resolve_direct_method_handle_holder(class, &method_name, &method_descriptor)?
+        } else {
+            class.try_get_method(method_name, method_descriptor)?
+        };
         let method_access_flags = method.access_flags().bits();
         let modifiers = i32::from(method_access_flags);
         let flags = flags | modifiers;
