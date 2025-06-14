@@ -318,7 +318,7 @@ impl ConstantPool {
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.7>
-    pub fn try_get_utf8(&self, index: u16) -> Result<&String> {
+    pub fn try_get_utf8(&self, index: u16) -> Result<&str> {
         match self.try_get(index)? {
             Constant::Utf8(value) => Ok(value),
             _ => Err(InvalidConstantPoolIndexType(index)),
@@ -580,7 +580,7 @@ impl ConstantPool {
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.1>
-    pub fn try_get_class(&self, index: u16) -> Result<&String> {
+    pub fn try_get_class(&self, index: u16) -> Result<&str> {
         match self.try_get(index)? {
             Constant::Class(utf8_index) => self.try_get_utf8(*utf8_index),
             _ => Err(InvalidConstantPoolIndexType(index)),
@@ -632,7 +632,7 @@ impl ConstantPool {
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.3>
-    pub fn try_get_string(&self, index: u16) -> Result<&String> {
+    pub fn try_get_string(&self, index: u16) -> Result<&str> {
         match self.try_get(index)? {
             Constant::String(value) => self.try_get_utf8(*value),
             _ => Err(InvalidConstantPoolIndexType(index)),
@@ -1199,7 +1199,7 @@ impl ConstantPool {
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.11>
-    pub fn try_get_module(&self, index: u16) -> Result<&String> {
+    pub fn try_get_module(&self, index: u16) -> Result<&str> {
         match self.try_get(index)? {
             Constant::Module(name_index) => self.try_get_utf8(*name_index),
             _ => Err(InvalidConstantPoolIndexType(index)),
@@ -1252,7 +1252,7 @@ impl ConstantPool {
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.12>
-    pub fn try_get_package(&self, index: u16) -> Result<&String> {
+    pub fn try_get_package(&self, index: u16) -> Result<&str> {
         match self.try_get(index)? {
             Constant::Package(name_index) => self.try_get_utf8(*name_index),
             _ => Err(InvalidConstantPoolIndexType(index)),
@@ -1812,7 +1812,7 @@ mod test {
 
     fn test_try_get_constant<T>(f: fn(&ConstantPool, u16) -> Result<&T>, constant: Constant)
     where
-        T: Debug + PartialEq,
+        T: Debug + PartialEq + ?Sized,
     {
         let mut constant_pool = ConstantPool::default();
         if matches!(constant, Constant::Utf8(_)) {

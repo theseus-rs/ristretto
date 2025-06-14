@@ -10,6 +10,8 @@
 
 ## Overview
 
+This crate provides procedural macros for the Ristretto JVM.
+
 ## License
 
 Licensed under either of

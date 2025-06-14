@@ -245,7 +245,7 @@ async fn resolve_bootstrap_method<'a>(
     thread: &Arc<Thread>,
     constant_pool: &'a ConstantPool,
     bootstrap_method_attribute: &BootstrapMethod,
-) -> Result<(&'a ReferenceKind, Arc<Class>, &'a String, Arc<Method>)> {
+) -> Result<(&'a ReferenceKind, Arc<Class>, &'a str, Arc<Method>)> {
     let (reference_kind, method_ref) =
         constant_pool.try_get_method_handle(bootstrap_method_attribute.bootstrap_method_ref)?;
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(*method_ref)?;

@@ -71,7 +71,6 @@ const POLYMORPHIC_METHODS: &[(&str, &str, &str)] = &[
 #[expect(clippy::struct_field_names)]
 #[derive(Debug)]
 pub struct Class {
-    name: String,
     source_file: Option<String>,
     class_file: ClassFile,
     parent: Arc<RwLock<Option<Arc<Class>>>>,
@@ -98,7 +97,6 @@ impl Class {
         };
         let methods = HashMap::new();
         let class = Arc::new(Self {
-            name,
             source_file: None,
             class_file,
             parent: Arc::new(RwLock::new(None)),
@@ -116,7 +114,6 @@ impl Class {
     ///
     /// if the class file cannot be read.
     pub fn from(class_file: ClassFile) -> Result<Arc<Self>> {
-        let name = class_file.class_name()?.clone();
         let mut source_file = None;
 
         for attribute in &class_file.attributes {
@@ -146,7 +143,6 @@ impl Class {
         }
 
         let class = Arc::new(Self {
-            name,
             source_file,
             class_file,
             parent: Arc::new(RwLock::new(None)),
@@ -161,7 +157,7 @@ impl Class {
     /// Get the class name.
     #[must_use]
     pub fn name(&self) -> &str {
-        &self.name
+        self.class_file.class_name().unwrap_or_default()
     }
 
     /// Transform the class name to a descriptor.
@@ -190,7 +186,7 @@ impl Class {
     /// Get the raw component name for an array class.
     #[must_use]
     pub fn array_component_type(&self) -> &str {
-        let mut component_type = self.name.split('[').next_back().unwrap_or_default();
+        let mut component_type = self.name().split('[').next_back().unwrap_or_default();
         if component_type.ends_with(';') {
             component_type = component_type
                 .strip_prefix('L')
@@ -231,13 +227,13 @@ impl Class {
     /// Determine if this class is an array
     #[must_use]
     pub fn is_array(&self) -> bool {
-        self.name.starts_with('[')
+        self.name().starts_with('[')
     }
 
     /// Get the number of array dimensions
     #[must_use]
     pub fn array_dimensions(&self) -> usize {
-        self.name.chars().filter(|&c| c == '[').count()
+        self.name().chars().filter(|&c| c == '[').count()
     }
 
     /// Determine if this class is an array
@@ -252,7 +248,7 @@ impl Class {
     #[must_use]
     pub fn is_primitive(&self) -> bool {
         matches!(
-            self.name.as_str(),
+            self.name(),
             "boolean" | "byte" | "char" | "double" | "float" | "int" | "long" | "short" | "void"
         )
     }
@@ -349,7 +345,7 @@ impl Class {
         if let Some(field) = self.fields.get(name) {
             if !field.access_flags().contains(FieldAccessFlags::STATIC) {
                 return Err(FieldNotFound {
-                    class_name: self.name.to_string(),
+                    class_name: self.name().to_string(),
                     field_name: name.to_string(),
                 });
             }
@@ -358,14 +354,14 @@ impl Class {
 
         let Some(parent) = &self.parent()? else {
             return Err(FieldNotFound {
-                class_name: self.name.to_string(),
+                class_name: self.name().to_string(),
                 field_name: name.to_string(),
             });
         };
 
         let Ok(field) = parent.static_field(name) else {
             return Err(FieldNotFound {
-                class_name: self.name.to_string(),
+                class_name: self.name().to_string(),
                 field_name: name.to_string(),
             });
         };
@@ -483,7 +479,7 @@ impl Class {
         for (polymorphic_class_name, polymorphic_method_name, polymorphic_method_descriptor) in
             POLYMORPHIC_METHODS
         {
-            if class_name != polymorphic_class_name || name != *polymorphic_method_name {
+            if class_name != *polymorphic_class_name || name != *polymorphic_method_name {
                 continue;
             }
             let method_identifier = format!("{name}:{polymorphic_method_descriptor}");
@@ -551,7 +547,7 @@ impl Class {
     ///
     /// if classes or interfaces cannot be accessed.
     pub fn is_assignable_from(&self, class: &Arc<Class>) -> Result<bool> {
-        if self.name == class.name() || self.name == "java/lang/Object" {
+        if self.name() == class.name() || self.name() == "java/lang/Object" {
             return Ok(true);
         }
 
@@ -561,7 +557,7 @@ impl Class {
             }
             // If the array is an array of primitives, then the two arrays are assignable if they
             // have the same number of dimensions and the component types are the same.
-            if !self.name.ends_with(';') || !class.name().ends_with(';') {
+            if !self.name().ends_with(';') || !class.name().ends_with(';') {
                 return Ok(false);
             }
             if self.array_dimensions() > class.array_dimensions() {
@@ -599,7 +595,7 @@ impl PartialEq for Class {
             return true;
         }
 
-        self.name == other.name
+        self.name() == other.name()
             && self.class_file == other.class_file
             && *self.parent.read().expect("parent") == *other.parent.read().expect("parent")
             && self.fields == other.fields
@@ -609,7 +605,7 @@ impl PartialEq for Class {
 
 impl Display for Class {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name)
+        write!(f, "{}", self.name())
     }
 }
 

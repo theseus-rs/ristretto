@@ -61,7 +61,7 @@ impl Method {
             _ => (0, 0, Vec::new(), Vec::new(), Vec::new()),
         };
 
-        let (parameters, return_type) = FieldType::parse_method_descriptor(descriptor.as_ref())?;
+        let (parameters, return_type) = FieldType::parse_method_descriptor(descriptor)?;
         Ok(Self {
             definition: definition.clone(),
             name: name.to_string(),
