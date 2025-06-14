@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/v0.20.0...v0.21.0) - 2025-06-14
+
+### Fixed
+- add invokedynamic bootstrap method descriptor verification
+
+### Other
+- update Cargo.toml dependencies
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- create compile time intrinsic method registry
+- add classfile attributes documentation
+- update rust doc formatting
+- add constants for java versions
+- remove unnecessary version file parsing on startup when the full java version is specified
+- remove unnecessary call to obtain current directory on initialization
+- remove unnecessary java version from intrinsics registry
+- correct clippy lints
+
+## `ristretto_vm` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.20.0...ristretto_vm-v0.21.0) - 2025-06-14
+
+### Fixed
+- add invokedynamic bootstrap method descriptor verification
+
+### Other
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- remove unnecessary java version from intrinsics registry
+- create compile time intrinsic method registry
+- update rust doc formatting
+- correct clippy lints
+- add constants for java versions
+
+## `ristretto_macros` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.20.0...ristretto_macros-v0.21.0) - 2025-06-14
+
+### Other
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- create compile time intrinsic method registry
+
+## `ristretto_jit` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.20.0...ristretto_jit-v0.21.0) - 2025-06-14
+
+### Other
+- update rust doc formatting
+
+## `ristretto_classloader` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.20.0...ristretto_classloader-v0.21.0) - 2025-06-14
+
+### Other
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- remove unnecessary version file parsing on startup when the full java version is specified
+- remove unnecessary call to obtain current directory on initialization
+- update rust doc formatting
+- add constants for java versions
+
+## `ristretto_classfile` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.20.0...ristretto_classfile-v0.21.0) - 2025-06-14
+
+### Other
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- create compile time intrinsic method registry
+- add classfile attributes documentation
+- update rust doc formatting
+- add constants for java versions
+
 ## `ristretto_cli` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/v0.19.2...v0.20.0) - 2025-06-06
 
 ### Added
