@@ -84,7 +84,7 @@ pub(crate) async fn multianewarray(
     let vm = thread.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.class(class_name.as_str()).await?;
+    let class = vm.class(class_name).await?;
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
 

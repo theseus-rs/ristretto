@@ -230,7 +230,7 @@ impl FieldType {
     /// );
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn parse(descriptor: &String) -> Result<FieldType> {
+    pub fn parse(descriptor: &str) -> Result<FieldType> {
         let mut chars = descriptor.chars();
         let code = chars.next().unwrap_or_default();
         let field_type = match code {
@@ -246,7 +246,8 @@ impl FieldType {
                 }
             }
             '[' => {
-                let component_type = Self::parse(&chars.collect())?;
+                let characters: String = chars.collect();
+                let component_type = Self::parse(&characters)?;
                 FieldType::Array(component_type.into())
             }
             _ => {
@@ -399,10 +400,7 @@ mod test {
 
     #[test]
     fn test_invalid_code() {
-        assert_eq!(
-            Err(InvalidFieldTypeCode('0')),
-            FieldType::parse(&"0".to_string())
-        );
+        assert_eq!(Err(InvalidFieldTypeCode('0')), FieldType::parse("0"));
     }
 
     fn test_field_type(

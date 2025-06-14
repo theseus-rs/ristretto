@@ -41,7 +41,7 @@ impl Field {
     pub fn from(class_file: &ClassFile, definition: &ristretto_classfile::Field) -> Result<Self> {
         let constant_pool = &class_file.constant_pool;
         let access_flags = definition.access_flags;
-        let name = constant_pool.try_get_utf8(definition.name_index)?.clone();
+        let name = constant_pool.try_get_utf8(definition.name_index)?;
         let field_type = definition.field_type.clone();
         let mut value = match field_type {
             FieldType::Base(
@@ -73,7 +73,7 @@ impl Field {
         Ok(Self {
             access_flags,
             field_type,
-            name,
+            name: name.to_string(),
             value: Arc::new(RwLock::new(value)),
             attributes: definition.attributes.clone(),
         })

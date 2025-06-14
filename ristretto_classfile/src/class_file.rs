@@ -82,7 +82,7 @@ impl ClassFile {
     /// println!("Class name: {class_name}"); // e.g., "java.lang.String"
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn class_name(&self) -> Result<&String> {
+    pub fn class_name(&self) -> Result<&str> {
         self.constant_pool.try_get_class(self.this_class)
     }
 
