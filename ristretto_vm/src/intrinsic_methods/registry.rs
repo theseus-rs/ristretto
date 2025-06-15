@@ -176,10 +176,6 @@ mod tests {
         let mut registry_methods = method_registry
             .methods()
             .keys()
-            .filter(|&method| {
-                // Skip internal JVM runtime classes
-                !method.starts_with("java/lang/invoke/DirectMethodHandle$Holder")
-            })
             .map(|method| method.to_string())
             .collect::<Vec<String>>();
         registry_methods.sort();
