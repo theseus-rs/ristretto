@@ -42,6 +42,13 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 
 ### Limitations
 
+#### String Encoding
+
+Ristretto uses Rust's `String` type to represent Java strings. This means that Ristretto does not support unpaired
+surrogates from Java's UTF-16 encoding. Any unpaired surrogates will be replaced with the replacement character `�`
+(U+FFFD) when decoding Java strings. For additional details on how Java and Rust handle strings, see
+[encodings](docs/encoding/index.md).
+
 #### Instructions
 
 The Invokedynamic instruction is not implemented.

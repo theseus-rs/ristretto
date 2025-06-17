@@ -69,29 +69,34 @@ use crate::Result;
 /// let result = mutf8::to_bytes(mixed)?;
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
+#[expect(clippy::cast_possible_truncation)]
 pub fn to_bytes<S: AsRef<str>>(data: S) -> Result<Vec<u8>> {
     let data = data.as_ref();
     let mut encoded = Vec::with_capacity(data.len());
 
     for ch in data.chars() {
-        match ch {
-            '\u{0000}' => encoded.extend_from_slice(&[0xC0, 0x80]),
-            '\u{0001}'..='\u{007F}' => encoded.push(ch as u8),
-            '\u{0080}'..='\u{07FF}' => {
-                encoded.push(0xC0 | u8::try_from((ch as u32) >> 6)?);
-                encoded.push(0x80 | u8::try_from((ch as u32) & 0x3F)?);
-            }
-            '\u{0800}'..='\u{FFFF}' => {
-                encoded.push(0xE0 | u8::try_from((ch as u32) >> 12)?);
-                encoded.push(0x80 | u8::try_from(((ch as u32) >> 6) & 0x3F)?);
-                encoded.push(0x80 | u8::try_from((ch as u32) & 0x3F)?);
-            }
-            _ => {
-                let mut buf = [0u8; 4];
-                let encoded_bytes = ch.encode_utf8(&mut buf);
-                for b in encoded_bytes.bytes() {
-                    encoded.push(b);
-                }
+        let code = ch as u32;
+        if code == 0 {
+            encoded.extend_from_slice(&[0xC0, 0x80]);
+        } else if code <= 0x7F {
+            encoded.push(code as u8);
+        } else if code <= 0x7FF {
+            encoded.push(0xC0 | ((code >> 6) as u8));
+            encoded.push(0x80 | ((code & 0x3F) as u8));
+        } else if code <= 0xFFFF {
+            encoded.push(0xE0 | ((code >> 12) as u8));
+            encoded.push(0x80 | (((code >> 6) & 0x3F) as u8));
+            encoded.push(0x80 | ((code & 0x3F) as u8));
+        } else {
+            // Supplementary character: encode as surrogate pair
+            let u = code - 0x1_0000;
+            let high = 0xD800 + ((u >> 10) as u16);
+            let low = 0xDC00 + ((u & 0x3FF) as u16);
+            // Encode each surrogate as 3-byte UTF-8
+            for unit in [high, low] {
+                encoded.push(0xE0 | ((unit >> 12) as u8));
+                encoded.push(0x80 | (((unit >> 6) & 0x3F) as u8));
+                encoded.push(0x80 | ((unit & 0x3F) as u8));
             }
         }
     }
@@ -121,13 +126,13 @@ pub fn to_bytes<S: AsRef<str>>(data: S) -> Result<Vec<u8>> {
 ///
 /// // Complex example with multiple character types
 /// let bytes = vec![
-///     0x41,                    // 'A' (ASCII)
-///     0xC0, 0x80,              // Null character
-///     0xCE, 0xB2,              // 'β' (Greek)
-///     0xF0, 0x9F, 0x98, 0x80   // '😀' (Emoji)
+///     0x41,                                // 'A' (ASCII)
+///     0xC0, 0x80,                          // Null character
+///     0xCE, 0xB2,                          // 'β' (Greek)
+///     0xED, 0xA0, 0xBD, 0xED, 0xB8, 0x83   // '😃' (Emoji)
 /// ];
 /// let result = mutf8::from_bytes(bytes)?;
-/// assert_eq!(result, "A\u{0000}β😀");
+/// assert_eq!(result, "A\u{0000}β😃");
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
 ///
@@ -136,55 +141,46 @@ pub fn to_bytes<S: AsRef<str>>(data: S) -> Result<Vec<u8>> {
 #[expect(clippy::similar_names)]
 pub fn from_bytes<V: AsRef<[u8]>>(bytes: V) -> Result<String> {
     let bytes = bytes.as_ref();
-    let mut decoded = String::with_capacity(bytes.len());
+    let mut utf16: Vec<u16> = Vec::with_capacity(bytes.len());
     let mut i = 0;
 
     while i < bytes.len() {
         let byte1 = bytes[i];
         if byte1 & 0x80 == 0 {
-            decoded.push(byte1 as char);
+            utf16.push(u16::from(byte1));
             i += 1;
         } else if byte1 & 0xE0 == 0xC0 {
             if i + 1 >= bytes.len() {
-                return Err(FromUtf8Error("Invalid UTF-8 byte sequence".to_string()));
+                return Err(FromUtf8Error("Invalid MUTF-8 byte sequence".to_string()));
             }
             let byte2 = bytes[i + 1];
             if byte1 == 0xC0 && byte2 == 0x80 {
-                decoded.push('\u{0000}');
+                utf16.push(0);
             } else {
-                let ch = (u32::from(byte1 & 0x1F) << 6) | u32::from(byte2 & 0x3F);
-                decoded.push(char::from_u32(ch).unwrap_or_default());
+                let ch = ((u16::from(byte1 & 0x1F)) << 6) | u16::from(byte2 & 0x3F);
+                utf16.push(ch);
             }
             i += 2;
         } else if byte1 & 0xF0 == 0xE0 {
             if i + 2 >= bytes.len() {
-                return Err(FromUtf8Error("Invalid UTF-8 byte sequence".to_string()));
+                return Err(FromUtf8Error("Invalid MUTF-8 byte sequence".to_string()));
             }
             let byte2 = bytes[i + 1];
             let byte3 = bytes[i + 2];
-            let ch = (u32::from(byte1 & 0x0F) << 12)
-                | (u32::from(byte2 & 0x3F) << 6)
-                | u32::from(byte3 & 0x3F);
-            decoded.push(char::from_u32(ch).unwrap_or_default());
+            let ch = ((u16::from(byte1 & 0x0F)) << 12)
+                | ((u16::from(byte2 & 0x3F)) << 6)
+                | (u16::from(byte3 & 0x3F));
+            utf16.push(ch);
             i += 3;
         } else {
-            if i + 3 >= bytes.len() {
-                return Err(FromUtf8Error("Invalid UTF-8 byte sequence".to_string()));
-            }
-            // Handle surrogate pairs and supplementary characters
-            let byte2 = bytes[i + 1];
-            let byte3 = bytes[i + 2];
-            let byte4 = bytes[i + 3];
-            let ch = (u32::from(byte1 & 0x07) << 18)
-                | (u32::from(byte2 & 0x3F) << 12)
-                | (u32::from(byte3 & 0x3F) << 6)
-                | u32::from(byte4 & 0x3F);
-            decoded.push(char::from_u32(ch).unwrap_or_default());
-            i += 4;
+            return Err(FromUtf8Error(
+                "MUTF-8 does not use 4-byte sequences".to_string(),
+            ));
         }
     }
 
-    Ok(decoded)
+    // Use `from_utf16_lossy` to accept surrogate code units (as Java would)
+    Ok(String::from_utf16_lossy(&utf16))
 }
 
 #[cfg(test)]
@@ -196,19 +192,38 @@ mod tests {
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.7:~:text=the%20resulting%20string).-,bytes%5B%5D,-The%20bytes%20array>
     #[test]
     fn test_all_utf8_chars() -> Result<()> {
-        for i in 0..=0x0010_FFFF {
+        for i in 0..=0x10_FFFF {
+            if (0xD800..=0xDFFF).contains(&i) {
+                // Surrogates: not valid scalar values
+                assert!(char::from_u32(i).is_none());
+                continue;
+            }
             if let Some(ch) = char::from_u32(i) {
                 let s = ch.to_string();
                 let rust_encoded_bytes = s.as_bytes().to_vec();
                 let mutf8_encoded_bytes = to_bytes(&s)?;
+
                 match i {
-                    0 => assert_eq!(mutf8_encoded_bytes, vec![0xC0, 0x80]),
-                    _ => assert_eq!(rust_encoded_bytes, mutf8_encoded_bytes),
+                    0 => {
+                        // Special null encoding in MUTF-8
+                        assert_eq!(mutf8_encoded_bytes, vec![0xC0, 0x80]);
+                    }
+                    0x10000..=0x10_FFFF => {
+                        // Supplementary characters (encoded as surrogate pairs in MUTF-8). Don't
+                        // assert that encoding matches Rust UTF-8. Instead, check round-trip
+                        // correctness below.
+                    }
+                    _ => {
+                        // BMP (non-null, non-surrogate)
+                        assert_eq!(rust_encoded_bytes, mutf8_encoded_bytes);
+                    }
                 }
 
                 let rust_encoded_result = String::from_utf8(rust_encoded_bytes)?;
                 let mutf8_encoded_result = from_bytes(mutf8_encoded_bytes.as_slice())?;
                 assert_eq!(rust_encoded_result, mutf8_encoded_result);
+            } else {
+                assert!((0xD800..=0xDFFF).contains(&i));
             }
         }
         Ok(())
@@ -232,7 +247,8 @@ mod tests {
             0xDF, 0xBF, // '\u{07FF}'
             0xE0, 0xA0, 0x80, // '\u{0800}'
             0xEF, 0xBF, 0xBF, // '\u{FFFF}'
-            0xF0, 0x90, 0x80, 0x80, // '\u{10000}'
+            0xED, 0xA0, 0x80, // High surrogate (for '\u{10000}')
+            0xED, 0xB0, 0x80, // Low surrogate (for '\u{10000}')
         ];
         assert_eq!(to_bytes(data)?, expected);
         Ok(())
@@ -247,7 +263,8 @@ mod tests {
             0xDF, 0xBF, // '\u{07FF}'
             0xE0, 0xA0, 0x80, // '\u{0800}'
             0xEF, 0xBF, 0xBF, // '\u{FFFF}'
-            0xF0, 0x90, 0x80, 0x80, // '\u{10000}'
+            0xED, 0xA0, 0x80, // High surrogate (for '\u{10000}')
+            0xED, 0xB0, 0x80, // Low surrogate (for '\u{10000}')
         ];
         let expected = "\u{0000}\u{007F}\u{0080}\u{07FF}\u{0800}\u{FFFF}\u{10000}";
         let result = from_bytes(bytes)?;
@@ -261,5 +278,15 @@ mod tests {
         assert!(from_bytes([0x56, 0xe7]).is_err());
         assert!(from_bytes([0x56, 0xa8]).is_err());
         assert!(from_bytes([0x7e, 0xff, 0xff, 0x2a]).is_err());
+    }
+
+    #[test]
+    fn test_encode_decode_supplementary_character() -> Result<()> {
+        // 😀 U+1F600
+        let s = String::from("\u{1F600}");
+        let mutf8_encoded_bytes = to_bytes(&s)?;
+        let decoded = from_bytes(&mutf8_encoded_bytes)?;
+        assert_eq!(decoded, s);
+        Ok(())
     }
 }
