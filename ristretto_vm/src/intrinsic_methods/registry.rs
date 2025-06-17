@@ -188,9 +188,8 @@ mod tests {
         let intrinsic_methods = get_intrinsic_methods(version).await?;
         let registry_methods = get_registry_methods(version)?;
         // Required methods for ristretto
-        #[expect(unused_mut)]
         #[expect(clippy::useless_vec)]
-        let mut required_methods = vec![
+        let required_methods = vec![
             "java/lang/ClassLoader.initSystemClassLoader()Ljava/lang/ClassLoader;".to_string(),
             "java/lang/System.allowSecurityManager()Z".to_string(),
             "java/lang/System.getSecurityManager()Ljava/lang/SecurityManager;".to_string(),
@@ -199,6 +198,7 @@ mod tests {
         ];
         #[cfg(target_os = "windows")]
         {
+            let mut required_methods = required_methods.clone();
             required_methods.push("java/io/WinNTFileSystem.initIDs()V".to_string());
             required_methods.push("sun/io/Win32ErrorMode.setErrorMode(J)J".to_string());
         }
