@@ -12,9 +12,11 @@ use std::sync::Arc;
 #[async_recursion(?Send)]
 pub(crate) async fn clear_0(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.ref.Reference.clear0()V")
+    let object = parameters.pop_object()?;
+    object.set_value("referent", Value::Object(None))?;
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -76,12 +78,29 @@ pub(crate) async fn wait_for_reference_pending_list(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::JavaObject;
+    use ristretto_classloader::Object;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.ref.Reference.clear0()V")]
-    async fn test_clear_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = clear_0(thread, Parameters::default()).await;
+    async fn test_clear_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let value = "foo".to_object(&vm).await?;
+        let weak_reference = vm
+            .object(
+                "java/lang/ref/WeakReference",
+                "Ljava/lang/Object;",
+                vec![value],
+            )
+            .await?;
+        let mut parameters = Parameters::default();
+        parameters.push(weak_reference.clone());
+
+        let result = clear_0(thread, parameters).await?;
+        assert_eq!(result, None);
+        let weak_reference: Object = weak_reference.try_into()?;
+        let referent = weak_reference.value("referent")?;
+        assert_eq!(referent, Value::Object(None));
+        Ok(())
     }
 
     #[tokio::test]

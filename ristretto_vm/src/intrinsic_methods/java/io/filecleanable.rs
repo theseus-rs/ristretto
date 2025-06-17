@@ -1,4 +1,5 @@
 use crate::Result;
+use crate::intrinsic_methods::java::io::fileoutputstream::file_handle_identifier;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
@@ -7,6 +8,8 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
+#[cfg(not(target_family = "wasm"))]
+use tokio::io::AsyncWriteExt;
 
 #[intrinsic_method(
     "java/io/FileCleanable.cleanupClose0(IJ)V",
@@ -14,20 +17,90 @@ use std::sync::Arc;
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn cleanup_close_0(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.io.FileCleanable.cleanupClose0(IJ)V")
+    let vm = thread.vm()?;
+    let handles = vm.handles();
+
+    #[cfg(not(target_os = "windows"))]
+    let fd = {
+        let _handle = parameters.pop_long()?;
+        let fd = parameters.pop_int()?;
+        i64::from(fd)
+    };
+
+    #[cfg(target_os = "windows")]
+    let fd = {
+        let handle = parameters.pop_long()?;
+        let _fd = parameters.pop_int()?;
+        handle
+    };
+
+    if fd < 0 {
+        return Ok(None);
+    }
+
+    let handle_identifier = file_handle_identifier(fd);
+    if let Some(handle) = handles.remove(&handle_identifier).await {
+        #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
+        {
+            let _ = handle;
+        }
+
+        #[cfg(target_os = "wasi")]
+        {
+            let file_handle: std::fs::File = handle.try_into()?;
+            file_handle.sync_all()?;
+        }
+
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let mut file_handle: tokio::fs::File = handle.try_into()?;
+            file_handle.shutdown().await?;
+        }
+    };
+
+    Ok(None)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::handle::Handle;
+    use crate::intrinsic_methods::java::io::fileoutputstream::raw_file_descriptor;
+    use tokio::fs::{File, remove_file};
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.io.FileCleanable.cleanupClose0(IJ)V")]
-    async fn test_cleanup_close_0() {
+    async fn test_cleanup_close_0_no_handle() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = cleanup_close_0(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        parameters.push_int(-1);
+        parameters.push_long(-1);
+        let result = cleanup_close_0(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_close_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let handles = vm.handles();
+
+        let file_name = "cleanup_close_0_no_handle_test.txt";
+        let file = File::create(file_name).await?;
+        let fd = raw_file_descriptor(&file)?;
+        let handle: Handle = (file, false).into();
+        let handle_identifier = file_handle_identifier(0);
+        handles.insert(handle_identifier, handle).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push_int(i32::try_from(fd)?);
+        parameters.push_long(fd);
+        let result = cleanup_close_0(thread, parameters).await?;
+        assert_eq!(result, None);
+
+        remove_file(file_name).await?;
+        Ok(())
     }
 }

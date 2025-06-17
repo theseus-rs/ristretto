@@ -62,6 +62,8 @@
 mod configuration;
 mod error;
 mod frame;
+mod handle;
+mod handles;
 mod instruction;
 mod intrinsic_methods;
 mod java_error;
