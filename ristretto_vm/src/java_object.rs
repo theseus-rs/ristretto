@@ -1,6 +1,6 @@
 use crate::Error::InternalError;
 use crate::{Result, VM};
-use ristretto_classfile::{JAVA_8, JAVA_17, mutf8};
+use ristretto_classfile::{JAVA_8, JAVA_17};
 use ristretto_classloader::{Class, ConcurrentVec, Object, Reference, Value};
 use std::sync::Arc;
 
@@ -182,20 +182,33 @@ impl JavaObject for &str {
         let class = vm.class("java.lang.String").await?;
         let object = Object::new(class)?;
 
-        // The String implementation changed in Java 9.
-        // In Java 8 and earlier, the value field is a char array.
-        // In Java 9 and later, the value field is a byte array.
         let java_class_file_version = vm.java_class_file_version();
         let array = if java_class_file_version <= &JAVA_8 {
+            // Java 8 and below: store as UTF-16 char array
             let chars = self.encode_utf16().collect::<Vec<u16>>();
             Reference::CharArray(ConcurrentVec::from(chars))
         } else {
             if java_class_file_version >= &JAVA_17 {
                 object.set_value("hashIsZero", Value::Int(0))?;
             }
-            object.set_value("coder", Value::Int(0))?; // LATIN1
 
-            let bytes = mutf8::to_bytes(self)?;
+            // Determine coder and value
+            let use_latin1 = self.chars().all(|c| (c as u32) <= 0xFF);
+            let (coder, bytes): (i32, Vec<i8>) = if use_latin1 {
+                // All chars fit in Latin1
+                (0, self.chars().map(|c| c as i8).collect())
+            } else {
+                // Must use UTF-16
+                (
+                    1,
+                    self.encode_utf16()
+                        .flat_map(|u| u.to_be_bytes())
+                        .map(|b| b as i8)
+                        .collect(),
+                )
+            };
+
+            object.set_value("coder", Value::Int(coder))?;
             Reference::from(bytes)
         };
 

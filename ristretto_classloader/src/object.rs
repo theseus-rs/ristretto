@@ -1,7 +1,7 @@
 use crate::Error::{FieldNotFound, InvalidValueType, ParseError};
 use crate::Reference::{ByteArray, CharArray};
 use crate::{Class, Field, Reference, Result, Value};
-use ristretto_classfile::{FieldAccessFlags, JAVA_8, mutf8};
+use ristretto_classfile::{FieldAccessFlags, JAVA_8};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
@@ -476,11 +476,25 @@ impl TryInto<String> for Object {
         };
         match reference {
             ByteArray(bytes) => {
-                let bytes = bytes.to_vec()?;
-                #[expect(clippy::cast_sign_loss)]
-                let bytes: Vec<u8> = bytes.iter().map(|&b| b as u8).collect();
-                let value = mutf8::from_bytes(&bytes)?;
-                Ok(value)
+                let coder = self.value("coder")?.to_int()?;
+                if coder == 0 {
+                    // Latin-1 encoded string
+                    let bytes = bytes.to_vec()?;
+                    #[expect(clippy::cast_sign_loss)]
+                    let value = bytes.iter().map(|&byte| char::from(byte as u8)).collect();
+                    Ok(value)
+                } else {
+                    // UTF-16 encoded string
+                    let bytes = bytes.to_vec()?;
+                    #[expect(clippy::cast_sign_loss)]
+                    let code_units = bytes
+                        .chunks(2)
+                        .map(|chunk| u16::from_be_bytes([chunk[0] as u8, chunk[1] as u8]))
+                        .collect::<Vec<u16>>();
+                    let value = String::from_utf16(&code_units)
+                        .map_err(|error| ParseError(error.to_string()))?;
+                    Ok(value)
+                }
             }
             CharArray(bytes) => {
                 let bytes = bytes.to_vec()?;
@@ -931,9 +945,13 @@ mod tests {
     async fn test_try_into_string_java8() -> Result<()> {
         let class = java8_string_class().await?;
         let object = Object::new(class)?;
-        #[expect(clippy::cast_possible_wrap)]
-        let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
-        let string_value = Value::from(string_bytes);
+        let string_chars: Vec<char> = "foo"
+            .as_bytes()
+            .to_vec()
+            .iter()
+            .map(|&b| b as char)
+            .collect();
+        let string_value = Value::from(string_chars);
         object.set_value("value", string_value)?;
         let result: String = object.try_into()?;
         assert_eq!("foo".to_string(), result);
@@ -953,9 +971,10 @@ mod tests {
 
     #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
-    async fn test_try_into_byte_array_string() -> Result<()> {
+    async fn test_try_into_latin1_byte_array_string() -> Result<()> {
         let class = string_class().await?;
         let object = Object::new(class)?;
+        object.set_value("coder", Value::Int(0))?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
         object.set_value("value", string_value)?;
@@ -964,20 +983,22 @@ mod tests {
         Ok(())
     }
 
+    #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
-    async fn test_try_into_char_array_string() -> Result<()> {
+    async fn test_try_into_utf16_byte_array_string() -> Result<()> {
+        let value = "😃";
         let class = string_class().await?;
         let object = Object::new(class)?;
-        let string_bytes: Vec<char> = "foo"
-            .as_bytes()
-            .to_vec()
-            .iter()
-            .map(|&b| b as char)
+        object.set_value("coder", Value::Int(1))?;
+        let string_bytes: Vec<i8> = value
+            .encode_utf16()
+            .flat_map(u16::to_be_bytes)
+            .map(|b| b as i8)
             .collect();
         let string_value = Value::from(string_bytes);
         object.set_value("value", string_value)?;
         let result: String = object.try_into()?;
-        assert_eq!("foo".to_string(), result);
+        assert_eq!(value.to_string(), result);
         Ok(())
     }
 
