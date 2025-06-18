@@ -159,10 +159,10 @@ pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::Array(_class, array)) => {
+        Some(Reference::Array(object_array)) => {
             let index = usize::try_from(index)?;
-            let Some(value) = array.get(index)? else {
-                let length = array.len()?;
+            let Some(value) = object_array.elements.get(index)? else {
+                let length = object_array.elements.len()?;
                 return Err(ArrayIndexOutOfBoundsException { index, length }.into());
             };
             stack.push_object(value)?;
@@ -182,15 +182,15 @@ pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::Array(_class, ref mut array)) => {
+        Some(Reference::Array(ref mut object_array)) => {
             let index = usize::try_from(index)?;
-            let length = array.capacity()?;
+            let length = object_array.elements.capacity()?;
             if index >= length {
                 return Err(ArrayIndexOutOfBoundsException { index, length }.into());
             }
             // TODO: validate object type is compatible with array type
             // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aastore
-            array.set(index, value)?;
+            object_array.elements.set(index, value)?;
             Ok(Continue)
         }
         Some(object) => Err(InvalidStackValue {
@@ -294,7 +294,7 @@ fn is_instance_of(object: &Reference, class: &Arc<Class>) -> Result<bool> {
             let reference_class_name = object.class_name();
             Ok(reference_class_name == class.name())
         }
-        Reference::Array(array_class, _) => Ok(class.is_assignable_from(array_class)?),
+        Reference::Array(object_array) => Ok(class.is_assignable_from(&object_array.class)?),
         Reference::Object(object) => Ok(object.instance_of(class)?),
     }
 }
@@ -673,7 +673,7 @@ mod tests {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         let string_class = thread.class("[Ljava/lang/String;").await?;
-        let string_array = Reference::Array(string_class, ConcurrentVec::default());
+        let string_array = Reference::from((string_class, Vec::new()));
         stack.push_object(Some(string_array))?;
         let class_index = get_class_index(&mut frame, "[Ljava/lang/Object;")?;
         let result = checkcast(&frame, stack, class_index).await?;
@@ -725,7 +725,7 @@ mod tests {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         let string_class = thread.class("[Ljava/lang/String;").await?;
-        let string_array = Reference::Array(string_class, ConcurrentVec::default());
+        let string_array = Reference::from((string_class, Vec::new()));
         stack.push_object(Some(string_array))?;
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;
         let result = instanceof(&frame, stack, class_index).await?;
@@ -739,7 +739,7 @@ mod tests {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         let object_class = thread.class("[Ljava/lang/Object;").await?;
-        let object_array = Reference::Array(object_class, ConcurrentVec::default());
+        let object_array = Reference::from((object_class, Vec::new()));
         stack.push_object(Some(object_array))?;
         let class_index = get_class_index(&mut frame, "java/lang/String")?;
         let result = instanceof(&frame, stack, class_index).await?;

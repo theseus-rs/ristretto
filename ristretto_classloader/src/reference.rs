@@ -7,6 +7,17 @@ use std::fmt::Display;
 use std::sync::{Arc, RwLockReadGuard};
 use zerocopy::transmute_ref;
 
+/// Represents an array of objects in the Ristretto VM.
+///
+/// `ObjectArray` groups the array's class `Arc<Class>` and its elements
+/// `ConcurrentVec<Option<Reference>>` together in order to reduce the amount of memory required by
+/// values in the Reference enum.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ObjectArray {
+    pub class: Arc<Class>,
+    pub elements: ConcurrentVec<Option<Reference>>,
+}
+
 /// Represents a reference to an object in the Ristretto VM.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Reference {
@@ -17,7 +28,7 @@ pub enum Reference {
     LongArray(ConcurrentVec<i64>),
     FloatArray(ConcurrentVec<f32>),
     DoubleArray(ConcurrentVec<f64>),
-    Array(Arc<Class>, ConcurrentVec<Option<Reference>>),
+    Array(ObjectArray),
     Object(Object),
 }
 
@@ -33,7 +44,7 @@ impl Reference {
             Reference::LongArray(_) => "[J",
             Reference::FloatArray(_) => "[F",
             Reference::DoubleArray(_) => "[D",
-            Reference::Array(class, _) => class.name(),
+            Reference::Array(object_array) => object_array.class.name(),
             Reference::Object(value) => value.class().name(),
         }
     }
@@ -45,7 +56,7 @@ impl Reference {
     /// if the class cannot be created
     pub fn class(&self) -> Result<Arc<Class>> {
         let class = match self {
-            Reference::Array(class, _) => class.clone(),
+            Reference::Array(object_array) => object_array.class.clone(),
             Reference::Object(value) => value.class().clone(),
             _ => {
                 let class_name = self.class_name();
@@ -156,7 +167,9 @@ impl Reference {
         &self,
     ) -> Result<(&Arc<Class>, RwLockReadGuard<'_, Vec<Option<Reference>>>)> {
         match self {
-            Reference::Array(class, value) => Ok((class, value.as_ref()?)),
+            Reference::Array(object_array) => {
+                Ok((&object_array.class, object_array.elements.as_ref()?))
+            }
             _ => Err(InvalidValueType("Expected array".to_string())),
         }
     }
@@ -187,8 +200,8 @@ impl Reference {
             Reference::LongArray(value) => Reference::LongArray(value.deep_clone()?),
             Reference::FloatArray(value) => Reference::FloatArray(value.deep_clone()?),
             Reference::DoubleArray(value) => Reference::DoubleArray(value.deep_clone()?),
-            Reference::Array(class, value) => {
-                let values = value.to_vec()?;
+            Reference::Array(object_array) => {
+                let values = object_array.elements.to_vec()?;
                 let mut cloned_values = Vec::with_capacity(values.len());
                 for value in values {
                     match value {
@@ -196,7 +209,11 @@ impl Reference {
                         None => cloned_values.push(value),
                     }
                 }
-                Reference::Array(class.clone(), ConcurrentVec::from(cloned_values))
+                let object_array = ObjectArray {
+                    class: object_array.class.clone(),
+                    elements: ConcurrentVec::from(cloned_values),
+                };
+                Reference::Array(object_array)
             }
             Reference::Object(value) => Reference::Object(value.deep_clone()?),
         };
@@ -214,9 +231,9 @@ impl Display for Reference {
             Reference::LongArray(value) => write!(f, "long{value}"),
             Reference::FloatArray(value) => write!(f, "float{value}"),
             Reference::DoubleArray(value) => write!(f, "double{value}"),
-            Reference::Array(class, value) => {
-                let length = value.len().unwrap_or_default();
-                write!(f, "{}[{length}]", class.array_component_type())
+            Reference::Array(object_array) => {
+                let length = object_array.elements.len().unwrap_or_default();
+                write!(f, "{}[{length}]", object_array.class.array_component_type())
             }
             Reference::Object(value) => {
                 write!(f, "{value}")
@@ -321,7 +338,11 @@ impl From<Vec<f64>> for Reference {
 impl From<(Arc<Class>, Vec<Option<Reference>>)> for Reference {
     fn from(value: (Arc<Class>, Vec<Option<Reference>>)) -> Self {
         let (class, value) = value;
-        Reference::Array(class, ConcurrentVec::from(value))
+        let object_array = ObjectArray {
+            class: class.clone(),
+            elements: ConcurrentVec::from(value),
+        };
+        Reference::Array(object_array)
     }
 }
 
@@ -339,7 +360,11 @@ impl TryFrom<(Arc<Class>, Vec<Value>)> for Reference {
             references.push(reference);
         }
 
-        Ok(Reference::Array(class, ConcurrentVec::from(references)))
+        let object_array = ObjectArray {
+            class,
+            elements: ConcurrentVec::from(references),
+        };
+        Ok(Reference::Array(object_array))
     }
 }
 
@@ -1137,10 +1162,12 @@ mod tests {
         let clone = reference.clone();
         assert_eq!(reference, clone);
 
-        let Reference::Array(ref _class, ref array) = clone else {
+        let Reference::Array(ref object_array) = clone else {
             unreachable!("Expected reference array");
         };
-        array.set(0, Some(Reference::from(vec![1i8])))?;
+        object_array
+            .elements
+            .set(0, Some(Reference::from(vec![1i8])))?;
         assert_eq!(reference, clone);
         Ok(())
     }
@@ -1152,10 +1179,12 @@ mod tests {
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
 
-        let Reference::Array(ref _class, ref array) = clone else {
+        let Reference::Array(ref object_array) = clone else {
             unreachable!("Expected reference array");
         };
-        array.set(0, Some(Reference::from(vec![1i8])))?;
+        object_array
+            .elements
+            .set(0, Some(Reference::from(vec![1i8])))?;
         assert_ne!(reference, clone);
         Ok(())
     }
@@ -1437,7 +1466,7 @@ mod tests {
         let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let original_value = vec![None];
         let reference = Reference::from((original_class.clone(), original_value.clone()));
-        assert!(matches!(reference, Reference::Array(_, _)));
+        assert!(matches!(reference, Reference::Array(_)));
         Ok(())
     }
 
@@ -1451,7 +1480,7 @@ mod tests {
         let value = Value::from(object);
         let original_values = vec![value];
         let reference = Reference::try_from((original_class.clone(), original_values.clone()))?;
-        assert!(matches!(reference, Reference::Array(_, _)));
+        assert!(matches!(reference, Reference::Array(_)));
         Ok(())
     }
 

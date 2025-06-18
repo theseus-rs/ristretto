@@ -234,7 +234,7 @@ async fn invoke_method(
                 return Err(InternalError("No reference found".to_string()));
             };
             class = match reference {
-                Reference::Array(class, _) => class.clone(),
+                Reference::Array(object_array) => object_array.class.clone(),
                 Reference::Object(object) => object.class().clone(),
                 _ => {
                     // Primitive types do not have a class associated with them so the class must be

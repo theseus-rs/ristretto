@@ -45,17 +45,17 @@ pub(crate) async fn init_stack_trace_elements_1(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let depth = usize::try_from(parameters.pop_int()?)?;
-    let Some(Reference::Array(_class, back_trace)) = parameters.pop_reference()? else {
+    let Some(Reference::Array(back_trace_array)) = parameters.pop_reference()? else {
         return Err(InternalError("No back trace object found".to_string()));
     };
-    let Some(Reference::Array(_class, stack_trace)) = parameters.pop_reference()? else {
+    let Some(Reference::Array(stack_trace_array)) = parameters.pop_reference()? else {
         return Err(InternalError("No stack trace object found".to_string()));
     };
     for index in 0..depth {
-        let Some(value) = back_trace.get(index)? else {
+        let Some(value) = back_trace_array.elements.get(index)? else {
             return Err(InternalError("No back trace element found".to_string()));
         };
-        stack_trace.set(index, value)?;
+        stack_trace_array.elements.set(index, value)?;
     }
     Ok(None)
 }

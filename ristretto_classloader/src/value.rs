@@ -1023,7 +1023,7 @@ mod tests {
         let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let original_value = vec![None];
         let value = Value::from((original_class.clone(), original_value.clone()));
-        assert!(matches!(value, Value::Object(Some(Reference::Array(_, _)))));
+        assert!(matches!(value, Value::Object(Some(Reference::Array(_)))));
         Ok(())
     }
 
@@ -1037,7 +1037,7 @@ mod tests {
         let value = Value::from(object);
         let original_values = vec![value];
         let value = Value::try_from((original_class.clone(), original_values.clone()))?;
-        assert!(matches!(value, Value::Object(Some(Reference::Array(_, _)))));
+        assert!(matches!(value, Value::Object(Some(Reference::Array(_)))));
         Ok(())
     }
 

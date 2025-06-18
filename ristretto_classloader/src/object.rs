@@ -172,14 +172,14 @@ impl Object {
                     }
                 }
                 (
-                    Value::Object(Some(Reference::Array(class, array))),
-                    Value::Object(Some(Reference::Array(other_class, other_array))),
+                    Value::Object(Some(Reference::Array(object_array))),
+                    Value::Object(Some(Reference::Array(other_object_array))),
                 ) => {
-                    if class != other_class {
+                    if object_array.class != other_object_array.class {
                         return false;
                     }
-                    let array = array.to_vec().unwrap_or_default();
-                    let other_array = other_array.to_vec().unwrap_or_default();
+                    let array = object_array.elements.to_vec().unwrap_or_default();
+                    let other_array = other_object_array.elements.to_vec().unwrap_or_default();
                     if array.len() != other_array.len() {
                         return false;
                     }
