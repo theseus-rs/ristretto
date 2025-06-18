@@ -1,3 +1,4 @@
+use crate::JavaError::{IllegalArgumentException, NullPointerException};
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -15,9 +16,36 @@ use std::sync::Arc;
 #[async_recursion(?Send)]
 pub(crate) async fn doubles_to_bytes(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.io.ObjectOutputStream.doublesToBytes([DI[BII)V")
+    let number_of_doubles = usize::try_from(parameters.pop_int()?)?;
+    let destination_position = usize::try_from(parameters.pop_int()?)?;
+    let Some(destination) = parameters.pop_reference()? else {
+        return Err(NullPointerException("destination cannot be null".into()).into());
+    };
+    let mut destination = destination.as_byte_vec_mut()?;
+    let source_position = usize::try_from(parameters.pop_int()?)?;
+    let Some(source) = parameters.pop_reference()? else {
+        return Err(NullPointerException("source cannot be null".into()).into());
+    };
+    let source = source.as_double_vec_ref()?;
+
+    if source_position.saturating_add(number_of_doubles) > source.len() {
+        return Err(IllegalArgumentException("source index out of bounds".into()).into());
+    }
+    if destination_position.saturating_sub(number_of_doubles.saturating_mul(8)) > destination.len()
+    {
+        return Err(IllegalArgumentException("destination index out of bounds".into()).into());
+    }
+
+    for i in 0..number_of_doubles {
+        let value = source[source_position + i];
+        let bytes = value.to_bits().to_be_bytes();
+        let bytes: &[i8] = zerocopy::transmute_ref!(bytes.as_slice());
+        let dest_offset = destination_position.saturating_add(i.saturating_mul(8));
+        destination[dest_offset..dest_offset + 8].copy_from_slice(bytes);
+    }
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -27,30 +55,78 @@ pub(crate) async fn doubles_to_bytes(
 #[async_recursion(?Send)]
 pub(crate) async fn floats_to_bytes(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.io.ObjectOutputStream.floatsToBytes([FI[BII)V")
+    let number_of_floats = usize::try_from(parameters.pop_int()?)?;
+    let destination_position = usize::try_from(parameters.pop_int()?)?;
+    let Some(destination) = parameters.pop_reference()? else {
+        return Err(NullPointerException("destination cannot be null".into()).into());
+    };
+    let mut destination = destination.as_byte_vec_mut()?;
+    let source_position = usize::try_from(parameters.pop_int()?)?;
+    let Some(source) = parameters.pop_reference()? else {
+        return Err(NullPointerException("source cannot be null".into()).into());
+    };
+    let source = source.as_float_vec_ref()?;
+
+    if source_position.saturating_add(number_of_floats) > source.len() {
+        return Err(IllegalArgumentException("source index out of bounds".into()).into());
+    }
+    if destination_position.saturating_sub(number_of_floats.saturating_mul(8)) > destination.len() {
+        return Err(IllegalArgumentException("destination index out of bounds".into()).into());
+    }
+
+    for i in 0..number_of_floats {
+        let value = source[source_position + i];
+        let bytes = value.to_bits().to_be_bytes();
+        let bytes: &[i8] = zerocopy::transmute_ref!(bytes.as_slice());
+        let dest_offset = destination_position.saturating_add(i.saturating_mul(4));
+        destination[dest_offset..dest_offset + 4].copy_from_slice(bytes);
+    }
+    Ok(None)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classloader::Reference;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.io.ObjectOutputStream.doublesToBytes([DI[BII)V"
-    )]
-    async fn test_doubles_to_bytes() {
+    async fn test_doubles_to_bytes() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = doubles_to_bytes(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        let source = Reference::from(vec![3.0f64, 42.0f64]);
+        let destination = Reference::from(vec![0i8; 16]); // 2 doubles * 8 bytes each
+        parameters.push_reference(Some(source));
+        parameters.push_int(0); // source position
+        parameters.push_reference(Some(destination.clone()));
+        parameters.push_int(0); // destination position
+        parameters.push_int(2); // number of doubles
+
+        let _ = doubles_to_bytes(thread, parameters).await?;
+        let bytes: Vec<u8> = destination.try_into()?;
+        assert_eq!(
+            bytes,
+            vec![64, 8, 0, 0, 0, 0, 0, 0, 64, 69, 0, 0, 0, 0, 0, 0]
+        );
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.io.ObjectOutputStream.floatsToBytes([FI[BII)V"
-    )]
-    async fn test_floats_to_bytes() {
+    async fn test_floats_to_bytes() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = floats_to_bytes(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        let source = Reference::from(vec![3.0f32, 42.0f32]);
+        let destination = Reference::from(vec![0i8; 8]); // 2 floats * 4 bytes each
+        parameters.push_reference(Some(source));
+        parameters.push_int(0); // source position
+        parameters.push_reference(Some(destination.clone()));
+        parameters.push_int(0); // destination position
+        parameters.push_int(2); // number of floats
+
+        let _ = floats_to_bytes(thread, parameters).await?;
+        let bytes: Vec<u8> = destination.try_into()?;
+        assert_eq!(bytes, vec![64, 64, 0, 0, 66, 40, 0, 0]);
+        Ok(())
     }
 }
