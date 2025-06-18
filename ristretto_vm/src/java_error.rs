@@ -1,6 +1,10 @@
 /// Errors that can occur when loading classes
 #[derive(Debug, thiserror::Error)]
 pub enum JavaError {
+    /// `AccessControlException`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/security/AccessControlException.html>
+    #[error("{0}")]
+    AccessControlException(String),
     /// `ArithmeticException`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ArithmeticException.html>
     #[error("{0}")]
@@ -28,6 +32,10 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ClassNotFoundException.html>
     #[error("{0}")]
     ClassNotFoundException(String),
+    /// `FileNotFoundException`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/io/FileNotFoundException.html>
+    #[error("{0}")]
+    FileNotFoundException(String),
     /// `IllegalArgumentException`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IllegalArgumentException.html>
     #[error("{0}")]
@@ -36,6 +44,10 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IndexOutOfBoundsException.html>
     #[error("Index: {index}, Size {size}")]
     IndexOutOfBoundsException { index: i32, size: i32 },
+    /// `IoException`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IoException.html>
+    #[error("{0}")]
+    IoException(String),
     /// `NoClassDefFoundError`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NoClassDefFoundError.html>
     #[error("{0}")]
@@ -44,6 +56,10 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NullPointerException.html>
     #[error("{0}")]
     NullPointerException(String),
+    /// `RuntimeException`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/RuntimeException.html>
+    #[error("{0}")]
+    RuntimeException(String),
 }
 
 impl JavaError {
@@ -51,6 +67,7 @@ impl JavaError {
     #[must_use]
     pub fn class_name(&self) -> &str {
         match self {
+            JavaError::AccessControlException { .. } => "java.security.AccessControlException",
             JavaError::ArrayIndexOutOfBoundsException { .. } => {
                 "java.lang.ArrayIndexOutOfBoundsException"
             }
@@ -59,10 +76,13 @@ impl JavaError {
             JavaError::ClassCastException { .. } => "java.lang.ClassCastException",
             JavaError::ClassFormatError(_) => "java.lang.ClassFormatError",
             JavaError::ClassNotFoundException(_) => "java.lang.ClassNotFoundException",
+            JavaError::FileNotFoundException(_) => "java.io.FileNotFoundException",
             JavaError::IllegalArgumentException(_) => "java.lang.IllegalArgumentException",
+            JavaError::IoException(_) => "java.lang.IOException",
             JavaError::IndexOutOfBoundsException { .. } => "java.lang.IndexOutOfBoundsException",
             JavaError::NoClassDefFoundError(_) => "java.lang.NoClassDefFoundError",
             JavaError::NullPointerException(_) => "java.lang.NullPointerException",
+            JavaError::RuntimeException(_) => "java.lang.RuntimeException",
         }
     }
 
@@ -76,6 +96,13 @@ impl JavaError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_access_control_exception() {
+        let error = JavaError::AccessControlException("foo".to_string());
+        assert_eq!(error.class_name(), "java.security.AccessControlException");
+        assert_eq!(error.message(), "foo");
+    }
 
     #[test]
     fn test_arithmetic_exception() {
@@ -132,6 +159,13 @@ mod tests {
     }
 
     #[test]
+    fn test_file_not_found_exception() {
+        let error = JavaError::FileNotFoundException("foo".to_string());
+        assert_eq!(error.class_name(), "java.io.FileNotFoundException");
+        assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
     fn test_illegal_argument_exception() {
         let error = JavaError::IllegalArgumentException("invalid argument".to_string());
         assert_eq!(error.class_name(), "java.lang.IllegalArgumentException");
@@ -146,6 +180,13 @@ mod tests {
     }
 
     #[test]
+    fn test_io_exception() {
+        let error = JavaError::IoException("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.IOException");
+        assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
     fn test_no_class_def_found_error() {
         let error = JavaError::NoClassDefFoundError("java.lang.String".to_string());
         assert_eq!(error.class_name(), "java.lang.NoClassDefFoundError");
@@ -157,5 +198,12 @@ mod tests {
         let error = JavaError::NullPointerException("null".to_string());
         assert_eq!(error.class_name(), "java.lang.NullPointerException");
         assert_eq!(error.message(), "null");
+    }
+
+    #[test]
+    fn test_runtime_exception() {
+        let error = JavaError::RuntimeException("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.RuntimeException");
+        assert_eq!(error.message(), "foo");
     }
 }

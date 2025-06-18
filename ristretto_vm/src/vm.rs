@@ -1,4 +1,5 @@
 use crate::Error::InternalError;
+use crate::handles::Handles;
 use crate::intrinsic_methods::MethodRegistry;
 use crate::java_object::JavaObject;
 use crate::rust_value::RustValue;
@@ -38,6 +39,7 @@ pub struct VM {
     next_thread_id: AtomicU64,
     threads: DashMap<u64, Arc<Thread>>,
     compiler: Option<Compiler>,
+    handles: Handles,
 }
 
 /// VM
@@ -143,6 +145,7 @@ impl VM {
             next_thread_id: AtomicU64::new(1),
             threads: DashMap::new(),
             compiler,
+            handles: Handles::new(),
         });
         vm.initialize().await?;
         Ok(vm)
@@ -235,6 +238,11 @@ impl VM {
     /// Get the JIT Compiler
     pub(crate) fn compiler(&self) -> Option<&Compiler> {
         self.compiler.as_ref()
+    }
+
+    /// Get the handles
+    pub(crate) fn handles(&self) -> &Handles {
+        &self.handles
     }
 
     /// Create a new thread

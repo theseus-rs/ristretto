@@ -2,7 +2,7 @@ use crate::Error::PoisonedLock;
 use crate::Result;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 /// A concurrent vector.
 pub struct ConcurrentVec<T: Clone + Debug + PartialEq> {
@@ -136,6 +136,32 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
             None
         };
         Ok(value)
+    }
+
+    /// Get a read lock guard to the inner vector.
+    ///
+    /// # Errors
+    ///
+    /// if the lock is poisoned.
+    pub fn as_ref(&self) -> Result<RwLockReadGuard<'_, Vec<T>>> {
+        let guard = self
+            .inner
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        Ok(guard)
+    }
+
+    /// Get a write lock guard to the inner vector.
+    ///
+    /// # Errors
+    ///
+    /// if the lock is poisoned.
+    pub fn as_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<T>>> {
+        let guard = self
+            .inner
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        Ok(guard)
     }
 
     /// Convert to a vector.
@@ -304,6 +330,32 @@ mod tests {
         assert_eq!(vec.remove(1)?, Some(2));
         assert_eq!(vec.remove(1)?, Some(3));
         assert_eq!(vec.remove(1)?, None);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_ref() -> Result<()> {
+        let vec = ConcurrentVec::new();
+        vec.push(1)?;
+        vec.push(2)?;
+        vec.push(3)?;
+        let guard = vec.as_ref()?;
+        assert_eq!(*guard, vec![1, 2, 3]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_mut() -> Result<()> {
+        let vec = ConcurrentVec::new();
+        vec.push(1)?;
+        vec.push(2)?;
+        vec.push(3)?;
+        {
+            let mut guard = vec.as_mut()?;
+            guard.push(4);
+            assert_eq!(*guard, vec![1, 2, 3, 4]);
+        }
+        assert_eq!(vec.len()?, 4);
         Ok(())
     }
 

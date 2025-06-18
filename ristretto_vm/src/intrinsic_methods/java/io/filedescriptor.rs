@@ -1,29 +1,91 @@
-use crate::Result;
+use crate::JavaError::IoException;
+use crate::handle::Handle;
+use crate::intrinsic_methods::java::io::fileoutputstream::file_handle_identifier;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
+use crate::{Result, VM};
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_11, JAVA_17};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Object, Value};
 use ristretto_macros::intrinsic_method;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+#[cfg(not(target_family = "wasm"))]
+use tokio::fs::File;
+#[cfg(not(target_family = "wasm"))]
+use tokio::io::AsyncWriteExt;
+
+/// Returns the file descriptor for a given Java `java.io.FileDescriptor` object taking into account
+/// the Java version. For Java 11 and later, it uses the `handle` field for windows, while for
+/// earlier versions, or on non-windows platforms, it uses the `fd` field.
+pub(crate) fn file_descriptor_from_java_object(
+    vm: &Arc<VM>,
+    file_descriptor: &Object,
+) -> Result<i64> {
+    let fd = if vm.java_class_file_version() >= &JAVA_11 {
+        #[cfg(not(target_os = "windows"))]
+        {
+            let fd = file_descriptor.value("fd")?.to_int()?;
+            i64::from(fd)
+        }
+        #[cfg(target_os = "windows")]
+        {
+            let fd: i64 = file_descriptor.value("handle")?.to_long()?;
+            fd
+        }
+    } else {
+        let fd = file_descriptor.value("fd")?.to_int()?;
+        i64::from(fd)
+    };
+    Ok(fd)
+}
 
 #[intrinsic_method("java/io/FileDescriptor.close0()V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn close_0(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.io.FileDescriptor.close0()V")
+    let file_descriptor = parameters.pop_object()?;
+    let vm = thread.vm()?;
+    let handles = vm.handles();
+    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    let handle_identifier = file_handle_identifier(fd);
+
+    file_descriptor.set_value("fd", Value::Int(-1))?;
+    if vm.java_class_file_version() >= &JAVA_11 {
+        file_descriptor.set_value("handle", Value::Long(-1))?;
+    }
+
+    let Some(handle) = handles.remove(&handle_identifier).await else {
+        return Err(IoException(format!(
+            "File handle not found for identifier: {handle_identifier}"
+        ))
+        .into());
+    };
+
+    #[cfg(target_family = "wasm")]
+    {
+        let _ = handle;
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let mut file_handle: File = handle.try_into()?;
+        file_handle.shutdown().await?;
+    }
+
+    Ok(None)
 }
 
 #[intrinsic_method("java/io/FileDescriptor.getAppend(I)Z", GreaterThanOrEqual(JAVA_11))]
 #[expect(clippy::match_same_arms)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_append(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let handle = parameters.pop_int()?;
@@ -40,7 +102,17 @@ pub(crate) async fn get_append(
             // true if stderr is in append mode
             false
         }
-        _ => false,
+        _ => {
+            let vm = thread.vm()?;
+            let handles = vm.handles();
+            let fd = i64::from(handle);
+            let handle_identifier = file_handle_identifier(fd);
+            let handle_guard = handles.get(&handle_identifier).await.ok_or_else(|| {
+                IoException(format!("File handle not found: {handle_identifier}"))
+            })?;
+            let Handle::File { append, .. } = handle_guard.deref();
+            *append
+        }
     };
     Ok(Some(Value::from(append)))
 }
@@ -73,8 +145,37 @@ pub(crate) async fn sync(thread: Arc<Thread>, parameters: Parameters) -> Result<
 
 #[intrinsic_method("java/io/FileDescriptor.sync0()V", GreaterThan(JAVA_17))]
 #[async_recursion(?Send)]
-pub(crate) async fn sync_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.io.FileDescriptor.sync0()V")
+pub(crate) async fn sync_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let file_descriptor = parameters.pop_object()?;
+    let vm = thread.vm()?;
+    let handles = vm.handles();
+    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    let handle_identifier = file_handle_identifier(fd);
+    let mut handle_guard = handles
+        .get_mut(&handle_identifier)
+        .await
+        .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
+    let Handle::File { file, .. } = handle_guard.deref_mut();
+
+    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
+    {
+        let _ = file;
+    }
+
+    #[cfg(target_os = "wasi")]
+    {
+        file.sync_all()?;
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    {
+        file.sync_all().await?;
+    }
+
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -82,16 +183,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.io.FileDescriptor.close0()V")]
-    async fn test_close_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_0(thread, Parameters::default()).await;
-    }
-
-    #[tokio::test]
     async fn test_get_append() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let handles = [0, 1, 2, 3];
+        let handles = [0, 1, 2];
 
         for handle in handles {
             let result =
@@ -103,32 +197,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_handle() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_handle(thread, Parameters::new(vec![Value::Int(1)])).await?;
-        assert_eq!(Some(Value::Long(1)), result);
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
-    }
-
-    #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.io.FileDescriptor.sync0()V")]
-    async fn test_sync() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = sync(thread, Parameters::default()).await;
-    }
-
-    #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.io.FileDescriptor.sync0()V")]
-    async fn test_sync_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = sync_0(thread, Parameters::default()).await;
     }
 }

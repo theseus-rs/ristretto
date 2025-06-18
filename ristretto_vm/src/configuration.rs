@@ -3,7 +3,7 @@ use crate::Result;
 use ristretto_classloader::{ClassPath, DEFAULT_JAVA_VERSION};
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::io::{Write, stderr, stdout};
+use std::io::{Read, Write, stderr, stdin, stdout};
 use std::path::PathBuf;
 use std::string::ToString;
 use std::sync::Arc;
@@ -23,6 +23,7 @@ pub struct Configuration {
     system_properties: HashMap<String, String>,
     interpreted: bool,
     preview_features: bool,
+    stdin: Arc<Mutex<dyn Read + Send + Sync>>,
     stdout: Arc<Mutex<dyn Write + Send + Sync>>,
     stderr: Arc<Mutex<dyn Write + Send + Sync>>,
 }
@@ -100,12 +101,21 @@ impl Configuration {
         self.preview_features
     }
 
+    /// Returns a reference to the standard input stream.
+    ///
+    /// This stream is used for normal input from the VM and executed Java programs.
+    /// The stream is wrapped in an `Arc<Mutex>` to allow for thread-safe access.
+    #[must_use]
+    pub fn stdin(&self) -> Arc<Mutex<dyn Read + Send + Sync>> {
+        self.stdin.clone()
+    }
+
     /// Returns a reference to the standard output stream.
     ///
     /// This stream is used for normal output from the VM and executed Java programs.
     /// The stream is wrapped in an `Arc<Mutex>` to allow for thread-safe access.
     #[must_use]
-    pub fn stdout(&self) -> Arc<Mutex<dyn Write>> {
+    pub fn stdout(&self) -> Arc<Mutex<dyn Write + Send + Sync>> {
         self.stdout.clone()
     }
 
@@ -114,7 +124,7 @@ impl Configuration {
     /// This stream is used for error messages from the VM and executed Java programs.
     /// The stream is wrapped in an `Arc<Mutex>` to allow for thread-safe access.
     #[must_use]
-    pub fn stderr(&self) -> Arc<Mutex<dyn Write>> {
+    pub fn stderr(&self) -> Arc<Mutex<dyn Write + Send + Sync>> {
         self.stderr.clone()
     }
 }
@@ -148,6 +158,7 @@ pub struct ConfigurationBuilder {
     system_properties: HashMap<String, String>,
     interpreted: bool,
     preview_features: bool,
+    stdin: Arc<Mutex<dyn Read + Send + Sync>>,
     stdout: Arc<Mutex<dyn Write + Send + Sync>>,
     stderr: Arc<Mutex<dyn Write + Send + Sync>>,
 }
@@ -177,6 +188,7 @@ impl ConfigurationBuilder {
             system_properties: HashMap::new(),
             interpreted: false,
             preview_features: false,
+            stdin: Arc::new(Mutex::new(stdin())),
             stdout: Arc::new(Mutex::new(stdout())),
             stderr: Arc::new(Mutex::new(stderr())),
         }
@@ -251,6 +263,13 @@ impl ConfigurationBuilder {
         self
     }
 
+    /// Set the standard input stream
+    #[must_use]
+    pub fn stdin(mut self, stdin: Arc<Mutex<dyn Read + Send + Sync>>) -> Self {
+        self.stdin = stdin;
+        self
+    }
+
     /// Set the standard output stream
     #[must_use]
     pub fn stdout(mut self, stdout: Arc<Mutex<dyn Write + Send + Sync>>) -> Self {
@@ -300,6 +319,7 @@ impl ConfigurationBuilder {
             system_properties: self.system_properties,
             interpreted: self.interpreted,
             preview_features: self.preview_features,
+            stdin: self.stdin,
             stdout: self.stdout,
             stderr: self.stderr,
         })
