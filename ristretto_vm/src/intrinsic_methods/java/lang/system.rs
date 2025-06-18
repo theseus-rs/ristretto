@@ -125,11 +125,11 @@ pub(crate) async fn arraycopy(
                 length,
             )?;
         }
-        (Reference::Array(_, source), Reference::Array(_, destination)) => {
+        (Reference::Array(source), Reference::Array(destination)) => {
             arraycopy_vec(
-                &source,
+                &source.elements,
                 source_position,
-                &destination,
+                &destination.elements,
                 destination_position,
                 length,
             )?;

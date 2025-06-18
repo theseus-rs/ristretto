@@ -231,8 +231,8 @@ pub(crate) async fn compare_and_set_reference(
 
     // TODO: the compare and set operation should be atomic
     let result = match reference {
-        Reference::Array(_class, array) => {
-            let Some(reference) = array.get(offset)? else {
+        Reference::Array(object_array) => {
+            let Some(reference) = object_array.elements.get(offset)? else {
                 return Err(InternalError(
                     "compareAndSetReference: Invalid reference index".to_string(),
                 ));
@@ -251,7 +251,7 @@ pub(crate) async fn compare_and_set_reference(
                         actual: x.to_string(),
                     });
                 };
-                array.set(offset, x_reference)?;
+                object_array.elements.set(offset, x_reference)?;
                 1
             } else {
                 0
@@ -494,8 +494,8 @@ fn get_reference_type(
             };
             Value::Double(double)
         }
-        Reference::Array(_class, array) => {
-            let Some(reference) = array.get(offset)? else {
+        Reference::Array(object_array) => {
+            let Some(reference) = object_array.elements.get(offset)? else {
                 return Err(InternalError(
                     "getReferenceType: Invalid array reference index".to_string(),
                 ));
@@ -1101,9 +1101,9 @@ pub(crate) async fn put_reference_volatile(
         ));
     };
     match object {
-        Reference::Array(_class, array) => {
+        Reference::Array(object_array) => {
             let x = x.to_reference()?;
-            array.set(offset, x)?;
+            object_array.elements.set(offset, x)?;
         }
         Reference::Object(object) => {
             let field_name = object.class().field_name(offset)?;

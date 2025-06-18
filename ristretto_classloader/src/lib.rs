@@ -77,7 +77,7 @@ pub use error::{Error, Result};
 pub use field::Field;
 pub use method::Method;
 pub use object::Object;
-pub use reference::Reference;
+pub use reference::{ObjectArray, Reference};
 pub use ristretto_classfile::{BaseType, FieldAccessFlags, FieldType, MethodAccessFlags};
 pub use runtime::DEFAULT_JAVA_VERSION;
 pub use value::Value;

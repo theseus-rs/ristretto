@@ -165,12 +165,12 @@ fn process_error(error: Error) -> Result<()> {
             "Caused by"
         };
         eprintln!("{prelude} {class_name}: {message}");
-        let Value::Object(Some(Reference::Array(_class, stack_trace))) =
+        let Value::Object(Some(Reference::Array(stack_trace_array))) =
             throwable.value("backtrace")?
         else {
             return Err(error);
         };
-        let stack_trace = stack_trace.to_vec()?;
+        let stack_trace = stack_trace_array.elements.to_vec()?;
         for stack_trace_element in stack_trace {
             let Some(Reference::Object(stack_trace_element)) = stack_trace_element else {
                 continue;

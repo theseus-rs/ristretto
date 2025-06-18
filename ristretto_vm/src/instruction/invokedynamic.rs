@@ -157,7 +157,7 @@ use crate::thread::Thread;
 use crate::{JavaObject, Result, VM};
 use ristretto_classfile::attributes::{Attribute, BootstrapMethod};
 use ristretto_classfile::{Constant, ConstantPool, FieldType, MethodAccessFlags, ReferenceKind};
-use ristretto_classloader::{Class, ConcurrentVec, Method, Reference, Value};
+use ristretto_classloader::{Class, ConcurrentVec, Method, ObjectArray, Reference, Value};
 use std::sync::Arc;
 use tracing::debug;
 
@@ -334,7 +334,11 @@ async fn get_method_type(vm: &VM, thread: &Thread, method_descriptor: &str) -> R
         argument_classes.push(Some(argument_reference))?;
     }
     let class_array = vm.class("[Ljava/lang/Class;").await?;
-    let arguments = Value::from(Reference::Array(class_array, argument_classes));
+    let reference_array = Reference::Array(ObjectArray {
+        class: class_array,
+        elements: argument_classes,
+    });
+    let arguments = Value::from(reference_array);
 
     let method = method_type_class.try_get_method(
         "methodType",
