@@ -23,6 +23,7 @@ thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 walkdir = { workspace = true }
+zerocopy = { workspace = true }
 zip = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
