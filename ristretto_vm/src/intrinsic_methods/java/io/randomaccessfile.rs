@@ -29,6 +29,7 @@ use std::sync::Arc;
 use tokio::fs::OpenOptions;
 #[cfg(not(target_family = "wasm"))]
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
+use zerocopy::transmute_ref;
 
 #[intrinsic_method("java/io/RandomAccessFile.close0()V", LessThanOrEqual(JAVA_8))]
 #[async_recursion(?Send)]
@@ -332,16 +333,14 @@ pub(crate) async fn read_bytes_0(
     let Some(Reference::ByteArray(bytes)) = bytes else {
         return Err(IoException("Cannot read bytes from reference".to_string()).into());
     };
-    let mut bytes = bytes.as_mut()?;
-    if bytes_read > 0 {
-        for i in 0..bytes_read {
-            bytes[offset + i] = buffer[i] as i8;
-        }
-    }
-
     let bytes_read = if bytes_read == 0 && length > 0 {
         -1
     } else {
+        let mut bytes = bytes.as_mut()?;
+        let buffer: &[i8] = transmute_ref!(buffer.as_slice());
+        if bytes_read > 0 {
+            bytes[offset..offset + bytes_read].copy_from_slice(&buffer[..bytes_read]);
+        }
         i32::try_from(bytes_read)?
     };
     Ok(Some(Value::Int(bytes_read)))

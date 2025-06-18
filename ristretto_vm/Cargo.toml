@@ -43,6 +43,7 @@ sys-locale = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 whoami = { workspace = true }
+zerocopy = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 getrandom = { workspace = true, features = ["wasm_js"] }

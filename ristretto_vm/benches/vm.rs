@@ -3,7 +3,10 @@ use ristretto_classfile::Error;
 use ristretto_classloader::ClassPath;
 use ristretto_vm::{ConfigurationBuilder, Result, VM};
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
 use tokio::runtime::Runtime;
+use tokio::sync::Mutex;
 
 const CARGO_MANIFEST: &str = env!("CARGO_MANIFEST_DIR");
 
@@ -53,6 +56,7 @@ async fn hello_world() -> Result<()> {
     let class_path = ClassPath::from(classes_jar_path.to_string_lossy());
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path)
+        .stdout(Arc::new(Mutex::new(std::io::sink())))
         .main_class("HelloWorld")
         .build()?;
     let vm = VM::new(configuration).await?;
@@ -63,7 +67,7 @@ async fn hello_world() -> Result<()> {
 
 criterion_group!(
     name = benches;
-    config = Criterion::default();
+    config = Criterion::default().measurement_time(Duration::from_secs(10));
     targets = benchmarks
 );
 criterion_main!(benches);

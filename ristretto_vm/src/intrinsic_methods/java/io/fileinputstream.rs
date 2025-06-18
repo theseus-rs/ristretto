@@ -29,6 +29,7 @@ use std::sync::Arc;
 use tokio::fs::OpenOptions;
 #[cfg(not(target_family = "wasm"))]
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use zerocopy::transmute_ref;
 
 #[intrinsic_method("java/io/FileInputStream.available0()I", Any)]
 #[async_recursion(?Send)]
@@ -331,10 +332,9 @@ pub(crate) async fn read_bytes(
         -1
     } else {
         let mut bytes = bytes.as_mut()?;
+        let buffer: &[i8] = transmute_ref!(buffer.as_slice());
         if bytes_read > 0 {
-            for i in 0..bytes_read {
-                bytes[offset + i] = buffer[i] as i8;
-            }
+            bytes[offset..offset + bytes_read].copy_from_slice(&buffer[..bytes_read]);
         }
         i32::try_from(bytes_read)?
     };

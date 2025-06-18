@@ -4,7 +4,8 @@ use crate::{Class, Object, Result, Value};
 use ristretto_classfile::{ClassFile, ConstantPool};
 use std::fmt;
 use std::fmt::Display;
-use std::sync::Arc;
+use std::sync::{Arc, RwLockReadGuard};
+use zerocopy::transmute_ref;
 
 /// Represents a reference to an object in the Ristretto VM.
 #[derive(Clone, Debug, PartialEq)]
@@ -66,9 +67,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `ByteArray`.
-    pub fn to_byte_vec(&self) -> Result<Vec<i8>> {
+    pub fn as_byte_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i8>>> {
         match self {
-            Reference::ByteArray(value) => Ok(value.to_vec()?),
+            Reference::ByteArray(value) => Ok(value.as_ref()?),
             _ => Err(InvalidValueType("Expected byte array".to_string())),
         }
     }
@@ -78,9 +79,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `CharArray`.
-    pub fn to_char_vec(&self) -> Result<Vec<u16>> {
+    pub fn as_char_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<u16>>> {
         match self {
-            Reference::CharArray(value) => Ok(value.to_vec()?),
+            Reference::CharArray(value) => Ok(value.as_ref()?),
             _ => Err(InvalidValueType("Expected char array".to_string())),
         }
     }
@@ -90,9 +91,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `ShortArray`.
-    pub fn to_short_vec(&self) -> Result<Vec<i16>> {
+    pub fn as_short_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i16>>> {
         match self {
-            Reference::ShortArray(value) => Ok(value.to_vec()?),
+            Reference::ShortArray(value) => Ok(value.as_ref()?),
             _ => Err(InvalidValueType("Expected short array".to_string())),
         }
     }
@@ -102,9 +103,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `IntArray`.
-    pub fn to_int_vec(&self) -> Result<Vec<i32>> {
+    pub fn as_int_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i32>>> {
         match self {
-            Reference::IntArray(value) => Ok(value.to_vec()?),
+            Reference::IntArray(value) => Ok(value.as_ref()?),
             _ => Err(InvalidValueType("Expected int array".to_string())),
         }
     }
@@ -114,9 +115,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `LongArray`.
-    pub fn to_long_vec(&self) -> Result<Vec<i64>> {
+    pub fn as_long_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i64>>> {
         match self {
-            Reference::LongArray(value) => Ok(value.to_vec()?),
+            Reference::LongArray(value) => Ok(value.as_ref()?),
             _ => Err(InvalidValueType("Expected long array".to_string())),
         }
     }
@@ -126,9 +127,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `FloatArray`.
-    pub fn to_float_vec(&self) -> Result<Vec<f32>> {
+    pub fn as_float_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<f32>>> {
         match self {
-            Reference::FloatArray(value) => Ok(value.to_vec()?),
+            Reference::FloatArray(value) => Ok(value.as_ref()?),
             _ => Err(InvalidValueType("Expected float array".to_string())),
         }
     }
@@ -138,9 +139,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `DoubleArray`.
-    pub fn to_double_vec(&self) -> Result<Vec<f64>> {
+    pub fn as_double_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<f64>>> {
         match self {
-            Reference::DoubleArray(value) => Ok(value.to_vec()?),
+            Reference::DoubleArray(value) => Ok(value.as_ref()?),
             _ => Err(InvalidValueType("Expected double array".to_string())),
         }
     }
@@ -150,9 +151,12 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not an `Array`.
-    pub fn to_class_vec(&self) -> Result<(Arc<Class>, Vec<Option<Reference>>)> {
+    #[expect(clippy::type_complexity)]
+    pub fn as_class_vec_ref(
+        &self,
+    ) -> Result<(&Arc<Class>, RwLockReadGuard<'_, Vec<Option<Reference>>>)> {
         match self {
-            Reference::Array(class, value) => Ok((class.clone(), value.to_vec()?)),
+            Reference::Array(class, value) => Ok((class, value.as_ref()?)),
             _ => Err(InvalidValueType("Expected array".to_string())),
         }
     }
@@ -162,9 +166,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not an Object.
-    pub fn to_object(&self) -> Result<Object> {
+    pub fn as_object_ref(&self) -> Result<&Object> {
         match self {
-            Reference::Object(object) => Ok(object.clone()),
+            Reference::Object(object) => Ok(object),
             _ => Err(InvalidValueType("Expected object".to_string())),
         }
     }
@@ -187,13 +191,12 @@ impl Reference {
                 let values = value.to_vec()?;
                 let mut cloned_values = Vec::with_capacity(values.len());
                 for value in values {
-                    if let Some(reference) = value {
-                        cloned_values.push(Value::from(reference.deep_clone()?));
-                    } else {
-                        cloned_values.push(Value::Object(None));
+                    match value {
+                        Some(reference) => cloned_values.push(Some(reference.deep_clone()?)),
+                        None => cloned_values.push(value),
                     }
                 }
-                Reference::try_from((class.clone(), cloned_values))?
+                Reference::Array(class.clone(), ConcurrentVec::from(cloned_values))
             }
             Reference::Object(value) => Reference::Object(value.deep_clone()?),
         };
@@ -237,9 +240,8 @@ impl From<Vec<i8>> for Reference {
 
 impl From<Vec<u8>> for Reference {
     fn from(value: Vec<u8>) -> Self {
-        #[expect(clippy::cast_possible_wrap)]
-        let value: Vec<i8> = value.into_iter().map(|v| v as i8).collect();
-        Reference::ByteArray(ConcurrentVec::from(value))
+        let value: &[i8] = transmute_ref!(value.as_slice());
+        Reference::ByteArray(ConcurrentVec::from(value.to_vec()))
     }
 }
 
@@ -258,9 +260,8 @@ impl From<Vec<i16>> for Reference {
 
 impl From<Vec<u16>> for Reference {
     fn from(value: Vec<u16>) -> Self {
-        #[expect(clippy::cast_possible_wrap)]
-        let value: Vec<i16> = value.into_iter().map(|v| v as i16).collect();
-        Reference::ShortArray(ConcurrentVec::from(value))
+        let value: &[i16] = transmute_ref!(value.as_slice());
+        Reference::ShortArray(ConcurrentVec::from(value.to_vec()))
     }
 }
 
@@ -272,9 +273,8 @@ impl From<Vec<i32>> for Reference {
 
 impl From<Vec<u32>> for Reference {
     fn from(value: Vec<u32>) -> Self {
-        #[expect(clippy::cast_possible_wrap)]
-        let value: Vec<i32> = value.into_iter().map(|v| v as i32).collect();
-        Reference::IntArray(ConcurrentVec::from(value))
+        let value: &[i32] = transmute_ref!(value.as_slice());
+        Reference::IntArray(ConcurrentVec::from(value.to_vec()))
     }
 }
 
@@ -286,9 +286,8 @@ impl From<Vec<i64>> for Reference {
 
 impl From<Vec<u64>> for Reference {
     fn from(value: Vec<u64>) -> Self {
-        #[expect(clippy::cast_possible_wrap)]
-        let value: Vec<i64> = value.into_iter().map(|v| v as i64).collect();
-        Reference::LongArray(ConcurrentVec::from(value))
+        let value: &[i64] = transmute_ref!(value.as_slice());
+        Reference::LongArray(ConcurrentVec::from(value.to_vec()))
     }
 }
 
@@ -331,7 +330,7 @@ impl TryFrom<(Arc<Class>, Vec<Value>)> for Reference {
 
     fn try_from(value: (Arc<Class>, Vec<Value>)) -> Result<Self> {
         let (class, values) = value;
-        let mut references = Vec::new();
+        let mut references = Vec::with_capacity(values.len());
 
         for value in values {
             let Value::Object(reference) = value else {
@@ -354,7 +353,7 @@ impl TryInto<Vec<bool>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<bool>> {
-        let value = self.to_byte_vec()?;
+        let value = self.as_byte_vec_ref()?.to_vec();
         let value = value.into_iter().map(|v| v != 0).collect();
         Ok(value)
     }
@@ -364,7 +363,7 @@ impl TryInto<Vec<char>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<char>> {
-        let values = self.to_char_vec()?;
+        let values = self.as_char_vec_ref()?.to_vec();
         let mut result = Vec::with_capacity(values.len());
         for value in values {
             let value = u32::from(value);
@@ -380,7 +379,7 @@ impl TryInto<Vec<i8>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<i8>> {
-        self.to_byte_vec()
+        Ok(self.as_byte_vec_ref()?.to_vec())
     }
 }
 
@@ -388,10 +387,9 @@ impl TryInto<Vec<u8>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<u8>> {
-        let value = self.to_byte_vec()?;
-        #[expect(clippy::cast_sign_loss)]
-        let value = value.into_iter().map(|v| v as u8).collect();
-        Ok(value)
+        let value = self.as_byte_vec_ref()?.to_vec();
+        let value: &[u8] = transmute_ref!(value.as_slice());
+        Ok(value.to_vec())
     }
 }
 
@@ -399,7 +397,7 @@ impl TryInto<Vec<i16>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<i16>> {
-        self.to_short_vec()
+        Ok(self.as_short_vec_ref()?.to_vec())
     }
 }
 
@@ -407,10 +405,9 @@ impl TryInto<Vec<u16>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<u16>> {
-        let value = self.to_short_vec()?;
-        #[expect(clippy::cast_sign_loss)]
-        let value = value.into_iter().map(|v| v as u16).collect();
-        Ok(value)
+        let value = self.as_short_vec_ref()?.to_vec();
+        let value: &[u16] = transmute_ref!(value.as_slice());
+        Ok(value.to_vec())
     }
 }
 
@@ -418,7 +415,7 @@ impl TryInto<Vec<i32>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<i32>> {
-        self.to_int_vec()
+        Ok(self.as_int_vec_ref()?.to_vec())
     }
 }
 
@@ -426,10 +423,9 @@ impl TryInto<Vec<u32>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<u32>> {
-        let value = self.to_int_vec()?;
-        #[expect(clippy::cast_sign_loss)]
-        let value = value.into_iter().map(|v| v as u32).collect();
-        Ok(value)
+        let value = self.as_int_vec_ref()?.to_vec();
+        let value: &[u32] = transmute_ref!(value.as_slice());
+        Ok(value.to_vec())
     }
 }
 
@@ -437,7 +433,7 @@ impl TryInto<Vec<i64>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<i64>> {
-        self.to_long_vec()
+        Ok(self.as_long_vec_ref()?.to_vec())
     }
 }
 
@@ -445,10 +441,9 @@ impl TryInto<Vec<u64>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<u64>> {
-        let value = self.to_long_vec()?;
-        #[expect(clippy::cast_sign_loss)]
-        let value = value.into_iter().map(|v| v as u64).collect();
-        Ok(value)
+        let value = self.as_long_vec_ref()?.to_vec();
+        let value: &[u64] = transmute_ref!(value.as_slice());
+        Ok(value.to_vec())
     }
 }
 
@@ -478,7 +473,7 @@ impl TryInto<Vec<f32>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<f32>> {
-        self.to_float_vec()
+        Ok(self.as_float_vec_ref()?.to_vec())
     }
 }
 
@@ -486,7 +481,7 @@ impl TryInto<Vec<f64>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<f64>> {
-        self.to_double_vec()
+        Ok(self.as_double_vec_ref()?.to_vec())
     }
 }
 
@@ -494,9 +489,10 @@ impl TryInto<Vec<Value>> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<Value>> {
-        let (_class, values) = self.to_class_vec()?;
+        let (_class, values) = self.as_class_vec_ref()?;
         let values = values
-            .into_iter()
+            .iter()
+            .cloned()
             .map(|value| {
                 if let Some(value) = value {
                     Value::Object(Some(value))
@@ -513,7 +509,8 @@ impl TryInto<(Arc<Class>, Vec<Option<Reference>>)> for Reference {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<(Arc<Class>, Vec<Option<Reference>>)> {
-        self.to_class_vec()
+        let (class, references) = self.as_class_vec_ref()?;
+        Ok((class.clone(), references.to_vec()))
     }
 }
 
@@ -714,18 +711,18 @@ mod tests {
     }
 
     #[test]
-    fn test_to_byte_vec() -> Result<()> {
+    fn test_as_byte_vec_ref() -> Result<()> {
         let original_value = vec![42i8];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.to_byte_vec()?);
+        assert_eq!(original_value, reference.as_byte_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
-    fn test_to_byte_vec_error() {
+    fn test_as_byte_vec_ref_error() {
         let original_value = vec![42i32];
         let reference = Reference::from(original_value.clone());
-        let result = reference.to_byte_vec();
+        let result = reference.as_byte_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
@@ -739,17 +736,17 @@ mod tests {
     }
 
     #[test]
-    fn test_to_char_vec() -> Result<()> {
+    fn test_as_char_vec_ref() -> Result<()> {
         let reference = Reference::from(vec!['*']);
-        assert_eq!(vec![42u16], reference.to_char_vec()?);
+        assert_eq!(vec![42u16], reference.as_char_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
-    fn test_to_char_vec_error() {
+    fn test_as_char_vec_ref_error() {
         let original_value = vec![42i32];
         let reference = Reference::from(original_value.clone());
-        let result = reference.to_char_vec();
+        let result = reference.as_char_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
@@ -763,18 +760,18 @@ mod tests {
     }
 
     #[test]
-    fn test_to_short_vec() -> Result<()> {
+    fn test_as_short_vec_ref() -> Result<()> {
         let original_value = vec![42i16];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.to_short_vec()?);
+        assert_eq!(original_value, reference.as_short_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
-    fn test_to_short_vec_error() {
+    fn test_as_short_vec_ref_error() {
         let original_value = vec![42i32];
         let reference = Reference::from(original_value.clone());
-        let result = reference.to_short_vec();
+        let result = reference.as_short_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
@@ -788,18 +785,18 @@ mod tests {
     }
 
     #[test]
-    fn test_to_int_vec() -> Result<()> {
+    fn test_a_int_vec_ref() -> Result<()> {
         let original_value = vec![42i32];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.to_int_vec()?);
+        assert_eq!(original_value, reference.as_int_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
-    fn test_to_int_vec_error() {
+    fn test_as_int_vec_ref_error() {
         let original_value = vec![42i8];
         let reference = Reference::from(original_value.clone());
-        let result = reference.to_int_vec();
+        let result = reference.as_int_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
@@ -813,18 +810,18 @@ mod tests {
     }
 
     #[test]
-    fn test_to_long_vec() -> Result<()> {
+    fn test_as_long_vec_ref() -> Result<()> {
         let original_value = vec![42i64];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.to_long_vec()?);
+        assert_eq!(original_value, reference.as_long_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
-    fn test_to_long_vec_error() {
+    fn test_as_long_vec_ref_error() {
         let original_value = vec![42i32];
         let reference = Reference::from(original_value.clone());
-        let result = reference.to_long_vec();
+        let result = reference.as_long_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
@@ -838,18 +835,18 @@ mod tests {
     }
 
     #[test]
-    fn test_to_float_vec() -> Result<()> {
+    fn test_as_float_vec_ref() -> Result<()> {
         let original_value = vec![42.1f32];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.to_float_vec()?);
+        assert_eq!(original_value, reference.as_float_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
-    fn test_to_float_vec_error() {
+    fn test_as_float_vec_ref_error() {
         let original_value = vec![42i32];
         let reference = Reference::from(original_value.clone());
-        let result = reference.to_float_vec();
+        let result = reference.as_float_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
@@ -863,18 +860,18 @@ mod tests {
     }
 
     #[test]
-    fn test_to_double_vec() -> Result<()> {
+    fn test_as_double_vec_ref() -> Result<()> {
         let original_value = vec![42.1f64];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.to_double_vec()?);
+        assert_eq!(original_value, reference.as_double_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
-    fn test_to_double_vec_error() {
+    fn test_as_double_vec_ref_error() {
         let original_value = vec![42i32];
         let reference = Reference::from(original_value.clone());
-        let result = reference.to_double_vec();
+        let result = reference.as_double_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
@@ -889,21 +886,21 @@ mod tests {
     }
 
     #[test]
-    fn test_to_class_vec() -> Result<()> {
+    fn test_as_class_vec_ref() -> Result<()> {
         let original_class = Class::new_named("[Ljava/lang/Object;")?;
         let original_value = vec![None];
         let reference = Reference::from((original_class.clone(), original_value.clone()));
-        let (class, value) = reference.to_class_vec()?;
-        assert_eq!(original_class, class);
-        assert_eq!(original_value, value);
+        let (class, value) = reference.as_class_vec_ref()?;
+        assert_eq!(&original_class, class);
+        assert_eq!(original_value, value.to_vec());
         Ok(())
     }
 
     #[test]
-    fn test_to_class_vec_error() {
+    fn test_as_class_vec_ref_error() {
         let original_value = vec![42i32];
         let reference = Reference::from(original_value.clone());
-        let result = reference.to_class_vec();
+        let result = reference.as_class_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
@@ -920,19 +917,20 @@ mod tests {
     }
 
     #[test]
-    fn test_to_object() -> Result<()> {
+    fn test_as_object_ref() -> Result<()> {
         let class = minimum_class()?;
-        let object = Object::new(class.clone())?;
-        let reference = Reference::from(object);
-        assert_eq!(class, reference.class()?);
+        let object = Object::new(class)?;
+        let reference = Reference::from(object.clone());
+        let result = reference.as_object_ref()?;
+        assert_eq!(&object, result);
         Ok(())
     }
 
     #[test]
-    fn test_to_object_error() {
+    fn test_as_object_ref_error() {
         let original_value = vec![42i32];
         let reference = Reference::from(original_value.clone());
-        let result = reference.to_object();
+        let result = reference.as_object_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
