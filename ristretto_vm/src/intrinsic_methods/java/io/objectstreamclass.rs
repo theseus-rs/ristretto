@@ -1,4 +1,5 @@
 use crate::Result;
+use crate::intrinsic_methods::java::lang::class::get_class;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
@@ -13,10 +14,13 @@ use std::sync::Arc;
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn has_static_initializer(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z")
+    let class_object = parameters.pop_object()?;
+    let class = get_class(&thread, &class_object).await?;
+    let has_initializer = class.method("<clinit>", "()V").is_some();
+    Ok(Some(Value::from(has_initializer)))
 }
 
 #[intrinsic_method("java/io/ObjectStreamClass.initNative()V", Any)]
@@ -31,14 +35,30 @@ pub(crate) async fn init_native(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::JavaObject;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z"
-    )]
-    async fn test_has_static_initializer() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = has_static_initializer(thread, Parameters::default()).await;
+    async fn test_has_static_initializer_false() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let class = thread.class("java/lang/Object").await?;
+        let class_object = class.to_object(&vm).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(class_object);
+        let has_initializer = has_static_initializer(thread, parameters).await?;
+        assert_eq!(Some(Value::from(false)), has_initializer);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_has_static_initializer_true() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let class = thread.class("java/lang/System").await?;
+        let class_object = class.to_object(&vm).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(class_object);
+        let has_initializer = has_static_initializer(thread, parameters).await?;
+        assert_eq!(Some(Value::from(true)), has_initializer);
+        Ok(())
     }
 
     #[tokio::test]
