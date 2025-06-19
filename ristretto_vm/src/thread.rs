@@ -159,7 +159,7 @@ impl Thread {
         for current_class in classes {
             if let Some(class_initializer) = current_class.class_initializer() {
                 // Execute the class initializer on the current thread.
-                self.execute(&current_class, &class_initializer, Vec::<Value>::new())
+                self.execute(&current_class, &class_initializer, &[] as &[Value])
                     .await?;
             }
         }
@@ -261,7 +261,7 @@ impl Thread {
         &self,
         class: &Arc<Class>,
         method: &Arc<Method>,
-        parameters: Vec<impl RustValue>,
+        parameters: &[impl RustValue],
     ) -> Result<Option<Value>> {
         let class_name = class.name();
         let method_name = method.name();
@@ -368,7 +368,7 @@ impl Thread {
         &self,
         class: &Arc<Class>,
         method: &Arc<Method>,
-        parameters: Vec<impl RustValue>,
+        parameters: &[impl RustValue],
     ) -> Result<Value> {
         let result = self.execute(class, method, parameters).await?;
         match result {
@@ -386,7 +386,7 @@ impl Thread {
         &self,
         class_name: C,
         descriptor: M,
-        parameters: Vec<impl RustValue>,
+        parameters: &[impl RustValue],
     ) -> Result<Value>
     where
         C: AsRef<str>,
@@ -409,8 +409,8 @@ impl Thread {
             constructor_parameters.push(value);
         }
         let vm = self.vm()?;
-        let parameters = process_values(&vm, constructor_parameters).await?;
-        self.execute(&class, &constructor, parameters).await?;
+        let parameters = process_values(&vm, &constructor_parameters).await?;
+        self.execute(&class, &constructor, &parameters).await?;
         Ok(object)
     }
 
@@ -509,7 +509,7 @@ mod tests {
     async fn test_new_object_integer() -> Result<()> {
         let vm = test_vm().await?;
         let thread = vm.new_thread()?;
-        let object = thread.object("java/lang/Integer", "I", vec![42]).await?;
+        let object = thread.object("java/lang/Integer", "I", &[42]).await?;
         let value: i32 = object.try_into()?;
         assert_eq!(42, value);
         Ok(())

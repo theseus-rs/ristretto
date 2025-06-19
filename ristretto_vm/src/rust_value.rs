@@ -203,8 +203,8 @@ impl RustValue for Vec<f64> {
 }
 
 /// Convert a vector of Rust values to a vector of `Value`. Rust value
-pub async fn process_values(vm: &VM, values: Vec<impl RustValue>) -> Result<Vec<Value>> {
-    let mut results = Vec::new();
+pub async fn process_values(vm: &VM, values: &[impl RustValue]) -> Result<Vec<Value>> {
+    let mut results = Vec::with_capacity(values.len());
     for value in values {
         let value = value.to_value();
         let Value::Object(Some(Reference::Object(ref object))) = value else {

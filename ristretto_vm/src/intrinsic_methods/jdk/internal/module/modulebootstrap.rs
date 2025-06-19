@@ -15,13 +15,13 @@ use std::sync::Arc;
 pub(crate) async fn boot(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // TODO: correctly populate the ModuleLayer
     let empty_list = thread
-        .object("java/util/ArrayList", "", Vec::<Value>::new())
+        .object("java/util/ArrayList", "", &[] as &[Value])
         .await?;
     let module_layer = thread
         .object(
             "java/lang/ModuleLayer",
             "Ljava/lang/module/Configuration;Ljava/util/List;Ljava/util/function/Function;",
-            vec![Value::Object(None), empty_list, Value::Object(None)],
+            &[Value::Object(None), empty_list, Value::Object(None)],
         )
         .await?;
     Ok(Some(module_layer))

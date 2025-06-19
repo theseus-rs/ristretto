@@ -61,7 +61,7 @@ async fn hello_world() -> Result<()> {
         .build()?;
     let vm = VM::new(configuration).await?;
     let parameters: Vec<&str> = Vec::new();
-    let _result = vm.invoke_main(parameters).await?;
+    let _result = vm.invoke_main(&parameters).await?;
     Ok(())
 }
 

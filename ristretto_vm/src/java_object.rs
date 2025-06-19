@@ -19,7 +19,7 @@ impl JavaObject for bool {
                 "java.lang.Boolean",
                 "valueOf",
                 "(Z)Ljava/lang/Boolean;",
-                vec![value],
+                &[value],
             )
             .await?;
         Ok(result)
@@ -34,7 +34,7 @@ impl JavaObject for char {
                 "java.lang.Character",
                 "valueOf",
                 "(C)Ljava/lang/Character;",
-                vec![value],
+                &[value],
             )
             .await?;
         Ok(result)
@@ -45,12 +45,7 @@ impl JavaObject for i8 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
         let value = Value::from(*self);
         let result = vm
-            .try_invoke(
-                "java.lang.Byte",
-                "valueOf",
-                "(B)Ljava/lang/Byte;",
-                vec![value],
-            )
+            .try_invoke("java.lang.Byte", "valueOf", "(B)Ljava/lang/Byte;", &[value])
             .await?;
         Ok(result)
     }
@@ -72,7 +67,7 @@ impl JavaObject for i16 {
                 "java.lang.Short",
                 "valueOf",
                 "(S)Ljava/lang/Short;",
-                vec![value],
+                &[value],
             )
             .await?;
         Ok(result)
@@ -95,7 +90,7 @@ impl JavaObject for i32 {
                 "java.lang.Integer",
                 "valueOf",
                 "(I)Ljava/lang/Integer;",
-                vec![value],
+                &[value],
             )
             .await?;
         Ok(result)
@@ -114,12 +109,7 @@ impl JavaObject for i64 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
         let value = Value::from(*self);
         let result = vm
-            .try_invoke(
-                "java.lang.Long",
-                "valueOf",
-                "(J)Ljava/lang/Long;",
-                vec![value],
-            )
+            .try_invoke("java.lang.Long", "valueOf", "(J)Ljava/lang/Long;", &[value])
             .await?;
         Ok(result)
     }
@@ -155,7 +145,7 @@ impl JavaObject for f32 {
                 "java.lang.Float",
                 "valueOf",
                 "(F)Ljava/lang/Float;",
-                vec![value],
+                &[value],
             )
             .await?;
         Ok(result)
@@ -170,7 +160,7 @@ impl JavaObject for f64 {
                 "java.lang.Double",
                 "valueOf",
                 "(D)Ljava/lang/Double;",
-                vec![value],
+                &[value],
             )
             .await?;
         Ok(result)

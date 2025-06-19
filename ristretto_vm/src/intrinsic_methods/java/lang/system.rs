@@ -222,7 +222,7 @@ pub(crate) async fn init_properties(
         let value = value.clone();
         let parameters = vec![properties.clone(), key, value];
         thread
-            .execute(&properties_class, &set_property_method, parameters)
+            .execute(&properties_class, &set_property_method, &parameters)
             .await?;
     }
     Ok(Some(properties))
@@ -277,7 +277,7 @@ pub(crate) async fn register_natives(
             "java.lang.System",
             "setJavaLangAccess",
             "()V",
-            Vec::<Value>::new(),
+            &[] as &[Value],
         )
         .await?;
         return Ok(None);
@@ -300,7 +300,7 @@ pub(crate) async fn register_natives(
             "java.lang.System",
             "setProperties",
             "(Ljava/util/Properties;)V",
-            vec![Value::Object(None)],
+            &[Value::Object(None)],
         )
         .await?;
     }
@@ -320,7 +320,7 @@ pub(crate) async fn register_natives(
         format!("{package_name}/SharedSecrets"),
         "setJavaLangRefAccess",
         format!("(L{package_name}/JavaLangRefAccess;)V"),
-        vec![java_lang_ref_access],
+        &[java_lang_ref_access],
     )
     .await?;
 

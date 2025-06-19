@@ -89,7 +89,7 @@ mod tests {
             .object(
                 "java/lang/ref/WeakReference",
                 "Ljava/lang/Object;",
-                vec![value],
+                &[value],
             )
             .await?;
         let mut parameters = Parameters::default();

@@ -280,7 +280,7 @@ async fn resolve_method_handles_lookup(thread: &Thread) -> Result<Value> {
     let lookup_method = method_handles_class
         .try_get_method("lookup", "()Ljava/lang/invoke/MethodHandles$Lookup;")?;
     let lookup = thread
-        .try_execute(&method_handles_class, &lookup_method, Vec::<Value>::new())
+        .try_execute(&method_handles_class, &lookup_method, &[] as &[Value])
         .await?;
     Ok(lookup)
 }
@@ -322,7 +322,7 @@ async fn get_method_type(vm: &VM, thread: &Thread, method_descriptor: &str) -> R
             "(Ljava/lang/Class;)Ljava/lang/invoke/MethodType;",
         )?;
         return thread
-            .try_execute(&method_type_class, &method, vec![return_class])
+            .try_execute(&method_type_class, &method, &[return_class])
             .await;
     }
 
@@ -346,7 +346,7 @@ async fn get_method_type(vm: &VM, thread: &Thread, method_descriptor: &str) -> R
     )?;
     let arguments = vec![return_class, first_argument, arguments];
     thread
-        .try_execute(&method_type_class, &method, arguments)
+        .try_execute(&method_type_class, &method, &arguments)
         .await
 }
 
@@ -393,7 +393,7 @@ async fn resolve_method_handle(vm: &VM, thread: &Thread, frame: &Frame) -> Resul
 
     arguments.insert(0, lookup);
     let method_handle = thread
-        .try_execute(&lookup_class, &find_method, arguments)
+        .try_execute(&lookup_class, &find_method, &arguments)
         .await?;
     Ok(method_handle)
 }
