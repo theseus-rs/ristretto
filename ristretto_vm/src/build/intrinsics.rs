@@ -270,7 +270,7 @@ fn write_intrinsic_method_map(
             continue;
         }
         let function = format!("{function} as IntrinsicMethod");
-        map_builder.entry(signature, function.as_str());
+        map_builder.entry(signature, function);
     }
     writeln!(file)?;
     let intrinsic_method_signature = "IntrinsicMethod";
