@@ -230,7 +230,7 @@ async fn run_test(java_version: &str, test_dir: &Path, interpreted: bool) -> Res
     let configuration = configuration_builder.build()?;
     let vm = VM::new(configuration).await?;
     let parameters: Vec<&str> = Vec::new();
-    let result = vm.invoke_main(parameters).await;
+    let result = vm.invoke_main(&parameters).await;
     let stdout_lock = stdout.lock().await;
     let stdout = String::from_utf8_lossy(&stdout_lock).to_string();
     let stderr_lock = stderr.lock().await;

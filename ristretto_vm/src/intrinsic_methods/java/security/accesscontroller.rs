@@ -21,7 +21,7 @@ pub(crate) async fn do_privileged_1(
     let class: Arc<Class> = object.class().clone();
     let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
     thread
-        .execute(&class, &method, vec![Value::from(object)])
+        .execute(&class, &method, &[Value::from(object)])
         .await
 }
 
@@ -39,7 +39,7 @@ pub(crate) async fn do_privileged_2(
     let class: Arc<Class> = object.class().clone();
     let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
     thread
-        .execute(&class, &method, vec![Value::from(object)])
+        .execute(&class, &method, &[Value::from(object)])
         .await
 }
 
@@ -56,7 +56,7 @@ pub(crate) async fn do_privileged_3(
     let class: Arc<Class> = object.class().clone();
     let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
     thread
-        .execute(&class, &method, vec![Value::from(object)])
+        .execute(&class, &method, &[Value::from(object)])
         .await
 }
 
@@ -74,7 +74,7 @@ pub(crate) async fn do_privileged_4(
     let class: Arc<Class> = object.class().clone();
     let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
     thread
-        .execute(&class, &method, vec![Value::from(object)])
+        .execute(&class, &method, &[Value::from(object)])
         .await
 }
 

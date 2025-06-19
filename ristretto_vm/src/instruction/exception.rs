@@ -80,7 +80,7 @@ pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Res
     };
 
     let throwable = vm
-        .object(class_name, "Ljava/lang/String;", vec![message])
+        .object(class_name, "Ljava/lang/String;", &[message])
         .await?;
     let throwable: Object = throwable.try_into()?;
     Ok(throwable)
@@ -101,7 +101,7 @@ mod test {
                 "java.lang.Integer",
                 "parseInt",
                 "(Ljava/lang/String;)I",
-                vec![value],
+                &[value],
             )
             .await;
         assert!(result.is_err());

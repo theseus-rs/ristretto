@@ -137,7 +137,7 @@ async fn common_main(cli: Cli) -> Result<()> {
     };
     let parameters = cli.parameters.unwrap_or_default();
 
-    match vm.invoke_main(parameters).await {
+    match vm.invoke_main(&parameters).await {
         Ok(_) => Ok(()),
         Err(error) => process_error(error),
     }

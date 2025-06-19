@@ -121,7 +121,7 @@ pub(crate) async fn get_field_at_0(
             "java.lang.Class",
             "getDeclaredField",
             "(Ljava/lang/String;)Ljava/lang/reflect/Field;",
-            vec![class_object, field_name],
+            &[class_object, field_name],
         )
         .await?;
     Ok(field)
@@ -275,7 +275,7 @@ pub(crate) async fn get_method_at_0(
             "java.lang.Class",
             "getDeclaredConstructor",
             "([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;",
-            vec![class_object, class_parameters],
+            &[class_object, class_parameters],
         )
         .await?
     } else {
@@ -284,7 +284,7 @@ pub(crate) async fn get_method_at_0(
             "java.lang.Class",
             "getDeclaredMethod",
             "(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;",
-            vec![class_object, method_name, class_parameters],
+            &[class_object, method_name, class_parameters],
         )
         .await?
     };
@@ -455,7 +455,7 @@ pub(crate) async fn get_tag_at_0(
             "jdk.internal.reflect.ConstantPool$Tag",
             "valueOf",
             "(B)Ljdk/internal/reflect/ConstantPool$Tag;",
-            vec![constant.tag()],
+            &[constant.tag()],
         )
         .await?;
     Ok(tag)

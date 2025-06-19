@@ -1153,7 +1153,7 @@ mod tests {
     async fn test_stat_0_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let unix_file_attributes = thread
-            .object("sun.nio.fs.UnixFileAttributes", "", Vec::<Value>::new())
+            .object("sun.nio.fs.UnixFileAttributes", "", &[] as &[Value])
             .await?;
         let parameters = Parameters::new(vec![Value::Long(0), unix_file_attributes]);
         let result = stat_0_0(thread, parameters).await?;
@@ -1165,7 +1165,7 @@ mod tests {
     async fn test_stat_0_1() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let unix_file_attributes = thread
-            .object("sun.nio.fs.UnixFileAttributes", "", Vec::<Value>::new())
+            .object("sun.nio.fs.UnixFileAttributes", "", &[] as &[Value])
             .await?;
         let parameters = Parameters::new(vec![Value::Long(0), unix_file_attributes]);
         let result = stat_0_1(thread, parameters).await?;

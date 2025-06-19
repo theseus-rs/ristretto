@@ -282,7 +282,7 @@ pub(crate) async fn get_declared_constructors_0(
             .object(
                 "java/lang/reflect/Constructor",
                 "Ljava/lang/Class;[Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B",
-                vec![
+                &[
                     class_object.clone(),
                     parameter_types,
                     checked_exceptions,
@@ -388,7 +388,7 @@ pub(crate) async fn get_declared_fields_0(
             )
         };
         let field = thread
-            .object("java/lang/reflect/Field", descriptor, parameters)
+            .object("java/lang/reflect/Field", descriptor, &parameters)
             .await?;
         fields.push(field);
     }
@@ -497,7 +497,7 @@ pub(crate) async fn get_declared_methods_0(
             .object(
                 "java/lang/reflect/Method",
                 "Ljava/lang/Class;Ljava/lang/String;[Ljava/lang/Class;Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B[B",
-                vec![
+                &[
                     class_object.clone(),
                     method_name,
                     parameter_types,
@@ -1227,7 +1227,7 @@ mod tests {
                     "java.lang.reflect.Field",
                     "toString",
                     "()Ljava/lang/String;",
-                    vec![Value::from(reference.clone())],
+                    &[Value::from(reference.clone())],
                 )
                 .await?;
             let signature: String = result.expect("string").try_into()?;
@@ -1268,7 +1268,7 @@ mod tests {
                     "java.lang.reflect.Method",
                     "getName",
                     "()Ljava/lang/String;",
-                    vec![Value::from(reference.clone())],
+                    &[Value::from(reference.clone())],
                 )
                 .await?;
             let method_name: String = result.expect("string").try_into()?;
@@ -1344,7 +1344,7 @@ mod tests {
             .object(
                 "java.util.HashMap$Node",
                 "ILjava/lang/Object;Ljava/lang/Object;Ljava/util/HashMap$Node;",
-                vec![
+                &[
                     Value::Int(0),
                     Value::Object(None),
                     Value::Object(None),
@@ -1542,7 +1542,7 @@ mod tests {
             .object(
                 "java.util.HashMap$Node",
                 "ILjava/lang/Object;Ljava/lang/Object;Ljava/util/HashMap$Node;",
-                vec![
+                &[
                     Value::Int(0),
                     Value::Object(None),
                     Value::Object(None),
@@ -1649,7 +1649,7 @@ mod tests {
     async fn test_is_assignable_from() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = thread
-            .object("java.lang.Object", "", Vec::<Value>::new())
+            .object("java.lang.Object", "", &[] as &[Value])
             .await?;
         let string_object = "foo".to_object(&vm).await?;
         let parameters = Parameters::new(vec![object, string_object]);
@@ -1662,7 +1662,7 @@ mod tests {
     async fn test_is_assignable_from_false() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = thread
-            .object("java.lang.Object", "", Vec::<Value>::new())
+            .object("java.lang.Object", "", &[] as &[Value])
             .await?;
         let string_object = "foo".to_object(&vm).await?;
         let parameters = Parameters::new(vec![string_object, object]);
@@ -1675,7 +1675,7 @@ mod tests {
     async fn test_is_assignable_from_npe() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let object = thread
-            .object("java.lang.Object", "", Vec::<Value>::new())
+            .object("java.lang.Object", "", &[] as &[Value])
             .await?;
         let null_object = Value::Object(None);
         let parameters = Parameters::new(vec![object, null_object]);
@@ -1696,7 +1696,7 @@ mod tests {
     async fn test_is_instance() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let object = thread
-            .object("java.lang.Object", "", Vec::<Value>::new())
+            .object("java.lang.Object", "", &[] as &[Value])
             .await?;
         let string_object = "foo".to_object(&vm).await?;
         let parameters = Parameters::new(vec![object, string_object]);
@@ -1709,7 +1709,7 @@ mod tests {
     async fn test_is_instance_false() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let object = thread
-            .object("java.lang.Object", "", Vec::<Value>::new())
+            .object("java.lang.Object", "", &[] as &[Value])
             .await?;
         let null_object = Value::Object(None);
         let parameters = Parameters::new(vec![object, null_object]);

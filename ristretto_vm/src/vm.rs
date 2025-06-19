@@ -268,11 +268,11 @@ impl VM {
                 "java.lang.System",
                 "initializeSystemClass",
                 "()V",
-                Vec::<Value>::new(),
+                &[] as &[Value],
             )
             .await?;
         } else {
-            self.invoke("java.lang.System", "initPhase1", "()V", Vec::<Value>::new())
+            self.invoke("java.lang.System", "initPhase1", "()V", &[] as &[Value])
                 .await?;
 
             let phase2_result = self
@@ -280,7 +280,7 @@ impl VM {
                     "java.lang.System",
                     "initPhase2",
                     "(ZZ)I",
-                    vec![Value::Int(1), Value::Int(1)],
+                    &[Value::Int(1), Value::Int(1)],
                 )
                 .await?;
             let Some(Value::Int(result)) = phase2_result else {
@@ -294,7 +294,7 @@ impl VM {
                 )));
             }
 
-            self.invoke("java.lang.System", "initPhase3", "()V", Vec::<Value>::new())
+            self.invoke("java.lang.System", "initPhase3", "()V", &[] as &[Value])
                 .await?;
         }
 
@@ -310,7 +310,7 @@ impl VM {
         let thread = self.new_thread()?;
         let thread_id = i64::try_from(thread.id())?;
         let thread_group = thread
-            .object("java.lang.ThreadGroup", "", Vec::<Value>::new())
+            .object("java.lang.ThreadGroup", "", &[] as &[Value])
             .await?;
 
         let java_version = self.java_class_file_version();
@@ -382,7 +382,7 @@ impl VM {
     /// - if the main class is not specified
     /// - if the main class does not specify a main method
     /// - if the main method cannot be invoked
-    pub async fn invoke_main<S: AsRef<str>>(&self, parameters: Vec<S>) -> Result<Option<Value>> {
+    pub async fn invoke_main<S: AsRef<str>>(&self, parameters: &[S]) -> Result<Option<Value>> {
         let Some(main_class_name) = &self.main_class else {
             return Err(InternalError("No main class specified".into()));
         };
@@ -393,7 +393,7 @@ impl VM {
             )));
         };
 
-        let mut string_parameters = Vec::new();
+        let mut string_parameters = Vec::with_capacity(parameters.len());
         for parameter in parameters {
             let parameter = parameter.as_ref();
             let value = parameter.to_object(self).await?;
@@ -407,7 +407,7 @@ impl VM {
             main_class_name,
             main_method.name(),
             main_method.descriptor(),
-            vec![string_parameter],
+            &[string_parameter],
         )
         .await
     }
@@ -423,7 +423,7 @@ impl VM {
         class: C,
         method: M,
         descriptor: D,
-        parameters: Vec<impl RustValue>,
+        parameters: &[impl RustValue],
     ) -> Result<Option<Value>>
     where
         C: AsRef<str>,
@@ -447,7 +447,7 @@ impl VM {
         class: C,
         method: M,
         descriptor: D,
-        parameters: Vec<impl RustValue>,
+        parameters: &[impl RustValue],
     ) -> Result<Value>
     where
         C: AsRef<str>,
@@ -469,7 +469,7 @@ impl VM {
         &self,
         class_name: C,
         descriptor: M,
-        parameters: Vec<impl RustValue>,
+        parameters: &[impl RustValue],
     ) -> Result<Value>
     where
         C: AsRef<str>,
@@ -620,7 +620,7 @@ mod tests {
     #[tokio::test]
     async fn test_new_object_integer() -> Result<()> {
         let vm = test_vm().await?;
-        let object = vm.object("java.lang.Integer", "I", vec![42]).await?;
+        let object = vm.object("java.lang.Integer", "I", &[42]).await?;
         let value: i32 = object.try_into()?;
         assert_eq!(42, value);
         Ok(())
@@ -630,7 +630,7 @@ mod tests {
     async fn test_new_object_integer_from_string() -> Result<()> {
         let vm = test_vm().await?;
         let object = vm
-            .object("java.lang.Integer", "Ljava/lang/String;", vec!["42"])
+            .object("java.lang.Integer", "Ljava/lang/String;", &["42"])
             .await?;
         let value: i32 = object.try_into()?;
         assert_eq!(42, value);
@@ -641,9 +641,7 @@ mod tests {
     async fn test_new_object_string() -> Result<()> {
         let vm = test_vm().await?;
         let characters = "foo".chars().collect::<Vec<char>>();
-        let object = vm
-            .object("java.lang.String", "[C", vec![characters])
-            .await?;
+        let object = vm.object("java.lang.String", "[C", &[characters]).await?;
         let value: String = object.try_into()?;
         assert_eq!("foo", value);
         Ok(())

@@ -15,7 +15,7 @@ async fn test_simple_main_method() -> Result<()> {
         .build()?;
     let vm = VM::new(configuration).await?;
     let parameters: Vec<&str> = Vec::new();
-    let result = vm.invoke_main(parameters).await?;
+    let result = vm.invoke_main(&parameters).await?;
     assert!(result.is_none());
     Ok(())
 }

@@ -12,7 +12,7 @@ async fn test_is_enum() -> Result<()> {
             "java.lang.Class",
             "getModifiers",
             "()I",
-            vec![class_object.clone()],
+            &[class_object.clone()],
         )
         .await?
         .expect("modifiers")
@@ -24,7 +24,7 @@ async fn test_is_enum() -> Result<()> {
             "java.lang.Class",
             "getSuperclass",
             "()Ljava/lang/Class;",
-            vec![class_object.clone()],
+            &[class_object.clone()],
         )
         .await?
         .expect("super class")
@@ -33,7 +33,7 @@ async fn test_is_enum() -> Result<()> {
     assert_eq!("java.lang.Enum", super_class_name);
 
     let is_enum: bool = vm
-        .invoke("java.lang.Class", "isEnum", "()Z", vec![class_object])
+        .invoke("java.lang.Class", "isEnum", "()Z", &[class_object])
         .await?
         .expect("is enum")
         .try_into()?;

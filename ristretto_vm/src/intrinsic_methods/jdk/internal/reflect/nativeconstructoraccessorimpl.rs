@@ -37,7 +37,7 @@ pub(crate) async fn new_instance_0(
         }
     }
 
-    let result = thread.object(class_name, descriptor, arguments).await?;
+    let result = thread.object(class_name, descriptor, &arguments).await?;
     Ok(Some(result))
 }
 
@@ -62,7 +62,7 @@ pub(crate) mod tests {
                 "java.lang.Class",
                 "getDeclaredConstructor",
                 "([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;",
-                vec![integer_class_object, arguments],
+                &[integer_class_object, arguments],
             )
             .await?
             .expect("constructor");
