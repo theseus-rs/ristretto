@@ -11,8 +11,13 @@ use std::sync::Arc;
 
 #[intrinsic_method("java/io/Console.echo(Z)Z", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-pub(crate) async fn echo(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.io.Console.echo(Z)Z")
+pub(crate) async fn echo(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _echo: bool = parameters.pop_bool()?;
+    // TODO: Implement actual echo functionality
+    Ok(Some(Value::from(false)))
 }
 
 #[intrinsic_method(
@@ -24,6 +29,7 @@ pub(crate) async fn encoding(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
+    // TODO: Implement actual encoding functionality
     Ok(Some(Value::Object(None)))
 }
 
@@ -40,10 +46,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.io.Console.echo(Z)Z")]
-    async fn test_echo() {
+    async fn test_echo() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = echo(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        parameters.push_bool(true);
+        let enabled: bool = echo(thread, parameters)
+            .await?
+            .expect("enabled")
+            .try_into()?;
+        assert!(!enabled);
+        Ok(())
     }
 
     #[tokio::test]
