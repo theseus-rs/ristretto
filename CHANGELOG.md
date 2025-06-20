@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - add java.io.ObjectInputStream and java.io.ObjectOutputStream intrinsics
 - add intrinsic support for basic file io
-- add "java/lang/ref/PhantomReference intrinsics
+- add java/lang/ref/PhantomReference intrinsics
 - add OS specific file intrinsics
 - implemented java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z
 
@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## `ristretto_vm` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.20.0...ristretto_vm-v0.21.0) - 2025-06-20
 
 ### Added
-- add "java/lang/ref/PhantomReference intrinsics
+- add java/lang/ref/PhantomReference intrinsics
 - add OS specific file intrinsics
 - add java.io.ObjectInputStream and java.io.ObjectOutputStream intrinsics
 - implemented java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z
