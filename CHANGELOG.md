@@ -32,9 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add java.lang.invoke.DirectMethodHandle$Holder trampoline methods on class definition
 - remove unnecessary version file parsing on startup when the full java version is specified
 - remove unnecessary call to obtain current directory on initialization
-- Merge pull request #406 from theseus-rs/update-phf
 - update to phf=0.12.1
-- Merge pull request #399 from theseus-rs/impl-objectstreamclass-hasstaticinitializer
 - remove lint warning on windows
 - remove unnecessary java version from intrinsics registry
 - correct clippy lints
@@ -52,12 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add invokedynamic bootstrap method descriptor verification
 
 ### Other
-- Merge pull request #406 from theseus-rs/update-phf
 - update to phf=0.12.1
 - [**breaking**] change VM parameter types from Vec<T> to &[T] for zero-allocation and improved ergonomics
 - optimize Reference enum memory
 - optimize file reads by removing iterative type conversion from u8->i8. Optimized Reference Vec signed<->unsigned type conversions.
-- Merge pull request #399 from theseus-rs/impl-objectstreamclass-hasstaticinitializer
 - remove lint warning on windows
 - add java.lang.invoke.DirectMethodHandle$Holder trampoline methods on class definition
 - [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
