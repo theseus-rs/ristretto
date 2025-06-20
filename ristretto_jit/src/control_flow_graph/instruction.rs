@@ -671,7 +671,7 @@ fn pop_field_type(stack: &mut TypeStack, field_type: &FieldType) -> Result<Type>
 mod tests {
     use super::*;
     use indexmap::IndexMap;
-    use ristretto_classfile::attributes::ArrayType;
+    use ristretto_classfile::attributes::{ArrayType, LookupSwitch, TableSwitch};
 
     #[test]
     fn test_ldc_integer() -> Result<()> {
@@ -2051,16 +2051,16 @@ mod tests {
     #[test]
     fn test_simulate_switch_instructions() -> Result<()> {
         let instructions = vec![
-            Instruction::Tableswitch {
+            Instruction::Tableswitch(TableSwitch {
                 default: 3,
                 low: 1,
                 high: 2,
                 offsets: vec![1; 2],
-            },
-            Instruction::Lookupswitch {
+            }),
+            Instruction::Lookupswitch(LookupSwitch {
                 default: 3,
                 pairs: IndexMap::new(),
-            },
+            }),
         ];
         for instruction in instructions {
             let mut stack = TypeStack::new();

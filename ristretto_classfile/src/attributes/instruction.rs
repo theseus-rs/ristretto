@@ -8,6 +8,32 @@ use indexmap::IndexMap;
 use std::fmt;
 use std::io::Cursor;
 
+/// Separate structure for the `tableseitch` instruction to limit the size of the `Instruction`
+/// enum.
+///
+/// # References
+///
+/// - [JVM Specification §6.5 tableswich](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.tableswitch)
+#[derive(Clone, Debug, PartialEq)]
+pub struct TableSwitch {
+    pub default: i32,
+    pub low: i32,
+    pub high: i32,
+    pub offsets: Vec<i32>,
+}
+
+/// Separate structure for the `lookupswitch` instruction to limit the size of the `Instruction`
+/// enum.
+///
+/// # References
+///
+/// - [JVM Specification §6.5 lookupswitch](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.lookupswitch)
+#[derive(Clone, Debug, PartialEq)]
+pub struct LookupSwitch {
+    pub default: i32,
+    pub pairs: IndexMap<i32, i32>,
+}
+
 /// Implementation of `Instruction`.
 ///
 /// # References
@@ -357,17 +383,9 @@ pub enum Instruction {
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ret>
     Ret(u8),
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.tableswitch>
-    Tableswitch {
-        default: i32,
-        low: i32,
-        high: i32,
-        offsets: Vec<i32>,
-    },
+    Tableswitch(TableSwitch),
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.lookupswitch>
-    Lookupswitch {
-        default: i32,
-        pairs: IndexMap<i32, i32>,
-    },
+    Lookupswitch(LookupSwitch),
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ireturn>
     Ireturn,
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.lreturn>
@@ -1224,12 +1242,13 @@ impl Instruction {
                     let offset = bytes.read_i32::<BigEndian>()?;
                     offsets.push(offset);
                 }
-                Instruction::Tableswitch {
+                let table_switch = TableSwitch {
                     default,
                     low,
                     high,
                     offsets,
-                }
+                };
+                Instruction::Tableswitch(table_switch)
             }
             171 => {
                 let position = u32::try_from(bytes.position())?;
@@ -1245,7 +1264,8 @@ impl Instruction {
                     let offset = bytes.read_i32::<BigEndian>()?;
                     pairs.insert(match_, offset);
                 }
-                Instruction::Lookupswitch { default, pairs }
+                let lookup_switch = LookupSwitch { default, pairs };
+                Instruction::Lookupswitch(lookup_switch)
             }
             172 => Instruction::Ireturn,
             173 => Instruction::Lreturn,
@@ -1390,34 +1410,29 @@ impl Instruction {
             Instruction::Goto(value) => Self::write_offset(bytes, *value)?,
             Instruction::Jsr(value) => Self::write_offset(bytes, *value)?,
             Instruction::Ret(value) => bytes.write_u8(*value)?,
-            Instruction::Tableswitch {
-                default,
-                low,
-                high,
-                offsets,
-            } => {
+            Instruction::Tableswitch(table_switch) => {
                 let position = i32::try_from(bytes.position())?;
                 let padding = (4 - (position % 4)) % 4;
                 for _ in 0..padding {
                     bytes.write_u8(0)?;
                 }
-                bytes.write_i32::<BigEndian>(*default)?;
-                bytes.write_i32::<BigEndian>(*low)?;
-                bytes.write_i32::<BigEndian>(*high)?;
-                for offset in offsets {
+                bytes.write_i32::<BigEndian>(table_switch.default)?;
+                bytes.write_i32::<BigEndian>(table_switch.low)?;
+                bytes.write_i32::<BigEndian>(table_switch.high)?;
+                for offset in &table_switch.offsets {
                     bytes.write_i32::<BigEndian>(*offset)?;
                 }
             }
-            Instruction::Lookupswitch { pairs, default } => {
+            Instruction::Lookupswitch(lookup_switch) => {
                 let position = i32::try_from(bytes.position())?;
                 let padding = (4 - (position % 4)) % 4;
                 for _ in 0..padding {
                     bytes.write_u8(0)?;
                 }
-                bytes.write_i32::<BigEndian>(*default)?;
-                let pairs_count = i32::try_from(pairs.len())?;
+                bytes.write_i32::<BigEndian>(lookup_switch.default)?;
+                let pairs_count = i32::try_from(lookup_switch.pairs.len())?;
                 bytes.write_i32::<BigEndian>(pairs_count)?;
-                for (match_, offset) in pairs {
+                for (match_, offset) in &lookup_switch.pairs {
                     bytes.write_i32::<BigEndian>(*match_)?;
                     bytes.write_i32::<BigEndian>(*offset)?;
                 }
@@ -1737,29 +1752,32 @@ impl fmt::Display for Instruction {
             Instruction::Goto(value) => write!(f, "goto {value}"),
             Instruction::Jsr(value) => write!(f, "jsr {value}"),
             Instruction::Ret(value) => write!(f, "ret {value}"),
-            Instruction::Tableswitch {
-                default,
-                low,
-                high,
-                offsets,
-            } => {
+            Instruction::Tableswitch(table_switch) => {
                 let width = 12;
-                writeln!(f, "tableswitch {{ // {low} to {high}")?;
-                for (i, offset) in offsets.iter().enumerate() {
-                    let value = low + i32::try_from(i).map_err(|_| fmt::Error)?;
+                writeln!(
+                    f,
+                    "tableswitch {{ // {} to {}",
+                    table_switch.low, table_switch.high
+                )?;
+                for (i, offset) in table_switch.offsets.iter().enumerate() {
+                    let value = table_switch.low + i32::try_from(i).map_err(|_| fmt::Error)?;
                     writeln!(f, "        {value:>width$}: {offset}")?;
                 }
-                writeln!(f, "        {:>width$}: {default}", "default")?;
+                writeln!(f, "        {:>width$}: {}", "default", table_switch.default)?;
                 write!(f, "        }}")
             }
-            Instruction::Lookupswitch { pairs, default } => {
+            Instruction::Lookupswitch(lookup_switch) => {
                 let width = 12;
-                writeln!(f, "lookupswitch {{ // {}", pairs.len())?;
-                for pair in pairs {
+                writeln!(f, "lookupswitch {{ // {}", lookup_switch.pairs.len())?;
+                for pair in &lookup_switch.pairs {
                     let (value, offset) = pair;
                     writeln!(f, "        {value:>width$}: {offset}")?;
                 }
-                writeln!(f, "        {:>width$}: {default}", "default")?;
+                writeln!(
+                    f,
+                    "        {:>width$}: {}",
+                    "default", lookup_switch.default
+                )?;
                 write!(f, "        }}")
             }
             Instruction::Ireturn => write!(f, "ireturn"),
@@ -4578,12 +4596,12 @@ mod test {
 
     #[test]
     fn test_tableswitch() -> Result<()> {
-        let instruction = Instruction::Tableswitch {
+        let instruction = Instruction::Tableswitch(TableSwitch {
             default: 42,
             low: 1,
             high: 2,
             offsets: vec![3, 4],
-        };
+        });
         let code = 170;
         let expected_bytes = [
             170, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4,
@@ -4607,10 +4625,10 @@ mod test {
 
     #[test]
     fn test_lookupswitch() -> Result<()> {
-        let instruction = Instruction::Lookupswitch {
+        let instruction = Instruction::Lookupswitch(LookupSwitch {
             default: 42,
             pairs: IndexMap::from([(1, 2)]),
-        };
+        });
         let code = 171;
         let expected_bytes = [
             171, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2,

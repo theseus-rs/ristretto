@@ -1787,24 +1787,17 @@ impl fmt::Display for Attribute {
                     let mut instruction =
                         Instruction::from_bytes(&mut cursor).map_err(|_| fmt::Error)?;
                     match instruction {
-                        Instruction::Tableswitch {
-                            ref mut default,
-                            ref mut offsets,
-                            ..
-                        } => {
+                        Instruction::Tableswitch(ref mut table_switch) => {
                             let position = i32::try_from(index).map_err(|_| fmt::Error)?;
-                            *default += position;
-                            for offset in offsets {
+                            table_switch.default += position;
+                            for offset in &mut table_switch.offsets {
                                 *offset += position;
                             }
                         }
-                        Instruction::Lookupswitch {
-                            ref mut default,
-                            ref mut pairs,
-                        } => {
+                        Instruction::Lookupswitch(ref mut lookupswitch) => {
                             let position = i32::try_from(index).map_err(|_| fmt::Error)?;
-                            *default += position;
-                            for offset in pairs.values_mut() {
+                            lookupswitch.default += position;
+                            for offset in lookupswitch.pairs.values_mut() {
                                 *offset += position;
                             }
                         }

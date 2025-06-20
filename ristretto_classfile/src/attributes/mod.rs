@@ -143,7 +143,7 @@ pub use exception_table_entry::ExceptionTableEntry;
 pub use exports::Exports;
 pub use exports_flags::ExportsFlags;
 pub use inner_class::InnerClass;
-pub use instruction::Instruction;
+pub use instruction::{Instruction, LookupSwitch, TableSwitch};
 pub use line_number::LineNumber;
 pub use local_variable_table::LocalVariableTable;
 pub use local_variable_target::LocalVariableTarget;
