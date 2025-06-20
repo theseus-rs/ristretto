@@ -18,7 +18,7 @@ path = "src/lib.rs"
 # Add this section for build dependencies
 [build-dependencies]
 phf_codegen = { workspace = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.20.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.21.0" }
 syn = { workspace = true }
 walkdir = { workspace = true }
 
@@ -34,10 +34,10 @@ filetime = { workspace = true }
 indexmap = { workspace = true }
 os_info = { workspace = true }
 phf = { workspace = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.20.0" }
-ristretto_classloader = { path = "../ristretto_classloader", version = "0.20.0" }
-ristretto_jit = { path = "../ristretto_jit", version = "0.20.0" }
-ristretto_macros = { path = "../ristretto_macros", version = "0.20.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.21.0" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.21.0" }
+ristretto_jit = { path = "../ristretto_jit", version = "0.21.0" }
+ristretto_macros = { path = "../ristretto_macros", version = "0.21.0" }
 stacker = { workspace = true }
 sysinfo = { workspace = true }
 sys-locale = { workspace = true }

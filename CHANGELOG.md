@@ -7,6 +7,111 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/v0.20.0...v0.21.0) - 2025-06-20
+
+### Added
+- add java.io.ObjectInputStream and java.io.ObjectOutputStream intrinsics
+- add intrinsic support for basic file io
+- add "java/lang/ref/PhantomReference intrinsics
+- add OS specific file intrinsics
+- implemented java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z
+
+### Fixed
+- correct mutf-8 class file string encoding/decoding as well as add utf-16 Java 9+ string support
+- add invokedynamic bootstrap method descriptor verification
+
+### Other
+- [**breaking**] change VM parameter types from Vec<T> to &[T] for zero-allocation and improved ergonomics
+- optimize Reference enum memory
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- create compile time intrinsic method registry
+- add classfile attributes documentation
+- update rust doc formatting
+- add constants for java versions
+- optimize file reads by removing iterative type conversion from u8->i8. Optimized Reference Vec signed<->unsigned type conversions.
+- add java.lang.invoke.DirectMethodHandle$Holder trampoline methods on class definition
+- remove unnecessary version file parsing on startup when the full java version is specified
+- remove unnecessary call to obtain current directory on initialization
+- Merge pull request #406 from theseus-rs/update-phf
+- update to phf=0.12.1
+- Merge pull request #399 from theseus-rs/impl-objectstreamclass-hasstaticinitializer
+- remove lint warning on windows
+- remove unnecessary java version from intrinsics registry
+- correct clippy lints
+
+## `ristretto_vm` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.20.0...ristretto_vm-v0.21.0) - 2025-06-20
+
+### Added
+- add "java/lang/ref/PhantomReference intrinsics
+- add OS specific file intrinsics
+- add java.io.ObjectInputStream and java.io.ObjectOutputStream intrinsics
+- implemented java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z
+
+### Fixed
+- correct mutf-8 class file string encoding/decoding as well as add utf-16 Java 9+ string support
+- add invokedynamic bootstrap method descriptor verification
+
+### Other
+- Merge pull request #406 from theseus-rs/update-phf
+- update to phf=0.12.1
+- [**breaking**] change VM parameter types from Vec<T> to &[T] for zero-allocation and improved ergonomics
+- optimize Reference enum memory
+- optimize file reads by removing iterative type conversion from u8->i8. Optimized Reference Vec signed<->unsigned type conversions.
+- Merge pull request #399 from theseus-rs/impl-objectstreamclass-hasstaticinitializer
+- remove lint warning on windows
+- add java.lang.invoke.DirectMethodHandle$Holder trampoline methods on class definition
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- remove unnecessary java version from intrinsics registry
+- create compile time intrinsic method registry
+- update rust doc formatting
+- correct clippy lints
+- add constants for java versions
+
+## `ristretto_macros` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.20.0...ristretto_macros-v0.21.0) - 2025-06-20
+
+### Other
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- create compile time intrinsic method registry
+
+## `ristretto_jit` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.20.0...ristretto_jit-v0.21.0) - 2025-06-20
+
+### Added
+- add intrinsic support for basic file io
+
+### Other
+- update rust doc formatting
+
+## `ristretto_classloader` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.20.0...ristretto_classloader-v0.21.0) - 2025-06-20
+
+### Added
+- add java.io.ObjectInputStream and java.io.ObjectOutputStream intrinsics
+- add intrinsic support for basic file io
+
+### Fixed
+- correct mutf-8 class file string encoding/decoding as well as add utf-16 Java 9+ string support
+
+### Other
+- optimize Reference enum memory
+- optimize file reads by removing iterative type conversion from u8->i8. Optimized Reference Vec signed<->unsigned type conversions.
+- add java.lang.invoke.DirectMethodHandle$Holder trampoline methods on class definition
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- remove unnecessary version file parsing on startup when the full java version is specified
+- remove unnecessary call to obtain current directory on initialization
+- update rust doc formatting
+- add constants for java versions
+
+## `ristretto_classfile` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.20.0...ristretto_classfile-v0.21.0) - 2025-06-20
+
+### Fixed
+- correct mutf-8 class file string encoding/decoding as well as add utf-16 Java 9+ string support
+
+### Other
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- create compile time intrinsic method registry
+- add classfile attributes documentation
+- update rust doc formatting
+- add constants for java versions
+
 ## `ristretto_cli` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/v0.19.2...v0.20.0) - 2025-06-06
 
 ### Added
