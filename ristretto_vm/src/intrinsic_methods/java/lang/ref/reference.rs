@@ -4,7 +4,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_11, JAVA_17};
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -52,14 +52,10 @@ pub(crate) async fn refers_to_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object_parameter = parameters.pop_reference()?;
-    let object = parameters.pop_object()?;
-    let refers_to = if let Some(Reference::Object(object_parameter)) = object_parameter {
-        object == object_parameter
-    } else {
-        // TODO: this should return true if object has been cleared
-        false
-    };
+    let object_parameter = parameters.pop()?;
+    let reference = parameters.pop_object()?;
+    let object = reference.value("referent")?;
+    let refers_to = object == object_parameter;
     Ok(Some(Value::from(refers_to)))
 }
 
@@ -119,6 +115,26 @@ mod tests {
     async fn test_has_reference_pending_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = has_reference_pending_list(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_refers_to_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let value = "foo".to_object(&vm).await?;
+        let weak_reference = vm
+            .object(
+                "java/lang/ref/WeakReference",
+                "Ljava/lang/Object;",
+                &[value.clone()],
+            )
+            .await?;
+        let mut parameters = Parameters::default();
+        parameters.push(weak_reference.clone());
+        parameters.push(value);
+        let value = refers_to_0(thread, parameters).await?.expect("refers to");
+        let refers_to: bool = value.try_into()?;
+        assert!(refers_to);
+        Ok(())
     }
 
     #[tokio::test]
