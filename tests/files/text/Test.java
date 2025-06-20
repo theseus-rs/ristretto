@@ -19,5 +19,9 @@ public class Test {
         }
         System.out.println("Read content:");
         System.out.println(sb);
+
+//         Files.delete(Paths.get(filename));
+//         System.out.print("File deleted: ");
+//         System.out.println(!Files.exists(Paths.get(filename)));
     }
 }

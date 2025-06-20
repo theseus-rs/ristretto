@@ -23,5 +23,9 @@ public class Test {
 
         System.out.println("Read content:");
         System.out.println(new String(readData, "UTF-8"));
+
+//         Files.delete(Paths.get(filename));
+//         System.out.print("File deleted: ");
+//         System.out.println(!Files.exists(Paths.get(filename)));
     }
 }

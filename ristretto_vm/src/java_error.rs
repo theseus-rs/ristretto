@@ -44,8 +44,8 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IndexOutOfBoundsException.html>
     #[error("Index: {index}, Size {size}")]
     IndexOutOfBoundsException { index: i32, size: i32 },
-    /// `IoException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IoException.html>
+    /// `IOException`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/io/IOException.html>
     #[error("{0}")]
     IoException(String),
     /// `NoClassDefFoundError`
@@ -78,7 +78,7 @@ impl JavaError {
             JavaError::ClassNotFoundException(_) => "java.lang.ClassNotFoundException",
             JavaError::FileNotFoundException(_) => "java.io.FileNotFoundException",
             JavaError::IllegalArgumentException(_) => "java.lang.IllegalArgumentException",
-            JavaError::IoException(_) => "java.lang.IOException",
+            JavaError::IoException(_) => "java.io.IOException",
             JavaError::IndexOutOfBoundsException { .. } => "java.lang.IndexOutOfBoundsException",
             JavaError::NoClassDefFoundError(_) => "java.lang.NoClassDefFoundError",
             JavaError::NullPointerException(_) => "java.lang.NullPointerException",
@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn test_io_exception() {
         let error = JavaError::IoException("foo".to_string());
-        assert_eq!(error.class_name(), "java.lang.IOException");
+        assert_eq!(error.class_name(), "java.io.IOException");
         assert_eq!(error.message(), "foo");
     }
 
