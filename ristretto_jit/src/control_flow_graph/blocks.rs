@@ -137,10 +137,8 @@ pub(crate) fn get_blocks(
                 insert_stack(&mut stack_states, address, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
             }
-            Instruction::Tableswitch {
-                default, offsets, ..
-            } => {
-                let default = usize::try_from(*default)?;
+            Instruction::Tableswitch(table_switch) => {
+                let default = usize::try_from(table_switch.default)?;
                 let default = program_counter.checked_add(default).ok_or_else(|| {
                     InternalError(format!(
                         "Invalid address calculation: {program_counter} + {default}"
@@ -149,7 +147,7 @@ pub(crate) fn get_blocks(
                 insert_stack(&mut stack_states, default, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, default, &mut blocks);
 
-                for offset in offsets {
+                for offset in &table_switch.offsets {
                     let address = usize::try_from(*offset)?;
                     let address = program_counter.checked_add(address).ok_or_else(|| {
                         InternalError(format!(
@@ -165,8 +163,8 @@ pub(crate) fn get_blocks(
                     );
                 }
             }
-            Instruction::Lookupswitch { default, pairs } => {
-                let default = usize::try_from(*default)?;
+            Instruction::Lookupswitch(lookup_switch) => {
+                let default = usize::try_from(lookup_switch.default)?;
                 let default = program_counter.checked_add(default).ok_or_else(|| {
                     InternalError(format!(
                         "Invalid address calculation: {program_counter} + {default}"
@@ -175,7 +173,7 @@ pub(crate) fn get_blocks(
                 insert_stack(&mut stack_states, default, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, default, &mut blocks);
 
-                for (_key, offset) in pairs {
+                for (_key, offset) in &lookup_switch.pairs {
                     let address = usize::try_from(*offset)?;
                     let address = program_counter.checked_add(address).ok_or_else(|| {
                         InternalError(format!(

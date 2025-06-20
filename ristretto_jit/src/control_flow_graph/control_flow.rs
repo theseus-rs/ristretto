@@ -60,7 +60,7 @@ impl InstructionControlFlow for Instruction {
 mod tests {
     use super::*;
     use indexmap::IndexMap;
-    use ristretto_classfile::attributes::Instruction;
+    use ristretto_classfile::attributes::{Instruction, LookupSwitch, TableSwitch};
 
     #[test]
     fn test_changes_control_flow() {
@@ -83,16 +83,16 @@ mod tests {
             Instruction::Goto_w(0),
             Instruction::Jsr(0),
             Instruction::Jsr_w(0),
-            Instruction::Tableswitch {
+            Instruction::Tableswitch(TableSwitch {
                 default: 0,
                 low: 0,
                 high: 0,
                 offsets: vec![0],
-            },
-            Instruction::Lookupswitch {
+            }),
+            Instruction::Lookupswitch(LookupSwitch {
                 default: 0,
                 pairs: IndexMap::new(),
-            },
+            }),
             Instruction::Ret(0),
             Instruction::Ret_w(0),
             Instruction::Return,

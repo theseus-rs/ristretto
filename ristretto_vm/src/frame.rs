@@ -26,7 +26,7 @@ use crate::instruction::{
 use crate::{LocalVariables, OperandStack, Result, Thread};
 use async_recursion::async_recursion;
 use byte_unit::{Byte, UnitType};
-use ristretto_classfile::attributes::Instruction;
+use ristretto_classfile::attributes::{Instruction, LookupSwitch, TableSwitch};
 use ristretto_classloader::{Class, Method, Value};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
@@ -500,16 +500,16 @@ impl Frame {
             Instruction::Goto(address) => goto(*address),
             Instruction::Jsr(address) => jsr(stack, *address),
             Instruction::Ret(index) => ret(locals, *index),
-            Instruction::Tableswitch {
+            Instruction::Tableswitch(TableSwitch {
                 default,
                 low,
                 high,
                 offsets,
-            } => {
+            }) => {
                 let program_counter = self.program_counter.load(Ordering::Relaxed);
                 tableswitch(stack, program_counter, *default, *low, *high, offsets)
             }
-            Instruction::Lookupswitch { default, pairs } => {
+            Instruction::Lookupswitch(LookupSwitch { default, pairs }) => {
                 let program_counter = self.program_counter.load(Ordering::Relaxed);
                 lookupswitch(stack, program_counter, *default, pairs)
             }

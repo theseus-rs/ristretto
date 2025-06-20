@@ -86,21 +86,19 @@ pub(crate) fn instructions_from_bytes(
                         .ok_or(InvalidInstructionOffset(u32::from(map_offset)))?,
                 );
             }
-            Instruction::Tableswitch {
-                default, offsets, ..
-            } => {
+            Instruction::Tableswitch(table_switch) => {
                 let position = instruction_to_byte_map
                     .get(&u16::try_from(index)?)
                     .expect("instruction byte");
                 let position = u32::from(*position);
-                let default_offset = position + u32::try_from(*default)?;
+                let default_offset = position + u32::try_from(table_switch.default)?;
                 let instruction_default = byte_to_instruction_map
                     .get(&u16::try_from(default_offset)?)
                     .ok_or(InvalidInstructionOffset(default_offset))?
                     - u16::try_from(index)?;
-                *default = i32::from(instruction_default);
+                table_switch.default = i32::from(instruction_default);
 
-                for offset in offsets.iter_mut() {
+                for offset in &mut table_switch.offsets {
                     let byte_offset = position + u32::try_from(*offset)?;
                     let instruction_offset = byte_to_instruction_map
                         .get(&u16::try_from(byte_offset)?)
@@ -109,19 +107,19 @@ pub(crate) fn instructions_from_bytes(
                     *offset = i32::from(instruction_offset);
                 }
             }
-            Instruction::Lookupswitch { default, pairs } => {
+            Instruction::Lookupswitch(lookup_switch) => {
                 let position = instruction_to_byte_map
                     .get(&u16::try_from(index)?)
                     .expect("instruction byte");
                 let position = u32::from(*position);
-                let default_offset = position + u32::try_from(*default)?;
+                let default_offset = position + u32::try_from(lookup_switch.default)?;
                 let instruction_default = byte_to_instruction_map
                     .get(&u16::try_from(default_offset)?)
                     .ok_or(InvalidInstructionOffset(default_offset))?
                     - u16::try_from(index)?;
-                *default = i32::from(instruction_default);
+                lookup_switch.default = i32::from(instruction_default);
 
-                for (_match, offset) in pairs.iter_mut() {
+                for (_match, offset) in &mut lookup_switch.pairs {
                     let byte_offset = position + u32::try_from(*offset)?;
                     let instruction_offset = byte_to_instruction_map
                         .get(&u16::try_from(byte_offset)?)
@@ -202,22 +200,20 @@ pub(crate) fn instructions_to_bytes(
                         .ok_or(InvalidInstructionOffset(u32::from(map_offset)))?,
                 );
             }
-            Instruction::Tableswitch {
-                default, offsets, ..
-            } => {
+            Instruction::Tableswitch(table_switch) => {
                 let position = u32::try_from(index)?;
                 let position_byte = i32::from(
                     *instruction_to_byte_map
                         .get(&u16::try_from(position)?)
                         .expect("instruction byte"),
                 );
-                let default_offset = position + u32::try_from(*default)?;
+                let default_offset = position + u32::try_from(table_switch.default)?;
                 let default_byte = *instruction_to_byte_map
                     .get(&u16::try_from(default_offset)?)
                     .ok_or(InvalidInstructionOffset(default_offset))?;
-                *default = i32::from(default_byte) - position_byte;
+                table_switch.default = i32::from(default_byte) - position_byte;
 
-                for offset in offsets.iter_mut() {
+                for offset in &mut table_switch.offsets {
                     let instruction_offset = position + u32::try_from(*offset)?;
                     let offset_byte = instruction_to_byte_map
                         .get(&u16::try_from(instruction_offset)?)
@@ -225,20 +221,20 @@ pub(crate) fn instructions_to_bytes(
                     *offset = i32::from(*offset_byte) - position_byte;
                 }
             }
-            Instruction::Lookupswitch { default, pairs } => {
+            Instruction::Lookupswitch(lookup_switch) => {
                 let position = u32::try_from(index)?;
                 let position_byte = i32::from(
                     *instruction_to_byte_map
                         .get(&u16::try_from(position)?)
                         .expect("instruction byte"),
                 );
-                let default_offset = position + u32::try_from(*default)?;
+                let default_offset = position + u32::try_from(lookup_switch.default)?;
                 let default_byte = *instruction_to_byte_map
                     .get(&u16::try_from(default_offset)?)
                     .ok_or(InvalidInstructionOffset(default_offset))?;
-                *default = i32::from(default_byte) - position_byte;
+                lookup_switch.default = i32::from(default_byte) - position_byte;
 
-                for (_match, offset) in pairs.iter_mut() {
+                for (_match, offset) in &mut lookup_switch.pairs {
                     let instruction_offset = position + u32::try_from(*offset)?;
                     let offset_byte = instruction_to_byte_map
                         .get(&u16::try_from(instruction_offset)?)
@@ -257,6 +253,7 @@ pub(crate) fn instructions_to_bytes(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::attributes::instruction::{LookupSwitch, TableSwitch};
     use indexmap::IndexMap;
 
     #[test]
@@ -287,12 +284,12 @@ mod tests {
 
     #[test]
     fn test_to_bytes_invalid_table_switch_default_offset() {
-        let instructions = vec![Instruction::Tableswitch {
+        let instructions = vec![Instruction::Tableswitch(TableSwitch {
             default: 42,
             low: 0,
             high: 0,
             offsets: vec![],
-        }];
+        })];
         let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
@@ -301,12 +298,12 @@ mod tests {
     fn test_to_bytes_invalid_table_switch_offset() {
         let instructions = vec![
             Instruction::Nop,
-            Instruction::Tableswitch {
+            Instruction::Tableswitch(TableSwitch {
                 default: 0,
                 low: 0,
                 high: 0,
                 offsets: vec![42],
-            },
+            }),
         ];
         let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
@@ -314,10 +311,10 @@ mod tests {
 
     #[test]
     fn test_to_bytes_invalid_lookup_switch_default_offset() {
-        let instructions = vec![Instruction::Lookupswitch {
+        let instructions = vec![Instruction::Lookupswitch(LookupSwitch {
             default: 42,
             pairs: IndexMap::new(),
-        }];
+        })];
         let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
@@ -326,10 +323,10 @@ mod tests {
     fn test_to_bytes_invalid_lookup_switch_pairs_offset() {
         let instructions = vec![
             Instruction::Nop,
-            Instruction::Lookupswitch {
+            Instruction::Lookupswitch(LookupSwitch {
                 default: 0,
                 pairs: IndexMap::from([(0, 42)]),
-            },
+            }),
         ];
         let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
@@ -538,12 +535,12 @@ mod tests {
 
     #[test]
     fn test_tableswitch() -> Result<()> {
-        let instruction = Instruction::Tableswitch {
+        let instruction = Instruction::Tableswitch(TableSwitch {
             default: 3,
             low: 3,
             high: 4,
             offsets: vec![1, 2],
-        };
+        });
         let expected_bytes = [
             instruction.code(),
             0,
@@ -591,10 +588,10 @@ mod tests {
 
     #[test]
     fn test_lookupswitch() -> Result<()> {
-        let instruction = Instruction::Lookupswitch {
+        let instruction = Instruction::Lookupswitch(LookupSwitch {
             default: 3,
             pairs: IndexMap::from([(1, 2)]),
-        };
+        });
         let expected_bytes = [
             instruction.code(),
             0,
