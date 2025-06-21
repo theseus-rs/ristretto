@@ -81,10 +81,10 @@ pub(crate) async fn compare_and_swap_int(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn compare_and_swap_long(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.compareAndSwapLong(Ljava/lang/Object;JJJ)Z")
+    jdk::internal::misc::r#unsafe::compare_and_set_long(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -828,10 +828,10 @@ pub(crate) async fn put_short_1(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn put_short_2(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putShort(Ljava/lang/Object;JS)V")
+    jdk::internal::misc::r#unsafe::put_short(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -840,10 +840,10 @@ pub(crate) async fn put_short_2(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn put_short_volatile(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putShortVolatile(Ljava/lang/Object;JS)V")
+    jdk::internal::misc::r#unsafe::put_short_volatile(thread, parameters).await
 }
 
 #[intrinsic_method("sun/misc/Unsafe.reallocateMemory(JJ)J", LessThanOrEqual(JAVA_8))]
@@ -954,6 +954,27 @@ pub(crate) async fn unpark(thread: Arc<Thread>, parameters: Parameters) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::JavaObject;
+
+    /// Creates a java.lang.reflect.Field for testing purposes.
+    async fn create_field(thread: &Arc<Thread>) -> Result<Value> {
+        let vm = thread.vm()?;
+        let descriptor =
+            "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IZILjava/lang/String;[B";
+        let parameters = vec![
+            Value::Object(None),               // Declaring Class
+            "fieldName".to_object(&vm).await?, // Field name
+            Value::Object(None),               // Type
+            Value::Int(0),                     // Modifiers
+            Value::from(false),                // Trusted Final
+            Value::Int(0),                     // Slot
+            "signature".to_object(&vm).await?, // Signature
+            Value::Object(None),               // Annotations
+        ];
+        thread
+            .object("java/lang/reflect/Field", descriptor, &parameters)
+            .await
+    }
 
     #[tokio::test]
     async fn test_address_size() -> Result<()> {
@@ -965,11 +986,58 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: sun.misc.Unsafe.compareAndSwapLong(Ljava/lang/Object;JJJ)Z"
+        expected = "not yet implemented: jdk.internal.misc.Unsafe.allocateInstance(Ljava/lang/Class;)Ljava/lang/Object;"
     )]
-    async fn test_compare_and_swap_long() {
+    async fn test_allocate_instance() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compare_and_swap_long(thread, Parameters::default()).await;
+        let _ = allocate_instance(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.allocateMemory0(J)J")]
+    async fn test_allocate_memory() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = allocate_memory(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_array_base_offset() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = array_base_offset(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(0)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_array_index_scale() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = array_index_scale(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(1)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ensure_class_initialized() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = ensure_class_initialized(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_free_memory() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = free_memory(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_full_fence() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = full_fence(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
@@ -1056,9 +1124,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_object_field_offset() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        let result = object_field_offset(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Long(0)));
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let field = create_field(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(field);
+        let value = object_field_offset(thread, parameters)
+            .await?
+            .expect("offset");
+        let offset: i64 = value.try_into()?;
+        assert_eq!(offset, 0);
         Ok(())
     }
 
@@ -1169,24 +1243,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Unsafe.putShort(Ljava/lang/Object;JS)V"
-    )]
-    async fn test_put_short_2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_short_2(thread, Parameters::default()).await;
-    }
-
-    #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Unsafe.putShortVolatile(Ljava/lang/Object;JS)V"
-    )]
-    async fn test_put_short_volatile() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_short_volatile(thread, Parameters::default()).await;
-    }
-
-    #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = register_natives(thread, Parameters::default()).await?;
@@ -1199,6 +1255,33 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let result = should_be_initialized(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_static_field_base() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let field = create_field(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(field);
+        let value = static_field_base(thread, parameters)
+            .await?
+            .expect("object");
+        assert_eq!(value, Value::Object(None));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_static_field_offset() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let field = create_field(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(field);
+        let value = static_field_offset(thread, parameters)
+            .await?
+            .expect("offset");
+        let offset: i64 = value.try_into()?;
+        assert_eq!(offset, 0);
         Ok(())
     }
 

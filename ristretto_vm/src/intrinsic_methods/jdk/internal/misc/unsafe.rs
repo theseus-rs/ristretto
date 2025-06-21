@@ -787,8 +787,9 @@ pub(crate) async fn load_fence(
 #[async_recursion(?Send)]
 pub(crate) async fn object_field_offset_0(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _ = parameters.pop_object()?;
     Ok(Some(Value::Long(0)))
 }
 
@@ -1225,9 +1226,10 @@ pub(crate) async fn should_be_initialized_0(
 #[async_recursion(?Send)]
 pub(crate) async fn static_field_base_0(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;")
+    let _ = parameters.pop_object()?;
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method(
@@ -1237,9 +1239,10 @@ pub(crate) async fn static_field_base_0(
 #[async_recursion(?Send)]
 pub(crate) async fn static_field_offset_0(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J")
+    let _ = parameters.pop_object()?;
+    Ok(Some(Value::Long(0)))
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.storeFence()V", Between(JAVA_11, JAVA_17))]
@@ -1311,6 +1314,27 @@ pub(crate) async fn writeback_pre_sync_0(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::JavaObject;
+
+    /// Creates a java.lang.reflect.Field for testing purposes.
+    async fn create_field(thread: &Arc<Thread>) -> Result<Value> {
+        let vm = thread.vm()?;
+        let descriptor =
+            "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IZILjava/lang/String;[B";
+        let parameters = vec![
+            Value::Object(None),               // Declaring Class
+            "fieldName".to_object(&vm).await?, // Field name
+            Value::Object(None),               // Type
+            Value::Int(0),                     // Modifiers
+            Value::from(false),                // Trusted Final
+            Value::Int(0),                     // Slot
+            "signature".to_object(&vm).await?, // Signature
+            Value::Object(None),               // Annotations
+        ];
+        thread
+            .object("java/lang/reflect/Field", descriptor, &parameters)
+            .await
+    }
 
     #[tokio::test]
     async fn test_address_size_0() -> Result<()> {
@@ -1475,9 +1499,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_object_field_offset_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        let result = object_field_offset_0(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Long(0)));
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let field = create_field(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(field);
+        let value = object_field_offset_0(thread, parameters)
+            .await?
+            .expect("offset");
+        let offset: i64 = value.try_into()?;
+        assert_eq!(offset, 0);
         Ok(())
     }
 
@@ -1546,21 +1576,30 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;"
-    )]
-    async fn test_static_field_base_0() {
+    async fn test_static_field_base_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = static_field_base_0(thread, Parameters::default()).await;
+        let field = create_field(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(field);
+        let value = static_field_base_0(thread, parameters)
+            .await?
+            .expect("object");
+        assert_eq!(value, Value::Object(None));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J"
-    )]
-    async fn test_static_field_offset_0() {
+    async fn test_static_field_offset_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = static_field_offset_0(thread, Parameters::default()).await;
+        let field = create_field(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(field);
+        let value = static_field_offset_0(thread, parameters)
+            .await?
+            .expect("offset");
+        let offset: i64 = value.try_into()?;
+        assert_eq!(offset, 0);
+        Ok(())
     }
 
     #[tokio::test]
