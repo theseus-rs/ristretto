@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/v0.21.0...v0.22.0) - 2025-06-21
+
+### Added
+- implement jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z
+- implemeted jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
+- implement jdk/internal/misc/Unsafe.pageSize()I and sun/misc/Unsafe.pageSize()I
+
+### Fixed
+- correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()
+
+### Other
+- update Cargo.lock dependencies
+- [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
+- Merge pull request #409 from theseus-rs/optimize-instruction-enum
+- update Cargo.toml dependencies
+- Merge pull request #411 from theseus-rs/correct-lint-warnings
+
+## `ristretto_vm` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.21.0...ristretto_vm-v0.22.0) - 2025-06-21
+
+### Added
+- implement jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z
+- implemeted jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
+- implement jdk/internal/misc/Unsafe.pageSize()I and sun/misc/Unsafe.pageSize()I
+
+### Fixed
+- correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()
+
+### Other
+- Merge pull request #411 from theseus-rs/correct-lint-warnings
+- Merge pull request #409 from theseus-rs/optimize-instruction-enum
+- [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
+
+## `ristretto_macros` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.21.0...ristretto_macros-v0.22.0) - 2025-06-21
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_jit` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.21.0...ristretto_jit-v0.22.0) - 2025-06-21
+
+### Other
+- Merge pull request #409 from theseus-rs/optimize-instruction-enum
+- [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
+
+## `ristretto_classloader` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.21.0...ristretto_classloader-v0.22.0) - 2025-06-21
+
+### Fixed
+- correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()
+
+## `ristretto_classfile` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.21.0...ristretto_classfile-v0.22.0) - 2025-06-21
+
+### Other
+- [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
+
 ## `ristretto_cli` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/v0.20.0...v0.21.0) - 2025-06-20
 
 ### Added
