@@ -956,6 +956,14 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn test_address_size() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = address_size(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(8)));
+        Ok(())
+    }
+
+    #[tokio::test]
     #[should_panic(
         expected = "not yet implemented: sun.misc.Unsafe.compareAndSwapLong(Ljava/lang/Object;JJJ)Z"
     )]
@@ -1021,6 +1029,14 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_load_fence() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = load_fence(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
     #[should_panic(
         expected = "not yet implemented: sun.misc.Unsafe.monitorEnter(Ljava/lang/Object;)V"
     )]
@@ -1036,6 +1052,37 @@ mod tests {
     async fn test_monitor_exit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = monitor_exit(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_object_field_offset() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = object_field_offset(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Long(0)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_page_size() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let value = page_size(thread, Parameters::default())
+            .await?
+            .expect("page_size");
+        let page_size: i32 = value.try_into()?;
+        let expected_page_size;
+
+        #[cfg(target_os = "macos")]
+        {
+            expected_page_size = 16_384;
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            expected_page_size = 4_096;
+        }
+
+        assert_eq!(page_size, expected_page_size);
+        Ok(())
     }
 
     #[tokio::test]
@@ -1137,6 +1184,34 @@ mod tests {
     async fn test_put_short_volatile() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = put_short_volatile(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_should_be_initialized() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = should_be_initialized(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_store_fence() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = crate::intrinsic_methods::jdk::internal::misc::r#unsafe::store_fence(
+            thread,
+            Parameters::default(),
+        )
+        .await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]

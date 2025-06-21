@@ -829,7 +829,20 @@ pub(crate) async fn page_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.pageSize()I")
+    let page_size;
+
+    #[cfg(target_os = "macos")]
+    {
+        page_size = 16_384;
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        // The page size is typically 4096 bytes on most systems.
+        page_size = 4_096;
+    }
+
+    Ok(Some(Value::Int(page_size)))
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.park(ZJ)V", GreaterThanOrEqual(JAVA_11))]
@@ -1469,10 +1482,26 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.pageSize()I")]
-    async fn test_page_size() {
+    async fn test_page_size() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = page_size(thread, Parameters::default()).await;
+        let value = page_size(thread, Parameters::default())
+            .await?
+            .expect("page_size");
+        let page_size: i32 = value.try_into()?;
+        let expected_page_size;
+
+        #[cfg(target_os = "macos")]
+        {
+            expected_page_size = 16_384;
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            expected_page_size = 4_096;
+        }
+
+        assert_eq!(page_size, expected_page_size);
+        Ok(())
     }
 
     #[tokio::test]
