@@ -1,4 +1,3 @@
-use crate::JavaError::RuntimeException;
 use crate::intrinsic_methods::java::io::unixfilesystem;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -204,7 +203,6 @@ pub(crate) async fn list_roots_0(
 ) -> Result<Option<Value>> {
     #[cfg(target_os = "windows")]
     {
-        use std::io::{Error, ErrorKind};
         let mut count = 0i32;
         for letter in b'A'..=b'Z' {
             let drive = format!("{}:\\", letter as char);
@@ -216,7 +214,7 @@ pub(crate) async fn list_roots_0(
     }
     #[cfg(not(target_os = "windows"))]
     {
-        Err(RuntimeException("Only supported on Windows".to_string()).into())
+        Err(crate::JavaError::RuntimeException("Only supported on Windows".to_string()).into())
     }
 }
 
