@@ -377,37 +377,46 @@ impl Class {
         self.fields.values().cloned().collect()
     }
 
-    /// Get a static field by name.
+    /// Get a field by name.
     ///
     /// # Errors
     ///
     /// if the field is not found.
-    pub fn static_field<S: AsRef<str>>(&self, name: S) -> Result<Arc<Field>> {
+    pub fn field<S: AsRef<str>>(&self, name: S) -> Result<Arc<Field>> {
         let name = name.as_ref();
         if let Some(field) = self.fields.get(name) {
-            if !field.access_flags().contains(FieldAccessFlags::STATIC) {
-                return Err(FieldNotFound {
-                    class_name: self.name().to_string(),
-                    field_name: name.to_string(),
-                });
-            }
             return Ok(field.clone());
         }
-
         let Some(parent) = &self.parent()? else {
             return Err(FieldNotFound {
                 class_name: self.name().to_string(),
                 field_name: name.to_string(),
             });
         };
-
-        let Ok(field) = parent.static_field(name) else {
+        let Ok(field) = parent.field(name) else {
             return Err(FieldNotFound {
                 class_name: self.name().to_string(),
                 field_name: name.to_string(),
             });
         };
         Ok(field)
+    }
+
+    /// Get a static field by name.
+    ///
+    /// # Errors
+    ///
+    /// if the field is not found.
+    pub fn static_field<S: AsRef<str>>(&self, name: S) -> Result<Arc<Field>> {
+        let field = self.field(&name)?;
+        if field.access_flags().contains(FieldAccessFlags::STATIC) {
+            Ok(field)
+        } else {
+            Err(FieldNotFound {
+                class_name: self.name().to_string(),
+                field_name: name.as_ref().to_string(),
+            })
+        }
     }
 
     /// Get a list of field names in the class hierarchy.
@@ -915,6 +924,26 @@ mod tests {
         let class = string_class().await?;
         let fields = class.fields();
         assert_eq!(11, fields.len());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_field() -> Result<()> {
+        let class = string_class().await?;
+        let result = class.field("value");
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_field_not_found() -> Result<()> {
+        let class = string_class().await?;
+        let result = class.field("foo");
+        assert!(matches!(
+            result,
+            Err(FieldNotFound { class_name, field_name })
+            if class.name() == class_name && field_name == "foo"
+        ));
         Ok(())
     }
 

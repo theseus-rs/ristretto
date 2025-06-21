@@ -231,7 +231,7 @@ pub(crate) async fn resolve(
         Ok(Some(member_self.into()))
     } else if member_name_flags.contains(MemberNameFlags::IS_FIELD) {
         let field_name: String = name.try_into()?;
-        let field = class_object.field(&field_name)?;
+        let field = class.field(&field_name)?;
         let field_access_flags = field.access_flags().bits();
         let modifiers = i32::from(field_access_flags);
         let flags = flags | modifiers;
