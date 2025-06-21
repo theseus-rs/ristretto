@@ -74,7 +74,7 @@ pub(crate) async fn ensure_materialized_for_stack_walk(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V")
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -314,10 +314,16 @@ pub(crate) async fn r#yield(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    #[cfg(not(target_family = "wasm"))]
-    tokio::task::yield_now().await;
-    #[cfg(target_family = "wasm")]
-    std::thread::yield_now();
+    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
+    {
+        tokio::task::yield_now().await;
+    }
+
+    #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+    {
+        std::thread::yield_now();
+    }
+
     Ok(None)
 }
 
@@ -373,12 +379,14 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V"
-    )]
-    async fn test_ensure_materialized_for_stack_walk() {
+    async fn test_ensure_materialized_for_stack_walk() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ensure_materialized_for_stack_walk(thread, Parameters::default()).await;
+        let parameters = Parameters::default();
+        let value = ensure_materialized_for_stack_walk(thread, parameters)
+            .await
+            .expect("value");
+        assert!(value.is_none());
+        Ok(())
     }
 
     #[tokio::test]
