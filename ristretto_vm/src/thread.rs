@@ -6,6 +6,7 @@ use async_recursion::async_recursion;
 use byte_unit::{Byte, UnitType};
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Value};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
 use sysinfo::{Pid, ProcessRefreshKind, RefreshKind, System};
 use tokio::sync::RwLock;
@@ -24,6 +25,7 @@ pub struct Thread {
     name: Arc<RwLock<String>>,
     java_object: Arc<RwLock<Value>>,
     frames: Arc<RwLock<Vec<Arc<Frame>>>>,
+    interrupted: AtomicBool,
 }
 
 impl Thread {
@@ -43,6 +45,7 @@ impl Thread {
             name: Arc::new(RwLock::new(name)),
             java_object: Arc::new(RwLock::new(java_object)),
             frames: Arc::new(RwLock::new(Vec::new())),
+            interrupted: AtomicBool::new(false),
         });
         Ok(thread)
     }
@@ -108,6 +111,20 @@ impl Thread {
         let frames = self.frames.read().await;
         let frame = frames.last().ok_or(InternalError("No frame".to_string()))?;
         Ok(frame.clone())
+    }
+
+    /// Set the thread as interrupted.
+    pub fn interrupt(&self) {
+        self.interrupted.store(true, Ordering::SeqCst);
+    }
+
+    /// Check if the thread is interrupted and clear the interrupt if specified.
+    pub fn is_interrupted(&self, clear_interrupt: bool) -> bool {
+        if clear_interrupt {
+            self.interrupted.swap(false, Ordering::SeqCst)
+        } else {
+            self.interrupted.load(Ordering::SeqCst)
+        }
     }
 
     /// Get a class.
@@ -449,6 +466,21 @@ mod tests {
     use crate::ConfigurationBuilder;
     use ristretto_classloader::ClassPath;
     use std::path::PathBuf;
+
+    #[tokio::test]
+    async fn test_interrupt() -> Result<()> {
+        let vm = test_vm().await?;
+        let thread = vm.new_thread()?;
+
+        assert!(!thread.is_interrupted(false));
+        thread.interrupt();
+        assert!(thread.is_interrupted(false));
+
+        // Clear the interrupt flag
+        assert!(thread.is_interrupted(true));
+        assert!(!thread.is_interrupted(false));
+        Ok(())
+    }
 
     fn classes_jar_path() -> PathBuf {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
