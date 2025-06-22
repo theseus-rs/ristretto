@@ -119,10 +119,20 @@ pub(crate) async fn get_stack_trace_0(
 #[intrinsic_method("java/lang/Thread.getThreads()[Ljava/lang/Thread;", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_threads(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.getThreads()[Ljava/lang/Thread;")
+    let vm = thread.vm()?;
+    let mut threads = Vec::new();
+
+    for vm_thread in vm.threads() {
+        let thread_object = vm_thread.java_object().await;
+        threads.push(thread_object);
+    }
+
+    let thread_class = thread.class("java/lang/Thread").await?;
+    let threads = (thread_class, threads).try_into()?;
+    Ok(Some(threads))
 }
 
 #[intrinsic_method("java/lang/Thread.holdsLock(Ljava/lang/Object;)Z", Any)]
@@ -252,10 +262,10 @@ pub(crate) async fn sleep(
     let millis = parameters.pop_long()?;
     let millis = u64::try_from(millis)?;
     let duration = Duration::from_millis(millis);
-    #[cfg(not(target_family = "wasm"))]
-    tokio::time::sleep(duration).await;
     #[cfg(target_family = "wasm")]
     std::thread::sleep(duration);
+    #[cfg(not(target_family = "wasm"))]
+    tokio::time::sleep(duration).await;
     Ok(None)
 }
 
@@ -274,10 +284,10 @@ pub(crate) async fn sleep_nanos_0(
     let nanos = parameters.pop_long()?;
     let nanos = u64::try_from(nanos)?;
     let duration = Duration::from_nanos(nanos);
-    #[cfg(not(target_family = "wasm"))]
-    tokio::time::sleep(duration).await;
     #[cfg(target_family = "wasm")]
     std::thread::sleep(duration);
+    #[cfg(not(target_family = "wasm"))]
+    tokio::time::sleep(duration).await;
     Ok(None)
 }
 
@@ -336,6 +346,7 @@ pub(crate) async fn yield_0(thread: Arc<Thread>, parameters: Parameters) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classloader::Class;
 
     #[tokio::test]
     async fn test_clear_interrupt_event() -> Result<()> {
@@ -417,12 +428,14 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Thread.getThreads()[Ljava/lang/Thread;"
-    )]
-    async fn test_get_threads() {
+    async fn test_get_threads() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_threads(thread, Parameters::default()).await;
+        let value = get_threads(thread, Parameters::default())
+            .await?
+            .expect("threads");
+        let (_class, threads): (Arc<Class>, Vec<Option<Reference>>) = value.try_into()?;
+        assert_eq!(threads.len(), 2);
+        Ok(())
     }
 
     #[tokio::test]
