@@ -1,4 +1,4 @@
-use crate::JavaError::NullPointerException;
+use crate::JavaError::{NullPointerException, RuntimeException};
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -10,12 +10,26 @@ use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 use std::time::Duration;
 
+/// Get the thread from the thread ID in the `eetop` field of the thread object.
+fn get_thread(thread: &Arc<Thread>, thread_object: &Object) -> Result<Arc<Thread>> {
+    let thread_id = thread_object.value("eetop")?.to_long()?;
+    let thread_id = u64::try_from(thread_id)?;
+    let vm = thread.vm()?;
+    let Some(thread) = vm.thread(thread_id) else {
+        return Err(RuntimeException(format!("Thread not found for id {thread_id}")).into());
+    };
+    Ok(thread)
+}
+
 #[intrinsic_method("java/lang/Thread.clearInterruptEvent()V", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn clear_interrupt_event(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let thread_object: Object = parameters.pop_object()?;
+    let instance_thread = get_thread(&thread, &thread_object)?;
+    let _ = instance_thread.is_interrupted(true);
     Ok(None)
 }
 
@@ -147,31 +161,37 @@ pub(crate) async fn holds_lock(
 #[intrinsic_method("java/lang/Thread.interrupt0()V", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn interrupt_0(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.interrupt0()V")
+    let thread_object: Object = parameters.pop_object()?;
+    let instance_thread = get_thread(&thread, &thread_object)?;
+    instance_thread.interrupt();
+    Ok(None)
 }
 
 #[intrinsic_method("java/lang/Thread.isAlive()Z", LessThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn is_alive(
     thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object: Object = thread.java_object().await.try_into()?;
-    let eetop = object.value("eetop")?.to_long()?;
-    let is_alive = eetop != 0;
+    let thread_object: Object = parameters.pop_object()?;
+    let is_alive = get_thread(&thread, &thread_object).is_ok();
     Ok(Some(Value::from(is_alive)))
 }
 
 #[intrinsic_method("java/lang/Thread.isInterrupted(Z)Z", LessThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
 pub(crate) async fn is_interrupted(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.isInterrupted(Z)Z")
+    let clear_interrupt = parameters.pop_bool()?;
+    let thread_object: Object = parameters.pop_object()?;
+    let instance_thread = get_thread(&thread, &thread_object)?;
+    let was_interrupted = instance_thread.is_interrupted(clear_interrupt);
+    Ok(Some(Value::from(was_interrupted)))
 }
 
 #[intrinsic_method("java/lang/Thread.registerNatives()V", Any)]
@@ -346,12 +366,26 @@ pub(crate) async fn yield_0(thread: Arc<Thread>, parameters: Parameters) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::VM;
     use ristretto_classloader::Class;
+
+    /// Helper function to create a thread object for testing
+    async fn create_thread(vm: &VM) -> Result<Value> {
+        let thread_class = vm.class("java/lang/Thread").await?;
+        let thread_object = Object::new(thread_class)?;
+        let thread = vm.new_thread()?;
+        let thread_id = thread.id();
+        thread_object.set_value("eetop", Value::from(thread_id))?;
+        Ok(Value::from(thread_object))
+    }
 
     #[tokio::test]
     async fn test_clear_interrupt_event() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        let result = clear_interrupt_event(thread, Parameters::default()).await?;
+        let (vm, thread) = crate::test::thread().await?;
+        let thread_instance = create_thread(&vm).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(thread_instance);
+        let result = clear_interrupt_event(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -448,17 +482,43 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Thread.interrupt0()V")]
-    async fn test_interrupt_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = interrupt_0(thread, Parameters::default()).await;
+    async fn test_interrupt_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let thread_instance = create_thread(&vm).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(thread_instance);
+        let result = interrupt_0(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Thread.isInterrupted(Z)Z")]
-    async fn test_is_interrupted() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_interrupted(thread, Parameters::default()).await;
+    async fn test_is_interrupted() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let thread_instance = create_thread(&vm).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(thread_instance.clone());
+        parameters.push(Value::from(false)); // clear interrupt
+        let result = is_interrupted(thread.clone(), parameters)
+            .await?
+            .expect("was_cleared");
+        let was_interrupted: bool = result.try_into()?;
+        assert!(!was_interrupted);
+
+        let mut parameters = Parameters::default();
+        parameters.push(thread_instance.clone());
+        let result = interrupt_0(thread.clone(), parameters).await?;
+        assert_eq!(result, None);
+
+        let mut parameters = Parameters::default();
+        parameters.push(thread_instance);
+        parameters.push(Value::from(true)); // clear interrupt
+        let result = is_interrupted(thread, parameters)
+            .await?
+            .expect("was_cleared");
+        let was_interrupted: bool = result.try_into()?;
+        assert!(was_interrupted);
+        Ok(())
     }
 
     #[tokio::test]

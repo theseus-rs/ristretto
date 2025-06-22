@@ -226,6 +226,11 @@ impl VM {
         Ok(id)
     }
 
+    /// Get a thread by its identifier
+    pub fn thread(&self, thread_id: u64) -> Option<Arc<Thread>> {
+        self.threads.get(&thread_id).map(|thread| thread.clone())
+    }
+
     /// Get the VM threads
     #[must_use]
     pub fn threads(&self) -> Vec<Arc<Thread>> {
