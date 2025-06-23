@@ -17,7 +17,7 @@ pub(crate) async fn is_supported_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.vm.ContinuationSupport.isSupported0()Z")
+    Ok(Some(Value::from(false)))
 }
 
 #[cfg(test)]
@@ -25,11 +25,13 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.vm.ContinuationSupport.isSupported0()Z"
-    )]
-    async fn test_is_supported_0() {
+    async fn test_is_supported_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_supported_0(thread, Parameters::default()).await;
+        let value = is_supported_0(thread, Parameters::default())
+            .await?
+            .expect("continuations support");
+        let supports_continuations: bool = value.try_into()?;
+        assert!(!supports_continuations);
+        Ok(())
     }
 }
