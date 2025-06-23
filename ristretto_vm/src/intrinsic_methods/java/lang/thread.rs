@@ -9,6 +9,8 @@ use ristretto_classloader::{Object, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 use std::time::Duration;
+#[cfg(not(target_family = "wasm"))]
+use thread_priority::{ThreadPriority, ThreadPriorityValue, set_current_thread_priority};
 
 /// Get the thread from the thread ID in the `eetop` field of the thread object.
 fn get_thread(thread: &Arc<Thread>, thread_object: &Object) -> Result<Arc<Thread>> {
@@ -259,8 +261,55 @@ pub(crate) async fn set_priority_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _new_priority = parameters.pop_int()?;
-    // TODO: implement priority if/when tokio supports it
+    let new_priority = parameters.pop_int()?;
+
+    #[cfg(target_family = "wasm")]
+    {
+        let _ = new_priority;
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let priority: ThreadPriority = match new_priority {
+            ..=1 => ThreadPriority::Min,
+            2..=9 => {
+                let priority: u8;
+
+                #[cfg(target_os = "macos")]
+                {
+                    priority = u8::try_from(new_priority)?
+                        .saturating_mul(4)
+                        .saturating_add(7);
+                }
+
+                #[cfg(target_os = "windows")]
+                {
+                    priority = match new_priority {
+                        2 => 1,
+                        3..=4 => 2,
+                        5 => 3,
+                        6 => 4,
+                        7..=8 => 5,
+                        _ => 6,
+                    };
+                }
+
+                #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+                {
+                    priority = u8::try_from(new_priority)?.saturating_mul(8);
+                }
+
+                let priority_value: ThreadPriorityValue = priority.try_into().map_err(|error| {
+                    RuntimeException(format!("Unable to determine thread priority: {error}"))
+                })?;
+                ThreadPriority::Crossplatform(priority_value)
+            }
+            _ => ThreadPriority::Max,
+        };
+        set_current_thread_priority(priority)
+            .map_err(|error| RuntimeException(format!("Unable to set thread priority: {error}")))?;
+    }
+
     Ok(None)
 }
 
@@ -565,9 +614,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_priority_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        let priority = Value::Int(0);
-        let result = set_priority_0(thread, Parameters::new(vec![priority])).await?;
+        let (vm, thread) = crate::test::thread().await?;
+        let thread_instance = create_thread(&vm).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(thread_instance);
+        parameters.push(Value::Int(7)); // newPriority
+        let result = set_priority_0(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
     }
