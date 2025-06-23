@@ -60,6 +60,10 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/RuntimeException.html>
     #[error("{0}")]
     RuntimeException(String),
+    /// `UnsupportedOperationException`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/UnsupportedOperationException.html>
+    #[error("{0}")]
+    UnsupportedOperationException(String),
 }
 
 impl JavaError {
@@ -83,6 +87,9 @@ impl JavaError {
             JavaError::NoClassDefFoundError(_) => "java.lang.NoClassDefFoundError",
             JavaError::NullPointerException(_) => "java.lang.NullPointerException",
             JavaError::RuntimeException(_) => "java.lang.RuntimeException",
+            JavaError::UnsupportedOperationException(_) => {
+                "java.lang.UnsupportedOperationException"
+            }
         }
     }
 
@@ -204,6 +211,16 @@ mod tests {
     fn test_runtime_exception() {
         let error = JavaError::RuntimeException("foo".to_string());
         assert_eq!(error.class_name(), "java.lang.RuntimeException");
+        assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
+    fn test_unsupported_operation_exception() {
+        let error = JavaError::UnsupportedOperationException("foo".to_string());
+        assert_eq!(
+            error.class_name(),
+            "java.lang.UnsupportedOperationException"
+        );
         assert_eq!(error.message(), "foo");
     }
 }

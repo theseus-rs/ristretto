@@ -1,4 +1,4 @@
-use crate::JavaError::{NullPointerException, RuntimeException};
+use crate::JavaError::{NullPointerException, RuntimeException, UnsupportedOperationException};
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -209,7 +209,10 @@ pub(crate) async fn resume_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.resume0()V")
+    Err(
+        UnsupportedOperationException("java/lang/Thread.resume0()V is not supported".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method(
@@ -326,7 +329,10 @@ pub(crate) async fn start_0(thread: Arc<Thread>, _parameters: Parameters) -> Res
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn stop_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.stop0(Ljava/lang/Object;)V")
+    Err(UnsupportedOperationException(
+        "java/lang/Thread.stop0(Ljava/lang/Object;)V is not supported".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("java/lang/Thread.suspend0()V", LessThanOrEqual(JAVA_17))]
@@ -335,7 +341,10 @@ pub(crate) async fn suspend_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.suspend0()V")
+    Err(
+        UnsupportedOperationException("java/lang/Thread.suspend0()V is not supported".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("java/lang/Thread.yield()V", LessThanOrEqual(JAVA_17))]
@@ -530,10 +539,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Thread.resume0()V")]
     async fn test_resume_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = resume_0(thread, Parameters::default()).await;
+        let result = resume_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -609,17 +618,17 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Thread.stop0(Ljava/lang/Object;)V")]
     async fn test_stop_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = stop_0(thread, Parameters::default()).await;
+        let result = stop_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Thread.suspend0()V")]
     async fn test_suspend_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = suspend_0(thread, Parameters::default()).await;
+        let result = suspend_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
