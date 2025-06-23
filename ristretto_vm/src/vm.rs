@@ -1,11 +1,10 @@
 use crate::Error::InternalError;
-use crate::handles::Handles;
+use crate::handles::{FileHandle, HandleManager, ThreadHandle};
 use crate::intrinsic_methods::MethodRegistry;
 use crate::java_object::JavaObject;
 use crate::rust_value::RustValue;
 use crate::thread::Thread;
 use crate::{Configuration, ConfigurationBuilder, Result};
-use dashmap::DashMap;
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_PREVIEW_MINOR_VERSION, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
@@ -36,10 +35,10 @@ pub struct VM {
     java_major_version: u16,
     java_class_file_version: Version,
     method_registry: MethodRegistry,
-    next_thread_id: AtomicU64,
-    threads: DashMap<u64, Arc<Thread>>,
     compiler: Option<Compiler>,
-    handles: Handles,
+    next_thread_id: AtomicU64,
+    thread_handles: HandleManager<u64, ThreadHandle>,
+    file_handles: HandleManager<String, FileHandle>,
 }
 
 /// VM
@@ -142,10 +141,10 @@ impl VM {
             java_major_version,
             java_class_file_version,
             method_registry,
-            next_thread_id: AtomicU64::new(1),
-            threads: DashMap::new(),
             compiler,
-            handles: Handles::new(),
+            next_thread_id: AtomicU64::new(1),
+            thread_handles: HandleManager::new(),
+            file_handles: HandleManager::new(),
         });
         vm.initialize().await?;
         Ok(vm)
@@ -213,6 +212,11 @@ impl VM {
         &self.method_registry
     }
 
+    /// Get the JIT Compiler
+    pub(crate) fn compiler(&self) -> Option<&Compiler> {
+        self.compiler.as_ref()
+    }
+
     /// Get the next thread ID
     ///
     /// # Errors
@@ -226,39 +230,15 @@ impl VM {
         Ok(id)
     }
 
-    /// Get a thread by its identifier
-    pub fn thread(&self, thread_id: u64) -> Option<Arc<Thread>> {
-        self.threads.get(&thread_id).map(|thread| thread.clone())
-    }
-
-    /// Get the VM threads
+    /// Get the VM thread handles
     #[must_use]
-    pub fn threads(&self) -> Vec<Arc<Thread>> {
-        self.threads
-            .iter()
-            .map(|entry| entry.value().clone())
-            .collect()
+    pub(crate) fn thread_handles(&self) -> &HandleManager<u64, ThreadHandle> {
+        &self.thread_handles
     }
 
-    /// Get the JIT Compiler
-    pub(crate) fn compiler(&self) -> Option<&Compiler> {
-        self.compiler.as_ref()
-    }
-
-    /// Get the handles
-    pub(crate) fn handles(&self) -> &Handles {
-        &self.handles
-    }
-
-    /// Create a new thread
-    ///
-    /// # Errors
-    ///
-    /// if the thread cannot be created
-    pub(crate) fn new_thread(&self) -> Result<Arc<Thread>> {
-        let thread = Thread::new(&self.vm)?;
-        self.threads.insert(thread.id(), thread.clone());
-        Ok(thread)
+    /// Get the VM file handles
+    pub(crate) fn file_handles(&self) -> &HandleManager<String, FileHandle> {
+        &self.file_handles
     }
 
     /// Initialize the VM
@@ -312,7 +292,11 @@ impl VM {
     ///
     /// if the primordial thread cannot be initialized
     async fn initialize_primordial_thread(&self) -> Result<()> {
-        let thread = self.new_thread()?;
+        let thread_id = self.next_thread_id()?;
+        let thread = Thread::new(&self.vm, thread_id)?;
+        self.thread_handles
+            .insert(thread.id(), ThreadHandle::from(thread.clone()))
+            .await?;
         let thread_id = i64::try_from(thread.id())?;
         let thread_group = thread
             .object("java.lang.ThreadGroup", "", &[] as &[Value])
@@ -325,7 +309,7 @@ impl VM {
             let thread_class = self.class("java.lang.Thread").await?;
             let new_thread = Object::new(thread_class)?;
             new_thread.set_value("daemon", Value::Int(0))?;
-            new_thread.set_value("eetop", Value::Long(0))?;
+            new_thread.set_value("eetop", Value::Long(thread_id))?;
             new_thread.set_value("group", thread_group.clone())?;
             new_thread.set_value("priority", Value::Int(5))?;
             new_thread.set_value("stackSize", Value::Long(0))?;
@@ -345,7 +329,7 @@ impl VM {
 
             let thread_class = self.class("java.lang.Thread").await?;
             let new_thread = Object::new(thread_class)?;
-            new_thread.set_value("eetop", Value::Long(0))?;
+            new_thread.set_value("eetop", Value::Long(thread_id))?;
             new_thread.set_value("holder", field_holder)?;
             new_thread.set_value("interrupted", Value::Int(0))?;
             new_thread.set_value("tid", Value::Long(thread_id))?;
@@ -361,12 +345,12 @@ impl VM {
     /// # Errors
     ///
     /// if the primordial thread cannot be found
-    fn primordial_thread(&self) -> Result<Arc<Thread>> {
-        let thread = self.threads.get(&1).map(|entry| entry.value().clone());
-        let Some(thread) = thread else {
+    async fn primordial_thread(&self) -> Result<Arc<Thread>> {
+        let thread_handle = self.thread_handles.get(&1).await;
+        let Some(thread_handle) = thread_handle else {
             return Err(InternalError("Primordial thread not found".into()));
         };
-        Ok(thread)
+        Ok(thread_handle.thread.clone())
     }
 
     /// Load a class (e.g. "java.lang.Object").
@@ -375,7 +359,7 @@ impl VM {
     ///
     /// if the class cannot be loaded
     pub async fn class<S: AsRef<str>>(&self, class_name: S) -> Result<Arc<Class>> {
-        let thread = self.primordial_thread()?;
+        let thread = self.primordial_thread().await?;
         thread.class(class_name).await
     }
 
@@ -437,7 +421,7 @@ impl VM {
     {
         let class = self.class(class).await?;
         let method = class.try_get_method(method, descriptor)?;
-        let thread = self.primordial_thread()?;
+        let thread = self.primordial_thread().await?;
         thread.execute(&class, &method, parameters).await
     }
 
@@ -480,7 +464,7 @@ impl VM {
         C: AsRef<str>,
         M: AsRef<str>,
     {
-        let thread = self.primordial_thread()?;
+        let thread = self.primordial_thread().await?;
         thread.object(class_name, descriptor, parameters).await
     }
 }

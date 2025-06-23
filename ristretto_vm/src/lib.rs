@@ -33,7 +33,7 @@
 //! let mut vm = VM::new(configuration).await?;
 //!
 //! // Execute main method of a class
-//! let _ = vm.invoke_main(Vec::<String>::new()).await?;
+//! let _ = vm.invoke_main(&[] as &[&str]).await?;
 //! # Ok(())
 //! # }
 //! ```
@@ -62,7 +62,6 @@
 mod configuration;
 mod error;
 mod frame;
-mod handle;
 mod handles;
 mod instruction;
 mod intrinsic_methods;

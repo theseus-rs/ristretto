@@ -13,7 +13,8 @@ pub(crate) async fn thread() -> Result<(Arc<VM>, Arc<Thread>)> {
         .class_path(class_path.clone())
         .build()?;
     let vm = VM::new(configuration).await?;
-    let thread = vm.new_thread()?;
+    let weak_vm = Arc::downgrade(&vm);
+    let thread = Thread::new(&weak_vm, 3)?;
     Ok((vm, thread))
 }
 

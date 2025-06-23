@@ -30,12 +30,8 @@ pub struct Thread {
 
 impl Thread {
     /// Create a new thread.
-    pub fn new(vm: &Weak<VM>) -> Result<Arc<Self>> {
+    pub fn new(vm: &Weak<VM>, id: u64) -> Result<Arc<Self>> {
         let vm_ref = vm.clone();
-        let vm = vm
-            .upgrade()
-            .ok_or(InternalError("VM is not available".to_string()))?;
-        let id = vm.next_thread_id()?;
         let name = format!("Thread-{id}");
         let java_object = Value::Object(None);
         let thread = Arc::new_cyclic(|thread| Thread {
@@ -469,8 +465,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_interrupt() -> Result<()> {
-        let vm = test_vm().await?;
-        let thread = vm.new_thread()?;
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
 
         assert!(!thread.is_interrupted(false));
         thread.interrupt();
@@ -505,8 +500,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hello_world_class() -> Result<()> {
-        let vm = test_vm().await?;
-        let thread = vm.new_thread()?;
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("HelloWorld").await?;
         assert_eq!("HelloWorld", class.name());
         Ok(())
@@ -514,8 +508,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_constants_class() -> Result<()> {
-        let vm = test_vm().await?;
-        let thread = vm.new_thread()?;
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("Constants").await?;
         assert_eq!("Constants", class.name());
         Ok(())
@@ -523,8 +516,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_class_inheritance() -> Result<()> {
-        let vm = test_vm().await?;
-        let thread = vm.new_thread()?;
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let hash_map = thread.class("java/util/HashMap").await?;
         assert_eq!("java/util/HashMap", hash_map.name());
 
@@ -539,8 +531,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_new_object_integer() -> Result<()> {
-        let vm = test_vm().await?;
-        let thread = vm.new_thread()?;
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let object = thread.object("java/lang/Integer", "I", &[42]).await?;
         let value: i32 = object.try_into()?;
         assert_eq!(42, value);
@@ -549,8 +540,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_print_stack_trace() -> Result<()> {
-        let vm = test_vm().await?;
-        let thread = vm.new_thread()?;
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         thread.print_stack_trace().await;
         Ok(())
     }

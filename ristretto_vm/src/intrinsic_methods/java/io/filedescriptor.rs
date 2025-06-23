@@ -1,5 +1,4 @@
 use crate::JavaError::IoException;
-use crate::handle::Handle;
 use crate::intrinsic_methods::java::io::fileoutputstream::file_handle_identifier;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -11,7 +10,6 @@ use ristretto_classfile::VersionSpecification::{
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{Object, Value};
 use ristretto_macros::intrinsic_method;
-use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
 use tokio::fs::File;
@@ -51,7 +49,7 @@ pub(crate) async fn close_0(
 ) -> Result<Option<Value>> {
     let file_descriptor = parameters.pop_object()?;
     let vm = thread.vm()?;
-    let handles = vm.handles();
+    let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
 
@@ -60,7 +58,7 @@ pub(crate) async fn close_0(
         file_descriptor.set_value("handle", Value::Long(-1))?;
     }
 
-    let Some(handle) = handles.remove(&handle_identifier).await else {
+    let Some(handle) = file_handles.remove(&handle_identifier).await else {
         return Err(IoException(format!(
             "File handle not found for identifier: {handle_identifier}"
         ))
@@ -104,14 +102,13 @@ pub(crate) async fn get_append(
         }
         _ => {
             let vm = thread.vm()?;
-            let handles = vm.handles();
+            let file_handles = vm.file_handles();
             let fd = i64::from(handle);
             let handle_identifier = file_handle_identifier(fd);
-            let handle_guard = handles.get(&handle_identifier).await.ok_or_else(|| {
+            let file_handle = file_handles.get(&handle_identifier).await.ok_or_else(|| {
                 IoException(format!("File handle not found: {handle_identifier}"))
             })?;
-            let Handle::File { append, .. } = handle_guard.deref();
-            *append
+            file_handle.append
         }
     };
     Ok(Some(Value::from(append)))
@@ -151,14 +148,14 @@ pub(crate) async fn sync_0(
 ) -> Result<Option<Value>> {
     let file_descriptor = parameters.pop_object()?;
     let vm = thread.vm()?;
-    let handles = vm.handles();
+    let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
-    let mut handle_guard = handles
+    let file_handle = file_handles
         .get_mut(&handle_identifier)
         .await
         .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
-    let Handle::File { file, .. } = handle_guard.deref_mut();
+    let file = &file_handle.file;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
     {
@@ -185,9 +182,9 @@ mod tests {
     #[tokio::test]
     async fn test_get_append() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let handles = [0, 1, 2];
+        let file_handles = [0, 1, 2];
 
-        for handle in handles {
+        for handle in file_handles {
             let result =
                 get_append(thread.clone(), Parameters::new(vec![Value::Int(handle)])).await?;
             assert_eq!(Some(Value::from(false)), result);
