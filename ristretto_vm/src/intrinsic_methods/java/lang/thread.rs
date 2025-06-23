@@ -1,5 +1,6 @@
 use crate::JavaError::{NullPointerException, RuntimeException, UnsupportedOperationException};
 use crate::Result;
+use crate::handles::ThreadHandle;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
@@ -11,6 +12,8 @@ use std::sync::Arc;
 use std::time::Duration;
 #[cfg(not(target_family = "wasm"))]
 use thread_priority::{ThreadPriority, ThreadPriorityValue, set_current_thread_priority};
+use tokio::runtime::Builder;
+use tracing::error;
 
 /// Get the thread from the thread ID in the `eetop` field of the thread object.
 async fn get_thread(thread: &Arc<Thread>, thread_object: &Object) -> Result<Arc<Thread>> {
@@ -368,10 +371,57 @@ pub(crate) async fn sleep_nanos_0(
 
 #[intrinsic_method("java/lang/Thread.start0()V", Any)]
 #[async_recursion(?Send)]
-pub(crate) async fn start_0(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    let thread_id = i64::try_from(thread.id())?;
-    let object: Object = thread.java_object().await.try_into()?;
-    object.set_value("eetop", Value::from(thread_id))?;
+pub(crate) async fn start_0(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let thread_object: Object = parameters.pop_object()?;
+    let thread_class = thread_object.class().clone();
+    let run_method = thread_class.try_get_method("run", "()V")?;
+    let thread_value = Value::from(thread_object.clone());
+
+    // Create a new internal thread (Arc<Thread>) and registered with the VM
+    let thread_id: u64 = thread_object.value("tid")?.try_into()?;
+    let vm = thread.vm()?;
+    let weak_vm = Arc::downgrade(&vm);
+    let new_thread = Thread::new(&weak_vm, thread_id)?;
+
+    // Associate the Java Thread object with the new internal thread and set its ID in `eetop`
+    thread_object.set_value("eetop", Value::from(thread_id))?;
+    new_thread
+        .set_java_object(Value::from(thread_object.clone()))
+        .await;
+
+    // Spawn a new OS thread to run the target's run() method in a Tokio runtime
+    let spawn_vm = vm.clone();
+    let spawn_thread = new_thread.clone();
+    let join_handle = std::thread::spawn({
+        move || {
+            let runtime = Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("Failed to create Tokio runtime for new thread");
+            // Execute the Runnable's run() method within the new thread's context
+            runtime.block_on(async move {
+                let _ = spawn_thread
+                    .execute(&thread_class, &run_method, &[thread_value])
+                    .await;
+                // Set `eetop` to 0 after execution to indicate the thread has finished
+                if let Err(error) = thread_object.set_value("eetop", Value::Long(0)) {
+                    error!("Failed to set eetop to 0: {error}");
+                }
+                // Remove the thread from the VM's thread handles; this drops the JoinHandle which
+                // in turn will drop the OS thread.
+                let thread_handles = spawn_vm.thread_handles();
+                thread_handles.remove(&thread_id).await;
+            });
+        }
+    });
+
+    let thread_handle = ThreadHandle::from((new_thread, join_handle));
+    let thread_handles = vm.thread_handles();
+    thread_handles.insert(thread_id, thread_handle).await?;
+
     Ok(None)
 }
 
