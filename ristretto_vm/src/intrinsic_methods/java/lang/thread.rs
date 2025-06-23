@@ -13,14 +13,15 @@ use std::time::Duration;
 use thread_priority::{ThreadPriority, ThreadPriorityValue, set_current_thread_priority};
 
 /// Get the thread from the thread ID in the `eetop` field of the thread object.
-fn get_thread(thread: &Arc<Thread>, thread_object: &Object) -> Result<Arc<Thread>> {
+async fn get_thread(thread: &Arc<Thread>, thread_object: &Object) -> Result<Arc<Thread>> {
     let thread_id = thread_object.value("eetop")?.to_long()?;
     let thread_id = u64::try_from(thread_id)?;
     let vm = thread.vm()?;
-    let Some(thread) = vm.thread(thread_id) else {
+    let thread_handles = vm.thread_handles();
+    let Some(thread_handle) = thread_handles.get(&thread_id).await else {
         return Err(RuntimeException(format!("Thread not found for id {thread_id}")).into());
     };
-    Ok(thread)
+    Ok(thread_handle.thread.clone())
 }
 
 #[intrinsic_method("java/lang/Thread.clearInterruptEvent()V", GreaterThanOrEqual(JAVA_17))]
@@ -30,7 +31,7 @@ pub(crate) async fn clear_interrupt_event(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let thread_object: Object = parameters.pop_object()?;
-    let instance_thread = get_thread(&thread, &thread_object)?;
+    let instance_thread = get_thread(&thread, &thread_object).await?;
     let _ = instance_thread.is_interrupted(true);
     Ok(None)
 }
@@ -139,9 +140,11 @@ pub(crate) async fn get_threads(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
+    let thread_handles = vm.thread_handles().read().await;
     let mut threads = Vec::new();
 
-    for vm_thread in vm.threads() {
+    for (_id, vm_thread_handle) in thread_handles.iter() {
+        let vm_thread = &vm_thread_handle.thread;
         let thread_object = vm_thread.java_object().await;
         threads.push(thread_object);
     }
@@ -167,7 +170,7 @@ pub(crate) async fn interrupt_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let thread_object: Object = parameters.pop_object()?;
-    let instance_thread = get_thread(&thread, &thread_object)?;
+    let instance_thread = get_thread(&thread, &thread_object).await?;
     instance_thread.interrupt();
     Ok(None)
 }
@@ -179,7 +182,7 @@ pub(crate) async fn is_alive(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let thread_object: Object = parameters.pop_object()?;
-    let is_alive = get_thread(&thread, &thread_object).is_ok();
+    let is_alive = get_thread(&thread, &thread_object).await.is_ok();
     Ok(Some(Value::from(is_alive)))
 }
 
@@ -191,7 +194,7 @@ pub(crate) async fn is_interrupted(
 ) -> Result<Option<Value>> {
     let clear_interrupt = parameters.pop_bool()?;
     let thread_object: Object = parameters.pop_object()?;
-    let instance_thread = get_thread(&thread, &thread_object)?;
+    let instance_thread = get_thread(&thread, &thread_object).await?;
     let was_interrupted = instance_thread.is_interrupted(clear_interrupt);
     Ok(Some(Value::from(was_interrupted)))
 }
@@ -425,15 +428,21 @@ pub(crate) async fn yield_0(thread: Arc<Thread>, parameters: Parameters) -> Resu
 mod tests {
     use super::*;
     use crate::VM;
+    use crate::handles::ThreadHandle;
     use ristretto_classloader::Class;
 
     /// Helper function to create a thread object for testing
-    async fn create_thread(vm: &VM) -> Result<Value> {
-        let thread_class = vm.class("java/lang/Thread").await?;
-        let thread_object = Object::new(thread_class)?;
-        let thread = vm.new_thread()?;
-        let thread_id = thread.id();
+    async fn create_thread(vm: &Arc<VM>) -> Result<Value> {
+        let thread_value = vm.object("java/lang/Thread", "", &[] as &[Value]).await?;
+        let thread_object: Object = thread_value.try_into()?;
+        let thread_id = vm.next_thread_id()?;
+        let weak_vm = Arc::downgrade(vm);
+        let thread = Thread::new(&weak_vm, thread_id)?;
+        let thread_handle = ThreadHandle::from(thread);
+        let mut thread_handles = vm.thread_handles().write().await;
+        thread_handles.insert(thread_id, thread_handle);
         thread_object.set_value("eetop", Value::from(thread_id))?;
+        thread_object.set_value("tid", Value::from(thread_id))?;
         Ok(Value::from(thread_object))
     }
 
@@ -526,7 +535,7 @@ mod tests {
             .await?
             .expect("threads");
         let (_class, threads): (Arc<Class>, Vec<Option<Reference>>) = value.try_into()?;
-        assert_eq!(threads.len(), 2);
+        assert_eq!(threads.len(), 1);
         Ok(())
     }
 

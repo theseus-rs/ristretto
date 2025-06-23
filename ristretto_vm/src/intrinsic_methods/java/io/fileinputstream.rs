@@ -2,7 +2,8 @@
 use crate::JavaError::{AccessControlException, IllegalArgumentException};
 use crate::JavaError::{FileNotFoundException, IoException};
 use crate::Result;
-use crate::handle::Handle;
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+use crate::handles::FileHandle;
 use crate::intrinsic_methods::java::io::filedescriptor::file_descriptor_from_java_object;
 use crate::intrinsic_methods::java::io::fileoutputstream::file_handle_identifier;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
@@ -23,7 +24,6 @@ use std::fs::OpenOptions;
 use std::io::{ErrorKind, SeekFrom};
 #[cfg(target_os = "wasi")]
 use std::io::{Read, Seek};
-use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
 use tokio::fs::OpenOptions;
@@ -40,15 +40,14 @@ pub(crate) async fn available_0(
     let file_input_stream = parameters.pop_object()?;
     let file_descriptor: Object = file_input_stream.value("fd")?.try_into()?;
     let vm = thread.vm()?;
-    let handles = vm.handles();
+    let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
-    let mut handle_guard = handles
+    let mut file_handle = file_handles
         .get_mut(&handle_identifier)
         .await
         .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
-    let Handle::File { file, .. } = handle_guard.deref_mut();
-
+    let file = &mut file_handle.file;
     let position: u64;
     let current_position: u64;
     let available_bytes: u64;
@@ -114,15 +113,14 @@ pub(crate) async fn is_regular_file_0(
     let file_input_stream = parameters.pop_object()?;
     let file_descriptor: Object = file_input_stream.value("fd")?.try_into()?;
     let vm = thread.vm()?;
-    let handles = vm.handles();
+    let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
-    let handle_guard = handles
+    let file_handle = file_handles
         .get(&handle_identifier)
         .await
         .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
-    let Handle::File { file, .. } = handle_guard.deref();
-
+    let file = &file_handle.file;
     let is_regular_file: bool;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -204,10 +202,10 @@ pub(crate) async fn open_0(
             Ok(file) => {
                 let fd = raw_file_descriptor(&file)?;
                 let vm = thread.vm()?;
-                let handles = vm.handles();
-                let handle: Handle = (file, false).into();
+                let file_handles = vm.file_handles();
+                let file_handle: FileHandle = (file, false).into();
                 let handle_identifier = file_handle_identifier(fd);
-                handles.insert(handle_identifier, handle).await?;
+                file_handles.insert(handle_identifier, file_handle).await?;
 
                 file_descriptor.set_value("fd", Value::Int(i32::try_from(fd)?))?;
                 if vm.java_class_file_version() >= &JAVA_11 {
@@ -296,12 +294,16 @@ pub(crate) async fn read_bytes(
                 .map_err(|error| IoException(error.to_string()))?
         }
         _ => {
-            let handles = vm.handles();
+            let file_handles = vm.file_handles();
             let handle_identifier = file_handle_identifier(fd);
-            let mut handle_guard = handles.get_mut(&handle_identifier).await.ok_or_else(|| {
-                IoException(format!("File handle not found: {handle_identifier}"))
-            })?;
-            let Handle::File { file, .. } = handle_guard.deref_mut();
+            let mut file_handle =
+                file_handles
+                    .get_mut(&handle_identifier)
+                    .await
+                    .ok_or_else(|| {
+                        IoException(format!("File handle not found: {handle_identifier}"))
+                    })?;
+            let file = &mut file_handle.file;
 
             #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
             {
@@ -351,14 +353,14 @@ pub(crate) async fn skip_0(
     let file_input_stream = parameters.pop_object()?;
     let file_descriptor: Object = file_input_stream.value("fd")?.try_into()?;
     let vm = thread.vm()?;
-    let handles = vm.handles();
+    let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
-    let mut handle_guard = handles
+    let mut file_handle = file_handles
         .get_mut(&handle_identifier)
         .await
         .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
-    let Handle::File { file, .. } = handle_guard.deref_mut();
+    let file = &mut file_handle.file;
     let original_position: u64;
     let current_position: u64;
 

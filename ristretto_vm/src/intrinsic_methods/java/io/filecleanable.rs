@@ -21,7 +21,7 @@ pub(crate) async fn cleanup_close_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
-    let handles = vm.handles();
+    let file_handles = vm.file_handles();
 
     #[cfg(not(target_os = "windows"))]
     let fd = {
@@ -42,7 +42,7 @@ pub(crate) async fn cleanup_close_0(
     }
 
     let handle_identifier = file_handle_identifier(fd);
-    if let Some(handle) = handles.remove(&handle_identifier).await {
+    if let Some(handle) = file_handles.remove(&handle_identifier).await {
         #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
         {
             let _ = handle;
@@ -67,7 +67,7 @@ pub(crate) async fn cleanup_close_0(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::handle::Handle;
+    use crate::handles::FileHandle;
     use crate::intrinsic_methods::java::io::fileoutputstream::raw_file_descriptor;
     use tokio::fs::{File, remove_file};
 
@@ -85,14 +85,14 @@ mod tests {
     #[tokio::test]
     async fn test_cleanup_close_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
-        let handles = vm.handles();
+        let file_handles = vm.file_handles();
 
         let file_name = "cleanup_close_0_no_handle_test.txt";
         let file = File::create(file_name).await?;
         let fd = raw_file_descriptor(&file)?;
-        let handle: Handle = (file, false).into();
+        let file_handle: FileHandle = (file, false).into();
         let handle_identifier = file_handle_identifier(0);
-        handles.insert(handle_identifier, handle).await?;
+        file_handles.insert(handle_identifier, file_handle).await?;
 
         let mut parameters = Parameters::default();
         parameters.push_int(i32::try_from(fd)?);

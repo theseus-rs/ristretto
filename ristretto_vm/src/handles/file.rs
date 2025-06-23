@@ -18,33 +18,23 @@ bitflags! {
     }
 }
 
-/// Represents a handle to an operating system resource, such as a file or socket.
+/// Represents a handle to a file.
 #[derive(Debug)]
-pub(crate) enum Handle {
+pub(crate) struct FileHandle {
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-    File {
-        file: String,
-        append: bool,
-        mode: FileModeFlags,
-    },
+    pub(crate) file: String,
     #[cfg(target_os = "wasi")]
-    File {
-        file: std::fs::File,
-        append: bool,
-        mode: FileModeFlags,
-    },
+    pub(crate) file: std::fs::File,
     #[cfg(not(target_family = "wasm"))]
-    File {
-        file: tokio::fs::File,
-        append: bool,
-        mode: FileModeFlags,
-    },
+    pub(crate) file: tokio::fs::File,
+    pub(crate) append: bool,
+    pub(crate) mode: FileModeFlags,
 }
 
 #[cfg(target_os = "wasi")]
-impl From<(std::fs::File, FileModeFlags)> for Handle {
+impl From<(std::fs::File, FileModeFlags)> for FileHandle {
     fn from((file, mode): (std::fs::File, FileModeFlags)) -> Self {
-        Handle::File {
+        FileHandle {
             file,
             append: false,
             mode,
@@ -53,9 +43,9 @@ impl From<(std::fs::File, FileModeFlags)> for Handle {
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl From<(tokio::fs::File, FileModeFlags)> for Handle {
+impl From<(tokio::fs::File, FileModeFlags)> for FileHandle {
     fn from((file, mode): (tokio::fs::File, FileModeFlags)) -> Self {
-        Handle::File {
+        FileHandle {
             file,
             append: false,
             mode,
@@ -64,9 +54,9 @@ impl From<(tokio::fs::File, FileModeFlags)> for Handle {
 }
 
 #[cfg(target_os = "wasi")]
-impl From<(std::fs::File, bool)> for Handle {
+impl From<(std::fs::File, bool)> for FileHandle {
     fn from((file, append): (std::fs::File, bool)) -> Self {
-        Handle::File {
+        FileHandle {
             file,
             append,
             mode: FileModeFlags::empty(),
@@ -75,9 +65,9 @@ impl From<(std::fs::File, bool)> for Handle {
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl From<(tokio::fs::File, bool)> for Handle {
+impl From<(tokio::fs::File, bool)> for FileHandle {
     fn from((file, append): (tokio::fs::File, bool)) -> Self {
-        Handle::File {
+        FileHandle {
             file,
             append,
             mode: FileModeFlags::empty(),
@@ -86,24 +76,22 @@ impl From<(tokio::fs::File, bool)> for Handle {
 }
 
 #[cfg(target_os = "wasi")]
-impl TryInto<std::fs::File> for Handle {
+impl TryInto<std::fs::File> for FileHandle {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<std::fs::File, Self::Error> {
-        match self {
-            Handle::File { file, .. } => Ok(file),
-        }
+        let FileHandle { file, .. } = self;
+        Ok(file)
     }
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl TryInto<tokio::fs::File> for Handle {
+impl TryInto<tokio::fs::File> for FileHandle {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<tokio::fs::File, Self::Error> {
-        match self {
-            Handle::File { file, .. } => Ok(file),
-        }
+        let FileHandle { file, .. } = self;
+        Ok(file)
     }
 }
 
@@ -114,13 +102,13 @@ mod tests {
     use tokio::fs::{File, remove_file};
 
     #[tokio::test]
-    async fn test_handle_from_file_and_append() -> Result<()> {
+    async fn test_file_handle_from_file_and_append() -> Result<()> {
         let file_name = "test_handle_from_file_and_append.txt";
         let file = File::create(file_name).await?;
-        let handle: Handle = (file, false).into();
+        let file_handle: FileHandle = (file, false).into();
         assert!(matches!(
-            handle,
-            Handle::File {
+            file_handle,
+            FileHandle {
                 file: _,
                 append: false,
                 mode,
@@ -131,14 +119,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_from_file_and_mode() -> Result<()> {
+    async fn test_file_handle_from_file_and_mode() -> Result<()> {
         let file_name = "test_handle_from_file_and_mode.txt";
         let file = File::create(file_name).await?;
         let expected_mode = FileModeFlags::READ_WRITE;
-        let handle: Handle = (file, expected_mode).into();
+        let file_handle: FileHandle = (file, expected_mode).into();
         assert!(matches!(
-            handle,
-            Handle::File {
+            file_handle,
+            FileHandle {
                 file: _,
                 append: false,
                 mode,
@@ -149,11 +137,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_try_into_file() -> Result<()> {
+    async fn test_file_handle_try_into_file() -> Result<()> {
         let file_name = "test_handle_try_into_file.txt";
         let file = File::create(file_name).await?;
-        let handle: Handle = (file, false).into();
-        let extracted_file: File = handle.try_into()?;
+        let file_handle: FileHandle = (file, false).into();
+        let extracted_file: File = file_handle.try_into()?;
         assert!(extracted_file.metadata().await.is_ok());
         remove_file(file_name).await?;
         Ok(())
