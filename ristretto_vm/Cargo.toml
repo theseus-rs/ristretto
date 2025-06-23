@@ -52,6 +52,7 @@ tokio = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 getrandom = { workspace = true }
+thread-priority = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
