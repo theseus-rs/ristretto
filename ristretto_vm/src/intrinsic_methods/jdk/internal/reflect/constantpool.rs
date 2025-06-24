@@ -116,13 +116,14 @@ pub(crate) async fn get_field_at_0(
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
     let field_name = field_name.to_object(&vm).await?;
-    let field = vm
-        .invoke(
-            "java.lang.Class",
-            "getDeclaredField",
-            "(Ljava/lang/String;)Ljava/lang/reflect/Field;",
-            &[class_object, field_name],
-        )
+
+    let class = thread.class("java.lang.Class").await?;
+    let method = class.try_get_method(
+        "getDeclaredField",
+        "(Ljava/lang/String;)Ljava/lang/reflect/Field;",
+    )?;
+    let field = thread
+        .execute(&class, &method, &[class_object, field_name])
         .await?;
     Ok(field)
 }
@@ -268,25 +269,29 @@ pub(crate) async fn get_method_at_0(
         parameters_classes.push(parameter_type);
     }
     let class = thread.class("java/lang/Class").await?;
-    let class_parameters = Value::try_from((class, parameters_classes))?;
+    let class_parameters = Value::try_from((class.clone(), parameters_classes))?;
 
     let method = if method_name == "<init>" {
-        vm.invoke(
-            "java.lang.Class",
+        let method = class.try_get_method(
             "getDeclaredConstructor",
             "([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;",
-            &[class_object, class_parameters],
-        )
-        .await?
+        )?;
+        thread
+            .execute(&class, &method, &[class_object, class_parameters])
+            .await?
     } else {
         let method_name = method_name.to_object(&vm).await?;
-        vm.invoke(
-            "java.lang.Class",
+        let method = class.try_get_method(
             "getDeclaredMethod",
             "(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;",
-            &[class_object, method_name, class_parameters],
-        )
-        .await?
+        )?;
+        thread
+            .execute(
+                &class,
+                &method,
+                &[class_object, method_name, class_parameters],
+            )
+            .await?
     };
 
     Ok(method)
@@ -449,15 +454,12 @@ pub(crate) async fn get_tag_at_0(
     let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let constant = constant_pool.try_get(index)?;
-    let vm = thread.vm()?;
-    let tag = vm
-        .invoke(
-            "jdk.internal.reflect.ConstantPool$Tag",
-            "valueOf",
-            "(B)Ljdk/internal/reflect/ConstantPool$Tag;",
-            &[constant.tag()],
-        )
+
+    let class = thread
+        .class("jdk/internal/reflect/ConstantPool$Tag")
         .await?;
+    let method = class.try_get_method("valueOf", "(B)Ljdk/internal/reflect/ConstantPool$Tag;")?;
+    let tag = thread.execute(&class, &method, &[constant.tag()]).await?;
     Ok(tag)
 }
 
