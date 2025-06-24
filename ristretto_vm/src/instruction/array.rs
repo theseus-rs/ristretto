@@ -81,10 +81,9 @@ pub(crate) async fn multianewarray(
     dimensions: u8,
 ) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
-    let vm = thread.vm()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = vm.class(class_name).await?;
+    let class = thread.class(class_name).await?;
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
 
@@ -112,7 +111,7 @@ pub(crate) async fn multianewarray(
         let count = stack.pop_int()?;
         let count = usize::try_from(count)?;
         type_class_name = format!("[{type_class_name}");
-        let type_class = vm.class(type_class_name.as_str()).await?;
+        let type_class = thread.class(type_class_name.as_str()).await?;
         let mut array_values = Vec::new();
         for _ in 0..count {
             array_values.push(Some(array.clone()));

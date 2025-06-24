@@ -1139,7 +1139,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_constant_pool_1() -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
-        let class = vm.class("java.lang.String").await?;
+        let class = thread.class("java.lang.String").await?;
         let class_object = class.to_object(&vm).await?;
         let parameters = Parameters::new(vec![class_object]);
         let constant_pool: Object = get_constant_pool_1(thread, parameters)
@@ -1493,7 +1493,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_raw_annotations() -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
-        let class = vm.class("java.lang.String").await?;
+        let class = thread.class("java.lang.String").await?;
         let class_object = class.to_object(&vm).await?;
         let parameters = Parameters::new(vec![class_object]);
         let value = get_raw_annotations(thread, parameters)
@@ -1507,7 +1507,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_raw_type_annotations() -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
-        let class = vm.class("java.lang.String").await?;
+        let class = thread.class("java.lang.String").await?;
         let class_object = class.to_object(&vm).await?;
         let parameters = Parameters::new(vec![class_object]);
         let value = get_raw_type_annotations(thread, parameters)

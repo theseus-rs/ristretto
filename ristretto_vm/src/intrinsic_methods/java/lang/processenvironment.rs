@@ -18,8 +18,7 @@ pub(crate) async fn environ(thread: Arc<Thread>, _parameters: Parameters) -> Res
         let value = Some(Reference::from(mutf8::to_bytes(value)?));
         values.push(value);
     }
-    let vm = thread.vm()?;
-    let class = vm.class("[[B").await?;
+    let class = thread.class("[[B").await?;
     let result = Reference::from((class, values));
     Ok(Some(Value::Object(Some(result))))
 }
