@@ -1,15 +1,32 @@
 use crate::thread::Thread;
 use std::sync::Arc;
+use std::thread::JoinHandle;
 
 /// Represents a handle to a thread.
 #[derive(Debug)]
 pub(crate) struct ThreadHandle {
     pub(crate) thread: Arc<Thread>,
+    /// The join handle for the thread, if it exists.  The primordial thread does not have a join
+    /// handle; the primordial thread is the one that started the VM and is not expected to be
+    /// joined.
+    pub(crate) join_handle: Option<JoinHandle<()>>,
 }
 
 impl From<Arc<Thread>> for ThreadHandle {
     fn from(thread: Arc<Thread>) -> Self {
-        ThreadHandle { thread }
+        ThreadHandle {
+            thread,
+            join_handle: None,
+        }
+    }
+}
+
+impl From<(Arc<Thread>, JoinHandle<()>)> for ThreadHandle {
+    fn from((thread, join_handle): (Arc<Thread>, JoinHandle<()>)) -> Self {
+        ThreadHandle {
+            thread,
+            join_handle: Some(join_handle),
+        }
     }
 }
 
