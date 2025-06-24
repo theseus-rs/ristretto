@@ -291,13 +291,17 @@ async fn resolve_method_handles_lookup(thread: &Thread) -> Result<Value> {
 /// that represents that type in the JVM. For primitive types and arrays, this returns the
 /// corresponding class objects (like `java.lang.Integer.TYPE` for `int`). For reference types, it
 /// loads the class for the specified type.
-async fn get_field_type_class(vm: &VM, field_type: Option<FieldType>) -> Result<Value> {
+async fn get_field_type_class(
+    vm: &VM,
+    thread: &Thread,
+    field_type: Option<FieldType>,
+) -> Result<Value> {
     let class_name = if let Some(field_type) = field_type {
         field_type.class_name()
     } else {
         "void".to_string()
     };
-    let class = vm.class(class_name).await?;
+    let class = thread.class(class_name).await?;
     class.to_object(vm).await
 }
 
@@ -313,7 +317,7 @@ async fn get_field_type_class(vm: &VM, field_type: Option<FieldType>) -> Result<
 /// `MethodType.methodType()` factory method to create a `MethodType` instance.
 async fn get_method_type(vm: &VM, thread: &Thread, method_descriptor: &str) -> Result<Value> {
     let (argument_types, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
-    let return_class = get_field_type_class(vm, return_type).await?;
+    let return_class = get_field_type_class(vm, thread, return_type).await?;
 
     let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
     if argument_types.is_empty() {
@@ -326,14 +330,14 @@ async fn get_method_type(vm: &VM, thread: &Thread, method_descriptor: &str) -> R
             .await;
     }
 
-    let first_argument = get_field_type_class(vm, argument_types.first().cloned()).await?;
+    let first_argument = get_field_type_class(vm, thread, argument_types.first().cloned()).await?;
     let argument_classes = ConcurrentVec::from(Vec::with_capacity(argument_types.len() - 1));
     for argument_type in argument_types.iter().skip(1) {
-        let argument_class = get_field_type_class(vm, Some(argument_type.clone())).await?;
+        let argument_class = get_field_type_class(vm, thread, Some(argument_type.clone())).await?;
         let argument_reference: Reference = argument_class.try_into()?;
         argument_classes.push(Some(argument_reference))?;
     }
-    let class_array = vm.class("[Ljava/lang/Class;").await?;
+    let class_array = thread.class("[Ljava/lang/Class;").await?;
     let reference_array = Reference::Array(ObjectArray {
         class: class_array,
         elements: argument_classes,

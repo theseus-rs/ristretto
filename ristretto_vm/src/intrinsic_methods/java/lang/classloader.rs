@@ -214,10 +214,10 @@ pub(crate) async fn find_bootstrap_class(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let class_name: String = parameters.pop()?.try_into()?;
-    let vm = thread.vm()?;
-    let Ok(class) = vm.class(class_name).await else {
+    let Ok(class) = thread.class(class_name).await else {
         return Ok(Some(Value::Object(None)));
     };
+    let vm = thread.vm()?;
     let class = class.to_object(&vm).await?;
     Ok(Some(class))
 }
@@ -245,10 +245,10 @@ pub(crate) async fn find_loaded_class_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let class_name: String = parameters.pop()?.try_into()?;
-    let vm = thread.vm()?;
-    let Ok(class) = vm.class(class_name).await else {
+    let Ok(class) = thread.class(class_name).await else {
         return Ok(Some(Value::Object(None)));
     };
+    let vm = thread.vm()?;
     let class = class.to_object(&vm).await?;
     Ok(Some(class))
 }

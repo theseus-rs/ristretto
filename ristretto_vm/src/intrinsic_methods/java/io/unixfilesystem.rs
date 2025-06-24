@@ -531,7 +531,7 @@ pub(crate) async fn list_0(
         entries = path_entries;
     }
 
-    let class = vm.class("java.lang.String").await?;
+    let class = thread.class("java.lang.String").await?;
     let paths = Value::try_from((class, entries))?;
     Ok(Some(paths))
 }
