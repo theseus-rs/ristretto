@@ -271,15 +271,13 @@ pub(crate) async fn register_natives(
     thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let system_class = thread.class("java.lang.System").await?;
     let vm = thread.vm()?;
     if vm.java_major_version() <= JAVA_8.java() {
-        vm.invoke(
-            "java.lang.System",
-            "setJavaLangAccess",
-            "()V",
-            &[] as &[Value],
-        )
-        .await?;
+        let method = system_class.try_get_method("setJavaLangAccess", "()V")?;
+        thread
+            .execute(&system_class, &method, &[] as &[Value])
+            .await?;
         return Ok(None);
     }
 
@@ -296,13 +294,10 @@ pub(crate) async fn register_natives(
         //             System::getProperties()
         //
         // will eventually call System::getProperty() which fails if this is not initialized.
-        vm.invoke(
-            "java.lang.System",
-            "setProperties",
-            "(Ljava/util/Properties;)V",
-            &[Value::Object(None)],
-        )
-        .await?;
+        let method = system_class.try_get_method("setProperties", "(Ljava/util/Properties;)V")?;
+        thread
+            .execute(&system_class, &method, &[Value::Object(None)])
+            .await?;
     }
 
     let java_major_version = vm.java_major_version();
@@ -316,13 +311,16 @@ pub(crate) async fn register_natives(
     let java_lang_ref_access = java_lang_ref_access_class(&thread, package_name).await?;
     let java_lang_ref_access =
         Value::Object(Some(Reference::Object(Object::new(java_lang_ref_access)?)));
-    vm.invoke(
-        format!("{package_name}/SharedSecrets"),
+    let shared_secrets_class = thread
+        .class(format!("{package_name}/SharedSecrets"))
+        .await?;
+    let method = shared_secrets_class.try_get_method(
         "setJavaLangRefAccess",
         format!("(L{package_name}/JavaLangRefAccess;)V"),
-        &[java_lang_ref_access],
-    )
-    .await?;
+    )?;
+    thread
+        .execute(&shared_secrets_class, &method, &[java_lang_ref_access])
+        .await?;
 
     Ok(None)
 }
