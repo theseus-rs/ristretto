@@ -98,8 +98,7 @@ mod test {
         let result = vm
             .invoke(
                 "java.lang.Integer",
-                "parseInt",
-                "(Ljava/lang/String;)I",
+                "parseInt(Ljava/lang/String;)I",
                 &[value],
             )
             .await;

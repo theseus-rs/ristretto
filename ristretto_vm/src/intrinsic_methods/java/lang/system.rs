@@ -271,12 +271,10 @@ pub(crate) async fn register_natives(
     thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let system_class = thread.class("java.lang.System").await?;
     let vm = thread.vm()?;
     if vm.java_major_version() <= JAVA_8.java() {
-        let method = system_class.try_get_method("setJavaLangAccess", "()V")?;
         thread
-            .execute(&system_class, &method, &[] as &[Value])
+            .invoke("java.lang.System", "setJavaLangAccess()V", &[] as &[Value])
             .await?;
         return Ok(None);
     }
@@ -294,9 +292,12 @@ pub(crate) async fn register_natives(
         //             System::getProperties()
         //
         // will eventually call System::getProperty() which fails if this is not initialized.
-        let method = system_class.try_get_method("setProperties", "(Ljava/util/Properties;)V")?;
         thread
-            .execute(&system_class, &method, &[Value::Object(None)])
+            .invoke(
+                "java.lang.System",
+                "setProperties(Ljava/util/Properties;)V",
+                &[Value::Object(None)],
+            )
             .await?;
     }
 
@@ -311,15 +312,13 @@ pub(crate) async fn register_natives(
     let java_lang_ref_access = java_lang_ref_access_class(&thread, package_name).await?;
     let java_lang_ref_access =
         Value::Object(Some(Reference::Object(Object::new(java_lang_ref_access)?)));
-    let shared_secrets_class = thread
-        .class(format!("{package_name}/SharedSecrets"))
-        .await?;
-    let method = shared_secrets_class.try_get_method(
-        "setJavaLangRefAccess",
-        format!("(L{package_name}/JavaLangRefAccess;)V"),
-    )?;
+    let shared_secrets_class = format!("{package_name}/SharedSecrets");
     thread
-        .execute(&shared_secrets_class, &method, &[java_lang_ref_access])
+        .invoke(
+            &shared_secrets_class,
+            format!("setJavaLangRefAccess(L{package_name}/JavaLangRefAccess;)V"),
+            &[java_lang_ref_access],
+        )
         .await?;
 
     Ok(None)

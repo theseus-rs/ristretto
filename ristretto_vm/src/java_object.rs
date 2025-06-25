@@ -17,8 +17,7 @@ impl JavaObject for bool {
         let result = vm
             .try_invoke(
                 "java.lang.Boolean",
-                "valueOf",
-                "(Z)Ljava/lang/Boolean;",
+                "valueOf(Z)Ljava/lang/Boolean;",
                 &[value],
             )
             .await?;
@@ -32,8 +31,7 @@ impl JavaObject for char {
         let result = vm
             .try_invoke(
                 "java.lang.Character",
-                "valueOf",
-                "(C)Ljava/lang/Character;",
+                "valueOf(C)Ljava/lang/Character;",
                 &[value],
             )
             .await?;
@@ -45,7 +43,7 @@ impl JavaObject for i8 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
         let value = Value::from(*self);
         let result = vm
-            .try_invoke("java.lang.Byte", "valueOf", "(B)Ljava/lang/Byte;", &[value])
+            .try_invoke("java.lang.Byte", "valueOf(B)Ljava/lang/Byte;", &[value])
             .await?;
         Ok(result)
     }
@@ -63,12 +61,7 @@ impl JavaObject for i16 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
         let value = Value::from(*self);
         let result = vm
-            .try_invoke(
-                "java.lang.Short",
-                "valueOf",
-                "(S)Ljava/lang/Short;",
-                &[value],
-            )
+            .try_invoke("java.lang.Short", "valueOf(S)Ljava/lang/Short;", &[value])
             .await?;
         Ok(result)
     }
@@ -88,8 +81,7 @@ impl JavaObject for i32 {
         let result = vm
             .try_invoke(
                 "java.lang.Integer",
-                "valueOf",
-                "(I)Ljava/lang/Integer;",
+                "valueOf(I)Ljava/lang/Integer;",
                 &[value],
             )
             .await?;
@@ -109,7 +101,7 @@ impl JavaObject for i64 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
         let value = Value::from(*self);
         let result = vm
-            .try_invoke("java.lang.Long", "valueOf", "(J)Ljava/lang/Long;", &[value])
+            .try_invoke("java.lang.Long", "valueOf(J)Ljava/lang/Long;", &[value])
             .await?;
         Ok(result)
     }
@@ -141,12 +133,7 @@ impl JavaObject for f32 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
         let value = Value::from(*self);
         let result = vm
-            .try_invoke(
-                "java.lang.Float",
-                "valueOf",
-                "(F)Ljava/lang/Float;",
-                &[value],
-            )
+            .try_invoke("java.lang.Float", "valueOf(F)Ljava/lang/Float;", &[value])
             .await?;
         Ok(result)
     }
@@ -156,12 +143,7 @@ impl JavaObject for f64 {
     async fn to_object(&self, vm: &VM) -> Result<Value> {
         let value = Value::from(*self);
         let result = vm
-            .try_invoke(
-                "java.lang.Double",
-                "valueOf",
-                "(D)Ljava/lang/Double;",
-                &[value],
-            )
+            .try_invoke("java.lang.Double", "valueOf(D)Ljava/lang/Double;", &[value])
             .await?;
         Ok(result)
     }
@@ -264,7 +246,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bool_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = true;
         let value: Value = original_value.to_object(&vm).await?;
         let value: bool = value.try_into()?;
@@ -274,7 +256,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_char_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = '*';
         let value: Value = original_value.to_object(&vm).await?;
         let value: char = value.try_into()?;
@@ -284,7 +266,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_i8_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42i8;
         let value: Value = original_value.to_object(&vm).await?;
         let value: i8 = value.try_into()?;
@@ -294,7 +276,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_u8_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42u8;
         let value: Value = original_value.to_object(&vm).await?;
         let value: u8 = value.try_into()?;
@@ -304,7 +286,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_i16_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42i16;
         let value: Value = original_value.to_object(&vm).await?;
         let value: i16 = value.try_into()?;
@@ -314,7 +296,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_u16_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42u16;
         let value: Value = original_value.to_object(&vm).await?;
         let value: u16 = value.try_into()?;
@@ -324,7 +306,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_i32_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42i32;
         let value: Value = original_value.to_object(&vm).await?;
         let value: i32 = value.try_into()?;
@@ -334,7 +316,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_u32_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42u32;
         let value: Value = original_value.to_object(&vm).await?;
         let value: u32 = value.try_into()?;
@@ -344,7 +326,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_i64_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42i64;
         let value: Value = original_value.to_object(&vm).await?;
         let value: i64 = value.try_into()?;
@@ -354,7 +336,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_u64_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42u64;
         let value: Value = original_value.to_object(&vm).await?;
         let value: u64 = value.try_into()?;
@@ -364,7 +346,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_isize_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42isize;
         let value: Value = original_value.to_object(&vm).await?;
         let value: isize = value.try_into()?;
@@ -374,7 +356,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_usize_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42usize;
         let value: Value = original_value.to_object(&vm).await?;
         let value: usize = value.try_into()?;
@@ -384,7 +366,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_f32_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42.1f32;
         let value: Value = original_value.to_object(&vm).await?;
         let value: f32 = value.try_into()?;
@@ -395,7 +377,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_f64_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = 42.1f64;
         let value: Value = original_value.to_object(&vm).await?;
         let value: f64 = value.try_into()?;
@@ -406,7 +388,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_str_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = "foo";
         let value: Value = original_value.to_object(&vm).await?;
         let value: String = value.try_into()?;
@@ -416,7 +398,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_string_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = "foo".to_string();
         let value: Value = original_value.to_object(&vm).await?;
         let value: String = value.try_into()?;
@@ -426,7 +408,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_class_to_object() -> Result<()> {
-        let vm = VM::default().await?;
+        let (vm, _thread) = crate::test::thread().await?;
         let original_value = Class::new_named("[I")?;
         let value: Value = original_value.to_object(&vm).await?;
         let value: Arc<Class> = value.try_into()?;

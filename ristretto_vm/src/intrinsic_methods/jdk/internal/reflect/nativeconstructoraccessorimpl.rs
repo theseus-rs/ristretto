@@ -60,8 +60,7 @@ pub(crate) mod tests {
         let constructor = vm
             .invoke(
                 "java.lang.Class",
-                "getDeclaredConstructor",
-                "([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;",
+                "getDeclaredConstructor([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;",
                 &[integer_class_object, arguments],
             )
             .await?
