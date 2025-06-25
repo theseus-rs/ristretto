@@ -259,7 +259,6 @@ pub(crate) fn ifnonnull(stack: &mut OperandStack, address: u16) -> Result<Execut
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::VM;
     use crate::java_object::JavaObject;
     use ristretto_classloader::Reference;
 
@@ -587,10 +586,10 @@ mod test {
 
     #[tokio::test]
     async fn test_if_acmpeq_class_equal() -> Result<()> {
-        let vm = VM::default().await?;
-        let class = vm.class("java.lang.String").await?;
-        let class1 = class.to_object(&vm).await?;
-        let class2 = class.to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.String").await?;
+        let class1 = class.to_object(&thread).await?;
+        let class2 = class.to_object(&thread).await?;
 
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_object(Some(class1.try_into()?))?;
@@ -602,11 +601,11 @@ mod test {
 
     #[tokio::test]
     async fn test_if_acmpeq_class_not_equal() -> Result<()> {
-        let vm = VM::default().await?;
-        let class1 = vm.class("java.lang.Object").await?;
-        let class1 = class1.to_object(&vm).await?;
-        let class2 = vm.class("java.lang.String").await?;
-        let class2 = class2.to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let class1 = thread.class("java.lang.Object").await?;
+        let class1 = class1.to_object(&thread).await?;
+        let class2 = thread.class("java.lang.String").await?;
+        let class2 = class2.to_object(&thread).await?;
 
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_object(Some(class1.try_into()?))?;
@@ -650,10 +649,10 @@ mod test {
 
     #[tokio::test]
     async fn test_if_acmpne_class_equal() -> Result<()> {
-        let vm = VM::default().await?;
-        let class = vm.class("java.lang.String").await?;
-        let class1 = class.to_object(&vm).await?;
-        let class2 = class.to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.String").await?;
+        let class1 = class.to_object(&thread).await?;
+        let class2 = class.to_object(&thread).await?;
 
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_object(Some(class1.try_into()?))?;
@@ -665,11 +664,11 @@ mod test {
 
     #[tokio::test]
     async fn test_if_acmpne_class_not_equal() -> Result<()> {
-        let vm = VM::default().await?;
-        let class1 = vm.class("java.lang.Object").await?;
-        let class1 = class1.to_object(&vm).await?;
-        let class2 = vm.class("java.lang.String").await?;
-        let class2 = class2.to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let class1 = thread.class("java.lang.Object").await?;
+        let class1 = class1.to_object(&thread).await?;
+        let class2 = thread.class("java.lang.String").await?;
+        let class2 = class2.to_object(&thread).await?;
 
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_object(Some(class1.try_into()?))?;

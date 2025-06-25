@@ -31,17 +31,17 @@ pub(crate) async fn fill_in_stack_trace(
         if class_name == "java/lang/Throwable" {
             continue;
         }
-        let class_name = class_name.to_object(&vm).await?;
+        let class_name = class_name.to_object(&thread).await?;
         let stack_element_object = Object::new(stack_element_class.clone())?;
         stack_element_object.set_value("declaringClass", class_name)?;
 
         if let Some(source_file) = class.source_file() {
-            let source_file = source_file.to_object(&vm).await?;
+            let source_file = source_file.to_object(&thread).await?;
             stack_element_object.set_value("fileName", source_file)?;
         }
 
         let method = frame.method();
-        let method_name = method.name().to_object(&vm).await?;
+        let method_name = method.name().to_object(&thread).await?;
         stack_element_object.set_value("methodName", method_name)?;
 
         let program_counter = frame.program_counter();

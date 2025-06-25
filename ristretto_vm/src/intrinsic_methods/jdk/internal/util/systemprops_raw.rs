@@ -129,13 +129,13 @@ pub(crate) async fn vm_properties(
 
     let mut properties: Vec<Option<Reference>> = Vec::new();
     for (key, value) in system_properties {
-        let Value::Object(key) = key.to_object(&vm).await? else {
+        let Value::Object(key) = key.to_object(&thread).await? else {
             return Err(InternalError(format!(
                 "Unable to convert key to string: {key}"
             )));
         };
         properties.push(key);
-        let Value::Object(value) = value.to_object(&vm).await? else {
+        let Value::Object(value) = value.to_object(&thread).await? else {
             return Err(InternalError(format!(
                 "Unable to convert value to string: {value}"
             )));

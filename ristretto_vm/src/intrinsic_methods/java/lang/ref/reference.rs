@@ -83,7 +83,7 @@ mod tests {
     #[tokio::test]
     async fn test_clear_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
-        let value = "foo".to_object(&vm).await?;
+        let value = "foo".to_object(&thread).await?;
         let weak_reference = vm
             .object(
                 "java/lang/ref/WeakReference",
@@ -126,7 +126,7 @@ mod tests {
     #[tokio::test]
     async fn test_refers_to_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
-        let value = "foo".to_object(&vm).await?;
+        let value = "foo".to_object(&thread).await?;
         let weak_reference = vm
             .object(
                 "java/lang/ref/WeakReference",

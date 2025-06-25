@@ -389,9 +389,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_arraylength_invalid_type() -> Result<()> {
-        let (vm, _thread, _frame) = crate::test::frame().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(1);
-        let invalid_value = "foo".to_object(&vm).await?;
+        let invalid_value = "foo".to_object(&thread).await?;
         stack.push(invalid_value)?;
         let result = arraylength(stack);
         assert!(matches!(

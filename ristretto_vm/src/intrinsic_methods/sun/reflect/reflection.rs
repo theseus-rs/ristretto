@@ -24,9 +24,8 @@ pub(crate) async fn get_caller_class_1(
     };
     let class = frame.class();
     let class_name = class.name();
-    let vm = thread.vm()?;
     let class = thread.class(class_name).await?;
-    let class = class.to_object(&vm).await?;
+    let class = class.to_object(&thread).await?;
     Ok(Some(class))
 }
 
@@ -86,9 +85,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_class_access_flags() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.String").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_class_access_flags(thread, parameters).await?;
         let access_flags: i32 = result.expect("access_flags").try_into()?;

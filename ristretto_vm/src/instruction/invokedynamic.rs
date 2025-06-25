@@ -154,7 +154,7 @@ use crate::JavaError::BootstrapMethodError;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
-use crate::{JavaObject, Result, VM};
+use crate::{JavaObject, Result};
 use ristretto_classfile::attributes::{Attribute, BootstrapMethod};
 use ristretto_classfile::{Constant, ConstantPool, FieldType, MethodAccessFlags, ReferenceKind};
 use ristretto_classloader::{Class, ConcurrentVec, Method, ObjectArray, Reference, Value};
@@ -291,18 +291,14 @@ async fn resolve_method_handles_lookup(thread: &Thread) -> Result<Value> {
 /// that represents that type in the JVM. For primitive types and arrays, this returns the
 /// corresponding class objects (like `java.lang.Integer.TYPE` for `int`). For reference types, it
 /// loads the class for the specified type.
-async fn get_field_type_class(
-    vm: &VM,
-    thread: &Thread,
-    field_type: Option<FieldType>,
-) -> Result<Value> {
+async fn get_field_type_class(thread: &Thread, field_type: Option<FieldType>) -> Result<Value> {
     let class_name = if let Some(field_type) = field_type {
         field_type.class_name()
     } else {
         "void".to_string()
     };
     let class = thread.class(class_name).await?;
-    class.to_object(vm).await
+    class.to_object(thread).await
 }
 
 /// **Step 3.2** Create MethodType from method descriptor:
@@ -315,9 +311,9 @@ async fn get_field_type_class(
 /// This function parses the provided method descriptor into its constituent parts (argument types
 /// and return type), creates `Class` objects for each type, and then invokes the appropriate
 /// `MethodType.methodType()` factory method to create a `MethodType` instance.
-async fn get_method_type(vm: &VM, thread: &Thread, method_descriptor: &str) -> Result<Value> {
+async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Value> {
     let (argument_types, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
-    let return_class = get_field_type_class(vm, thread, return_type).await?;
+    let return_class = get_field_type_class(thread, return_type).await?;
 
     let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
     if argument_types.is_empty() {
@@ -330,10 +326,10 @@ async fn get_method_type(vm: &VM, thread: &Thread, method_descriptor: &str) -> R
             .await;
     }
 
-    let first_argument = get_field_type_class(vm, thread, argument_types.first().cloned()).await?;
+    let first_argument = get_field_type_class(thread, argument_types.first().cloned()).await?;
     let argument_classes = ConcurrentVec::from(Vec::with_capacity(argument_types.len() - 1));
     for argument_type in argument_types.iter().skip(1) {
-        let argument_class = get_field_type_class(vm, thread, Some(argument_type.clone())).await?;
+        let argument_class = get_field_type_class(thread, Some(argument_type.clone())).await?;
         let argument_reference: Reference = argument_class.try_into()?;
         argument_classes.push(Some(argument_reference))?;
     }
@@ -360,17 +356,17 @@ async fn get_method_type(vm: &VM, thread: &Thread, method_descriptor: &str) -> R
 ///
 /// This function obtains a lookup object that has the access privileges of the caller's class. The
 /// lookup object is used for finding and binding methods during dynamic method invocation.
-async fn resolve_method_handle(vm: &VM, thread: &Thread, frame: &Frame) -> Result<Value> {
+async fn resolve_method_handle(thread: &Thread, frame: &Frame) -> Result<Value> {
     let lookup = resolve_method_handles_lookup(thread).await?;
 
     // Get the caller MethodHandle
     let class = frame.class();
-    let class_object = class.to_object(vm).await?;
+    let class_object = class.to_object(thread).await?;
     let method = frame.method();
     let method_name = method.name();
-    let method_name_object = method_name.to_object(vm).await?;
+    let method_name_object = method_name.to_object(thread).await?;
     let method_descriptor = method.descriptor();
-    let method_type = get_method_type(vm, thread, method_descriptor).await?;
+    let method_type = get_method_type(thread, method_descriptor).await?;
     let mut arguments = vec![method_name_object, method_type];
 
     let lookup_class = thread
@@ -421,7 +417,7 @@ async fn resolve_method_handle(vm: &VM, thread: &Thread, frame: &Frame) -> Resul
 /// in the constant pool. This function resolves those arguments from the constant pool and creates
 /// arguments vector.
 async fn resolve_static_bootstrap_arguments(
-    vm: &Arc<VM>,
+    thread: &Arc<Thread>,
     constant_pool: &ConstantPool,
     bootstrap_method: &BootstrapMethod,
 ) -> Result<Vec<Value>> {
@@ -443,7 +439,7 @@ async fn resolve_static_bootstrap_arguments(
             }
             Constant::String(value) => {
                 let string = constant_pool.try_get_utf8(*value)?;
-                let value = string.to_object(vm).await?;
+                let value = string.to_object(thread).await?;
                 arguments.push(value);
             }
             _ => {
@@ -511,12 +507,12 @@ pub async fn resolve_call_site(frame: &Frame, method_index: u16) -> Result<Value
     );
 
     // Invoke the bootstrap method
-    let vm = thread.vm()?;
-    let method_handle = resolve_method_handle(&vm, &thread, frame).await?;
+    let method_handle = resolve_method_handle(&thread, frame).await?;
     let static_arguments =
-        resolve_static_bootstrap_arguments(&vm, constant_pool, &bootstrap_method_attribute).await?;
-    let method_name = bootstrap_method_attr_name.to_object(&vm).await?;
-    let method_type = get_method_type(&vm, &thread, bootstrap_method_descriptor).await?;
+        resolve_static_bootstrap_arguments(&thread, constant_pool, &bootstrap_method_attribute)
+            .await?;
+    let method_name = bootstrap_method_attr_name.to_object(&thread).await?;
+    let method_type = get_method_type(&thread, bootstrap_method_descriptor).await?;
 
     // 4.1 Construct argument array for bootstrap method:
     let mut arguments = vec![method_handle, method_name, method_type];

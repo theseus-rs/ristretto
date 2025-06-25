@@ -1,8 +1,8 @@
 use crate::JavaError::{ClassFormatError, IndexOutOfBoundsException, NoClassDefFoundError};
+use crate::Result;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use crate::{Result, VM};
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11};
@@ -15,7 +15,7 @@ use std::sync::Arc;
 /// This method is used by the `defineClass0`, `defineClass1`, and `defineClass2` native methods.
 /// The `defineClass0` method is used by Java 8 and earlier versions.
 async fn class_object_from_bytes(
-    vm: &Arc<VM>,
+    thread: &Arc<Thread>,
     source_file: Option<Reference>,
     bytes: &[u8],
     offset: i32,
@@ -49,7 +49,7 @@ async fn class_object_from_bytes(
     }
 
     let class = Class::from(class_file)?;
-    let class = class.to_object(vm).await?;
+    let class = class.to_object(thread).await?;
     let class: Object = class.try_into()?;
     Ok(class)
 }
@@ -63,12 +63,11 @@ pub(crate) async fn define_class_0_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let vm = thread.vm()?;
     let _protection_domain = parameters.pop_object()?;
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
     let bytes: Vec<u8> = parameters.pop()?.try_into()?;
-    let class = class_object_from_bytes(&vm, None, &bytes, offset, length).await?;
+    let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
         let expected_class_name: String = expected_class_name.try_into()?;
         let class_name = class.class().name();
@@ -93,8 +92,7 @@ pub(crate) async fn define_class_1_0(
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
     let bytes: Vec<u8> = parameters.pop()?.try_into()?;
-    let vm = thread.vm()?;
-    let class = class_object_from_bytes(&vm, source_file, &bytes, offset, length).await?;
+    let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
         let expected_class_name: String = expected_class_name.try_into()?;
         let class_name = class.class().name();
@@ -122,8 +120,7 @@ pub(crate) async fn define_class_2_0(
     let buffer: Vec<u8> = byte_buffer.value("hb")?.try_into()?;
     let buffer_offset = byte_buffer.value("offset")?.try_into()?;
     let bytes: Vec<u8> = buffer.into_iter().skip(buffer_offset).collect();
-    let vm = thread.vm()?;
-    let class = class_object_from_bytes(&vm, source_file, &bytes, offset, length).await?;
+    let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
         let expected_class_name: String = expected_class_name.try_into()?;
         let class_name = class.class().name();
@@ -143,7 +140,6 @@ pub(crate) async fn define_class_0_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let vm = thread.vm()?;
     let _class_data = parameters.pop_reference()?;
     let _flags = parameters.pop_int()?;
     let _initialize = parameters.pop_bool()?;
@@ -153,7 +149,7 @@ pub(crate) async fn define_class_0_1(
     let bytes: Vec<u8> = parameters.pop()?.try_into()?;
     let _name: String = parameters.pop()?.try_into()?;
     let _lookup: Arc<Class> = parameters.pop()?.try_into()?;
-    let class = class_object_from_bytes(&vm, None, &bytes, offset, length).await?;
+    let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
     class.set_value("classLoader", class_loader)?;
     Ok(Some(Value::from(class)))
@@ -173,8 +169,7 @@ pub(crate) async fn define_class_1_1(
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
     let bytes: Vec<u8> = parameters.pop()?.try_into()?;
-    let vm = thread.vm()?;
-    let class = class_object_from_bytes(&vm, source_file, &bytes, offset, length).await?;
+    let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
     class.set_value("classLoader", class_loader)?;
     Ok(Some(Value::from(class)))
@@ -197,8 +192,7 @@ pub(crate) async fn define_class_2_1(
     let buffer: Vec<u8> = byte_buffer.value("hb")?.try_into()?;
     let buffer_offset = byte_buffer.value("offset")?.try_into()?;
     let bytes: Vec<u8> = buffer.into_iter().skip(buffer_offset).collect();
-    let vm = thread.vm()?;
-    let class = class_object_from_bytes(&vm, source_file, &bytes, offset, length).await?;
+    let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
     class.set_value("classLoader", class_loader)?;
     Ok(Some(Value::from(class)))
@@ -217,8 +211,7 @@ pub(crate) async fn find_bootstrap_class(
     let Ok(class) = thread.class(class_name).await else {
         return Ok(Some(Value::Object(None)));
     };
-    let vm = thread.vm()?;
-    let class = class.to_object(&vm).await?;
+    let class = class.to_object(&thread).await?;
     Ok(Some(class))
 }
 
@@ -248,8 +241,7 @@ pub(crate) async fn find_loaded_class_0(
     let Ok(class) = thread.class(class_name).await else {
         return Ok(Some(Value::Object(None)));
     };
-    let vm = thread.vm()?;
-    let class = class.to_object(&vm).await?;
+    let class = class.to_object(&thread).await?;
     Ok(Some(class))
 }
 

@@ -80,9 +80,8 @@ pub(crate) async fn get_caller_class(
             continue;
         }
 
-        let vm = thread.vm()?;
         let class = thread.class(class_name).await?;
-        let class = class.to_object(&vm).await?;
+        let class = class.to_object(&thread).await?;
         return Ok(Some(class));
     }
     Ok(None)
@@ -117,12 +116,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_are_nest_mates_current_class_null_is_false() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let current_class = Value::Object(None);
         let member_class = thread
             .class("java.lang.String")
             .await?
-            .to_object(&vm)
+            .to_object(&thread)
             .await?;
         let mut parameters = Parameters::default();
         parameters.push(current_class);
@@ -137,11 +136,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_are_nest_mates_member_class_null_is_false() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let current_class = thread
             .class("java.lang.String")
             .await?
-            .to_object(&vm)
+            .to_object(&thread)
             .await?;
         let member_class = Value::Object(None);
         let mut parameters = Parameters::default();
@@ -157,11 +156,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_are_nest_mates_same_class_is_true() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let string_class = thread
             .class("java.lang.String")
             .await?
-            .to_object(&vm)
+            .to_object(&thread)
             .await?;
         let current_class = string_class.clone();
         let member_class = string_class;
@@ -178,16 +177,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_are_nest_mates_same_nest_host_is_true() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let current_class = thread
             .class("java.lang.Integer")
             .await?
-            .to_object(&vm)
+            .to_object(&thread)
             .await?;
         let member_class = thread
             .class("java.lang.Integer$IntegerCache")
             .await?
-            .to_object(&vm)
+            .to_object(&thread)
             .await?;
         let mut parameters = Parameters::default();
         parameters.push(current_class);
@@ -202,9 +201,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_class_access_flags() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.String").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_class_access_flags(thread, parameters).await?;
         let access_flags: i32 = result.expect("access_flags").try_into()?;

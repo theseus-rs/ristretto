@@ -41,8 +41,7 @@ pub(crate) async fn find_builtin_lib(
         .join(library_file_name)
         .to_string_lossy()
         .to_string();
-    let vm = thread.vm()?;
-    let library_name = library_path.to_object(&vm).await?;
+    let library_name = library_path.to_object(&thread).await?;
     Ok(Some(library_name))
 }
 
@@ -125,8 +124,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_unload_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let name = "foo".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let name = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![name, Value::Int(1), Value::Long(2)]);
         let result = unload_0(thread, parameters).await?;
         assert_eq!(result, None);
@@ -135,8 +134,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_unload_1() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let name = "foo".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let name = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![name, Value::Int(1), Value::Long(2)]);
         let result = unload_1(thread, parameters).await?;
         assert_eq!(result, None);

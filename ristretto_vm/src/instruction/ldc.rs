@@ -49,15 +49,13 @@ async fn load_constant(
         Constant::String(utf8_index) => {
             let utf8_value = constant_pool.try_get_utf8(*utf8_index)?;
             let thread = frame.thread()?;
-            let vm = thread.vm()?;
-            utf8_value.to_object(&vm).await?
+            utf8_value.to_object(&thread).await?
         }
         Constant::Class(class_index) => {
             let class_name = constant_pool.try_get_utf8(*class_index)?;
             let thread = frame.thread()?;
-            let vm = thread.vm()?;
             let class = thread.class(class_name).await?;
-            class.to_object(&vm).await?
+            class.to_object(&thread).await?
         }
         constant => {
             return Err(InvalidConstant {

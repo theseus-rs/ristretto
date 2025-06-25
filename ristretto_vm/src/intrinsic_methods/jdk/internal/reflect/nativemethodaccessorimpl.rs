@@ -63,12 +63,12 @@ pub(crate) mod tests {
     pub(crate) async fn invoke_test(invoke: IntrinsicMethod) -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
         let integer_class = thread.class("java/lang/Integer").await?;
-        let integer_class_object = integer_class.to_object(&vm).await?;
+        let integer_class_object = integer_class.to_object(&thread).await?;
 
-        let method_name = "valueOf".to_object(&vm).await?;
+        let method_name = "valueOf".to_object(&thread).await?;
         let class = thread.class("java/lang/Class").await?;
         let string_class = thread.class("java/lang/String").await?;
-        let string_class_object = string_class.to_object(&vm).await?;
+        let string_class_object = string_class.to_object(&thread).await?;
         let arguments = Value::try_from((class.clone(), vec![string_class_object]))?;
 
         let method = vm
@@ -80,7 +80,7 @@ pub(crate) mod tests {
             .await?
             .expect("method");
 
-        let string_parameter = "42".to_object(&vm).await?;
+        let string_parameter = "42".to_object(&thread).await?;
         let parameters = Value::try_from((class, vec![string_parameter]))?;
         let parameters = Parameters::new(vec![method, Value::Object(None), parameters]);
         let value: i32 = invoke(thread, parameters)

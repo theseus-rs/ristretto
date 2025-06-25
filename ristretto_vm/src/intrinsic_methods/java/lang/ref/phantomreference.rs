@@ -36,7 +36,7 @@ mod tests {
     #[tokio::test]
     async fn test_clear_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
-        let value = "foo".to_object(&vm).await?;
+        let value = "foo".to_object(&thread).await?;
         let reference_queue = vm
             .object("java/lang/ref/ReferenceQueue", "", &[] as &[Value])
             .await?;
@@ -61,7 +61,7 @@ mod tests {
     #[tokio::test]
     async fn test_refers_to_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
-        let value = "foo".to_object(&vm).await?;
+        let value = "foo".to_object(&thread).await?;
         let reference_queue = vm
             .object("java/lang/ref/ReferenceQueue", "", &[] as &[Value])
             .await?;

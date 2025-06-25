@@ -25,8 +25,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_intern() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let value = "foo".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let value = "foo".to_object(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(value.clone());
         let result = intern(thread, parameters).await?;

@@ -55,14 +55,13 @@ pub(crate) async fn for_name_0(
         return Err(NullPointerException("className cannot be null".to_string()).into());
     };
     let class_name: String = object.try_into()?;
-    let vm = thread.vm()?;
     let class = match thread.class(&class_name).await {
         Ok(class) => class,
         Err(_error) => {
             return Err(ClassNotFoundException(class_name).into());
         }
     };
-    let class_object = class.to_object(&vm).await?;
+    let class_object = class.to_object(&thread).await?;
     Ok(Some(class_object))
 }
 
@@ -121,8 +120,7 @@ pub(crate) async fn get_component_type(
 
     let class_name = class_name.trim_start_matches('[');
     let class = thread.class(class_name).await?;
-    let vm = thread.vm()?;
-    let class_object = class.to_object(&vm).await?;
+    let class_object = class.to_object(&thread).await?;
 
     Ok(Some(class_object))
 }
@@ -164,7 +162,6 @@ pub(crate) async fn get_declared_classes_0(
     let class = parameters.pop_object()?;
     let class_name: String = class.value("name")?.try_into()?;
     let class = thread.class(&class_name).await?;
-    let vm = thread.vm()?;
     let mut declared_classes = Vec::new();
 
     let class_file = class.class_file();
@@ -189,7 +186,7 @@ pub(crate) async fn get_declared_classes_0(
         }
         let inner_class_name = constant_pool.try_get_class(inner_class.class_info_index)?;
         let class = thread.class(inner_class_name).await?;
-        let class = class.to_object(&vm).await?;
+        let class = class.to_object(&thread).await?;
         declared_classes.push(class);
     }
 
@@ -209,9 +206,8 @@ pub(crate) async fn get_declared_constructors_0(
 ) -> Result<Option<Value>> {
     let public_only = parameters.pop_bool()?;
     let object = parameters.pop_object()?;
-    let vm = thread.vm()?;
     let class = get_class(&thread, &object).await?;
-    let class_object = class.to_object(&vm).await?;
+    let class_object = class.to_object(&thread).await?;
 
     let class_array = thread.class("[Ljava/lang/Class;").await?;
     let mut constructors = Vec::new();
@@ -229,7 +225,7 @@ pub(crate) async fn get_declared_constructors_0(
         for parameter in method.parameters() {
             let class_name = parameter.class_name();
             let class = thread.class(class_name).await?;
-            parameters.push(class.to_object(&vm).await?);
+            parameters.push(class.to_object(&thread).await?);
         }
         let parameter_types = Value::try_from((class_array.clone(), parameters))?;
         let checked_exceptions = get_exceptions(&thread, &class, method).await?;
@@ -247,7 +243,7 @@ pub(crate) async fn get_declared_constructors_0(
                     let class_file = class.class_file();
                     let constant_pool = &class_file.constant_pool;
                     let signature = constant_pool.try_get_utf8(*signature_index)?;
-                    method_signature = signature.to_object(&vm).await?;
+                    method_signature = signature.to_object(&thread).await?;
                 }
                 Attribute::RuntimeVisibleAnnotations {
                     annotations: runtime_annotations,
@@ -311,7 +307,7 @@ pub(crate) async fn get_declared_fields_0(
     let object = parameters.pop_object()?;
     let vm = thread.vm()?;
     let class = get_class(&thread, &object).await?;
-    let class_object = class.to_object(&vm).await?;
+    let class_object = class.to_object(&thread).await?;
 
     let mut fields = Vec::new();
     for field in class.fields() {
@@ -323,7 +319,7 @@ pub(crate) async fn get_declared_fields_0(
         let field_name = field.name();
         let field_type_class_name = field.field_type().class_name();
         let field_type_class = thread.class(field_type_class_name).await?;
-        let field_type = field_type_class.to_object(&vm).await?;
+        let field_type = field_type_class.to_object(&thread).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
         let slot = &class.field_offset(field_name)?;
         let slot = Value::Int(i32::try_from(*slot)?);
@@ -339,7 +335,7 @@ pub(crate) async fn get_declared_fields_0(
                     let class_file = class.class_file();
                     let constant_pool = &class_file.constant_pool;
                     let signature = constant_pool.try_get_utf8(*signature_index)?;
-                    field_signature = signature.to_object(&vm).await?;
+                    field_signature = signature.to_object(&thread).await?;
                 }
                 Attribute::RuntimeVisibleAnnotations {
                     annotations: runtime_annotations,
@@ -409,9 +405,8 @@ pub(crate) async fn get_declared_methods_0(
 ) -> Result<Option<Value>> {
     let public_only = parameters.pop_bool()?;
     let object = parameters.pop_object()?;
-    let vm = thread.vm()?;
     let class = get_class(&thread, &object).await?;
-    let class_object = class.to_object(&vm).await?;
+    let class_object = class.to_object(&thread).await?;
 
     let class_array = thread.class("[Ljava/lang/Class;").await?;
     let mut methods = Vec::new();
@@ -426,21 +421,21 @@ pub(crate) async fn get_declared_methods_0(
             continue;
         }
 
-        let method_name = method_name.to_object(&vm).await?;
+        let method_name = method_name.to_object(&thread).await?;
         let mut parameters = Vec::new();
         for parameter in method.parameters() {
             let class_name = parameter.class_name();
             let class = thread.class(class_name).await?;
-            parameters.push(class.to_object(&vm).await?);
+            parameters.push(class.to_object(&thread).await?);
         }
         let parameter_types = Value::try_from((class_array.clone(), parameters))?;
         let return_type = if let Some(return_type) = method.return_type() {
             let class_name = return_type.class_name();
             let class = thread.class(class_name).await?;
-            class.to_object(&vm).await?
+            class.to_object(&thread).await?
         } else {
             let class = thread.class("void").await?;
-            class.to_object(&vm).await?
+            class.to_object(&thread).await?
         };
         let checked_exceptions = get_exceptions(&thread, &class, method).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
@@ -457,7 +452,7 @@ pub(crate) async fn get_declared_methods_0(
                     let class_file = class.class_file();
                     let constant_pool = &class_file.constant_pool;
                     let signature = constant_pool.try_get_utf8(*signature_index)?;
-                    method_signature = signature.to_object(&vm).await?;
+                    method_signature = signature.to_object(&thread).await?;
                 }
                 Attribute::RuntimeVisibleAnnotations {
                     annotations: runtime_annotations,
@@ -539,8 +534,7 @@ pub(crate) async fn get_declaring_class_0(
     {
         Some(class_name) => {
             let class = thread.class(class_name).await?;
-            let vm = thread.vm()?;
-            let class = class.to_object(&vm).await?;
+            let class = class.to_object(&thread).await?;
             Ok(Some(class))
         }
         None => Ok(Some(Value::Object(None))),
@@ -563,20 +557,19 @@ pub(crate) async fn get_enclosing_method_0(
             ..
         } = attribute
         {
-            let vm = thread.vm()?;
             let constant_pool = &class_file.constant_pool;
             let class_name = constant_pool.try_get_utf8(*class_index)?;
             let class = thread.class(class_name).await?;
-            let class = class.to_object(&vm).await?;
+            let class = class.to_object(&thread).await?;
             let (method_name, method_descriptor) = if *method_index == 0 {
                 (Value::Object(None), Value::Object(None))
             } else {
                 let (name_index, descriptor_index) =
                     constant_pool.try_get_name_and_type(*method_index)?;
                 let method_name = constant_pool.try_get_utf8(*name_index)?;
-                let method_name = method_name.to_object(&vm).await?;
+                let method_name = method_name.to_object(&thread).await?;
                 let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-                let method_descriptor = method_descriptor.to_object(&vm).await?;
+                let method_descriptor = method_descriptor.to_object(&thread).await?;
                 (method_name, method_descriptor)
             };
             let object_array_class = thread.class("[Ljava/lang/Object;").await?;
@@ -596,7 +589,6 @@ pub(crate) async fn get_exceptions(
     class: &Arc<Class>,
     method: &Arc<Method>,
 ) -> Result<Value> {
-    let vm = thread.vm()?;
     let constant_pool = class.constant_pool();
     let class_array = thread.class("[Ljava/lang/Class;").await?;
     let mut exceptions = Vec::new();
@@ -608,7 +600,7 @@ pub(crate) async fn get_exceptions(
             for exception_index in exception_indexes {
                 let class_name = constant_pool.try_get_class(*exception_index)?;
                 let exception = thread.class(class_name).await?;
-                let exception = exception.to_object(&vm).await?;
+                let exception = exception.to_object(thread).await?;
                 exceptions.push(exception);
             }
             break;
@@ -636,11 +628,10 @@ pub(crate) async fn get_interfaces_0(
     let class = parameters.pop_object()?;
     let class_name: String = class.value("name")?.try_into()?;
     let class = thread.class(class_name).await?;
-    let vm = thread.vm()?;
     let mut interfaces = Vec::new();
 
     for interface in class.interfaces()? {
-        let interface = interface.to_object(&vm).await?;
+        let interface = interface.to_object(&thread).await?;
         interfaces.push(interface);
     }
 
@@ -680,8 +671,7 @@ pub(crate) async fn get_name_0(
     let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_name = class.name().replace('/', ".");
-    let vm = thread.vm()?;
-    let value = class_name.to_object(&vm).await?;
+    let value = class_name.to_object(&thread).await?;
     Ok(Some(value))
 }
 
@@ -732,9 +722,8 @@ pub(crate) async fn get_primitive_class(
 ) -> Result<Option<Value>> {
     let primitive: Object = parameters.pop_object()?;
     let class_name: String = primitive.try_into()?;
-    let vm = thread.vm()?;
     let class = thread.class(class_name).await?;
-    let class = class.to_object(&vm).await?;
+    let class = class.to_object(&thread).await?;
     Ok(Some(class))
 }
 
@@ -842,9 +831,8 @@ pub(crate) async fn get_simple_binary_name_0(
         return Ok(Some(Value::Object(None)));
     }
 
-    let vm = thread.vm()?;
     let binary_name = class_name_parts[class_name_parts.len() - 1];
-    let value: Value = binary_name.to_string().to_object(&vm).await?;
+    let value: Value = binary_name.to_string().to_object(&thread).await?;
     Ok(Some(value))
 }
 
@@ -863,9 +851,8 @@ pub(crate) async fn get_superclass(
     match class.parent()? {
         Some(parent) => {
             let class_name = parent.name();
-            let vm = thread.vm()?;
             let class = thread.class(class_name).await?;
-            let class = class.to_object(&vm).await?;
+            let class = class.to_object(&thread).await?;
             Ok(Some(class))
         }
         None => Ok(Some(Value::Object(None))),
@@ -885,8 +872,7 @@ pub(crate) async fn init_class_name(
     let object = parameters.pop_object()?;
     let class = get_class(&thread, &object).await?;
     let class_name = class.name().replace('/', ".");
-    let vm = thread.vm()?;
-    let value = class_name.to_object(&vm).await?;
+    let value = class_name.to_object(&thread).await?;
     Ok(Some(value))
 }
 
@@ -1034,8 +1020,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_for_name_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let object = "java.lang.String".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = "java.lang.String".to_object(&thread).await?;
         let parameters = Parameters::new(vec![
             object,
             Value::from(true),
@@ -1066,8 +1052,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_for_name_0_class_not_found() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let object = "foo".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![
             object,
             Value::from(true),
@@ -1081,9 +1067,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_class_access_flags_raw_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.String").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_class_access_flags_raw_0(thread, parameters).await?;
         let access_flags: i32 = result.expect("access_flags").try_into()?;
@@ -1093,9 +1079,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_class_file_version_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.Object").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_class_file_version_0(thread, parameters).await?;
         let version: i32 = result.expect("version").try_into()?;
@@ -1105,9 +1091,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_component_type() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("[int").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_component_type(thread, parameters).await?;
         let class_object: Object = result.expect("class").try_into()?;
@@ -1118,9 +1104,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_component_type_null() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.String").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_component_type(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
@@ -1138,9 +1124,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_constant_pool_1() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java.lang.String").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let constant_pool: Object = get_constant_pool_1(thread, parameters)
             .await?
@@ -1154,9 +1140,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_declared_classes_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.String").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_declared_classes_0(thread, parameters).await?;
         let (class, values) = result.expect("interfaces").try_into()?;
@@ -1177,9 +1163,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_declared_constructors_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.Integer").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object, Value::from(false)]);
         let result = get_declared_constructors_0(thread, parameters).await?;
         let (class, values) = result.expect("constructors").try_into()?;
@@ -1215,7 +1201,7 @@ mod tests {
     async fn test_get_declared_fields_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.Integer").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object, Value::from(false)]);
         let result = get_declared_fields_0(thread, parameters).await?;
         let (class, values) = result.expect("fields").try_into()?;
@@ -1255,7 +1241,7 @@ mod tests {
     async fn test_get_declared_methods_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.Boolean").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object, Value::from(false)]);
         let result = get_declared_methods_0(thread, parameters).await?;
         let (class, values) = result.expect("methods").try_into()?;
@@ -1360,9 +1346,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_declaring_class_0_primitive() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("int").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_declaring_class_0(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
@@ -1371,8 +1357,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_declaring_class_0_non_inner() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let object = "foo".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_declaring_class_0(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
@@ -1390,9 +1376,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_interfaces_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.lang.String").await?;
-        let object = class.to_object(&vm).await?;
+        let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_interfaces_0(thread, parameters).await?;
         let (class, values) = result.expect("interfaces").try_into()?;
@@ -1419,8 +1405,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_modifiers() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let object = "foo".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_modifiers(thread, parameters).await?;
         let modifiers: i32 = result.expect("modifiers").try_into()?;
@@ -1430,8 +1416,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_name_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let object = "foo".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_name_0(thread, parameters).await?;
         let class_name: String = result.expect("object").try_into()?;
@@ -1459,8 +1445,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_permitted_subclasses_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let object = "foo".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_permitted_subclasses_0(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
@@ -1469,8 +1455,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_primitive_class() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let object = "int".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = "int".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_primitive_class(thread, parameters).await?;
         let class_object: Object = result.expect("class").try_into()?;
@@ -1490,9 +1476,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_raw_annotations() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java.lang.String").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let value = get_raw_annotations(thread, parameters)
             .await?
@@ -1504,9 +1490,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_raw_type_annotations() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java.lang.String").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let value = get_raw_type_annotations(thread, parameters)
             .await?
@@ -1557,8 +1543,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_simple_binary_name_0_non_inner_class_returns_none() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let object = "foo".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_simple_binary_name_0(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
@@ -1567,8 +1553,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_superclass() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let object = "foo".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_superclass(thread, parameters).await?.expect("result");
         let result_object: Object = result.try_into()?;
@@ -1579,9 +1565,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_superclass_primitive() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("int").await?;
-        let object = class.to_object(&vm).await?;
+        let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_superclass(thread, parameters).await?;
         assert_eq!(Some(Value::Object(None)), result);
@@ -1590,9 +1576,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_superclass_void() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("void").await?;
-        let object = class.to_object(&vm).await?;
+        let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_superclass(thread, parameters).await?;
         assert_eq!(Some(Value::Object(None)), result);
@@ -1601,9 +1587,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_superclass_interface() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class = thread.class("java.io.Serializable").await?;
-        let object = class.to_object(&vm).await?;
+        let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_superclass(thread, parameters).await?;
         assert_eq!(Some(Value::Object(None)), result);
@@ -1612,8 +1598,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_init_class_name() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let object = "foo".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = init_class_name(thread, parameters).await?.expect("result");
         let result_object: String = result.try_into()?;
@@ -1623,9 +1609,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_array() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("[int").await?;
-        let object = class.to_object(&vm).await?;
+        let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_array(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(true)));
@@ -1634,9 +1620,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_array_false() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("int").await?;
-        let object = class.to_object(&vm).await?;
+        let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_array(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(false)));
@@ -1645,11 +1631,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_assignable_from() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let object = thread
             .object("java.lang.Object", "", &[] as &[Value])
             .await?;
-        let string_object = "foo".to_object(&vm).await?;
+        let string_object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object, string_object]);
         let result = is_assignable_from(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(true)));
@@ -1658,11 +1644,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_assignable_from_false() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let object = thread
             .object("java.lang.Object", "", &[] as &[Value])
             .await?;
-        let string_object = "foo".to_object(&vm).await?;
+        let string_object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![string_object, object]);
         let result = is_assignable_from(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(false)));
@@ -1692,11 +1678,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_instance() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let object = thread
             .object("java.lang.Object", "", &[] as &[Value])
             .await?;
-        let string_object = "foo".to_object(&vm).await?;
+        let string_object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object, string_object]);
         let result = is_instance(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(true)));
@@ -1718,9 +1704,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_interface() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("java.lang.Cloneable").await?;
-        let object = class.to_object(&vm).await?;
+        let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_interface(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(true)));
@@ -1729,9 +1715,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_interface_false() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("java.lang.Integer").await?;
-        let object = class.to_object(&vm).await?;
+        let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_interface(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(false)));
@@ -1740,9 +1726,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_primitive() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("int").await?;
-        let object = class.to_object(&vm).await?;
+        let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_primitive(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(true)));
@@ -1751,9 +1737,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_primitive_false() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::thread().await?;
         let class: Arc<Class> = thread.class("java.lang.Integer").await?;
-        let object = class.to_object(&vm).await?;
+        let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_primitive(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(false)));

@@ -30,14 +30,12 @@ pub(crate) async fn canonicalize_with_prefix_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let vm = thread.vm()?;
     let path: String = parameters.pop_object()?.try_into()?;
     let prefix: String = parameters.pop_object()?.try_into()?;
     let canonical_path: String;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
     {
-        let _ = vm;
         let _ = prefix;
         // In WebAssembly, we cannot access the filesystem directly, so we return the path as is.
         canonical_path = path;
@@ -50,7 +48,7 @@ pub(crate) async fn canonicalize_with_prefix_0(
         canonical_path = canonicalized_path.to_string_lossy().to_string();
     }
 
-    let canonical = canonical_path.to_object(&vm).await?;
+    let canonical = canonical_path.to_object(&thread).await?;
     Ok(Some(canonical))
 }
 
@@ -127,8 +125,7 @@ pub(crate) async fn get_drive_directory(
         letter_code as char
     };
     let directory = format!("{drive_letter}:\\");
-    let vm = thread.vm()?;
-    let directory_value = directory.to_object(&vm).await?;
+    let directory_value = directory.to_object(&thread).await?;
     Ok(Some(directory_value))
 }
 
@@ -264,15 +261,15 @@ pub(crate) async fn set_read_only(
 mod tests {
     use super::*;
     use crate::JavaError::RuntimeException;
-    use crate::{JavaObject, VM};
+    use crate::JavaObject;
     use std::path::Path;
     use tempfile::NamedTempFile;
 
-    async fn create_file(vm: &VM, prefix: &str) -> Result<(NamedTempFile, Value)> {
+    async fn create_file(thread: &Thread, prefix: &str) -> Result<(NamedTempFile, Value)> {
         let file = NamedTempFile::with_prefix(prefix)?;
         let path_name = file.path().to_string_lossy().to_string();
-        let path_name: Value = path_name.to_object(vm).await?;
-        let file_object = vm
+        let path_name: Value = path_name.to_object(thread).await?;
+        let file_object = thread
             .object("java.io.File", "Ljava/lang/String;", &[path_name])
             .await?;
         Ok((file, file_object))
@@ -280,9 +277,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_canonicalize_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let original_path = ".";
-        let path = original_path.to_object(&vm).await?;
+        let path = original_path.to_object(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(path);
         let value = canonicalize_0(thread, parameters).await?.expect("value");
@@ -293,11 +290,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_canonicalize_with_prefix_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let original_path_prefix = "..";
         let original_path = ".";
-        let path_prefix = original_path_prefix.to_object(&vm).await?;
-        let path = original_path.to_object(&vm).await?;
+        let path_prefix = original_path_prefix.to_object(&thread).await?;
+        let path = original_path.to_object(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(path_prefix);
         parameters.push(path);
@@ -312,8 +309,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_access() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let (_file, file_object) = create_file(&vm, "check_access").await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let (_file, file_object) = create_file(&thread, "check_access").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         parameters.push_int(1); // Read access
@@ -329,8 +326,8 @@ mod tests {
         if Path::new(path_name).exists() {
             tokio::fs::remove_dir_all(path_name).await?;
         }
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let path_object: Value = path_name.to_object(&vm).await?;
+        let (vm, thread) = crate::test::thread().await?;
+        let path_object: Value = path_name.to_object(&thread).await?;
         let file_object = vm
             .object("java.io.File", "Ljava/lang/String;", &[path_object])
             .await?;
@@ -352,8 +349,8 @@ mod tests {
             tokio::fs::remove_file(path_name).await?;
         }
 
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let path_object: Value = path_name.to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let path_object: Value = path_name.to_object(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(path_object);
         let value = create_file_exclusively(thread, parameters)
@@ -367,8 +364,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let (file, file_object) = create_file(&vm, "delete").await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let (file, file_object) = create_file(&thread, "delete").await?;
         let path: String = file.path().to_string_lossy().to_string();
         assert!(Path::new(&path).exists());
 
@@ -385,8 +382,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_boolean_attributes() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let (_file, file_object) = create_file(&vm, "get_boolean_attributes_0").await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let (_file, file_object) = create_file(&thread, "get_boolean_attributes_0").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = get_boolean_attributes(thread, parameters)
@@ -412,12 +409,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_last_modified_time() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await?;
         let start_time = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|e| RuntimeException(e.to_string()))?
             .as_millis() as i64;
-        let (_file, file_object) = create_file(&vm, "get_last_modified_time").await?;
+        let (_file, file_object) = create_file(&thread, "get_last_modified_time").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = get_last_modified_time(thread, parameters)
@@ -430,8 +427,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_length() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let (_file, file_object) = create_file(&vm, "get_length").await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let (_file, file_object) = create_file(&thread, "get_length").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = get_length(thread, parameters).await?.expect("length");
@@ -442,8 +439,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_name_max_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let path = "get_name_max_0.txt".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let path = "get_name_max_0.txt".to_object(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(path);
         let value = unixfilesystem::get_name_max_0(thread, parameters)
@@ -457,8 +454,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_space_0() -> Result<()> {
         for space_type in [0, 1, 2, 3] {
-            let (vm, thread) = crate::test::thread().await.expect("thread");
-            let (_file, file_object) = create_file(&vm, "get_space_0").await?;
+            let (_vm, thread) = crate::test::thread().await?;
+            let (_file, file_object) = create_file(&thread, "get_space_0").await?;
             let mut parameters = Parameters::default();
             parameters.push(file_object);
             parameters.push_int(space_type);
@@ -484,8 +481,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_list() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let path_object: Value = ".".to_object(&vm).await?;
+        let (vm, thread) = crate::test::thread().await?;
+        let path_object: Value = ".".to_object(&thread).await?;
         let file_object = vm
             .object("java.io.File", "Ljava/lang/String;", &[path_object])
             .await?;
@@ -518,11 +515,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_rename_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let (source_file, source_object) = create_file(&vm, "rename_source").await?;
+        let (vm, thread) = crate::test::thread().await?;
+        let (source_file, source_object) = create_file(&thread, "rename_source").await?;
         let source_path: String = source_file.path().to_string_lossy().to_string();
         let destination_path = format!("{source_path}_destination");
-        let destination_object: Value = destination_path.to_object(&vm).await?;
+        let destination_object: Value = destination_path.to_object(&thread).await?;
         let destination_object = vm
             .object("java.io.File", "Ljava/lang/String;", &[destination_object])
             .await?;
@@ -539,8 +536,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_last_modified_time() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let (_file, file_object) = create_file(&vm, "set_last_modified_time").await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let (_file, file_object) = create_file(&thread, "set_last_modified_time").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         parameters.push_long(0);
@@ -554,8 +551,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_permission() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let (_file, file_object) = create_file(&vm, "set_permission").await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let (_file, file_object) = create_file(&thread, "set_permission").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         parameters.push_bool(false); // owner_only
@@ -569,8 +566,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_read_only() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let (_file, file_object) = create_file(&vm, "set_read_only").await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let (_file, file_object) = create_file(&thread, "set_read_only").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = set_read_only(thread, parameters).await?.expect("success");

@@ -383,7 +383,8 @@ impl VM {
         let mut string_parameters = Vec::with_capacity(parameters.len());
         for parameter in parameters {
             let parameter = parameter.as_ref();
-            let value = parameter.to_object(self).await?;
+            let thread = self.primordial_thread().await?;
+            let value = parameter.to_object(&thread).await?;
             string_parameters.push(value);
         }
 

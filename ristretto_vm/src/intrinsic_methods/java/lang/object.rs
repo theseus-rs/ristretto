@@ -33,9 +33,8 @@ pub(crate) async fn get_class(
     };
 
     let class_name = object.class_name();
-    let vm = thread.vm()?;
     let class = thread.class(class_name).await?;
-    let class = class.to_object(&vm).await?;
+    let class = class.to_object(&thread).await?;
     Ok(Some(class))
 }
 
