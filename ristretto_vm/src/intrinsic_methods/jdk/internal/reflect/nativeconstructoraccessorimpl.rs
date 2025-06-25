@@ -50,11 +50,11 @@ pub(crate) mod tests {
     pub(crate) async fn new_instance_test(new_instance: IntrinsicMethod) -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
         let integer_class = thread.class("java/lang/Integer").await?;
-        let integer_class_object = integer_class.to_object(&vm).await?;
+        let integer_class_object = integer_class.to_object(&thread).await?;
 
         let class = thread.class("java/lang/Class").await?;
         let string_class = thread.class("java/lang/String").await?;
-        let string_class_object = string_class.to_object(&vm).await?;
+        let string_class_object = string_class.to_object(&thread).await?;
         let arguments = Value::try_from((class.clone(), vec![string_class_object]))?;
 
         let constructor = vm
@@ -66,7 +66,7 @@ pub(crate) mod tests {
             .await?
             .expect("constructor");
 
-        let string_parameter = "42".to_object(&vm).await?;
+        let string_parameter = "42".to_object(&thread).await?;
         let parameters = Value::try_from((class, vec![string_parameter]))?;
         let parameters = Parameters::new(vec![constructor, parameters]);
         let result: Object = new_instance(thread, parameters)

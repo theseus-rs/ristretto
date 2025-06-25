@@ -1,11 +1,17 @@
 use ristretto_classloader::Object;
-use ristretto_vm::{JavaObject, Result, VM};
+use ristretto_vm::{Result, VM};
 
 #[tokio::test]
 async fn test_is_enum() -> Result<()> {
     let vm = VM::default().await?;
-    let class = vm.class("java.util.concurrent.TimeUnit").await?;
-    let class_object = class.to_object(&vm).await?;
+    let class_object = vm
+        .invoke(
+            "java.lang.Class",
+            "forName(Ljava/lang/String;)Ljava/lang/Class;",
+            &["java.util.concurrent.TimeUnit"],
+        )
+        .await?
+        .expect("class object");
 
     let modifiers: i32 = vm
         .invoke(

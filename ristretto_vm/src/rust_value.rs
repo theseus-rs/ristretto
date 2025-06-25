@@ -1,5 +1,6 @@
 use crate::java_object::JavaObject;
-use crate::{Result, VM, Value};
+use crate::thread::Thread;
+use crate::{Result, Value};
 use ristretto_classloader::{Class, Object, Reference};
 
 const STRING_PREFIX: &str = "str:";
@@ -203,7 +204,7 @@ impl RustValue for Vec<f64> {
 }
 
 /// Convert a vector of Rust values to a vector of `Value`. Rust value
-pub async fn process_values(vm: &VM, values: &[impl RustValue]) -> Result<Vec<Value>> {
+pub async fn process_values(thread: &Thread, values: &[impl RustValue]) -> Result<Vec<Value>> {
     let mut results = Vec::with_capacity(values.len());
     for value in values {
         let value = value.to_value();
@@ -216,7 +217,7 @@ pub async fn process_values(vm: &VM, values: &[impl RustValue]) -> Result<Vec<Va
         let class_name = class.name();
         if class_name.starts_with(STRING_PREFIX) {
             let string_value = class_name.strip_prefix(STRING_PREFIX).unwrap_or_default();
-            let value = string_value.to_object(vm).await?;
+            let value = string_value.to_object(thread).await?;
             results.push(value);
         } else {
             results.push(value);

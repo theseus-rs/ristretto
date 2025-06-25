@@ -456,14 +456,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_object_field_offset() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
         let member_name = Object::new(member_name_class)?;
         let class_object = thread.class("java.lang.Integer").await?;
         let class = Reference::from(Object::new(class_object)?);
         member_name.set_value("clazz", Value::from(class))?;
-        let value_string = "value".to_object(&vm).await?;
+        let value_string = "value".to_object(&thread).await?;
         member_name.set_value("name", value_string)?;
         parameters.push_reference(Some(Reference::from(member_name)));
         let result = object_field_offset(thread, parameters).await?;
@@ -526,14 +526,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_static_field_offset() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
         let member_name = Object::new(member_name_class)?;
         let class_object = thread.class("java.lang.Integer").await?;
         let class = Reference::from(Object::new(class_object)?);
         member_name.set_value("clazz", Value::from(class))?;
-        let value_string = "MAX_VALUE".to_object(&vm).await?;
+        let value_string = "MAX_VALUE".to_object(&thread).await?;
         member_name.set_value("name", value_string)?;
         parameters.push_reference(Some(Reference::from(member_name)));
         let result = static_field_offset(thread, parameters).await?;

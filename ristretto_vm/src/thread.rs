@@ -327,7 +327,7 @@ impl Thread {
         let method_name = method.name();
         let method_descriptor = method.descriptor();
         let vm = self.vm()?;
-        let parameters = process_values(&vm, parameters).await?;
+        let parameters = process_values(self, parameters).await?;
         let method_registry = vm.method_registry();
         let rust_method = method_registry.method(class_name, method_name, method_descriptor);
         // If the method is not found in the registry, try to JIT compile it.
@@ -468,8 +468,7 @@ impl Thread {
             let value = parameter.to_value();
             constructor_parameters.push(value);
         }
-        let vm = self.vm()?;
-        let parameters = process_values(&vm, &constructor_parameters).await?;
+        let parameters = process_values(self, &constructor_parameters).await?;
         self.execute(&class, &constructor, &parameters).await?;
         Ok(object)
     }

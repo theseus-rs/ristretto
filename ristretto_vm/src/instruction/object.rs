@@ -641,9 +641,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_checkcast_string_to_object() -> Result<()> {
-        let (vm, _thread, mut frame) = crate::test::frame().await?;
+        let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
-        let string = "foo".to_object(&vm).await?;
+        let string = "foo".to_object(&thread).await?;
         stack.push(string)?;
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;
         let result = checkcast(&frame, stack, class_index).await?;
@@ -695,9 +695,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_instanceof_string_to_object() -> Result<()> {
-        let (vm, _thread, mut frame) = crate::test::frame().await?;
+        let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
-        let string = "foo".to_object(&vm).await?;
+        let string = "foo".to_object(&thread).await?;
         stack.push(string)?;
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;
         let result = instanceof(&frame, stack, class_index).await?;

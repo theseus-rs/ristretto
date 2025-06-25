@@ -88,14 +88,13 @@ pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Res
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::VM;
     use crate::java_object::JavaObject;
 
     #[tokio::test]
     async fn test_process_throwable() -> Result<()> {
-        let vm = VM::default().await?;
-        let value = "foo".to_object(&vm).await?;
-        let result = vm
+        let (_vm, thread) = crate::test::thread().await?;
+        let value = "foo".to_object(&thread).await?;
+        let result = thread
             .invoke(
                 "java.lang.Integer",
                 "parseInt(Ljava/lang/String;)I",

@@ -24,7 +24,7 @@ pub(crate) async fn system(thread: &Arc<Thread>) -> Result<HashMap<&'static str,
     let system_properties = system_properties(&vm)?;
     let mut properties = HashMap::new();
     for (key, value) in system_properties {
-        let value = value.to_object(&vm).await?;
+        let value = value.to_object(thread).await?;
         properties.insert(key, value);
     }
     Ok(properties)

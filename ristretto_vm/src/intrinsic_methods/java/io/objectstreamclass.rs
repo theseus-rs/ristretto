@@ -39,9 +39,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_has_static_initializer_false() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(class_object);
         let has_initializer = has_static_initializer(thread, parameters).await?;
@@ -51,9 +51,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_has_static_initializer_true() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/System").await?;
-        let class_object = class.to_object(&vm).await?;
+        let class_object = class.to_object(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(class_object);
         let has_initializer = has_static_initializer(thread, parameters).await?;

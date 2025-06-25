@@ -25,8 +25,7 @@ pub(crate) async fn get_class_at_0(
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
     let class = thread.class(class_name).await?;
-    let vm = thread.vm()?;
-    let result = class.to_object(&vm).await?;
+    let result = class.to_object(&thread).await?;
     Ok(Some(result))
 }
 
@@ -45,8 +44,7 @@ pub(crate) async fn get_class_at_if_loaded_0(
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
     let class = thread.class(class_name).await?;
-    let vm = thread.vm()?;
-    let result = class.to_object(&vm).await?;
+    let result = class.to_object(&thread).await?;
     Ok(Some(result))
 }
 
@@ -110,12 +108,11 @@ pub(crate) async fn get_field_at_0(
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
     let class = thread.class(class_name).await?;
-    let vm = thread.vm()?;
-    let class_object = class.to_object(&vm).await?;
+    let class_object = class.to_object(&thread).await?;
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
-    let field_name = field_name.to_object(&vm).await?;
+    let field_name = field_name.to_object(&thread).await?;
 
     let field = thread
         .invoke(
@@ -222,14 +219,13 @@ pub(crate) async fn get_member_ref_info_at_0(
             )));
         }
     };
-    let vm = thread.vm()?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class_name = class_name.to_object(&vm).await?.to_reference()?;
+    let class_name = class_name.to_object(&thread).await?.to_reference()?;
     let (name_index, type_index) = constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let name = constant_pool.try_get_utf8(*name_index)?;
-    let name = name.to_object(&vm).await?.to_reference()?;
+    let name = name.to_object(&thread).await?.to_reference()?;
     let descriptor = constant_pool.try_get_utf8(*type_index)?;
-    let descriptor = descriptor.to_object(&vm).await?.to_reference()?;
+    let descriptor = descriptor.to_object(&thread).await?.to_reference()?;
     let string_class = thread.class("java/lang/String").await?;
     let string_array = vec![class_name, name, descriptor];
     let results = Reference::from((string_class, string_array));
@@ -252,8 +248,7 @@ pub(crate) async fn get_method_at_0(
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
     let class = thread.class(class_name).await?;
-    let vm = thread.vm()?;
-    let class_object = class.to_object(&vm).await?;
+    let class_object = class.to_object(&thread).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -264,7 +259,7 @@ pub(crate) async fn get_method_at_0(
     for parameter_type in parameter_types {
         let parameter_type = parameter_type.class_name();
         let parameter_type = thread.class(&parameter_type).await?;
-        let parameter_type = parameter_type.to_object(&vm).await?;
+        let parameter_type = parameter_type.to_object(&thread).await?;
         parameters_classes.push(parameter_type);
     }
     let class = thread.class("java.lang.Class").await?;
@@ -279,7 +274,7 @@ pub(crate) async fn get_method_at_0(
             )
             .await?
     } else {
-        let method_name = method_name.to_object(&vm).await?;
+        let method_name = method_name.to_object(&thread).await?;
         thread
             .invoke(
                 "java.lang.Class",
@@ -388,12 +383,11 @@ pub(crate) async fn get_name_and_type_ref_info_at_0(
             )));
         }
     };
-    let vm = thread.vm()?;
     let (name_index, type_index) = constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let name = constant_pool.try_get_utf8(*name_index)?;
-    let name = name.to_object(&vm).await?.to_reference()?;
+    let name = name.to_object(&thread).await?.to_reference()?;
     let descriptor = constant_pool.try_get_utf8(*type_index)?;
-    let descriptor = descriptor.to_object(&vm).await?.to_reference()?;
+    let descriptor = descriptor.to_object(&thread).await?.to_reference()?;
     let string_class = thread.class("java/lang/String").await?;
     let string_array = vec![name, descriptor];
     let results = Reference::from((string_class, string_array));
@@ -430,8 +424,7 @@ pub(crate) async fn get_string_at_0(
     let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let utf8 = constant_pool.try_get_string(index)?;
-    let vm = thread.vm()?;
-    let result = utf8.to_object(&vm).await?;
+    let result = utf8.to_object(&thread).await?;
     Ok(Some(result))
 }
 
@@ -472,8 +465,7 @@ pub(crate) async fn get_utf_8_at_0(
     let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let utf8 = constant_pool.try_get_utf8(index)?;
-    let vm = thread.vm()?;
-    let result = utf8.to_object(&vm).await?;
+    let result = utf8.to_object(&thread).await?;
     Ok(Some(result))
 }
 

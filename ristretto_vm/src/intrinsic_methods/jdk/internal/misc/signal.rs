@@ -88,8 +88,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_find_signal_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let signal_name = "INT".to_object(&vm).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        let signal_name = "INT".to_object(&thread).await?;
         let parameters = Parameters::new(vec![signal_name]);
         let value = find_signal_0(thread, parameters).await?;
         assert_eq!(value, Some(Value::Int(2)));

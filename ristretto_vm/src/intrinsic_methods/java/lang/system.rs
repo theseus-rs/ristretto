@@ -209,7 +209,6 @@ pub(crate) async fn init_properties(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let properties = parameters.pop()?;
-    let vm = thread.vm()?;
     let properties_class = thread.class("java.util.Properties").await?;
     let set_property_method = properties_class.try_get_method(
         "setProperty",
@@ -218,7 +217,7 @@ pub(crate) async fn init_properties(
     let system_properties = &mut properties::system(&thread).await?;
 
     for (key, value) in system_properties.iter() {
-        let key = key.to_object(&vm).await?;
+        let key = key.to_object(&thread).await?;
         let value = value.clone();
         let parameters = vec![properties.clone(), key, value];
         thread
@@ -246,8 +245,7 @@ pub(crate) async fn map_library_name(
         "windows" => format!("{library_name}.dll"),
         _ => format!("lib{library_name}.so"),
     };
-    let vm = thread.vm()?;
-    let library_name = library_file_name.to_object(&vm).await?;
+    let library_name = library_file_name.to_object(&thread).await?;
     Ok(Some(library_name))
 }
 
