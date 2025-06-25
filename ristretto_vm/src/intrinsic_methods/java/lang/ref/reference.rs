@@ -28,7 +28,8 @@ pub(crate) async fn get_and_clear_reference_pending_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.ref.Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;")
+    // TODO: Implement when the pending list is implemented
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method(
@@ -102,12 +103,13 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.ref.Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;"
-    )]
-    async fn test_get_and_clear_reference_pending_list() {
+    async fn test_get_and_clear_reference_pending_list() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_clear_reference_pending_list(thread, Parameters::default()).await;
+        let result = get_and_clear_reference_pending_list(thread, Parameters::default())
+            .await?
+            .expect("pending list");
+        assert_eq!(result, Value::Object(None));
+        Ok(())
     }
 
     #[tokio::test]
