@@ -4,7 +4,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_21};
-use ristretto_classloader::{Class, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -18,10 +18,13 @@ pub(crate) async fn do_privileged_1(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
-    let class: Arc<Class> = object.class().clone();
-    let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
+    let class_name = object.class().name().to_string();
     thread
-        .execute(&class, &method, &[Value::from(object)])
+        .invoke(
+            &class_name,
+            "run()Ljava/lang/Object;",
+            &[Value::from(object)],
+        )
         .await
 }
 
@@ -36,10 +39,13 @@ pub(crate) async fn do_privileged_2(
 ) -> Result<Option<Value>> {
     let _context = parameters.pop_object()?;
     let object = parameters.pop_object()?;
-    let class: Arc<Class> = object.class().clone();
-    let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
+    let class_name = object.class().name().to_string();
     thread
-        .execute(&class, &method, &[Value::from(object)])
+        .invoke(
+            &class_name,
+            "run()Ljava/lang/Object;",
+            &[Value::from(object)],
+        )
         .await
 }
 
@@ -53,10 +59,13 @@ pub(crate) async fn do_privileged_3(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
-    let class: Arc<Class> = object.class().clone();
-    let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
+    let class_name = object.class().name().to_string();
     thread
-        .execute(&class, &method, &[Value::from(object)])
+        .invoke(
+            &class_name,
+            "run()Ljava/lang/Object;",
+            &[Value::from(object)],
+        )
         .await
 }
 
@@ -71,10 +80,13 @@ pub(crate) async fn do_privileged_4(
 ) -> Result<Option<Value>> {
     let _context = parameters.pop_object()?;
     let object = parameters.pop_object()?;
-    let class: Arc<Class> = object.class().clone();
-    let method = class.try_get_method("run", "()Ljava/lang/Object;")?;
+    let class_name = object.class().name().to_string();
     thread
-        .execute(&class, &method, &[Value::from(object)])
+        .invoke(
+            &class_name,
+            "run()Ljava/lang/Object;",
+            &[Value::from(object)],
+        )
         .await
 }
 

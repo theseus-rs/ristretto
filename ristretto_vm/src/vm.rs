@@ -251,20 +251,18 @@ impl VM {
         if self.java_class_file_version <= JAVA_8 {
             self.invoke(
                 "java.lang.System",
-                "initializeSystemClass",
-                "()V",
+                "initializeSystemClass()V",
                 &[] as &[Value],
             )
             .await?;
         } else {
-            self.invoke("java.lang.System", "initPhase1", "()V", &[] as &[Value])
+            self.invoke("java.lang.System", "initPhase1()V", &[] as &[Value])
                 .await?;
 
             let phase2_result = self
                 .invoke(
                     "java.lang.System",
-                    "initPhase2",
-                    "(ZZ)I",
+                    "initPhase2(ZZ)I",
                     &[Value::Int(1), Value::Int(1)],
                 )
                 .await?;
@@ -279,7 +277,7 @@ impl VM {
                 )));
             }
 
-            self.invoke("java.lang.System", "initPhase3", "()V", &[] as &[Value])
+            self.invoke("java.lang.System", "initPhase3()V", &[] as &[Value])
                 .await?;
         }
 
@@ -394,8 +392,7 @@ impl VM {
 
         self.invoke(
             main_class_name,
-            main_method.name(),
-            main_method.descriptor(),
+            main_method.signature(),
             &[string_parameter],
         )
         .await
@@ -407,22 +404,18 @@ impl VM {
     /// # Errors
     ///
     /// if the method cannot be invoked
-    pub async fn invoke<C, M, D>(
+    pub async fn invoke<C, M>(
         &self,
         class: C,
         method: M,
-        descriptor: D,
         parameters: &[impl RustValue],
     ) -> Result<Option<Value>>
     where
         C: AsRef<str>,
         M: AsRef<str>,
-        D: AsRef<str>,
     {
-        let class = self.class(class).await?;
-        let method = class.try_get_method(method, descriptor)?;
         let thread = self.primordial_thread().await?;
-        thread.execute(&class, &method, parameters).await
+        thread.invoke(&class, &method, parameters).await
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
@@ -431,22 +424,18 @@ impl VM {
     /// # Errors
     ///
     /// if the method cannot be invoked
-    pub async fn try_invoke<C, M, D>(
+    pub async fn try_invoke<C, M>(
         &self,
         class: C,
         method: M,
-        descriptor: D,
         parameters: &[impl RustValue],
     ) -> Result<Value>
     where
         C: AsRef<str>,
         M: AsRef<str>,
-        D: AsRef<str>,
     {
-        let Some(value) = self.invoke(class, method, descriptor, parameters).await? else {
-            return Err(InternalError("No return value".into()));
-        };
-        Ok(value)
+        let thread = self.primordial_thread().await?;
+        thread.try_invoke(&class, &method, parameters).await
     }
 
     /// Create a new VM Object by invoking the constructor of the specified class.

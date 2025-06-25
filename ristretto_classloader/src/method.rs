@@ -128,10 +128,10 @@ impl Method {
         self.return_type.as_ref()
     }
 
-    /// Get the method identifier.
+    /// Get the method signature.
     #[must_use]
-    pub fn identifier(&self) -> String {
-        format!("{}:{}", self.name, self.descriptor)
+    pub fn signature(&self) -> String {
+        format!("{}{}", self.name, self.descriptor)
     }
 
     /// Get the maximum stack size.
@@ -233,7 +233,7 @@ mod tests {
         assert_eq!(method.access_flags(), &MethodAccessFlags::empty());
         assert_eq!(method.name(), "test");
         assert_eq!(method.descriptor(), "()V");
-        assert_eq!(method.identifier(), "test:()V");
+        assert_eq!(method.signature(), "test()V");
         assert!(method.parameters().is_empty());
         assert_eq!(method.return_type(), None);
         assert_eq!(method.max_stack, 1);

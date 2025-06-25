@@ -51,8 +51,7 @@ pub(crate) async fn invoke_0(
     let descriptor = format!("({parameters}){return_type_class}");
 
     let method = class.try_get_method(name, descriptor)?;
-    let result = thread.execute(&class, &method, &arguments).await?;
-    Ok(result)
+    thread.execute(&class, &method, &arguments).await
 }
 
 #[cfg(test)]
@@ -75,8 +74,7 @@ pub(crate) mod tests {
         let method = vm
             .invoke(
                 "java.lang.Class",
-                "getDeclaredMethod",
-                "(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;",
+                "getDeclaredMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;",
                 &[integer_class_object, method_name, arguments],
             )
             .await?

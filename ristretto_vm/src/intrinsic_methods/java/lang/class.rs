@@ -1225,8 +1225,7 @@ mod tests {
             let result = vm
                 .invoke(
                     "java.lang.reflect.Field",
-                    "toString",
-                    "()Ljava/lang/String;",
+                    "toString()Ljava/lang/String;",
                     &[Value::from(reference.clone())],
                 )
                 .await?;
@@ -1266,8 +1265,7 @@ mod tests {
             let result = vm
                 .invoke(
                     "java.lang.reflect.Method",
-                    "getName",
-                    "()Ljava/lang/String;",
+                    "getName()Ljava/lang/String;",
                     &[Value::from(reference.clone())],
                 )
                 .await?;

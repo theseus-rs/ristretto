@@ -139,8 +139,8 @@ impl Class {
         let mut methods = HashMap::new();
         for class_file_method in &class_file.methods {
             let method = Method::from(&class_file, class_file_method)?;
-            let method_identifier = method.identifier();
-            methods.insert(method_identifier, Arc::new(method));
+            let signature = method.signature();
+            methods.insert(signature, Arc::new(method));
         }
 
         if class_file.class_name()? == "java/lang/invoke/DirectMethodHandle$Holder" {
@@ -354,7 +354,7 @@ impl Class {
                 attributes: vec![],
             };
             let method = Method::from(class_file, &method)?;
-            methods.insert(method.identifier(), Arc::new(method));
+            methods.insert(method.signature(), Arc::new(method));
         }
         Ok(())
     }
@@ -518,8 +518,8 @@ impl Class {
     {
         let name = name.as_ref();
         let descriptor = descriptor.as_ref();
-        let method_identifier = format!("{name}:{descriptor}");
-        if let Some(method) = self.methods.get(&method_identifier) {
+        let signature = format!("{name}{descriptor}");
+        if let Some(method) = self.methods.get(&signature) {
             return Some(method.clone());
         }
 
@@ -533,8 +533,8 @@ impl Class {
             if class_name != *polymorphic_class_name || name != *polymorphic_method_name {
                 continue;
             }
-            let method_identifier = format!("{name}:{polymorphic_method_descriptor}");
-            return self.methods.get(&method_identifier).cloned();
+            let signature = format!("{name}:{polymorphic_method_descriptor}");
+            return self.methods.get(&signature).cloned();
         }
 
         None

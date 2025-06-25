@@ -264,6 +264,53 @@ impl Thread {
         Ok(())
     }
 
+    /// Invoke a method.  To invoke a method on an object reference, the object reference must be
+    /// the first parameter in the parameters vector.
+    ///
+    /// # Errors
+    ///
+    /// if the method cannot be invoked
+    pub async fn invoke<C, M>(
+        &self,
+        class: C,
+        method: M,
+        parameters: &[impl RustValue],
+    ) -> Result<Option<Value>>
+    where
+        C: AsRef<str>,
+        M: AsRef<str>,
+    {
+        let class = self.class(class).await?;
+        let method = method.as_ref();
+        let index = method.find('(').unwrap_or_default();
+        let name = &method[..index];
+        let descriptor = &method[index..];
+        let method = class.try_get_method(name, descriptor)?;
+        self.execute(&class, &method, parameters).await
+    }
+
+    /// Invoke a method.  To invoke a method on an object reference, the object reference must be
+    /// the first parameter in the parameters vector.
+    ///
+    /// # Errors
+    ///
+    /// if the method cannot be invoked
+    pub async fn try_invoke<C, M>(
+        &self,
+        class: C,
+        method: M,
+        parameters: &[impl RustValue],
+    ) -> Result<Value>
+    where
+        C: AsRef<str>,
+        M: AsRef<str>,
+    {
+        let Some(value) = self.invoke(class, method, parameters).await? else {
+            return Err(InternalError("No return value".into()));
+        };
+        Ok(value)
+    }
+
     /// Add a new frame to the thread and invoke the method. To invoke a method on an object
     /// reference, the object reference must be the first parameter in the parameters vector.
     ///
@@ -386,7 +433,7 @@ impl Thread {
         let result = self.execute(class, method, parameters).await?;
         match result {
             Some(value) => Ok(value),
-            None => Err(InternalError("No result".to_string())),
+            None => Err(InternalError("No return value".to_string())),
         }
     }
 
