@@ -40,7 +40,8 @@ pub(crate) async fn has_reference_pending_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.ref.Reference.hasReferencePendingList()Z")
+    // TODO: Implement when the pending list is implemented
+    Ok(Some(Value::from(false)))
 }
 
 #[intrinsic_method(
@@ -68,7 +69,8 @@ pub(crate) async fn wait_for_reference_pending_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.ref.Reference.waitForReferencePendingList()V")
+    // TODO: Implement when the pending list is implemented
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -109,12 +111,14 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.ref.Reference.hasReferencePendingList()Z"
-    )]
-    async fn test_has_reference_pending_list() {
+    async fn test_has_reference_pending_list() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = has_reference_pending_list(thread, Parameters::default()).await;
+        let value = has_reference_pending_list(thread, Parameters::default())
+            .await?
+            .expect("has pending list");
+        let has_pending_list: bool = value.try_into()?;
+        assert!(!has_pending_list);
+        Ok(())
     }
 
     #[tokio::test]
@@ -138,11 +142,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.ref.Reference.waitForReferencePendingList()V"
-    )]
-    async fn test_wait_for_reference_pending_list() {
+    async fn test_wait_for_reference_pending_list() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = wait_for_reference_pending_list(thread, Parameters::default()).await;
+        let result = wait_for_reference_pending_list(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 }
