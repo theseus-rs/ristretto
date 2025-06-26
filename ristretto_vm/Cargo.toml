@@ -48,12 +48,12 @@ zerocopy = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 getrandom = { workspace = true, features = ["wasm_js"] }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 getrandom = { workspace = true }
 thread-priority = { workspace = true }
-tokio = { workspace = true, features = ["fs"] }
+tokio = { workspace = true, features = ["fs", "time"] }
 
 [dev-dependencies]
 criterion = { workspace = true }

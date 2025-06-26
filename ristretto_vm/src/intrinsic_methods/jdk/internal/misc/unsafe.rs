@@ -848,8 +848,11 @@ pub(crate) async fn page_size(
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.park(ZJ)V", GreaterThanOrEqual(JAVA_11))]
 #[async_recursion(?Send)]
-pub(crate) async fn park(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.park(ZJ)V")
+pub(crate) async fn park(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let time = u64::try_from(parameters.pop_long()?)?;
+    let is_absolute = parameters.pop_bool()?;
+    thread.park(is_absolute, time).await?;
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -1280,8 +1283,9 @@ pub(crate) async fn unaligned_access_0(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_recursion(?Send)]
-pub(crate) async fn unpark(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Unsafe.unpark(Ljava/lang/Object;)V")
+pub(crate) async fn unpark(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+    thread.unpark();
+    Ok(None)
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.writeback0(J)V", GreaterThan(JAVA_11))]
@@ -1315,6 +1319,7 @@ pub(crate) async fn writeback_pre_sync_0(
 mod tests {
     use super::*;
     use crate::JavaObject;
+    use std::time::Duration;
 
     /// Creates a java.lang.reflect.Field for testing purposes.
     async fn create_field(thread: &Thread) -> Result<Value> {
@@ -1534,10 +1539,18 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.park(ZJ)V")]
-    async fn test_park() {
+    async fn test_park() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = park(thread, Parameters::default()).await;
+        let start_time = std::time::Instant::now();
+        let mut parameters = Parameters::default();
+        parameters.push_bool(false);
+        // Park the thread for 100 milliseconds
+        parameters.push_long(100_000_000);
+        let result = park(thread, parameters).await?;
+        assert_eq!(result, None);
+        let elapsed_time = start_time.elapsed();
+        assert!(elapsed_time >= Duration::from_nanos(100_000_000));
+        Ok(())
     }
 
     #[tokio::test]
@@ -1627,12 +1640,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.Unsafe.unpark(Ljava/lang/Object;)V"
-    )]
-    async fn test_unpark() {
+    async fn test_unpark() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unpark(thread, Parameters::default()).await;
+        let result = unpark(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
