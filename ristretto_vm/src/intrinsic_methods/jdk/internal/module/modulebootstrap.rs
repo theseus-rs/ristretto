@@ -14,6 +14,10 @@ use std::sync::Arc;
 #[async_recursion(?Send)]
 pub(crate) async fn boot(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // TODO: correctly populate the ModuleLayer
+    let configuration = thread
+        .object("java/lang/module/Configuration", "", &[] as &[Value])
+        .await?;
+
     let empty_list = thread
         .object("java/util/ArrayList", "", &[] as &[Value])
         .await?;
@@ -21,7 +25,7 @@ pub(crate) async fn boot(thread: Arc<Thread>, _parameters: Parameters) -> Result
         .object(
             "java/lang/ModuleLayer",
             "Ljava/lang/module/Configuration;Ljava/util/List;Ljava/util/function/Function;",
-            &[Value::Object(None), empty_list, Value::Object(None)],
+            &[configuration, empty_list, Value::Object(None)],
         )
         .await?;
     Ok(Some(module_layer))
