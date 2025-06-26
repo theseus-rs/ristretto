@@ -1,4 +1,5 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
+use crate::JavaError::RuntimeException;
 use crate::parameters::Parameters;
 use crate::rust_value::{RustValue, process_values};
 use crate::{Frame, Result, VM, jit};
@@ -8,9 +9,31 @@ use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Value};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
+use std::time::Duration;
 use sysinfo::{Pid, ProcessRefreshKind, RefreshKind, System};
-use tokio::sync::RwLock;
+use tokio::sync::{Notify, RwLock};
+use tokio::time::{Instant, timeout_at};
 use tracing::{Level, debug, event_enabled};
+
+/// A state that is used to park a thread.  The thread will be parked until it is unparked by
+/// another thread or interrupted.
+#[derive(Debug)]
+struct ParkState {
+    permit: AtomicBool,
+    interrupted: AtomicBool,
+    notify: Notify,
+}
+
+impl ParkState {
+    /// Create a new ParkState.
+    fn new() -> Self {
+        Self {
+            permit: AtomicBool::new(false),
+            interrupted: AtomicBool::new(false),
+            notify: Notify::new(),
+        }
+    }
+}
 
 /// A thread is a single sequential flow of control within a program. It has its own call stack
 /// and program counter.
@@ -25,7 +48,7 @@ pub struct Thread {
     name: Arc<RwLock<String>>,
     java_object: Arc<RwLock<Value>>,
     frames: Arc<RwLock<Vec<Arc<Frame>>>>,
-    interrupted: AtomicBool,
+    park_state: ParkState,
 }
 
 impl Thread {
@@ -41,7 +64,7 @@ impl Thread {
             name: Arc::new(RwLock::new(name)),
             java_object: Arc::new(RwLock::new(java_object)),
             frames: Arc::new(RwLock::new(Vec::new())),
-            interrupted: AtomicBool::new(false),
+            park_state: ParkState::new(),
         });
         Ok(thread)
     }
@@ -111,16 +134,84 @@ impl Thread {
 
     /// Set the thread as interrupted.
     pub fn interrupt(&self) {
-        self.interrupted.store(true, Ordering::SeqCst);
+        self.park_state.interrupted.store(true, Ordering::SeqCst);
+        self.unpark();
     }
 
     /// Check if the thread is interrupted and clear the interrupt if specified.
     pub fn is_interrupted(&self, clear_interrupt: bool) -> bool {
         if clear_interrupt {
-            self.interrupted.swap(false, Ordering::SeqCst)
+            self.park_state.interrupted.swap(false, Ordering::SeqCst)
         } else {
-            self.interrupted.load(Ordering::SeqCst)
+            self.park_state.interrupted.load(Ordering::SeqCst)
         }
+    }
+
+    /// Park the thread.  If the permit is available, it will be consumed and the thread will return
+    /// immediately. If the permit is not available, the thread will be parked until it is unparked
+    /// or the specified time has elapsed.
+    ///
+    /// # Arguments
+    ///
+    /// * `is_absolute` - If true, the `time` parameter is treated as an absolute timestamp
+    ///   (milliseconds since epoch).
+    /// * `time` - The time to park the thread. If `is_absolute` is true, this is the absolute
+    ///   timestamp in milliseconds since epoch. If `is_absolute` is false, this is the relative
+    ///   duration in nanoseconds.
+    ///
+    /// # Errors
+    ///
+    /// If the parking operation fails, an error will be returned.
+    pub async fn park(&self, is_absolute: bool, time: u64) -> Result<()> {
+        if self.is_interrupted(false) {
+            return Ok(());
+        }
+
+        // Fast-path: if permit is available, consume it and return
+        if self.park_state.permit.swap(false, Ordering::Acquire) {
+            return Ok(());
+        }
+
+        // Calculate target time or duration
+        if time == 0 {
+            // Double-check if we have been unparked before sleeping
+            while self.park_state.permit.swap(false, Ordering::Acquire) {
+                self.park_state.notify.notified().await;
+            }
+        } else if is_absolute {
+            // Absolute timestamp (milliseconds since epoch)
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|error| RuntimeException(format!("Time went backwards: {error}")))?
+                .as_millis() as u64;
+            let duration = if time > now {
+                time.saturating_sub(now)
+            } else {
+                0
+            };
+            let deadline = Instant::now() + Duration::from_millis(duration);
+
+            // Wait until permit or deadline
+            let notified = self.park_state.notify.notified();
+            let _ = timeout_at(deadline, notified).await;
+            // Also check if unpark happened during sleep
+            self.park_state.permit.swap(false, Ordering::Acquire);
+        } else {
+            // Relative duration in nanoseconds
+            let duration = Duration::from_nanos(time);
+            let deadline = Instant::now() + duration;
+
+            let notified = self.park_state.notify.notified();
+            let _ = timeout_at(deadline, notified).await;
+            self.park_state.permit.swap(false, Ordering::Acquire);
+        }
+        Ok(())
+    }
+
+    /// Unpark the thread if it is parked.
+    pub fn unpark(&self) {
+        self.park_state.permit.store(true, Ordering::Release);
+        self.park_state.notify.notify_one();
     }
 
     /// Get a class.
@@ -520,6 +611,35 @@ mod tests {
         // Clear the interrupt flag
         assert!(thread.is_interrupted(true));
         assert!(!thread.is_interrupted(false));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_park() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let start_time = std::time::Instant::now();
+        thread.park(false, 100_000_000).await?;
+        let elapsed_time = start_time.elapsed();
+        assert!(elapsed_time >= Duration::from_nanos(100_000_000));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_park_interrupted() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        thread.interrupt();
+        let start_time = std::time::Instant::now();
+        thread.park(false, 100_000_000).await?;
+        let elapsed_time = start_time.elapsed();
+        // Thread should return immediately when interrupted
+        assert!(elapsed_time < Duration::from_nanos(1_000_000));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_unpark() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        thread.unpark();
         Ok(())
     }
 
