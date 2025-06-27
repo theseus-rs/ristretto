@@ -160,12 +160,12 @@ pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn object_field_offset(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let member_name = parameters.pop_object()?;
     let class_object: Object = member_name.value("clazz")?.try_into()?;
-    let class = class_object.class();
+    let class = get_class(&thread, &class_object).await?;
     let field_name: String = member_name.value("name")?.try_into()?;
     let offset = class.field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
