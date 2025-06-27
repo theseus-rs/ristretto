@@ -150,6 +150,7 @@
 //! - [JVM Specification §6.5](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.invokedynamic)
 //! - [JVM Specification §4.7.23](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.23)
 
+use crate::Error::InternalError;
 use crate::JavaError::BootstrapMethodError;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
@@ -167,6 +168,11 @@ use tracing::debug;
 ///
 /// This function retrieves the bootstrap method attribute index and name/type index from the
 /// constant pool entry referenced by `method_index`.
+///
+/// # Errors
+///
+/// Returns an error if the constant pool entry is not a valid `InvokeDynamic` entry or if the
+/// bootstrap method attribute index or name/type index cannot be retrieved.
 fn get_bootstrap_method_attribute_name_and_type(
     constant_pool: &ConstantPool,
     method_index: u16,
@@ -192,6 +198,11 @@ fn get_bootstrap_method_attribute_name_and_type(
 /// This function retrieves a specific `BootstrapMethod` from the class's bootstrap methods
 /// attribute using the provided index. Bootstrap methods are used in the Java Virtual Machine
 /// to support dynamic invocation through the `invokedynamic` instruction.
+///
+/// # Errors
+///
+/// Returns an error if the bootstrap method attribute index is invalid or if the bootstrap method
+/// cannot be found in the class's attributes.
 fn get_bootstrap_method_attribute(
     frame: &Frame,
     bootstrap_method_attr_index: u16,
@@ -227,6 +238,11 @@ fn get_bootstrap_method_attribute(
 ///
 /// Resolves the bootstrap method reference and retrieves the method handle, class, and method name
 /// and method descriptor for the invokedynamic instruction.
+///
+/// # Errors
+///
+/// Returns an error if the bootstrap method reference cannot be resolved, if the method signature
+/// does not match the expected pattern, or if any constant pool entries are invalid.
 async fn resolve_bootstrap_method<'a>(
     thread: &Arc<Thread>,
     constant_pool: &'a ConstantPool,
@@ -275,7 +291,12 @@ async fn resolve_bootstrap_method<'a>(
 ///   - Lookup modes include: MODULE, PACKAGE, PROTECTED, PUBLIC
 ///
 /// Resolves the `MethodHandles.Lookup` object for the current thread.
-async fn resolve_method_handles_lookup(thread: &Thread) -> Result<Value> {
+///
+/// # Errors
+///
+/// Returns an error if the `MethodHandles` class cannot be found or if the lookup method cannot be
+/// resolved.
+async fn get_method_handles_lookup(thread: &Thread) -> Result<Value> {
     let method_handles_class = thread.class("java.lang.invoke.MethodHandles").await?;
     let lookup_method = method_handles_class
         .try_get_method("lookup", "()Ljava/lang/invoke/MethodHandles$Lookup;")?;
@@ -291,6 +312,10 @@ async fn resolve_method_handles_lookup(thread: &Thread) -> Result<Value> {
 /// that represents that type in the JVM. For primitive types and arrays, this returns the
 /// corresponding class objects (like `java.lang.Integer.TYPE` for `int`). For reference types, it
 /// loads the class for the specified type.
+///
+/// # Errors
+///
+/// Returns an error if the class cannot be resolved or if the field type is invalid.
 async fn get_field_type_class(thread: &Thread, field_type: Option<FieldType>) -> Result<Value> {
     let class_name = if let Some(field_type) = field_type {
         field_type.class_name()
@@ -311,6 +336,11 @@ async fn get_field_type_class(thread: &Thread, field_type: Option<FieldType>) ->
 /// This function parses the provided method descriptor into its constituent parts (argument types
 /// and return type), creates `Class` objects for each type, and then invokes the appropriate
 /// `MethodType.methodType()` factory method to create a `MethodType` instance.
+///
+/// # Errors
+///
+/// Returns an error if the method descriptor is invalid or if any of the field types cannot be
+/// resolved.
 async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Value> {
     let (argument_types, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
     let return_class = get_field_type_class(thread, return_type).await?;
@@ -350,14 +380,229 @@ async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Val
         .await
 }
 
+/// Construct a `java.lang.invoke.MethodHandle` instance for a `CONSTANT_MethodHandle`
+///
+/// This function creates a `MethodHandle` object based on the provided reference kind and index. It
+/// resolves the target constant from the constant pool and retrieves the class and method or field
+/// name/type information. It then uses the `MethodHandles.Lookup` object to find the corresponding
+/// method handle.
+///
+/// # Errors
+///
+/// Returns an error if the target constant is not a valid field or method reference, or if the
+/// class or method/field cannot be resolved.
+pub async fn get_method_handle(
+    thread: &Arc<Thread>,
+    constant_pool: &ConstantPool,
+    reference_kind: &ReferenceKind,
+    reference_index: u16,
+) -> Result<Value> {
+    // 1. Lookup the referenced constant
+    let target = constant_pool.try_get(reference_index)?;
+
+    // 2. Get (class, name, descriptor, type) for the target
+    let (class_name, member_name, member_descriptor, is_method) = match target {
+        Constant::FieldRef {
+            class_index,
+            name_and_type_index,
+        } => {
+            let class_name = constant_pool.try_get_class(*class_index)?;
+            let (field_name_index, field_descriptor_index) =
+                constant_pool.try_get_name_and_type(*name_and_type_index)?;
+            let field_name = constant_pool.try_get_utf8(*field_name_index)?;
+            let field_descriptor = constant_pool.try_get_utf8(*field_descriptor_index)?;
+            (class_name, field_name, field_descriptor, false)
+        }
+        Constant::MethodRef {
+            class_index,
+            name_and_type_index,
+        }
+        | Constant::InterfaceMethodRef {
+            class_index,
+            name_and_type_index,
+        } => {
+            let class_name = constant_pool.try_get_class(*class_index)?;
+            let (method_name_index, method_descriptor_index) =
+                constant_pool.try_get_name_and_type(*name_and_type_index)?;
+            let method_name = constant_pool.try_get_utf8(*method_name_index)?;
+            let method_descriptor = constant_pool.try_get_utf8(*method_descriptor_index)?;
+            (class_name, method_name, method_descriptor, true)
+        }
+        _ => {
+            return Err(InternalError(format!(
+                "Unsupported MethodHandle target at constant pool index {reference_index}"
+            )));
+        }
+    };
+
+    // 3. Get the class and lookup object
+    let class = thread.class(class_name).await?;
+    let class_object = class.to_object(thread).await?;
+    let lookup_class = thread
+        .class("java.lang.invoke.MethodHandles$Lookup")
+        .await?;
+    let lookup_object = get_method_handles_lookup(thread).await?;
+    // We use the "trusted" lookup for bootstraps
+    let lookup = thread
+        .try_execute(
+            &lookup_class,
+            &lookup_class.try_get_method(
+                "in",
+                "(Ljava/lang/Class;)Ljava/lang/invoke/MethodHandles$Lookup;",
+            )?,
+            &[lookup_object, class_object.clone()],
+        )
+        .await?;
+
+    // 4. Build the Java String and MethodType for the member
+    let name_value = member_name.to_object(thread).await?;
+    let method_type = if is_method {
+        get_method_type(thread, member_descriptor).await?
+    } else {
+        // not used for fields
+        Value::Object(None)
+    };
+
+    // 5. Select and call the right Lookup method based on ReferenceKind
+    let method_handle = match (reference_kind, is_method) {
+        (ReferenceKind::InvokeStatic, true) => {
+            let method_handle = lookup_class.try_get_method(
+                "findStatic",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &method_handle,
+                    &[lookup.clone(), class_object, name_value, method_type],
+                )
+                .await?
+        }
+        (ReferenceKind::InvokeVirtual, true) => {
+            let method_handle = lookup_class.try_get_method(
+                "findVirtual",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &method_handle,
+                    &[lookup.clone(), class_object, name_value, method_type],
+                )
+                .await?
+        }
+        (ReferenceKind::InvokeSpecial, true) => {
+            let method_handle = lookup_class.try_get_method(
+                "findSpecial",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &method_handle,
+                    &[
+                        lookup.clone(),
+                        class_object.clone(),
+                        name_value,
+                        method_type.clone(),
+                        class_object,
+                    ],
+                )
+                .await?
+        }
+        (ReferenceKind::NewInvokeSpecial, true) => {
+            let method_handle = lookup_class.try_get_method(
+                "findConstructor",
+                "(Ljava/lang/Class;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &method_handle,
+                    &[lookup.clone(), class_object, method_type],
+                )
+                .await?
+        }
+        (ReferenceKind::GetField, false) | (ReferenceKind::GetStatic, false) => {
+            let method_name = if *reference_kind == ReferenceKind::GetField {
+                "findGetter"
+            } else {
+                "findStaticGetter"
+            };
+            let method_handle = lookup_class.try_get_method(
+                method_name,
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            // field type from descriptor
+            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_class = thread.class(field_type).await?;
+            let field_class_obj = field_class.to_object(thread).await?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &method_handle,
+                    &[lookup.clone(), class_object, name_value, field_class_obj],
+                )
+                .await?
+        }
+        (ReferenceKind::PutField, false) | (ReferenceKind::PutStatic, false) => {
+            let method_name = if *reference_kind == ReferenceKind::PutField {
+                "findSetter"
+            } else {
+                "findStaticSetter"
+            };
+            let method_handle = lookup_class.try_get_method(
+                method_name,
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_class = thread.class(field_type).await?;
+            let field_class_obj = field_class.to_object(thread).await?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &method_handle,
+                    &[lookup.clone(), class_object, name_value, field_class_obj],
+                )
+                .await?
+        }
+        (ReferenceKind::InvokeInterface, true) => {
+            let method_handle = lookup_class.try_get_method(
+                "findVirtual",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &method_handle,
+                    &[lookup.clone(), class_object, name_value, method_type],
+                )
+                .await?
+        }
+        _ => {
+            return Err(InternalError(format!(
+                "Unsupported method handle reference kind: {:?} is_method: {}",
+                reference_kind, is_method
+            )));
+        }
+    };
+
+    Ok(method_handle)
+}
+
 /// **Step 3.3** Resolve the bootstrap_method_ref to get the actual MethodHandle
 ///
 /// Retrieves a `MethodHandle` object for the current execution context.
 ///
 /// This function obtains a lookup object that has the access privileges of the caller's class. The
 /// lookup object is used for finding and binding methods during dynamic method invocation.
+///
+/// # Errors
+///
+/// Returns an error if the `MethodHandles.Lookup` class cannot be found or if the lookup method
+/// cannot be resolved.
 async fn resolve_method_handle(thread: &Thread, frame: &Frame) -> Result<Value> {
-    let lookup = resolve_method_handles_lookup(thread).await?;
+    let lookup = get_method_handles_lookup(thread).await?;
 
     // Get the caller MethodHandle
     let class = frame.class();
@@ -416,6 +661,11 @@ async fn resolve_method_handle(thread: &Thread, frame: &Frame) -> Result<Value> 
 /// In the JVM specification, bootstrap methods can have additional static arguments that are stored
 /// in the constant pool. This function resolves those arguments from the constant pool and creates
 /// arguments vector.
+///
+/// # Errors
+///
+/// Returns an error if any of the constant pool entries are invalid or if the conversion to Java
+/// objects fails.
 async fn resolve_static_bootstrap_arguments(
     thread: &Arc<Thread>,
     constant_pool: &ConstantPool,
@@ -442,9 +692,31 @@ async fn resolve_static_bootstrap_arguments(
                 let value = string.to_object(thread).await?;
                 arguments.push(value);
             }
+            Constant::Class(class_index) => {
+                let class_name = constant_pool.try_get_utf8(*class_index)?;
+                let class = thread.class(class_name).await?;
+                let class_object = class.to_object(thread).await?;
+                arguments.push(class_object);
+            }
+            Constant::MethodType(descriptor_index) => {
+                let descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
+                let method_type = get_method_type(thread, descriptor).await?;
+                arguments.push(method_type);
+            }
+            Constant::MethodHandle {
+                reference_kind,
+                reference_index,
+            } => {
+                let method_handle =
+                    get_method_handle(thread, constant_pool, reference_kind, *reference_index)
+                        .await?;
+                arguments.push(method_handle);
+            }
             _ => {
                 return Err(BootstrapMethodError(format!(
-                    "Invalid bootstrap argument type: {argument}"
+                    "Invalid bootstrap argument type at constant pool index {} (tag: {})",
+                    argument,
+                    constant.tag()
                 ))
                 .into());
             }
@@ -466,6 +738,13 @@ async fn resolve_static_bootstrap_arguments(
 ///    - The method type for the dynamic call site
 ///    - Any additional static arguments from the constant pool
 /// 4. Invokes the bootstrap method to obtain and return a callsite object
+///
+/// # Errors
+///
+/// Returns an error if any of the following conditions are met:
+/// - The bootstrap method cannot be found or resolved
+/// - The method name or descriptor cannot be resolved
+/// - The bootstrap method invocation fails
 ///
 /// # References
 ///
@@ -544,6 +823,11 @@ pub async fn resolve_call_site(frame: &Frame, method_index: u16) -> Result<Value
 /// - Dynamic language support on the JVM
 /// - Improved performance for interface method invocation
 /// - Efficient implementation of functional interfaces
+///
+/// # Errors
+///
+/// Returns an error if the call site cannot be resolved, if the bootstrap method fails, or if the
+/// target method handle cannot be invoked.
 ///
 /// # References
 ///
