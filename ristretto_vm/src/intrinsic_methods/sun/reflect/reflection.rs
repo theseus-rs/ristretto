@@ -19,14 +19,14 @@ pub(crate) async fn get_caller_class_1(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
-    let Some(frame) = frames.last() else {
+    if frames.len() < 2 {
         return Ok(Some(Value::Object(None)));
-    };
-    let class = frame.class();
-    let class_name = class.name();
-    let class = thread.class(class_name).await?;
-    let class = class.to_object(&thread).await?;
-    Ok(Some(class))
+    }
+    // current frame = len - 1, caller = len - 2, etc.
+    let caller_frame = &frames[frames.len() - 2];
+    let class = caller_frame.class();
+    let class_object = class.to_object(&thread).await?;
+    Ok(Some(class_object))
 }
 
 #[intrinsic_method(

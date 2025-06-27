@@ -72,19 +72,24 @@ pub(crate) async fn get_caller_class(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
-    for frame in frames.iter().rev() {
+    // skip current frame
+    for frame in frames.iter().rev().skip(1) {
         let class = frame.class();
         let class_name = class.name();
-
-        if class_name == "java/lang/MethodHandles" {
+        // Skip known reflection/VM implementation frames
+        if class_name.starts_with("jdk/internal/reflect/")
+            || class_name.starts_with("sun/reflect/")
+            || class_name == "java/lang/invoke/MethodHandles"
+            || class_name == "java/lang/invoke/MethodHandleNatives"
+            || class_name == "java/lang/invoke/MemberName"
+        {
             continue;
         }
-
-        let class = thread.class(class_name).await?;
-        let class = class.to_object(&thread).await?;
-        return Ok(Some(class));
+        let class_object = class.to_object(&thread).await?;
+        return Ok(Some(class_object));
     }
-    Ok(None)
+    // No non-reflection caller found
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method(
