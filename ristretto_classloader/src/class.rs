@@ -166,6 +166,13 @@ impl Class {
         &self.name
     }
 
+    /// Get the package.
+    #[must_use]
+    pub fn package(&self) -> &str {
+        let index = self.name.rfind('/').unwrap_or(self.name.len());
+        &self.name[..index]
+    }
+
     /// Transform the class name to a descriptor.
     #[must_use]
     pub fn to_descriptor(class_name: &str) -> String {
@@ -592,6 +599,22 @@ impl Class {
         Ok(())
     }
 
+    /// Determine if this class is a subclass of the given class.
+    ///
+    /// # Errors
+    ///
+    /// if the parent class cannot be accessed due to a poisoned lock.
+    pub fn is_subclass_of(&self, class: &Arc<Class>) -> Result<bool> {
+        let mut current: Option<Arc<Class>> = self.parent()?;
+        while let Some(ref parent) = current {
+            if parent.name() == class.name() {
+                return Ok(true);
+            }
+            current = parent.parent()?;
+        }
+        Ok(false)
+    }
+
     /// Determine if this class is assignable from the given class.
     ///
     /// # Errors
@@ -700,6 +723,7 @@ mod tests {
     async fn test_new() -> Result<()> {
         let class = string_class().await?;
         assert_eq!("java/lang/String", class.name());
+        assert_eq!("java/lang", class.package());
         assert_eq!(None, class.component_type());
         assert_eq!(0, class.array_dimensions());
         assert!(!class.is_array());
@@ -1104,6 +1128,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_object_not_is_subclass_of_object() -> Result<()> {
+        let object_class = object_class().await?;
+        assert!(!object_class.is_subclass_of(&object_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_string_is_subclass_of_object() -> Result<()> {
+        let string_class = string_class().await?;
+        let object_class = object_class().await?;
+        assert!(string_class.is_subclass_of(&object_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_not_subclass_of_string() -> Result<()> {
+        let string_class = string_class().await?;
+        let object_class = object_class().await?;
+        assert!(!object_class.is_subclass_of(&string_class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_object_is_assignable_from_object() -> Result<()> {
         let object_class = object_class().await?;
         assert!(object_class.is_assignable_from(&object_class)?);
@@ -1119,7 +1166,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_string_not_is_assignable_from_string() -> Result<()> {
+    async fn test_string_not_is_assignable_from_object() -> Result<()> {
         let string_class = string_class().await?;
         let object_class = object_class().await?;
         assert!(!string_class.is_assignable_from(&object_class)?);
