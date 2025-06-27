@@ -7,7 +7,7 @@ use ristretto_classfile::{
 };
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, LazyLock, RwLock};
 
 /// A list of methods that are designated as polymorphic in the Java Virtual Machine.
 ///
@@ -24,48 +24,43 @@ use std::sync::{Arc, RwLock};
 /// TODO: This implementation should likely be refactored to use a more dynamic approach that looks
 ///       for the `PolymorphicSignature` annotation in the method attributes, rather than hardcoding
 ///       the method names and classes.
-const POLYMORPHIC_METHODS: &[(&str, &str, &str)] = &[
-    (
-        "java/lang/invoke/MethodHandle",
-        "invoke",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-    ),
-    (
-        "java/lang/invoke/MethodHandle",
-        "invokeBasic",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-    ),
-    (
-        "java/lang/invoke/MethodHandle",
-        "invokeExact",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-    ),
-    (
-        "java/lang/invoke/MethodHandle",
-        "linkToInterface",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-    ),
-    (
-        "java/lang/invoke/MethodHandle",
-        "linkToNative",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-    ),
-    (
-        "java/lang/invoke/MethodHandle",
-        "linkToSpecial",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-    ),
-    (
-        "java/lang/invoke/MethodHandle",
-        "linkToStatic",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-    ),
-    (
-        "java/lang/invoke/MethodHandle",
-        "linkToVirtual",
-        "([Ljava/lang/Object;)Ljava/lang/Object;",
-    ),
-];
+pub static POLYMORPHIC_METHODS: LazyLock<HashMap<(&'static str, &'static str), &'static str>> =
+    LazyLock::new(|| {
+        let mut map = HashMap::new();
+        map.insert(
+            ("java/lang/invoke/MethodHandle", "invoke"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/MethodHandle", "invokeBasic"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/MethodHandle", "invokeExact"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/MethodHandle", "linkToInterface"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/MethodHandle", "linkToNative"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/MethodHandle", "linkToSpecial"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/MethodHandle", "linkToStatic"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/MethodHandle", "linkToVirtual"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map
+    });
 
 /// A representation of a Java class.
 #[expect(clippy::struct_field_names)]
@@ -534,14 +529,13 @@ impl Class {
             return None;
         };
 
-        for (polymorphic_class_name, polymorphic_method_name, polymorphic_method_descriptor) in
-            POLYMORPHIC_METHODS
-        {
-            if class_name != *polymorphic_class_name || name != *polymorphic_method_name {
-                continue;
+        if let Some(polymorphic_descriptor) = POLYMORPHIC_METHODS.get(&(class_name, name)) {
+            // If the class name and method name match a polymorphic method, we can return it
+            // regardless of the descriptor.
+            let signature = format!("{name}{polymorphic_descriptor}");
+            if let Some(method) = self.methods.get(&signature) {
+                return Some(method.clone());
             }
-            let signature = format!("{name}:{polymorphic_method_descriptor}");
-            return self.methods.get(&signature).cloned();
         }
 
         None
@@ -1063,7 +1057,9 @@ mod tests {
     #[tokio::test]
     async fn test_object_initializer() -> Result<()> {
         let class = string_class().await?;
-        let method = class.object_initializer("()V").expect("class initializer");
+        let method = class
+            .object_initializer("()V")
+            .expect("instant initializer");
         assert_eq!("<init>", method.name());
         assert_eq!("()V", method.descriptor());
         Ok(())
@@ -1072,7 +1068,7 @@ mod tests {
     #[test]
     fn test_main_method() -> Result<()> {
         let class = simple_class()?;
-        let method = class.main_method().expect("class initializer");
+        let method = class.main_method().expect("method");
         assert_eq!("main", method.name());
         assert_eq!("([Ljava/lang/String;)V", method.descriptor());
         Ok(())
@@ -1083,9 +1079,24 @@ mod tests {
         let class = string_class().await?;
         let name = "isEmpty";
         let descriptor = "()Z";
-        let method = class.method(name, descriptor).expect("class initializer");
+        let method = class.method(name, descriptor).expect("method");
         assert_eq!(name, method.name());
         assert_eq!(descriptor, method.descriptor());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_method_polymorphic() -> Result<()> {
+        let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
+        let class = class_loader.load("java.lang.invoke.MethodHandle").await?;
+        let name = "linkToStatic";
+        let descriptor = "(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;";
+        let method = class.method(name, descriptor).expect("method");
+        assert_eq!(name, method.name());
+        assert_eq!(
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+            method.descriptor()
+        );
         Ok(())
     }
 
