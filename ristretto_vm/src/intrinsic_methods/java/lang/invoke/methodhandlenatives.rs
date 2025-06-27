@@ -1,5 +1,6 @@
 use crate::Error::InternalError;
 use crate::Result;
+use crate::intrinsic_methods::java::lang::class::get_class;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
@@ -7,13 +8,14 @@ use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::{
     Any, Between, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
-use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21};
+use ristretto_classfile::{FieldAccessFlags, JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodAccessFlags};
+use ristretto_classloader::Error::IllegalAccessError;
 use ristretto_classloader::{Class, Method, Object, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 bitflags! {
-    /// Method name flags.
+    /// Member name flags.
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct MemberNameFlags: i32 {
         /// method (not constructor)
@@ -37,10 +39,19 @@ bitflags! {
 
 bitflags! {
     /// Lookup mode flags.
+    ///
+    /// # References
+    ///
+    /// - [java.lang.invoke.MethodHandles.Lookup fields](https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/invoke/MethodHandles.Lookup.html#field-summary)
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct LookupModeFlags: i32 {
-        const MODULE = 16;
-        const UNCONDITIONAL = 32;
+        const PUBLIC = 0x0001;
+        const PRIVATE = 0x0002;
+        const PROTECTED = 0x0004;
+        const PACKAGE = 0x0008;
+        const MODULE = 0x0010;
+        const UNCONDITIONAL = 0x0020;
+        const ORIGINAL = 0x0040;
         const TRUSTED = -1;
     }
 }
@@ -188,17 +199,18 @@ pub(crate) async fn register_natives(
 pub(crate) async fn resolve(
     thread: Arc<Thread>,
     member_self: Object,
-    _caller: Option<Arc<Class>>,
-    _lookup_mode: i32,
-    _speculative_resolve: bool,
+    caller: Option<Arc<Class>>,
+    lookup_mode_flags: &LookupModeFlags,
+    speculative_resolve: bool,
 ) -> Result<Option<Value>> {
     let class_object: Object = member_self.value("clazz")?.try_into()?;
     let class_name: String = class_object.value("name")?.try_into()?;
-    let class = thread.class(class_name).await?;
+    let class = thread.class(class_name.clone()).await?;
     let name = member_self.value("name")?;
     let flags = member_self.value("flags")?.to_int()?;
     let member_name_flags = MemberNameFlags::from_bits_truncate(flags);
 
+    // Handle methods/constructors
     if member_name_flags.contains(MemberNameFlags::IS_METHOD)
         || member_name_flags.contains(MemberNameFlags::IS_CONSTRUCTOR)
     {
@@ -220,20 +232,61 @@ pub(crate) async fn resolve(
         let method_name: String = name.try_into()?;
         let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
         let method = if &class_name == "java.lang.invoke.DirectMethodHandle$Holder" {
-            resolve_direct_method_handle_holder(class, &method_name, &method_descriptor)?
+            resolve_direct_method_handle_holder(class.clone(), &method_name, &method_descriptor)?
         } else {
-            class.try_get_method(method_name, method_descriptor)?
+            class.try_get_method(method_name.clone(), method_descriptor.clone())?
         };
-        let method_access_flags = method.access_flags().bits();
-        let modifiers = i32::from(method_access_flags);
+
+        // Access control enforcement
+        let method_access_flags = method.access_flags();
+        if !check_method_access(caller, &class, method_access_flags, lookup_mode_flags)? {
+            return if speculative_resolve {
+                // If speculative, return None (fail silently)
+                Ok(None)
+            } else {
+                Err(IllegalAccessError(format!(
+                    "member is {}: {}.{}{}",
+                    if method_access_flags.contains(MethodAccessFlags::PRIVATE) {
+                        "private"
+                    } else {
+                        "inaccessible"
+                    },
+                    class_name,
+                    method_name,
+                    method_descriptor,
+                ))
+                .into())
+            };
+        }
+
+        let modifiers = i32::from(method_access_flags.bits());
         let flags = flags | modifiers;
         member_self.set_value("flags", Value::from(flags))?;
         Ok(Some(member_self.into()))
-    } else if member_name_flags.contains(MemberNameFlags::IS_FIELD) {
+    }
+    // Handle fields (for both normal field and VarHandle)
+    else if member_name_flags.contains(MemberNameFlags::IS_FIELD) {
         let field_name: String = name.try_into()?;
         let field = class.field(&field_name)?;
-        let field_access_flags = field.access_flags().bits();
-        let modifiers = i32::from(field_access_flags);
+        let field_access_flags = field.access_flags();
+        if !check_field_access(caller, &class, field_access_flags, lookup_mode_flags)? {
+            return if speculative_resolve {
+                Ok(None)
+            } else {
+                Err(IllegalAccessError(format!(
+                    "member is {}: {}.{}",
+                    if field_access_flags.contains(FieldAccessFlags::PRIVATE) {
+                        "private"
+                    } else {
+                        "inaccessible"
+                    },
+                    class_name,
+                    field_name,
+                ))
+                .into())
+            };
+        }
+        let modifiers = i32::from(field_access_flags.bits());
         let flags = flags | modifiers;
         member_self.set_value("flags", Value::from(flags))?;
         Ok(Some(member_self.into()))
@@ -242,6 +295,108 @@ pub(crate) async fn resolve(
             "Unsupported member name flag: {member_name_flags:?}"
         )))
     }
+}
+
+/// Returns true if `caller` is permitted to access a method of `declaring` with the given access
+/// flags.
+///
+/// # References
+///
+/// - [JLS §6.6 Access Control](https://docs.oracle.com/javase/specs/jls/se24/html/jls-6.html#jls-6.6)
+pub fn check_method_access(
+    caller: Option<Arc<Class>>,
+    declaring: &Arc<Class>,
+    method_access_flags: &MethodAccessFlags,
+    lookup_mode_flags: &LookupModeFlags,
+) -> Result<bool> {
+    if lookup_mode_flags.contains(LookupModeFlags::TRUSTED) {
+        return Ok(true);
+    }
+
+    // 1. PUBLIC: accessible everywhere
+    if method_access_flags.contains(MethodAccessFlags::PUBLIC) {
+        return Ok(true);
+    }
+
+    let Some(ref caller) = caller else {
+        return Ok(false);
+    };
+
+    // 2. PRIVATE: accessible only from the same class
+    if method_access_flags.contains(MethodAccessFlags::PRIVATE) {
+        if Arc::ptr_eq(caller, declaring) {
+            return Ok(true);
+        }
+        return Ok(false);
+    }
+
+    // 3. PROTECTED: accessible to subclasses (and package; Java's rules)
+    if method_access_flags.contains(MethodAccessFlags::PROTECTED) {
+        if caller.package() == declaring.package() || caller.is_subclass_of(declaring)? {
+            return Ok(true);
+        }
+        return Ok(false);
+    }
+
+    // 4. PACKAGE-PRIVATE (default): accessible to same-package classes only
+    // If not public/private/protected, then it's package-private
+    if caller.package() == declaring.package() {
+        return Ok(true);
+    }
+
+    // Not accessible
+    Ok(false)
+}
+
+/// Returns true if `caller` is permitted to access a field of `declaring` with the given access
+/// flags.
+///
+/// # References
+///
+/// - [JLS §6.6 Access Control](https://docs.oracle.com/javase/specs/jls/se24/html/jls-6.html#jls-6.6)
+pub fn check_field_access(
+    caller: Option<Arc<Class>>,
+    declaring: &Arc<Class>,
+    field_access_flags: &FieldAccessFlags,
+    lookup_mode_flags: &LookupModeFlags,
+) -> Result<bool> {
+    if lookup_mode_flags.contains(LookupModeFlags::TRUSTED) {
+        return Ok(true);
+    }
+
+    // 1. PUBLIC: accessible everywhere
+    if field_access_flags.contains(FieldAccessFlags::PUBLIC) {
+        return Ok(true);
+    }
+
+    let Some(ref caller) = caller else {
+        return Ok(false);
+    };
+
+    // 2. PRIVATE: accessible only from the same class
+    if field_access_flags.contains(FieldAccessFlags::PRIVATE) {
+        if Arc::ptr_eq(caller, declaring) {
+            return Ok(true);
+        }
+        return Ok(false);
+    }
+
+    // 3. PROTECTED: accessible to subclasses (and package; Java's rules)
+    if field_access_flags.contains(FieldAccessFlags::PROTECTED) {
+        if caller.package() == declaring.package() || caller.is_subclass_of(declaring)? {
+            return Ok(true);
+        }
+        return Ok(false);
+    }
+
+    // 4. PACKAGE-PRIVATE (default): accessible to same-package classes only
+    // If not public/private/protected, then it's package-private
+    if caller.package() == declaring.package() {
+        return Ok(true);
+    }
+
+    // Not accessible
+    Ok(false)
 }
 
 #[intrinsic_method(
@@ -257,12 +412,19 @@ pub(crate) async fn resolve_0(
     let member_self = parameters.pop_object()?;
     let caller = match parameters.pop_object() {
         Ok(caller) => {
-            let caller: Arc<Class> = caller.try_into()?;
+            let caller = get_class(&thread, &caller).await?;
             Some(caller)
         }
         Err(_) => None,
     };
-    resolve(thread, member_self, caller, -1, true).await
+    resolve(
+        thread,
+        member_self,
+        caller,
+        &LookupModeFlags::empty(),
+        false,
+    )
+    .await
 }
 
 #[intrinsic_method(
@@ -277,13 +439,20 @@ pub(crate) async fn resolve_1(
     let speculative_resolve = parameters.pop_bool()?;
     let caller = match parameters.pop_object() {
         Ok(caller) => {
-            let caller: Arc<Class> = caller.try_into()?;
+            let caller = get_class(&thread, &caller).await?;
             Some(caller)
         }
         Err(_) => None,
     };
     let member_self = parameters.pop_object()?;
-    resolve(thread, member_self, caller, -1, speculative_resolve).await
+    resolve(
+        thread,
+        member_self,
+        caller,
+        &LookupModeFlags::empty(),
+        speculative_resolve,
+    )
+    .await
 }
 
 #[intrinsic_method(
@@ -296,10 +465,10 @@ pub(crate) async fn resolve_2(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let speculative_resolve = parameters.pop_bool()?;
-    let lookup_mode = parameters.pop_int()?;
+    let lookup_mode = LookupModeFlags::from_bits_truncate(parameters.pop_int()?);
     let caller = match parameters.pop_object() {
         Ok(caller) => {
-            let caller: Arc<Class> = caller.try_into()?;
+            let caller = get_class(&thread, &caller).await?;
             Some(caller)
         }
         Err(_) => None,
@@ -309,7 +478,7 @@ pub(crate) async fn resolve_2(
         thread,
         member_self,
         caller,
-        lookup_mode,
+        &lookup_mode,
         speculative_resolve,
     )
     .await
