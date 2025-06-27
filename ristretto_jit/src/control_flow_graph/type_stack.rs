@@ -106,9 +106,24 @@ impl TypeStack {
         self.stack.is_empty()
     }
 
-    /// Returns a copy of the stack as a vector of types.
+    /// Returns a reference to the inner Vec
+    pub fn as_vec(&self) -> &Vec<Type> {
+        &self.stack
+    }
+
+    /// Returns a slice reference
+    pub fn as_slice(&self) -> &[Type] {
+        &self.stack
+    }
+
+    /// Returns a cloned Vec
     pub fn to_vec(&self) -> Vec<Type> {
         self.stack.clone()
+    }
+
+    /// Consumes self and returns the Vec
+    pub fn into_vec(self) -> Vec<Type> {
+        self.stack
     }
 }
 
@@ -259,13 +274,50 @@ mod tests {
     }
 
     #[test]
+    fn test_as_vec() -> Result<()> {
+        let mut type_stack = TypeStack::new();
+        type_stack.push_int()?;
+        type_stack.push_long()?;
+        let vec = type_stack.as_vec();
+        assert_eq!(vec.len(), 2);
+        assert_eq!(vec[0], types::I32);
+        assert_eq!(vec[1], types::I64);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_slice() -> Result<()> {
+        let mut type_stack = TypeStack::new();
+        type_stack.push_int()?;
+        type_stack.push_long()?;
+        let slice = type_stack.as_slice();
+        assert_eq!(slice.len(), 2);
+        assert_eq!(slice[0], types::I32);
+        assert_eq!(slice[1], types::I64);
+        Ok(())
+    }
+
+    #[test]
     fn test_to_vec() -> Result<()> {
         let mut type_stack = TypeStack::new();
         type_stack.push_int()?;
         type_stack.push_long()?;
+        let vec = type_stack.to_vec();
+        assert_eq!(vec.len(), 2);
+        assert_eq!(vec[0], types::I32);
+        assert_eq!(vec[1], types::I64);
+        Ok(())
+    }
 
-        let types = type_stack.to_vec();
-        assert_eq!(types, vec![types::I32, types::I64]);
+    #[test]
+    fn test_into_vec() -> Result<()> {
+        let mut type_stack = TypeStack::new();
+        type_stack.push_int()?;
+        type_stack.push_long()?;
+        let vec = type_stack.into_vec();
+        assert_eq!(vec.len(), 2);
+        assert_eq!(vec[0], types::I32);
+        assert_eq!(vec[1], types::I64);
         Ok(())
     }
 }

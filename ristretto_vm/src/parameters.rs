@@ -151,6 +151,26 @@ impl Parameters {
     pub fn is_empty(&self) -> bool {
         self.parameters.is_empty()
     }
+
+    /// Returns a reference to the inner Vec
+    pub fn as_vec(&self) -> &Vec<Value> {
+        &self.parameters
+    }
+
+    /// Returns a slice reference
+    pub fn as_slice(&self) -> &[Value] {
+        &self.parameters
+    }
+
+    /// Returns a cloned Vec
+    pub fn to_vec(&self) -> Vec<Value> {
+        self.parameters.clone()
+    }
+
+    /// Consumes self and returns the Vec
+    pub fn into_vec(self) -> Vec<Value> {
+        self.parameters
+    }
 }
 
 impl Display for Parameters {
@@ -368,5 +388,41 @@ mod tests {
         parameters.push_int(1);
         parameters.push_int(2);
         assert_eq!("[int(1), int(2)]", parameters.to_string());
+    }
+
+    #[test]
+    fn test_as_vec() {
+        let mut parameters = Parameters::default();
+        parameters.push_int(1);
+        parameters.push_int(2);
+        let vec = parameters.as_vec();
+        assert_eq!(vec, &vec![Value::Int(1), Value::Int(2)]);
+    }
+
+    #[test]
+    fn test_as_slice() {
+        let mut parameters = Parameters::default();
+        parameters.push_int(1);
+        parameters.push_int(2);
+        let slice = parameters.as_slice();
+        assert_eq!(slice, &[Value::Int(1), Value::Int(2)]);
+    }
+
+    #[test]
+    fn test_to_vec() {
+        let mut parameters = Parameters::default();
+        parameters.push_int(1);
+        parameters.push_int(2);
+        let vec = parameters.to_vec();
+        assert_eq!(vec, vec![Value::Int(1), Value::Int(2)]);
+    }
+
+    #[test]
+    fn test_into_vec() {
+        let mut parameters = Parameters::default();
+        parameters.push_int(1);
+        parameters.push_int(2);
+        let vec = parameters.into_vec();
+        assert_eq!(vec, vec![Value::Int(1), Value::Int(2)]);
     }
 }
