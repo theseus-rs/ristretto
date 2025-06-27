@@ -35,10 +35,20 @@ pub(crate) async fn get_caller_class_1(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_caller_class_2(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.reflect.Reflection.getCallerClass(I)Ljava/lang/Class;")
+    let depth = parameters.pop_int()? as usize;
+    let frames = thread.frames().await?;
+    if frames.len() <= depth {
+        return Ok(Some(Value::Object(None)));
+    }
+    // The frame at index (frames.len() - 1 - depth) is the target
+    // current frame = len - 1, caller = len - 2, etc.
+    let frame = &frames[frames.len() - 1 - depth];
+    let class = frame.class();
+    let class_object = class.to_object(&thread).await?;
+    Ok(Some(class_object))
 }
 
 #[intrinsic_method(
@@ -74,13 +84,13 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.reflect.Reflection.getCallerClass(I)Ljava/lang/Class;"
-    )]
-    async fn test_get_caller_class_2() {
+    async fn test_get_caller_class_2() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let parameters = Parameters::default();
-        let _ = get_caller_class_2(thread, parameters).await;
+        let mut parameters = Parameters::default();
+        parameters.push_int(42); // Depth parameter
+        let result = get_caller_class_2(thread, parameters).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
     }
 
     #[tokio::test]
