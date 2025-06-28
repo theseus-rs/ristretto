@@ -316,8 +316,14 @@ impl From<Object> for Value {
 }
 
 impl From<Reference> for Value {
-    fn from(value: Reference) -> Self {
-        Value::Object(Some(value))
+    fn from(reference: Reference) -> Self {
+        Value::Object(Some(reference))
+    }
+}
+
+impl From<Option<Reference>> for Value {
+    fn from(reference: Option<Reference>) -> Self {
+        Value::Object(reference)
     }
 }
 
@@ -1066,6 +1072,16 @@ mod tests {
         let object = Object::new(class)?;
         let reference = Reference::from(object);
         let value = Value::from(reference);
+        assert!(matches!(value, Value::Object(Some(Reference::Object(_)))));
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_option_reference() -> Result<()> {
+        let class = Class::new_named("[Ljava/lang/Object;")?;
+        let object = Object::new(class)?;
+        let reference = Reference::from(object);
+        let value = Value::from(Some(reference));
         assert!(matches!(value, Value::Object(Some(Reference::Object(_)))));
         Ok(())
     }
