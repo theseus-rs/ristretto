@@ -793,17 +793,125 @@ pub async fn resolve_call_site(frame: &Frame, method_index: u16) -> Result<Value
     let method_type = get_method_type(&thread, bootstrap_method_descriptor).await?;
 
     // 4.1 Construct argument array for bootstrap method:
-    let mut arguments = vec![method_handle, method_name, method_type];
+    let mut arguments = vec![method_handle.clone(), method_name, method_type];
     arguments.extend(static_arguments);
 
     // 4.2 Invoke bootstrap method using MethodHandle.invoke():
-    // let call_site = ...
+    let call_site_result = invoke_bootstrap_method(&thread, method_handle, arguments).await?;
 
     // 4.3 Validate returned CallSite:
-    // validate_call_site(call_site);
+    validate_call_site(&thread, bootstrap_method_descriptor, &call_site_result).await?;
 
-    // Ok(call_site)
-    todo!("invokedynamic get_call_site")
+    Ok(call_site_result)
+}
+
+/// **Step 4.2** Invokes the bootstrap method using MethodHandle.invoke().
+///
+/// # Errors
+///
+/// Returns an error if the bootstrap method invocation fails or if the method handle is not valid.
+async fn invoke_bootstrap_method(
+    thread: &Arc<Thread>,
+    method_handle: Value,
+    arguments: Vec<Value>,
+) -> Result<Value> {
+    let method_handle_class = thread.class("java.lang.invoke.MethodHandle").await?;
+    let invoke_method =
+        method_handle_class.try_get_method("invoke", "([Ljava/lang/Object;)Ljava/lang/Object;")?;
+
+    // Convert arguments to Object array
+    let object_class = thread.class("java.lang.Object").await?;
+    let arguments = arguments
+        .into_iter()
+        .map(|argument| {
+            if let Value::Object(Some(reference)) = argument {
+                Some(reference)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<Option<Reference>>>();
+    let arguments = Value::from((object_class, arguments));
+    let call_site_result = thread
+        .try_execute(
+            &method_handle_class,
+            &invoke_method,
+            &[method_handle, arguments],
+        )
+        .await
+        .map_err(|error| -> crate::Error {
+            BootstrapMethodError(format!("Bootstrap method invocation failed: {error}")).into()
+        })?;
+    Ok(call_site_result)
+}
+
+/// **Step 4.3** Validates the CallSite returned by the bootstrap method.
+///
+/// Validate returned CallSite:
+///   - Must not be null
+///   - CallSite.type() must exactly match the expected MethodType
+///   - If validation fails, throw BootstrapMethodError
+///
+/// # Errors
+///
+/// Returns an error if the CallSite is null, if it does not match the expected type, or if it does
+/// not implement the `CallSite` interface.
+async fn validate_call_site(
+    thread: &Arc<Thread>,
+    bootstrap_method_descriptor: &str,
+    call_site: &Value,
+) -> Result<()> {
+    if let Value::Object(None) = call_site {
+        return Err(
+            BootstrapMethodError("Bootstrap method returned null CallSite".to_string()).into(),
+        );
+    }
+
+    // Validate that the returned object is actually a CallSite
+    let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
+    let call_site_reference: Reference = call_site.clone().try_into()?;
+
+    if let Reference::Object(object) = call_site_reference {
+        // Check if the object's class is assignable from CallSite class
+        let object_class = object.class();
+        if !call_site_class.is_assignable_from(object_class)? {
+            return Err(BootstrapMethodError(format!(
+                "Bootstrap method returned object of type {} which is not a CallSite",
+                object_class.name()
+            ))
+            .into());
+        }
+    } else {
+        return Err(
+            BootstrapMethodError("Bootstrap method did not return an object".to_string()).into(),
+        );
+    }
+
+    // Validate CallSite.type() matches expected MethodType
+    let type_method = call_site_class.try_get_method("type", "()Ljava/lang/invoke/MethodType;")?;
+    let call_site_type = thread
+        .try_execute(&call_site_class, &type_method, &[call_site.clone()])
+        .await?;
+    let expected_method_type = get_method_type(thread, bootstrap_method_descriptor).await?;
+
+    // Compare the method types
+    let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
+    let equals_method = method_type_class.try_get_method("equals", "(Ljava/lang/Object;)Z")?;
+    let types_equal = thread
+        .try_execute(
+            &method_type_class,
+            &equals_method,
+            &[call_site_type, expected_method_type],
+        )
+        .await?;
+
+    if let Value::Int(0) = types_equal {
+        return Err(BootstrapMethodError(
+            "CallSite type does not match expected MethodType".to_string(),
+        )
+        .into());
+    }
+    Ok(())
 }
 
 /// Executes the `invokedynamic` JVM instruction for dynamic method invocation.
