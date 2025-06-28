@@ -1,10 +1,12 @@
+use crate::Error::InternalError;
 use crate::Result;
+use crate::intrinsic_methods::java::lang::invoke::methodhandlenatives::MemberNameFlags;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
-use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
-use ristretto_classloader::Value;
+use ristretto_classfile::{JAVA_17, ReferenceKind};
+use ristretto_classloader::{Class, Object, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -13,8 +15,15 @@ use std::sync::Arc;
     Any
 )]
 #[async_recursion(?Send)]
-pub(crate) async fn invoke(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;")
+pub(crate) async fn invoke(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let arguments: Vec<Value> = parameters.pop()?.try_into()?;
+    let method_handle = parameters.pop_object()?;
+    let target_member: Object = method_handle.value("member")?.try_into()?;
+    let result = call_method_handle_target(thread, target_member, arguments).await?;
+    Ok(Some(result))
 }
 
 #[intrinsic_method(
@@ -23,10 +32,14 @@ pub(crate) async fn invoke(_thread: Arc<Thread>, _parameters: Parameters) -> Res
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn invoke_basic(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;")
+    let arguments: Vec<Value> = parameters.pop()?.try_into()?;
+    let method_handle = parameters.pop_object()?;
+    let target_member: Object = method_handle.value("member")?.try_into()?;
+    let result = call_method_handle_target(thread, target_member, arguments).await?;
+    Ok(Some(result))
 }
 
 #[intrinsic_method(
@@ -35,10 +48,139 @@ pub(crate) async fn invoke_basic(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn invoke_exact(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;")
+    let arguments: Vec<Value> = parameters.pop()?.try_into()?;
+    let method_handle = parameters.pop_object()?;
+    let target_member: Object = method_handle.value("member")?.try_into()?;
+    let result = call_method_handle_target(thread, target_member, arguments).await?;
+    Ok(Some(result))
+}
+
+/// Helper: Actually invokes the target referenced by a MethodHandle.
+pub async fn call_method_handle_target(
+    thread: Arc<Thread>,
+    member: Object,
+    mut arguments: Vec<Value>,
+) -> Result<Value> {
+    let target_class_object: Object = member.value("clazz")?.try_into()?;
+    let target_class_name: String = target_class_object.value("name")?.try_into()?;
+    let target_class = thread.class(target_class_name).await?;
+    let member_name: String = member.value("name")?.try_into()?;
+
+    // Get flags to determine the kind of member and operation
+    let flags = member.value("flags")?.to_int()?;
+    let reference_kind_value = (flags
+        & (MemberNameFlags::REFERENCE_KIND_MASK.bits()
+            << MemberNameFlags::REFERENCE_KIND_SHIFT.bits()))
+        >> MemberNameFlags::REFERENCE_KIND_SHIFT.bits();
+    let reference_kind_value = u8::try_from(reference_kind_value)?;
+    let reference_kind = ReferenceKind::try_from(reference_kind_value)?;
+
+    // Get the descriptor (method signature or field type)
+    let member_descriptor: String = if let Ok(method_type) = member.value("type") {
+        let method_descriptor = thread
+            .invoke(
+                "java.lang.invoke.MethodType",
+                "toMethodDescriptorString()Ljava/lang/String;",
+                &[method_type],
+            )
+            .await?;
+        match method_descriptor {
+            Some(descriptor) => descriptor.try_into()?,
+            _ => return Err(InternalError("Invalid MethodType".to_string())),
+        }
+    } else if let Ok(descriptor) = member.value("descriptor").and_then(|v| v.try_into()) {
+        descriptor
+    } else {
+        return Err(InternalError(
+            "MemberName missing type/descriptor".to_string(),
+        ));
+    };
+
+    match reference_kind {
+        ReferenceKind::InvokeVirtual | ReferenceKind::InvokeInterface => {
+            let receiver = arguments.remove(0);
+            let method = target_class.try_get_method(member_name, member_descriptor)?;
+            let mut call_arguments = vec![receiver];
+            call_arguments.extend(arguments);
+            thread
+                .try_execute(&target_class, &method, &call_arguments)
+                .await
+        }
+        ReferenceKind::InvokeStatic => {
+            let method = target_class.try_get_method(member_name, member_descriptor)?;
+            thread.try_execute(&target_class, &method, &arguments).await
+        }
+        ReferenceKind::InvokeSpecial | ReferenceKind::NewInvokeSpecial => {
+            invoke_special(
+                thread,
+                target_class,
+                member_name,
+                member_descriptor,
+                arguments,
+                matches!(reference_kind, ReferenceKind::NewInvokeSpecial),
+            )
+            .await
+        }
+        ReferenceKind::GetField => {
+            let receiver: Object = arguments.remove(0).try_into()?;
+            Ok(receiver.value(&member_name)?)
+        }
+        ReferenceKind::GetStatic => {
+            let field = target_class.static_field(member_name)?;
+            let value = field.value()?;
+            Ok(value)
+        }
+        ReferenceKind::PutField => {
+            let receiver: Object = arguments.remove(0).try_into()?;
+            let value = arguments.remove(0);
+            receiver.set_value(&member_name, value)?;
+            Ok(Value::Object(None))
+        }
+        ReferenceKind::PutStatic => {
+            let value = arguments.remove(0);
+            let field = target_class.static_field(member_name)?;
+            field.set_value(value)?;
+            Ok(Value::Object(None))
+        }
+    }
+}
+
+/// Helper: Invokes a special method (constructor, private method, or super call).
+///
+/// # Errors
+///
+/// Returns an error if the method cannot be found or executed.
+async fn invoke_special(
+    thread: Arc<Thread>,
+    target_class: Arc<Class>,
+    method_name: String,
+    method_descriptor: String,
+    mut arguments: Vec<Value>,
+    is_constructor: bool,
+) -> Result<Value> {
+    if is_constructor {
+        let start_index = method_descriptor.find('(').unwrap_or_default();
+        let end_index = method_descriptor
+            .rfind(')')
+            .unwrap_or(method_descriptor.len());
+        let descriptor = &method_descriptor[start_index..end_index];
+        let instance = thread
+            .object(target_class.name(), descriptor, arguments.as_slice())
+            .await?;
+        Ok(instance)
+    } else {
+        // Regular special invocation (private methods, super calls)
+        let receiver = arguments.remove(0);
+        let method = target_class.try_get_method(method_name, method_descriptor)?;
+        let mut call_arguments = vec![receiver];
+        call_arguments.extend(arguments);
+        thread
+            .try_execute(&target_class, &method, &call_arguments)
+            .await
+    }
 }
 
 #[intrinsic_method(
@@ -104,33 +246,6 @@ pub(crate) async fn link_to_virtual(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_invoke() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke(thread, Parameters::default()).await;
-    }
-
-    #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_invoke_basic() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke_basic(thread, Parameters::default()).await;
-    }
-
-    #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_invoke_exact() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke_exact(thread, Parameters::default()).await;
-    }
 
     #[tokio::test]
     #[should_panic(

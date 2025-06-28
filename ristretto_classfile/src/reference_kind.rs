@@ -1,3 +1,4 @@
+use crate::Error;
 use crate::error::Error::InvalidReferenceKind;
 use crate::error::Result;
 use byteorder::{ReadBytesExt, WriteBytesExt};
@@ -98,20 +99,8 @@ impl ReferenceKind {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ReferenceKind> {
-        let reference_kind = match bytes.read_u8()? {
-            1 => ReferenceKind::GetField,
-            2 => ReferenceKind::GetStatic,
-            3 => ReferenceKind::PutField,
-            4 => ReferenceKind::PutStatic,
-            5 => ReferenceKind::InvokeVirtual,
-            6 => ReferenceKind::InvokeStatic,
-            7 => ReferenceKind::InvokeSpecial,
-            8 => ReferenceKind::NewInvokeSpecial,
-            9 => ReferenceKind::InvokeInterface,
-            reference_kind => return Err(InvalidReferenceKind(reference_kind)),
-        };
-
-        Ok(reference_kind)
+        let byte = bytes.read_u8()?;
+        ReferenceKind::try_from(byte)
     }
 
     /// Serialize the `ReferenceKind` to bytes.
@@ -257,6 +246,45 @@ impl fmt::Display for ReferenceKind {
             ReferenceKind::InvokeSpecial => write!(f, "InvokeSpecial"),
             ReferenceKind::NewInvokeSpecial => write!(f, "NewInvokeSpecial"),
             ReferenceKind::InvokeInterface => write!(f, "InvokeInterface"),
+        }
+    }
+}
+
+impl TryFrom<u8> for ReferenceKind {
+    type Error = Error;
+
+    /// Converts a `u8` value to a `ReferenceKind`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `u8` value does not correspond to a valid `ReferenceKind`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::ReferenceKind;
+    ///
+    /// // Convert a valid u8 to ReferenceKind
+    /// let reference_kind: ReferenceKind = 5.try_into()?;
+    /// assert_eq!(reference_kind, ReferenceKind::InvokeVirtual);
+    ///
+    /// // Attempting to convert an invalid u8
+    /// let invalid_reference_kind: Result<ReferenceKind, _> = 10.try_into();
+    /// assert!(invalid_reference_kind.is_err());
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
+    fn try_from(value: u8) -> Result<Self> {
+        match value {
+            1 => Ok(ReferenceKind::GetField),
+            2 => Ok(ReferenceKind::GetStatic),
+            3 => Ok(ReferenceKind::PutField),
+            4 => Ok(ReferenceKind::PutStatic),
+            5 => Ok(ReferenceKind::InvokeVirtual),
+            6 => Ok(ReferenceKind::InvokeStatic),
+            7 => Ok(ReferenceKind::InvokeSpecial),
+            8 => Ok(ReferenceKind::NewInvokeSpecial),
+            9 => Ok(ReferenceKind::InvokeInterface),
+            _ => Err(InvalidReferenceKind(value)),
         }
     }
 }
