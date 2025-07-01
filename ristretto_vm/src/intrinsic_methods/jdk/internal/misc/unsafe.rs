@@ -144,10 +144,9 @@ pub(crate) async fn compare_and_set_int(
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
-        let field = object.field(&field_name)?;
-        let value = field.value()?.to_int()?;
+        let value = object.value(&field_name)?.to_int()?;
         if value == expected {
-            field.set_value(Value::Int(x))?;
+            object.set_value(&field_name, Value::Int(x))?;
             1
         } else {
             0
@@ -185,10 +184,9 @@ pub(crate) async fn compare_and_set_long(
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
-        let field = object.field(&field_name)?;
-        let value = field.value()?.to_long()?;
+        let value = object.value(&field_name)?.to_long()?;
         if value == expected {
-            field.set_value(Value::Long(x))?;
+            object.set_value(&field_name, Value::Long(x))?;
             1
         } else {
             0
@@ -259,10 +257,9 @@ pub(crate) async fn compare_and_set_reference(
         }
         Reference::Object(object) => {
             let field_name = object.class().field_name(offset)?;
-            let field = object.field(&field_name)?;
-            let value = field.value()?;
+            let value = object.value(&field_name)?;
             if value == expected {
-                field.set_value(x)?;
+                object.set_value(&field_name, x)?;
                 1
             } else {
                 0
@@ -786,11 +783,14 @@ pub(crate) async fn load_fence(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn object_field_offset_0(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _ = parameters.pop_object()?;
-    Ok(Some(Value::Long(0)))
+    let field = parameters.pop_object()?;
+    let class = field.value("clazz")?;
+    let name = field.value("name")?;
+    let parameters = Parameters::new(vec![class, name]);
+    object_field_offset_1(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -802,21 +802,8 @@ pub(crate) async fn object_field_offset_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let value = parameters.pop()?;
-    let field_name: String = match value {
-        Value::Object(_) => value.try_into()?,
-        value => {
-            return Err(InvalidOperand {
-                expected: "object".to_string(),
-                actual: value.to_string(),
-            });
-        }
-    };
-    let Some(Reference::Object(class_object)) = parameters.pop_reference()? else {
-        return Err(InternalError(
-            "objectFieldOffset1: Invalid class reference".to_string(),
-        ));
-    };
+    let field_name: String = parameters.pop_object()?.try_into()?;
+    let class_object = parameters.pop_object()?;
     let class_name: String = class_object.value("name")?.try_into()?;
     let class = thread.class(&class_name).await?;
     let offset = class.field_offset(&field_name)?;
@@ -1191,8 +1178,7 @@ pub(crate) async fn register_natives(
     if vm.java_major_version() >= 17 {
         // Set the endianness to big endian
         let class = thread.class("jdk.internal.misc.UnsafeConstants").await?;
-        let big_endian = class.static_field("BIG_ENDIAN")?;
-        big_endian.set_value(Value::from(true))?;
+        class.set_static_value("BIG_ENDIAN", Value::from(true))?;
     }
     Ok(None)
 }
@@ -1323,17 +1309,19 @@ mod tests {
 
     /// Creates a java.lang.reflect.Field for testing purposes.
     async fn create_field(thread: &Thread) -> Result<Value> {
+        let string_class = thread.class("java/lang/String").await?;
+        let string_class_object = string_class.to_object(thread).await?;
         let descriptor =
             "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IZILjava/lang/String;[B";
         let parameters = vec![
-            Value::Object(None),                  // Declaring Class
-            "fieldName".to_object(thread).await?, // Field name
-            Value::Object(None),                  // Type
-            Value::Int(0),                        // Modifiers
-            Value::from(false),                   // Trusted Final
-            Value::Int(0),                        // Slot
-            "signature".to_object(thread).await?, // Signature
-            Value::Object(None),                  // Annotations
+            string_class_object,              // Declaring Class
+            "value".to_object(thread).await?, // Field name
+            Value::Object(None),              // Type
+            Value::Int(0),                    // Modifiers
+            Value::from(false),               // Trusted Final
+            Value::Int(0),                    // Slot
+            "[B".to_object(thread).await?,    // Signature
+            Value::Object(None),              // Annotations
         ];
         thread
             .object("java/lang/reflect/Field", descriptor, &parameters)

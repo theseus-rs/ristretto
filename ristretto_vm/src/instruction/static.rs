@@ -19,15 +19,16 @@ pub(crate) async fn getstatic(
     let class_name = constant_pool.try_get_class(*class_index)?;
     let class = thread.class(class_name).await?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
-    let field = class.static_field(field_name)?;
-    let value = field.value()?;
-    stack.push(value)?;
 
+    let field = class.static_field(field_name)?;
     if let FieldType::Object(class_name) = field.field_type() {
         // Load the class of the field value if it is an object.
         // https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html#jvms-5.4.3
         thread.class(class_name).await?;
     }
+
+    let value = class.static_value(field_name)?;
+    stack.push(value)?;
     Ok(Continue)
 }
 
@@ -46,15 +47,15 @@ pub(crate) async fn putstatic(
     let class_name = constant_pool.try_get_class(*class_index)?;
     let class = thread.class(class_name).await?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
-    let field = class.static_field(field_name)?;
-    let value = stack.pop()?;
-    field.set_value(value)?;
 
+    let field = class.static_field(field_name)?;
     if let FieldType::Object(class_name) = field.field_type() {
         // Load the class of the field value if it is an object.
         // https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html#jvms-5.4.3
         thread.class(class_name).await?;
     }
+    let value = stack.pop()?;
+    class.set_static_value(field_name, value)?;
     Ok(Continue)
 }
 

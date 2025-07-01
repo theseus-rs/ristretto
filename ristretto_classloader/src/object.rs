@@ -1,16 +1,18 @@
-use crate::Error::{FieldNotFound, InvalidValueType, ParseError};
+use crate::Error::{FieldNotFound, InvalidValueType, ParseError, PoisonedLock};
 use crate::Reference::{ByteArray, CharArray};
+use crate::field::FieldKey;
 use crate::{Class, Field, Reference, Result, Value};
 use ristretto_classfile::{FieldAccessFlags, JAVA_8};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt::{Debug, Display};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 /// Represents an object in the Ristretto VM.
 #[derive(Clone)]
 pub struct Object {
     class: Arc<Class>,
-    fields: Arc<HashMap<String, Field>>,
+    fields: Vec<Arc<Field>>,
+    values: Arc<Vec<RwLock<Value>>>,
 }
 
 impl Object {
@@ -20,29 +22,43 @@ impl Object {
     ///
     /// if the fields of the class cannot be read.
     pub fn new(class: Arc<Class>) -> Result<Self> {
-        let mut fields = HashMap::new();
+        let mut seen_fields = HashSet::new();
+        let mut all_fields = Vec::new();
+        let mut all_values = Vec::new();
+
+        // Collect all classes in hierarchy from root to current class
+        let mut class_hierarchy = Vec::new();
         let mut current_class = Some(class.clone());
         while let Some(class) = current_class {
-            let class_file = class.class_file();
-            for class_file_field in &class_file.fields {
-                if class_file_field
-                    .access_flags
-                    .contains(FieldAccessFlags::STATIC)
-                {
+            class_hierarchy.push(class.clone());
+            current_class = class.parent()?;
+        }
+
+        // Reverse to go from root (Object) to current class
+        class_hierarchy.reverse();
+
+        // Process fields from parent to child to maintain correct ordering
+        for class in class_hierarchy {
+            let object_fields = class.declared_fields();
+            for field in object_fields {
+                if field.access_flags().contains(FieldAccessFlags::STATIC) {
                     continue;
                 }
 
-                let field = Field::from(class_file, class_file_field)?;
-                if !fields.contains_key(field.name()) {
-                    fields.insert(field.name().to_string(), field);
+                let field_name = field.name().to_string();
+                if !seen_fields.contains(&field_name) {
+                    let value = field.default_value();
+                    all_fields.push(field.clone());
+                    all_values.push(RwLock::new(value));
+                    seen_fields.insert(field_name);
                 }
             }
-
-            current_class = class.parent()?;
         }
+
         Ok(Self {
             class,
-            fields: Arc::new(fields),
+            fields: all_fields,
+            values: Arc::new(all_values),
         })
     }
 
@@ -61,26 +77,25 @@ impl Object {
         class.is_assignable_from(&self.class)
     }
 
-    /// Get the fields.
-    #[must_use]
-    pub fn fields(&self) -> Vec<&Field> {
-        self.fields.values().collect()
-    }
-
-    /// Get field by name.
+    /// Get field and value lock by key.
     ///
     /// # Errors
     ///
     /// if the field cannot be found.
-    pub fn field<S: AsRef<str>>(&self, name: S) -> Result<&Field> {
-        let name = name.as_ref();
-        let Some(field) = self.fields.get(name) else {
+    fn field_value<K: FieldKey>(&self, key: K) -> Result<(&Field, &RwLock<Value>)> {
+        let Some((index, field)) = key.get_field(&self.fields) else {
             return Err(FieldNotFound {
                 class_name: self.class.name().to_string(),
-                field_name: name.to_string(),
+                field_name: key.to_string(),
             });
         };
-        Ok(field)
+        let Some(value_lock) = self.values.get(index) else {
+            return Err(FieldNotFound {
+                class_name: self.class.name().to_string(),
+                field_name: key.to_string(),
+            });
+        };
+        Ok((field, value_lock))
     }
 
     /// Get value for a field.
@@ -88,9 +103,12 @@ impl Object {
     /// # Errors
     ///
     /// if the field cannot be found.
-    pub fn value<S: AsRef<str>>(&self, name: S) -> Result<Value> {
-        let field = self.field(name)?;
-        field.value()
+    pub fn value<K: FieldKey>(&self, key: K) -> Result<Value> {
+        let (_field, value_lock) = self.field_value(key)?;
+        let value_guard = value_lock
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        Ok(value_guard.clone())
     }
 
     /// Sets value for field.
@@ -98,9 +116,28 @@ impl Object {
     /// # Errors
     ///
     /// if the field cannot be found.
-    pub fn set_value<S: AsRef<str>>(&self, name: S, value: Value) -> Result<()> {
-        let field = self.field(name)?;
-        field.set_value(value)
+    pub fn set_value<S: FieldKey>(&self, key: S, value: Value) -> Result<()> {
+        let (field, value_lock) = self.field_value(key)?;
+        field.check_value(&value)?;
+        let mut value_guard = value_lock
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        *value_guard = value;
+        Ok(())
+    }
+
+    /// Sets value for field without checking the field constraints.
+    ///
+    /// # Errors
+    ///
+    /// if the field cannot be found.
+    pub fn set_value_unchecked<S: FieldKey>(&self, key: S, value: Value) -> Result<()> {
+        let (_field, value_lock) = self.field_value(key)?;
+        let mut value_guard = value_lock
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        *value_guard = value;
+        Ok(())
     }
 
     /// Check if the object is an instance of the given class and return the "value".
@@ -120,12 +157,12 @@ impl Object {
 
     /// Recursively compare two `Object` instances for equality and avoid cycles.
     #[expect(clippy::type_complexity)]
-    fn equal_with_visited(
+    pub(crate) fn equal_with_visited(
         &self,
         other: &Object,
         visited: &mut HashSet<(
-            (*const Class, *const HashMap<String, Field>),
-            (*const Class, *const HashMap<String, Field>),
+            (*const Class, *const Vec<RwLock<Value>>),
+            (*const Class, *const Vec<RwLock<Value>>),
         )>,
     ) -> bool {
         // Optimization for the case where the two objects are the same reference.
@@ -133,76 +170,43 @@ impl Object {
             return true;
         }
 
-        if self.class != other.class {
-            return false;
-        }
-
-        // Optimization for the case where the two objects are the same but have different references.
-        if Arc::ptr_eq(&self.fields, &other.fields) {
-            return true;
-        }
-
-        let self_ptr = (Arc::as_ptr(&self.class), Arc::as_ptr(&self.fields));
-        let other_ptr = (Arc::as_ptr(&other.class), Arc::as_ptr(&other.fields));
+        let self_ptr = (Arc::as_ptr(&self.class), Arc::as_ptr(&self.values));
+        let other_ptr = (Arc::as_ptr(&other.class), Arc::as_ptr(&other.values));
         let object_ptr_pair = (self_ptr, other_ptr);
+
+        // Check if we've already visited this pair to avoid infinite recursion
         if visited.contains(&object_ptr_pair) {
             return true;
         }
 
+        // Add this pair to visited set before recursive calls
         visited.insert(object_ptr_pair);
 
-        if self.fields.len() != other.fields.len() {
+        if !Arc::ptr_eq(&self.class, &other.class) {
+            return false;
+        }
+        if self.class.name() != other.class.name() || self.fields != other.fields {
             return false;
         }
 
-        for (name, field) in self.fields.iter() {
-            let Some(other_field) = other.fields.get(name) else {
-                return false;
-            };
-            let (Ok(value), Ok(other_value)) = (field.value(), other_field.value()) else {
-                return false;
-            };
-            match (value, other_value) {
+        // Compare values by iterating over the Vec<RwLock<Value>>
+        for (self_value_lock, other_value_lock) in self.values.iter().zip(other.values.iter()) {
+            if std::ptr::eq(self_value_lock, other_value_lock) {
+                continue;
+            }
+            let self_value = self_value_lock.read().expect("poisoned lock");
+            let other_value = other_value_lock.read().expect("poisoned lock");
+            match (&*self_value, &*other_value) {
                 (
-                    Value::Object(Some(Reference::Object(object))),
+                    Value::Object(Some(Reference::Object(self_object))),
                     Value::Object(Some(Reference::Object(other_object))),
                 ) => {
-                    if !object.equal_with_visited(&other_object, visited) {
+                    if !self_object.equal_with_visited(other_object, visited) {
                         return false;
                     }
                 }
-                (
-                    Value::Object(Some(Reference::Array(object_array))),
-                    Value::Object(Some(Reference::Array(other_object_array))),
-                ) => {
-                    if object_array.class != other_object_array.class {
-                        return false;
-                    }
-                    let array = object_array.elements.to_vec().unwrap_or_default();
-                    let other_array = other_object_array.elements.to_vec().unwrap_or_default();
-                    if array.len() != other_array.len() {
-                        return false;
-                    }
-                    for (element, other_element) in array.iter().zip(other_array.iter()) {
-                        match (element, other_element) {
-                            (
-                                Some(Reference::Object(object)),
-                                Some(Reference::Object(other_object)),
-                            ) => {
-                                if !object.equal_with_visited(other_object, visited) {
-                                    return false;
-                                }
-                            }
-                            _ => {
-                                if element != other_element {
-                                    return false;
-                                }
-                            }
-                        }
-                    }
-                }
-                (value, other_value) => {
-                    if value != other_value {
+                _ => {
+                    if *self_value != *other_value {
                         return false;
                     }
                 }
@@ -218,14 +222,17 @@ impl Object {
     ///
     /// if the fields cannot be cloned.
     pub fn deep_clone(&self) -> Result<Self> {
-        let mut fields = HashMap::new();
-        for (name, field) in self.fields.iter() {
-            let field = field.deep_clone()?;
-            fields.insert(name.clone(), field);
+        let mut values = Vec::new();
+        for value_lock in self.values.iter() {
+            let value = value_lock
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            values.push(RwLock::new(value.clone()));
         }
         Ok(Self {
             class: self.class.clone(),
-            fields: Arc::new(fields),
+            fields: self.fields.clone(),
+            values: Arc::new(values),
         })
     }
 }
@@ -238,11 +245,10 @@ impl Debug for Object {
         }
 
         // Print fields by name to ensure consistent output
-        let mut names = self.fields.keys().collect::<Vec<_>>();
-        names.sort();
-        for name in names {
-            let field = self.fields.get(name).ok_or(std::fmt::Error)?;
-            let value = field.value().map_err(|_| std::fmt::Error)?;
+        for (index, field) in self.fields.iter().enumerate() {
+            let name = field.name();
+            let value_lock = self.values.get(index).ok_or(std::fmt::Error)?;
+            let value = value_lock.read().map_err(|_| std::fmt::Error)?;
             writeln!(f, "  {name}={value}")?;
         }
 
@@ -557,37 +563,6 @@ mod tests {
         let class = load_class(class_name).await?;
         let object = Object::new(class.clone())?;
         assert!(object.instance_of(&class)?);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_fields() -> Result<()> {
-        let class = string_class().await?;
-        let object = Object::new(class)?;
-        let fields = object.fields();
-        assert_eq!(4, fields.len());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_field() -> Result<()> {
-        let class = string_class().await?;
-        let object = Object::new(class)?;
-        let field = object.field("value");
-        assert!(field.is_ok());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_field_not_found() -> Result<()> {
-        let class = string_class().await?;
-        let object = Object::new(class)?;
-        let field = object.field("foo");
-        assert!(matches!(
-            field,
-            Err(FieldNotFound { class_name, field_name })
-            if class_name == "java/lang/String" && field_name == "foo"
-        ));
         Ok(())
     }
 

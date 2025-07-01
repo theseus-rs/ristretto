@@ -233,9 +233,18 @@ impl<T: Clone + Debug + PartialEq> Display for ConcurrentVec<T> {
 impl<T: Clone + Debug + PartialEq> PartialEq for ConcurrentVec<T> {
     /// Compare two concurrent vectors.
     fn eq(&self, other: &Self) -> bool {
-        let vec = self.inner.read().expect("poisoned lock");
-        let other = other.inner.read().expect("poisoned lock");
-        *vec == *other
+        // Quick reference equality check
+        if Arc::as_ptr(&self.inner) == Arc::as_ptr(&other.inner) {
+            return true;
+        }
+        // Use try_read to avoid blocking if locks are contended
+        if let (Ok(inner), Ok(other_inner)) = (self.inner.try_read(), other.inner.try_read()) {
+            *inner == *other_inner
+        } else {
+            let inner = self.inner.read().expect("poisoned lock");
+            let other_inner = other.inner.read().expect("poisoned lock");
+            *inner == *other_inner
+        }
     }
 }
 

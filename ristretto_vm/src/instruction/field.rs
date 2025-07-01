@@ -1,20 +1,24 @@
 use crate::Result;
-use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
+use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 use ristretto_classloader::{Class, Object};
 use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.getfield>
 #[inline]
-pub(crate) fn getfield(
+pub(crate) async fn getfield(
+    frame: &Frame,
     stack: &mut OperandStack,
     class: &Arc<Class>,
     index: u16,
 ) -> Result<ExecutionResult> {
+    let thread = frame.thread()?;
     let object: Object = stack.pop()?.try_into()?;
     let constant_pool = class.constant_pool();
-    let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
+    let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
+    let field_class_name = constant_pool.try_get_class(*class_index)?;
+    let _field_class = thread.class(field_class_name).await?;
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
@@ -25,15 +29,19 @@ pub(crate) fn getfield(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.putfield>
 #[inline]
-pub(crate) fn putfield(
+pub(crate) async fn putfield(
+    frame: &Frame,
     stack: &mut OperandStack,
     class: &Arc<Class>,
     index: u16,
 ) -> Result<ExecutionResult> {
+    let thread = frame.thread()?;
     let value = stack.pop()?;
     let object: Object = stack.pop()?.try_into()?;
     let constant_pool = class.constant_pool();
-    let (_class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
+    let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
+    let field_class_name = constant_pool.try_get_class(*class_index)?;
+    let _field_class = thread.class(field_class_name).await?;
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
@@ -79,10 +87,10 @@ mod test {
         assert_eq!(Continue, result);
 
         stack.push_int(42)?;
-        let result = putfield(stack, class, field_index)?;
+        let result = putfield(&frame, stack, class, field_index).await?;
         assert_eq!(Continue, result);
 
-        let result = getfield(stack, class, field_index)?;
+        let result = getfield(&frame, stack, class, field_index).await?;
         assert_eq!(Continue, result);
         let value = stack.pop()?;
         assert_eq!(Value::Int(42), value);
@@ -102,7 +110,7 @@ mod test {
         let result = new(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
         let class = frame.class();
-        let result = getfield(stack, class, field_index);
+        let result = getfield(&frame, stack, class, field_index).await;
         assert!(result.is_err());
         Ok(())
     }
@@ -113,7 +121,7 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         let class = frame.class();
         stack.push_object(None)?;
-        let result = getfield(stack, class, 0);
+        let result = getfield(&frame, stack, class, 0).await;
         assert!(result.is_err());
         Ok(())
     }
@@ -134,7 +142,7 @@ mod test {
         let result = dup(stack)?;
         assert_eq!(Continue, result);
         stack.push_int(42)?;
-        let result = putfield(stack, class, field_index);
+        let result = putfield(&frame, stack, class, field_index).await;
         assert!(result.is_err());
         Ok(())
     }
@@ -146,7 +154,7 @@ mod test {
         let class = frame.class();
         stack.push_object(None)?;
         stack.push_int(42)?;
-        let result = putfield(stack, class, 0);
+        let result = putfield(&frame, stack, class, 0).await;
         assert!(result.is_err());
         Ok(())
     }

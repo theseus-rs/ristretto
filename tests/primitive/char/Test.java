@@ -1,3 +1,4 @@
+/** Test the char primitive type and its wrapper class. */
 class Test {
     public static void main(String[] args) throws Exception {
         System.out.println(Character.MIN_HIGH_SURROGATE);

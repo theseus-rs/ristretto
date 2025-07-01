@@ -1,3 +1,4 @@
+/** Test the short primitive type and its wrapper class. */
 class Test {
     public static void main(String[] args) throws Exception {
         short zero = 0;

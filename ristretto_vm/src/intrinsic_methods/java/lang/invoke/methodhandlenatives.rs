@@ -267,7 +267,7 @@ pub(crate) async fn resolve(
     // Handle fields (for both normal field and VarHandle)
     else if member_name_flags.contains(MemberNameFlags::IS_FIELD) {
         let field_name: String = name.try_into()?;
-        let field = class.field(&field_name)?;
+        let field = class.declared_field(&field_name)?;
         let field_access_flags = field.access_flags();
         if !check_field_access(caller, &class, field_access_flags, lookup_mode_flags)? {
             return if speculative_resolve {

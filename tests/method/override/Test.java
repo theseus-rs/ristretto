@@ -1,3 +1,4 @@
+/** Test method overriding behavior in Java. */
 public class Test {
     static class Animal {
         public void speak() {

@@ -129,8 +129,7 @@ pub async fn call_method_handle_target(
             Ok(receiver.value(&member_name)?)
         }
         ReferenceKind::GetStatic => {
-            let field = target_class.static_field(member_name)?;
-            let value = field.value()?;
+            let value = target_class.static_value(&member_name)?;
             Ok(value)
         }
         ReferenceKind::PutField => {
@@ -141,8 +140,7 @@ pub async fn call_method_handle_target(
         }
         ReferenceKind::PutStatic => {
             let value = arguments.remove(0);
-            let field = target_class.static_field(member_name)?;
-            field.set_value(value)?;
+            target_class.set_static_value(&member_name, value)?;
             Ok(Value::Object(None))
         }
     }

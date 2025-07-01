@@ -1,3 +1,4 @@
+/** Test java.lang.String encoding */
 public class Test {
     public static final String EMPTY = "";
     public static final String SINGLE_A = "A";
