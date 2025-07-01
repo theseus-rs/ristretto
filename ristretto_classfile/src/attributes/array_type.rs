@@ -39,7 +39,7 @@ use std::io::Cursor;
 /// assert_eq!(deserialized_type, ArrayType::Boolean);
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ArrayType {
     /// Represents a `boolean` array (`T_BOOLEAN = 4`).
     Boolean,

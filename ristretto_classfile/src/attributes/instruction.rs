@@ -14,7 +14,7 @@ use std::io::Cursor;
 /// # References
 ///
 /// - [JVM Specification §6.5 tableswich](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.tableswitch)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TableSwitch {
     pub default: i32,
     pub low: i32,
@@ -28,7 +28,7 @@ pub struct TableSwitch {
 /// # References
 ///
 /// - [JVM Specification §6.5 lookupswitch](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.lookupswitch)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LookupSwitch {
     pub default: i32,
     pub pairs: IndexMap<i32, i32>,
@@ -40,7 +40,7 @@ pub struct LookupSwitch {
 ///
 /// - [JVM Specification §6.5](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5)
 #[expect(non_camel_case_types)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Instruction {
     /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.nop>
     Nop,

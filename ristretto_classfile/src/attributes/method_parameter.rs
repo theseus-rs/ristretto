@@ -39,7 +39,7 @@ use std::io::Cursor;
 /// # References
 ///
 /// - [JVM Specification §4.7.24](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.24)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MethodParameter {
     pub name_index: u16,
     pub access_flags: MethodAccessFlags,

@@ -56,7 +56,7 @@ use std::io::Cursor;
 /// assert_eq!(int_element, deserialized_element);
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AnnotationElement {
     /// A `byte` constant value.
     /// The `const_value_index` is an index into the `constant_pool` table to a
