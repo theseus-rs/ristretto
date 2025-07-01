@@ -51,7 +51,7 @@ use std::ops::Range;
 /// assert!(!entry.range_pc.contains(&10));
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ExceptionTableEntry {
     pub range_pc: Range<u16>,
     pub handler_pc: u16,

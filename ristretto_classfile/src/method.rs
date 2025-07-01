@@ -46,7 +46,7 @@ use std::io::Cursor;
 ///  # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.6>
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Method {
     pub access_flags: MethodAccessFlags,
     pub name_index: u16,

@@ -43,7 +43,7 @@ use std::io::Cursor;
 /// # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html#jvms-5.4.3.5>
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ReferenceKind {
     /// Reference kind 1: Read a non-static field.
     /// Used to get the value of an instance field.

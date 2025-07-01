@@ -55,7 +55,7 @@ use std::io::Cursor;
 /// assert_eq!(unqualified_export, deserialized_export);
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Exports {
     pub index: u16,
     pub flags: ExportsFlags,

@@ -35,7 +35,7 @@ use std::io::Cursor;
 /// assert_eq!(bsm, deserialized_bsm);
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BootstrapMethod {
     pub bootstrap_method_ref: u16,
     pub arguments: Vec<u16>,

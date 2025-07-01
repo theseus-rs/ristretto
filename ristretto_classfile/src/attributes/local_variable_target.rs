@@ -48,7 +48,7 @@ use std::io::Cursor;
 /// assert_eq!(lv_target.to_string(), "start_pc: 20, length: 5, index: 3");
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LocalVariableTarget {
     pub start_pc: u16,
     pub length: u16,

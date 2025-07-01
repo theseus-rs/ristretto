@@ -56,7 +56,7 @@ use std::io::Cursor;
 /// assert_eq!(string_pair, deserialized_pair);
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AnnotationValuePair {
     /// An index into the `constant_pool` table. The entry at this index must be a
     /// `CONSTANT_Utf8_info` structure representing a valid Java field or method name

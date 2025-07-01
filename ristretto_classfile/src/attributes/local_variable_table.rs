@@ -60,7 +60,7 @@ use std::io::Cursor;
 /// assert_eq!(lv_entry.to_string(), "start_pc: 5, length: 10, name_index: 100, descriptor_index: 101, index: 1");
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LocalVariableTable {
     pub start_pc: u16,
     pub length: u16,
