@@ -40,7 +40,7 @@ use std::io::Cursor;
 /// assert_eq!(annotation, deserialized_annotation);
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Annotation {
     /// The `type_index` item is an unsigned short. The value of the `type_index` item must be a
     /// valid index into the `constant_pool` table. The `constant_pool` entry at that index must be

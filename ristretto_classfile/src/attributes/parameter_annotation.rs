@@ -53,7 +53,7 @@ use std::io::Cursor;
 /// # References
 ///
 /// - [JVM Specification §4.7.18](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.18)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParameterAnnotation {
     pub annotations: Vec<Annotation>,
 }

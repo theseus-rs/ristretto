@@ -62,7 +62,7 @@ use std::io::Cursor;
 /// };
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InnerClass {
     pub class_info_index: u16,
     pub outer_class_info_index: u16,

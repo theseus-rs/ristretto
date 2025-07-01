@@ -73,7 +73,7 @@ const VERSION_61_0: Version = JAVA_17;
 /// # References
 ///
 /// - [JVM Specification §4.7](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Attribute {
     /// Represents a constant value for a field.
     ///

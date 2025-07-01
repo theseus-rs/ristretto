@@ -18,7 +18,7 @@ use std::io::Cursor;
 /// # References
 ///
 /// - [JVM Specification §4.7.20.1](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.20.1)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TargetType {
     /// `target_type` value `0x00`.
     /// Identifies a type parameter declaration of a generic class or interface.
