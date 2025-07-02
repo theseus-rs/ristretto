@@ -581,8 +581,7 @@ pub async fn get_method_handle(
         }
         _ => {
             return Err(InternalError(format!(
-                "Unsupported method handle reference kind: {:?} is_method: {}",
-                reference_kind, is_method
+                "Unsupported method handle reference kind: {reference_kind:?} is_method: {is_method}"
             )));
         }
     };
