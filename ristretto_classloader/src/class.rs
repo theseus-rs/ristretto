@@ -656,6 +656,8 @@ impl Class {
     }
 }
 
+impl Eq for Class {}
+
 impl PartialEq for Class {
     fn eq(&self, other: &Self) -> bool {
         // Optimization for the case where the two classes are the same instance.
@@ -664,10 +666,13 @@ impl PartialEq for Class {
         }
 
         self.name() == other.name()
+            && self.source_file == other.source_file
             && self.class_file == other.class_file
             && *self.parent.read().expect("parent") == *other.parent.read().expect("parent")
+            && *self.interfaces.read().expect("parent") == *other.interfaces.read().expect("parent")
             && self.fields == other.fields
             && self.methods == other.methods
+            && *self.object.read().expect("parent") == *other.object.read().expect("parent")
     }
 }
 
