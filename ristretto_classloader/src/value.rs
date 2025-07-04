@@ -6,7 +6,7 @@ use std::fmt::Display;
 use std::sync::Arc;
 
 /// Represents a value in the Ristretto VM.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Value {
     Int(i32),
     Long(i64),
@@ -119,6 +119,30 @@ impl Display for Value {
                 }
             }
             Value::Unused => write!(f, "unused"),
+        }
+    }
+}
+
+impl Eq for Value {}
+
+impl PartialEq for Value {
+    /// Compares two `Value` instances for equality.  Handles the following cases:
+    ///
+    /// - `Int` values are compared directly.
+    /// - `Long` values are compared directly.
+    /// - `Float` and `Double` values are compared using their bit representations to avoid issues
+    ///   with floating-point precision.
+    /// - `Object` values are compared by their references, allowing for `None` values to be
+    ///   considered equal.
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Int(a), Value::Int(b)) => a == b,
+            (Value::Long(a), Value::Long(b)) => a == b,
+            (Value::Float(a), Value::Float(b)) => a.to_bits() == b.to_bits(),
+            (Value::Double(a), Value::Double(b)) => a.to_bits() == b.to_bits(),
+            (Value::Object(Some(a)), Value::Object(Some(b))) => a == b,
+            (Value::Object(None), Value::Object(None)) | (Value::Unused, Value::Unused) => true,
+            _ => false,
         }
     }
 }
@@ -824,6 +848,73 @@ mod tests {
         array.set(0, 2)?;
         assert_ne!(value, clone);
         Ok(())
+    }
+
+    #[test]
+    fn test_eq_int() {
+        assert_eq!(Value::Int(1), Value::Int(1));
+        assert_ne!(Value::Int(1), Value::Int(2));
+        assert_ne!(Value::Int(1), Value::Long(1));
+        let value = Value::Int(42);
+        assert_eq!(value, value);
+    }
+
+    #[test]
+    fn test_eq_long() {
+        assert_eq!(Value::Long(1), Value::Long(1));
+        assert_ne!(Value::Long(1), Value::Long(2));
+        assert_ne!(Value::Long(1), Value::Int(1));
+        let value = Value::Long(42);
+        assert_eq!(value, value);
+    }
+
+    #[test]
+    fn test_eq_float() {
+        assert_eq!(Value::Float(1.0), Value::Float(1.0));
+        assert_ne!(Value::Float(1.0), Value::Float(2.0));
+        assert_ne!(Value::Float(1.0), Value::Int(1));
+        let value = Value::Float(42.0);
+        assert_eq!(value, value);
+    }
+
+    #[test]
+    fn test_eq_double() {
+        assert_eq!(Value::Double(1.0), Value::Double(1.0));
+        assert_ne!(Value::Double(1.0), Value::Double(2.0));
+        assert_ne!(Value::Double(1.0), Value::Int(1));
+        let value = Value::Double(42.0);
+        assert_eq!(value, value);
+    }
+
+    #[tokio::test]
+    async fn test_eq_object() -> Result<()> {
+        let class_name = "java.lang.Object";
+        let class = load_class(class_name).await?;
+        let value = Value::from(Object::new(class)?);
+        assert_eq!(Value::Object(None), Value::Object(None));
+        assert_eq!(value, value);
+        assert_ne!(Value::Object(None), value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eq_recursive_object() -> Result<()> {
+        let class_name = "java.util.concurrent.atomic.AtomicReference";
+        let class = load_class(class_name).await?;
+        let object = Object::new(class)?;
+        let value1 = Value::from(object);
+        if let Value::Object(Some(Reference::Object(ref obj))) = value1 {
+            obj.set_value("value", value1.clone())?;
+        }
+        let value2 = value1.clone();
+        assert_eq!(value1, value2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_eq_unused() {
+        assert_eq!(Value::Unused, Value::Unused);
+        assert_ne!(Value::Unused, Value::Int(1));
     }
 
     #[test]

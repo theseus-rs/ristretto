@@ -12,14 +12,22 @@ use zerocopy::transmute_ref;
 /// `ObjectArray` groups the array's class `Arc<Class>` and its elements
 /// `ConcurrentVec<Option<Reference>>` together in order to reduce the amount of memory required by
 /// values in the Reference enum.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct ObjectArray {
     pub class: Arc<Class>,
     pub elements: ConcurrentVec<Option<Reference>>,
 }
 
+impl Eq for ObjectArray {}
+
+impl PartialEq for ObjectArray {
+    fn eq(&self, other: &Self) -> bool {
+        self.class == other.class && self.elements == other.elements
+    }
+}
+
 /// Represents a reference to an object in the Ristretto VM.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Reference {
     ByteArray(ConcurrentVec<i8>),
     CharArray(ConcurrentVec<u16>),
@@ -339,6 +347,45 @@ impl Display for Reference {
             Reference::Object(value) => {
                 write!(f, "{value}")
             }
+        }
+    }
+}
+
+impl Eq for Reference {}
+
+impl PartialEq for Reference {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Reference::ByteArray(a), Reference::ByteArray(b)) => a == b,
+            (Reference::CharArray(a), Reference::CharArray(b)) => a == b,
+            (Reference::ShortArray(a), Reference::ShortArray(b)) => a == b,
+            (Reference::IntArray(a), Reference::IntArray(b)) => a == b,
+            (Reference::LongArray(a), Reference::LongArray(b)) => a == b,
+            (Reference::FloatArray(a), Reference::FloatArray(b)) => {
+                let a = a.as_ref().expect("a.Vec<f32>");
+                let b = b.as_ref().expect("b.Vec<f32>");
+                if a.len() != b.len() {
+                    return false;
+                }
+                a.iter()
+                    .zip(b.iter())
+                    .all(|(&a, &b)| a.to_bits() == b.to_bits())
+            }
+            (Reference::DoubleArray(a), Reference::DoubleArray(b)) => {
+                let a = a.as_ref().expect("a.Vec<f64>");
+                let b = b.as_ref().expect("b.Vec<f64>");
+                if a.len() != b.len() {
+                    return false;
+                }
+                a.iter()
+                    .zip(b.iter())
+                    .all(|(&a, &b)| a.to_bits() == b.to_bits())
+            }
+            (Reference::Array(a), Reference::Array(b)) => {
+                a.class == b.class && a.elements == b.elements
+            }
+            (Reference::Object(a), Reference::Object(b)) => a == b,
+            _ => false,
         }
     }
 }
