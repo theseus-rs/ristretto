@@ -160,10 +160,18 @@ pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::Array(object_array)) => {
-            let index = usize::try_from(index)?;
+            let original_index = index;
+            let length = object_array.elements.len()?;
+            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+                index: original_index,
+                length,
+            })?;
             let Some(value) = object_array.elements.get(index)? else {
-                let length = object_array.elements.len()?;
-                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: original_index,
+                    length,
+                }
+                .into());
             };
             stack.push_object(value)?;
             Ok(Continue)
@@ -183,10 +191,18 @@ pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::Array(ref mut object_array)) => {
-            let index = usize::try_from(index)?;
             let length = object_array.elements.capacity()?;
+            let original_index = index;
+            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+                index: original_index,
+                length,
+            })?;
             if index >= length {
-                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: original_index,
+                    length,
+                }
+                .into());
             }
             // TODO: validate object type is compatible with array type
             // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aastore
@@ -482,6 +498,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_aaload_invalid_index_negative() -> Result<()> {
+        let (_vm, thread, _frame) = crate::test::frame().await?;
+        let stack = &mut OperandStack::with_max_size(2);
+        let class = thread.class("java/lang/Object").await?;
+        let object = Reference::from(vec![42i32]);
+        let array = Reference::from((class, vec![Some(object.clone())]));
+        stack.push_object(Some(array))?;
+        stack.push_int(-1)?;
+        let result = aaload(stack);
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException { index, length }))
+            if index == -1 && length == 1
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_aaload_invalid_index() -> Result<()> {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
@@ -538,6 +572,25 @@ mod tests {
                 expected,
                 actual
             }) if expected == "reference array" && actual == "int[42]"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aastore_invalid_index_negative() -> Result<()> {
+        let (_vm, thread, _frame) = crate::test::frame().await?;
+        let stack = &mut OperandStack::with_max_size(3);
+        let class = thread.class("java/lang/Object").await?;
+        let object = Reference::from(vec![3i32]);
+        let array = Reference::from((class, vec![Some(object.clone())]));
+        stack.push_object(Some(array))?;
+        stack.push_int(-1)?;
+        stack.push_object(Some(object))?;
+        let result = aastore(stack);
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException { index, length }))
+            if index == -1 && length == 1
         ));
         Ok(())
     }

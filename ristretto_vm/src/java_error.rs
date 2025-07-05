@@ -12,7 +12,7 @@ pub enum JavaError {
     /// `ArrayIndexOutOfBoundsException`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ArrayIndexOutOfBoundsException.html>
     #[error("Index {index} out of bounds for length {length}")]
-    ArrayIndexOutOfBoundsException { index: usize, length: usize },
+    ArrayIndexOutOfBoundsException { index: i32, length: usize },
     /// `BootstrapMethodError`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/BootstrapMethodError.html>
     #[error("{0}")]
