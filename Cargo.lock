@@ -355,7 +355,7 @@ checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
 name = "class_loader"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "ristretto_classloader",
  "tokio",
@@ -1797,7 +1797,7 @@ dependencies = [
 
 [[package]]
 name = "read_class"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "anyhow",
  "ristretto_classfile",
@@ -1959,7 +1959,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classfile"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "anyhow",
  "bitflags 2.9.1",
@@ -1977,7 +1977,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classloader"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "criterion",
  "flate2",
@@ -1999,7 +1999,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_cli"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "clap",
  "os_info",
@@ -2011,7 +2011,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_jit"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "cranelift",
  "indexmap",
@@ -2021,7 +2021,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_macros"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2031,7 +2031,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_vm"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "async-recursion",
  "bitflags 2.9.1",
@@ -2097,7 +2097,7 @@ dependencies = [
 
 [[package]]
 name = "runtime_class_loader"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "ristretto_classloader",
  "tokio",
@@ -3351,7 +3351,7 @@ dependencies = [
 
 [[package]]
 name = "write_class"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "ristretto_classfile",
 ]
