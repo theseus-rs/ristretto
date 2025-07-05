@@ -13,10 +13,18 @@ pub(crate) fn baload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ByteArray(array)) => {
-            let index = usize::try_from(index)?;
+            let original_index = index;
+            let length = array.len()?;
+            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+                index: original_index,
+                length,
+            })?;
             let Some(value) = array.get(index)? else {
-                let length = array.len()?;
-                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: original_index,
+                    length,
+                }
+                .into());
             };
             stack.push_int(i32::from(value))?;
             Ok(Continue)
@@ -36,10 +44,18 @@ pub(crate) fn bastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ByteArray(ref mut array)) => {
-            let index = usize::try_from(index)?;
             let length = array.capacity()?;
+            let original_index = index;
+            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+                index: original_index,
+                length,
+            })?;
             if index >= length {
-                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: original_index,
+                    length,
+                }
+                .into());
             }
             array.set(index, i8::try_from(value)?)?;
             Ok(Continue)
@@ -81,6 +97,21 @@ mod test {
                 expected,
                 actual
             }) if expected == "byte array" && actual == "int[42]"
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn test_baload_invalid_index_negative() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(2);
+        let array = Reference::from(vec![42i8]);
+        stack.push_object(Some(array))?;
+        stack.push_int(-1)?;
+        let result = baload(stack);
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException{ index, length }))
+            if index == -1 && length == 1
         ));
         Ok(())
     }
@@ -136,6 +167,22 @@ mod test {
                 expected,
                 actual
             }) if expected == "byte array" && actual == "int[42]"
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn test_bastore_invalid_index_negative() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(3);
+        let array = Reference::from(vec![3i8]);
+        stack.push_object(Some(array))?;
+        stack.push_int(-1)?;
+        stack.push_int(42)?;
+        let result = bastore(stack);
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException{ index, length }))
+            if index == -1 && length == 1
         ));
         Ok(())
     }

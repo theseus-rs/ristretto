@@ -202,10 +202,18 @@ pub(crate) fn iaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::IntArray(array)) => {
-            let index = usize::try_from(index)?;
+            let original_index = index;
+            let length = array.len()?;
+            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+                index: original_index,
+                length,
+            })?;
             let Some(value) = array.get(index)? else {
-                let length = array.len()?;
-                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: original_index,
+                    length,
+                }
+                .into());
             };
             stack.push_int(value)?;
             Ok(Continue)
@@ -225,10 +233,18 @@ pub(crate) fn iastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::IntArray(ref mut array)) => {
-            let index = usize::try_from(index)?;
             let length = array.capacity()?;
+            let original_index = index;
+            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+                index: original_index,
+                length,
+            })?;
             if index >= length {
-                return Err(ArrayIndexOutOfBoundsException { index, length }.into());
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: original_index,
+                    length,
+                }
+                .into());
             }
             array.set(index, value)?;
             Ok(Continue)
@@ -630,6 +646,21 @@ mod tests {
     }
 
     #[test]
+    fn test_iaload_invalid_index_negative() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(2);
+        let array = Reference::from(vec![42i32]);
+        stack.push_object(Some(array))?;
+        stack.push_int(-1)?;
+        let result = iaload(stack);
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException { index, length }))
+            if index == -1 && length == 1
+        ));
+        Ok(())
+    }
+
+    #[test]
     fn test_iaload_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         let array = Reference::from(vec![42i32]);
@@ -680,6 +711,22 @@ mod tests {
                 expected,
                 actual
             }) if expected == "int array" && actual == "byte[42]"
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn test_iastore_invalid_index_negative() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(3);
+        let array = Reference::from(vec![3i32]);
+        stack.push_object(Some(array))?;
+        stack.push_int(-1)?;
+        stack.push_int(42)?;
+        let result = iastore(stack);
+        assert!(matches!(
+            result,
+            Err(JavaError(ArrayIndexOutOfBoundsException { index, length }))
+            if index == -1 && length == 1
         ));
         Ok(())
     }
