@@ -5,7 +5,7 @@ use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
     ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, MethodAccessFlags,
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::sync::{Arc, LazyLock, RwLock};
 
@@ -528,15 +528,23 @@ impl Class {
         Ok(())
     }
 
-    /// Get the object fields for the class. This includes all fields from the class hierarchy
-    /// and the current class, excluding static fields.
+    /// Get the object fields for this class.
     ///
     /// # Errors
     ///
     /// if there is an issue accessing the parent class due to a poisoned lock.
-    pub fn object_fields(&self) -> Result<Vec<Arc<Field>>> {
-        let mut seen_fields = HashSet::new();
-        let mut fields = Vec::new();
+    #[must_use]
+    pub fn object_fields(&self) -> &[Arc<Field>] {
+        &self.object_fields
+    }
+
+    /// Get all object fields in the class hierarchy, including those from parent classes.
+    ///
+    /// # Errors
+    ///
+    /// if there is an issue accessing the parent class due to a poisoned lock.
+    pub fn all_object_fields(&self) -> Result<Vec<Arc<Field>>> {
+        let mut fields = Vec::with_capacity(self.object_fields.len());
 
         // Collect all classes in hierarchy from root to current class
         let mut class_hierarchy = Vec::new();
@@ -551,27 +559,15 @@ impl Class {
 
         // Process fields from parent to child to maintain correct ordering
         for class in class_hierarchy {
-            let object_fields = class.declared_fields();
+            let object_fields = class.object_fields();
             for field in object_fields {
-                if field.access_flags().contains(FieldAccessFlags::STATIC) {
-                    continue;
-                }
-
-                let field_name = field.name().to_string();
-                if !seen_fields.contains(&field_name) {
-                    fields.push(field.clone());
-                    seen_fields.insert(field_name);
-                }
+                fields.push(field.clone());
             }
         }
 
         // Add the fields from the current class
         for field in &self.object_fields {
-            let field_name = field.name().to_string();
-            if !seen_fields.contains(&field_name) {
-                fields.push(field.clone());
-                seen_fields.insert(field_name);
-            }
+            fields.push(field.clone());
         }
 
         Ok(fields)
@@ -1353,8 +1349,24 @@ mod tests {
     #[tokio::test]
     async fn test_object_fields() -> Result<()> {
         let class = string_class().await?;
-        let fields = class.object_fields()?;
+        let fields = class.object_fields();
         let expected_names = ["value", "coder", "hash", "hashIsZero"];
+        assert_eq!(fields.len(), expected_names.len());
+        for (i, field) in fields.iter().enumerate() {
+            assert_eq!(expected_names[i], field.name());
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_all_object_fields() -> Result<()> {
+        let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
+        let abstract_string_builder_class =
+            class_loader.load("java.lang.AbstractStringBuilder").await?;
+        let class = class_loader.load("java.lang.StringBuilder").await?;
+        class.set_parent(Some(abstract_string_builder_class))?;
+        let fields = class.all_object_fields()?;
+        let expected_names = ["value", "coder", "maybeLatin1", "count"];
         assert_eq!(fields.len(), expected_names.len());
         for (i, field) in fields.iter().enumerate() {
             assert_eq!(expected_names[i], field.name());

@@ -232,11 +232,28 @@ impl Field {
 
 /// Trait for getting a field by either the name, or the offset.
 pub trait FieldKey: Display + Debug + Copy + Eq + Hash {
+    /// Check if the key is numeric (i.e., an offset).
+    fn is_numeric_key(&self) -> bool {
+        false
+    }
+
+    /// Check if the key matches the field.
+    fn matches_field(&self, field: &Field) -> bool;
+
+    /// Get the field by the key from the provided fields.
     fn get_field<'a>(&self, fields: &'a [Arc<Field>]) -> Option<(usize, &'a Arc<Field>)>;
 }
 
 /// Implementation of `FieldKey` for the offset.
 impl FieldKey for usize {
+    fn is_numeric_key(&self) -> bool {
+        true
+    }
+
+    fn matches_field(&self, field: &Field) -> bool {
+        field.offset as usize == *self
+    }
+
     fn get_field<'a>(&self, fields: &'a [Arc<Field>]) -> Option<(usize, &'a Arc<Field>)> {
         if let Some(field) = fields.get(*self) {
             return Some((*self, field));
@@ -247,6 +264,10 @@ impl FieldKey for usize {
 
 /// Implementation of `FieldKey` for field name.
 impl FieldKey for &String {
+    fn matches_field(&self, field: &Field) -> bool {
+        self.as_str().matches_field(field)
+    }
+
     fn get_field<'a>(&self, fields: &'a [Arc<Field>]) -> Option<(usize, &'a Arc<Field>)> {
         self.as_str().get_field(fields)
     }
@@ -254,8 +275,15 @@ impl FieldKey for &String {
 
 /// Implementation of `FieldKey` for field name.
 impl FieldKey for &str {
+    fn matches_field(&self, field: &Field) -> bool {
+        field.name == *self
+    }
+
     fn get_field<'a>(&self, fields: &'a [Arc<Field>]) -> Option<(usize, &'a Arc<Field>)> {
-        fields.iter().enumerate().find(|(_, f)| f.name == *self)
+        fields
+            .iter()
+            .enumerate()
+            .find(|(_, field)| self.matches_field(field))
     }
 }
 
@@ -444,6 +472,7 @@ mod tests {
         ];
         let key: usize = 1;
         let expected = fields.get(key).map(|field| (key, field));
+        assert!(key.is_numeric_key());
         assert_eq!(expected, key.get_field(&fields));
     }
 
@@ -470,6 +499,7 @@ mod tests {
             .iter()
             .enumerate()
             .find(|(_, field)| field.name == key.as_str());
+        assert!(!key.is_numeric_key());
         assert_eq!(expected, key.get_field(&fields));
 
         let key = key.as_str();
@@ -477,6 +507,7 @@ mod tests {
             .iter()
             .enumerate()
             .find(|(_, field)| field.name == key);
+        assert!(!key.is_numeric_key());
         assert_eq!(expected, key.get_field(&fields));
     }
 }
