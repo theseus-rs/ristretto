@@ -9,7 +9,7 @@ use std::sync::Arc;
 #[expect(clippy::struct_field_names)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Field {
-    index: u16,
+    offset: u16,
     access_flags: FieldAccessFlags,
     field_type: FieldType,
     name: String,
@@ -20,14 +20,14 @@ impl Field {
     /// Create a new class field with the given parameters.
     #[must_use]
     pub fn new(
-        index: u16,
+        offset: u16,
         access_flags: FieldAccessFlags,
         field_type: FieldType,
         name: String,
         attributes: Vec<Attribute>,
     ) -> Self {
         Self {
-            index,
+            offset,
             access_flags,
             field_type,
             name,
@@ -42,7 +42,7 @@ impl Field {
     /// if the field name cannot be read.
     pub fn from(
         class_file: &ClassFile,
-        index: u16,
+        offset: u16,
         definition: &ristretto_classfile::Field,
     ) -> Result<Self> {
         let constant_pool = &class_file.constant_pool;
@@ -51,7 +51,7 @@ impl Field {
         let field_type = definition.field_type.clone();
 
         Ok(Self {
-            index,
+            offset,
             access_flags,
             field_type,
             name: name.to_string(),
@@ -59,10 +59,10 @@ impl Field {
         })
     }
 
-    /// Get the index of the field.
+    /// Get the field offset.
     #[must_use]
-    pub fn index(&self) -> u16 {
-        self.index
+    pub fn offset(&self) -> u16 {
+        self.offset
     }
 
     /// Get the field access flags.
@@ -235,7 +235,7 @@ pub trait FieldKey: Display + Debug + Copy + Eq + Hash {
     fn get_field<'a>(&self, fields: &'a [Arc<Field>]) -> Option<(usize, &'a Arc<Field>)>;
 }
 
-/// Implementation of `FieldKey` for index offset.
+/// Implementation of `FieldKey` for the offset.
 impl FieldKey for usize {
     fn get_field<'a>(&self, fields: &'a [Arc<Field>]) -> Option<(usize, &'a Arc<Field>)> {
         if let Some(field) = fields.get(*self) {
@@ -273,7 +273,7 @@ mod tests {
             "test".to_string(),
             vec![],
         );
-        assert_eq!(field.index(), 0);
+        assert_eq!(field.offset(), 0);
         assert_eq!(field.access_flags(), &FieldAccessFlags::PUBLIC);
         assert_eq!(field.field_type(), &FieldType::Base(BaseType::Int));
         assert_eq!(field.name(), "test");
@@ -425,7 +425,7 @@ mod tests {
     }
 
     #[test]
-    fn test_field_key_get_by_index() {
+    fn test_field_key_get_by_offset() {
         let fields = vec![
             Arc::new(Field::new(
                 0,

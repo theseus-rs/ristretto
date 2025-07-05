@@ -2,7 +2,7 @@ use crate::Error::{FieldNotFound, InvalidValueType, ParseError, PoisonedLock};
 use crate::Reference::{ByteArray, CharArray};
 use crate::field::FieldKey;
 use crate::{Class, Field, Reference, Result, Value};
-use ristretto_classfile::{FieldAccessFlags, JAVA_8};
+use ristretto_classfile::JAVA_8;
 use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::sync::{Arc, RwLock};
@@ -11,7 +11,6 @@ use std::sync::{Arc, RwLock};
 #[derive(Clone)]
 pub struct Object {
     class: Arc<Class>,
-    fields: Vec<Arc<Field>>,
     values: Arc<Vec<RwLock<Value>>>,
 }
 
@@ -22,43 +21,16 @@ impl Object {
     ///
     /// if the fields of the class cannot be read.
     pub fn new(class: Arc<Class>) -> Result<Self> {
-        let mut seen_fields = HashSet::new();
-        let mut all_fields = Vec::new();
-        let mut all_values = Vec::new();
-
-        // Collect all classes in hierarchy from root to current class
-        let mut class_hierarchy = Vec::new();
-        let mut current_class = Some(class.clone());
-        while let Some(class) = current_class {
-            class_hierarchy.push(class.clone());
-            current_class = class.parent()?;
-        }
-
-        // Reverse to go from root (Object) to current class
-        class_hierarchy.reverse();
-
-        // Process fields from parent to child to maintain correct ordering
-        for class in class_hierarchy {
-            let object_fields = class.declared_fields();
-            for field in object_fields {
-                if field.access_flags().contains(FieldAccessFlags::STATIC) {
-                    continue;
-                }
-
-                let field_name = field.name().to_string();
-                if !seen_fields.contains(&field_name) {
-                    let value = field.default_value();
-                    all_fields.push(field.clone());
-                    all_values.push(RwLock::new(value));
-                    seen_fields.insert(field_name);
-                }
-            }
+        let object_fields = class.object_fields()?;
+        let mut values = Vec::with_capacity(object_fields.len());
+        for field in object_fields {
+            let value = field.default_value();
+            values.push(RwLock::new(value));
         }
 
         Ok(Self {
             class,
-            fields: all_fields,
-            values: Arc::new(all_values),
+            values: Arc::new(values),
         })
     }
 
@@ -82,8 +54,9 @@ impl Object {
     /// # Errors
     ///
     /// if the field cannot be found.
-    fn field_value<K: FieldKey>(&self, key: K) -> Result<(&Field, &RwLock<Value>)> {
-        let Some((index, field)) = key.get_field(&self.fields) else {
+    fn field_value<K: FieldKey>(&self, key: K) -> Result<(Arc<Field>, &RwLock<Value>)> {
+        let object_fields = self.class.object_fields()?;
+        let Some((index, field)) = key.get_field(&object_fields) else {
             return Err(FieldNotFound {
                 class_name: self.class.name().to_string(),
                 field_name: key.to_string(),
@@ -95,7 +68,7 @@ impl Object {
                 field_name: key.to_string(),
             });
         };
-        Ok((field, value_lock))
+        Ok((field.clone(), value_lock))
     }
 
     /// Get value for a field.
@@ -185,7 +158,7 @@ impl Object {
         if !Arc::ptr_eq(&self.class, &other.class) {
             return false;
         }
-        if self.class.name() != other.class.name() || self.fields != other.fields {
+        if self.class.name() != other.class.name() {
             return false;
         }
 
@@ -231,7 +204,6 @@ impl Object {
         }
         Ok(Self {
             class: self.class.clone(),
-            fields: self.fields.clone(),
             values: Arc::new(values),
         })
     }
@@ -240,12 +212,13 @@ impl Object {
 impl Debug for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Object({})", self.class.name())?;
-        if !self.fields.is_empty() {
+        let object_fields = self.class.object_fields().map_err(|_| std::fmt::Error)?;
+        if !object_fields.is_empty() {
             writeln!(f)?;
         }
 
         // Print fields by name to ensure consistent output
-        for (index, field) in self.fields.iter().enumerate() {
+        for (index, field) in object_fields.iter().enumerate() {
             let name = field.name();
             let value_lock = self.values.get(index).ok_or(std::fmt::Error)?;
             let value = value_lock.read().map_err(|_| std::fmt::Error)?;
