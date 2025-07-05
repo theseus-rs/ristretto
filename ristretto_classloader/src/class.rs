@@ -5,7 +5,7 @@ use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
     ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, MethodAccessFlags,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::sync::{Arc, LazyLock, RwLock};
 
@@ -399,7 +399,7 @@ impl Class {
             .collect::<Vec<_>>();
         // Sort the fields by field index to ensure the order is consistent with the order they are
         // defined in the class file.
-        fields.sort_by_key(|field| field.index());
+        fields.sort_by_key(|field| field.offset());
         fields
     }
 
@@ -526,6 +526,55 @@ impl Class {
             .map_err(|error| PoisonedLock(error.to_string()))?;
         *value_guard = value;
         Ok(())
+    }
+
+    /// Get the object fields for the class. This includes all fields from the class hierarchy
+    /// and the current class, excluding static fields.
+    ///
+    /// # Errors
+    ///
+    /// if there is an issue accessing the parent class due to a poisoned lock.
+    pub fn object_fields(&self) -> Result<Vec<Arc<Field>>> {
+        let mut seen_fields = HashSet::new();
+        let mut fields = Vec::new();
+
+        // Collect all classes in hierarchy from root to current class
+        let mut class_hierarchy = Vec::new();
+        let mut current_class = self.parent()?;
+        while let Some(class) = current_class {
+            class_hierarchy.push(class.clone());
+            current_class = class.parent()?;
+        }
+
+        // Reverse to go from root (Object) to current class
+        class_hierarchy.reverse();
+
+        // Process fields from parent to child to maintain correct ordering
+        for class in class_hierarchy {
+            let object_fields = class.declared_fields();
+            for field in object_fields {
+                if field.access_flags().contains(FieldAccessFlags::STATIC) {
+                    continue;
+                }
+
+                let field_name = field.name().to_string();
+                if !seen_fields.contains(&field_name) {
+                    fields.push(field.clone());
+                    seen_fields.insert(field_name);
+                }
+            }
+        }
+
+        // Add the fields from the current class
+        for field in &self.object_fields {
+            let field_name = field.name().to_string();
+            if !seen_fields.contains(&field_name) {
+                fields.push(field.clone());
+                seen_fields.insert(field_name);
+            }
+        }
+
+        Ok(fields)
     }
 
     /// Get a list of field names in the class hierarchy.
@@ -1298,6 +1347,18 @@ mod tests {
             Err(FieldNotFound { class_name, field_name })
             if class.name() == class_name && field_name == "value"
         ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_fields() -> Result<()> {
+        let class = string_class().await?;
+        let fields = class.object_fields()?;
+        let expected_names = ["value", "coder", "hash", "hashIsZero"];
+        assert_eq!(fields.len(), expected_names.len());
+        for (i, field) in fields.iter().enumerate() {
+            assert_eq!(expected_names[i], field.name());
+        }
         Ok(())
     }
 
