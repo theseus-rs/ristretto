@@ -1,16 +1,18 @@
-use crate::Error::{IllegalAccessError, PoisonedLock};
+use crate::Error::IllegalAccessError;
 use crate::{Result, Value};
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{BaseType, ClassFile, ConstantPool, FieldAccessFlags, FieldType};
-use std::sync::{Arc, RwLock};
+use std::fmt::{Debug, Display};
+use std::hash::Hash;
+use std::sync::Arc;
 
 #[expect(clippy::struct_field_names)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Field {
+    index: u16,
     access_flags: FieldAccessFlags,
     field_type: FieldType,
     name: String,
-    value: Arc<RwLock<Value>>,
     attributes: Vec<Attribute>,
 }
 
@@ -18,17 +20,17 @@ impl Field {
     /// Create a new class field with the given parameters.
     #[must_use]
     pub fn new(
+        index: u16,
         access_flags: FieldAccessFlags,
         field_type: FieldType,
         name: String,
-        value: Value,
         attributes: Vec<Attribute>,
     ) -> Self {
         Self {
+            index,
             access_flags,
             field_type,
             name,
-            value: Arc::new(RwLock::new(value)),
             attributes,
         }
     }
@@ -38,45 +40,29 @@ impl Field {
     /// # Errors
     ///
     /// if the field name cannot be read.
-    pub fn from(class_file: &ClassFile, definition: &ristretto_classfile::Field) -> Result<Self> {
+    pub fn from(
+        class_file: &ClassFile,
+        index: u16,
+        definition: &ristretto_classfile::Field,
+    ) -> Result<Self> {
         let constant_pool = &class_file.constant_pool;
         let access_flags = definition.access_flags;
         let name = constant_pool.try_get_utf8(definition.name_index)?;
         let field_type = definition.field_type.clone();
-        let mut value = match field_type {
-            FieldType::Base(
-                BaseType::Boolean
-                | BaseType::Byte
-                | BaseType::Char
-                | BaseType::Int
-                | BaseType::Short,
-            ) => Value::Int(0),
-            FieldType::Base(BaseType::Double) => Value::Double(0.0),
-            FieldType::Base(BaseType::Float) => Value::Float(0.0),
-            FieldType::Base(BaseType::Long) => Value::Long(0),
-            FieldType::Object(_) | FieldType::Array(_) => Value::Object(None),
-        };
-
-        if access_flags.contains(FieldAccessFlags::STATIC) {
-            for attribute in &definition.attributes {
-                if let Attribute::ConstantValue {
-                    constant_value_index,
-                    ..
-                } = attribute
-                {
-                    value = get_typed_value(&field_type, constant_pool, *constant_value_index)?;
-                    break;
-                }
-            }
-        }
 
         Ok(Self {
+            index,
             access_flags,
             field_type,
             name: name.to_string(),
-            value: Arc::new(RwLock::new(value)),
             attributes: definition.attributes.clone(),
         })
+    }
+
+    /// Get the index of the field.
+    #[must_use]
+    pub fn index(&self) -> u16 {
+        self.index
     }
 
     /// Get the field access flags.
@@ -97,19 +83,6 @@ impl Field {
         &self.name
     }
 
-    /// Get the field value.
-    ///
-    /// # Errors
-    ///
-    /// if the lock is poisoned.
-    pub fn value(&self) -> Result<Value> {
-        let value = self
-            .value
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        Ok(value.clone())
-    }
-
     /// Set the field value.
     ///
     /// # Errors
@@ -117,11 +90,7 @@ impl Field {
     /// - if the field is final.
     /// - if the value is not permissible for the field type.
     /// - if the lock is poisoned.
-    pub fn set_value(&self, value: Value) -> Result<()> {
-        let mut guarded_value = self
-            .value
-            .write()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+    pub fn check_value(&self, value: &Value) -> Result<()> {
         // TODO: Check that the field is not final
         // if self.access_flags.contains(FieldAccessFlags::FINAL) && *guarded_value != Value::Unused {
         //     let error = format!("Cannot set final field: {}", self.name);
@@ -174,22 +143,6 @@ impl Field {
                 }
             }
         }
-
-        *guarded_value = value;
-        Ok(())
-    }
-
-    /// Set the field value without checking field permissions or type.
-    ///
-    /// # Errors
-    ///
-    /// if the lock is poisoned.
-    pub fn unsafe_set_value(&self, value: Value) -> Result<()> {
-        let mut guarded_value = self
-            .value
-            .write()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        *guarded_value = value;
         Ok(())
     }
 
@@ -199,81 +152,110 @@ impl Field {
         &self.attributes
     }
 
-    /// Deep clone the field.
+    /// Get the default value for the field type.
+    #[must_use]
+    pub fn default_value(&self) -> Value {
+        match self.field_type {
+            FieldType::Base(
+                BaseType::Boolean
+                | BaseType::Byte
+                | BaseType::Char
+                | BaseType::Int
+                | BaseType::Short,
+            ) => Value::Int(0),
+            FieldType::Base(BaseType::Double) => Value::Double(0.0),
+            FieldType::Base(BaseType::Float) => Value::Float(0.0),
+            FieldType::Base(BaseType::Long) => Value::Long(0),
+            FieldType::Object(_) | FieldType::Array(_) => Value::Object(None),
+        }
+    }
+
+    /// Get the default static value for the field type.
     ///
     /// # Errors
     ///
-    /// if the field value cannot be cloned.
-    pub fn deep_clone(&self) -> Result<Self> {
-        let value = self.value()?;
-        Ok(Self {
-            access_flags: self.access_flags,
-            field_type: self.field_type.clone(),
-            name: self.name.clone(),
-            value: Arc::new(RwLock::new(value)),
-            attributes: self.attributes.clone(),
-        })
+    /// - if the index is out of bounds for the constant pool.
+    /// - if the value cannot be converted to the expected type.
+    pub fn default_static_value(&self, constant_pool: &ConstantPool) -> Result<Value> {
+        if self.access_flags.contains(FieldAccessFlags::STATIC) {
+            let constant_value_index = self.attributes.iter().find_map(|attribute| {
+                if let Attribute::ConstantValue {
+                    constant_value_index,
+                    ..
+                } = attribute
+                {
+                    Some(*constant_value_index)
+                } else {
+                    None
+                }
+            });
+
+            if let Some(constant_value_index) = constant_value_index {
+                let value = match &self.field_type {
+                    FieldType::Base(
+                        BaseType::Boolean
+                        | BaseType::Byte
+                        | BaseType::Char
+                        | BaseType::Int
+                        | BaseType::Short,
+                    ) => {
+                        let value = constant_pool.try_get_integer(constant_value_index)?;
+                        Value::Int(*value)
+                    }
+                    FieldType::Base(BaseType::Double) => {
+                        let value = constant_pool.try_get_double(constant_value_index)?;
+                        Value::Double(*value)
+                    }
+                    FieldType::Base(BaseType::Float) => {
+                        let value = constant_pool.try_get_float(constant_value_index)?;
+                        Value::Float(*value)
+                    }
+                    FieldType::Base(BaseType::Long) => {
+                        let value = constant_pool.try_get_long(constant_value_index)?;
+                        Value::Long(*value)
+                    }
+                    FieldType::Object(_class_name) => {
+                        // Objects are loaded through a class initializer
+                        Value::Unused
+                    }
+                    FieldType::Array(_field_type) => {
+                        // Arrays are loaded through a class initializer
+                        Value::Unused
+                    }
+                };
+                return Ok(value);
+            }
+        }
+        Ok(self.default_value())
     }
 }
 
-fn get_typed_value(
-    field_type: &FieldType,
-    constant_pool: &ConstantPool,
-    index: u16,
-) -> Result<Value> {
-    let value = match field_type {
-        FieldType::Base(BaseType::Boolean) => {
-            let value = constant_pool.try_get_integer(index)?;
-            Value::Int(*value)
-        }
-        FieldType::Base(BaseType::Byte) => {
-            let value = constant_pool.try_get_integer(index)?;
-            Value::Int(*value)
-        }
-        FieldType::Base(BaseType::Char) => {
-            let value = constant_pool.try_get_integer(index)?;
-            Value::Int(*value)
-        }
-        FieldType::Base(BaseType::Double) => {
-            let value = constant_pool.try_get_double(index)?;
-            Value::Double(*value)
-        }
-        FieldType::Base(BaseType::Float) => {
-            let value = constant_pool.try_get_float(index)?;
-            Value::Float(*value)
-        }
-        FieldType::Base(BaseType::Int) => {
-            let value = constant_pool.try_get_integer(index)?;
-            Value::Int(*value)
-        }
-        FieldType::Base(BaseType::Long) => {
-            let value = constant_pool.try_get_long(index)?;
-            Value::Long(*value)
-        }
-        FieldType::Base(BaseType::Short) => {
-            let value = constant_pool.try_get_integer(index)?;
-            Value::Int(*value)
-        }
-        FieldType::Object(_class_name) => {
-            // Objects are loaded through a class initializer
-            Value::Unused
-        }
-        FieldType::Array(_field_type) => {
-            // Arrays are loaded through a class initializer
-            Value::Unused
-        }
-    };
-    Ok(value)
+/// Trait for getting a field by either the name, or the offset.
+pub trait FieldKey: Display + Debug + Copy + Eq + Hash {
+    fn get_field<'a>(&self, fields: &'a [Arc<Field>]) -> Option<(usize, &'a Arc<Field>)>;
 }
 
-impl PartialEq for Field {
-    fn eq(&self, other: &Self) -> bool {
-        let value = self.value.read().expect("poisoned lock");
-        let other_value = other.value.read().expect("poisoned lock");
-        self.access_flags == other.access_flags
-            && self.field_type == other.field_type
-            && self.name == other.name
-            && *value == *other_value
+/// Implementation of `FieldKey` for index offset.
+impl FieldKey for usize {
+    fn get_field<'a>(&self, fields: &'a [Arc<Field>]) -> Option<(usize, &'a Arc<Field>)> {
+        if let Some(field) = fields.get(*self) {
+            return Some((*self, field));
+        }
+        None
+    }
+}
+
+/// Implementation of `FieldKey` for field name.
+impl FieldKey for &String {
+    fn get_field<'a>(&self, fields: &'a [Arc<Field>]) -> Option<(usize, &'a Arc<Field>)> {
+        self.as_str().get_field(fields)
+    }
+}
+
+/// Implementation of `FieldKey` for field name.
+impl FieldKey for &str {
+    fn get_field<'a>(&self, fields: &'a [Arc<Field>]) -> Option<(usize, &'a Arc<Field>)> {
+        fields.iter().enumerate().find(|(_, f)| f.name == *self)
     }
 }
 
@@ -283,276 +265,218 @@ mod tests {
     use ristretto_classfile::FieldAccessFlags;
 
     #[test]
-    fn test_field_new() -> Result<()> {
+    fn test_field_new() {
         let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Int),
             "test".to_string(),
-            Value::Int(42),
             vec![],
         );
+        assert_eq!(field.index(), 0);
         assert_eq!(field.access_flags(), &FieldAccessFlags::PUBLIC);
         assert_eq!(field.field_type(), &FieldType::Base(BaseType::Int));
         assert_eq!(field.name(), "test");
-        assert_eq!(field.value()?, Value::Int(42));
         assert!(field.attributes.is_empty());
-        Ok(())
     }
 
     #[test]
-    fn test_value() -> Result<()> {
+    fn test_check_value_boolean() -> Result<()> {
         let field = Field::new(
-            FieldAccessFlags::PUBLIC,
-            FieldType::Base(BaseType::Int),
-            "test".to_string(),
-            Value::Int(42),
-            vec![],
-        );
-        assert_eq!(Value::Int(42), field.value()?);
-        Ok(())
-    }
-
-    #[test]
-    fn test_set_value_boolean() -> Result<()> {
-        let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Boolean),
             "test".to_string(),
-            Value::from(false),
             vec![],
         );
-        field.set_value(Value::from(true))?;
-        assert_eq!(Value::from(true), field.value()?);
+        field.check_value(&Value::from(true))?;
         Ok(())
     }
 
     #[test]
-    fn test_set_value_byte() -> Result<()> {
+    fn test_check_value_byte() -> Result<()> {
         let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Byte),
             "test".to_string(),
-            Value::Int(0),
             vec![],
         );
-        field.set_value(Value::Int(1))?;
-        assert_eq!(Value::Int(1), field.value()?);
+        field.check_value(&Value::Int(1))?;
         Ok(())
     }
 
     #[test]
-    fn test_set_value_char() -> Result<()> {
+    fn test_check_value_char() -> Result<()> {
         let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Char),
             "test".to_string(),
-            Value::Int(0),
             vec![],
         );
-        field.set_value(Value::Int(1))?;
-        assert_eq!(Value::Int(1), field.value()?);
+        field.check_value(&Value::Int(1))?;
         Ok(())
     }
 
     #[test]
-    fn test_set_value_double() -> Result<()> {
+    fn test_check_value_double() -> Result<()> {
         let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Double),
             "test".to_string(),
-            Value::Double(0.0),
             vec![],
         );
-        field.set_value(Value::Double(1.0))?;
-        assert_eq!(Value::Double(1.0), field.value()?);
+        field.check_value(&Value::Double(1.0))?;
         Ok(())
     }
 
     #[test]
-    fn test_set_value_float() -> Result<()> {
+    fn test_check_value_float() -> Result<()> {
         let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Float),
             "test".to_string(),
-            Value::Float(0.0),
             vec![],
         );
-        field.set_value(Value::Float(1.0))?;
-        assert_eq!(Value::Float(1.0), field.value()?);
+        field.check_value(&Value::Float(1.0))?;
         Ok(())
     }
 
     #[test]
-    fn test_set_value_int() -> Result<()> {
+    fn test_check_value_int() -> Result<()> {
         let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Int),
             "test".to_string(),
-            Value::Int(0),
             vec![],
         );
-        field.set_value(Value::Int(1))?;
-        assert_eq!(Value::Int(1), field.value()?);
+        field.check_value(&Value::Int(1))?;
         Ok(())
     }
 
     #[test]
-    fn test_set_value_long() -> Result<()> {
+    fn test_check_value_long() -> Result<()> {
         let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Long),
             "test".to_string(),
-            Value::Long(0),
             vec![],
         );
-        field.set_value(Value::Long(1))?;
-        assert_eq!(Value::Long(1), field.value()?);
+        field.check_value(&Value::Long(1))?;
         Ok(())
     }
 
     #[test]
-    fn test_set_value_object() -> Result<()> {
+    fn test_check_value_object() -> Result<()> {
         let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Object("java/lang/Object".to_string()),
             "test".to_string(),
-            Value::Object(None),
             vec![],
         );
-        field.set_value(Value::Object(None))?;
-        assert_eq!(Value::Object(None), field.value()?);
+        field.check_value(&Value::Object(None))?;
         Ok(())
     }
 
     #[test]
-    fn test_set_value_array() -> Result<()> {
-        let value: Value = vec![42i32].into();
+    fn test_check_value_array() -> Result<()> {
         let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Array(Box::new(FieldType::Base(BaseType::Int))),
             "test".to_string(),
-            value,
             vec![],
         );
-        field.set_value(Value::Object(None))?;
-        assert_eq!(Value::Object(None), field.value()?);
+        let value: Value = vec![42i32].into();
+        field.check_value(&value)?;
         Ok(())
     }
 
     #[test]
-    fn test_set_value_short() -> Result<()> {
+    fn test_check_value_short() -> Result<()> {
         let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Short),
             "test".to_string(),
-            Value::Int(0),
             vec![],
         );
-        field.set_value(Value::Int(1))?;
-        assert_eq!(Value::Int(1), field.value()?);
+        field.check_value(&Value::Int(1))?;
         Ok(())
     }
 
     #[test]
-    fn test_set_value_invalid() {
+    fn test_check_value_invalid() {
         let field = Field::new(
+            0,
             FieldAccessFlags::PUBLIC,
             FieldType::Base(BaseType::Int),
             "test".to_string(),
-            Value::Int(0),
             vec![],
         );
-        let result = field.set_value(Value::Double(1.0));
+        let result = field.check_value(&Value::Double(1.0));
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_unsafe_set_value() -> Result<()> {
-        let field = Field::new(
-            FieldAccessFlags::PUBLIC,
-            FieldType::Base(BaseType::Int),
-            "test".to_string(),
-            Value::Int(1),
-            vec![],
-        );
-        field.unsafe_set_value(Value::Int(2))?;
-        assert_eq!(Value::Int(2), field.value()?);
-        Ok(())
+    fn test_field_key_get_by_index() {
+        let fields = vec![
+            Arc::new(Field::new(
+                0,
+                FieldAccessFlags::PUBLIC,
+                FieldType::Base(BaseType::Int),
+                "field1".to_string(),
+                vec![],
+            )),
+            Arc::new(Field::new(
+                0,
+                FieldAccessFlags::PUBLIC,
+                FieldType::Base(BaseType::Int),
+                "field2".to_string(),
+                vec![],
+            )),
+        ];
+        let key: usize = 1;
+        let expected = fields.get(key).map(|field| (key, field));
+        assert_eq!(expected, key.get_field(&fields));
     }
 
     #[test]
-    fn test_clone() -> Result<()> {
-        let field = Field::new(
-            FieldAccessFlags::PUBLIC,
-            FieldType::Base(BaseType::Int),
-            "test".to_string(),
-            Value::Int(1),
-            vec![],
-        );
-        let clone = field.clone();
-        assert_eq!(Value::Int(1), field.value()?);
-        assert_eq!(Value::Int(1), clone.value()?);
+    fn test_field_key_get_by_name() {
+        let fields = vec![
+            Arc::new(Field::new(
+                0,
+                FieldAccessFlags::PUBLIC,
+                FieldType::Base(BaseType::Int),
+                "field1".to_string(),
+                vec![],
+            )),
+            Arc::new(Field::new(
+                0,
+                FieldAccessFlags::PUBLIC,
+                FieldType::Base(BaseType::Int),
+                "field2".to_string(),
+                vec![],
+            )),
+        ];
+        let key = &"field2".to_string();
+        let expected = fields
+            .iter()
+            .enumerate()
+            .find(|(_, field)| field.name == key.as_str());
+        assert_eq!(expected, key.get_field(&fields));
 
-        clone.set_value(Value::Int(2))?;
-        assert_eq!(Value::Int(2), field.value()?);
-        assert_eq!(Value::Int(2), clone.value()?);
-        Ok(())
-    }
-
-    #[test]
-    fn test_deep_clone() -> Result<()> {
-        let field = Field::new(
-            FieldAccessFlags::PUBLIC,
-            FieldType::Base(BaseType::Int),
-            "test".to_string(),
-            Value::Int(1),
-            vec![],
-        );
-        let clone = field.deep_clone()?;
-        assert_eq!(Value::Int(1), field.value()?);
-        assert_eq!(Value::Int(1), clone.value()?);
-
-        clone.set_value(Value::Int(2))?;
-        assert_eq!(Value::Int(1), field.value()?);
-        assert_eq!(Value::Int(2), clone.value()?);
-        Ok(())
-    }
-
-    #[test]
-    fn test_eq() {
-        let field = Field::new(
-            FieldAccessFlags::PUBLIC,
-            FieldType::Base(BaseType::Int),
-            "test".to_string(),
-            Value::Int(1),
-            vec![],
-        );
-        let other = Field::new(
-            FieldAccessFlags::PUBLIC,
-            FieldType::Base(BaseType::Int),
-            "test".to_string(),
-            Value::Int(1),
-            vec![],
-        );
-        assert_eq!(field, other);
-    }
-
-    #[test]
-    fn test_ne() {
-        let field = Field::new(
-            FieldAccessFlags::PUBLIC,
-            FieldType::Base(BaseType::Int),
-            "test".to_string(),
-            Value::Int(1),
-            vec![],
-        );
-        let other = Field::new(
-            FieldAccessFlags::PUBLIC,
-            FieldType::Base(BaseType::Int),
-            "test".to_string(),
-            Value::Int(2),
-            vec![],
-        );
-        assert_ne!(field, other);
+        let key = key.as_str();
+        let expected = fields
+            .iter()
+            .enumerate()
+            .find(|(_, field)| field.name == key);
+        assert_eq!(expected, key.get_field(&fields));
     }
 }

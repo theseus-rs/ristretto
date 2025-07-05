@@ -1,5 +1,6 @@
 import java.io.*;
 
+/** Test reading and writing text files using BufferedReader and BufferedWriter. */
 public class Test {
     public static void main(String[] args) throws IOException {
         String filename = "test.txt";

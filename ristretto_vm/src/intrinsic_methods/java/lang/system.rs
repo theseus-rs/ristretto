@@ -373,8 +373,8 @@ pub(crate) async fn set_in_0(
 ) -> Result<Option<Value>> {
     let input_stream = parameters.pop_reference()?;
     let system = thread.class("java.lang.System").await?;
-    let in_field = system.static_field("in")?;
-    in_field.unsafe_set_value(Value::Object(input_stream))?;
+    let value = Value::Object(input_stream);
+    system.set_static_value_unchecked("in", value)?;
     Ok(None)
 }
 
@@ -386,8 +386,8 @@ pub(crate) async fn set_out_0(
 ) -> Result<Option<Value>> {
     let print_stream = parameters.pop_reference()?;
     let system = thread.class("java.lang.System").await?;
-    let out_field = system.static_field("out")?;
-    out_field.unsafe_set_value(Value::Object(print_stream))?;
+    let value = Value::Object(print_stream);
+    system.set_static_value_unchecked("out", value)?;
     Ok(None)
 }
 
@@ -399,8 +399,8 @@ pub(crate) async fn set_err_0(
 ) -> Result<Option<Value>> {
     let print_stream = parameters.pop_reference()?;
     let system = thread.class("java.lang.System").await?;
-    let err_field = system.static_field("err")?;
-    err_field.unsafe_set_value(Value::Object(print_stream))?;
+    let value = Value::Object(print_stream);
+    system.set_static_value_unchecked("err", value)?;
     Ok(None)
 }
 

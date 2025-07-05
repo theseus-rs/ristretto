@@ -213,8 +213,7 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
     object.set_value("name", name)?;
     // TODO: a "null" class loader indicates a system class loader; this should be re-evaluated
     // to support custom class loaders
-    let class_loader_field = object.field("classLoader")?;
-    class_loader_field.unsafe_set_value(Value::Object(None))?;
+    object.set_value_unchecked("classLoader", Value::Object(None))?;
     class.set_object(Some(object.clone()))?;
     let value = Value::from(object);
     Ok(value)

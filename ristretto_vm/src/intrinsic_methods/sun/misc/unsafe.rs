@@ -958,17 +958,19 @@ mod tests {
 
     /// Creates a java.lang.reflect.Field for testing purposes.
     async fn create_field(thread: &Thread) -> Result<Value> {
+        let string_class = thread.class("java/lang/String").await?;
+        let string_class_object = string_class.to_object(thread).await?;
         let descriptor =
             "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IZILjava/lang/String;[B";
         let parameters = vec![
-            Value::Object(None),                  // Declaring Class
-            "fieldName".to_object(thread).await?, // Field name
-            Value::Object(None),                  // Type
-            Value::Int(0),                        // Modifiers
-            Value::from(false),                   // Trusted Final
-            Value::Int(0),                        // Slot
-            "signature".to_object(thread).await?, // Signature
-            Value::Object(None),                  // Annotations
+            string_class_object,              // Declaring Class
+            "value".to_object(thread).await?, // Field name
+            Value::Object(None),              // Type
+            Value::Int(0),                    // Modifiers
+            Value::from(false),               // Trusted Final
+            Value::Int(0),                    // Slot
+            "[B".to_object(thread).await?,    // Signature
+            Value::Object(None),              // Annotations
         ];
         thread
             .object("java/lang/reflect/Field", descriptor, &parameters)

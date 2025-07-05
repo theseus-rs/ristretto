@@ -1,3 +1,4 @@
+/** Test the double primitive type and its wrapper class. */
 class Test {
     public static void main(String[] args) throws Exception {
         System.out.println(0.0d);

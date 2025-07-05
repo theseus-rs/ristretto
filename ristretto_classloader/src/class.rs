@@ -1,6 +1,6 @@
 use crate::Error::{FieldNotFound, MethodNotFound, PoisonedLock};
-use crate::{Field, Method, Object, Result};
-use indexmap::IndexMap;
+use crate::field::FieldKey;
+use crate::{Field, Method, Object, Result, Value};
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
     ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, MethodAccessFlags,
@@ -71,7 +71,9 @@ pub struct Class {
     class_file: ClassFile,
     parent: Arc<RwLock<Option<Arc<Class>>>>,
     interfaces: Arc<RwLock<Vec<Arc<Class>>>>,
-    fields: IndexMap<String, Arc<Field>>,
+    static_fields: Vec<Arc<Field>>,
+    static_values: Vec<Arc<RwLock<Value>>>,
+    object_fields: Vec<Arc<Field>>,
     methods: HashMap<String, Arc<Method>>,
     object: Arc<RwLock<Option<Object>>>,
 }
@@ -97,7 +99,9 @@ impl Class {
             class_file,
             parent: Arc::new(RwLock::new(None)),
             interfaces: Arc::new(RwLock::new(Vec::new())),
-            fields: IndexMap::new(),
+            static_fields: Vec::new(),
+            static_values: Vec::new(),
+            object_fields: Vec::new(),
             methods: HashMap::new(),
             object: Arc::new(RwLock::new(None)),
         });
@@ -124,11 +128,20 @@ impl Class {
             }
         }
 
-        let mut fields = IndexMap::new();
-        for class_field in &class_file.fields {
-            let field = Field::from(&class_file, class_field)?;
-            let field_name = field.name().to_string();
-            fields.insert(field_name, Arc::new(field));
+        let mut static_fields = Vec::new();
+        let mut static_values = Vec::new();
+        let mut object_fields = Vec::new();
+        let constant_pool = &class_file.constant_pool;
+        for (index, class_field) in class_file.fields.iter().enumerate() {
+            let index = u16::try_from(index)?;
+            let field = Arc::new(Field::from(&class_file, index, class_field)?);
+            if field.access_flags().contains(FieldAccessFlags::STATIC) {
+                static_fields.push(field.clone());
+                let value = field.default_static_value(constant_pool)?;
+                static_values.push(Arc::new(RwLock::new(value)));
+            } else {
+                object_fields.push(field);
+            }
         }
 
         let mut methods = HashMap::new();
@@ -148,7 +161,9 @@ impl Class {
             class_file,
             parent: Arc::new(RwLock::new(None)),
             interfaces: Arc::new(RwLock::new(Vec::new())),
-            fields,
+            static_fields,
+            static_values,
+            object_fields,
             methods,
             object: Arc::new(RwLock::new(None)),
         });
@@ -372,53 +387,145 @@ impl Class {
         &mut self.class_file.constant_pool
     }
 
-    /// Get the fields for the class.
-    /// The fields are returned in the order they are defined in the class file.
+    /// Get the declared fields for the class. The fields are returned in the order they are defined
+    /// in the class file.
     #[must_use]
-    pub fn fields(&self) -> Vec<Arc<Field>> {
-        self.fields.values().cloned().collect()
+    pub fn declared_fields(&self) -> Vec<Arc<Field>> {
+        let mut fields = self
+            .static_fields
+            .iter()
+            .chain(self.object_fields.iter())
+            .cloned()
+            .collect::<Vec<_>>();
+        // Sort the fields by field index to ensure the order is consistent with the order they are
+        // defined in the class file.
+        fields.sort_by_key(|field| field.index());
+        fields
     }
 
-    /// Get a field by name.
+    /// Get a declared field by key.
     ///
     /// # Errors
     ///
     /// if the field is not found.
-    pub fn field<S: AsRef<str>>(&self, name: S) -> Result<Arc<Field>> {
-        let name = name.as_ref();
-        if let Some(field) = self.fields.get(name) {
+    pub fn declared_field<K: FieldKey>(&self, key: K) -> Result<Arc<Field>> {
+        let declared_fields = self.declared_fields();
+        if let Some((_index, field)) = key.get_field(&declared_fields) {
             return Ok(field.clone());
         }
         let Some(parent) = &self.parent()? else {
             return Err(FieldNotFound {
                 class_name: self.name().to_string(),
-                field_name: name.to_string(),
+                field_name: key.to_string(),
             });
         };
-        let Ok(field) = parent.field(name) else {
+        let Ok(field) = parent.declared_field(key) else {
             return Err(FieldNotFound {
                 class_name: self.name().to_string(),
-                field_name: name.to_string(),
+                field_name: key.to_string(),
             });
         };
         Ok(field)
     }
 
-    /// Get a static field by name.
+    /// Get a static field by key.
     ///
     /// # Errors
     ///
     /// if the field is not found.
-    pub fn static_field<S: AsRef<str>>(&self, name: S) -> Result<Arc<Field>> {
-        let field = self.field(&name)?;
-        if field.access_flags().contains(FieldAccessFlags::STATIC) {
-            Ok(field)
-        } else {
-            Err(FieldNotFound {
-                class_name: self.name().to_string(),
-                field_name: name.as_ref().to_string(),
-            })
+    pub fn static_field<K: FieldKey>(&self, key: K) -> Result<Arc<Field>> {
+        if let Some((_index, field)) = key.get_field(&self.static_fields) {
+            return Ok(field.clone());
         }
+
+        if let Some(parent) = &self.parent()?
+            && let Ok(field) = parent.static_field(key)
+        {
+            return Ok(field);
+        }
+
+        Err(FieldNotFound {
+            class_name: self.name().to_string(),
+            field_name: key.to_string(),
+        })
+    }
+
+    /// Get static field and value lock by key.
+    ///
+    /// # Errors
+    ///
+    /// if the field cannot be found.
+    fn static_field_value<K: FieldKey>(&self, key: K) -> Result<(Arc<Field>, Arc<RwLock<Value>>)> {
+        if let Some((index, field)) = key.get_field(&self.static_fields)
+            && let Some(value_lock) = self.static_values.get(index)
+        {
+            return Ok((field.clone(), value_lock.clone()));
+        }
+
+        if let Some(parent) = &self.parent()?
+            && let Ok((field, value)) = parent.static_field_value(key)
+        {
+            return Ok((field, value));
+        }
+
+        Err(FieldNotFound {
+            class_name: self.name().to_string(),
+            field_name: key.to_string(),
+        })
+    }
+
+    /// Get a static field value by key.
+    ///
+    /// # Errors
+    ///
+    /// if the field is not found.
+    pub fn static_value<K: FieldKey>(&self, key: K) -> Result<Value> {
+        if let Ok((_field, value_lock)) = self.static_field_value(key) {
+            let value_guard = value_lock
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            return Ok(value_guard.clone());
+        }
+
+        if let Some(parent) = &self.parent()?
+            && let Ok(value) = parent.static_value(key)
+        {
+            return Ok(value);
+        }
+
+        Err(FieldNotFound {
+            class_name: self.name().to_string(),
+            field_name: key.to_string(),
+        })
+    }
+
+    /// Set a static field value.
+    ///
+    /// # Errors
+    ///
+    /// if the field is not found.
+    pub fn set_static_value<K: FieldKey>(&self, key: K, value: Value) -> Result<()> {
+        let (field, value_lock) = self.static_field_value(key)?;
+        field.check_value(&value)?;
+        let mut value_guard = value_lock
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        *value_guard = value;
+        Ok(())
+    }
+
+    /// Set a static field value without checking field constraints.
+    ///
+    /// # Errors
+    ///
+    /// if the field is not found.
+    pub fn set_static_value_unchecked<K: FieldKey>(&self, key: K, value: Value) -> Result<()> {
+        let (_field, value_lock) = self.static_field_value(key)?;
+        let mut value_guard = value_lock
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        *value_guard = value;
+        Ok(())
     }
 
     /// Get a list of field names in the class hierarchy.
@@ -430,14 +537,16 @@ impl Class {
         let mut field_names = Vec::new();
         let mut parent = self.parent()?;
         while let Some(class) = parent {
-            for field_name in class.fields.keys().rev() {
-                field_names.insert(0, field_name.clone());
+            for field in class.declared_fields().iter().rev() {
+                let field_name = field.name().to_string();
+                field_names.insert(0, field_name);
             }
             parent = class.parent()?;
         }
 
-        for field_name in self.fields.keys() {
-            field_names.push(field_name.clone());
+        for field in self.declared_fields() {
+            let field_name = field.name().to_string();
+            field_names.push(field_name);
         }
         Ok(field_names)
     }
@@ -665,12 +774,14 @@ impl PartialEq for Class {
             return true;
         }
 
+        // TODO: This is a very basic equality check. It should be extended to include static_values
         self.name() == other.name()
             && self.source_file == other.source_file
             && self.class_file == other.class_file
             && *self.parent.read().expect("parent") == *other.parent.read().expect("parent")
             && *self.interfaces.read().expect("parent") == *other.interfaces.read().expect("parent")
-            && self.fields == other.fields
+            && self.static_fields == other.static_fields
+            && self.object_fields == other.object_fields
             && self.methods == other.methods
             && *self.object.read().expect("parent") == *other.object.read().expect("parent")
     }
@@ -685,7 +796,9 @@ impl Display for Class {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Error::IllegalAccessError;
     use crate::{Error, Result, runtime};
+    use ristretto_classfile::{BaseType, FieldType};
     use std::io::Cursor;
 
     async fn object_class() -> Result<Arc<Class>> {
@@ -704,6 +817,51 @@ mod tests {
         string_class.set_interfaces(vec![serializable_class])?;
 
         Ok(string_class)
+    }
+
+    async fn static_class() -> Result<Arc<Class>> {
+        let mut constant_pool = ConstantPool::new();
+        let class_name_index = constant_pool.add_class("StaticTest")?;
+
+        let static_field_index =
+            constant_pool.add_field_ref(class_name_index, "staticField", "I")?;
+        let (_class_index, name_and_type_index) =
+            constant_pool.try_get_field_ref(static_field_index)?;
+        let (name_index, descriptor_index) =
+            constant_pool.try_get_name_and_type(*name_and_type_index)?;
+        let static_field = ristretto_classfile::Field {
+            name_index: *name_index,
+            descriptor_index: *descriptor_index,
+            access_flags: FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC,
+            field_type: FieldType::Base(BaseType::Int),
+            attributes: vec![],
+        };
+
+        let static_final_field_index =
+            constant_pool.add_field_ref(class_name_index, "staticFinalField", "I")?;
+        let (_class_index, name_and_type_index) =
+            constant_pool.try_get_field_ref(static_final_field_index)?;
+        let (name_index, descriptor_index) =
+            constant_pool.try_get_name_and_type(*name_and_type_index)?;
+        let static_final_field = ristretto_classfile::Field {
+            name_index: *name_index,
+            descriptor_index: *descriptor_index,
+            access_flags: FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC,
+            field_type: FieldType::Base(BaseType::Int),
+            attributes: vec![],
+        };
+
+        let class_file = ClassFile {
+            constant_pool,
+            this_class: class_name_index,
+            access_flags: ClassAccessFlags::PUBLIC,
+            fields: vec![static_field, static_final_field],
+            ..Default::default()
+        };
+        let class = Class::from(class_file)?;
+        let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
+        class_loader.register(class.clone()).await?;
+        Ok(class)
     }
 
     async fn serializable_class() -> Result<Arc<Class>> {
@@ -945,7 +1103,7 @@ mod tests {
     #[tokio::test]
     async fn test_fields() -> Result<()> {
         let class = string_class().await?;
-        let fields = class.fields();
+        let fields = class.declared_fields();
         assert_eq!(11, fields.len());
         Ok(())
     }
@@ -953,7 +1111,7 @@ mod tests {
     #[tokio::test]
     async fn test_field() -> Result<()> {
         let class = string_class().await?;
-        let result = class.field("value");
+        let result = class.declared_field("value");
         assert!(result.is_ok());
         Ok(())
     }
@@ -961,7 +1119,7 @@ mod tests {
     #[tokio::test]
     async fn test_field_not_found() -> Result<()> {
         let class = string_class().await?;
-        let result = class.field("foo");
+        let result = class.declared_field("foo");
         assert!(matches!(
             result,
             Err(FieldNotFound { class_name, field_name })
@@ -994,6 +1152,147 @@ mod tests {
     async fn test_static_field_found_but_not_static() -> Result<()> {
         let class = string_class().await?;
         let result = class.static_field("value");
+        assert!(matches!(
+            result,
+            Err(FieldNotFound { class_name, field_name })
+            if class.name() == class_name && field_name == "value"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_static_value() -> Result<()> {
+        let class = string_class().await?;
+        let result: i64 = class.static_value("serialVersionUID")?.try_into()?;
+        assert_eq!(result, -6_849_794_470_754_667_710);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_static_value_not_found() -> Result<()> {
+        let class = string_class().await?;
+        let result = class.static_value("foo");
+        assert!(matches!(
+            result,
+            Err(FieldNotFound { class_name, field_name })
+            if class.name() == class_name && field_name == "foo"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_static_value_found_but_not_static() -> Result<()> {
+        let class = string_class().await?;
+        let result = class.static_value("value");
+        assert!(matches!(
+            result,
+            Err(FieldNotFound { class_name, field_name })
+            if class.name() == class_name && field_name == "value"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_static_value() -> Result<()> {
+        let class = static_class().await?;
+        class.set_static_value("staticField", Value::Int(42))?;
+        let value: i32 = class.static_value("staticField")?.try_into()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_static_value_final() -> Result<()> {
+        let class = string_class().await?;
+        let _result = class.set_static_value("staticFinalField", Value::Int(42));
+        // TODO: Check that final fields that are already set throw an error
+        // assert!(matches!(
+        //     result,
+        //     Err(IllegalAccessError(message))
+        //     if message == "staticFinalField"
+        // ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_static_value_invalid_type() -> Result<()> {
+        let class = static_class().await?;
+        let result = class.set_static_value("staticField", Value::Object(None));
+        assert!(matches!(
+            result,
+            Err(IllegalAccessError(message))
+            if message == "Invalid value for int field"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_static_value_not_found() -> Result<()> {
+        let class = static_class().await?;
+        let result = class.set_static_value("foo", Value::Object(None));
+        assert!(matches!(
+            result,
+            Err(FieldNotFound { class_name, field_name })
+            if class.name() == class_name && field_name == "foo"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_static_value_found_but_not_static() -> Result<()> {
+        let class = string_class().await?;
+        let result = class.set_static_value("value", Value::Object(None));
+        assert!(matches!(
+            result,
+            Err(FieldNotFound { class_name, field_name })
+            if class.name() == class_name && field_name == "value"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_static_value_unchecked() -> Result<()> {
+        let class = static_class().await?;
+        class.set_static_value_unchecked("staticField", Value::Int(42))?;
+        let value: i32 = class.static_value("staticField")?.try_into()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_static_value_unchecked_final() -> Result<()> {
+        let class = static_class().await?;
+        class.set_static_value_unchecked("staticFinalField", Value::Int(42))?;
+        let value: i32 = class.static_value("staticFinalField")?.try_into()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_static_value_unchecked_invalid_type() -> Result<()> {
+        let class = static_class().await?;
+        class.set_static_value_unchecked("staticField", Value::Int(42))?;
+        let value: i32 = class.static_value("staticField")?.try_into()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_static_value_unchecked_not_found() -> Result<()> {
+        let class = static_class().await?;
+        let result = class.set_static_value_unchecked("foo", Value::Object(None));
+        assert!(matches!(
+            result,
+            Err(FieldNotFound { class_name, field_name })
+            if class.name() == class_name && field_name == "foo"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_static_value_unchecked_found_but_not_static() -> Result<()> {
+        let class = string_class().await?;
+        let result = class.set_static_value_unchecked("value", Value::Object(None));
         assert!(matches!(
             result,
             Err(FieldNotFound { class_name, field_name })

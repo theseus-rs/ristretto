@@ -230,13 +230,11 @@ mod tests {
         // Set a static value on the class to test class caching
         let expected_value = Value::Int(21);
         let class = &mut class_loader.load(class_name).await?;
-        let answer_field = class.static_field("ANSWER")?;
-        answer_field.set_value(expected_value.clone())?;
+        class.set_static_value("ANSWER", expected_value.clone())?;
 
         // Load the same class again and verify that the static value is still set
         let class = class_loader.load(class_name).await?;
-        let answer_field = class.static_field("ANSWER")?;
-        let value = answer_field.value()?;
+        let value = class.static_value("ANSWER")?;
         assert_eq!(expected_value, value);
         Ok(())
     }
