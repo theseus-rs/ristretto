@@ -21,7 +21,7 @@ impl Object {
     ///
     /// if the fields of the class cannot be read.
     pub fn new(class: Arc<Class>) -> Result<Self> {
-        let object_fields = class.object_fields()?;
+        let object_fields = class.all_object_fields()?;
         let mut values = Vec::with_capacity(object_fields.len());
         for field in object_fields {
             let value = field.default_value();
@@ -54,21 +54,135 @@ impl Object {
     /// # Errors
     ///
     /// if the field cannot be found.
-    fn field_value<K: FieldKey>(&self, key: K) -> Result<(Arc<Field>, &RwLock<Value>)> {
-        let object_fields = self.class.object_fields()?;
-        let Some((index, field)) = key.get_field(&object_fields) else {
+    fn field_value<K: FieldKey>(
+        &self,
+        accessing_class: &Class,
+        key: K,
+    ) -> Result<(Arc<Field>, &RwLock<Value>)> {
+        // TODO: Optimize this function to avoid the field resolution for every access.
+        let object_fields = self.class.all_object_fields()?;
+
+        // Fast path for numeric keys (direct index access)
+        if key.is_numeric_key() {
+            if let Some((index, field)) = key.get_field(&object_fields)
+                && let Some(value_lock) = self.values.get(index)
+            {
+                return Ok((field.clone(), value_lock));
+            }
             return Err(FieldNotFound {
-                class_name: self.class.name().to_string(),
+                class_name: accessing_class.name().to_string(),
                 field_name: key.to_string(),
             });
-        };
-        let Some(value_lock) = self.values.get(index) else {
-            return Err(FieldNotFound {
-                class_name: self.class.name().to_string(),
-                field_name: key.to_string(),
-            });
-        };
-        Ok((field.clone(), value_lock))
+        }
+
+        // For string keys, we need to handle field shadowing correctly. In Java, field access is
+        // resolved based on the static type of the reference, not the dynamic type
+
+        // If accessing through the object's actual class, get the most derived field
+        if accessing_class.name() == self.class.name() {
+            // Find the last (most derived) field that matches the key
+            for (index, field) in object_fields.iter().enumerate().rev() {
+                if key.matches_field(field)
+                    && let Some(value_lock) = self.values.get(index)
+                {
+                    return Ok((field.clone(), value_lock));
+                }
+            }
+        } else {
+            // Accessing through a parent class reference. We need to find the field that would be
+            // visible from that class level
+
+            // Build the class hierarchy to understand which field belongs to which class
+            let mut class_hierarchy = Vec::new();
+            let mut current_class = Some(self.class.clone());
+
+            // Build hierarchy from most derived to root
+            while let Some(class) = current_class {
+                class_hierarchy.push(class.clone());
+                current_class = class.parent()?;
+            }
+
+            // Find the accessing class in the hierarchy
+            let accessing_class_index = class_hierarchy
+                .iter()
+                .position(|class| class.name() == accessing_class.name());
+
+            if let Some(accessing_index) = accessing_class_index {
+                // Look for the field starting from the accessing class and going up to more derived
+                // classes. This handles field shadowing: if a field exists in the accessing class,
+                // use that one. If not, use the most derived version available
+
+                let mut field_offset = 0;
+                let mut found_field = None;
+
+                // Calculate field offset for classes above the accessing class (towards root)
+                for class in class_hierarchy.iter().skip(accessing_index + 1) {
+                    field_offset += class.object_fields().len();
+                }
+
+                // First, check if the accessing class itself has the field (for shadowing)
+                let accessing_class_fields = class_hierarchy[accessing_index].object_fields();
+                for (local_index, field) in accessing_class_fields.iter().enumerate() {
+                    if key.matches_field(field) {
+                        let global_index = field_offset + local_index;
+                        if let Some(value_lock) = self.values.get(global_index) {
+                            return Ok((field.clone(), value_lock));
+                        }
+                    }
+                }
+
+                // If not found in accessing class, look in more derived classes (towards the
+                // object's actual class)
+                let mut current_offset = 0;
+                for i in (0..accessing_index).rev() {
+                    let current_class_fields = class_hierarchy[i].object_fields();
+                    for (local_index, field) in current_class_fields.iter().enumerate() {
+                        if key.matches_field(field) {
+                            let global_index = field_offset
+                                + accessing_class_fields.len()
+                                + current_offset
+                                + local_index;
+                            if let Some(value_lock) = self.values.get(global_index) {
+                                found_field = Some((field.clone(), value_lock));
+                            }
+                        }
+                    }
+                    current_offset += current_class_fields.len();
+                }
+
+                if let Some((field, value_lock)) = found_field {
+                    return Ok((field, value_lock));
+                }
+            }
+
+            // If accessing class is not in the hierarchy, fall back to searching all fields. This
+            // handles cases where we're accessing through an interface or other reference type
+            for (index, field) in object_fields.iter().enumerate() {
+                if key.matches_field(field)
+                    && let Some(value_lock) = self.values.get(index)
+                {
+                    return Ok((field.clone(), value_lock));
+                }
+            }
+        }
+
+        Err(FieldNotFound {
+            class_name: accessing_class.name().to_string(),
+            field_name: key.to_string(),
+        })
+    }
+
+    /// Get value for a field in the class.
+    ///
+    /// # Errors
+    ///
+    /// if the field cannot be found.
+    pub fn value_in_class<K: FieldKey>(&self, class: &Class, key: K) -> Result<Value> {
+        let (_field, value_lock) = self.field_value(class, key)?;
+        let value_guard = value_lock
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        Ok(value_guard.clone())
     }
 
     /// Get value for a field.
@@ -77,20 +191,21 @@ impl Object {
     ///
     /// if the field cannot be found.
     pub fn value<K: FieldKey>(&self, key: K) -> Result<Value> {
-        let (_field, value_lock) = self.field_value(key)?;
-        let value_guard = value_lock
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        Ok(value_guard.clone())
+        self.value_in_class(&self.class, key)
     }
 
-    /// Sets value for field.
+    /// Sets the value for a field in the class.
     ///
     /// # Errors
     ///
     /// if the field cannot be found.
-    pub fn set_value<S: FieldKey>(&self, key: S, value: Value) -> Result<()> {
-        let (field, value_lock) = self.field_value(key)?;
+    pub fn set_value_in_class<S: FieldKey>(
+        &self,
+        class: &Class,
+        key: S,
+        value: Value,
+    ) -> Result<()> {
+        let (field, value_lock) = self.field_value(class, key)?;
         field.check_value(&value)?;
         let mut value_guard = value_lock
             .write()
@@ -99,13 +214,22 @@ impl Object {
         Ok(())
     }
 
+    /// Sets value for field.
+    ///
+    /// # Errors
+    ///
+    /// if the field cannot be found.
+    pub fn set_value<S: FieldKey>(&self, key: S, value: Value) -> Result<()> {
+        self.set_value_in_class(&self.class, key, value)
+    }
+
     /// Sets value for field without checking the field constraints.
     ///
     /// # Errors
     ///
     /// if the field cannot be found.
     pub fn set_value_unchecked<S: FieldKey>(&self, key: S, value: Value) -> Result<()> {
-        let (_field, value_lock) = self.field_value(key)?;
+        let (_field, value_lock) = self.field_value(&self.class, key)?;
         let mut value_guard = value_lock
             .write()
             .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -212,7 +336,10 @@ impl Object {
 impl Debug for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Object({})", self.class.name())?;
-        let object_fields = self.class.object_fields().map_err(|_| std::fmt::Error)?;
+        let object_fields = self
+            .class
+            .all_object_fields()
+            .map_err(|_| std::fmt::Error)?;
         if !object_fields.is_empty() {
             writeln!(f)?;
         }
