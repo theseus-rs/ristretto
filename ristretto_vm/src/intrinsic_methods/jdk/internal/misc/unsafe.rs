@@ -1,14 +1,13 @@
 use crate::Error::{InternalError, InvalidOperand};
+use crate::JavaError::ArrayIndexOutOfBoundsException;
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
-use byteorder::{BigEndian, ReadBytesExt};
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{BaseType, JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
-use std::io::Cursor;
 use std::sync::Arc;
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.addressSize0()I", Equal(JAVA_11))]
@@ -404,98 +403,140 @@ fn get_reference_type(
     let value = match &reference {
         Reference::ByteArray(_) => {
             let bytes: Vec<u8> = reference.try_into()?;
-            let mut bytes = Cursor::new(bytes);
-            let position = u64::try_from(offset)?;
-            bytes.set_position(position);
             let Some(base_type) = base_type else {
                 return Err(InternalError(
                     "getReferenceType: Invalid base type".to_string(),
                 ));
             };
+
+            // Check bounds and zero-fill if index is short
+            let required_bytes = match base_type {
+                BaseType::Boolean | BaseType::Byte => 1,
+                BaseType::Char | BaseType::Short => 2,
+                BaseType::Int | BaseType::Float => 4,
+                BaseType::Long | BaseType::Double => 8,
+            };
+
+            // If offset is beyond the array, throw proper Java exception
+            if offset >= bytes.len() {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: bytes.len(),
+                }
+                .into());
+            }
+
+            // Create a zero-filled buffer and copy available bytes
+            let mut buffer = vec![0u8; required_bytes];
+            let available_bytes = (bytes.len() - offset).min(required_bytes);
+            buffer[..available_bytes].copy_from_slice(&bytes[offset..offset + available_bytes]);
+
             match base_type {
                 BaseType::Boolean | BaseType::Byte => {
-                    let value = bytes.read_u8()?;
+                    let value = buffer[0];
                     Value::Int(i32::from(value))
                 }
                 BaseType::Char => {
-                    let value = bytes.read_u16::<BigEndian>()?;
+                    let value = u16::from_be_bytes([buffer[0], buffer[1]]);
                     Value::Int(i32::from(value))
                 }
                 BaseType::Int => {
-                    let value = bytes.read_i32::<BigEndian>()?;
+                    let value = i32::from_be_bytes([buffer[0], buffer[1], buffer[2], buffer[3]]);
                     Value::Int(value)
                 }
                 BaseType::Short => {
-                    let value = bytes.read_i16::<BigEndian>()?;
+                    let value = i16::from_be_bytes([buffer[0], buffer[1]]);
                     Value::Int(i32::from(value))
                 }
                 BaseType::Long => {
-                    let value = bytes.read_i64::<BigEndian>()?;
+                    let value = i64::from_be_bytes([
+                        buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5],
+                        buffer[6], buffer[7],
+                    ]);
                     Value::Long(value)
                 }
                 BaseType::Float => {
-                    let value = bytes.read_f32::<BigEndian>()?;
+                    let bits = u32::from_be_bytes([buffer[0], buffer[1], buffer[2], buffer[3]]);
+                    let value = f32::from_bits(bits);
                     Value::Float(value)
                 }
                 BaseType::Double => {
-                    let value = bytes.read_f64::<BigEndian>()?;
+                    let bits = u64::from_be_bytes([
+                        buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5],
+                        buffer[6], buffer[7],
+                    ]);
+                    let value = f64::from_bits(bits);
                     Value::Double(value)
                 }
             }
         }
         Reference::CharArray(array) => {
             let Some(char) = array.get(offset)? else {
-                return Err(InternalError(
-                    "getReferenceType: Invalid char reference index".to_string(),
-                ));
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len()?,
+                }
+                .into());
             };
             Value::Int(i32::from(char))
         }
         Reference::ShortArray(array) => {
             let Some(short) = array.get(offset)? else {
-                return Err(InternalError(
-                    "getReferenceType: Invalid short reference index".to_string(),
-                ));
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len()?,
+                }
+                .into());
             };
             Value::Int(i32::from(short))
         }
         Reference::IntArray(array) => {
             let Some(int) = array.get(offset)? else {
-                return Err(InternalError(
-                    "getReferenceType: Invalid int reference index".to_string(),
-                ));
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len()?,
+                }
+                .into());
             };
             Value::Int(int)
         }
         Reference::LongArray(array) => {
             let Some(long) = array.get(offset)? else {
-                return Err(InternalError(
-                    "getReferenceType: Invalid long reference index".to_string(),
-                ));
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len()?,
+                }
+                .into());
             };
             Value::Long(long)
         }
         Reference::FloatArray(array) => {
             let Some(float) = array.get(offset)? else {
-                return Err(InternalError(
-                    "getReferenceType: Invalid float reference index".to_string(),
-                ));
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len()?,
+                }
+                .into());
             };
             Value::Float(float)
         }
         Reference::DoubleArray(array) => {
             let Some(double) = array.get(offset)? else {
-                return Err(InternalError(
-                    "getReferenceType: Invalid double reference index".to_string(),
-                ));
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len()?,
+                }
+                .into());
             };
             Value::Double(double)
         }
         Reference::Array(object_array) => {
             let Some(reference) = object_array.elements.get(offset)? else {
-                return Err(InternalError(
-                    "getReferenceType: Invalid array reference index".to_string(),
-                ));
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: object_array.elements.len()?,
+                }
+                .into());
             };
             Value::Object(reference)
         }
