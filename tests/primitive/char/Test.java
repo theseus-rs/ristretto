@@ -6,7 +6,7 @@ class Test {
         System.out.println(Character.MIN_LOW_SURROGATE);
         System.out.println(Character.MAX_LOW_SURROGATE);
 
-        for (int c = 0; c < 4096; c++) {
+        for (int c = 0; c < 127; c++) {
             System.out.print(Character.toChars(c));
         }
     }

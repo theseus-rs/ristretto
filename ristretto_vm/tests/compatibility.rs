@@ -1,9 +1,11 @@
+use rayon::prelude::*;
 use ristretto_classloader::{DEFAULT_JAVA_VERSION, runtime};
 use ristretto_vm::Error::InternalError;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::Mutex;
 use tracing::metadata::LevelFilter;
 use tracing::{debug, error, info};
@@ -26,10 +28,10 @@ fn compatibility_tests() -> Result<()> {
     let test_dirs = collect_test_dirs(&tests_root_dir)?;
     compile_tests(&java_home, &test_dirs)?;
 
-    let mut passed = 0;
-    let mut failed = 0;
+    let passed = AtomicUsize::new(0);
+    let failed = AtomicUsize::new(0);
 
-    for test_dir in &test_dirs {
+    test_dirs.par_iter().for_each(|test_dir| {
         let test_dir_string = test_dir.to_string_lossy().to_string();
         let test_name = test_dir_string
             .strip_prefix(&tests_root_dir_string)
@@ -37,26 +39,34 @@ fn compatibility_tests() -> Result<()> {
             .strip_prefix("/")
             .unwrap_or(&test_dir_string);
         info!("Running test: {test_name}");
-        let expected_output = expected_output(&java_home, test_dir)?;
-        if test_vm(&java_version, test_dir, test_name, true, &expected_output).is_ok() {
-            passed += 1;
-        } else {
-            failed += 1;
-        }
-        if test_vm(&java_version, test_dir, test_name, false, &expected_output).is_ok() {
-            passed += 1;
-        } else {
-            failed += 1;
-        }
-    }
 
-    info!("Tests: {}", passed + failed);
-    if failed > 0 {
-        error!("Tests failed: {failed}");
+        if let Ok(expected_output) = expected_output(&java_home, test_dir) {
+            if test_vm(&java_version, test_dir, test_name, true, &expected_output).is_ok() {
+                passed.fetch_add(1, Ordering::Relaxed);
+            } else {
+                failed.fetch_add(1, Ordering::Relaxed);
+            }
+            if test_vm(&java_version, test_dir, test_name, false, &expected_output).is_ok() {
+                passed.fetch_add(1, Ordering::Relaxed);
+            } else {
+                failed.fetch_add(1, Ordering::Relaxed);
+            }
+        } else {
+            // If we can't get expected output, count both tests as failed
+            failed.fetch_add(2, Ordering::Relaxed);
+        }
+    });
+
+    let passed_count = passed.load(Ordering::Relaxed);
+    let failed_count = failed.load(Ordering::Relaxed);
+
+    info!("Tests: {}", passed_count + failed_count);
+    if failed_count > 0 {
+        error!("Tests failed: {failed_count}");
     } else {
         info!("All tests passed");
     }
-    assert_eq!(failed, 0);
+    assert_eq!(failed_count, 0);
     Ok(())
 }
 
@@ -122,9 +132,9 @@ fn java_home(java_version: &str) -> Result<PathBuf> {
 
 /// Compiles the tests in the test directories.
 fn compile_tests(java_home: &Path, test_dirs: &[PathBuf]) -> Result<()> {
-    for test_dir in test_dirs {
-        compile_test(java_home, test_dir)?;
-    }
+    test_dirs
+        .par_iter()
+        .try_for_each(|test_dir| compile_test(java_home, test_dir))?;
     Ok(())
 }
 
