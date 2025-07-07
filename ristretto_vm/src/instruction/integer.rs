@@ -288,11 +288,12 @@ pub(crate) fn imul(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn idiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
-    stack.push_int(
-        value1
-            .checked_div(value2)
-            .ok_or(ArithmeticException("/ by zero".to_string()))?,
-    )?;
+
+    if value2 == 0 {
+        return Err(ArithmeticException("/ by zero".to_string()).into());
+    }
+
+    stack.push_int(value1.wrapping_div(value2))?;
     Ok(Continue)
 }
 
@@ -301,11 +302,12 @@ pub(crate) fn idiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn irem(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
-    stack.push_int(
-        value1
-            .checked_rem(value2)
-            .ok_or(ArithmeticException("/ by zero".to_string()))?,
-    )?;
+
+    if value2 == 0 {
+        return Err(ArithmeticException("/ by zero".to_string()).into());
+    }
+
+    stack.push_int(value1.wrapping_rem(value2))?;
     Ok(Continue)
 }
 
@@ -390,7 +392,7 @@ pub(crate) fn iinc(
 ) -> Result<ExecutionResult> {
     let index = usize::from(index);
     let local = locals.get_int(index)?;
-    locals.set_int(index, local + i32::from(constant))?;
+    locals.set_int(index, local.wrapping_add(i32::from(constant)))?;
     Ok(Continue)
 }
 
@@ -404,7 +406,7 @@ pub(crate) fn iinc_w(
 ) -> Result<ExecutionResult> {
     let index = usize::from(index);
     let local = locals.get_int(index)?;
-    locals.set_int(index, local + i32::from(constant))?;
+    locals.set_int(index, local.wrapping_add(i32::from(constant)))?;
     Ok(Continue)
 }
 
