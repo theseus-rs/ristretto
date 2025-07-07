@@ -313,6 +313,12 @@ impl Object {
         true
     }
 
+    /// Returns hash code implementation based on memory address.
+    #[must_use]
+    pub fn hash_code(&self) -> usize {
+        Arc::as_ptr(&self.values).cast::<Vec<Value>>() as usize
+    }
+
     /// Check if two references point to the same memory location.
     #[must_use]
     pub fn ptr_eq(&self, other: &Self) -> bool {
@@ -665,8 +671,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_instance_of() -> Result<()> {
-        let class_name = "java.lang.Object";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Object").await?;
         let object = Object::new(class.clone())?;
         assert!(object.instance_of(&class)?);
         Ok(())
@@ -674,8 +679,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clone() -> Result<()> {
-        let class_name = "java.lang.Integer";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         let clone = object.clone();
@@ -687,17 +691,20 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_object_ptr_eq() -> Result<()> {
-        let class_name = "java.lang.Object";
-        let class = load_class(class_name).await?;
-        let object1 = Object {
-            class: class.clone(),
-            values: Arc::new(vec![]),
-        };
-        let object2 = Object {
-            class: class.clone(),
-            values: Arc::new(vec![]),
-        };
+    async fn test_hash_code() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let object1 = Object::new(class.clone())?;
+        let object2 = Object::new(class)?;
+        assert_ne!(0, object1.hash_code());
+        assert_ne!(object1.hash_code(), object2.hash_code());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ptr_eq() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let object1 = Object::new(class.clone())?;
+        let object2 = Object::new(class)?;
         let object3 = object1.clone();
         assert!(object1.ptr_eq(&object1));
         assert!(!object1.ptr_eq(&object2));
@@ -707,8 +714,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_deep_clone() -> Result<()> {
-        let class_name = "java.lang.Integer";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         let clone = object.deep_clone()?;
@@ -721,8 +727,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_debug() -> Result<()> {
-        let class_name = "java.lang.Integer";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!(
@@ -734,8 +739,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_eq_same_references() -> Result<()> {
-        let class_name = "java.lang.Integer";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!(object, object);
@@ -744,8 +748,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_eq_different_references() -> Result<()> {
-        let class_name = "java.lang.Integer";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Integer").await?;
         let object1 = Object::new(class.clone())?;
         object1.set_value("value", Value::Int(42))?;
         let object2 = Object::new(class)?;
@@ -756,8 +759,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_eq_not_equal() -> Result<()> {
-        let class_name = "java.lang.Integer";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Integer").await?;
         let object1 = Object::new(class.clone())?;
         object1.set_value("value", Value::Int(3))?;
         let object2 = Object::new(class)?;
@@ -864,8 +866,7 @@ mod tests {
         let string_value = Value::from(string_bytes);
         string_object.set_value("value", string_value)?;
 
-        let class_name = "java.lang.Class";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Class").await?;
         let object = Object::new(class)?;
         object.set_value("name", Value::from(string_object))?;
         assert_eq!("Class(java.lang.Integer)", object.to_string());
@@ -874,8 +875,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string() -> Result<()> {
-        let class_name = "java.lang.Object";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
         assert_eq!("Object(class java/lang/Object)", object.to_string());
         Ok(())
@@ -1115,8 +1115,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_class() -> Result<()> {
-        let class_name = "java.lang.Integer";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value: Arc<Class> = object.try_into()?;

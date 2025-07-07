@@ -1,6 +1,6 @@
 use crate::Error::InternalError;
 use crate::Result;
-use crate::intrinsic_methods::java::lang::object::object_hash_code;
+use crate::intrinsic_methods::java::lang::object::hash_code;
 use crate::intrinsic_methods::properties;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
@@ -188,14 +188,10 @@ pub(crate) async fn get_security_manager(
 #[intrinsic_method("java/lang/System.identityHashCode(Ljava/lang/Object;)I", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn identity_hash_code(
-    _thread: Arc<Thread>,
-    mut parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let hash_code = match parameters.pop_reference()? {
-        Some(object) => object_hash_code(&object),
-        None => 0,
-    };
-    Ok(Some(Value::Int(hash_code)))
+    hash_code(thread, parameters).await
 }
 
 #[intrinsic_method(
