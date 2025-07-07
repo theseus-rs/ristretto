@@ -6,9 +6,8 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
-use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/Object.clone()Ljava/lang/Object;", Any)]
@@ -47,18 +46,13 @@ pub(crate) async fn hash_code(
     let Some(object) = parameters.pop_reference()? else {
         return Err(InternalError("no object reference defined".to_string()));
     };
-    let hash_code = object_hash_code(&object);
-    Ok(Some(Value::Int(hash_code)))
-}
-
-pub(crate) fn object_hash_code(object: &Reference) -> i32 {
-    let value = format!("{object}");
-    let mut hasher = DefaultHasher::new();
-    value.hash(&mut hasher);
-    let hash_code = hasher.finish();
+    let hash_code = object.hash_code();
     #[expect(clippy::cast_possible_truncation)]
+    let hash_code = (hash_code ^ (hash_code >> 32)) as u32;
+    #[expect(clippy::cast_possible_wrap)]
     let hash_code = hash_code as i32;
-    hash_code
+
+    Ok(Some(Value::Int(hash_code)))
 }
 
 #[intrinsic_method("java/lang/Object.notify()V", Any)]

@@ -295,6 +295,22 @@ impl Reference {
         }
     }
 
+    /// Returns hash code implementation based on memory address.
+    #[must_use]
+    pub fn hash_code(&self) -> usize {
+        match self {
+            Reference::ByteArray(reference) => reference.hash_code(),
+            Reference::CharArray(reference) => reference.hash_code(),
+            Reference::ShortArray(reference) => reference.hash_code(),
+            Reference::IntArray(reference) => reference.hash_code(),
+            Reference::LongArray(reference) => reference.hash_code(),
+            Reference::FloatArray(reference) => reference.hash_code(),
+            Reference::DoubleArray(reference) => reference.hash_code(),
+            Reference::Array(reference) => reference.elements.hash_code(),
+            Reference::Object(reference) => reference.hash_code(),
+        }
+    }
+
     /// Check if two references point to the same memory location.
     #[must_use]
     pub fn ptr_eq(&self, other: &Self) -> bool {
@@ -870,27 +886,11 @@ impl TryInto<Arc<Class>> for Reference {
 mod tests {
     use super::*;
     use crate::{Class, Result, Value, runtime};
-    use ristretto_classfile::ClassFile;
-    use std::io::Cursor;
     use std::sync::Arc;
 
     async fn load_class(class: &str) -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
         class_loader.load(class).await
-    }
-
-    fn minimum_class() -> Result<Arc<Class>> {
-        let bytes = include_bytes!("../../classes/Minimum.class").to_vec();
-        let mut cursor = Cursor::new(bytes);
-        let class_file = ClassFile::from_bytes(&mut cursor)?;
-        Class::from(class_file)
-    }
-
-    fn simple_class() -> Result<Arc<Class>> {
-        let bytes = include_bytes!("../../classes/Simple.class").to_vec();
-        let mut cursor = Cursor::new(bytes);
-        let class_file = ClassFile::from_bytes(&mut cursor)?;
-        Class::from(class_file)
     }
 
     #[test]
@@ -1243,19 +1243,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_display_reference() -> Result<()> {
-        let class = minimum_class()?;
+        let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object);
-        assert_eq!(reference.class_name(), "Minimum");
-        assert_eq!(reference.class()?.name(), "Minimum");
-        assert!(reference.to_string().starts_with("Object(class Minimum)"));
-        assert!(reference.to_string().contains("Minimum"));
+        assert_eq!(reference.class_name(), "java/lang/Object");
+        assert_eq!(reference.class()?.name(), "java/lang/Object");
+        assert!(
+            reference
+                .to_string()
+                .starts_with("Object(class java/lang/Object)")
+        );
+        assert!(reference.to_string().contains("java/lang/Object"));
         Ok(())
     }
 
-    #[test]
-    fn test_as_object_ref() -> Result<()> {
-        let class = minimum_class()?;
+    #[tokio::test]
+    async fn test_as_object_ref() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object.clone());
         let result = reference.as_object_ref()?;
@@ -1269,6 +1273,12 @@ mod tests {
         let reference = Reference::from(original_value.clone());
         let result = reference.as_object_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_hash_code_byte_array() {
+        let reference = Reference::from(vec![1i8]);
+        assert_ne!(0, reference.hash_code());
     }
 
     #[test]
@@ -1310,6 +1320,12 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_code_char_array() {
+        let reference = Reference::from(vec![1 as char]);
+        assert_ne!(0, reference.hash_code());
+    }
+
+    #[test]
     fn test_ptr_eq_char_array() {
         let reference1 = Reference::from(vec![1 as char]);
         let reference2 = Reference::from(vec![1 as char]);
@@ -1345,6 +1361,12 @@ mod tests {
         array.set(0, 2)?;
         assert_ne!(reference, clone);
         Ok(())
+    }
+
+    #[test]
+    fn test_hash_code_short_array() {
+        let reference = Reference::from(vec![1i16]);
+        assert_ne!(0, reference.hash_code());
     }
 
     #[test]
@@ -1386,6 +1408,12 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_code_int_array() {
+        let reference = Reference::from(vec![1i32]);
+        assert_ne!(0, reference.hash_code());
+    }
+
+    #[test]
     fn test_ptr_eq_int_array() {
         let reference1 = Reference::from(vec![1i32]);
         let reference2 = Reference::from(vec![1i32]);
@@ -1421,6 +1449,12 @@ mod tests {
         array.set(0, 2)?;
         assert_ne!(reference, clone);
         Ok(())
+    }
+
+    #[test]
+    fn test_hash_code_long_array() {
+        let reference = Reference::from(vec![1i64]);
+        assert_ne!(0, reference.hash_code());
     }
 
     #[test]
@@ -1462,6 +1496,12 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_code_float_array() {
+        let reference = Reference::from(vec![1.0f32]);
+        assert_ne!(0, reference.hash_code());
+    }
+
+    #[test]
     fn test_ptr_eq_float_array() {
         let reference1 = Reference::from(vec![1.0f32]);
         let reference2 = Reference::from(vec![1.0f32]);
@@ -1497,6 +1537,12 @@ mod tests {
         array.set(0, 2.0)?;
         assert_ne!(reference, clone);
         Ok(())
+    }
+
+    #[test]
+    fn test_hash_code_double_array() {
+        let reference = Reference::from(vec![1.0f64]);
+        assert_ne!(0, reference.hash_code());
     }
 
     #[test]
@@ -1537,9 +1583,17 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_ptr_eq_reference_array() -> Result<()> {
-        let class = minimum_class()?;
+    #[tokio::test]
+    async fn test_hash_code_reference_array() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let reference = Reference::from((class.clone(), vec![None]));
+        assert_ne!(0, reference.hash_code());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ptr_eq_reference_array() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
         let reference1 = Reference::from((class.clone(), vec![None]));
         let reference2 = Reference::from((class.clone(), vec![None]));
         let reference3 = reference1.clone();
@@ -1549,9 +1603,9 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_clone_reference_array() -> Result<()> {
-        let class = minimum_class()?;
+    #[tokio::test]
+    async fn test_clone_reference_array() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
         let reference = Reference::from((class.clone(), vec![None]));
         let clone = reference.clone();
         assert_eq!(reference, clone);
@@ -1566,9 +1620,9 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_deep_clone_reference_array() -> Result<()> {
-        let class = minimum_class()?;
+    #[tokio::test]
+    async fn test_deep_clone_reference_array() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
         let reference = Reference::from((class.clone(), vec![None]));
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
@@ -1584,9 +1638,16 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_hash_code_object() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let reference = Reference::from(Object::new(class.clone())?);
+        assert_ne!(0, reference.hash_code());
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_ptr_eq_object() -> Result<()> {
-        let class_name = "java.lang.Object";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Object").await?;
         let reference1 = Reference::from(Object::new(class.clone())?);
         let reference2 = Reference::from(Object::new(class)?);
         let reference3 = reference1.clone();
@@ -1598,8 +1659,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clone_object() -> Result<()> {
-        let class_name = "java.lang.Integer";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         let reference = Reference::from(object);
@@ -1616,8 +1676,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_deep_clone_object() -> Result<()> {
-        let class_name = "java.lang.Integer";
-        let class = load_class(class_name).await?;
+        let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         let reference = Reference::from(object);
@@ -1632,156 +1691,156 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_array_eq() -> Result<()> {
-        let class = minimum_class()?;
-        let ref1 = Reference::from((class.clone(), vec![]));
-        let ref2 = Reference::from((class, vec![]));
-        assert_eq!(ref1, ref2);
+    #[tokio::test]
+    async fn test_array_eq() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let reference1 = Reference::from((class.clone(), vec![]));
+        let reference2 = Reference::from((class, vec![]));
+        assert_eq!(reference1, reference2);
         Ok(())
     }
 
-    #[test]
-    fn test_array_eq_class_ne() -> Result<()> {
-        let minimum_class = minimum_class()?;
-        let ref1 = Reference::from((minimum_class, vec![]));
-        let simple_class = simple_class()?;
-        let ref2 = Reference::from((simple_class, vec![]));
-        assert_ne!(ref1, ref2);
+    #[tokio::test]
+    async fn test_array_eq_class_ne() -> Result<()> {
+        let object_class = load_class("java.lang.Object").await?;
+        let reference1 = Reference::from((object_class, vec![]));
+        let string_class = load_class("java.lang.String").await?;
+        let reference2 = Reference::from((string_class, vec![]));
+        assert_ne!(reference1, reference2);
         Ok(())
     }
 
-    #[test]
-    fn test_array_eq_value_ne() -> Result<()> {
-        let minimum_class = minimum_class()?;
-        let ref1 = Reference::from((minimum_class.clone(), vec![]));
-        let ref2 = Reference::from((minimum_class, vec![None]));
-        assert_ne!(ref1, ref2);
+    #[tokio::test]
+    async fn test_array_eq_value_ne() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let reference1 = Reference::from((class.clone(), vec![]));
+        let reference2 = Reference::from((class, vec![None]));
+        assert_ne!(reference1, reference2);
         Ok(())
     }
 
     #[test]
     fn test_byte_array_eq() {
-        let ref1 = Reference::from(vec![42i8]);
-        let ref2 = Reference::from(vec![42i8]);
-        assert_eq!(ref1, ref2);
+        let reference1 = Reference::from(vec![42i8]);
+        let reference2 = Reference::from(vec![42i8]);
+        assert_eq!(reference1, reference2);
     }
 
     #[test]
     fn test_byte_array_ne() {
-        let ref1 = Reference::from(vec![3i8]);
-        let ref2 = Reference::from(vec![42i8]);
-        assert_ne!(ref1, ref2);
+        let reference1 = Reference::from(vec![3i8]);
+        let reference2 = Reference::from(vec![42i8]);
+        assert_ne!(reference1, reference2);
     }
 
     #[test]
     fn test_char_array_eq() {
-        let ref1 = Reference::from(vec![42 as char]);
-        let ref2 = Reference::from(vec![42 as char]);
-        assert_eq!(ref1, ref2);
+        let reference1 = Reference::from(vec![42 as char]);
+        let reference2 = Reference::from(vec![42 as char]);
+        assert_eq!(reference1, reference2);
     }
 
     #[test]
     fn test_char_array_ne() {
-        let ref1 = Reference::from(vec![3 as char]);
-        let ref2 = Reference::from(vec![42 as char]);
-        assert_ne!(ref1, ref2);
+        let reference1 = Reference::from(vec![3 as char]);
+        let reference2 = Reference::from(vec![42 as char]);
+        assert_ne!(reference1, reference2);
     }
 
     #[test]
     fn test_double_array_eq() {
-        let ref1 = Reference::from(vec![42.1f64]);
-        let ref2 = Reference::from(vec![42.1f64]);
-        assert_eq!(ref1, ref2);
+        let reference1 = Reference::from(vec![42.1f64]);
+        let reference2 = Reference::from(vec![42.1f64]);
+        assert_eq!(reference1, reference2);
     }
 
     #[test]
     fn test_double_array_ne() {
-        let ref1 = Reference::from(vec![3.1f64]);
-        let ref2 = Reference::from(vec![42.1f64]);
-        assert_ne!(ref1, ref2);
+        let reference1 = Reference::from(vec![3.1f64]);
+        let reference2 = Reference::from(vec![42.1f64]);
+        assert_ne!(reference1, reference2);
     }
 
     #[test]
     fn test_float_array_eq() {
-        let ref1 = Reference::from(vec![42.1f32]);
-        let ref2 = Reference::from(vec![42.1f32]);
-        assert_eq!(ref1, ref2);
+        let reference1 = Reference::from(vec![42.1f32]);
+        let reference2 = Reference::from(vec![42.1f32]);
+        assert_eq!(reference1, reference2);
     }
 
     #[test]
     fn test_float_array_ne() {
-        let ref1 = Reference::from(vec![3.1f32]);
-        let ref2 = Reference::from(vec![42.1f32]);
-        assert_ne!(ref1, ref2);
+        let reference1 = Reference::from(vec![3.1f32]);
+        let reference2 = Reference::from(vec![42.1f32]);
+        assert_ne!(reference1, reference2);
     }
 
     #[test]
     fn test_int_array_eq() {
-        let ref1 = Reference::from(vec![42i32]);
-        let ref2 = Reference::from(vec![42i32]);
-        assert_eq!(ref1, ref2);
+        let reference1 = Reference::from(vec![42i32]);
+        let reference2 = Reference::from(vec![42i32]);
+        assert_eq!(reference1, reference2);
     }
 
     #[test]
     fn test_int_array_ne() {
-        let ref1 = Reference::from(vec![3i32]);
-        let ref2 = Reference::from(vec![42i32]);
-        assert_ne!(ref1, ref2);
+        let reference1 = Reference::from(vec![3i32]);
+        let reference2 = Reference::from(vec![42i32]);
+        assert_ne!(reference1, reference2);
     }
 
     #[test]
     fn test_long_array_eq() {
-        let ref1 = Reference::from(vec![42i64]);
-        let ref2 = Reference::from(vec![42i64]);
-        assert_eq!(ref1, ref2);
+        let reference1 = Reference::from(vec![42i64]);
+        let reference2 = Reference::from(vec![42i64]);
+        assert_eq!(reference1, reference2);
     }
 
     #[test]
     fn test_long_array_ne() {
-        let ref1 = Reference::from(vec![3i64]);
-        let ref2 = Reference::from(vec![42i64]);
-        assert_ne!(ref1, ref2);
+        let reference1 = Reference::from(vec![3i64]);
+        let reference2 = Reference::from(vec![42i64]);
+        assert_ne!(reference1, reference2);
     }
 
     #[test]
     fn test_short_array_eq() {
-        let ref1 = Reference::from(vec![42i16]);
-        let ref2 = Reference::from(vec![42i16]);
-        assert_eq!(ref1, ref2);
+        let reference1 = Reference::from(vec![42i16]);
+        let reference2 = Reference::from(vec![42i16]);
+        assert_eq!(reference1, reference2);
     }
 
     #[test]
     fn test_short_array_ne() {
-        let ref1 = Reference::from(vec![3i16]);
-        let ref2 = Reference::from(vec![42i16]);
-        assert_ne!(ref1, ref2);
+        let reference1 = Reference::from(vec![3i16]);
+        let reference2 = Reference::from(vec![42i16]);
+        assert_ne!(reference1, reference2);
     }
 
-    #[test]
-    fn test_object_eq() -> Result<()> {
-        let minimum_class = minimum_class()?;
-        let ref1 = Reference::from(Object::new(minimum_class.clone())?);
-        let ref2 = Reference::from(Object::new(minimum_class)?);
-        assert_eq!(ref1, ref2);
+    #[tokio::test]
+    async fn test_object_eq() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let reference1 = Reference::from(Object::new(class.clone())?);
+        let reference2 = Reference::from(Object::new(class)?);
+        assert_eq!(reference1, reference2);
         Ok(())
     }
 
-    #[test]
-    fn test_object_ne() -> Result<()> {
-        let minimum_class = minimum_class()?;
-        let ref1 = Reference::from(Object::new(minimum_class)?);
-        let simple_class = simple_class()?;
-        let ref2 = Reference::from(Object::new(simple_class)?);
-        assert_ne!(ref1, ref2);
+    #[tokio::test]
+    async fn test_object_ne() -> Result<()> {
+        let object_class = load_class("java.lang.Object").await?;
+        let reference1 = Reference::from(Object::new(object_class)?);
+        let string_class = load_class("java.lang.String").await?;
+        let reference2 = Reference::from(Object::new(string_class)?);
+        assert_ne!(reference1, reference2);
         Ok(())
     }
 
     #[test]
     fn test_different_types_ne() {
-        let ref1 = Reference::from(vec![42i32]);
-        let ref2 = Reference::from(vec![42i64]);
-        assert_ne!(ref1, ref2);
+        let reference1 = Reference::from(vec![42i32]);
+        let reference2 = Reference::from(vec![42i64]);
+        assert_ne!(reference1, reference2);
     }
 
     #[test]
@@ -1901,9 +1960,9 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_from_vec_object() -> Result<()> {
-        let class = minimum_class()?;
+    #[tokio::test]
+    async fn test_from_vec_object() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object);
         assert!(matches!(reference, Reference::Object(_)));

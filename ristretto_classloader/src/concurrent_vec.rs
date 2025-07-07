@@ -177,6 +177,12 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
         Ok(vec.clone())
     }
 
+    /// Returns hash code implementation based on memory address.
+    #[must_use]
+    pub fn hash_code(&self) -> usize {
+        Arc::as_ptr(&self.inner).cast::<Vec<RwLock<T>>>() as usize
+    }
+
     /// Check if two concurrent vectors point to the same memory location.
     #[must_use]
     pub fn ptr_eq(&self, other: &Self) -> bool {
@@ -384,6 +390,14 @@ mod tests {
         clone.set(0, 2)?;
         assert_eq!(vec, clone);
         Ok(())
+    }
+
+    #[test]
+    fn test_hash_code() {
+        let vec1 = ConcurrentVec::from(vec![1]);
+        let vec2 = ConcurrentVec::from(vec![1]);
+        assert_ne!(0, vec1.hash_code());
+        assert_ne!(vec1.hash_code(), vec2.hash_code());
     }
 
     #[test]
