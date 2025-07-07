@@ -2,7 +2,6 @@ use crate::Error::InvalidStackValue;
 use crate::JavaError::{ArrayIndexOutOfBoundsException, NullPointerException};
 use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue};
-use crate::java_error::JavaError::ArithmeticException;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{Result, Value};
@@ -253,11 +252,6 @@ pub(crate) fn dmul(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn ddiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
-
-    if value2 == 0.0 {
-        return Err(ArithmeticException("/ by zero".to_string()).into());
-    }
-
     stack.push_double(value1 / value2)?;
     Ok(Continue)
 }
@@ -267,11 +261,6 @@ pub(crate) fn ddiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn drem(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
-
-    if value2 == 0.0 {
-        return Err(ArithmeticException("/ by zero".to_string()).into());
-    }
-
     stack.push_double(value1 % value2)?;
     Ok(Continue)
 }
@@ -714,8 +703,11 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1.0)?;
         stack.push_double(0.0)?;
-        let result = ddiv(stack);
-        assert!(matches!(result, Err(JavaError(ArithmeticException(_)))));
+        let result = ddiv(stack)?;
+        assert_eq!(Continue, result);
+        // IEEE 754: 1.0 / 0.0 should produce positive infinity
+        let value = stack.pop_double()?;
+        assert!(value.is_infinite() && value.is_sign_positive());
         Ok(())
     }
 
@@ -736,8 +728,11 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1.0)?;
         stack.push_double(0.0)?;
-        let result = drem(stack);
-        assert!(matches!(result, Err(JavaError(ArithmeticException(_)))));
+        let result = drem(stack)?;
+        assert_eq!(Continue, result);
+        // IEEE 754: 1.0 % 0.0 should produce NaN
+        let value = stack.pop_double()?;
+        assert!(value.is_nan());
         Ok(())
     }
 

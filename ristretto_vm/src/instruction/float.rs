@@ -2,7 +2,6 @@ use crate::Error::InvalidStackValue;
 use crate::JavaError::{ArrayIndexOutOfBoundsException, NullPointerException};
 use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue};
-use crate::java_error::JavaError::ArithmeticException;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{Result, Value};
@@ -260,11 +259,6 @@ pub(crate) fn fmul(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn fdiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_float()?;
     let value1 = stack.pop_float()?;
-
-    if value2 == 0.0 {
-        return Err(ArithmeticException("/ by zero".to_string()).into());
-    }
-
     stack.push_float(value1 / value2)?;
     Ok(Continue)
 }
@@ -274,11 +268,6 @@ pub(crate) fn fdiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn frem(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_float()?;
     let value1 = stack.pop_float()?;
-
-    if value2 == 0.0 {
-        return Err(ArithmeticException("/ by zero".to_string()).into());
-    }
-
     stack.push_float(value1 % value2)?;
     Ok(Continue)
 }
@@ -336,7 +325,6 @@ pub(crate) fn freturn(stack: &mut OperandStack) -> Result<ExecutionResult> {
 mod tests {
     use super::*;
     use crate::Error::{InvalidOperand, JavaError};
-    use crate::java_error::JavaError::ArithmeticException;
 
     #[test]
     fn test_fconst_0() -> Result<()> {
@@ -732,8 +720,11 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_float(1.0)?;
         stack.push_float(0.0)?;
-        let result = fdiv(stack);
-        assert!(matches!(result, Err(JavaError(ArithmeticException(_)))));
+        let result = fdiv(stack)?;
+        assert_eq!(Continue, result);
+        // IEEE 754: 1.0 / 0.0 should produce positive infinity
+        let value = stack.pop_float()?;
+        assert!(value.is_infinite() && value.is_sign_positive());
         Ok(())
     }
 
@@ -754,8 +745,11 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_float(1.0)?;
         stack.push_float(0.0)?;
-        let result = frem(stack);
-        assert!(matches!(result, Err(JavaError(ArithmeticException(_)))));
+        let result = frem(stack)?;
+        assert_eq!(Continue, result);
+        // IEEE 754: 1.0 % 0.0 should produce NaN
+        let value = stack.pop_float()?;
+        assert!(value.is_nan());
         Ok(())
     }
 
