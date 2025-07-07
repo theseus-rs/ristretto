@@ -8,7 +8,7 @@ use crate::{Configuration, ConfigurationBuilder, Result};
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_PREVIEW_MINOR_VERSION, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
-    Class, ClassLoader, ClassPath, ClassPathEntry, Object, Reference, Value, runtime,
+    Class, ClassLoader, ClassPath, ClassPathEntry, Object, Value, runtime,
 };
 use ristretto_jit::Compiler;
 use std::collections::HashMap;
@@ -322,8 +322,7 @@ impl VM {
             field_holder.set_value("priority", Value::Int(5))?;
             field_holder.set_value("stackSize", Value::Long(0))?;
             field_holder.set_value("threadStatus", Value::Int(4))?; // Runnable
-            let reference = Reference::from(field_holder);
-            let field_holder = Value::Object(Some(reference));
+            let field_holder = Value::from(field_holder);
 
             let thread_class = self.class("java.lang.Thread").await?;
             let new_thread = Object::new(thread_class)?;

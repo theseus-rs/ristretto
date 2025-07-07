@@ -236,91 +236,91 @@ impl From<f64> for Value {
 
 impl From<Vec<bool>> for Value {
     fn from(value: Vec<bool>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<i8>> for Value {
     fn from(value: Vec<i8>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<u8>> for Value {
     fn from(value: Vec<u8>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<char>> for Value {
     fn from(value: Vec<char>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<i16>> for Value {
     fn from(value: Vec<i16>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<u16>> for Value {
     fn from(value: Vec<u16>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<i32>> for Value {
     fn from(value: Vec<i32>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<u32>> for Value {
     fn from(value: Vec<u32>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<i64>> for Value {
     fn from(value: Vec<i64>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<u64>> for Value {
     fn from(value: Vec<u64>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<isize>> for Value {
     fn from(value: Vec<isize>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<usize>> for Value {
     fn from(value: Vec<usize>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<f32>> for Value {
     fn from(value: Vec<f32>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Vec<f64>> for Value {
     fn from(value: Vec<f64>) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<(Arc<Class>, Vec<Option<Reference>>)> for Value {
     fn from(value: (Arc<Class>, Vec<Option<Reference>>)) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
@@ -335,13 +335,13 @@ impl TryFrom<(Arc<Class>, Vec<Value>)> for Value {
 
 impl From<Object> for Value {
     fn from(value: Object) -> Self {
-        Value::Object(Some(Reference::from(value)))
+        Value::from(Reference::from(value))
     }
 }
 
 impl From<Reference> for Value {
     fn from(reference: Reference) -> Self {
-        Value::Object(Some(reference))
+        Value::from(Some(reference))
     }
 }
 
