@@ -254,11 +254,12 @@ pub(crate) fn lmul(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn ldiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
-    stack.push_long(
-        value1
-            .checked_div(value2)
-            .ok_or(ArithmeticException("/ by zero".to_string()))?,
-    )?;
+
+    if value2 == 0 {
+        return Err(ArithmeticException("/ by zero".to_string()).into());
+    }
+
+    stack.push_long(value1.wrapping_div(value2))?;
     Ok(Continue)
 }
 
@@ -267,11 +268,12 @@ pub(crate) fn ldiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn lrem(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
-    stack.push_long(
-        value1
-            .checked_rem(value2)
-            .ok_or(ArithmeticException("/ by zero".to_string()))?,
-    )?;
+
+    if value2 == 0 {
+        return Err(ArithmeticException("/ by zero".to_string()).into());
+    }
+
+    stack.push_long(value1.wrapping_rem(value2))?;
     Ok(Continue)
 }
 
