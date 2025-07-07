@@ -306,16 +306,11 @@ pub(crate) fn lshr(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn lushr(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_long()?;
-    let result = if value1 > 0 {
-        value1 >> (value2 & 0x3f)
-    } else {
-        #[expect(clippy::cast_sign_loss)]
-        let value1 = value1 as u64;
-        let result = value1 >> value2;
-        #[expect(clippy::cast_possible_wrap)]
-        let result = result as i64;
-        result
-    };
+    #[expect(clippy::cast_sign_loss)]
+    let value1 = value1 as u64;
+    let result = value1 >> (value2 & 0x3f);
+    #[expect(clippy::cast_possible_wrap)]
+    let result = result as i64;
     stack.push_long(result)?;
     Ok(Continue)
 }
