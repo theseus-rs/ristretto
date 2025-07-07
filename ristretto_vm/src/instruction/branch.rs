@@ -130,10 +130,17 @@ pub(crate) fn if_icmple(stack: &mut OperandStack, address: u16) -> Result<Execut
 pub(crate) fn if_acmpeq(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_object()?;
     let value1 = stack.pop_object()?;
-    if value1 == value2 {
-        Ok(ContinueAtPosition(usize::from(address)))
-    } else {
-        Ok(Continue)
+
+    match (value1, value2) {
+        (None, None) => Ok(ContinueAtPosition(usize::from(address))),
+        (Some(_), None) | (None, Some(_)) => Ok(Continue),
+        (Some(value1), Some(value2)) => {
+            if value1.ptr_eq(&value2) {
+                Ok(ContinueAtPosition(usize::from(address)))
+            } else {
+                Ok(Continue)
+            }
+        }
     }
 }
 
@@ -142,10 +149,17 @@ pub(crate) fn if_acmpeq(stack: &mut OperandStack, address: u16) -> Result<Execut
 pub(crate) fn if_acmpne(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
     let value2 = stack.pop_object()?;
     let value1 = stack.pop_object()?;
-    if value1 == value2 {
-        Ok(Continue)
-    } else {
-        Ok(ContinueAtPosition(usize::from(address)))
+
+    match (value1, value2) {
+        (None, None) => Ok(Continue),
+        (Some(_), None) | (None, Some(_)) => Ok(ContinueAtPosition(usize::from(address))),
+        (Some(value1), Some(value2)) => {
+            if value1.ptr_eq(&value2) {
+                Ok(Continue)
+            } else {
+                Ok(ContinueAtPosition(usize::from(address)))
+            }
+        }
     }
 }
 

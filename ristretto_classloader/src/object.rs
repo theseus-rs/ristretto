@@ -313,6 +313,12 @@ impl Object {
         true
     }
 
+    /// Check if two references point to the same memory location.
+    #[must_use]
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.class, &other.class) && Arc::ptr_eq(&self.values, &other.values)
+    }
+
     /// Deep clone the object.
     ///
     /// # Errors
@@ -677,6 +683,25 @@ mod tests {
 
         clone.set_value("value", Value::Int(1))?;
         assert_eq!(object, clone);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_object_ptr_eq() -> Result<()> {
+        let class_name = "java.lang.Object";
+        let class = load_class(class_name).await?;
+        let object1 = Object {
+            class: class.clone(),
+            values: Arc::new(vec![]),
+        };
+        let object2 = Object {
+            class: class.clone(),
+            values: Arc::new(vec![]),
+        };
+        let object3 = object1.clone();
+        assert!(object1.ptr_eq(&object1));
+        assert!(!object1.ptr_eq(&object2));
+        assert!(object1.ptr_eq(&object3));
         Ok(())
     }
 

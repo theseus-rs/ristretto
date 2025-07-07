@@ -177,6 +177,12 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
         Ok(vec.clone())
     }
 
+    /// Check if two concurrent vectors point to the same memory location.
+    #[must_use]
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        Arc::as_ptr(&self.inner) == Arc::as_ptr(&other.inner)
+    }
+
     /// Deep clone the concurrent vector.
     ///
     /// # Errors
@@ -377,6 +383,21 @@ mod tests {
 
         clone.set(0, 2)?;
         assert_eq!(vec, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_ptr_eq() -> Result<()> {
+        let vec1 = ConcurrentVec::new();
+        let vec2 = ConcurrentVec::new();
+        assert!(!vec1.ptr_eq(&vec2));
+
+        let vec3 = vec1.clone();
+        assert!(vec1.ptr_eq(&vec3));
+
+        vec1.push(1)?;
+        assert!(!vec1.ptr_eq(&vec2));
+        assert!(vec1.ptr_eq(&vec3));
         Ok(())
     }
 

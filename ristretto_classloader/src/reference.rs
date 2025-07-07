@@ -295,6 +295,25 @@ impl Reference {
         }
     }
 
+    /// Check if two references point to the same memory location.
+    #[must_use]
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Reference::ByteArray(a), Reference::ByteArray(b)) => a.ptr_eq(b),
+            (Reference::CharArray(a), Reference::CharArray(b)) => a.ptr_eq(b),
+            (Reference::ShortArray(a), Reference::ShortArray(b)) => a.ptr_eq(b),
+            (Reference::IntArray(a), Reference::IntArray(b)) => a.ptr_eq(b),
+            (Reference::LongArray(a), Reference::LongArray(b)) => a.ptr_eq(b),
+            (Reference::FloatArray(a), Reference::FloatArray(b)) => a.ptr_eq(b),
+            (Reference::DoubleArray(a), Reference::DoubleArray(b)) => a.ptr_eq(b),
+            (Reference::Array(a), Reference::Array(b)) => {
+                Arc::ptr_eq(&a.class, &b.class) && a.elements.ptr_eq(&b.elements)
+            }
+            (Reference::Object(a), Reference::Object(b)) => a.ptr_eq(b),
+            _ => false,
+        }
+    }
+
     /// Returns a deep clone of the reference.
     ///
     /// # Errors
@@ -1253,6 +1272,16 @@ mod tests {
     }
 
     #[test]
+    fn test_ptr_eq_byte_array() {
+        let reference1 = Reference::from(vec![1i8]);
+        let reference2 = Reference::from(vec![1i8]);
+        let reference3 = reference1.clone();
+        assert!(reference1.ptr_eq(&reference1));
+        assert!(!reference1.ptr_eq(&reference2));
+        assert!(reference1.ptr_eq(&reference3));
+    }
+
+    #[test]
     fn test_clone_byte_array() -> Result<()> {
         let reference = Reference::from(vec![1i8]);
         let clone = reference.clone();
@@ -1278,6 +1307,16 @@ mod tests {
         array.set(0, 2i8)?;
         assert_ne!(reference, clone);
         Ok(())
+    }
+
+    #[test]
+    fn test_ptr_eq_char_array() {
+        let reference1 = Reference::from(vec![1 as char]);
+        let reference2 = Reference::from(vec![1 as char]);
+        let reference3 = reference1.clone();
+        assert!(reference1.ptr_eq(&reference1));
+        assert!(!reference1.ptr_eq(&reference2));
+        assert!(reference1.ptr_eq(&reference3));
     }
 
     #[test]
@@ -1309,6 +1348,16 @@ mod tests {
     }
 
     #[test]
+    fn test_ptr_eq_short_array() {
+        let reference1 = Reference::from(vec![1i16]);
+        let reference2 = Reference::from(vec![1i16]);
+        let reference3 = reference1.clone();
+        assert!(reference1.ptr_eq(&reference1));
+        assert!(!reference1.ptr_eq(&reference2));
+        assert!(reference1.ptr_eq(&reference3));
+    }
+
+    #[test]
     fn test_clone_short_array() -> Result<()> {
         let reference = Reference::from(vec![1i16]);
         let clone = reference.clone();
@@ -1334,6 +1383,16 @@ mod tests {
         array.set(0, 2)?;
         assert_ne!(reference, clone);
         Ok(())
+    }
+
+    #[test]
+    fn test_ptr_eq_int_array() {
+        let reference1 = Reference::from(vec![1i32]);
+        let reference2 = Reference::from(vec![1i32]);
+        let reference3 = reference1.clone();
+        assert!(reference1.ptr_eq(&reference1));
+        assert!(!reference1.ptr_eq(&reference2));
+        assert!(reference1.ptr_eq(&reference3));
     }
 
     #[test]
@@ -1365,6 +1424,16 @@ mod tests {
     }
 
     #[test]
+    fn test_ptr_eq_long_array() {
+        let reference1 = Reference::from(vec![1i64]);
+        let reference2 = Reference::from(vec![1i64]);
+        let reference3 = reference1.clone();
+        assert!(reference1.ptr_eq(&reference1));
+        assert!(!reference1.ptr_eq(&reference2));
+        assert!(reference1.ptr_eq(&reference3));
+    }
+
+    #[test]
     fn test_clone_long_array() -> Result<()> {
         let reference = Reference::from(vec![1i64]);
         let clone = reference.clone();
@@ -1390,6 +1459,16 @@ mod tests {
         array.set(0, 2)?;
         assert_ne!(reference, clone);
         Ok(())
+    }
+
+    #[test]
+    fn test_ptr_eq_float_array() {
+        let reference1 = Reference::from(vec![1.0f32]);
+        let reference2 = Reference::from(vec![1.0f32]);
+        let reference3 = reference1.clone();
+        assert!(reference1.ptr_eq(&reference1));
+        assert!(!reference1.ptr_eq(&reference2));
+        assert!(reference1.ptr_eq(&reference3));
     }
 
     #[test]
@@ -1421,6 +1500,16 @@ mod tests {
     }
 
     #[test]
+    fn test_ptr_eq_double_array() {
+        let reference1 = Reference::from(vec![1.0f64]);
+        let reference2 = Reference::from(vec![1.0f64]);
+        let reference3 = reference1.clone();
+        assert!(reference1.ptr_eq(&reference1));
+        assert!(!reference1.ptr_eq(&reference2));
+        assert!(reference1.ptr_eq(&reference3));
+    }
+
+    #[test]
     fn test_clone_double_array() -> Result<()> {
         let reference = Reference::from(vec![1.0f64]);
         let clone = reference.clone();
@@ -1445,6 +1534,18 @@ mod tests {
         };
         array.set(0, 2.0)?;
         assert_ne!(reference, clone);
+        Ok(())
+    }
+
+    #[test]
+    fn test_ptr_eq_reference_array() -> Result<()> {
+        let class = minimum_class()?;
+        let reference1 = Reference::from((class.clone(), vec![None]));
+        let reference2 = Reference::from((class.clone(), vec![None]));
+        let reference3 = reference1.clone();
+        assert!(reference1.ptr_eq(&reference1));
+        assert!(!reference1.ptr_eq(&reference2));
+        assert!(reference1.ptr_eq(&reference3));
         Ok(())
     }
 
@@ -1479,6 +1580,19 @@ mod tests {
             .elements
             .set(0, Some(Reference::from(vec![1i8])))?;
         assert_ne!(reference, clone);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ptr_eq_object() -> Result<()> {
+        let class_name = "java.lang.Object";
+        let class = load_class(class_name).await?;
+        let reference1 = Reference::from(Object::new(class.clone())?);
+        let reference2 = Reference::from(Object::new(class)?);
+        let reference3 = reference1.clone();
+        assert!(reference1.ptr_eq(&reference1));
+        assert!(!reference1.ptr_eq(&reference2));
+        assert!(reference1.ptr_eq(&reference3));
         Ok(())
     }
 
