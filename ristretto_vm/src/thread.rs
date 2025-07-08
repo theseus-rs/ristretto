@@ -673,10 +673,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_constants_class() -> Result<()> {
+    async fn test_primitive_class() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let class = thread.class("Constants").await?;
-        assert_eq!("Constants", class.name());
+        let class = thread.class("int").await?;
+        assert_eq!("int", class.name());
         Ok(())
     }
 

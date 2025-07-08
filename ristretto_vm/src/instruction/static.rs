@@ -85,19 +85,19 @@ mod test {
     #[tokio::test]
     async fn test_getstatic() -> Result<()> {
         let (_vm, _thread, frame, _class_index, field_index) =
-            test_class_field("Constants", "INT_VALUE", "I").await?;
+            test_class_field("java.lang.Integer", "MAX_VALUE", "I").await?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = getstatic(&frame, stack, field_index).await?;
         assert_eq!(Continue, result);
         let value = stack.pop()?;
-        assert_eq!(Value::Int(3), value);
+        assert_eq!(Value::Int(i32::MAX), value);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_getstatic_field_not_found() -> Result<()> {
         let (_vm, _thread, frame, _class_index, field_index) =
-            test_class_field("Child", "foo", "I").await?;
+            test_class_field("java.lang.Integer", "foo", "I").await?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = getstatic(&frame, stack, field_index).await;
         assert!(result.is_err());
@@ -123,7 +123,7 @@ mod test {
     #[tokio::test]
     async fn test_putstatic_field_not_found() -> Result<()> {
         let (_vm, _thread, frame, _class_index, field_index) =
-            test_class_field("Child", "foo", "I").await?;
+            test_class_field("java.lang.Integer", "foo", "I").await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
         let result = putstatic(&frame, stack, field_index).await;
