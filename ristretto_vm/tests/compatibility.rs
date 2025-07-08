@@ -2,7 +2,6 @@ use rayon::prelude::*;
 use ristretto_classloader::{DEFAULT_JAVA_VERSION, runtime};
 use ristretto_vm::Error::InternalError;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -21,7 +20,6 @@ fn compatibility_tests() -> Result<()> {
     let tests_root_dir_string = tests_root_dir.to_string_lossy().to_string();
 
     initialize_tracing()?;
-    cleanup_test_dirs(&tests_root_dir)?;
 
     let java_version = DEFAULT_JAVA_VERSION.to_string();
     let java_home = java_home(&java_version)?;
@@ -93,20 +91,6 @@ fn initialize_tracing() -> Result<()> {
     Ok(())
 }
 
-/// Cleans up the test directories by removing all `*.class` files.
-fn cleanup_test_dirs(tests_root_dir: &PathBuf) -> Result<()> {
-    for entry in walkdir::WalkDir::new(tests_root_dir) {
-        let entry = entry.map_err(|error| InternalError(error.to_string()))?;
-        let file_name = entry.file_name();
-        if entry.file_type().is_file() && file_name.to_string_lossy().ends_with(".class") {
-            if let Err(error) = fs::remove_file(entry.path()) {
-                error!("Unable to remove file {file_name:?}: {error:?}");
-            }
-        }
-    }
-    Ok(())
-}
-
 /// Collects directories of all tests to run.  A test is a directory that contains a
 /// `Test.java` file.
 fn collect_test_dirs(tests_root_dir: &PathBuf) -> Result<Vec<PathBuf>> {
@@ -115,7 +99,7 @@ fn collect_test_dirs(tests_root_dir: &PathBuf) -> Result<Vec<PathBuf>> {
         let entry = entry.map_err(|error| InternalError(error.to_string()))?;
         if entry.file_name() == TEST_FILE {
             let test_dir = entry.path().parent().unwrap();
-            test_paths.push(test_dir.to_path_buf());
+            test_paths.push(test_dir.to_path_buf().canonicalize()?);
         }
     }
     Ok(test_paths)
@@ -140,6 +124,19 @@ fn compile_tests(java_home: &Path, test_dirs: &[PathBuf]) -> Result<()> {
 
 /// Compiles a test directory by running `javac` on the `Test.java` file.
 fn compile_test(java_home: &Path, test_dir: &PathBuf) -> Result<()> {
+    // Check the data of the .class file to see if it is newer than the .java file and skip
+    // compilation if it is.
+    let class_file = test_dir.join(format!("{TEST_CLASS_NAME}.class"));
+    if class_file.exists() {
+        let java_file = test_dir.join(TEST_FILE);
+        let java_file_modified = java_file.metadata()?.modified()?;
+        let class_file_modified = class_file.metadata()?.modified()?;
+        if class_file_modified >= java_file_modified {
+            debug!("Skipping compilation for {java_file:?} as .class file is up to date.");
+            return Ok(());
+        }
+    }
+
     let arguments = vec![
         "-parameters",
         "-cp",
@@ -153,7 +150,7 @@ fn compile_test(java_home: &Path, test_dir: &PathBuf) -> Result<()> {
         .output()
         .map_err(|error| InternalError(error.to_string()))?;
     let stdout = String::from_utf8_lossy(&output.stdout);
-    debug!("Compiling {test_dir:?}: {stdout}");
+    info!("Compiling test {test_dir:?}: {stdout}");
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         error!("Compilation failed: {stderr}");

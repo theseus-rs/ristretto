@@ -74,7 +74,7 @@ mod test {
 
     async fn test_put_and_get_field() -> Result<()> {
         let (_vm, _thread, frame, class_index, field_index) =
-            test_class_field("Child", "zero", "I").await?;
+            test_class_field("java.lang.Integer", "value", "I").await?;
         let stack = &mut OperandStack::with_max_size(4);
         let class = frame.class();
         let result = new(&frame, stack, class_index).await?;
@@ -105,7 +105,7 @@ mod test {
     #[tokio::test]
     async fn test_getfield_field_not_found() -> Result<()> {
         let (_vm, _thread, frame, class_index, field_index) =
-            test_class_field("Child", "foo", "I").await?;
+            test_class_field("java.lang.Integer", "foo", "I").await?;
         let stack = &mut OperandStack::with_max_size(1);
         let result = new(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
@@ -134,7 +134,7 @@ mod test {
     #[tokio::test]
     async fn test_putfield_field_not_found() -> Result<()> {
         let (_vm, _thread, frame, class_index, field_index) =
-            test_class_field("Child", "foo", "I").await?;
+            test_class_field("java.lang.Integer", "foo", "I").await?;
         let stack = &mut OperandStack::with_max_size(3);
         let class = frame.class();
         let result = new(&frame, stack, class_index).await?;

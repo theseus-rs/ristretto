@@ -17,16 +17,6 @@ pub fn test_annotations() -> Result<()> {
 }
 
 #[test]
-pub fn test_constants() -> Result<()> {
-    test_class(include_bytes!("../../classes/Constants.class"))
-}
-
-#[test]
-pub fn test_expressions() -> Result<()> {
-    test_class(include_bytes!("../../classes/Expressions.class"))
-}
-
-#[test]
 pub fn test_jdbc() -> Result<()> {
     test_class(include_bytes!("../../classes/JDBC.class"))
 }

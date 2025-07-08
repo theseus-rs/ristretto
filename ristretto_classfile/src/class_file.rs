@@ -417,11 +417,10 @@ mod test {
 
     #[test]
     fn test_class_name() -> Result<()> {
-        let class_bytes = include_bytes!("../../classes/Simple.class");
+        let class_bytes = include_bytes!("../../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
-
-        assert_eq!("Simple", class_file.class_name()?);
+        assert_eq!("Minimum", class_file.class_name()?);
         Ok(())
     }
 
@@ -434,7 +433,6 @@ mod test {
             this_class: utf8_index,
             ..Default::default()
         };
-
         assert_eq!(
             Err(InvalidConstantPoolIndexType(1)),
             class_file.class_name()
@@ -444,10 +442,9 @@ mod test {
 
     #[test]
     fn test_verify() -> Result<()> {
-        let class_bytes = include_bytes!("../../classes/Simple.class");
+        let class_bytes = include_bytes!("../../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
-
         assert!(class_file.verify().is_ok());
         Ok(())
     }
@@ -534,25 +531,6 @@ mod test {
             class_file.access_flags
         );
         assert_eq!("Minimum", class_file.class_name()?);
-
-        let mut bytes = Vec::with_capacity(4);
-        class_file.to_bytes(&mut bytes)?;
-        assert_eq!(expected_bytes, bytes);
-        Ok(())
-    }
-
-    #[test]
-    fn test_simple_serialization() -> Result<()> {
-        let class_bytes = include_bytes!("../../classes/Simple.class");
-        let expected_bytes = class_bytes.to_vec();
-        let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
-
-        assert_eq!(JAVA_8, class_file.version);
-        assert_eq!(
-            ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER,
-            class_file.access_flags
-        );
-        assert_eq!("Simple", class_file.class_name()?);
 
         let mut bytes = Vec::with_capacity(4);
         class_file.to_bytes(&mut bytes)?;

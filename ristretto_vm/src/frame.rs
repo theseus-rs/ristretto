@@ -592,8 +592,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute() -> Result<()> {
-        let (thread, class) = get_class("Expressions").await?;
-        let method = class.method("add", "(II)I").expect("method not found");
+        let (thread, class) = get_class("java.lang.Math").await?;
+        let method = class.method("addExact", "(II)I").expect("method not found");
         let parameters = vec![Value::Int(1), Value::Int(2)];
         let frame = Frame::new(&Arc::downgrade(&thread), &class, &method);
         let result = frame.execute(parameters).await?;

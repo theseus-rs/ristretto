@@ -665,7 +665,7 @@ mod tests {
         let (_vm, _thread, mut frame) = crate::test::frame().await?;
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
-        let class_index = constant_pool.add_class("Child")?;
+        let class_index = constant_pool.add_class("Minimum")?;
         let stack = &mut OperandStack::with_max_size(1);
         let process_result = new(&frame, stack, class_index).await?;
         assert_eq!(process_result, Continue);
