@@ -7,6 +7,142 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/v0.21.0...v0.22.0) - 2025-07-07
+
+### Added
+- add Eq trait to class file attributes
+- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
+- implement jdk/internal/misc/Unsafe.park(ZJ)V and jdk/internal/misc/Unsafe.unpark(Ljava/lang/Object;)V
+- implement java/lang/ref/Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;
+- implement java/lang/ref/Reference.hasReferencePendingList()Z and java/lang/ref/Reference.waitForReferencePendingList()V
+- implement java/lang/Thread.start0()V
+- implement jdk/internal/vm/ContinuationSupport.isSupported0()Z
+- implement java/lang/Thread.setPriority0(I)V
+- implement java.lang.Thread resume, suspend and stop methods to return UnsupportedOperationException
+- implement java/lang/Thread.clearInterruptEvent()V, java/lang/Thread.interrupt0()V, java/lang/Thread.isInterrupted(Z)Z
+- implement java/lang/Thread.getThreads()[Ljava/lang/Thread;
+- implement java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V
+- implement jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z
+- implement jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
+- implement jdk/internal/misc/Unsafe.pageSize()I and sun/misc/Unsafe.pageSize()I
+
+### Fixed
+- correct java/lang/Object.hashCode()I
+- correct if_icmpeq and if_icmpne instructions
+- correct field shadowing logic
+- correct and optimize class polymorphic method lookups
+- correct java/lang/invoke/MethodHandleNatives resolve access check logic
+- correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()
+- correct integer/long div/rem instructions when dividing by zero
+- correct double/float div/rem instructions when dividing by zero
+- correct jdk/internal/misc/Unsafe.get<type>(...) methods to handle partial byte buffers
+- correct array index out of bounds behavior
+- add class, method type and method handle support to invokedynamic static bootstrap argument resolution
+- correct class retrieval for java/lang/invoke/MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J
+- define empty configuration for jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;
+- use thread execute for internal vm calls
+- lookup classes using existing thread context instead of vm
+
+### Other
+- update Cargo.toml dependencies
+- [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
+- reduced direct usages of Reference
+- remove fields from object instances
+- [**breaking**] refactor class and object fields
+- add eq trait to value and reference
+- [**breaking**] refactor VM invoke interfaces to combine method name and method descriptor argument into a single method signature argument
+- update compatibility tests to run in parallel
+- update to Rust 1.88.0
+- update JavaObject.to_object(&VM) -> JavaObject.to_object(&Thread)
+- refactored file handle management and created thread handles
+
+## `ristretto_vm` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.21.0...ristretto_vm-v0.22.0) - 2025-07-07
+
+### Added
+- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
+- implement jdk/internal/misc/Unsafe.park(ZJ)V and jdk/internal/misc/Unsafe.unpark(Ljava/lang/Object;)V
+- implement java/lang/ref/Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;
+- implement java/lang/ref/Reference.hasReferencePendingList()Z and java/lang/ref/Reference.waitForReferencePendingList()V
+- implement java/lang/Thread.start0()V
+- implement jdk/internal/vm/ContinuationSupport.isSupported0()Z
+- implement java/lang/Thread.setPriority0(I)V
+- implement java.lang.Thread resume, suspend and stop methods to return UnsupportedOperationException
+- implement java/lang/Thread.clearInterruptEvent()V, java/lang/Thread.interrupt0()V, java/lang/Thread.isInterrupted(Z)Z
+- implement java/lang/Thread.getThreads()[Ljava/lang/Thread;
+- implement java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V
+- implement jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z
+- implement jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
+- implement jdk/internal/misc/Unsafe.pageSize()I and sun/misc/Unsafe.pageSize()I
+
+### Fixed
+- correct java/lang/Object.hashCode()I
+- correct if_icmpeq and if_icmpne instructions
+- correct integer/long div/rem instructions when dividing by zero
+- correct double/float div/rem instructions when dividing by zero
+- correct jdk/internal/misc/Unsafe.get<type>(...) methods to handle partial byte buffers
+- correct field shadowing logic
+- correct array index out of bounds behavior
+- add class, method type and method handle support to invokedynamic static bootstrap argument resolution
+- correct and optimize class polymorphic method lookups
+- correct class retrieval for java/lang/invoke/MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J
+- correct java/lang/invoke/MethodHandleNatives resolve access check logic
+- define empty configuration for jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;
+- use thread execute for internal vm calls
+- lookup classes using existing thread context instead of vm
+- correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()
+
+### Other
+- reduced direct usages of Reference
+- update compatibility tests to run in parallel
+- [**breaking**] refactor class and object fields
+- update to Rust 1.88.0
+- update JavaObject.to_object(&VM) -> JavaObject.to_object(&Thread)
+- [**breaking**] refactor VM invoke interfaces to combine method name and method descriptor argument into a single method signature argument
+- refactored file handle management and created thread handles
+- [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
+
+## `ristretto_macros` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.21.0...ristretto_macros-v0.22.0) - 2025-07-07
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_jit` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.21.0...ristretto_jit-v0.22.0) - 2025-07-07
+
+### Fixed
+- correct and optimize class polymorphic method lookups
+
+### Other
+- [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
+
+## `ristretto_classloader` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.21.0...ristretto_classloader-v0.22.0) - 2025-07-07
+
+### Added
+- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
+
+### Fixed
+- correct java/lang/Object.hashCode()I
+- correct if_icmpeq and if_icmpne instructions
+- correct field shadowing logic
+- correct and optimize class polymorphic method lookups
+- correct java/lang/invoke/MethodHandleNatives resolve access check logic
+- correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()
+
+### Other
+- reduced direct usages of Reference
+- remove fields from object instances
+- [**breaking**] refactor class and object fields
+- add eq trait to value and reference
+- [**breaking**] refactor VM invoke interfaces to combine method name and method descriptor argument into a single method signature argument
+
+## `ristretto_classfile` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.21.0...ristretto_classfile-v0.22.0) - 2025-07-07
+
+### Added
+- add Eq trait to class file attributes
+- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
+
+### Other
+- [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
+
 ## `ristretto_cli` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/v0.20.0...v0.21.0) - 2025-06-20
 
 ### Added
