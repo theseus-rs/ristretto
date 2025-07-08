@@ -23,14 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement java/lang/Thread.getThreads()[Ljava/lang/Thread;
 - implement java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V
 - implement jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z
-- implemeted jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
+- implement jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
 - implement jdk/internal/misc/Unsafe.pageSize()I and sun/misc/Unsafe.pageSize()I
 
 ### Fixed
 - correct java/lang/Object.hashCode()I
 - correct if_icmpeq and if_icmpne instructions
 - correct field shadowing logic
-- corrected and optimized class polymorphic method lookups
+- correct and optimize class polymorphic method lookups
 - correct java/lang/invoke/MethodHandleNatives resolve access check logic
 - correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()
 - correct integer/long div/rem instructions when dividing by zero
@@ -51,16 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [**breaking**] refactor class and object fields
 - add eq trait to value and reference
 - [**breaking**] refactor VM invoke interfaces to combine method name and method descriptor argument into a single method signature argument
-- Merge pull request #409 from theseus-rs/optimize-instruction-enum
-- Merge pull request #455 from theseus-rs/correct-double-and-float-div-and-rem
 - update compatibility tests to run in parallel
-- Merge branch 'main' into update-to-rust-1.88.0
 - update to Rust 1.88.0
-- Merge pull request #436 from theseus-rs/impl-get-caller-class
-- Merge pull request #437 from theseus-rs/fix-methodhandles-resolve
 - update JavaObject.to_object(&VM) -> JavaObject.to_object(&Thread)
 - refactored file handle management and created thread handles
-- Merge pull request #411 from theseus-rs/correct-lint-warnings
 
 ## `ristretto_vm` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.21.0...ristretto_vm-v0.22.0) - 2025-07-07
 
@@ -77,7 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement java/lang/Thread.getThreads()[Ljava/lang/Thread;
 - implement java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V
 - implement jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z
-- implemeted jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
+- implement jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
 - implement jdk/internal/misc/Unsafe.pageSize()I and sun/misc/Unsafe.pageSize()I
 
 ### Fixed
@@ -89,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct field shadowing logic
 - correct array index out of bounds behavior
 - add class, method type and method handle support to invokedynamic static bootstrap argument resolution
-- corrected and optimized class polymorphic method lookups
+- correct and optimize class polymorphic method lookups
 - correct class retrieval for java/lang/invoke/MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J
 - correct java/lang/invoke/MethodHandleNatives resolve access check logic
 - define empty configuration for jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;
@@ -99,18 +93,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 - reduced direct usages of Reference
-- Merge pull request #455 from theseus-rs/correct-double-and-float-div-and-rem
 - update compatibility tests to run in parallel
 - [**breaking**] refactor class and object fields
-- Merge branch 'main' into update-to-rust-1.88.0
 - update to Rust 1.88.0
-- Merge pull request #436 from theseus-rs/impl-get-caller-class
-- Merge pull request #437 from theseus-rs/fix-methodhandles-resolve
 - update JavaObject.to_object(&VM) -> JavaObject.to_object(&Thread)
 - [**breaking**] refactor VM invoke interfaces to combine method name and method descriptor argument into a single method signature argument
 - refactored file handle management and created thread handles
-- Merge pull request #411 from theseus-rs/correct-lint-warnings
-- Merge pull request #409 from theseus-rs/optimize-instruction-enum
 - [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
 
 ## `ristretto_macros` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.21.0...ristretto_macros-v0.22.0) - 2025-07-07
@@ -121,10 +109,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## `ristretto_jit` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.21.0...ristretto_jit-v0.22.0) - 2025-07-07
 
 ### Fixed
-- corrected and optimized class polymorphic method lookups
+- correct and optimize class polymorphic method lookups
 
 ### Other
-- Merge pull request #409 from theseus-rs/optimize-instruction-enum
 - [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
 
 ## `ristretto_classloader` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.21.0...ristretto_classloader-v0.22.0) - 2025-07-07
@@ -136,7 +123,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct java/lang/Object.hashCode()I
 - correct if_icmpeq and if_icmpne instructions
 - correct field shadowing logic
-- corrected and optimized class polymorphic method lookups
+- correct and optimize class polymorphic method lookups
 - correct java/lang/invoke/MethodHandleNatives resolve access check logic
 - correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()
 
