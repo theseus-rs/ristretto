@@ -955,6 +955,10 @@ pub(crate) async fn unpark(thread: Arc<Thread>, parameters: Parameters) -> Resul
 mod tests {
     use super::*;
     use crate::JavaObject;
+    use crate::intrinsic_methods::jdk::internal::misc::r#unsafe::{
+        BOOLEAN_SIZE, BYTE_SIZE, CHAR_SIZE, DOUBLE_SIZE, FLOAT_SIZE, INT_SIZE, LONG_SIZE,
+        REFERENCE_SIZE, SHORT_SIZE,
+    };
 
     /// Creates a java.lang.reflect.Field for testing purposes.
     async fn create_field(thread: &Thread) -> Result<Value> {
@@ -1012,8 +1016,29 @@ mod tests {
     #[tokio::test]
     async fn test_array_index_scale() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = array_index_scale(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Int(1)));
+        let tests = vec![
+            ("[Z", BOOLEAN_SIZE),
+            ("[B", BYTE_SIZE),
+            ("[C", CHAR_SIZE),
+            ("[S", SHORT_SIZE),
+            ("[I", INT_SIZE),
+            ("[F", FLOAT_SIZE),
+            ("[J", LONG_SIZE),
+            ("[D", DOUBLE_SIZE),
+            ("[Ljava/lang/Object;", REFERENCE_SIZE),
+        ];
+
+        for (class_name, expected_scale) in tests {
+            let expected_scale = i32::try_from(expected_scale)?;
+            let class = thread.class(class_name).await?;
+            let class_object = class.to_object(&thread).await?;
+            let parameters = Parameters::new(vec![class_object]);
+            let result = array_index_scale(thread.clone(), parameters)
+                .await?
+                .expect("scale");
+            let scale: i32 = result.try_into()?;
+            assert_eq!(expected_scale, scale);
+        }
         Ok(())
     }
 

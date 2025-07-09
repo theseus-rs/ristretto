@@ -1,14 +1,30 @@
 use crate::Error::{InternalError, InvalidOperand};
 use crate::JavaError::ArrayIndexOutOfBoundsException;
 use crate::Result;
+use crate::intrinsic_methods::java::lang::class::get_class;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{BaseType, JAVA_11, JAVA_17};
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
+
+pub(crate) const BOOLEAN_SIZE: usize = 1;
+pub(crate) const BYTE_SIZE: usize = 1;
+pub(crate) const CHAR_SIZE: usize = 2;
+pub(crate) const SHORT_SIZE: usize = 2;
+pub(crate) const INT_SIZE: usize = 4;
+pub(crate) const LONG_SIZE: usize = 8;
+pub(crate) const FLOAT_SIZE: usize = 4;
+pub(crate) const DOUBLE_SIZE: usize = 8;
+
+/// The size of a pointer in bytes
+#[cfg(target_pointer_width = "64")]
+pub(crate) const REFERENCE_SIZE: usize = 8;
+#[cfg(target_pointer_width = "32")]
+pub(crate) const REFERENCE_SIZE: usize = 4;
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.addressSize0()I", Equal(JAVA_11))]
 #[async_recursion(?Send)]
@@ -16,7 +32,8 @@ pub(crate) async fn address_size_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(8))) // 64-bit pointers
+    let pointer_size = REFERENCE_SIZE as i32;
+    Ok(Some(Value::Int(pointer_size)))
 }
 
 #[intrinsic_method(
@@ -61,10 +78,32 @@ pub(crate) async fn array_base_offset_0(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn array_index_scale_0(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(1)))
+    let object: Object = parameters.pop()?.try_into()?;
+    let class: Arc<Class> = get_class(&thread, &object).await?;
+    let class_name = class.name();
+    let scale = match class_name {
+        "[Z" => BOOLEAN_SIZE, // boolean
+        "[B" => BYTE_SIZE,    // byte
+        "[C" => CHAR_SIZE,    // char (Java is 2 bytes)
+        "[S" => SHORT_SIZE,   // short
+        "[I" => INT_SIZE,     // int
+        "[F" => FLOAT_SIZE,   // float
+        "[J" => LONG_SIZE,    // long
+        "[D" => DOUBLE_SIZE,  // double
+        _ if class_name.starts_with("[L") => {
+            // object reference; use the address size
+            REFERENCE_SIZE
+        }
+        _ => {
+            return Err(InternalError(format!(
+                "Unknown array class type '{class_name}'"
+            )));
+        }
+    };
+    Ok(Some(Value::Int(scale as i32)))
 }
 
 #[intrinsic_method(
@@ -229,6 +268,7 @@ pub(crate) async fn compare_and_set_reference(
     // TODO: the compare and set operation should be atomic
     let result = match reference {
         Reference::Array(object_array) => {
+            let offset = offset / REFERENCE_SIZE;
             let Some(reference) = object_array.elements.get(offset)? else {
                 return Err(InternalError(
                     "compareAndSetReference: Invalid reference index".to_string(),
@@ -471,6 +511,7 @@ fn get_reference_type(
             }
         }
         Reference::CharArray(array) => {
+            let offset = offset / CHAR_SIZE;
             let Some(char) = array.get(offset)? else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
@@ -481,6 +522,7 @@ fn get_reference_type(
             Value::Int(i32::from(char))
         }
         Reference::ShortArray(array) => {
+            let offset = offset / SHORT_SIZE;
             let Some(short) = array.get(offset)? else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
@@ -491,6 +533,7 @@ fn get_reference_type(
             Value::Int(i32::from(short))
         }
         Reference::IntArray(array) => {
+            let offset = offset / INT_SIZE;
             let Some(int) = array.get(offset)? else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
@@ -501,6 +544,7 @@ fn get_reference_type(
             Value::Int(int)
         }
         Reference::LongArray(array) => {
+            let offset = offset / LONG_SIZE;
             let Some(long) = array.get(offset)? else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
@@ -511,6 +555,7 @@ fn get_reference_type(
             Value::Long(long)
         }
         Reference::FloatArray(array) => {
+            let offset = offset / FLOAT_SIZE;
             let Some(float) = array.get(offset)? else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
@@ -521,6 +566,7 @@ fn get_reference_type(
             Value::Float(float)
         }
         Reference::DoubleArray(array) => {
+            let offset = offset / DOUBLE_SIZE;
             let Some(double) = array.get(offset)? else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
@@ -531,6 +577,7 @@ fn get_reference_type(
             Value::Double(double)
         }
         Reference::Array(object_array) => {
+            let offset = offset / REFERENCE_SIZE;
             let Some(reference) = object_array.elements.get(offset)? else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
@@ -934,11 +981,13 @@ pub(crate) async fn put_byte_volatile(
 ) -> Result<Option<Value>> {
     let x = i8::try_from(parameters.pop_int()?)?;
     let offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut object) = parameters.pop()? else {
+    let Value::Object(ref mut reference) = parameters.pop()? else {
         return Err(InternalError("putByte: Invalid reference".to_string()));
     };
-    let bytes = Reference::from(vec![x; offset]);
-    *object = Some(bytes);
+    let Some(Reference::ByteArray(array)) = reference.as_ref() else {
+        return Err(InternalError("putByte: Not a byte array".to_string()));
+    };
+    array.set(offset, x)?;
     Ok(None)
 }
 
@@ -965,12 +1014,14 @@ pub(crate) async fn put_char_volatile(
     let Some(x) = char::from_u32(x) else {
         return Err(InternalError("putChar: Invalid character".to_string()));
     };
-    let offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut object) = parameters.pop()? else {
+    let offset = usize::try_from(parameters.pop_long()?)? / CHAR_SIZE;
+    let Value::Object(ref mut reference) = parameters.pop()? else {
         return Err(InternalError("putChar: Invalid reference".to_string()));
     };
-    let bytes = Reference::from(vec![x; offset]);
-    *object = Some(bytes);
+    let Some(Reference::CharArray(array)) = reference.as_ref() else {
+        return Err(InternalError("putChar: Not a char array".to_string()));
+    };
+    array.set(offset, x as u16)?;
     Ok(None)
 }
 
@@ -996,12 +1047,14 @@ pub(crate) async fn put_double_volatile(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let x = parameters.pop_double()?;
-    let offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut object) = parameters.pop()? else {
+    let offset = usize::try_from(parameters.pop_long()?)? / DOUBLE_SIZE;
+    let Value::Object(ref mut reference) = parameters.pop()? else {
         return Err(InternalError("putDouble: Invalid reference".to_string()));
     };
-    let bytes = Reference::from(vec![x; offset]);
-    *object = Some(bytes);
+    let Some(Reference::DoubleArray(array)) = reference.as_ref() else {
+        return Err(InternalError("putDouble: Not a double array".to_string()));
+    };
+    array.set(offset, x)?;
     Ok(None)
 }
 
@@ -1027,12 +1080,14 @@ pub(crate) async fn put_float_volatile(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let x = parameters.pop_float()?;
-    let offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut object) = parameters.pop()? else {
+    let offset = usize::try_from(parameters.pop_long()?)? / FLOAT_SIZE;
+    let Value::Object(ref mut reference) = parameters.pop()? else {
         return Err(InternalError("putFloat: Invalid reference".to_string()));
     };
-    let bytes = Reference::from(vec![x; offset]);
-    *object = Some(bytes);
+    let Some(Reference::FloatArray(array)) = reference.as_ref() else {
+        return Err(InternalError("putFloat: Not a float array".to_string()));
+    };
+    array.set(offset, x)?;
     Ok(None)
 }
 
@@ -1056,11 +1111,13 @@ pub(crate) async fn put_int_volatile(
 ) -> Result<Option<Value>> {
     let x = parameters.pop_int()?;
     let offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut object) = parameters.pop()? else {
+    let Value::Object(ref mut reference) = parameters.pop()? else {
         return Err(InternalError("putInt: Invalid reference".to_string()));
     };
-    let bytes = Reference::from(vec![x; offset]);
-    *object = Some(bytes);
+    let Some(Reference::IntArray(array)) = reference.as_ref() else {
+        return Err(InternalError("putInt: Not a int array".to_string()));
+    };
+    array.set(offset, x)?;
     Ok(None)
 }
 
@@ -1084,11 +1141,13 @@ pub(crate) async fn put_long_volatile(
 ) -> Result<Option<Value>> {
     let x = parameters.pop_long()?;
     let offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut object) = parameters.pop()? else {
+    let Value::Object(ref mut reference) = parameters.pop()? else {
         return Err(InternalError("putlong: Invalid reference".to_string()));
     };
-    let bytes = Reference::from(vec![x; offset]);
-    *object = Some(bytes);
+    let Some(Reference::LongArray(array)) = reference.as_ref() else {
+        return Err(InternalError("putLong: Not a long array".to_string()));
+    };
+    array.set(offset, x)?;
     Ok(None)
 }
 
@@ -1148,6 +1207,7 @@ pub(crate) async fn put_reference_volatile(
     match object {
         Reference::Array(object_array) => {
             let x = x.to_reference()?;
+            let offset = offset / REFERENCE_SIZE;
             object_array.elements.set(offset, x)?;
         }
         Reference::Object(object) => {
@@ -1185,12 +1245,14 @@ pub(crate) async fn put_short_volatile(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let x = i16::try_from(parameters.pop_int()?)?;
-    let offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut object) = parameters.pop()? else {
+    let offset = usize::try_from(parameters.pop_long()?)? / SHORT_SIZE;
+    let Value::Object(ref mut reference) = parameters.pop()? else {
         return Err(InternalError("putShort: Invalid reference".to_string()));
     };
-    let bytes = Reference::from(vec![x; offset]);
-    *object = Some(bytes);
+    let Some(Reference::ShortArray(array)) = reference.as_ref() else {
+        return Err(InternalError("putShort: Not a short array".to_string()));
+    };
+    array.set(offset, x)?;
     Ok(None)
 }
 
@@ -1373,7 +1435,8 @@ mod tests {
     async fn test_address_size_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = address_size_0(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Int(8)));
+        let pointer_size = REFERENCE_SIZE as i32;
+        assert_eq!(result, Some(Value::Int(pointer_size)));
         Ok(())
     }
 
@@ -1404,8 +1467,30 @@ mod tests {
     #[tokio::test]
     async fn test_array_index_scale_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = array_index_scale_0(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Int(1)));
+        let tests = vec![
+            ("[Z", BOOLEAN_SIZE),
+            ("[B", BYTE_SIZE),
+            ("[C", CHAR_SIZE),
+            ("[S", SHORT_SIZE),
+            ("[I", INT_SIZE),
+            ("[F", FLOAT_SIZE),
+            ("[J", LONG_SIZE),
+            ("[D", DOUBLE_SIZE),
+            ("[Ljava/lang/Object;", REFERENCE_SIZE),
+        ];
+
+        for (class_name, expected_scale) in tests {
+            let expected_scale = i32::try_from(expected_scale)?;
+            let class = thread.class(class_name).await?;
+            let class_object = class.to_object(&thread).await?;
+            let parameters = Parameters::new(vec![class_object]);
+            let result = array_index_scale_0(thread.clone(), parameters)
+                .await?
+                .expect("scale");
+            let scale: i32 = result.try_into()?;
+            assert_eq!(expected_scale, scale);
+        }
+
         Ok(())
     }
 
