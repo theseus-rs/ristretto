@@ -16,10 +16,10 @@ use crate::instruction::{
     iload, iload_0, iload_1, iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, ior, irem,
     ireturn, ishl, ishr, istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr,
     ixor, jsr, jsr_w, l2d, l2f, l2i, ladd, land, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w,
-    ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lor, lrem, lreturn, lshl,
-    lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr, lxor,
-    monitorenter, monitorexit, nop, pop, pop2, ret, ret_w, r#return, sipush, swap, tableswitch,
-    wide,
+    ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lookupswitch, lor, lrem,
+    lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr,
+    lxor, monitorenter, monitorexit, nop, pop, pop2, ret, ret_w, r#return, sipush, swap,
+    tableswitch, wide,
 };
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
@@ -526,10 +526,13 @@ impl Compiler {
                 program_counter,
                 table_switch,
             )?,
-            // Instruction::Lookupswitch { default, pairs } => {
-            //     let program_counter = self.program_counter.load(Ordering::Relaxed);
-            //     lookupswitch(stack, program_counter, *default, pairs)
-            // }
+            Instruction::Lookupswitch(lookup_switch) => lookupswitch(
+                function_builder,
+                blocks,
+                stack,
+                program_counter,
+                lookup_switch,
+            )?,
             Instruction::Ireturn => ireturn(function_builder, stack, return_pointer)?,
             Instruction::Lreturn => lreturn(function_builder, stack, return_pointer)?,
             Instruction::Freturn => freturn(function_builder, stack, return_pointer)?,
