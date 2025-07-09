@@ -1,5 +1,5 @@
 use crate::util::create_function;
-use ristretto_classfile::attributes::Instruction;
+use ristretto_classfile::attributes::{Instruction, TableSwitch};
 use ristretto_jit::{Result, Value};
 
 #[test]
@@ -361,6 +361,54 @@ fn jsr_w_and_ret_w() -> Result<()> {
     let function = create_function("()I", &instructions)?;
     let value = function.execute(vec![])?.expect("value");
     assert_eq!(value, Value::I32(2));
+    Ok(())
+}
+
+#[test]
+fn tableswitch() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Tableswitch(TableSwitch {
+            default: 7,
+            low: 0,
+            high: 2,
+            offsets: vec![1, 3, 5],
+        }),
+        Instruction::Iconst_0,
+        Instruction::Ireturn,
+        Instruction::Iconst_1,
+        Instruction::Ireturn,
+        Instruction::Iconst_2,
+        Instruction::Ireturn,
+        Instruction::Iconst_m1,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(I)I", &instructions)?;
+
+    // Test case 0 (within range)
+    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    assert_eq!(value, Value::I32(0));
+
+    // Test case 1 (within range)
+    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    // Test case 2 (within range)
+    let value = function.execute(vec![Value::I32(2)])?.expect("value");
+    assert_eq!(value, Value::I32(2));
+
+    // Test default case (below range)
+    let value = function.execute(vec![Value::I32(-1)])?.expect("value");
+    assert_eq!(value, Value::I32(-1));
+
+    // Test default case (above range)
+    let value = function.execute(vec![Value::I32(3)])?.expect("value");
+    assert_eq!(value, Value::I32(-1));
+
+    // Test default case (far above range)
+    let value = function.execute(vec![Value::I32(100)])?.expect("value");
+    assert_eq!(value, Value::I32(-1));
+
     Ok(())
 }
 
