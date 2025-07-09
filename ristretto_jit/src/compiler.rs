@@ -18,7 +18,8 @@ use crate::instruction::{
     ixor, jsr, jsr_w, l2d, l2f, l2i, ladd, land, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w,
     ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lor, lrem, lreturn, lshl,
     lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr, lxor,
-    monitorenter, monitorexit, nop, pop, pop2, ret, ret_w, r#return, sipush, swap, wide,
+    monitorenter, monitorexit, nop, pop, pop2, ret, ret_w, r#return, sipush, swap, tableswitch,
+    wide,
 };
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
@@ -518,15 +519,13 @@ impl Compiler {
                 jsr(function_builder, blocks, stack, program_counter, *address)?;
             }
             Instruction::Ret(index) => ret(function_builder, blocks, locals, stack, *index)?,
-            // Instruction::Tableswitch {
-            //     default,
-            //     low,
-            //     high,
-            //     offsets,
-            // } => {
-            //     let program_counter = self.program_counter.load(Ordering::Relaxed);
-            //     tableswitch(stack, program_counter, *default, *low, *high, offsets)
-            // }
+            Instruction::Tableswitch(table_switch) => tableswitch(
+                function_builder,
+                blocks,
+                stack,
+                program_counter,
+                table_switch,
+            )?,
             // Instruction::Lookupswitch { default, pairs } => {
             //     let program_counter = self.program_counter.load(Ordering::Relaxed);
             //     lookupswitch(stack, program_counter, *default, pairs)

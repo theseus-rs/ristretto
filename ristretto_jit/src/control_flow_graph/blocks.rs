@@ -138,22 +138,15 @@ pub(crate) fn get_blocks(
                 create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
             }
             Instruction::Tableswitch(table_switch) => {
-                let default = usize::try_from(table_switch.default)?;
-                let default = program_counter.checked_add(default).ok_or_else(|| {
-                    InternalError(format!(
-                        "Invalid address calculation: {program_counter} + {default}"
-                    ))
-                })?;
+                let default = usize::try_from(
+                    i32::try_from(program_counter)?.wrapping_add(table_switch.default),
+                )?;
                 insert_stack(&mut stack_states, default, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, default, &mut blocks);
 
                 for offset in &table_switch.offsets {
-                    let address = usize::try_from(*offset)?;
-                    let address = program_counter.checked_add(address).ok_or_else(|| {
-                        InternalError(format!(
-                            "Invalid address calculation: {program_counter} + {address}"
-                        ))
-                    })?;
+                    let address =
+                        usize::try_from(i32::try_from(program_counter)?.wrapping_add(*offset))?;
                     insert_stack(&mut stack_states, address, &stack)?;
                     create_block_with_parameters(
                         function_builder,
@@ -164,22 +157,15 @@ pub(crate) fn get_blocks(
                 }
             }
             Instruction::Lookupswitch(lookup_switch) => {
-                let default = usize::try_from(lookup_switch.default)?;
-                let default = program_counter.checked_add(default).ok_or_else(|| {
-                    InternalError(format!(
-                        "Invalid address calculation: {program_counter} + {default}"
-                    ))
-                })?;
+                let default = usize::try_from(
+                    i32::try_from(program_counter)?.wrapping_add(lookup_switch.default),
+                )?;
                 insert_stack(&mut stack_states, default, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, default, &mut blocks);
 
                 for (_key, offset) in &lookup_switch.pairs {
-                    let address = usize::try_from(*offset)?;
-                    let address = program_counter.checked_add(address).ok_or_else(|| {
-                        InternalError(format!(
-                            "Invalid address calculation: {program_counter} + {address}"
-                        ))
-                    })?;
+                    let address =
+                        usize::try_from(i32::try_from(program_counter)?.wrapping_add(*offset))?;
                     insert_stack(&mut stack_states, address, &stack)?;
                     create_block_with_parameters(
                         function_builder,

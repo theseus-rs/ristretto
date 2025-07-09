@@ -454,11 +454,9 @@ pub(crate) fn goto_w(
     address: i32,
 ) -> Result<()> {
     let address = usize::try_from(address)?;
-
     let block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
-
     let block_arguments = stack.as_block_arguments();
     function_builder.ins().jump(*block, &block_arguments);
     stack.reset(function_builder)?;
@@ -563,6 +561,56 @@ pub(crate) fn ret_w(
         }
     }
 
+    Ok(())
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.tableswitch>
+pub(crate) fn tableswitch(
+    function_builder: &mut FunctionBuilder,
+    blocks: &HashMap<usize, Block>,
+    stack: &mut OperandStack,
+    program_counter: usize,
+    table_switch: &ristretto_classfile::attributes::TableSwitch,
+) -> Result<()> {
+    // TODO: evaluate if the table switch can be optimized to a jump table.
+    let index = stack.pop()?;
+    let block_arguments = stack.as_block_arguments();
+
+    for (offset_index, offset) in table_switch.offsets.iter().enumerate() {
+        let stack_types = stack.to_type_vec(function_builder);
+        let else_block = function_builder.create_block();
+        append_block_params(function_builder, else_block, &stack_types);
+
+        // PC = start of tableswitch + offset (signed arithmetic)
+        let target_address =
+            usize::try_from(i32::try_from(program_counter)?.wrapping_add(*offset))?;
+        let block = *blocks
+            .get(&target_address)
+            .ok_or_else(|| InvalidBlockAddress(target_address))?;
+        let offset_value = i64::from(table_switch.low).saturating_add(i64::try_from(offset_index)?);
+        let block_address = function_builder.ins().iconst(types::I32, offset_value);
+        let condition_value = function_builder
+            .ins()
+            .icmp(IntCC::Equal, index, block_address);
+        function_builder.ins().brif(
+            condition_value,
+            block,
+            &block_arguments,
+            else_block,
+            &block_arguments,
+        );
+        function_builder.switch_to_block(else_block);
+    }
+
+    // PC = start of tableswitch + default (signed arithmetic)
+    let default_address =
+        usize::try_from(i32::try_from(program_counter)?.wrapping_add(table_switch.default))?;
+    let block = blocks
+        .get(&default_address)
+        .ok_or_else(|| InvalidBlockAddress(default_address))?;
+    let block_arguments = stack.as_block_arguments();
+    function_builder.ins().jump(*block, &block_arguments);
+    stack.reset(function_builder)?;
     Ok(())
 }
 
