@@ -6,6 +6,7 @@ use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{Block, InstBuilder, IntCC, TrapCode, Value, types};
+use ristretto_classfile::attributes::{LookupSwitch, TableSwitch};
 use std::collections::HashMap;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.if_cond>
@@ -570,20 +571,19 @@ pub(crate) fn tableswitch(
     blocks: &HashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    table_switch: &ristretto_classfile::attributes::TableSwitch,
+    table_switch: &TableSwitch,
 ) -> Result<()> {
     // TODO: evaluate if the table switch can be optimized to a jump table.
     let index = stack.pop()?;
     let block_arguments = stack.as_block_arguments();
+    let stack_types = stack.to_type_vec(function_builder);
 
-    for (offset_index, offset) in table_switch.offsets.iter().enumerate() {
-        let stack_types = stack.to_type_vec(function_builder);
+    for (offset_index, &offset) in table_switch.offsets.iter().enumerate() {
         let else_block = function_builder.create_block();
         append_block_params(function_builder, else_block, &stack_types);
 
         // PC = start of tableswitch + offset (signed arithmetic)
-        let target_address =
-            usize::try_from(i32::try_from(program_counter)?.wrapping_add(*offset))?;
+        let target_address = usize::try_from(i32::try_from(program_counter)?.wrapping_add(offset))?;
         let block = *blocks
             .get(&target_address)
             .ok_or_else(|| InvalidBlockAddress(target_address))?;
@@ -605,6 +605,55 @@ pub(crate) fn tableswitch(
     // PC = start of tableswitch + default (signed arithmetic)
     let default_address =
         usize::try_from(i32::try_from(program_counter)?.wrapping_add(table_switch.default))?;
+    let block = blocks
+        .get(&default_address)
+        .ok_or_else(|| InvalidBlockAddress(default_address))?;
+    let block_arguments = stack.as_block_arguments();
+    function_builder.ins().jump(*block, &block_arguments);
+    stack.reset(function_builder)?;
+    Ok(())
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.lookupswitch>
+pub(crate) fn lookupswitch(
+    function_builder: &mut FunctionBuilder,
+    blocks: &HashMap<usize, Block>,
+    stack: &mut OperandStack,
+    program_counter: usize,
+    lookup_switch: &LookupSwitch,
+) -> Result<()> {
+    // TODO: evaluate if the lookup switch can be optimized to a jump table.
+    let index = stack.pop()?;
+    let block_arguments = stack.as_block_arguments();
+    let stack_types = stack.to_type_vec(function_builder);
+
+    for (&index_value, &offset) in &lookup_switch.pairs {
+        let else_block = function_builder.create_block();
+        append_block_params(function_builder, else_block, &stack_types);
+
+        // PC = start of tableswitch + offset (signed arithmetic)
+        let target_address = usize::try_from(i32::try_from(program_counter)?.wrapping_add(offset))?;
+        let block = *blocks
+            .get(&target_address)
+            .ok_or_else(|| InvalidBlockAddress(target_address))?;
+        let index_value = i64::from(index_value);
+        let block_address = function_builder.ins().iconst(types::I32, index_value);
+        let condition_value = function_builder
+            .ins()
+            .icmp(IntCC::Equal, index, block_address);
+        function_builder.ins().brif(
+            condition_value,
+            block,
+            &block_arguments,
+            else_block,
+            &block_arguments,
+        );
+        function_builder.switch_to_block(else_block);
+    }
+
+    // PC = start of tableswitch + default (signed arithmetic)
+    let default_address =
+        usize::try_from(i32::try_from(program_counter)?.wrapping_add(lookup_switch.default))?;
     let block = blocks
         .get(&default_address)
         .ok_or_else(|| InvalidBlockAddress(default_address))?;
