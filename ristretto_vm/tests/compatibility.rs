@@ -153,8 +153,9 @@ fn compile_test(java_home: &Path, test_dir: &PathBuf) -> Result<()> {
     info!("Compiling test {test_dir:?}: {stdout}");
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        error!("Compilation failed: {stderr}");
-        return Err(InternalError("Compilation failed".to_string()));
+        let message = format!("Compilation failed for {test_dir:?}: {stderr}");
+        error!(message);
+        return Err(InternalError(message));
     }
     Ok(())
 }
@@ -174,8 +175,9 @@ fn expected_output(java_home: &Path, test_dir: &PathBuf) -> Result<String> {
         .map_err(|error| InternalError(error.to_string()))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        error!("Compilation failed: {stderr}");
-        return Err(InternalError("Compilation failed".to_string()));
+        let message = format!("Execution failed for {test_dir:?}: {stderr}");
+        error!(message);
+        return Err(InternalError(message));
     }
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     Ok(stdout)
