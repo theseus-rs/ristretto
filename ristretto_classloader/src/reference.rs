@@ -519,8 +519,7 @@ impl From<Vec<f64>> for Reference {
 }
 
 impl From<(Arc<Class>, Vec<Option<Reference>>)> for Reference {
-    fn from(value: (Arc<Class>, Vec<Option<Reference>>)) -> Self {
-        let (class, value) = value;
+    fn from((class, value): (Arc<Class>, Vec<Option<Reference>>)) -> Self {
         let object_array = ObjectArray {
             class: class.clone(),
             elements: ConcurrentVec::from(value),

@@ -1,12 +1,24 @@
-use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
+use crate::{JavaObject, Result};
 use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-use ristretto_classloader::Value;
+use ristretto_classloader::{ClassLoader, Value};
 use ristretto_macros::intrinsic_method;
+use std::collections::HashSet;
 use std::sync::Arc;
+
+/// Get the boot class loader for the current thread.
+async fn boot_class_loader(thread: &Arc<Thread>) -> Result<ClassLoader> {
+    let vm = thread.vm()?;
+    let class_loader = vm.class_loader().read().await.clone();
+    let mut current_class_loader = class_loader;
+    while let Some(parent) = current_class_loader.parent() {
+        current_class_loader = parent.clone();
+    }
+    Ok(current_class_loader)
+}
 
 #[intrinsic_method(
     "jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String;",
@@ -14,12 +26,28 @@ use std::sync::Arc;
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_system_package_location(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.loader.BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String;"
-    )
+    let package_name: String = parameters.pop()?.try_into()?;
+    let boot_class_loader = boot_class_loader(&thread).await?;
+    let package_path = package_name.replace('.', "/");
+
+    for class_path_entry in boot_class_loader.class_path().iter() {
+        let class_names = class_path_entry.class_names().await?;
+        for class_name in class_names {
+            if class_name.starts_with(&package_path) && class_name.contains('/') {
+                let class_package = class_name.rsplit_once('/').map(|x| x.0).unwrap_or("");
+                if class_package == package_path {
+                    let location = class_path_entry.name().to_object(&thread).await?;
+                    return Ok(Some(location));
+                }
+            }
+        }
+    }
+
+    // Package not found in system class loader
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method(
@@ -28,10 +56,36 @@ pub(crate) async fn get_system_package_location(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_system_package_names(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.loader.BootLoader.getSystemPackageNames()[Ljava/lang/String;")
+    let boot_class_loader = boot_class_loader(&thread).await?;
+    let class_path = boot_class_loader.class_path();
+    let mut package_names = HashSet::new();
+
+    for class_path_entry in class_path.iter() {
+        let class_names = class_path_entry.class_names().await?;
+        for class_name in class_names {
+            if let Some(last_slash_index) = class_name.rfind('/') {
+                let package_path = &class_name[..last_slash_index];
+                let package_name = package_path.replace('/', ".");
+                package_names.insert(package_name);
+            }
+        }
+    }
+
+    let mut package_names: Vec<String> = package_names.into_iter().collect();
+    package_names.sort();
+
+    let mut string_objects = Vec::with_capacity(package_names.len());
+    for package_name in package_names {
+        let string_object = package_name.to_object(&thread).await?;
+        string_objects.push(string_object);
+    }
+
+    let string_class = thread.class("java.lang.String").await?;
+    let package_names = Value::try_from((string_class, string_objects))?;
+    Ok(Some(package_names))
 }
 
 #[intrinsic_method(
@@ -52,21 +106,31 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.loader.BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String;"
-    )]
-    async fn test_get_system_package_location() {
+    async fn test_get_system_package_location() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_package_location(thread, Parameters::default()).await;
+        let package_name = "java.lang".to_object(&thread).await?;
+        let parameters = Parameters::new(vec![package_name]);
+        let result = get_system_package_location(thread, parameters).await?;
+        let location: String = result.expect("location").try_into()?;
+        assert!(location.ends_with("java.base.jmod"));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.loader.BootLoader.getSystemPackageNames()[Ljava/lang/String;"
-    )]
-    async fn test_get_system_package_names() {
+    async fn test_get_system_package_names() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_package_names(thread, Parameters::default()).await;
+        let result = get_system_package_names(thread, Parameters::default()).await?;
+        let package_name_objects: Vec<Value> = result.expect("package names").try_into()?;
+        let mut package_names = Vec::new();
+
+        for package_name_object in package_name_objects {
+            let package_name: String = package_name_object.try_into()?;
+            package_names.push(package_name);
+        }
+
+        assert!(package_names.contains(&"java.lang".to_string()));
+        assert!(package_names.len() > 250);
+        Ok(())
     }
 
     #[tokio::test]

@@ -139,6 +139,7 @@ fn compile_test(java_home: &Path, test_dir: &PathBuf) -> Result<()> {
 
     let arguments = vec![
         "-parameters",
+        "-XDstringConcat=inline", // TODO: Remove when invokedynamic string concatenation is implemented
         "-cp",
         test_dir.to_str().unwrap_or_default(),
         TEST_FILE,
