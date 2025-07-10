@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.22.1](https://github.com/theseus-rs/ristretto/compare/v0.22.0...v0.22.1) - 2025-07-10
+
+### Added
+- implement jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String; and jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;
+- add jit lookupswitch
+- add jit tableswitch
+
+### Fixed
+- improve unsafe support for byte offsets
+
+### Other
+- update Cargo.lock dependencies
+- remove unnecessary test classes
+- improve compatibility test messages
+
+## `ristretto_vm` - [0.22.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.22.0...ristretto_vm-v0.22.1) - 2025-07-10
+
+### Added
+- implement jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String; and jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;
+
+### Fixed
+- improve unsafe support for byte offsets
+
+### Other
+- improve compatibility test messages
+- remove unnecessary test classes
+
+## `ristretto_jit` - [0.22.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.22.0...ristretto_jit-v0.22.1) - 2025-07-10
+
+### Added
+- add jit lookupswitch
+- add jit tableswitch
+
+## `ristretto_classloader` - [0.22.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.22.0...ristretto_classloader-v0.22.1) - 2025-07-10
+
+### Added
+- implement jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String; and jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;
+
+## `ristretto_classfile` - [0.22.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.22.0...ristretto_classfile-v0.22.1) - 2025-07-10
+
+### Other
+- remove unnecessary test classes
+
 ## `ristretto_cli` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/v0.21.0...v0.22.0) - 2025-07-07
 
 ### Added
