@@ -23,9 +23,12 @@ pub enum Error {
     /// An error occurred while loading a class file
     #[error(transparent)]
     ClassFileError(#[from] ristretto_classfile::Error),
-    /// An error occurred while loading a class
+    /// An error occurred in class loading
     #[error(transparent)]
     ClassLoaderError(#[from] ristretto_classloader::Error),
+    /// An error occurred in garbage collection
+    #[error(transparent)]
+    GcError(#[from] ristretto_gc::Error),
     /// An error occurred while compiling
     #[error(transparent)]
     JitError(#[from] ristretto_jit::Error),

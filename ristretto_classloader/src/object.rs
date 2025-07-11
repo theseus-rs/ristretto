@@ -3,6 +3,7 @@ use crate::Reference::{ByteArray, CharArray};
 use crate::field::FieldKey;
 use crate::{Class, Field, Reference, Result, Value};
 use ristretto_classfile::JAVA_8;
+use ristretto_gc::{GarbageCollector, Gc, Trace};
 use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::sync::{Arc, RwLock};
@@ -11,7 +12,7 @@ use std::sync::{Arc, RwLock};
 #[derive(Clone)]
 pub struct Object {
     class: Arc<Class>,
-    values: Arc<Vec<RwLock<Value>>>,
+    values: Gc<Vec<RwLock<Value>>>,
 }
 
 impl Object {
@@ -30,7 +31,7 @@ impl Object {
 
         Ok(Self {
             class,
-            values: Arc::new(values),
+            values: Gc::new(values),
         })
     }
 
@@ -267,8 +268,8 @@ impl Object {
             return true;
         }
 
-        let self_ptr = (Arc::as_ptr(&self.class), Arc::as_ptr(&self.values));
-        let other_ptr = (Arc::as_ptr(&other.class), Arc::as_ptr(&other.values));
+        let self_ptr = (Arc::as_ptr(&self.class), Gc::as_ptr(&self.values));
+        let other_ptr = (Arc::as_ptr(&other.class), Gc::as_ptr(&other.values));
         let object_ptr_pair = (self_ptr, other_ptr);
 
         // Check if we've already visited this pair to avoid infinite recursion
@@ -316,13 +317,13 @@ impl Object {
     /// Returns hash code implementation based on memory address.
     #[must_use]
     pub fn hash_code(&self) -> usize {
-        Arc::as_ptr(&self.values).cast::<Vec<Value>>() as usize
+        Gc::as_ptr(&self.values).cast::<Vec<Value>>() as usize
     }
 
     /// Check if two references point to the same memory location.
     #[must_use]
     pub fn ptr_eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.class, &other.class) && Arc::ptr_eq(&self.values, &other.values)
+        Arc::ptr_eq(&self.class, &other.class) && Gc::ptr_eq(&self.values, &other.values)
     }
 
     /// Deep clone the object.
@@ -340,7 +341,7 @@ impl Object {
         }
         Ok(Self {
             class: self.class.clone(),
-            values: Arc::new(values),
+            values: Gc::new(values),
         })
     }
 }
@@ -424,6 +425,18 @@ impl Display for Object {
                 write!(f, "Class({value})")
             }
             _ => write!(f, "Object(class {class_name})"),
+        }
+    }
+}
+
+impl Trace for Object {
+    fn trace(&self, collector: &GarbageCollector) {
+        for value_lock in self.values.iter() {
+            if let Ok(value_guard) = value_lock.read()
+                && let Value::Object(Some(value)) = &*value_guard
+            {
+                value.trace(collector);
+            }
         }
     }
 }
@@ -697,6 +710,15 @@ mod tests {
         let object2 = Object::new(class)?;
         assert_ne!(0, object1.hash_code());
         assert_ne!(object1.hash_code(), object2.hash_code());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_trace() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let object = Object::new(class)?;
+        let collector = GarbageCollector::new();
+        object.trace(&collector);
         Ok(())
     }
 

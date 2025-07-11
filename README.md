@@ -38,6 +38,7 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - Url class loading from jars and modules
 - Reading, writing, verifying classes
 - Verification of class files is supported, but is still a work in progress.
+- Concurrent mark and sweep garbage collector
 - Just-In-Time (JIT) compilation for functions that exclusively use primitive type byte code
 
 ### Limitations

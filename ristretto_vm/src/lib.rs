@@ -15,6 +15,7 @@
 //! - Support for Java class loading and execution
 //! - Configurable VM parameters
 //! - Basic JIT compilation capabilities
+//! - Type safe concurrent, mark-sweep garbage collector
 //!
 //! ## Examples
 //!
