@@ -128,7 +128,7 @@ impl ObjectMetadata {
     }
 
     /// Returns whether the object is marked.
-    pub(crate) fn marked(&self) -> bool {
+    pub(crate) fn is_marked(&self) -> bool {
         self.marked.load(Ordering::Acquire)
     }
 
@@ -190,7 +190,7 @@ impl std::fmt::Debug for ObjectMetadata {
         f.debug_struct("ObjectMetadata")
             .field("ptr", &self.ptr)
             .field("size", &self.size)
-            .field("marked", &self.marked())
+            .field("marked", &self.is_marked())
             .finish()
     }
 }

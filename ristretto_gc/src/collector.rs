@@ -7,6 +7,7 @@ use crate::metadata::ObjectMetadata;
 use crate::pointers::{SafePtr, TracePtr};
 use crate::root_guard::GcRootGuard;
 use dashmap::DashMap;
+use rayon::prelude::*;
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, LazyLock, Mutex, RwLock, Weak};
@@ -52,7 +53,7 @@ enum GcPhase {
 /// 4. Concurrent Sweep: Reclaim unmarked objects concurrently
 pub struct GarbageCollector {
     this: Weak<Self>,
-    config: Configuration,
+    configuration: Configuration,
     stats: Arc<RwLock<Statistics>>,
     roots: Arc<DashMap<usize, TracePtr>>,
     next_root_id: AtomicUsize,
@@ -86,7 +87,7 @@ impl GarbageCollector {
     pub fn with_config(config: Configuration) -> Arc<Self> {
         Arc::new_cyclic(|this| Self {
             this: this.clone(),
-            config,
+            configuration: config,
             stats: Arc::new(RwLock::new(Statistics::default())),
             roots: Arc::new(DashMap::new()),
             next_root_id: AtomicUsize::new(0),
@@ -232,7 +233,7 @@ impl GarbageCollector {
         let old_size = self.bytes_allocated.fetch_add(size, Ordering::Relaxed);
 
         // Trigger collection if threshold exceeded (use saturating arithmetic to prevent overflow)
-        if old_size.saturating_add(size) >= self.config.allocation_threshold {
+        if old_size.saturating_add(size) >= self.configuration.allocation_threshold {
             self.collect();
         }
     }
@@ -335,7 +336,7 @@ impl GarbageCollector {
     pub(crate) fn is_object_marked(&self, ptr: SafePtr) -> bool {
         if let Ok(objects) = self.objects.read() {
             if let Some(metadata) = objects.get(&ptr) {
-                return metadata.marked();
+                return metadata.is_marked();
             }
         }
         false
@@ -470,10 +471,10 @@ impl GarbageCollector {
             stats_guard.last_collection_start = Some(start_time);
         }
 
-        debug!("Starting garbage collection cycle");
+        debug!("starting garbage collection cycle");
 
         // Phase 1: Initial Mark - mark all root objects
-        Self::initial_mark_phase(phase, roots, mark_queue, objects);
+        Self::initial_mark_phase(collector, phase, roots, mark_queue, objects);
 
         // Phase 2: Concurrent Mark - mark all reachable objects
         Self::concurrent_mark_phase(collector, phase, mark_queue, objects);
@@ -483,7 +484,7 @@ impl GarbageCollector {
 
         // Phase 4: Concurrent Sweep - reclaim unmarked objects
         let (bytes_freed, objects_swept) =
-            Self::concurrent_sweep_phase(phase, objects, bytes_allocated);
+            Self::concurrent_sweep_phase(collector, phase, objects, bytes_allocated);
 
         // Update phase back to idle
         if let Ok(mut phase_guard) = phase.write() {
@@ -502,13 +503,14 @@ impl GarbageCollector {
         }
 
         debug!(
-            "Garbage collection cycle completed in {:?}, freed {} objects ({} bytes)",
+            "garbage collection cycle completed in {:?}, freed {} objects ({} bytes)",
             duration, objects_swept, bytes_freed
         );
     }
 
     /// Phase 1: Initial mark - mark all root objects
     fn initial_mark_phase(
+        collector: &GarbageCollector,
         phase: &Arc<RwLock<GcPhase>>,
         roots: &Arc<DashMap<usize, TracePtr>>,
         mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
@@ -525,9 +527,19 @@ impl GarbageCollector {
         }
 
         // Unmark all objects first
-        if let Ok(mut objects_guard) = objects.write() {
-            for metadata in objects_guard.values_mut() {
-                metadata.unmark();
+        if let Ok(mut objects) = objects.write() {
+            let configuration = &collector.configuration;
+            let number_of_objects = objects.len();
+            if number_of_objects > configuration.parallel_threshold {
+                debug!("unmarking {number_of_objects} objects (parallel)");
+                objects.par_iter_mut().for_each(|(_, metadata)| {
+                    metadata.unmark();
+                });
+            } else {
+                debug!("unmarking {number_of_objects} objects (sequential)");
+                for metadata in objects.values_mut() {
+                    metadata.unmark();
+                }
             }
         }
 
@@ -655,6 +667,7 @@ impl GarbageCollector {
 
     /// Phase 4: Concurrent sweep - reclaim unmarked objects
     fn concurrent_sweep_phase(
+        collector: &GarbageCollector,
         phase: &Arc<RwLock<GcPhase>>,
         objects: &Arc<RwLock<HashMap<SafePtr, ObjectMetadata>>>,
         bytes_allocated: &Arc<AtomicUsize>,
@@ -666,25 +679,45 @@ impl GarbageCollector {
 
         trace!("Concurrent sweep phase started");
 
+        let configuration = &collector.configuration;
         let mut bytes_freed = 0;
         let mut objects_freed = 0;
 
         // Collect unmarked objects for removal
         let to_remove: Vec<(SafePtr, ObjectMetadata)> = {
-            if let Ok(objects_guard) = objects.read() {
-                objects_guard
-                    .iter()
-                    .filter_map(|(ptr, metadata)| {
-                        if metadata.marked() {
-                            None // Keep marked objects
-                        } else {
-                            Some((
-                                *ptr,
-                                ObjectMetadata::new_for_gcbox::<u8>(*ptr, metadata.size()),
-                            ))
-                        }
-                    })
-                    .collect()
+            if let Ok(objects) = objects.read() {
+                let number_of_objects = objects.len();
+                if number_of_objects > configuration.parallel_threshold {
+                    debug!("sweeping {number_of_objects} objects (parallel)");
+                    objects
+                        .par_iter()
+                        .filter_map(|(ptr, metadata)| {
+                            if metadata.is_marked() {
+                                None // Keep marked objects
+                            } else {
+                                Some((
+                                    *ptr,
+                                    ObjectMetadata::new_for_gcbox::<u8>(*ptr, metadata.size()),
+                                ))
+                            }
+                        })
+                        .collect()
+                } else {
+                    debug!("sweeping {number_of_objects} objects (sequential)");
+                    objects
+                        .iter()
+                        .filter_map(|(ptr, metadata)| {
+                            if metadata.is_marked() {
+                                None // Keep marked objects
+                            } else {
+                                Some((
+                                    *ptr,
+                                    ObjectMetadata::new_for_gcbox::<u8>(*ptr, metadata.size()),
+                                ))
+                            }
+                        })
+                        .collect()
+                }
             } else {
                 Vec::new()
             }

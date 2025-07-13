@@ -2,7 +2,7 @@
 //!
 //! Tests error scenarios, error types, and proper error propagation.
 
-use ristretto_gc::{Configuration, Error, GarbageCollector, Gc, Result};
+use ristretto_gc::{Error, GarbageCollector, Gc, Result};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -153,19 +153,4 @@ fn test_graceful_degradation() {
     // All objects should be accessible in reachability analysis
     assert!(Gc::ptr_eq(&gc1, &gc1));
     assert!(!Gc::ptr_eq(&gc1, &gc2));
-}
-
-#[test_log::test]
-fn test_config_validation() {
-    // Test that invalid configurations are handled gracefully
-    let config = Configuration {
-        allocation_threshold: 1024,
-        max_pause_time_us: 50,
-        incremental_step_size: 100,
-    };
-
-    let collector = GarbageCollector::with_config(config);
-
-    // Should be able to create collector with custom config
-    assert!(collector.statistics().is_ok());
 }

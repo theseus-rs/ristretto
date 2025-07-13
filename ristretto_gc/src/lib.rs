@@ -7,9 +7,9 @@
 //!
 //! ## Overview
 //!
-//! A pauseless, concurrent mark and sweep garbage collector implementation for the Ristretto VM.
-//! This crate provides `Gc<T>` types for garbage-collected references, using a pure reachability
-//! analysis algorithm with automatic cycle detection and collection.
+//! A pauseless, concurrent and parallel mark and sweep garbage collector implementation for the
+//! Ristretto VM. This crate provides `Gc<T>` types for garbage-collected references, using a pure
+//! reachability analysis algorithm with automatic cycle detection and collection.
 //!
 //! ## Features
 //!
@@ -19,33 +19,41 @@
 //! - **Background collection thread** that runs alongside application code
 //! - **Incremental processing** to maintain low latency
 //!
-//! ### ⚡ **Smart Pointer Type**
+//! ### ⚡ **Parallel Processing**
+//! - **Parallel marking and sweeping** for multi-core utilization
+//! - **Configurable parallel threshold** (default: 1,000,000 objects)
+//! - **Automatic fallback** to sequential processing for smaller object sets
+//! - **Work-stealing parallelism** for efficient load distribution
+//!
+//! ### 🛠️ **Smart Pointer Type**
 //! - **[`Gc<T>`]**: Garbage-collected smart pointer with reachability-based collection
 //! - **Thread-safe**: Full [`Send`] + [`Sync`] support for concurrent access
 //! - **Cycle-safe**: Automatic detection and collection of circular references
 //! - **[`Finalize`]**: Optional custom cleanup for objects before deallocation
 //!
-//! ### 🛠️ **Configurable Performance**
-//! - **Allocation thresholds**: Trigger collection based on memory usage
+//! ### 🎯 **Configurable Performance**
+//! - **Allocation thresholds**: Trigger collection based on memory usage (default: 8MB)
 //! - **Time budgets**: Configurable maximum pause times per collection step
-//! - **Step sizes**: Adjustable incremental processing batch sizes
-//! - **Concurrent sweeping**: Optional background memory reclamation
+//! - **Step sizes**: Adjustable incremental processing batch sizes (default: 1000 objects)
+//! - **Parallel threshold**: Objects count threshold for parallel vs sequential processing
 //!
 //! ## Architecture
 //!
-//! ### Reachability Analysis Algorithm
+//! ### Parallel Reachability Analysis Algorithm
 //!
-//! The garbage collector implements a pure reachability analysis with concurrent collection:
+//! The garbage collector implements a sophisticated parallel reachability analysis with concurrent collection:
 //!
 //! 1. **Initial Mark Phase**
 //!    - Brief pause to mark root objects
-//!    - Pauseless for small root sets
+//!    - Parallel unmarking of all objects when object count exceeds threshold
+//!    - Sequential processing for smaller object sets to avoid parallelization overhead
 //!    - Prepares concurrent marking phase
 //!
 //! 2. **Concurrent Mark Phase**
 //!    - Mark reachable objects concurrently with application
 //!    - Incremental processing with configurable time budgets
 //!    - Tri-color marking for correctness
+//!    - Write barriers to handle concurrent modifications
 //!
 //! 3. **Final Mark Phase**
 //!    - Brief pause to handle objects modified during concurrent marking
@@ -53,9 +61,10 @@
 //!    - Ensures marking completeness
 //!
 //! 4. **Concurrent Sweep Phase**
+//!    - Parallel identification of unmarked objects
+//!    - Automatic selection between parallel and sequential sweeping
 //!    - Reclaim unmarked objects in background
 //!    - Yields regularly to application threads
-//!    - Optional concurrent operation
 //!
 //! ### Tri-Color Marking Algorithm
 //!
@@ -75,34 +84,52 @@
 //! Tri-color marking, combined with write barriers, ensures that objects modified during concurrent marking are correctly
 //! processed, preventing premature reclamation and maintaining application correctness.
 //!
+//! ### Parallel Processing Strategy
+//!
+//! The collector automatically selects between parallel and sequential processing based on workload characteristics:
+//!
+//! - **Parallel Processing**: Used when object count exceeds the configured threshold (default: 1,000,000 objects)
+//!   - Utilizes work-stealing thread pool for optimal performance
+//!   - Parallel iteration over object collections during mark and sweep phases
+//!   - Efficient for large heaps with many objects
+//!
+//! - **Sequential Processing**: Used for smaller object sets
+//!   - Avoids parallelization overhead for small workloads
+//!   - Single-threaded iteration for optimal cache locality
+//!   - Better performance for applications with smaller heaps
+//!
 //! ### Performance Characteristics
 //!
 //! - **Pause Times**: Sub-millisecond (default 100μs maximum)
-//! - **Throughput**: Minimal impact on application performance
-//! - **Memory Overhead**: Low overhead tri-color marking
-//! - **Scalability**: Configurable for different workload patterns
+//! - **Throughput**: Minimal impact on application performance with parallel efficiency
+//! - **Memory Overhead**: Low overhead tri-color marking with parallel-safe metadata
+//! - **Scalability**: Configurable for different workload patterns and core counts
+//! - **Multi-core Utilization**: Automatic scaling to available CPU cores during collection
 //!
 //! ### Thread Safety
 //!
-//! All operations are fully thread-safe:
+//! All operations are fully thread-safe with enhanced parallel processing:
 //! - Lock-free fast paths for common operations
 //! - Safe concurrent collection with proper synchronization
 //! - Cross-thread garbage collection coordination
+//! - Work-stealing parallel processing
 //!
 //! ## Safety and Correctness
 //!
 //! - **Memory Safety**: All operations are memory-safe with no dangling pointers
 //! - **Cycle Detection**: Automatic detection and collection of circular references
 //! - **Concurrent Correctness**: Proper synchronization for multithreaded environments
+//! - **Parallel Safety**: Thread-safe parallel processing with proper coordination
 //! - **Leak Prevention**: Guaranteed collection of unreachable object graphs
 //!
 //! ## Integration with Ristretto VM
 //!
 //! This garbage collector is specifically designed for the Ristretto JVM implementation:
 //! - **Low-latency requirements**: Suitable for real-time and interactive applications
-//! - **High-throughput**: Minimal impact on JVM bytecode execution
+//! - **High-throughput**: Minimal impact on JVM bytecode execution with parallel efficiency
 //! - **Memory efficiency**: Compact object representation and fast allocation
 //! - **JVM compatibility**: Supports Java memory model requirements
+//! - **Multi-core optimization**: Leverages modern multi-core processors for collection
 
 #![allow(dead_code)]
 #![deny(clippy::pedantic)]
