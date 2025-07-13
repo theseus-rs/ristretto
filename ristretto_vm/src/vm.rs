@@ -10,6 +10,7 @@ use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
     Class, ClassLoader, ClassPath, ClassPathEntry, Object, Value, runtime,
 };
+use ristretto_gc::{GC, Statistics};
 use ristretto_jit::Compiler;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -205,6 +206,20 @@ impl VM {
     #[must_use]
     pub fn system_properties(&self) -> &HashMap<String, String> {
         self.configuration().system_properties()
+    }
+
+    /// Runs the garbage collector for the VM.
+    pub fn gc(&self) {
+        // TODO: implement a per-vm garbage collector instead of using global one. This would allow
+        //       multiple VMs to run in the same process without interfering with each other.
+        GC.collect();
+    }
+
+    /// Get VM statistics
+    pub fn statistics(&self) -> Statistics {
+        // TODO: implement per-VM statistics instead of using global GC statistics. Also, create VM
+        //       statistics that include more than just GC such as class loading, etc.
+        GC.statistics().unwrap_or_default()
     }
 
     /// Get the method registry

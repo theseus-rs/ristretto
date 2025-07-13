@@ -5,6 +5,7 @@ use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_gc::GC;
 use ristretto_macros::intrinsic_method;
 use std::cmp::min;
 use std::sync::Arc;
@@ -40,6 +41,7 @@ pub(crate) async fn free_memory(
 #[intrinsic_method("java/lang/Runtime.gc()V", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn gc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+    GC.collect();
     Ok(None)
 }
 

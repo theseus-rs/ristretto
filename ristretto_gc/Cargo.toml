@@ -1,0 +1,25 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "JVM Garbage Collector"
+edition.workspace = true
+keywords = ["java", "jvm", "gc"]
+license.workspace = true
+name = "ristretto_gc"
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+bitflags = { workspace = true }
+dashmap = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+test-log = { workspace = true, features = ["trace"] }
+
+[[bench]]
+harness = false
+name = "gc"

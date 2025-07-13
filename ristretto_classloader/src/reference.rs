@@ -2,6 +2,7 @@ use crate::Error::InvalidValueType;
 use crate::concurrent_vec::ConcurrentVec;
 use crate::{Class, Object, Result, Value};
 use ristretto_classfile::{ClassFile, ConstantPool};
+use ristretto_gc::{GarbageCollector, Trace};
 use std::fmt;
 use std::fmt::Display;
 use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
@@ -382,6 +383,24 @@ impl Display for Reference {
             Reference::Object(value) => {
                 write!(f, "{value}")
             }
+        }
+    }
+}
+
+impl Trace for Reference {
+    fn trace(&self, collector: &GarbageCollector) {
+        match self {
+            Reference::Array(object_array) => {
+                let references = object_array
+                    .elements
+                    .as_ref()
+                    .expect("object_array.elements");
+                for reference in references.iter().flatten() {
+                    reference.trace(collector);
+                }
+            }
+            Reference::Object(object) => object.trace(collector),
+            _ => {}
         }
     }
 }
@@ -898,6 +917,34 @@ mod tests {
         assert_eq!(reference.class_name(), "[B");
         assert_eq!(reference.class()?.name(), "[B");
         assert_eq!(reference.to_string(), "byte[1, 2, 3]");
+        Ok(())
+    }
+
+    #[test]
+    fn test_trace_byte_array() {
+        let reference = Reference::from(vec![1i8, 2i8, 3i8]);
+        let collector = GarbageCollector::new();
+        reference.trace(&collector);
+    }
+
+    #[tokio::test]
+    async fn test_trace_class_vec() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let object = Object::new(class.clone())?;
+        let values = vec![Some(Reference::Object(object))];
+        let reference = Reference::from((class, values));
+        let collector = GarbageCollector::new();
+        reference.trace(&collector);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_trace_object() -> Result<()> {
+        let class = Class::new_named("java.lang.Object")?;
+        let object = Object::new(class)?;
+        let reference = Reference::from(object);
+        let collector = GarbageCollector::new();
+        reference.trace(&collector);
         Ok(())
     }
 

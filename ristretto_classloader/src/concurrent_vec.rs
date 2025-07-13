@@ -1,15 +1,16 @@
 use crate::Error::PoisonedLock;
 use crate::Result;
+use ristretto_gc::Gc;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 /// A concurrent vector.
-pub struct ConcurrentVec<T: Clone + Debug + PartialEq> {
-    inner: Arc<RwLock<Vec<T>>>,
+pub struct ConcurrentVec<T: Clone + Debug + PartialEq + Send + Sync> {
+    inner: Gc<RwLock<Vec<T>>>,
 }
 
-impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
+impl<T: Clone + Debug + PartialEq + Send + Sync> ConcurrentVec<T> {
     /// Create a new concurrent vector.
     #[must_use]
     pub fn new() -> Self {
@@ -20,7 +21,7 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     #[must_use]
     pub fn from(values: Vec<T>) -> Self {
         ConcurrentVec {
-            inner: Arc::new(RwLock::new(values)),
+            inner: Gc::new(RwLock::new(values)),
         }
     }
 
@@ -180,13 +181,13 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     /// Returns hash code implementation based on memory address.
     #[must_use]
     pub fn hash_code(&self) -> usize {
-        Arc::as_ptr(&self.inner).cast::<Vec<RwLock<T>>>() as usize
+        Gc::as_ptr(&self.inner).cast::<Vec<RwLock<T>>>() as usize
     }
 
     /// Check if two concurrent vectors point to the same memory location.
     #[must_use]
     pub fn ptr_eq(&self, other: &Self) -> bool {
-        Arc::as_ptr(&self.inner) == Arc::as_ptr(&other.inner)
+        Gc::ptr_eq(&self.inner, &other.inner)
     }
 
     /// Deep clone the concurrent vector.
@@ -200,16 +201,16 @@ impl<T: Clone + Debug + PartialEq> ConcurrentVec<T> {
     }
 }
 
-impl<T: Clone + Debug + PartialEq> Clone for ConcurrentVec<T> {
+impl<T: Clone + Debug + PartialEq + Send + Sync> Clone for ConcurrentVec<T> {
     /// Clone the concurrent vector.
     fn clone(&self) -> Self {
         ConcurrentVec {
-            inner: Arc::clone(&self.inner),
+            inner: Gc::clone(&self.inner),
         }
     }
 }
 
-impl<T: Clone + Debug + PartialEq> Debug for ConcurrentVec<T> {
+impl<T: Clone + Debug + PartialEq + Send + Sync> Debug for ConcurrentVec<T> {
     /// Debug the concurrent vector.
     #[expect(clippy::unwrap_in_result)]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -218,14 +219,14 @@ impl<T: Clone + Debug + PartialEq> Debug for ConcurrentVec<T> {
     }
 }
 
-impl<T: Clone + Debug + PartialEq> Default for ConcurrentVec<T> {
+impl<T: Clone + Debug + PartialEq + Send + Sync> Default for ConcurrentVec<T> {
     /// Create a default concurrent vector.
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: Clone + Debug + PartialEq> Display for ConcurrentVec<T> {
+impl<T: Clone + Debug + PartialEq + Send + Sync> Display for ConcurrentVec<T> {
     /// Display the concurrent vector.
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let vec = self.inner.read().map_err(|_| fmt::Error)?;
@@ -242,11 +243,11 @@ impl<T: Clone + Debug + PartialEq> Display for ConcurrentVec<T> {
     }
 }
 
-impl<T: Clone + Debug + PartialEq> PartialEq for ConcurrentVec<T> {
+impl<T: Clone + Debug + PartialEq + Send + Sync> PartialEq for ConcurrentVec<T> {
     /// Compare two concurrent vectors.
     fn eq(&self, other: &Self) -> bool {
         // Quick reference equality check
-        if Arc::as_ptr(&self.inner) == Arc::as_ptr(&other.inner) {
+        if Gc::ptr_eq(&self.inner, &other.inner) {
             return true;
         }
         // Use try_read to avoid blocking if locks are contended

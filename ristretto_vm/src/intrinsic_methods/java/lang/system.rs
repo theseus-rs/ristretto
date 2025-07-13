@@ -19,7 +19,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-fn arraycopy_vec<T: Clone + Debug + PartialEq>(
+fn arraycopy_vec<T: Clone + Debug + PartialEq + Send + Sync>(
     source: &ConcurrentVec<T>,
     source_position: usize,
     destination: &ConcurrentVec<T>,

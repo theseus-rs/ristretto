@@ -36,6 +36,7 @@ os_info = { workspace = true }
 phf = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.22.0" }
 ristretto_classloader = { path = "../ristretto_classloader", version = "0.22.0" }
+ristretto_gc = { path = "../ristretto_gc", version = "0.22.0" }
 ristretto_jit = { path = "../ristretto_jit", version = "0.22.0" }
 ristretto_macros = { path = "../ristretto_macros", version = "0.22.0" }
 stacker = { workspace = true }

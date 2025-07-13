@@ -4,8 +4,6 @@
 - [CESU8 Edge Cases](cesu8_edge_cases.md): Edge cases in CESU-8, e.g., null handling, supplementary
   characters, historic quirks
 
-This approach provides discoverable, cross-linked reference material for anyone maintaining or extending your project.
-
 ---
 
 *For more details on Java string encoding, see
