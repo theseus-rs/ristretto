@@ -9,6 +9,8 @@ pub struct Configuration {
     pub max_pause_time_us: u64,
     /// Number of objects to process per incremental marking step
     pub incremental_step_size: usize,
+    /// Threshold for parallel collection (objects)
+    pub parallel_threshold: usize,
 }
 
 impl Default for Configuration {
@@ -22,6 +24,7 @@ impl Default for Configuration {
             allocation_threshold: 8 * 1024 * 1024,
             max_pause_time_us: 100,
             incremental_step_size: 1000,
+            parallel_threshold: 1_000_000,
         }
     }
 }
@@ -52,6 +55,7 @@ mod tests {
         assert_eq!(config.allocation_threshold, 8 * 1024 * 1024);
         assert_eq!(config.max_pause_time_us, 100);
         assert_eq!(config.incremental_step_size, 1000);
+        assert_eq!(config.parallel_threshold, 1_000_000);
     }
 
     #[test]

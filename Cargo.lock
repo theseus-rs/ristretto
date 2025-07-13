@@ -2077,6 +2077,7 @@ dependencies = [
  "bitflags 2.9.1",
  "criterion",
  "dashmap",
+ "rayon",
  "test-log",
  "thiserror",
  "tracing",

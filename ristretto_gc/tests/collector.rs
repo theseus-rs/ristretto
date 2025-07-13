@@ -13,6 +13,7 @@ fn test_custom_gc_config() -> Result<()> {
         allocation_threshold: 16 * 1024 * 1024, // 16MB
         max_pause_time_us: 50,
         incremental_step_size: 2000,
+        parallel_threshold: 10_000_000,
     };
 
     let collector = GarbageCollector::with_config(config.clone());
@@ -178,8 +179,7 @@ fn test_allocation_threshold_trigger() -> Result<()> {
     // Test that allocations trigger collection when threshold is exceeded
     let small_threshold_config = Configuration {
         allocation_threshold: 1024, // Small threshold
-        max_pause_time_us: 100,
-        incremental_step_size: 100,
+        ..Default::default()
     };
 
     let collector = GarbageCollector::with_config(small_threshold_config);
@@ -501,5 +501,32 @@ fn test_collector_stress() -> Result<()> {
         assert_eq!(**obj, format!("batch-{batch}-item-{item}"));
     }
 
+    Ok(())
+}
+
+#[test_log::test]
+fn test_parallel_garbage_collection() -> Result<()> {
+    let configuration = Configuration {
+        parallel_threshold: 1_000, // Set a low threshold for parallel collection
+        ..Default::default()
+    };
+    let collector = GarbageCollector::with_config(configuration.clone());
+    collector.start();
+
+    // Allocate enough objects to trigger parallel collection
+    let number_of_objects = configuration.parallel_threshold * 10;
+    for _ in 0..number_of_objects {
+        let _gc = Gc::with_collector(&collector, 42);
+    }
+    let allocation_statistics = collector.statistics()?;
+
+    collector.collect();
+    thread::sleep(Duration::from_millis(100));
+    let collector_statistics = collector.statistics()?;
+
+    assert_eq!(
+        collector_statistics.bytes_freed,
+        allocation_statistics.bytes_allocated
+    );
     Ok(())
 }

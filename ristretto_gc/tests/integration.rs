@@ -214,8 +214,7 @@ fn test_collector_configuration() -> Result<()> {
     // Test custom collector configuration
     let config = Configuration {
         allocation_threshold: 1024 * 1024, // 1MB
-        max_pause_time_us: 200,
-        incremental_step_size: 500,
+        ..Default::default()
     };
 
     let collector = GarbageCollector::with_config(config);
