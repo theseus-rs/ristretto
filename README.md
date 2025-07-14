@@ -39,7 +39,7 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - Reading, writing, verifying classes
 - Verification of class files is supported, but is still a work in progress.
 - Pauseless, concurrent and parallel mark and sweep garbage collector
-- Just-In-Time (JIT) compilation for functions that exclusively use primitive type byte code
+- Just-In-Time (JIT) compilation for x86-64, aarch64, s390x and riscv64
 
 ### Limitations
 

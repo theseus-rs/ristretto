@@ -10,17 +10,45 @@
 //! Ristretto JIT provides a Just-In-Time compiler for the Ristretto VM. The JIT compiler generates
 //! native code from Ristretto VM bytecode, allowing for high-performance execution directly on the
 //! host machine. The library supports both standard platforms and WebAssembly targets with tailored
-//! compilation strategies.  The appropriate compiler is automatically selected based on the target
+//! compilation strategies. The appropriate compiler is automatically selected based on the target
 //! platform.
+//!
+//! ## Architecture
+//!
+//! The JIT compiler follows a multi-stage compilation pipeline:
+//!
+//! 1. **Bytecode Analysis** - Analyzes Java bytecode for control flow patterns
+//! 2. **Control Flow Graph Construction** - Builds a block based control flow graph
+//! 3. **SSA Transformation** - Converts stack-based operations to Static Single Assignment form
+//! 4. **Native Code Generation** - Generates optimized machine code
+//! 5. **Function Binding** - Creates callable native functions
 //!
 //! ## Features
 //!
-//! - Fast execution through native code generation
-//! - Automatic optimization of bytecode
-//! - Control flow graph analysis
-//! - Platform-specific compilation for x86-64, aarch64 (aka ARM64), s390x (aka IBM Z) and riscv64
-//! - Comprehensive error handling
+//! - **Fast execution** through native code generation
+//! - **Automatic optimization** of bytecode patterns
+//! - **Control flow graph analysis** for complex branching logic
+//! - **Platform-specific compilation** for x86-64, aarch64 (ARM64), s390x (IBM Z) and riscv64
+//! - **Comprehensive error handling** with detailed error messages
 //!
+//! ## Platform Support
+//!
+//! The JIT compiler automatically adapts to the target platform:
+//!
+//! - **Native platforms**:
+//!   - x86-64 (Intel/AMD 64-bit)
+//!   - aarch64 (ARM 64-bit)
+//!   - s390x (IBM Z Architecture)
+//!   - riscv64 (RISC-V 64-bit)
+//!
+//! ## Limitations
+//!
+//! Current limitations include:
+//!
+//! - Only static methods and constructors (`<init>`) are supported
+//! - Limited object-oriented features (no instance method compilation yet)
+//! - No garbage collection integration
+//! - Exception handling is not fully implemented
 #![forbid(clippy::allow_attributes)]
 #![allow(dead_code)]
 #![deny(clippy::pedantic)]
