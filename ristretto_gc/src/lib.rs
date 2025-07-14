@@ -52,7 +52,6 @@
 //! 2. **Concurrent Mark Phase**
 //!    - Mark reachable objects concurrently with application
 //!    - Incremental processing with configurable time budgets
-//!    - Tri-color marking for correctness
 //!    - Write barriers to handle concurrent modifications
 //!
 //! 3. **Final Mark Phase**
@@ -65,24 +64,6 @@
 //!    - Automatic selection between parallel and sequential sweeping
 //!    - Reclaim unmarked objects in background
 //!    - Yields regularly to application threads
-//!
-//! ### Tri-Color Marking Algorithm
-//!
-//! The garbage collector uses the tri-color marking algorithm to ensure correctness and efficiency during concurrent
-//! collection. Objects are classified into three colors:
-//!
-//! - **White**: Unreachable objects, candidates for reclamation.
-//! - **Gray**: Reachable objects whose references have not yet been fully scanned.
-//! - **Black**: Reachable objects whose references have been completely scanned.
-//!
-//! During the mark phases:
-//! - The collector starts by marking root objects gray.
-//! - It scans gray objects, marking their referenced objects gray and turning the scanned object black.
-//! - This process continues until no gray objects remain.
-//! - At the end, white objects are considered unreachable and are reclaimed during the sweep phase.
-//!
-//! Tri-color marking, combined with write barriers, ensures that objects modified during concurrent marking are correctly
-//! processed, preventing premature reclamation and maintaining application correctness.
 //!
 //! ### Parallel Processing Strategy
 //!
@@ -102,7 +83,6 @@
 //!
 //! - **Pause Times**: Sub-millisecond (default 100μs maximum)
 //! - **Throughput**: Minimal impact on application performance with parallel efficiency
-//! - **Memory Overhead**: Low overhead tri-color marking with parallel-safe metadata
 //! - **Scalability**: Configurable for different workload patterns and core counts
 //! - **Multi-core Utilization**: Automatic scaling to available CPU cores during collection
 //!
