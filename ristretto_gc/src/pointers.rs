@@ -82,9 +82,9 @@ impl TracePtr {
         }
     }
 
-    /// Creates a new `TracePtr` directly from a `GcBox` pointer.
+    /// Creates a new `TracePtr` directly from a `Gc` pointer.
     /// This is used for roots to avoid storing pointers to temporary `Gc<T>` structs.
-    pub(crate) fn new_from_ptr<T: Trace>(gcbox_ptr: *const T) -> Self {
+    pub(crate) fn new_from_ptr<T: Trace>(gc_ptr: *const T) -> Self {
         fn trace_impl<T: Trace>(ptr: *const (), collector: &GarbageCollector) {
             if ptr.is_null() {
                 return;
@@ -97,7 +97,7 @@ impl TracePtr {
             }
 
             // Safety: This is safer because:
-            // 1. The pointer was created from a valid GcBox pointer
+            // 1. The pointer was created from a valid Gc pointer
             // 2. We've added a basic null check and address validation
             // 3. T implements Trace so the cast is valid
             // 4. The object is managed by the GC and should be alive during tracing
@@ -108,7 +108,7 @@ impl TracePtr {
         }
 
         Self {
-            ptr: gcbox_ptr.cast::<()>(),
+            ptr: gc_ptr.cast::<()>(),
             trace_fn: trace_impl::<T>,
         }
     }
