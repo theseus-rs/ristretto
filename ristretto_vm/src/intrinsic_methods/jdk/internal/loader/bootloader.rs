@@ -10,11 +10,11 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Get the boot class loader for the current thread.
-async fn boot_class_loader(thread: &Arc<Thread>) -> Result<ClassLoader> {
+async fn boot_class_loader(thread: &Arc<Thread>) -> Result<Arc<ClassLoader>> {
     let vm = thread.vm()?;
     let class_loader = vm.class_loader().read().await.clone();
     let mut current_class_loader = class_loader;
-    while let Some(parent) = current_class_loader.parent() {
+    while let Some(parent) = current_class_loader.parent().await {
         current_class_loader = parent.clone();
     }
     Ok(current_class_loader)

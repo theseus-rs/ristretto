@@ -29,7 +29,7 @@ pub(crate) const CLASS_FILE_MAJOR_VERSION_OFFSET: u16 = 44;
 pub struct VM {
     vm: Weak<VM>,
     configuration: Configuration,
-    class_loader: Arc<RwLock<ClassLoader>>,
+    class_loader: Arc<RwLock<Arc<ClassLoader>>>,
     main_class: Option<String>,
     java_home: PathBuf,
     java_version: String,
@@ -86,15 +86,19 @@ impl VM {
         // system property
 
         let class_path = configuration.class_path().clone();
-        let mut system_class_loader = ClassLoader::new("system", class_path);
-        system_class_loader.set_parent(Some(bootstrap_class_loader.clone()));
+        let system_class_loader = ClassLoader::new("system", class_path);
+        system_class_loader
+            .set_parent(Some(bootstrap_class_loader.clone()))
+            .await;
         let mut main_class_name = configuration.main_class().cloned();
 
         let class_loader = if let Some(jar) = configuration.jar() {
             let path = jar.to_string_lossy();
             let jar_class_path = ClassPath::from(path);
-            let mut jar_class_loader = ClassLoader::new("jar", jar_class_path);
-            jar_class_loader.set_parent(Some(system_class_loader.clone()));
+            let jar_class_loader = ClassLoader::new("jar", jar_class_path);
+            jar_class_loader
+                .set_parent(Some(system_class_loader.clone()))
+                .await;
 
             // If the main class is not specified, try to get it from the jar manifest file
             if main_class_name.is_none() {
@@ -168,7 +172,7 @@ impl VM {
     }
 
     /// Get the class loader
-    pub(crate) fn class_loader(&self) -> Arc<RwLock<ClassLoader>> {
+    pub(crate) fn class_loader(&self) -> Arc<RwLock<Arc<ClassLoader>>> {
         self.class_loader.clone()
     }
 
