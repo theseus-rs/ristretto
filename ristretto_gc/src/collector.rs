@@ -2,7 +2,6 @@ use crate::Finalize;
 use crate::config::{Configuration, Statistics};
 use crate::error::{Error, Result};
 use crate::gc::Gc;
-use crate::gc_box::GcBox;
 use crate::metadata::ObjectMetadata;
 use crate::pointers::{SafePtr, TracePtr};
 use crate::root_guard::GcRootGuard;
@@ -103,13 +102,13 @@ impl GarbageCollector {
     }
 
     /// Registers a new object with the garbage collector for reachability analysis.
-    pub(crate) fn register_object<T: Send + Sync>(&self, ptr: *const GcBox<T>, size: usize) {
+    pub(crate) fn register_object<T: Send + Sync>(&self, ptr: *const T, size: usize) {
         // Store the raw pointer without casting to ensure type information is preserved
         let safe_ptr = SafePtr::from_ptr(ptr);
 
-        // Create type-safe metadata that knows how to properly drop the GcBox<T>
-        // Here T is the inner type, so we create a dropper for GcBox<T>
-        let metadata = ObjectMetadata::new_for_gcbox::<T>(safe_ptr, size);
+        // Create type-safe metadata that knows how to properly drop the Gc<T>
+        // Here T is the inner type, so we create a dropper for Gc<T>
+        let metadata = ObjectMetadata::new_for_gc::<T>(safe_ptr, size);
 
         trace!("registering object at {:#x} with size {size}", safe_ptr.0);
         if let Ok(mut objects) = self.objects.write() {
@@ -119,14 +118,14 @@ impl GarbageCollector {
 
     /// Registers a new object with finalizer support for reachability analysis. This is used when
     /// `T` implements the `Finalize` trait.
-    pub(crate) fn register_object_with_finalizer<T>(&self, ptr: *const GcBox<T>, size: usize)
+    pub(crate) fn register_object_with_finalizer<T>(&self, ptr: *const T, size: usize)
     where
         T: Send + Sync + Finalize,
     {
         let safe_ptr = SafePtr::from_ptr(ptr);
 
         // Create metadata with finalizer support
-        let metadata = ObjectMetadata::new_for_gcbox_with_finalizer::<T>(safe_ptr, size);
+        let metadata = ObjectMetadata::new_for_gc_with_finalizer::<T>(safe_ptr, size);
 
         trace!(
             "registering object with finalizer at {:#x} with size {size}",
@@ -259,16 +258,16 @@ impl GarbageCollector {
     /// Adds a `Gc<T>` root object for garbage collection and returns its ID.
     pub fn add_root<T: Trace>(&self, root: &Gc<T>) -> usize {
         let root_id = self.next_root_id.fetch_add(1, Ordering::Relaxed);
-        // Instead of storing a TracePtr to the Gc<T> struct, store the GcBox<T> pointer directly
-        let gcbox_ptr = root.ptr.as_ptr();
-        let gc_trace_ptr = TracePtr::new_from_ptr(gcbox_ptr);
+        // Instead of storing a TracePtr to the Gc<T> struct, store the Gc<T> pointer directly
+        let gc_ptr = root.ptr.as_ptr();
+        let gc_trace_ptr = TracePtr::new_from_ptr(gc_ptr);
 
         self.roots.insert(root_id, gc_trace_ptr);
 
         // Ensure the insertion is visible to other threads before proceeding
         std::sync::atomic::fence(Ordering::SeqCst);
 
-        trace!("adding root {:#x} with id {root_id}", gcbox_ptr as usize);
+        trace!("adding root {:#x} with id {root_id}", gc_ptr as usize);
         root_id
     }
 
@@ -344,7 +343,7 @@ impl GarbageCollector {
 
     /// Adds an object to the mark queue for processing during collection. Used by the `Trace`
     /// implementations to queue objects for reachability analysis.
-    pub(crate) fn add_gcbox_to_mark_queue<T: Trace>(&self, ptr: *const GcBox<T>) {
+    pub(crate) fn add_gc_to_mark_queue<T: Trace>(&self, ptr: *const Gc<T>) {
         if let Ok(mut queue) = self.mark_queue.try_lock() {
             queue.push_back(TracePtr::new_from_ptr(ptr));
         }
@@ -697,7 +696,7 @@ impl GarbageCollector {
                             } else {
                                 Some((
                                     *ptr,
-                                    ObjectMetadata::new_for_gcbox::<u8>(*ptr, metadata.size()),
+                                    ObjectMetadata::new_for_gc::<u8>(*ptr, metadata.size()),
                                 ))
                             }
                         })
@@ -712,7 +711,7 @@ impl GarbageCollector {
                             } else {
                                 Some((
                                     *ptr,
-                                    ObjectMetadata::new_for_gcbox::<u8>(*ptr, metadata.size()),
+                                    ObjectMetadata::new_for_gc::<u8>(*ptr, metadata.size()),
                                 ))
                             }
                         })

@@ -114,9 +114,6 @@ fn test_garbage_collection_frees_memory() -> Result<()> {
     assert!(allocation_stats.bytes_allocated >= initial_stats.bytes_allocated);
     assert_eq!(allocation_stats.bytes_freed, 0);
 
-    // THERE IS A BUG HERE; the collector should not be freeing memory as the `as_root()` references
-    // are still held by the object Vec. However, the collector should still be able to run without
-    // freeing any memory.
     collector.collect();
     thread::sleep(Duration::from_millis(100));
     let collector_stats = collector.statistics()?;

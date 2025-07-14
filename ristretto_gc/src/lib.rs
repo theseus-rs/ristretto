@@ -13,25 +13,25 @@
 //!
 //! ## Features
 //!
-//! ### 🔄 **Pauseless Concurrent Collection**
+//! ### **Pauseless Concurrent Collection**
 //! - **Sub-millisecond pause times** (default: 100 microseconds maximum)
 //! - **Concurrent mark-and-sweep** algorithm with reachability analysis
 //! - **Background collection thread** that runs alongside application code
 //! - **Incremental processing** to maintain low latency
 //!
-//! ### ⚡ **Parallel Processing**
+//! ### **Parallel Processing**
 //! - **Parallel marking and sweeping** for multi-core utilization
 //! - **Configurable parallel threshold** (default: 1,000,000 objects)
 //! - **Automatic fallback** to sequential processing for smaller object sets
 //! - **Work-stealing parallelism** for efficient load distribution
 //!
-//! ### 🛠️ **Smart Pointer Type**
+//! ### **Smart Pointer Type**
 //! - **[`Gc<T>`]**: Garbage-collected smart pointer with reachability-based collection
 //! - **Thread-safe**: Full [`Send`] + [`Sync`] support for concurrent access
 //! - **Cycle-safe**: Automatic detection and collection of circular references
 //! - **[`Finalize`]**: Optional custom cleanup for objects before deallocation
 //!
-//! ### 🎯 **Configurable Performance**
+//! ### **Configurable Performance**
 //! - **Allocation thresholds**: Trigger collection based on memory usage (default: 8MB)
 //! - **Time budgets**: Configurable maximum pause times per collection step
 //! - **Step sizes**: Adjustable incremental processing batch sizes (default: 1000 objects)
@@ -121,7 +121,6 @@ mod config;
 mod error;
 mod finalizer;
 mod gc;
-mod gc_box;
 mod metadata;
 mod pointers;
 mod root_guard;

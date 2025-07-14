@@ -1,6 +1,5 @@
 use crate::collector::{GarbageCollector, Trace};
 use crate::error::Result;
-use crate::gc_box::GcBox;
 use crate::pointers::SafePtr;
 use crate::root_guard::GcRootGuard;
 use crate::{Finalize, GC};
@@ -19,8 +18,8 @@ use std::ptr::{self, NonNull};
 /// `Arc<T>`, `Gc<T>` can automatically detect and collect circular references using a concurrent,
 /// pauseless garbage collector with pure reachability analysis.
 pub struct Gc<T> {
-    pub(crate) ptr: NonNull<GcBox<T>>,
-    pub(crate) phantom: PhantomData<GcBox<T>>,
+    pub(crate) ptr: NonNull<T>,
+    pub(crate) phantom: PhantomData<T>,
 }
 
 impl<T> Gc<T> {
@@ -49,21 +48,24 @@ impl<T> Gc<T> {
     where
         T: Send + Sync,
     {
-        let boxed = Box::new(GcBox::new(data));
+        let boxed = Box::new(data);
         let ptr = Box::into_raw(boxed);
 
         // Record allocation with the collector
-        let size = size_of::<GcBox<T>>();
+        let size = size_of::<T>();
         collector.record_allocation(size);
 
-        // Register the new object with the collector for reachability analysis. We need to register
-        // this as a GcBox<T>, not just T
+        let gc_ptr = NonNull::new(ptr).expect("Box::into_raw returned null pointer");
+        let gc = Self {
+            ptr: gc_ptr,
+            phantom: PhantomData,
+        };
+
+        // Register the heap-allocated data pointer (not the Gc wrapper)
+        // This matches what the root registration uses: root.ptr.as_ptr()
         collector.register_object::<T>(ptr, size);
 
-        Self {
-            ptr: NonNull::new(ptr).expect("Box::into_raw returned null pointer"),
-            phantom: PhantomData,
-        }
+        gc
     }
 
     /// Constructs a new `Gc<T>` with a specific garbage collector and finalization support.
@@ -75,20 +77,24 @@ impl<T> Gc<T> {
     where
         T: Send + Sync + Finalize,
     {
-        let boxed = Box::new(GcBox::new(data));
+        let boxed = Box::new(data);
         let ptr = Box::into_raw(boxed);
 
         // Record allocation with the collector
-        let size = size_of::<GcBox<T>>();
+        let size = size_of::<T>();
         collector.record_allocation(size);
 
-        // Register the new object with finalizer support
+        let gc_ptr = NonNull::new(ptr).expect("Box::into_raw returned null pointer");
+        let gc = Self {
+            ptr: gc_ptr,
+            phantom: PhantomData,
+        };
+
+        // Register the heap-allocated data pointer (not the Gc wrapper)
+        // This matches what the root registration uses: root.ptr.as_ptr()
         collector.register_object_with_finalizer::<T>(ptr, size);
 
-        Self {
-            ptr: NonNull::new(ptr).expect("Box::into_raw returned null pointer"),
-            phantom: PhantomData,
-        }
+        gc
     }
 
     /// Returns `true` if the two `Gc`s point to the same allocation.
@@ -116,10 +122,10 @@ impl<T> Gc<T> {
         // Safety: The caller guarantees no other references exist,
         // and we have a mutable reference to self, so we can safely
         // provide mutable access to the data
-        unsafe { &mut self.ptr.as_mut().data }
+        unsafe { self.ptr.as_mut() }
     }
 
-    pub(crate) fn inner(&self) -> &GcBox<T> {
+    pub(crate) fn inner(&self) -> &T {
         // Safety: self.ptr is guaranteed to be valid and non-null
         // because it was created from Box::into_raw and stored in NonNull
         unsafe { self.ptr.as_ref() }
@@ -152,7 +158,7 @@ impl<T> Deref for Gc<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner().data
+        self.inner()
     }
 }
 
@@ -164,14 +170,14 @@ impl<T> Drop for Gc<T> {
 }
 
 // Safety: Gc<T> can be sent between threads when T: Send + Sync because:
-// 1. The NonNull<GcBox<T>> pointer is just a pointer address
+// 1. The NonNull<Gc<T>> pointer is just a pointer address
 // 2. The actual data access is controlled by the garbage collector
 // 3. T is required to be Send + Sync by the constructor bounds
 // 4. The GC ensures proper synchronization during object access
 unsafe impl<T: Sync + Send> Send for Gc<T> {}
 
 // Safety: Gc<T> can be shared between threads when T: Send + Sync because:
-// 1. The NonNull<GcBox<T>> pointer is immutable after construction
+// 1. The NonNull<Gc<T>> pointer is immutable after construction
 // 2. Data access goes through Deref which provides shared references
 // 3. T is required to be Send + Sync by the constructor bounds
 // 4. The garbage collector handles thread safety for the underlying data
