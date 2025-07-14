@@ -76,7 +76,7 @@ impl Reference {
                     this_class: class_index,
                     ..Default::default()
                 };
-                Class::from(class_file)?
+                Class::from(None, class_file)?
             }
         };
         Ok(class)

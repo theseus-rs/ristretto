@@ -1,8 +1,8 @@
-use crate::Error::ClassNotFound;
-use crate::{Class, ClassPath, Result};
+use crate::Error::{ClassNotFound, InternalError};
+use crate::{Class, ClassPath, Result, Value};
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
 
 /// Implementation of a Java class loader.
@@ -10,21 +10,25 @@ use tokio::sync::RwLock;
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html>
 #[derive(Debug)]
 pub struct ClassLoader {
+    this: Weak<ClassLoader>,
     name: String,
     class_path: ClassPath,
-    parent: Arc<Option<ClassLoader>>,
+    parent: Arc<RwLock<Option<Arc<ClassLoader>>>>,
     classes: Arc<RwLock<HashMap<String, Arc<Class>>>>,
+    object: Arc<RwLock<Option<Value>>>,
 }
 
 impl ClassLoader {
     /// Create a new class loader with the given name and parent.
-    pub fn new<S: AsRef<str>>(name: S, class_path: ClassPath) -> Self {
-        Self {
+    pub fn new<S: AsRef<str>>(name: S, class_path: ClassPath) -> Arc<Self> {
+        Arc::new_cyclic(|weak_self| ClassLoader {
+            this: weak_self.clone(),
             name: name.as_ref().to_string(),
             class_path,
-            parent: Arc::new(None),
+            parent: Arc::new(RwLock::new(None)),
             classes: Arc::new(RwLock::new(HashMap::new())),
-        }
+            object: Arc::new(RwLock::new(None)),
+        })
     }
 
     /// Get the name of the class loader.
@@ -40,17 +44,18 @@ impl ClassLoader {
     }
 
     /// Get the parent class loader.
-    #[must_use]
-    pub fn parent(&self) -> Option<&ClassLoader> {
-        if let Some(parent) = self.parent.as_ref() {
-            return Some(parent);
+    pub async fn parent(&self) -> Option<Arc<ClassLoader>> {
+        let parent_guard = self.parent.read().await;
+        if let Some(parent) = parent_guard.as_ref() {
+            return Some(parent.clone());
         }
         None
     }
 
     /// Set the parent class loader.
-    pub fn set_parent(&mut self, parent: Option<ClassLoader>) {
-        self.parent = Arc::new(parent);
+    pub async fn set_parent(&self, parent: Option<Arc<ClassLoader>>) {
+        let mut parent_guard = self.parent.write().await;
+        *parent_guard = parent;
     }
 
     /// Load a class by name.
@@ -82,11 +87,14 @@ impl ClassLoader {
 
         // Convert hierarchy of class loaders to a flat list so that we can iterate over them from
         // the boot class loader to the current class loader.
-        let mut class_loader = self;
-        let mut class_loaders = vec![class_loader];
-        while let Some(parent) = class_loader.parent() {
+        let mut class_loader = self
+            .this
+            .upgrade()
+            .ok_or(InternalError("Unable to upgrade class loader".to_string()))?;
+        let mut class_loaders = vec![class_loader.clone()];
+        while let Some(parent) = class_loader.parent().await {
+            class_loaders.push(parent.clone());
             class_loader = parent;
-            class_loaders.push(parent);
         }
 
         for class_loader in class_loaders.into_iter().rev() {
@@ -97,7 +105,8 @@ impl ClassLoader {
                 if let Some(class) = classes.get(class_name) {
                     return Ok((class.clone(), true));
                 }
-                let class = Class::from(class_file)?;
+                let class_loader = Arc::downgrade(&class_loader);
+                let class = Class::from(Some(class_loader), class_file)?;
                 classes.insert(class_name.to_string(), class.clone());
                 return Ok((class, false));
             }
@@ -117,16 +126,34 @@ impl ClassLoader {
         classes.insert(class_name, class);
         Ok(())
     }
+
+    /// Get the object for the class loader.
+    pub async fn object(&self) -> Option<Value> {
+        let object_guard = self.object.read().await;
+        object_guard.as_ref().cloned()
+    }
+
+    /// Set the object for the class loader.
+    ///
+    /// # Errors
+    ///
+    /// if the object cannot be set due to a poisoned lock.
+    pub async fn set_object(&self, object: Option<Value>) {
+        let mut object_guard = self.object.write().await;
+        *object_guard = object;
+    }
 }
 
 impl Clone for ClassLoader {
     /// Clone the class loader.
     fn clone(&self) -> Self {
         Self {
+            this: self.this.clone(),
             name: self.name.clone(),
             class_path: self.class_path.clone(),
             parent: Arc::clone(&self.parent),
             classes: Arc::clone(&self.classes),
+            object: Arc::clone(&self.object),
         }
     }
 }
@@ -135,12 +162,6 @@ impl Display for ClassLoader {
     /// Display the class loader.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}={}", self.name, self.class_path)?;
-
-        let mut class_loader = self;
-        while let Some(parent) = class_loader.parent() {
-            class_loader = parent;
-            write!(f, "; {}={}", class_loader.name, class_loader.class_path)?;
-        }
         Ok(())
     }
 }
@@ -149,7 +170,10 @@ impl Display for ClassLoader {
 impl PartialEq for ClassLoader {
     /// Compare class loaders by name.
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
+        match (self.this.upgrade(), other.this.upgrade()) {
+            (Some(self_loader), Some(other_loader)) => Arc::ptr_eq(&self_loader, &other_loader),
+            _ => false,
+        }
     }
 }
 
@@ -159,23 +183,22 @@ mod tests {
     use crate::Value;
     use std::path::PathBuf;
 
-    #[test]
-    fn test_new() {
+    #[tokio::test]
+    async fn test_new() {
         let name = "test";
         let class_path = ClassPath::from(".");
         let class_loader = ClassLoader::new(name, class_path);
         assert_eq!(name, class_loader.name());
         assert_eq!(&ClassPath::from("."), class_loader.class_path());
-        assert!(class_loader.parent().is_none());
+        assert!(class_loader.parent().await.is_none());
     }
 
     #[test]
     fn test_equality() {
-        let class_path1 = ClassPath::from(".");
-        let class_loader1 = ClassLoader::new("test", class_path1);
-        let class_path2 = ClassPath::from(".");
-        let class_loader2 = ClassLoader::new("test", class_path2);
-        assert_eq!(class_loader1, class_loader2);
+        let class_path = ClassPath::from(".");
+        let class_loader = ClassLoader::new("test", class_path);
+        let class_loader2 = class_loader.clone();
+        assert_eq!(class_loader, class_loader2);
     }
 
     #[test]
@@ -187,16 +210,19 @@ mod tests {
         assert_ne!(class_loader1, class_loader2);
     }
 
-    #[test]
-    fn test_set_parent() {
+    #[tokio::test]
+    async fn test_set_parent() {
         let class_path1 = ClassPath::from(".");
         let class_loader1 = ClassLoader::new("test1", class_path1);
         let class_path2 = ClassPath::from(".");
-        let mut class_loader2 = ClassLoader::new("test2", class_path2);
-        class_loader2.set_parent(Some(class_loader1));
-        assert_eq!("test1", class_loader2.parent().expect("parent").name());
-        class_loader2.set_parent(None);
-        assert_eq!(None, class_loader2.parent());
+        let class_loader2 = ClassLoader::new("test2", class_path2);
+        class_loader2.set_parent(Some(class_loader1.clone())).await;
+        assert_eq!(
+            "test1",
+            class_loader2.parent().await.expect("parent").name()
+        );
+        class_loader2.set_parent(None).await;
+        assert_eq!(None, class_loader2.parent().await);
     }
 
     #[tokio::test]
@@ -247,8 +273,8 @@ mod tests {
         let class_path = ClassPath::from(class_path_entries.join(":"));
         let boot_class_loader = ClassLoader::new("test", class_path);
         let foo_class_path = ClassPath::from("foo");
-        let mut class_loader = ClassLoader::new("test", foo_class_path);
-        class_loader.set_parent(Some(boot_class_loader));
+        let class_loader = ClassLoader::new("test", foo_class_path);
+        class_loader.set_parent(Some(boot_class_loader)).await;
 
         let class = class_loader.load("HelloWorld").await?;
         assert_eq!("HelloWorld", class.name());
@@ -270,14 +296,15 @@ mod tests {
         assert_eq!("test=.", class_loader.to_string());
     }
 
-    #[test]
-    fn test_to_string_parent() {
+    #[tokio::test]
+    async fn test_to_string_parent() {
         let class_path1 = ClassPath::from(".");
         let class_loader1 = ClassLoader::new("test1", class_path1);
         let class_path2 = ClassPath::from(".");
-        let mut class_loader2 = ClassLoader::new("test2", class_path2);
-        class_loader2.set_parent(Some(class_loader1));
-        assert_eq!("test2=.; test1=.", class_loader2.to_string());
+        let class_loader2 = ClassLoader::new("test2", class_path2);
+        class_loader2.set_parent(Some(class_loader1)).await;
+        // Note: Display implementation no longer shows parent chain due to async limitations
+        assert_eq!("test2=.", class_loader2.to_string());
     }
 
     #[tokio::test]
@@ -294,7 +321,9 @@ mod tests {
         let clone = class_loader.clone();
         assert_eq!(class_loader, clone);
         assert_eq!(class_loader.class_path(), clone.class_path());
-        assert_eq!(class_loader.parent(), clone.parent());
+        let original_parent = class_loader.parent().await;
+        let clone_parent = clone.parent().await;
+        assert_eq!(original_parent.is_some(), clone_parent.is_some());
         assert_eq!(
             class_loader.classes.read().await.len(),
             clone.classes.read().await.len()

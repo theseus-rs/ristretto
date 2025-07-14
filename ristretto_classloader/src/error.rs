@@ -37,6 +37,9 @@ pub enum Error {
     /// Illegal access attempt
     #[error("Illegal access: {0}")]
     IllegalAccessError(String),
+    /// Internal error
+    #[error("Internal error: {0}")]
+    InternalError(String),
     /// Invalid value type
     #[error("Invalid value type: {0}")]
     InvalidValueType(String),

@@ -356,7 +356,7 @@ pub(crate) async fn java_lang_ref_access_class(
         ..Default::default()
     };
 
-    let java_lang_ref_access = Class::from(class_file)?;
+    let java_lang_ref_access = Class::from(None, class_file)?;
     thread.register_class(java_lang_ref_access.clone()).await?;
     Ok(java_lang_ref_access)
 }

@@ -2,7 +2,7 @@ use crate::Error::InternalError;
 use crate::Result;
 use crate::thread::Thread;
 use ristretto_classfile::{JAVA_8, JAVA_17};
-use ristretto_classloader::{Class, ConcurrentVec, Object, Reference, Value};
+use ristretto_classloader::{Class, ClassLoader, ConcurrentVec, Object, Reference, Value};
 use std::sync::Arc;
 
 /// Trait for converting a Rust value to a Java object.  Converts to objects of the primitive
@@ -201,9 +201,69 @@ impl JavaObject for String {
     }
 }
 
+async fn to_class_loader_object(thread: &Thread, class_loader: &Arc<ClassLoader>) -> Result<Value> {
+    if let Some(object) = class_loader.object().await {
+        return Ok(object);
+    }
+
+    let name = class_loader.name();
+    if name == "bootstrap" {
+        let builtin_class_loader = Value::Object(None);
+        class_loader
+            .set_object(Some(builtin_class_loader.clone()))
+            .await;
+        return Ok(builtin_class_loader);
+    }
+
+    let vm = thread.vm()?;
+    let builtin_class_loader = if *vm.java_class_file_version() == JAVA_8 {
+        // TODO: implement creating a class loader object for Java 8
+        let builtin_class_loader = Value::Object(None);
+        class_loader
+            .set_object(Some(builtin_class_loader.clone()))
+            .await;
+        builtin_class_loader
+    } else {
+        let name: Value = name.to_object(thread).await?;
+        let parent_class_loader = match class_loader.parent().await {
+            Some(parent_class_loader) => Box::pin(parent_class_loader.to_object(thread)).await?,
+            None => Value::Object(None),
+        };
+        let class_path = class_loader.class_path().to_string();
+        let class_path_object: Value = class_path.to_object(thread).await?;
+
+        let url_class_path = thread
+            .object(
+                "jdk.internal.loader.URLClassPath",
+                "Ljava/lang/String;Z",
+                &[class_path_object, Value::from(false)],
+            )
+            .await?;
+        let builtin_class_loader = thread
+            .object(
+                "jdk.internal.loader.BuiltinClassLoader",
+                "Ljava/lang/String;Ljdk/internal/loader/BuiltinClassLoader;Ljdk/internal/loader/URLClassPath;",
+                &[name, parent_class_loader, url_class_path],
+            )
+            .await?;
+        class_loader
+            .set_object(Some(builtin_class_loader.clone()))
+            .await;
+        builtin_class_loader
+    };
+
+    Ok(builtin_class_loader)
+}
+
+impl JavaObject for Arc<ClassLoader> {
+    async fn to_object(&self, thread: &Thread) -> Result<Value> {
+        to_class_loader_object(thread, self).await
+    }
+}
+
 async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
     if let Some(object) = class.object()? {
-        return Ok(Value::from(object));
+        return Ok(object);
     }
 
     let java_lang_class = thread.class("java.lang.Class").await?;
@@ -211,10 +271,28 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
     let class_name = class.name().replace('/', ".");
     let name = class_name.to_object(thread).await?;
     object.set_value("name", name)?;
-    // TODO: a "null" class loader indicates a system class loader; this should be re-evaluated
-    // to support custom class loaders
-    object.set_value_unchecked("classLoader", Value::Object(None))?;
-    class.set_object(Some(object.clone()))?;
+    let class_loader_object = match class.class_loader()? {
+        Some(class_loader) => Box::pin(to_class_loader_object(thread, &class_loader)).await?,
+        None => Value::Object(None),
+    };
+
+    // Set the class module if applicable
+    if !matches!(class_loader_object, Value::Object(None)) {
+        let vm = thread.vm()?;
+        if *vm.java_class_file_version() > JAVA_8 {
+            let module = thread
+                .try_invoke(
+                    "java.lang.ClassLoader",
+                    "getUnnamedModule()Ljava/lang/Module;",
+                    &[class_loader_object.clone()],
+                )
+                .await?;
+            object.set_value_unchecked("module", module)?;
+        }
+    }
+    object.set_value_unchecked("classLoader", class_loader_object)?;
+
+    class.set_object(Some(Value::from(object.clone())))?;
     let value = Value::from(object);
     Ok(value)
 }

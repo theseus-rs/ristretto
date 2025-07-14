@@ -42,7 +42,7 @@ fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
 
 async fn default_class_loader() -> Result<Arc<ClassLoader>> {
     let (_java_home, _version, class_loader) = runtime::default_class_loader().await?;
-    let class_loader = Arc::new(class_loader);
+    let class_loader = class_loader;
     Ok(class_loader)
 }
 

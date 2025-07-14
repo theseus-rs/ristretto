@@ -562,7 +562,7 @@ pub(crate) mod tests {
             methods,
             ..Default::default()
         };
-        let class = Class::from(class_file)?;
+        let class = Class::from(None, class_file)?;
         let class_loader_lock = vm.class_loader();
         let class_loader = class_loader_lock.write().await;
         class_loader.register(class.clone()).await?;

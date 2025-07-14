@@ -38,7 +38,7 @@ pub(crate) async fn class() -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
         methods: vec![test_method],
         ..Default::default()
     };
-    let class = Class::from(class_file)?;
+    let class = Class::from(None, class_file)?;
     Ok((vm, thread, class))
 }
 

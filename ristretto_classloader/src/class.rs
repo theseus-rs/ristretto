@@ -1,13 +1,13 @@
-use crate::Error::{FieldNotFound, MethodNotFound, PoisonedLock};
+use crate::Error::{FieldNotFound, InternalError, MethodNotFound, PoisonedLock};
 use crate::field::FieldKey;
-use crate::{Field, Method, Object, Result, Value};
+use crate::{ClassLoader, Field, Method, Result, Value};
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
     ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, MethodAccessFlags,
 };
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
-use std::sync::{Arc, LazyLock, RwLock};
+use std::sync::{Arc, LazyLock, RwLock, Weak};
 
 /// A list of methods that are designated as polymorphic in the Java Virtual Machine.
 ///
@@ -66,6 +66,7 @@ pub static POLYMORPHIC_METHODS: LazyLock<HashMap<(&'static str, &'static str), &
 #[expect(clippy::struct_field_names)]
 #[derive(Debug)]
 pub struct Class {
+    class_loader: Option<Weak<ClassLoader>>,
     name: String,
     source_file: Option<String>,
     class_file: ClassFile,
@@ -75,7 +76,7 @@ pub struct Class {
     static_values: Vec<Arc<RwLock<Value>>>,
     object_fields: Vec<Arc<Field>>,
     methods: HashMap<String, Arc<Method>>,
-    object: Arc<RwLock<Option<Object>>>,
+    object: Arc<RwLock<Option<Value>>>,
 }
 
 impl Class {
@@ -94,6 +95,7 @@ impl Class {
             ..Default::default()
         };
         let class = Arc::new(Self {
+            class_loader: None,
             name,
             source_file: None,
             class_file,
@@ -113,7 +115,10 @@ impl Class {
     /// # Errors
     ///
     /// if the class file cannot be read.
-    pub fn from(mut class_file: ClassFile) -> Result<Arc<Self>> {
+    pub fn from(
+        class_loader: Option<Weak<ClassLoader>>,
+        mut class_file: ClassFile,
+    ) -> Result<Arc<Self>> {
         let mut source_file = None;
 
         for attribute in &class_file.attributes {
@@ -156,6 +161,7 @@ impl Class {
         }
 
         let class = Arc::new(Self {
+            class_loader,
             name: class_file.class_name()?.to_string(),
             source_file,
             class_file,
@@ -168,6 +174,23 @@ impl Class {
             object: Arc::new(RwLock::new(None)),
         });
         Ok(class)
+    }
+
+    /// Get the class loader.
+    ///
+    /// # Errors
+    ///
+    /// if the weak reference cannot be upgraded.
+    pub fn class_loader(&self) -> Result<Option<Arc<ClassLoader>>> {
+        let Some(class_loader) = &self.class_loader else {
+            return Ok(None);
+        };
+        let Some(class_loader) = class_loader.upgrade() else {
+            return Err(InternalError(
+                "Class loader is no longer available".to_string(),
+            ));
+        };
+        Ok(Some(class_loader))
     }
 
     /// Get the class name.
@@ -722,7 +745,7 @@ impl Class {
     /// # Errors
     ///
     /// if the object cannot be accessed due to a poisoned lock.
-    pub fn object(&self) -> Result<Option<Object>> {
+    pub fn object(&self) -> Result<Option<Value>> {
         let object_guard = self
             .object
             .read()
@@ -738,7 +761,7 @@ impl Class {
     /// # Errors
     ///
     /// if the object cannot be set due to a poisoned lock.
-    pub fn set_object(&self, object: Option<Object>) -> Result<()> {
+    pub fn set_object(&self, object: Option<Value>) -> Result<()> {
         let mut object_guard = self
             .object
             .write()
@@ -842,9 +865,9 @@ impl Display for Class {
 mod tests {
     use super::*;
     use crate::Error::IllegalAccessError;
-    use crate::{Error, Result, runtime};
+    use crate::{ClassPath, Error, Result, runtime};
     use ristretto_classfile::{BaseType, FieldType};
-    use std::io::Cursor;
+    use std::path::PathBuf;
 
     async fn object_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
@@ -903,8 +926,9 @@ mod tests {
             fields: vec![static_field, static_final_field],
             ..Default::default()
         };
-        let class = Class::from(class_file)?;
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
+        let class_loader = Arc::new(class_loader);
+        let class = Class::from(Some(Arc::downgrade(&class_loader)), class_file)?;
         class_loader.register(class.clone()).await?;
         Ok(class)
     }
@@ -914,11 +938,15 @@ mod tests {
         class_loader.load("java.io.Serializable").await
     }
 
-    fn simple_class() -> Result<Arc<Class>> {
-        let bytes = include_bytes!("../../classes/Simple.class").to_vec();
-        let mut cursor = Cursor::new(bytes);
-        let class_file = ClassFile::from_bytes(&mut cursor)?;
-        Class::from(class_file)
+    async fn simple_class() -> Result<Arc<Class>> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_directory = cargo_manifest.join("..").join("classes");
+        let class_path_entries = [classes_directory.to_string_lossy().to_string()];
+
+        let class_path = ClassPath::from(class_path_entries.join(":"));
+        let class_loader = ClassLoader::new("test", class_path);
+        let class_name = "Simple";
+        class_loader.load(class_name).await
     }
 
     #[tokio::test]
@@ -1442,9 +1470,9 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_main_method() -> Result<()> {
-        let class = simple_class()?;
+    #[tokio::test]
+    async fn test_main_method() -> Result<()> {
+        let class = simple_class().await?;
         let method = class.main_method().expect("method");
         assert_eq!("main", method.name());
         assert_eq!("([Ljava/lang/String;)V", method.descriptor());
