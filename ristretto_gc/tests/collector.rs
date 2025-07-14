@@ -76,7 +76,7 @@ fn test_garbage_collector_does_not_free_root() -> Result<()> {
 
     assert_eq!(stats.collections_started, 1);
     assert_eq!(stats.collections_completed, 1);
-    assert_eq!(stats.bytes_allocated, 8);
+    assert_eq!(stats.bytes_allocated, 4);
     assert_eq!(stats.bytes_freed, 0);
 
     assert_eq!(*root, 42);

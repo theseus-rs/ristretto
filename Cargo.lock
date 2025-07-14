@@ -2074,7 +2074,6 @@ dependencies = [
 name = "ristretto_gc"
 version = "0.23.0"
 dependencies = [
- "bitflags 2.9.1",
  "criterion",
  "dashmap",
  "rayon",

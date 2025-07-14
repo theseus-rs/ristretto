@@ -1,6 +1,6 @@
 use crate::collector::{GarbageCollector, Trace};
 use crate::error::Result;
-use crate::gc_box::{GcBox, GcState};
+use crate::gc_box::GcBox;
 use crate::pointers::SafePtr;
 use crate::root_guard::GcRootGuard;
 use crate::{Finalize, GC};
@@ -123,54 +123,6 @@ impl<T> Gc<T> {
         // Safety: self.ptr is guaranteed to be valid and non-null
         // because it was created from Box::into_raw and stored in NonNull
         unsafe { self.ptr.as_ref() }
-    }
-
-    /// Write barrier for concurrent garbage collection.
-    ///
-    /// Call this method when storing a Gc pointer into another Gc object during concurrent marking.
-    /// This maintains the tri-color invariant to ensure correctness of concurrent collection.
-    pub fn write_barrier(&self, collector: &GarbageCollector)
-    where
-        T: Trace,
-    {
-        // Fast path: if we're not in concurrent marking, no barrier needed
-        if let Ok(is_marking) = collector.is_concurrent_marking() {
-            if !is_marking {
-                return;
-            }
-        } else {
-            // If we can't determine the phase, err on the side of caution and skip
-            return;
-        }
-
-        let inner = self.inner();
-        let current_color = inner.get_color();
-
-        // Tri-color invariant: Black objects should not reference White objects
-        // If this object is white during concurrent marking, we need to ensure
-        // it gets marked to maintain the invariant
-        if current_color == GcState::WHITE {
-            // Use atomic compare-and-swap to safely transition from WHITE to GRAY
-            // This prevents race conditions where multiple threads try to mark the same object
-            if inner
-                .state
-                .compare_exchange_weak(
-                    GcState::WHITE.bits(),
-                    GcState::GRAY.bits(),
-                    std::sync::atomic::Ordering::AcqRel,
-                    std::sync::atomic::Ordering::Acquire,
-                )
-                .is_ok()
-            {
-                // Successfully changed WHITE to GRAY, now mark and enqueue
-                if inner.mark() {
-                    // Successfully marked this object for the first time
-                    // Add it to the mark queue for processing
-                    collector.add_to_mark_queue(&**self);
-                }
-            }
-        }
-        // Gray and Black objects don't need additional handling in the write barrier
     }
 
     /// Add this `Gc` object as a root to the global garbage collector.
