@@ -73,6 +73,7 @@ mod local_variables;
 mod operand_stack;
 mod parameters;
 mod rust_value;
+mod string_pool;
 #[cfg(test)]
 pub(crate) mod test;
 mod thread;
