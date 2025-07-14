@@ -3,6 +3,7 @@ use crate::handles::{FileHandle, HandleManager, ThreadHandle};
 use crate::intrinsic_methods::MethodRegistry;
 use crate::java_object::JavaObject;
 use crate::rust_value::RustValue;
+use crate::string_pool::StringPool;
 use crate::thread::Thread;
 use crate::{Configuration, ConfigurationBuilder, Result};
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_PREVIEW_MINOR_VERSION, Version};
@@ -40,6 +41,7 @@ pub struct VM {
     next_thread_id: AtomicU64,
     thread_handles: HandleManager<u64, ThreadHandle>,
     file_handles: HandleManager<String, FileHandle>,
+    string_pool: StringPool,
 }
 
 /// VM
@@ -150,6 +152,7 @@ impl VM {
             next_thread_id: AtomicU64::new(1),
             thread_handles: HandleManager::new(),
             file_handles: HandleManager::new(),
+            string_pool: StringPool::new(),
         });
         vm.initialize().await?;
         Ok(vm)
@@ -474,6 +477,11 @@ impl VM {
     {
         let thread = self.primordial_thread().await?;
         thread.object(class_name, descriptor, parameters).await
+    }
+
+    /// The string pool is used to store and intern strings for the VM.
+    pub(crate) fn string_pool(&self) -> &StringPool {
+        &self.string_pool
     }
 }
 
