@@ -1,0 +1,40 @@
+InternalError("Throwable(Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[4]
+  detailMessage=String(\"Internal error: No reference found\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(4)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
+stdout: === Basic Class.forName ===
+Loaded String class: java.lang.String
+Loaded Object class: java.lang.Object
+Loaded Integer class: java.lang.Integer
+
+=== Array Class Loading ===
+String array class: [Ljava.lang.String;
+Is array: true
+Component type: java.lang.String
+Int array class: [I
+Component type: int
+String matrix class: [[Ljava.lang.String;
+
+=== Primitive Class Loading ===
+ERROR: Should not be able to load primitive via forName
+Int primitive class: int
+Is primitive: true
+
+=== Nested Class Loading ===
+Nested class: Test$NestedClass
+Simple name: NestedClass
+Enclosing class: Test
+Nested interface: Test$NestedInterface
+Is interface: true
+Nested enum: Test$NestedEnum
+Is enum: true
+
+=== Class Loading with Initialization ===
+Loaded with initialization: Test
+Loaded without initialization: Test
+
+=== ClassLoader Operations ===
