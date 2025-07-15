@@ -1,0 +1,21 @@
+expected
+Miller-Rabin Primality Test Results:
+97 is probably prime
+100 is composite
+101 is composite
+561 is composite
+1009 is probably prime
+1013 is composite
+2047 is composite
+3571 is composite
+
+actual
+Miller-Rabin Primality Test Results:
+97 is composite
+100 is composite
+101 is composite
+561 is composite
+1009 is probably prime
+1013 is composite
+2047 is composite
+3571 is composite

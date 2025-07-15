@@ -1,0 +1,11 @@
+expected
+String 1: kitten
+String 2: sitting
+Edit Distance: 3
+Edit distance between 'kitten' and 'sitting': 3
+
+actual
+String 1: kitten
+String 2: sitting
+Edit Distance: 6
+Edit distance between 'kitten' and 'sitting': 6
