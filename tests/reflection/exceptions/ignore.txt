@@ -1,0 +1,10 @@
+InternalError("Throwable(Object(java/lang/ClassCastException)
+  backtrace=java/lang/StackTraceElement[14]
+  detailMessage=String(\"class [Ljava.util.stream.StreamOpFlag$Type; cannot be cast to class [Ljava.lang.Enum;\")
+  cause=Object(class java/lang/ClassCastException)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(14)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
+stdout: === NoSuchMethodException Tests ===
+Correctly caught NoSuchMethodException: Test$TestClass.nonExistentMethod()
