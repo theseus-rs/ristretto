@@ -1,0 +1,8 @@
+InternalError("Throwable(Object(java/lang/IllegalArgumentException)
+  backtrace=java/lang/StackTraceElement[15]
+  detailMessage=String(\"not primitive: int\")
+  cause=Object(class java/lang/IllegalArgumentException)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(15)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
