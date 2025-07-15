@@ -10,11 +10,15 @@ use std::sync::Arc;
 #[intrinsic_method("java/lang/String.intern()Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn intern(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let value = parameters.pop()?;
-    // TODO: implement string interning
+    let value: String = value.try_into()?;
+
+    let vm = thread.vm()?;
+    let string_pool = vm.string_pool();
+    let value = string_pool.intern(&thread, &value).await?;
     Ok(Some(value))
 }
 
