@@ -1,0 +1,116 @@
+InternalError("Throwable(Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[9]
+  detailMessage=String(\"Method not found: java/util/ArrayList.subListRangeCheck(III)V\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(9)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
+stdout: === Unicode Category Tests ===
+Latin: Hello Café
+Latin length: 10
+Latin toUpperCase(): HELLO CAFÉ
+Latin toLowerCase(): hello café
+Cyrillic: Привет мир
+Cyrillic length: 10
+Cyrillic toUpperCase(): ПРИВЕТ МИР
+Cyrillic toLowerCase(): привет мир
+Greek: Γεια σας κόσμος
+Greek length: 15
+Greek toUpperCase(): ΓΕΙΑ ΣΑΣ ΚΌΣΜΟΣ
+Greek toLowerCase(): γεια σας κόσμος
+Arabic: مرحبا بالعالم
+Arabic length: 13
+Arabic toUpperCase(): مرحبا بالعالم
+Arabic toLowerCase(): مرحبا بالعالم
+Hebrew: שלום עולם
+Hebrew length: 9
+Hebrew toUpperCase(): שלום עולם
+Hebrew toLowerCase(): שלום עולם
+Chinese: 你好世界
+Chinese length: 4
+Chinese toUpperCase(): 你好世界
+Chinese toLowerCase(): 你好世界
+Japanese: こんにちは世界 コンニチハ
+Japanese length: 13
+Japanese toUpperCase(): こんにちは世界 コンニチハ
+Japanese toLowerCase(): こんにちは世界 コンニチハ
+Korean: 안녕하세요 세계
+Korean length: 8
+Korean toUpperCase(): 안녕하세요 세계
+Korean toLowerCase(): 안녕하세요 세계
+
+=== Mixed Script Tests ===
+Mixed scripts: Hello 世界 мир עולם
+Mixed length: 17
+Mixed toUpperCase(): HELLO 世界 МИР עולם
+Mixed toLowerCase(): hello 世界 мир עולם
+
+=== Diacritics and Combining Characters Tests ===
+Diacritics: café naïve résumé
+Diacritics length: 17
+Diacritics toUpperCase(): CAFÉ NAÏVE RÉSUMÉ
+Diacritics toLowerCase(): café naïve résumé
+Combining e + acute: e\\u0301
+Precomposed é: é
+Combining length: 7
+Precomposed length: 1
+Are they equal? false
+
+=== Emoji and Surrogate Pair Tests ===
+Emoji: 😀😃😄😁😊😉😍
+Emoji length: 14
+Emoji codePointCount: 7
+Emoji with skin tone: 👋🏻👋🏼👋🏽👋🏾👋🏿
+Emoji with modifier length: 20
+Emoji with modifier codePointCount: 10
+Flag emoji: 🇺🇸🇬🇧🇫🇷🇩🇪🇯🇵
+Flag emoji length: 20
+Flag emoji codePointCount: 10
+Complex emoji: 👨\u{200d}👩\u{200d}👧\u{200d}👦👨\u{200d}💻👩\u{200d}🚀
+Complex emoji length: 21
+Complex emoji codePointCount: 13
+
+=== Normalization Tests ===
+Precomposed Åpfel: Åpfel
+Decomposed Åpfel: A\\u030Apfel
+Precomposed length: 5
+Decomposed length: 11
+Are they equal? false
+
+=== Case Conversion Edge Cases ===
+German ß: Straße
+German toUpperCase(): STRASSE
+German toLowerCase(): straße
+Turkish İ: İstanbul
+Turkish toUpperCase(): İSTANBUL
+Turkish toLowerCase(): i\u{307}stanbul
+
+=== International Sorting Tests ===
+Original order:
+  apple
+  ápple
+  café
+  zebra
+  Zebra
+  naïve
+After Arrays.sort():
+  Zebra
+  apple
+  café
+  naïve
+  zebra
+  ápple
+
+=== Cross-Script Operations Tests ===
+English + Russian: Hello Привет
+Russian + Chinese: Привет 你好
+All three: Hello Привет 你好
+International string: Hello мир 世界 שלום
+indexOf('мир'): 6
+indexOf('世界'): 10
+indexOf('שלום'): 13
+substring(0, 5): 'Hello'
+substring(6, 9): 'мир'
+substring(10, 12): '世界'
+After replace('мир', 'world'): Hello world 世界 שלום

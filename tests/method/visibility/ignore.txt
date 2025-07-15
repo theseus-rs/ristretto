@@ -1,0 +1,21 @@
+expected
+Child public method
+Child protected method
+Child package method
+Child private method (not override)
+Parent private method
+Child public method
+Child protected method
+Child package method
+Parent private method
+
+actual
+Child public method
+Child protected method
+Child package method
+Child private method (not override)
+Child private method (not override)
+Child public method
+Child protected method
+Child package method
+Child private method (not override)

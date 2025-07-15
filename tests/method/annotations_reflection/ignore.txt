@@ -1,0 +1,9 @@
+InternalError("Throwable(Object(java/lang/annotation/AnnotationFormatError)
+  backtrace=java/lang/StackTraceElement[24]
+  detailMessage=String(\"Attempt to create proxy for a non-annotation type: java.lang.annotation.Retention\")
+  cause=Object(class java/lang/annotation/AnnotationFormatError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(24)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
+stdout: === Testing Method Reflection ===
