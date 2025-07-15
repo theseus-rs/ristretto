@@ -1,0 +1,4 @@
+JNI is not currently supported; also fails with:
+
+thread '<unknown>' has overflowed its stack
+fatal runtime error: stack overflow, aborting

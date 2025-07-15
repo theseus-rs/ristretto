@@ -1,0 +1,30 @@
+InternalError("Throwable(Object(java/lang/IllegalArgumentException)
+  backtrace=java/lang/StackTraceElement[33]
+  detailMessage=String(\"not primitive: int\")
+  cause=Object(class java/lang/IllegalArgumentException)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(33)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
+stdout: === substring Tests ===
+Original: Hello World
+substring(0, 5): Hello
+substring(6): World
+substring(0, 0): 
+substring(5, 5): 
+substring(0, length): Hello World
+
+=== concat Tests ===
+'Hello'.concat(' World'): Hello World
+'Hello'.concat(''): Hello
+''.concat('World'): World
+
+=== replace Tests ===
+Original: Hello World Hello
+replace('l', 'L'): HeLLo WorLd HeLLo
+replace('Hello', 'Hi'): Hi World Hi
+replace('xyz', 'abc'): Hello World Hello
+replace('', 'X'): XHXeXlXlXoX XWXoXrXlXdX XHXeXlXlXoX
+
+=== replaceAll Tests ===
+Original: Hello123World456

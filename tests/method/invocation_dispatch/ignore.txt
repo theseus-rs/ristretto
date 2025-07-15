@@ -1,0 +1,91 @@
+expected
+=== Virtual Method Dispatch ===
+Parent virtual method
+Child virtual method
+Parent virtual method
+GrandChild virtual method
+Child virtual method
+Parent virtual method
+
+=== Polymorphic Dispatch ===
+Parent virtual method
+Child virtual method
+Parent virtual method
+GrandChild virtual method
+Child virtual method
+Parent virtual method
+
+=== Static Method Dispatch ===
+Parent static method
+Child static method
+Parent static method
+
+=== Final Method Dispatch ===
+Parent final method
+Parent final method
+
+=== Private Method Behavior ===
+Parent private method
+Parent private method
+Child private method (not override)
+
+=== Interface Method Dispatch ===
+Interface method implementation
+Overridden default method
+Interface default method
+Interface method implementation
+Overridden default method
+Interface default method
+
+=== Method Resolution and Overloading ===
+method(String): Hello
+method(int): 42
+method(Integer): 42
+method(Object): Hello
+method(Object): 42
+
+actual
+=== Virtual Method Dispatch ===
+Parent virtual method
+Child virtual method
+Parent virtual method
+GrandChild virtual method
+Child virtual method
+Parent virtual method
+
+=== Polymorphic Dispatch ===
+Parent virtual method
+Child virtual method
+Parent virtual method
+GrandChild virtual method
+Child virtual method
+Parent virtual method
+
+=== Static Method Dispatch ===
+Parent static method
+Child static method
+Parent static method
+
+=== Final Method Dispatch ===
+Parent final method
+Parent final method
+
+=== Private Method Behavior ===
+Parent private method
+Child private method (not override)
+Child private method (not override)
+
+=== Interface Method Dispatch ===
+Interface method implementation
+Overridden default method
+Interface default method
+Interface method implementation
+Overridden default method
+Interface default method
+
+=== Method Resolution and Overloading ===
+method(String): Hello
+method(int): 42
+method(Integer): 42
+method(Object): Hello
+method(Object): 42

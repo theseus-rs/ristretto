@@ -12,6 +12,7 @@ use tracing_subscriber::{EnvFilter, fmt};
 
 const TEST_CLASS_NAME: &str = "Test";
 const TEST_FILE: &str = "Test.java";
+const IGNORE_FILE: &str = "ignore.txt";
 
 #[test]
 fn compatibility_tests() -> Result<()> {
@@ -36,6 +37,14 @@ fn compatibility_tests() -> Result<()> {
             .unwrap_or(&test_dir_string)
             .strip_prefix("/")
             .unwrap_or(&test_dir_string);
+
+        // Determine if the test should be ignored
+        let ignore_file = test_dir.join(IGNORE_FILE);
+        if ignore_file.exists() {
+            debug!("Ignoring test: {test_name}");
+            return;
+        }
+
         info!("Running test: {test_name}");
 
         if let Ok(expected_output) = expected_output(&java_home, test_dir) {
