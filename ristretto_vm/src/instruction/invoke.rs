@@ -1,4 +1,5 @@
 use crate::Error::InternalError;
+use crate::JavaError::NullPointerException;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
@@ -272,8 +273,15 @@ async fn invoke_method(
     // TODO: evaluate refactoring this
     match invocation_type {
         InvocationType::Interface | InvocationType::Virtual => {
-            let Some(Value::Object(Some(reference))) = parameters.first() else {
-                return Err(InternalError("No reference found".to_string()));
+            let Some(Value::Object(this_ref)) = parameters.first() else {
+                return Err(InternalError(
+                    "Expected object reference for virtual method call".to_string(),
+                ));
+            };
+
+            // Check if 'this' reference is null - this should throw NullPointerException
+            let Some(reference) = this_ref else {
+                return Err(NullPointerException("".to_string()).into());
             };
 
             // Private methods have special resolution rules: they are always resolved

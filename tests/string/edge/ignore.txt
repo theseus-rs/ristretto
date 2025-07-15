@@ -1,10 +1,2 @@
-InternalError("Throwable(Object(java/lang/InternalError)
-  backtrace=java/lang/StackTraceElement[6]
-  detailMessage=String(\"Internal error: No reference found\")
-  cause=Object(class java/lang/InternalError)
-  stackTrace=java/lang/StackTraceElement[0]
-  depth=int(6)
-  suppressedExceptions=Object(class java/util/Collections$EmptyList)
-):
-stdout: === Null Handling Tests ===
-String.valueOf(null): null
+thread '<unknown>' has overflowed its stack
+fatal runtime error: stack overflow, aborting
