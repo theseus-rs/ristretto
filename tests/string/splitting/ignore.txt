@@ -1,9 +1,19 @@
-InternalError("Throwable(Object(java/lang/InternalError)
-  backtrace=java/lang/StackTraceElement[9]
-  detailMessage=String(\"Method not found: java/util/ArrayList.subListRangeCheck(III)V\")
-  cause=Object(class java/lang/InternalError)
+InternalError("Throwable(Object(java/lang/IllegalArgumentException)
+  backtrace=java/lang/StackTraceElement[34]
+  detailMessage=String(\"not primitive: int\")
+  cause=Object(class java/lang/IllegalArgumentException)
   stackTrace=java/lang/StackTraceElement[0]
-  depth=int(9)
+  depth=int(34)
   suppressedExceptions=Object(class java/util/Collections$EmptyList)
 ):
 stdout: === Basic split Tests ===
+Original: apple,banana,cherry,date
+split(','): 'apple' 'banana' 'cherry' 'date' 
+
+=== split with limit Tests ===
+Original: one,two,three,four,five
+split(',', 3): 'one' 'two' 'three,four,five' 
+split(',', 0): 'one' 'two' 'three' 'four' 'five' 
+split(',', -1): 'one' 'two' 'three' 'four' 'five' 
+
+=== split with regex Tests ===

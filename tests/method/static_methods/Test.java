@@ -5,6 +5,10 @@ public class Test {
             System.out.println("Parent static method");
         }
 
+        public static void parentOnlyStaticMethod() {
+            System.out.println("Parent only static method");
+        }
+
         public void instanceMethod() {
             System.out.println("Parent instance method");
         }
@@ -32,6 +36,8 @@ public class Test {
         Child child = new Child();
         child.staticMethod();
         child.instanceMethod();
+
+        Parent.parentOnlyStaticMethod();
+        Child.parentOnlyStaticMethod();
     }
 }
-

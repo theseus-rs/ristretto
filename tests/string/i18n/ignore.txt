@@ -1,9 +1,9 @@
-InternalError("Throwable(Object(java/lang/InternalError)
-  backtrace=java/lang/StackTraceElement[9]
-  detailMessage=String(\"Method not found: java/util/ArrayList.subListRangeCheck(III)V\")
-  cause=Object(class java/lang/InternalError)
+InternalError("Throwable(Object(java/lang/IllegalArgumentException)
+  backtrace=java/lang/StackTraceElement[34]
+  detailMessage=String(\"not primitive: int\")
+  cause=Object(class java/lang/IllegalArgumentException)
   stackTrace=java/lang/StackTraceElement[0]
-  depth=int(9)
+  depth=int(34)
   suppressedExceptions=Object(class java/util/Collections$EmptyList)
 ):
 stdout: === Unicode Category Tests ===
@@ -114,3 +114,19 @@ substring(0, 5): 'Hello'
 substring(6, 9): 'мир'
 substring(10, 12): '世界'
 After replace('мир', 'world'): Hello world 世界 שלום
+Split by bullet character:
+  'apple'
+  'banana'
+  'cherry'
+  'date'
+
+=== Code Point Tests ===
+Code point test string: A𝐁𝐂
+Length: 5
+Code point count: 3
+Code point at 0: 65 (char: A)
+Code point at 1: 119809 (char: 𝐁)
+Code point at 3: 119810 (char: 𝐂)
+
+=== Byte Representation Tests ===
+'Hello' bytes: 
