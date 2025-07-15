@@ -180,9 +180,51 @@ pub(crate) async fn invokestatic(
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-    let method = class.try_get_method(method_name, method_descriptor)?;
+    let (method_class, method) = try_get_static_method(&class, method_name, method_descriptor)?;
 
-    invoke_method(&thread, stack, class, method, &InvocationType::Static).await
+    invoke_method(
+        &thread,
+        stack,
+        method_class,
+        method,
+        &InvocationType::Static,
+    )
+    .await
+}
+
+/// Get a static method by name and descriptor, searching the inheritance hierarchy.
+///
+/// # Errors
+///
+/// if the method is not found.
+fn try_get_static_method<S: AsRef<str>>(
+    class: &Arc<Class>,
+    name: S,
+    descriptor: S,
+) -> Result<(Arc<Class>, Arc<Method>)> {
+    let name = name.as_ref();
+    let descriptor = descriptor.as_ref();
+
+    if let Some(method) = class.method(name, descriptor) {
+        return Ok((class.clone(), method));
+    }
+
+    let Some(parent) = class.parent()? else {
+        return Err(Error::from(MethodNotFound {
+            class_name: class.name().to_string(),
+            method_name: name.to_string(),
+            method_descriptor: descriptor.to_string(),
+        }));
+    };
+
+    let Ok((class, method)) = try_get_static_method(&parent, name, descriptor) else {
+        return Err(Error::from(MethodNotFound {
+            class_name: class.name().to_string(),
+            method_name: name.to_string(),
+            method_descriptor: descriptor.to_string(),
+        }));
+    };
+    Ok((class, method))
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.invokeinterface>
@@ -337,6 +379,36 @@ mod test {
                 method_name,
                 method_descriptor
             })) if class_name == "java/util/AbstractSet" && method_name == "foo" && method_descriptor == "()V"
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_get_static_method_inheritance() -> Result<()> {
+        let vm = VM::default().await?;
+        let class = vm.class("java.util.ArrayList").await?;
+        // Test that ArrayList can find the static subListRangeCheck method from AbstractList
+        let (method_class, method) = try_get_static_method(&class, "subListRangeCheck", "(III)V")?;
+        assert_eq!(method.name(), "subListRangeCheck");
+        assert_eq!(method.descriptor(), "(III)V");
+        assert!(method.is_static());
+        // Verify that the method was found in the parent class (AbstractList)
+        assert_eq!(method_class.name(), "java/util/AbstractList");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_get_static_method_not_found() -> Result<()> {
+        let vm = VM::default().await?;
+        let class = vm.class("java.util.ArrayList").await?;
+        let result = try_get_static_method(&class, "nonExistentStaticMethod", "()V");
+        assert!(matches!(
+            result,
+            Err(ClassLoaderError(MethodNotFound {
+                class_name,
+                method_name,
+                method_descriptor
+            })) if class_name == "java/util/ArrayList" && method_name == "nonExistentStaticMethod" && method_descriptor == "()V"
         ));
         Ok(())
     }
