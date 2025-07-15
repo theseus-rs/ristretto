@@ -1,4 +1,5 @@
 use crate::Error::InternalError;
+use crate::JavaError::IllegalArgumentException;
 use crate::Result;
 use crate::intrinsic_methods::java::lang::object::hash_code;
 use crate::intrinsic_methods::properties;
@@ -13,7 +14,6 @@ use ristretto_classfile::{
 };
 use ristretto_classloader::{Class, ConcurrentVec, Object, Reference, Value};
 use ristretto_macros::intrinsic_method;
-use std::cmp::min;
 use std::env::consts::OS;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -23,18 +23,74 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq + Send + Sync>(
     source: &ConcurrentVec<T>,
     source_position: usize,
     destination: &ConcurrentVec<T>,
-    mut destination_position: usize,
+    destination_position: usize,
     length: usize,
 ) -> Result<()> {
-    // TODO: optimize this logic to avoid the need for looping
-    let max_length = min(source_position + length, source.len()?);
-    for i in source_position..max_length {
-        let Some(value) = source.get(i)? else {
-            return Err(InternalError("invalid source array index".to_string()));
-        };
-        destination.set(destination_position, value)?;
-        destination_position += 1;
+    // Early return for zero-length copies
+    if length == 0 {
+        return Ok(());
     }
+
+    // Validate bounds before copying; get lengths once to avoid multiple lock acquisitions
+    let source_len = source.len()?;
+    let destination_len = destination.len()?;
+
+    if source_position + length > source_len {
+        return Err(
+            IllegalArgumentException("source array index out of bounds".to_string()).into(),
+        );
+    }
+    if destination_position + length > destination_len {
+        return Err(
+            IllegalArgumentException("destination array index out of bounds".to_string()).into(),
+        );
+    }
+
+    // Check if source and destination are the same array
+    if source.ptr_eq(destination) {
+        // Same array; need to handle overlapping regions
+        let mut array = destination.as_mut()?;
+
+        // Handle overlapping regions correctly
+        let regions_overlap = (source_position < destination_position
+            && source_position + length > destination_position)
+            || (destination_position < source_position
+                && destination_position + length > source_position);
+
+        if regions_overlap && destination_position > source_position {
+            // Copy backwards to avoid overwriting source elements
+            for i in (0..length).rev() {
+                let value = array[source_position + i].clone();
+                array[destination_position + i] = value;
+            }
+        } else if regions_overlap {
+            // Copy forwards for left shift or other overlapping cases
+            for i in 0..length {
+                let value = array[source_position + i].clone();
+                array[destination_position + i] = value;
+            }
+        } else {
+            // Non-overlapping regions in same array; use slice operations for better performance
+            let (src_start, src_end) = (source_position, source_position + length);
+            let (dst_start, dst_end) = (destination_position, destination_position + length);
+
+            // Create a temporary vector to hold the source elements
+            let temp: Vec<T> = array[src_start..src_end].to_vec();
+            array[dst_start..dst_end].clone_from_slice(&temp);
+        }
+    } else {
+        // Different arrays; can optimize with bulk operations
+        let source_guard = source.as_ref()?;
+        let mut destination_guard = destination.as_mut()?;
+
+        // Use slice operations for maximum efficiency
+        let source_slice = &source_guard[source_position..source_position + length];
+        let destination_slice =
+            &mut destination_guard[destination_position..destination_position + length];
+
+        destination_slice.clone_from_slice(source_slice);
+    }
+
     Ok(())
 }
 
@@ -418,6 +474,260 @@ pub(crate) async fn set_security_manager(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Error::JavaError;
+    use ristretto_classloader::ConcurrentVec;
+
+    #[test]
+    fn test_arraycopy_vec_basic_copy() -> Result<()> {
+        let source = ConcurrentVec::from(vec![1, 2, 3, 4, 5]);
+        let destination = ConcurrentVec::from(vec![0, 0, 0, 0, 0]);
+
+        arraycopy_vec(&source, 0, &destination, 0, 3)?;
+
+        assert_eq!(destination.get(0)?, Some(1));
+        assert_eq!(destination.get(1)?, Some(2));
+        assert_eq!(destination.get(2)?, Some(3));
+        assert_eq!(destination.get(3)?, Some(0)); // Unchanged
+        assert_eq!(destination.get(4)?, Some(0)); // Unchanged
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_offset_copy() -> Result<()> {
+        let source = ConcurrentVec::from(vec![1, 2, 3, 4, 5]);
+        let destination = ConcurrentVec::from(vec![0, 0, 0, 0, 0]);
+
+        // Copy from source[1..3] to destination[2..4]
+        arraycopy_vec(&source, 1, &destination, 2, 2)?;
+
+        assert_eq!(destination.get(0)?, Some(0)); // Unchanged
+        assert_eq!(destination.get(1)?, Some(0)); // Unchanged
+        assert_eq!(destination.get(2)?, Some(2)); // source[1]
+        assert_eq!(destination.get(3)?, Some(3)); // source[2]
+        assert_eq!(destination.get(4)?, Some(0)); // Unchanged
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_full_array_copy() -> Result<()> {
+        let source = ConcurrentVec::from(vec![10, 20, 30]);
+        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+
+        arraycopy_vec(&source, 0, &destination, 0, 3)?;
+
+        assert_eq!(destination.get(0)?, Some(10));
+        assert_eq!(destination.get(1)?, Some(20));
+        assert_eq!(destination.get(2)?, Some(30));
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_zero_length() -> Result<()> {
+        let source = ConcurrentVec::from(vec![1, 2, 3]);
+        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+
+        arraycopy_vec(&source, 0, &destination, 0, 0)?;
+
+        // Nothing should be copied
+        assert_eq!(destination.get(0)?, Some(0));
+        assert_eq!(destination.get(1)?, Some(0));
+        assert_eq!(destination.get(2)?, Some(0));
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_single_element() -> Result<()> {
+        let source = ConcurrentVec::from(vec![42]);
+        let destination = ConcurrentVec::from(vec![0]);
+
+        arraycopy_vec(&source, 0, &destination, 0, 1)?;
+
+        assert_eq!(destination.get(0)?, Some(42));
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_copy_to_end() -> Result<()> {
+        let source = ConcurrentVec::from(vec![1, 2, 3, 4, 5]);
+        let destination = ConcurrentVec::from(vec![0, 0, 0, 0, 0]);
+
+        // Copy last 2 elements of source to last 2 positions of destination
+        arraycopy_vec(&source, 3, &destination, 3, 2)?;
+
+        assert_eq!(destination.get(0)?, Some(0)); // Unchanged
+        assert_eq!(destination.get(1)?, Some(0)); // Unchanged
+        assert_eq!(destination.get(2)?, Some(0)); // Unchanged
+        assert_eq!(destination.get(3)?, Some(4)); // source[3]
+        assert_eq!(destination.get(4)?, Some(5)); // source[4]
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_overlapping_arrays_different_objects() -> Result<()> {
+        let source = ConcurrentVec::from(vec![1, 2, 3, 4, 5]);
+        let destination = ConcurrentVec::from(vec![10, 11, 12, 13, 14]);
+
+        // This should work fine since they're different arrays
+        arraycopy_vec(&source, 1, &destination, 0, 3)?;
+
+        assert_eq!(destination.get(0)?, Some(2)); // source[1]
+        assert_eq!(destination.get(1)?, Some(3)); // source[2]
+        assert_eq!(destination.get(2)?, Some(4)); // source[3]
+        assert_eq!(destination.get(3)?, Some(13)); // Unchanged
+        assert_eq!(destination.get(4)?, Some(14)); // Unchanged
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_source_bounds_error() {
+        let source = ConcurrentVec::from(vec![1, 2, 3]);
+        let destination = ConcurrentVec::from(vec![0, 0, 0, 0, 0]);
+
+        // Try to copy 3 elements starting from position 2 (would need source[2,3,4] but only have [0,1,2])
+        let result = arraycopy_vec(&source, 2, &destination, 0, 2);
+        assert!(result.is_err());
+        assert!(matches!(
+            result,
+            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("source array index out of bounds")
+        ));
+    }
+
+    #[test]
+    fn test_arraycopy_vec_destination_bounds_error() {
+        let source = ConcurrentVec::from(vec![1, 2, 3, 4, 5]);
+        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+
+        // Try to copy 3 elements to position 1 (would need dest[1,2,3] but only have [0,1,2])
+        let result = arraycopy_vec(&source, 0, &destination, 1, 3);
+        assert!(matches!(
+            result,
+            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("destination array index out of bounds")
+        ));
+    }
+
+    #[test]
+    fn test_arraycopy_vec_source_position_out_of_bounds() {
+        let source = ConcurrentVec::from(vec![1, 2, 3]);
+        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+
+        // Try to start copying from position 3 (doesn't exist)
+        let result = arraycopy_vec(&source, 3, &destination, 0, 1);
+        assert!(result.is_err());
+        assert!(matches!(
+            result,
+            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("source array index out of bounds")
+        ));
+    }
+
+    #[test]
+    fn test_arraycopy_vec_destination_position_out_of_bounds() {
+        let source = ConcurrentVec::from(vec![1, 2, 3]);
+        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+
+        // Try to start copying to position 3 (doesn't exist)
+        let result = arraycopy_vec(&source, 0, &destination, 3, 1);
+        assert!(result.is_err());
+        assert!(matches!(
+            result,
+            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("destination array index out of bounds")
+        ));
+    }
+
+    #[test]
+    fn test_arraycopy_vec_exact_boundary() -> Result<()> {
+        let source = ConcurrentVec::from(vec![1, 2, 3]);
+        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+
+        // Copy exactly to the boundary - should work
+        arraycopy_vec(&source, 0, &destination, 0, 3)?;
+
+        assert_eq!(destination.get(0)?, Some(1));
+        assert_eq!(destination.get(1)?, Some(2));
+        assert_eq!(destination.get(2)?, Some(3));
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_empty_arrays() -> Result<()> {
+        let source: ConcurrentVec<i32> = ConcurrentVec::from(vec![]);
+        let destination: ConcurrentVec<i32> = ConcurrentVec::from(vec![]);
+
+        // Copying 0 elements from empty arrays should work
+        arraycopy_vec(&source, 0, &destination, 0, 0)?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_empty_source_error() {
+        let source: ConcurrentVec<i32> = ConcurrentVec::from(vec![]);
+        let destination = ConcurrentVec::from(vec![0]);
+
+        // Try to copy from empty array
+        let result = arraycopy_vec(&source, 0, &destination, 0, 1);
+        assert!(matches!(
+            result,
+            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("source array index out of bounds")
+        ));
+    }
+
+    #[test]
+    fn test_arraycopy_vec_empty_destination_error() {
+        let source = ConcurrentVec::from(vec![1]);
+        let destination: ConcurrentVec<i32> = ConcurrentVec::from(vec![]);
+
+        // Try to copy to empty array
+        let result = arraycopy_vec(&source, 0, &destination, 0, 1);
+        assert!(matches!(
+            result,
+            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("destination array index out of bounds")
+        ));
+    }
+
+    #[test]
+    fn test_arraycopy_vec_string_copy() -> Result<()> {
+        let source = ConcurrentVec::from(vec![
+            "hello".to_string(),
+            "world".to_string(),
+            "test".to_string(),
+        ]);
+        let destination = ConcurrentVec::from(vec!["".to_string(), "".to_string(), "".to_string()]);
+
+        arraycopy_vec(&source, 0, &destination, 0, 2)?;
+
+        assert_eq!(destination.get(0)?, Some("hello".to_string()));
+        assert_eq!(destination.get(1)?, Some("world".to_string()));
+        assert_eq!(destination.get(2)?, Some("".to_string())); // Unchanged
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_large_copy() -> Result<()> {
+        let source_data: Vec<i32> = (0..1000).collect();
+        let dest_data: Vec<i32> = vec![0; 1000];
+
+        let source = ConcurrentVec::from(source_data);
+        let destination = ConcurrentVec::from(dest_data);
+
+        arraycopy_vec(&source, 100, &destination, 200, 500)?;
+
+        // Verify first few and last few elements
+        assert_eq!(destination.get(200)?, Some(100));
+        assert_eq!(destination.get(201)?, Some(101));
+        assert_eq!(destination.get(699)?, Some(599)); // 200 + 500 - 1
+
+        // Verify boundaries weren't affected
+        assert_eq!(destination.get(199)?, Some(0)); // Before copy region
+        assert_eq!(destination.get(700)?, Some(0)); // After copy region
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_allow_security_manager() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = allow_security_manager(thread, Parameters::default()).await?;
+        assert_eq!(Some(Value::from(false)), result);
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_get_security_manager() -> Result<()> {
@@ -441,6 +751,66 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let result = set_security_manager(thread, Parameters::default()).await;
         assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_overlapping_same_array_forward_shift() -> Result<()> {
+        // Test shifting elements to the right within the same array (like StringBuilder insert)
+        let array = ConcurrentVec::from(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']);
+
+        // Shift "cdef" to the right by 2 positions to make room for insertion
+        // This simulates what StringBuilder does when inserting text
+        arraycopy_vec(&array, 2, &array, 4, 4)?;
+
+        assert_eq!(array.get(0)?, Some('a')); // Unchanged
+        assert_eq!(array.get(1)?, Some('b')); // Unchanged
+        assert_eq!(array.get(2)?, Some('c')); // Original position
+        assert_eq!(array.get(3)?, Some('d')); // Original position
+        assert_eq!(array.get(4)?, Some('c')); // Shifted from position 2
+        assert_eq!(array.get(5)?, Some('d')); // Shifted from position 3
+        assert_eq!(array.get(6)?, Some('e')); // Shifted from position 4
+        assert_eq!(array.get(7)?, Some('f')); // Shifted from position 5
+        assert_eq!(array.get(8)?, Some('i')); // Unchanged
+        assert_eq!(array.get(9)?, Some('j')); // Unchanged
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_overlapping_same_array_backward_shift() -> Result<()> {
+        // Test shifting elements to the left within the same array
+        let array = ConcurrentVec::from(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+
+        // Shift "cdefgh" to the left by 1 position
+        arraycopy_vec(&array, 2, &array, 1, 6)?;
+
+        assert_eq!(array.get(0)?, Some('a')); // Unchanged
+        assert_eq!(array.get(1)?, Some('c')); // Shifted from position 2
+        assert_eq!(array.get(2)?, Some('d')); // Shifted from position 3
+        assert_eq!(array.get(3)?, Some('e')); // Shifted from position 4
+        assert_eq!(array.get(4)?, Some('f')); // Shifted from position 5
+        assert_eq!(array.get(5)?, Some('g')); // Shifted from position 6
+        assert_eq!(array.get(6)?, Some('h')); // Shifted from position 7
+        assert_eq!(array.get(7)?, Some('h')); // Original value still here
+        Ok(())
+    }
+
+    #[test]
+    fn test_arraycopy_vec_non_overlapping_same_array() -> Result<()> {
+        // Test copying within the same array but with non-overlapping regions
+        let array = ConcurrentVec::from(vec![1, 2, 3, 4, 5, 6, 7, 8]);
+
+        // Copy first 3 elements to positions 5-7 (no overlap)
+        arraycopy_vec(&array, 0, &array, 5, 3)?;
+
+        assert_eq!(array.get(0)?, Some(1)); // Unchanged
+        assert_eq!(array.get(1)?, Some(2)); // Unchanged
+        assert_eq!(array.get(2)?, Some(3)); // Unchanged
+        assert_eq!(array.get(3)?, Some(4)); // Unchanged
+        assert_eq!(array.get(4)?, Some(5)); // Unchanged
+        assert_eq!(array.get(5)?, Some(1)); // Copied from position 0
+        assert_eq!(array.get(6)?, Some(2)); // Copied from position 1
+        assert_eq!(array.get(7)?, Some(3)); // Copied from position 2
         Ok(())
     }
 }
