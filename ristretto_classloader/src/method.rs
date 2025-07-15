@@ -88,6 +88,22 @@ impl Method {
         &self.definition.access_flags
     }
 
+    /// Check if the method is public.
+    #[must_use]
+    pub fn is_public(&self) -> bool {
+        self.definition
+            .access_flags
+            .contains(MethodAccessFlags::PUBLIC)
+    }
+
+    /// Check if the method is private.
+    #[must_use]
+    pub fn is_private(&self) -> bool {
+        self.definition
+            .access_flags
+            .contains(MethodAccessFlags::PRIVATE)
+    }
+
     /// Check if the method is native.
     #[must_use]
     pub fn is_native(&self) -> bool {
@@ -231,6 +247,10 @@ mod tests {
         };
         let method = Method::from(&class_file, &method)?;
         assert_eq!(method.access_flags(), &MethodAccessFlags::empty());
+        assert!(!method.is_public());
+        assert!(!method.is_private());
+        assert!(!method.is_native());
+        assert!(!method.is_static());
         assert_eq!(method.name(), "test");
         assert_eq!(method.descriptor(), "()V");
         assert_eq!(method.signature(), "test()V");

@@ -275,34 +275,40 @@ async fn invoke_method(
             let Some(Value::Object(Some(reference))) = parameters.first() else {
                 return Err(InternalError("No reference found".to_string()));
             };
-            class = match reference {
-                Reference::Array(object_array) => object_array.class.clone(),
-                Reference::Object(object) => object.class().clone(),
-                _ => {
-                    // Primitive types do not have a class associated with them so the class must be
-                    // created from the class name.
-                    let class_name = reference.class_name();
-                    thread.class(class_name).await?
-                }
-            };
-            let method_name = method.name();
-            let method_descriptor = method.descriptor();
 
-            // Find the method in the class hierarchy; the Method.try_get_virtual_method() cannot
-            // currently be used here because the class constant pool associated with the method is
-            // required for execution.
-            loop {
-                if let Some(class_method) = class.method(method_name, method_descriptor) {
-                    method = class_method;
-                    break;
-                }
-                let Some(parent_class) = class.parent()? else {
-                    return Err(InternalError(
-                        "No virtual method found for class".to_string(),
-                    ));
+            // Private methods have special resolution rules: they are always resolved
+            // in the class that owns the method reference, not the runtime type
+            if !method.is_private() {
+                class = match reference {
+                    Reference::Array(object_array) => object_array.class.clone(),
+                    Reference::Object(object) => object.class().clone(),
+                    _ => {
+                        // Primitive types do not have a class associated with them so the class must be
+                        // created from the class name.
+                        let class_name = reference.class_name();
+                        thread.class(class_name).await?
+                    }
                 };
-                class = parent_class;
+                let method_name = method.name();
+                let method_descriptor = method.descriptor();
+
+                // Find the method in the class hierarchy; the Method.try_get_virtual_method() cannot
+                // currently be used here because the class constant pool associated with the method is
+                // required for execution.
+                loop {
+                    if let Some(class_method) = class.method(method_name, method_descriptor) {
+                        method = class_method;
+                        break;
+                    }
+                    let Some(parent_class) = class.parent()? else {
+                        return Err(InternalError(
+                            "No virtual method found for class".to_string(),
+                        ));
+                    };
+                    class = parent_class;
+                }
             }
+            // For private methods, we keep the original class and method from constant pool resolution
         }
         _ => {}
     }

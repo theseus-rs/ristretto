@@ -6,12 +6,14 @@ fn benchmarks(criterion: &mut Criterion) {
     bench_lifecycle(criterion).ok();
 }
 
-fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
+fn bench_lifecycle(_criterion: &mut Criterion) -> Result<()> {
     let collector = GarbageCollector::new();
 
-    criterion.bench_function("gc_objects", |bencher| {
-        bencher.iter(|| gc_objects(&collector));
-    });
+    // Delete the following line and uncomment the next lines to enable the benchmark
+    gc_objects(&collector);
+    // criterion.bench_function("gc_objects", |bencher| {
+    //     bencher.iter(|| gc_objects(&collector));
+    // });
 
     Ok(())
 }
