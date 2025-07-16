@@ -1,0 +1,15 @@
+expected
+Testing Random() default constructor
+First random value from r1: 146141185
+First random value from r2: 725947409
+Values are different: true
+Sequential values from same instance are different: true
+Test completed successfully
+
+actual
+Testing Random() default constructor
+First random value from r1: 1942789369
+First random value from r2: 1638210394
+Values are different: true
+Sequential values from same instance are different: true
+Test completed successfully

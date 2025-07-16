@@ -1,0 +1,27 @@
+InternalError("Throwable(Object(java/lang/IllegalArgumentException)
+  backtrace=java/lang/StackTraceElement[33]
+  detailMessage=String(\"not primitive: int\")
+  cause=Object(class java/lang/IllegalArgumentException)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(33)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
+stdout: Testing nextDouble() method
+Generating 10 random doubles:
+nextDouble()[0] = 0.7275636800328681
+nextDouble()[1] = 0.6832234717598454
+nextDouble()[2] = 0.30871945533265976
+nextDouble()[3] = 0.27707849007413665
+nextDouble()[4] = 0.6655489517945736
+nextDouble()[5] = 0.9033722646721782
+nextDouble()[6] = 0.36878291341130565
+nextDouble()[7] = 0.2757480694417024
+nextDouble()[8] = 0.46365357580915334
+nextDouble()[9] = 0.7829017787900358
+
+Testing range constraints [0.0, 1.0):
+All values in range [0.0, 1.0): true
+Min value observed: 1.936563882911635E-4
+Max value observed: 0.9997835147355856
+
+Testing precision with fixed seed:

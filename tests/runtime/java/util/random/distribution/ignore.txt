@@ -1,0 +1,11 @@
+InternalError("Throwable(Object(java/lang/IllegalArgumentException)
+  backtrace=java/lang/StackTraceElement[33]
+  detailMessage=String(\"not primitive: int\")
+  cause=Object(class java/lang/IllegalArgumentException)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(33)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
+stdout: Testing Random statistical distribution properties
+Testing uniform distribution of nextInt(10) over 100000 samples:
+Expected count per bucket: 10000.0
