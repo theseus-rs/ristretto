@@ -595,6 +595,144 @@ fn get_reference_type(
     Ok(Some(value))
 }
 
+#[expect(clippy::too_many_lines)]
+fn put_reference_type(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+    base_type: Option<BaseType>,
+) -> Result<Option<Value>> {
+    let value = parameters.pop()?;
+    // validate the value type
+    match (base_type, &value) {
+        (Some(BaseType::Boolean), Value::Int(_))
+        | (Some(BaseType::Byte), Value::Int(_))
+        | (Some(BaseType::Char), Value::Int(_))
+        | (Some(BaseType::Short), Value::Int(_))
+        | (Some(BaseType::Int), Value::Int(_))
+        | (Some(BaseType::Long), Value::Long(_))
+        | (Some(BaseType::Float), Value::Float(_))
+        | (Some(BaseType::Double), Value::Double(_)) => {}
+        (None, Value::Object(_)) => {}
+        _ => {
+            return Err(InternalError(
+                "putReferenceType: Invalid value type".to_string(),
+            ));
+        }
+    }
+    let offset = parameters.pop_long()?;
+    let Some(mut reference) = parameters.pop_reference()? else {
+        return Err(InternalError(
+            "putReferenceType: Invalid reference".to_string(),
+        ));
+    };
+
+    let offset = usize::try_from(offset)?;
+
+    match &mut reference {
+        Reference::ByteArray(array) => {
+            let byte_value = match value {
+                Value::Int(int_val) => i8::try_from(int_val)?,
+                _ => {
+                    return Err(InternalError(
+                        "putReferenceType: Invalid value type for byte array".to_string(),
+                    ));
+                }
+            };
+            array.set(offset, byte_value)?;
+        }
+        Reference::CharArray(array) => {
+            let char_value = match value {
+                Value::Int(int_val) => u16::try_from(int_val)?,
+                _ => {
+                    return Err(InternalError(
+                        "putReferenceType: Invalid value type for char array".to_string(),
+                    ));
+                }
+            };
+            let offset = offset / CHAR_SIZE;
+            array.set(offset, char_value)?;
+        }
+        Reference::ShortArray(array) => {
+            let short_value = match value {
+                Value::Int(int_val) => i16::try_from(int_val)?,
+                _ => {
+                    return Err(InternalError(
+                        "putReferenceType: Invalid value type for short array".to_string(),
+                    ));
+                }
+            };
+            let offset = offset / SHORT_SIZE;
+            array.set(offset, short_value)?;
+        }
+        Reference::IntArray(array) => {
+            let int_value = match value {
+                Value::Int(int_val) => int_val,
+                _ => {
+                    return Err(InternalError(
+                        "putReferenceType: Invalid value type for int array".to_string(),
+                    ));
+                }
+            };
+            let offset = offset / INT_SIZE;
+            array.set(offset, int_value)?;
+        }
+        Reference::LongArray(array) => {
+            let long_value = match value {
+                Value::Long(long_val) => long_val,
+                _ => {
+                    return Err(InternalError(
+                        "putReferenceType: Invalid value type for long array".to_string(),
+                    ));
+                }
+            };
+            let offset = offset / LONG_SIZE;
+            array.set(offset, long_value)?;
+        }
+        Reference::FloatArray(array) => {
+            let float_value = match value {
+                Value::Float(float_val) => float_val,
+                _ => {
+                    return Err(InternalError(
+                        "putReferenceType: Invalid value type for float array".to_string(),
+                    ));
+                }
+            };
+            let offset = offset / FLOAT_SIZE;
+            array.set(offset, float_value)?;
+        }
+        Reference::DoubleArray(array) => {
+            let double_value = match value {
+                Value::Double(double_val) => double_val,
+                _ => {
+                    return Err(InternalError(
+                        "putReferenceType: Invalid value type for double array".to_string(),
+                    ));
+                }
+            };
+            let offset = offset / DOUBLE_SIZE;
+            array.set(offset, double_value)?;
+        }
+        Reference::Array(object_array) => {
+            let object_value = match value {
+                Value::Object(obj_ref) => obj_ref,
+                _ => {
+                    return Err(InternalError(
+                        "putReferenceType: Invalid value type for object array".to_string(),
+                    ));
+                }
+            };
+            let offset = offset / REFERENCE_SIZE;
+            object_array.elements.set(offset, object_value)?;
+        }
+        Reference::Object(object) => {
+            let field_name = object.class().field_name(offset)?;
+            object.set_value(&field_name, value)?;
+        }
+    };
+
+    Ok(None)
+}
+
 #[intrinsic_method(
     "jdk/internal/misc/Unsafe.getBoolean(Ljava/lang/Object;J)Z",
     GreaterThanOrEqual(JAVA_11)
@@ -948,17 +1086,10 @@ pub(crate) async fn put_boolean(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn put_boolean_volatile(
-    _thread: Arc<Thread>,
-    mut parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = parameters.pop_bool()?;
-    let offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut object) = parameters.pop()? else {
-        return Err(InternalError("putBoolean: Invalid reference".to_string()));
-    };
-    let bytes = Reference::from(vec![x; offset]);
-    *object = Some(bytes);
-    Ok(None)
+    put_reference_type(thread, parameters, Some(BaseType::Boolean))
 }
 
 #[intrinsic_method(
@@ -976,19 +1107,10 @@ pub(crate) async fn put_byte(thread: Arc<Thread>, parameters: Parameters) -> Res
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn put_byte_volatile(
-    _thread: Arc<Thread>,
-    mut parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = i8::try_from(parameters.pop_int()?)?;
-    let offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut reference) = parameters.pop()? else {
-        return Err(InternalError("putByte: Invalid reference".to_string()));
-    };
-    let Some(Reference::ByteArray(array)) = reference.as_ref() else {
-        return Err(InternalError("putByte: Not a byte array".to_string()));
-    };
-    array.set(offset, x)?;
-    Ok(None)
+    put_reference_type(thread, parameters, Some(BaseType::Byte))
 }
 
 #[intrinsic_method(
@@ -1006,23 +1128,10 @@ pub(crate) async fn put_char(thread: Arc<Thread>, parameters: Parameters) -> Res
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn put_char_volatile(
-    _thread: Arc<Thread>,
-    mut parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    #[expect(clippy::cast_sign_loss)]
-    let x = parameters.pop_int()? as u32;
-    let Some(x) = char::from_u32(x) else {
-        return Err(InternalError("putChar: Invalid character".to_string()));
-    };
-    let offset = usize::try_from(parameters.pop_long()?)? / CHAR_SIZE;
-    let Value::Object(ref mut reference) = parameters.pop()? else {
-        return Err(InternalError("putChar: Invalid reference".to_string()));
-    };
-    let Some(Reference::CharArray(array)) = reference.as_ref() else {
-        return Err(InternalError("putChar: Not a char array".to_string()));
-    };
-    array.set(offset, x as u16)?;
-    Ok(None)
+    put_reference_type(thread, parameters, Some(BaseType::Char))
 }
 
 #[intrinsic_method(
@@ -1043,19 +1152,10 @@ pub(crate) async fn put_double(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn put_double_volatile(
-    _thread: Arc<Thread>,
-    mut parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = parameters.pop_double()?;
-    let offset = usize::try_from(parameters.pop_long()?)? / DOUBLE_SIZE;
-    let Value::Object(ref mut reference) = parameters.pop()? else {
-        return Err(InternalError("putDouble: Invalid reference".to_string()));
-    };
-    let Some(Reference::DoubleArray(array)) = reference.as_ref() else {
-        return Err(InternalError("putDouble: Not a double array".to_string()));
-    };
-    array.set(offset, x)?;
-    Ok(None)
+    put_reference_type(thread, parameters, Some(BaseType::Double))
 }
 
 #[intrinsic_method(
@@ -1076,19 +1176,10 @@ pub(crate) async fn put_float(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn put_float_volatile(
-    _thread: Arc<Thread>,
-    mut parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = parameters.pop_float()?;
-    let offset = usize::try_from(parameters.pop_long()?)? / FLOAT_SIZE;
-    let Value::Object(ref mut reference) = parameters.pop()? else {
-        return Err(InternalError("putFloat: Invalid reference".to_string()));
-    };
-    let Some(Reference::FloatArray(array)) = reference.as_ref() else {
-        return Err(InternalError("putFloat: Not a float array".to_string()));
-    };
-    array.set(offset, x)?;
-    Ok(None)
+    put_reference_type(thread, parameters, Some(BaseType::Float))
 }
 
 #[intrinsic_method(
@@ -1106,19 +1197,10 @@ pub(crate) async fn put_int(thread: Arc<Thread>, parameters: Parameters) -> Resu
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn put_int_volatile(
-    _thread: Arc<Thread>,
-    mut parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = parameters.pop_int()?;
-    let offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut reference) = parameters.pop()? else {
-        return Err(InternalError("putInt: Invalid reference".to_string()));
-    };
-    let Some(Reference::IntArray(array)) = reference.as_ref() else {
-        return Err(InternalError("putInt: Not a int array".to_string()));
-    };
-    array.set(offset, x)?;
-    Ok(None)
+    put_reference_type(thread, parameters, Some(BaseType::Int))
 }
 
 #[intrinsic_method(
@@ -1136,19 +1218,10 @@ pub(crate) async fn put_long(thread: Arc<Thread>, parameters: Parameters) -> Res
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn put_long_volatile(
-    _thread: Arc<Thread>,
-    mut parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = parameters.pop_long()?;
-    let offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut reference) = parameters.pop()? else {
-        return Err(InternalError("putlong: Invalid reference".to_string()));
-    };
-    let Some(Reference::LongArray(array)) = reference.as_ref() else {
-        return Err(InternalError("putLong: Not a long array".to_string()));
-    };
-    array.set(offset, x)?;
-    Ok(None)
+    put_reference_type(thread, parameters, Some(BaseType::Long))
 }
 
 #[intrinsic_method(
@@ -1172,7 +1245,7 @@ pub(crate) async fn put_object_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    put_reference_volatile(thread, parameters).await
+    put_reference_type(thread, parameters, None)
 }
 
 #[intrinsic_method(
@@ -1193,34 +1266,10 @@ pub(crate) async fn put_reference(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn put_reference_volatile(
-    _thread: Arc<Thread>,
-    mut parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = parameters.pop()?;
-    let offset = parameters.pop_long()?;
-    let offset = usize::try_from(offset)?;
-    let Some(object) = parameters.pop_reference()? else {
-        return Err(InternalError(
-            "putReferenceVolatile: Invalid reference".to_string(),
-        ));
-    };
-    match object {
-        Reference::Array(object_array) => {
-            let x = x.to_reference()?;
-            let offset = offset / REFERENCE_SIZE;
-            object_array.elements.set(offset, x)?;
-        }
-        Reference::Object(object) => {
-            let field_name = object.class().field_name(offset)?;
-            object.set_value(&field_name, x)?;
-        }
-        _ => {
-            return Err(InternalError(
-                "putReferenceVolatile: Invalid reference".to_string(),
-            ));
-        }
-    }
-    Ok(None)
+    put_reference_type(thread, parameters, None)
 }
 
 #[intrinsic_method(
@@ -1241,19 +1290,10 @@ pub(crate) async fn put_short(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn put_short_volatile(
-    _thread: Arc<Thread>,
-    mut parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = i16::try_from(parameters.pop_int()?)?;
-    let offset = usize::try_from(parameters.pop_long()?)? / SHORT_SIZE;
-    let Value::Object(ref mut reference) = parameters.pop()? else {
-        return Err(InternalError("putShort: Invalid reference".to_string()));
-    };
-    let Some(Reference::ShortArray(array)) = reference.as_ref() else {
-        return Err(InternalError("putShort: Not a short array".to_string()));
-    };
-    array.set(offset, x)?;
-    Ok(None)
+    put_reference_type(thread, parameters, Some(BaseType::Short))
 }
 
 #[intrinsic_method(
