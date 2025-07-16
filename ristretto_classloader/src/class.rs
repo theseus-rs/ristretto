@@ -299,6 +299,14 @@ impl Class {
         )
     }
 
+    /// Determine if this class is an annotation
+    #[must_use]
+    pub fn is_annotation(&self) -> bool {
+        self.class_file
+            .access_flags
+            .contains(ClassAccessFlags::ANNOTATION)
+    }
+
     /// Get the class file.
     #[must_use]
     pub fn class_file(&self) -> &ClassFile {
@@ -1696,6 +1704,14 @@ mod tests {
     async fn test_to_string() -> Result<()> {
         let class = string_class().await?;
         assert_eq!("java/lang/String", class.to_string());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_annotation() -> Result<()> {
+        let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
+        let class = class_loader.load("java.lang.Override").await?;
+        assert!(class.is_annotation());
         Ok(())
     }
 }

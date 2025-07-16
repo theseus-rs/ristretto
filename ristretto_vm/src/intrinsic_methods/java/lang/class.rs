@@ -749,15 +749,22 @@ pub(crate) async fn get_raw_annotations(
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let mut bytes = Vec::new();
-    for attribute in &class_file.attributes {
-        if let Attribute::RuntimeVisibleAnnotations { annotations, .. } = attribute {
-            let annotations_length = u16::try_from(annotations.len())?;
-            bytes.write_u16::<BigEndian>(annotations_length)?;
-            for annotation in annotations {
-                annotation.to_bytes(&mut bytes)?;
+    let annotations = class_file
+        .attributes
+        .iter()
+        .filter_map(|attribute| {
+            if let Attribute::RuntimeVisibleAnnotations { annotations, .. } = attribute {
+                Some(annotations)
+            } else {
+                None
             }
-            break;
-        }
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+    let annotations_length = u16::try_from(annotations.len())?;
+    bytes.write_u16::<BigEndian>(annotations_length)?;
+    for annotation in annotations {
+        annotation.to_bytes(&mut bytes)?;
     }
     Ok(Some(Value::from(bytes)))
 }
@@ -772,18 +779,25 @@ pub(crate) async fn get_raw_type_annotations(
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let mut bytes = Vec::new();
-    for attribute in &class_file.attributes {
-        if let Attribute::RuntimeVisibleTypeAnnotations {
-            type_annotations, ..
-        } = attribute
-        {
-            let annotations_length = u16::try_from(type_annotations.len())?;
-            bytes.write_u16::<BigEndian>(annotations_length)?;
-            for type_annotation in type_annotations {
-                type_annotation.to_bytes(&mut bytes)?;
+    let annotations = class_file
+        .attributes
+        .iter()
+        .filter_map(|attribute| {
+            if let Attribute::RuntimeVisibleTypeAnnotations {
+                type_annotations, ..
+            } = attribute
+            {
+                Some(type_annotations)
+            } else {
+                None
             }
-            break;
-        }
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+    let annotations_length = u16::try_from(annotations.len())?;
+    bytes.write_u16::<BigEndian>(annotations_length)?;
+    for annotation in annotations {
+        annotation.to_bytes(&mut bytes)?;
     }
     Ok(Some(Value::from(bytes)))
 }
@@ -1484,7 +1498,7 @@ mod tests {
             .await?
             .expect("bytes");
         let bytes: Vec<u8> = value.try_into()?;
-        assert!(bytes.is_empty());
+        assert_eq!(bytes, vec![0, 0]);
         Ok(())
     }
 
@@ -1498,7 +1512,7 @@ mod tests {
             .await?
             .expect("bytes");
         let bytes: Vec<u8> = value.try_into()?;
-        assert!(bytes.is_empty());
+        assert_eq!(bytes, vec![0, 0]);
         Ok(())
     }
 
