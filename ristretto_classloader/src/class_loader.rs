@@ -78,6 +78,7 @@ impl ClassLoader {
     ) -> Result<(Arc<Class>, bool)> {
         let class_name = class_name.as_ref().to_string().replace('.', "/");
         let class_name = class_name.as_str();
+
         {
             let classes = self.classes.read().await;
             if let Some(class) = classes.get(class_name) {
@@ -96,8 +97,9 @@ impl ClassLoader {
             class_loaders.push(parent.clone());
             class_loader = parent;
         }
+        class_loaders.reverse();
 
-        for class_loader in class_loaders.into_iter().rev() {
+        for class_loader in &class_loaders {
             let class_path = class_loader.class_path();
             if let Ok(class_file) = class_path.read_class(class_name).await {
                 let mut classes = self.classes.write().await;
@@ -105,11 +107,25 @@ impl ClassLoader {
                 if let Some(class) = classes.get(class_name) {
                     return Ok((class.clone(), true));
                 }
-                let class_loader = Arc::downgrade(&class_loader);
+                let class_loader = Arc::downgrade(class_loader);
                 let class = Class::from(Some(class_loader), class_file)?;
                 classes.insert(class_name.to_string(), class.clone());
                 return Ok((class, false));
             }
+        }
+
+        if class_name.starts_with('[')
+            || [
+                "boolean", "byte", "char", "double", "float", "int", "long", "short", "void",
+            ]
+            .contains(&class_name)
+        {
+            let class = Class::new_named(class_name)?;
+            {
+                let mut classes = self.classes.write().await;
+                classes.insert(class_name.to_string(), Arc::clone(&class));
+            }
+            return Ok((class, false));
         }
 
         Err(ClassNotFound(class_name.to_string()))
