@@ -19,26 +19,21 @@ const IGNORE_FILE: &str = "ignore.txt";
 #[test]
 fn compatibility_tests() -> Result<()> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let tests_root_dir = cargo_manifest.join("..").join("tests");
-    let tests_root_dir_string = tests_root_dir.to_string_lossy().to_string();
+    let tests_root_dir = cargo_manifest.join("..").join("tests").canonicalize()?;
 
     initialize_tracing()?;
 
     let java_version = DEFAULT_JAVA_VERSION.to_string();
     let java_home = java_home(&java_version)?;
     let test_dirs = collect_test_dirs(&tests_root_dir)?;
-    compile_tests(&java_home, &test_dirs)?;
+    compile_tests(&java_home, &tests_root_dir, &test_dirs)?;
 
     let passed = AtomicUsize::new(0);
     let failed = AtomicUsize::new(0);
 
     test_dirs.par_iter().for_each(|test_dir| {
-        let test_dir_string = test_dir.to_string_lossy().to_string();
-        let test_name = test_dir_string
-            .strip_prefix(&tests_root_dir_string)
-            .unwrap_or(&test_dir_string)
-            .strip_prefix("/")
-            .unwrap_or(&test_dir_string);
+        let test_name = test_dir.to_string_lossy().to_string();
+        let test_dir = tests_root_dir.join(test_dir);
 
         if let Some(filter) = TEST_ENDS_WITH_FILTER {
             if !test_name.ends_with(filter) {
@@ -49,17 +44,19 @@ fn compatibility_tests() -> Result<()> {
         // Determine if the test should be ignored
         let ignore_file = test_dir.join(IGNORE_FILE);
         if ignore_file.exists() {
-            debug!("Ignoring test: {test_name}");
+            debug!("Ignoring test {test_name}");
             return;
         }
 
-        info!("Running test: {test_name}");
+        info!("Running test {test_name}");
 
-        if let Ok((expected_duration, expected_output)) = expected_output(&java_home, test_dir) {
+        if let Ok((expected_duration, expected_output)) =
+            expected_output(&java_home, &tests_root_dir, &test_dir)
+        {
             if test_vm(
                 &java_version,
-                test_dir,
-                test_name,
+                &test_name,
+                &test_dir,
                 true,
                 &expected_duration,
                 &expected_output,
@@ -72,8 +69,8 @@ fn compatibility_tests() -> Result<()> {
             }
             if test_vm(
                 &java_version,
-                test_dir,
-                test_name,
+                &test_name,
+                &test_dir,
                 false,
                 &expected_duration,
                 &expected_output,
@@ -134,7 +131,8 @@ fn collect_test_dirs(tests_root_dir: &PathBuf) -> Result<Vec<PathBuf>> {
         let entry = entry.map_err(|error| InternalError(error.to_string()))?;
         if entry.file_name() == TEST_FILE {
             let test_dir = entry.path().parent().unwrap();
-            test_paths.push(test_dir.to_path_buf().canonicalize()?);
+            let test_dir = test_dir.strip_prefix(tests_root_dir).unwrap_or(test_dir);
+            test_paths.push(test_dir.to_path_buf());
         }
     }
     Ok(test_paths)
@@ -150,15 +148,18 @@ fn java_home(java_version: &str) -> Result<PathBuf> {
 }
 
 /// Compiles the tests in the test directories.
-fn compile_tests(java_home: &Path, test_dirs: &[PathBuf]) -> Result<()> {
+fn compile_tests(java_home: &Path, tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<()> {
     test_dirs
         .par_iter()
-        .try_for_each(|test_dir| compile_test(java_home, test_dir))?;
+        .try_for_each(|test_dir| compile_test(java_home, tests_root_dir, test_dir))?;
     Ok(())
 }
 
 /// Compiles a test directory by running `javac` on the `Test.java` file.
-fn compile_test(java_home: &Path, test_dir: &PathBuf) -> Result<()> {
+fn compile_test(java_home: &Path, tests_root_dir: &Path, test_dir: &PathBuf) -> Result<()> {
+    let test_name = test_dir.to_string_lossy().to_string();
+    let test_dir = tests_root_dir.join(test_dir);
+
     // Check the data of the .class file to see if it is newer than the .java file and skip
     // compilation if it is.
     let class_file = test_dir.join(format!("{TEST_CLASS_NAME}.class"));
@@ -167,7 +168,7 @@ fn compile_test(java_home: &Path, test_dir: &PathBuf) -> Result<()> {
         let java_file_modified = java_file.metadata()?.modified()?;
         let class_file_modified = class_file.metadata()?.modified()?;
         if class_file_modified >= java_file_modified {
-            debug!("Skipping compilation for {java_file:?} as .class file is up to date.");
+            debug!("Skipping compilation for {test_name} as .class file is up to date.");
             return Ok(());
         }
     }
@@ -186,10 +187,10 @@ fn compile_test(java_home: &Path, test_dir: &PathBuf) -> Result<()> {
         .output()
         .map_err(|error| InternalError(error.to_string()))?;
     let stdout = String::from_utf8_lossy(&output.stdout);
-    info!("Compiling test {test_dir:?}: {stdout}");
+    info!("Compiling test {test_name}: {stdout}");
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let message = format!("Compilation failed for {test_dir:?}: {stderr}");
+        let message = format!("Compilation failed for {test_name}: {stderr}");
         error!(message);
         return Err(InternalError(message));
     }
@@ -197,7 +198,14 @@ fn compile_test(java_home: &Path, test_dir: &PathBuf) -> Result<()> {
 }
 
 /// Compiles a test directory by running `javac` on the `Test.java` file.
-fn expected_output(java_home: &Path, test_dir: &PathBuf) -> Result<(Duration, String)> {
+fn expected_output(
+    java_home: &Path,
+    tests_root_dir: &Path,
+    test_dir: &PathBuf,
+) -> Result<(Duration, String)> {
+    let test_name = test_dir.to_string_lossy().to_string();
+    let test_dir = tests_root_dir.join(test_dir);
+
     let start_time = Instant::now();
     let arguments = vec![
         "-cp",
@@ -212,7 +220,7 @@ fn expected_output(java_home: &Path, test_dir: &PathBuf) -> Result<(Duration, St
         .map_err(|error| InternalError(error.to_string()))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let message = format!("Execution failed for {test_dir:?}: {stderr}");
+        let message = format!("Execution failed for {test_name}: {stderr}");
         error!(message);
         return Err(InternalError(message));
     }
@@ -223,8 +231,8 @@ fn expected_output(java_home: &Path, test_dir: &PathBuf) -> Result<(Duration, St
 /// Tests the VM by running the `Test` class in the specified test directory.
 fn test_vm(
     java_version: &str,
-    test_dir: &Path,
     test_name: &str,
+    test_dir: &Path,
     interpreted: bool,
     expected_duration: &Duration,
     expected_output: &str,
