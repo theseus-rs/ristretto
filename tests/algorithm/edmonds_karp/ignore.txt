@@ -1,5 +1,0 @@
-expected
-Maximum flow (Edmonds-Karp): 4
-
-actual
-Maximum flow (Edmonds-Karp): 2

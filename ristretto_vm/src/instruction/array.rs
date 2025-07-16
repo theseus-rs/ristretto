@@ -4,6 +4,7 @@ use crate::Result;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
+use crate::thread::Thread;
 use ristretto_classfile::BaseType;
 use ristretto_classfile::attributes::ArrayType;
 use ristretto_classloader::Reference;
@@ -84,43 +85,82 @@ pub(crate) async fn multianewarray(
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
     let class = thread.class(class_name).await?;
-    let count = stack.pop_int()?;
-    let count = usize::try_from(count)?;
 
-    let mut type_class_name = class.array_component_type().to_string();
-    let mut array = if type_class_name.len() == 1 {
-        let base_type = BaseType::parse(type_class_name.chars().next().unwrap_or_default())?;
-        let array = match base_type {
-            BaseType::Char => Reference::from(vec![0 as char; count]),
-            BaseType::Float => Reference::from(vec![0.0f32; count]),
-            BaseType::Double => Reference::from(vec![0.0f64; count]),
-            BaseType::Boolean | BaseType::Byte => Reference::from(vec![0i8; count]),
-            BaseType::Short => Reference::from(vec![0i16; count]),
-            BaseType::Int => Reference::from(vec![0i32; count]),
-            BaseType::Long => Reference::from(vec![0i64; count]),
-        };
-        type_class_name = array.class_name().to_string();
-        array
-    } else {
-        type_class_name = format!("[L{type_class_name};");
-        let type_class = thread.class(type_class_name.as_str()).await?;
-        Reference::from((type_class, vec![None; count]))
-    };
-
-    for _ in 1..dimensions {
+    // Pop dimension sizes from stack (in reverse order)
+    let mut dimension_sizes = Vec::new();
+    for _ in 0..dimensions {
         let count = stack.pop_int()?;
         let count = usize::try_from(count)?;
-        type_class_name = format!("[{type_class_name}");
-        let type_class = thread.class(type_class_name.as_str()).await?;
-        let mut array_values = Vec::new();
-        for _ in 0..count {
-            array_values.push(Some(array.clone()));
-        }
-        array = Reference::from((type_class, array_values));
+        dimension_sizes.push(count);
     }
+    dimension_sizes.reverse();
+
+    // Create the nested array structure
+    let array =
+        create_multidimensional_array(&thread, class.array_component_type(), &dimension_sizes, 0)
+            .await?;
 
     stack.push_object(Some(array))?;
     Ok(Continue)
+}
+
+async fn create_multidimensional_array(
+    thread: &Thread,
+    component_type: &str,
+    dimension_sizes: &[usize],
+    depth: usize,
+) -> Result<Reference> {
+    let current_size = dimension_sizes[depth];
+
+    if depth == dimension_sizes.len() - 1 {
+        // This is the innermost dimension; create the actual array
+        if component_type.len() == 1 {
+            // Primitive array
+            let base_type = BaseType::parse(component_type.chars().next().unwrap_or_default())?;
+            let array = match base_type {
+                BaseType::Char => Reference::from(vec![0 as char; current_size]),
+                BaseType::Float => Reference::from(vec![0.0f32; current_size]),
+                BaseType::Double => Reference::from(vec![0.0f64; current_size]),
+                BaseType::Boolean | BaseType::Byte => Reference::from(vec![0i8; current_size]),
+                BaseType::Short => Reference::from(vec![0i16; current_size]),
+                BaseType::Int => Reference::from(vec![0i32; current_size]),
+                BaseType::Long => Reference::from(vec![0i64; current_size]),
+            };
+            Ok(array)
+        } else {
+            // Object array
+            let array_class_name = format!("[L{component_type};");
+            let array_class = thread.class(&array_class_name).await?;
+            Ok(Reference::from((array_class, vec![None; current_size])))
+        }
+    } else {
+        // This is not the innermost dimension; create array of arrays
+        let mut elements = Vec::new();
+        for _ in 0..current_size {
+            let sub_array = Box::pin(create_multidimensional_array(
+                thread,
+                component_type,
+                dimension_sizes,
+                depth + 1,
+            ))
+            .await?;
+            elements.push(Some(sub_array));
+        }
+
+        // Build the array class name for this dimension
+        let mut array_class_name = String::new();
+        for _ in 0..(dimension_sizes.len() - depth) {
+            array_class_name.push('[');
+        }
+        if component_type.len() == 1 {
+            array_class_name.push_str(component_type);
+        } else {
+            array_class_name.push_str(&format!("L{component_type};"));
+        }
+
+        let array_class = thread.class(&array_class_name).await?;
+        Ok(Reference::from((array_class, elements)))
+    }
 }
 
 #[cfg(test)]

@@ -1,5 +1,0 @@
-expected
-Maximum flow from source to sink: 23
-
-actual
-Maximum flow from source to sink: 0
