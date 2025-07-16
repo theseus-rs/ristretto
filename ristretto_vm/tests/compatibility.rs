@@ -5,11 +5,13 @@ use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tracing::metadata::LevelFilter;
 use tracing::{debug, error, info};
 use tracing_subscriber::{EnvFilter, fmt};
 
+const TEST_ENDS_WITH_FILTER: Option<&str> = None;
 const TEST_CLASS_NAME: &str = "Test";
 const TEST_FILE: &str = "Test.java";
 const IGNORE_FILE: &str = "ignore.txt";
@@ -38,6 +40,12 @@ fn compatibility_tests() -> Result<()> {
             .strip_prefix("/")
             .unwrap_or(&test_dir_string);
 
+        if let Some(filter) = TEST_ENDS_WITH_FILTER {
+            if !test_name.ends_with(filter) {
+                return;
+            }
+        }
+
         // Determine if the test should be ignored
         let ignore_file = test_dir.join(IGNORE_FILE);
         if ignore_file.exists() {
@@ -47,13 +55,31 @@ fn compatibility_tests() -> Result<()> {
 
         info!("Running test: {test_name}");
 
-        if let Ok(expected_output) = expected_output(&java_home, test_dir) {
-            if test_vm(&java_version, test_dir, test_name, true, &expected_output).is_ok() {
+        if let Ok((expected_duration, expected_output)) = expected_output(&java_home, test_dir) {
+            if test_vm(
+                &java_version,
+                test_dir,
+                test_name,
+                true,
+                &expected_duration,
+                &expected_output,
+            )
+            .is_ok()
+            {
                 passed.fetch_add(1, Ordering::Relaxed);
             } else {
                 failed.fetch_add(1, Ordering::Relaxed);
             }
-            if test_vm(&java_version, test_dir, test_name, false, &expected_output).is_ok() {
+            if test_vm(
+                &java_version,
+                test_dir,
+                test_name,
+                false,
+                &expected_duration,
+                &expected_output,
+            )
+            .is_ok()
+            {
                 passed.fetch_add(1, Ordering::Relaxed);
             } else {
                 failed.fetch_add(1, Ordering::Relaxed);
@@ -171,7 +197,8 @@ fn compile_test(java_home: &Path, test_dir: &PathBuf) -> Result<()> {
 }
 
 /// Compiles a test directory by running `javac` on the `Test.java` file.
-fn expected_output(java_home: &Path, test_dir: &PathBuf) -> Result<String> {
+fn expected_output(java_home: &Path, test_dir: &PathBuf) -> Result<(Duration, String)> {
+    let start_time = Instant::now();
     let arguments = vec![
         "-cp",
         test_dir.to_str().unwrap_or_default(),
@@ -190,7 +217,7 @@ fn expected_output(java_home: &Path, test_dir: &PathBuf) -> Result<String> {
         return Err(InternalError(message));
     }
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    Ok(stdout)
+    Ok((start_time.elapsed(), stdout))
 }
 
 /// Tests the VM by running the `Test` class in the specified test directory.
@@ -199,6 +226,7 @@ fn test_vm(
     test_dir: &Path,
     test_name: &str,
     interpreted: bool,
+    expected_duration: &Duration,
     expected_output: &str,
 ) -> Result<()> {
     let test_type = if interpreted { "int" } else { "jit" };
@@ -208,9 +236,11 @@ fn test_vm(
         runtime.block_on(run_test(java_version, test_dir, interpreted))
     });
     match result {
-        Ok(Ok(output)) => {
+        Ok(Ok((duration, output))) => {
             if expected_output == output {
-                info!("Passed ({test_type}) {test_name}");
+                info!(
+                    "Passed ({test_type}) {test_name} in {duration:.2?} (expected: {expected_duration:.2?})"
+                );
                 Ok(())
             } else {
                 let error_message =
@@ -231,7 +261,12 @@ fn test_vm(
 }
 
 /// Runs the test by creating a VM and invoking the `Test` class.
-async fn run_test(java_version: &str, test_dir: &Path, interpreted: bool) -> Result<String> {
+async fn run_test(
+    java_version: &str,
+    test_dir: &Path,
+    interpreted: bool,
+) -> Result<(Duration, String)> {
+    let start_time = Instant::now();
     let class_path = ClassPath::from(test_dir.to_string_lossy());
     let stdout = Arc::new(Mutex::new(Vec::new()));
     let stderr = Arc::new(Mutex::new(Vec::new()));
@@ -259,5 +294,5 @@ async fn run_test(java_version: &str, test_dir: &Path, interpreted: bool) -> Res
             "{error:?}:\nstdout: {stdout}\nstderr: {stderr}"
         )));
     }
-    Ok(stdout)
+    Ok((start_time.elapsed(), stdout))
 }

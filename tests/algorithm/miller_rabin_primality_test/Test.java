@@ -1,7 +1,7 @@
 import java.util.Random;
 
 public class Test {
-    private static final Random random = new Random();
+    private static final Random random = new Random(42L); // Fixed seed for reproducibility
 
     public static boolean millerRabinTest(long n, int k) {
         if (n < 2) return false;
