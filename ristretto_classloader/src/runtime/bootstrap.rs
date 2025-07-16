@@ -8,7 +8,7 @@ use std::{env, io};
 use tar::Archive;
 use tracing::{debug, instrument, warn};
 
-pub const DEFAULT_JAVA_VERSION: &str = "21.0.7.6.1";
+pub const DEFAULT_JAVA_VERSION: &str = "21.0.8.9.1";
 
 /// Get a class loader for the default Java runtime version. If the version is not installed, the
 /// archive will be downloaded and extracted.
@@ -232,7 +232,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_class_loader_v8() -> Result<()> {
-        let version = "8.452.09.1";
+        let version = "8.462.08.1";
         let (_java_home, java_version, class_loader) = version_class_loader(version).await?;
         assert_eq!(version, java_version);
         assert_eq!("bootstrap", class_loader.name());
@@ -241,7 +241,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_class_loader_v21() -> Result<()> {
-        let version = "21.0.7.6.1";
+        let version = "21.0.8.9.1";
         let (_java_home, java_version, class_loader) = version_class_loader(version).await?;
         assert_eq!(version, java_version);
         assert_eq!("bootstrap", class_loader.name());
