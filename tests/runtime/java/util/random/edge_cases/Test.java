@@ -42,7 +42,9 @@ public class Test {
             r.nextBytes(null);
             System.out.println("ERROR: nextBytes(null) should throw NullPointerException");
         } catch (NullPointerException e) {
-            System.out.println("SUCCESS: nextBytes(null) threw NullPointerException: " + e.getMessage());
+            // TODO: The message in ristretto varies from other implementations, so we can't check it.
+            // System.out.println("SUCCESS: nextBytes(null) threw NullPointerException: " + e.getMessage());
+            System.out.println("SUCCESS: nextBytes(null) threw NullPointerException");
         } catch (Exception e) {
             System.out.println("ERROR: nextBytes(null) threw unexpected exception: " + e.getClass().getName() + " - " + e.getMessage());
         }

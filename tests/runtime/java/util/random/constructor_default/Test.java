@@ -11,8 +11,6 @@ public class Test {
         int val1 = r1.nextInt();
         int val2 = r2.nextInt();
 
-        System.out.println("First random value from r1: " + val1);
-        System.out.println("First random value from r2: " + val2);
         System.out.println("Values are different: " + (val1 != val2));
 
         // Test that subsequent calls produce different values
