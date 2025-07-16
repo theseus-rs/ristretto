@@ -1,4 +1,4 @@
-use crate::Error::{ClassNotFound, InternalError};
+use crate::Error::ClassNotFound;
 use crate::{Class, ClassPath, Result, Value};
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -79,6 +79,14 @@ impl ClassLoader {
         let class_name = class_name.as_ref().to_string().replace('.', "/");
         let class_name = class_name.as_str();
 
+        // Attempt to load the class from the parent class loader first.
+        if let Some(parent) = self.parent().await
+            && let Ok((class, loaded)) = Box::pin(parent.load_with_status(class_name)).await
+        {
+            return Ok((class, loaded));
+        }
+
+        // Check if the class is already loaded in this class loader.
         {
             let classes = self.classes.read().await;
             if let Some(class) = classes.get(class_name) {
@@ -86,40 +94,23 @@ impl ClassLoader {
             }
         }
 
-        // Convert hierarchy of class loaders to a flat list so that we can iterate over them from
-        // the boot class loader to the current class loader.
-        let mut class_loader = self
-            .this
-            .upgrade()
-            .ok_or(InternalError("Unable to upgrade class loader".to_string()))?;
-        let mut class_loaders = vec![class_loader.clone()];
-        while let Some(parent) = class_loader.parent().await {
-            class_loaders.push(parent.clone());
-            class_loader = parent;
-        }
-        class_loaders.reverse();
-
-        for class_loader in &class_loaders {
-            let class_path = class_loader.class_path();
-            if let Ok(class_file) = class_path.read_class(class_name).await {
-                let mut classes = self.classes.write().await;
-                // Check if the class was loaded while waiting for the lock.
-                if let Some(class) = classes.get(class_name) {
-                    return Ok((class.clone(), true));
-                }
-                let class_loader = Arc::downgrade(class_loader);
-                let class = Class::from(Some(class_loader), class_file)?;
-                classes.insert(class_name.to_string(), class.clone());
-                return Ok((class, false));
+        let class_path = self.class_path();
+        if let Ok(class_file) = class_path.read_class(class_name).await {
+            let mut classes = self.classes.write().await;
+            // Check if the class was loaded while waiting for the lock.
+            if let Some(class) = classes.get(class_name) {
+                return Ok((class.clone(), true));
             }
+            let class = Class::from(Some(self.this.clone()), class_file)?;
+            classes.insert(class_name.to_string(), class.clone());
+            return Ok((class, false));
         }
 
-        if class_name.starts_with('[')
-            || [
-                "boolean", "byte", "char", "double", "float", "int", "long", "short", "void",
-            ]
-            .contains(&class_name)
-        {
+        // Handle array classes, which start with '['
+        // TODO: array class loading needs to be updated to only load array classes in the class
+        // loader that is responsible for the component:
+        // https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html#jvms-5.3.3
+        if class_name.starts_with('[') {
             let class = Class::new_named(class_name)?;
             {
                 let mut classes = self.classes.write().await;
