@@ -225,39 +225,18 @@ impl Thread {
     #[async_recursion(?Send)]
     pub(crate) async fn class<S: AsRef<str>>(&self, class_name: S) -> Result<Arc<Class>> {
         let class_name = class_name.as_ref();
-        let class_load_result = {
+        let (class, previously_loaded) = {
             let vm = self.vm()?;
             let class_loader_lock = vm.class_loader();
             let class_loader = class_loader_lock.read().await;
-            class_loader.load_with_status(class_name).await
+            class_loader.load_with_status(class_name).await?
         };
 
-        let class = match class_load_result {
-            Ok((class, previously_loaded)) => {
-                // Determine if the class has already been loaded.  If the class has already been loaded,
-                // return the class. Otherwise, the class must be initialized.
-                if previously_loaded {
-                    return Ok(class);
-                }
-                class
-            }
-            Err(error) => {
-                if class_name.starts_with('[')
-                    || [
-                        "boolean", "byte", "char", "double", "float", "int", "long", "short",
-                        "void",
-                    ]
-                    .contains(&class_name)
-                {
-                    let array_class = Class::new_named(class_name)?;
-                    // Register the array class so that it will be available for future lookups.
-                    self.register_class(array_class.clone()).await?;
-                    array_class
-                } else {
-                    return Err(error.into());
-                }
-            }
-        };
+        // Determine if the class has already been loaded.  If the class has already been loaded,
+        // return the class. Otherwise, the class must be initialized.
+        if previously_loaded {
+            return Ok(class);
+        }
 
         let classes = self.prepare_class_initialization(&class).await?;
         for current_class in classes {
