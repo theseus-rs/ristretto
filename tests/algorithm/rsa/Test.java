@@ -2,7 +2,7 @@ import java.math.BigInteger;
 import java.util.Random;
 
 public class Test {
-    private static final Random random = new Random();
+    private static final Random random = new Random(42L); // Fixed seed for reproducibility
 
     public static class RSAKeyPair {
         BigInteger n, e, d;
