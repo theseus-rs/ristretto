@@ -54,6 +54,7 @@ pub(crate) async fn for_name_0(
     let Ok(object) = parameters.pop_object() else {
         return Err(NullPointerException("className cannot be null".to_string()).into());
     };
+
     let class_name: String = object.try_into()?;
     let class = match thread.class(&class_name).await {
         Ok(class) => class,
@@ -61,6 +62,11 @@ pub(crate) async fn for_name_0(
             return Err(ClassNotFoundException(class_name).into());
         }
     };
+
+    if class.is_primitive() {
+        return Err(ClassNotFoundException(class_name).into());
+    }
+
     let class_object = class.to_object(&thread).await?;
     Ok(Some(class_object))
 }
@@ -1068,6 +1074,21 @@ mod tests {
     async fn test_for_name_0_class_not_found() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let object = "foo".to_object(&thread).await?;
+        let parameters = Parameters::new(vec![
+            object,
+            Value::from(true),
+            Value::Object(None),
+            Value::Object(None),
+        ]);
+        let result = for_name_0(thread, parameters).await;
+        assert!(matches!(result, Err(JavaError(ClassNotFoundException(_)))));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_primitive_class_not_found() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = "int".to_object(&thread).await?;
         let parameters = Parameters::new(vec![
             object,
             Value::from(true),
