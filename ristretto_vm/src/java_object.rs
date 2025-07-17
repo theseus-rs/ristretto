@@ -489,10 +489,11 @@ mod tests {
     #[tokio::test]
     async fn test_class_to_object() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let original_value = Class::new_named("[I")?;
+        let original_value = thread.class("[I").await?;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: Arc<Class> = value.try_into()?;
-        assert_eq!("java/lang/Class", value.name());
+        let object: Object = value.try_into()?;
+        let class = object.class();
+        assert_eq!("java/lang/Class", class.name());
         Ok(())
     }
 }

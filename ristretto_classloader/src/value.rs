@@ -486,15 +486,6 @@ impl TryInto<Vec<Value>> for Value {
     }
 }
 
-impl TryInto<(Arc<Class>, Vec<Option<Reference>>)> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<(Arc<Class>, Vec<Option<Reference>>)> {
-        let reference: Reference = self.try_into()?;
-        reference.try_into()
-    }
-}
-
 impl TryInto<bool> for Value {
     type Error = crate::Error;
 
@@ -681,15 +672,6 @@ impl TryInto<String> for Value {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<String> {
-        let reference: Reference = self.try_into()?;
-        reference.try_into()
-    }
-}
-
-impl TryInto<Arc<Class>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Arc<Class>> {
         let reference: Reference = self.try_into()?;
         reference.try_into()
     }
@@ -1115,9 +1097,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_from_class_vec() -> Result<()> {
-        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+    #[tokio::test]
+    async fn test_from_class_vec() -> Result<()> {
+        let original_class = load_class("[Ljava/lang/Object;").await?;
         let original_value = vec![None];
         let value = Value::from((original_class.clone(), original_value.clone()));
         assert!(matches!(value, Value::Object(Some(Reference::Array(_)))));
@@ -1126,7 +1108,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_from_class_vec() -> Result<()> {
-        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+        let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
@@ -1140,7 +1122,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_from_class_vec_error() -> Result<()> {
-        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+        let original_class = load_class("[Ljava/lang/Object;").await?;
         let value = Value::from(42);
         let original_value = vec![value];
         let value = Value::try_from((original_class.clone(), original_value.clone()));
@@ -1148,18 +1130,18 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_from_object() -> Result<()> {
-        let class = Class::new_named("[Ljava/lang/Object;")?;
+    #[tokio::test]
+    async fn test_from_object() -> Result<()> {
+        let class = load_class("[Ljava/lang/Object;").await?;
         let object = Object::new(class)?;
         let value = Value::from(object);
         assert!(matches!(value, Value::Object(Some(Reference::Object(_)))));
         Ok(())
     }
 
-    #[test]
-    fn test_from_reference() -> Result<()> {
-        let class = Class::new_named("[Ljava/lang/Object;")?;
+    #[tokio::test]
+    async fn test_from_reference() -> Result<()> {
+        let class = load_class("[Ljava/lang/Object;").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object);
         let value = Value::from(reference);
@@ -1167,9 +1149,9 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_from_option_reference() -> Result<()> {
-        let class = Class::new_named("[Ljava/lang/Object;")?;
+    #[tokio::test]
+    async fn test_from_option_reference() -> Result<()> {
+        let class = load_class("[Ljava/lang/Object;").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object);
         let value = Value::from(Some(reference));
@@ -1305,7 +1287,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_vec_value() -> Result<()> {
-        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+        let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java/lang/Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class.clone())?;
@@ -1320,7 +1302,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_class_vec() -> Result<()> {
-        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+        let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java/lang/Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class.clone())?;
@@ -1328,8 +1310,10 @@ mod tests {
         let value = Value::from(object);
         let original_values = vec![value];
         let value = Value::try_from((original_class.clone(), original_values.clone()))?;
-        let (reference_class, reference_values) = value.try_into()?;
-        assert_eq!(original_class.name(), reference_class.name());
+        let reference = value.to_reference()?.expect("vec");
+        let reference_class_name = reference.class_name().to_string();
+        let reference_values: Vec<Value> = reference.try_into()?;
+        assert_eq!(original_class.name(), reference_class_name);
         assert_eq!(original_values.len(), reference_values.len());
         Ok(())
     }
@@ -1606,7 +1590,7 @@ mod tests {
         let class = load_class(class_name).await?;
         let value = Value::from(Object::new(class)?);
         let reference: Reference = value.try_into()?;
-        assert_eq!(class_name, reference.class()?.name());
+        assert_eq!(class_name, reference.class_name());
         Ok(())
     }
 
@@ -1620,18 +1604,6 @@ mod tests {
         object.set_value("value", string_value)?;
         let result: String = object.try_into()?;
         assert_eq!("foo".to_string(), result);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_class() -> Result<()> {
-        let class_name = "java.lang.Integer";
-        let class = load_class(class_name).await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
-        let value: Arc<Class> = value.try_into()?;
-        assert_eq!("java/lang/Integer", value.name());
         Ok(())
     }
 }

@@ -1046,8 +1046,10 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = list(thread, parameters).await?.expect("paths");
-        let (class, elements) = value.try_into()?;
-        assert_eq!(class.name(), "java/lang/String");
+        let reference = value.to_reference()?.expect("paths");
+        let class_name = reference.class_name().to_string();
+        let elements: Vec<Value> = reference.try_into()?;
+        assert_eq!(class_name, "java/lang/String");
         assert!(!elements.is_empty());
         Ok(())
     }
@@ -1062,8 +1064,10 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = list_0(thread, parameters).await?.expect("paths");
-        let (class, elements) = value.try_into()?;
-        assert_eq!(class.name(), "java/lang/String");
+        let reference = value.to_reference()?.expect("paths");
+        let class_name = reference.class_name().to_string();
+        let elements: Vec<Value> = value.try_into()?;
+        assert_eq!(class_name, "java/lang/String");
         assert!(!elements.is_empty());
         Ok(())
     }

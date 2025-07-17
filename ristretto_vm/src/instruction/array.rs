@@ -298,10 +298,7 @@ mod tests {
         let Value::Object(Some(reference)) = stack.pop()? else {
             panic!("expected reference");
         };
-        let class = reference.class()?;
-        assert_eq!("[Ljava/lang/Object;", class.name());
-        assert_eq!("java/lang/Object", class.array_component_type());
-        assert!(class.is_array());
+        assert_eq!("[Ljava/lang/Object;", reference.class_name());
         Ok(())
     }
 

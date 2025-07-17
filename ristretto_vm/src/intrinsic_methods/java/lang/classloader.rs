@@ -1,5 +1,6 @@
 use crate::JavaError::{ClassFormatError, IndexOutOfBoundsException, NoClassDefFoundError};
 use crate::Result;
+use crate::intrinsic_methods::java::lang::class::get_class;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -148,7 +149,8 @@ pub(crate) async fn define_class_0_1(
     let offset = parameters.pop_int()?;
     let bytes: Vec<u8> = parameters.pop()?.try_into()?;
     let _name: String = parameters.pop()?.try_into()?;
-    let _lookup: Arc<Class> = parameters.pop()?.try_into()?;
+    let lookup: Object = parameters.pop_object()?;
+    let _lookup: Arc<Class> = get_class(&thread, &lookup).await?;
     let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
     class.set_value("classLoader", class_loader)?;

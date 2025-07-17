@@ -1,6 +1,7 @@
 use crate::java_object::JavaObject;
 use crate::thread::Thread;
 use crate::{Result, Value};
+use ristretto_classfile::{ClassFile, ConstantPool};
 use ristretto_classloader::{Class, Object, Reference};
 
 const STRING_PREFIX: &str = "str:";
@@ -97,7 +98,16 @@ impl RustValue for f64 {
 impl RustValue for &str {
     fn to_value(&self) -> Value {
         let class_name = format!("{STRING_PREFIX}{self}");
-        let Ok(class) = Class::new_named(&class_name) else {
+        let mut constant_pool = ConstantPool::new();
+        let Ok(class_index) = constant_pool.add_class(class_name) else {
+            return Value::Object(None);
+        };
+        let class_file = ClassFile {
+            constant_pool,
+            this_class: class_index,
+            ..Default::default()
+        };
+        let Ok(class) = Class::from(None, class_file) else {
             return Value::Object(None);
         };
         let Ok(object) = Object::new(class) else {
