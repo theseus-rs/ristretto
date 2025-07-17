@@ -1,10 +1,12 @@
-InternalError("Throwable(Object(java/lang/InternalError)
-  backtrace=java/lang/StackTraceElement[4]
-  detailMessage=String(\"Internal error: No reference found\")
-  cause=Object(class java/lang/InternalError)
+InternalError("Throwable(Object(java/lang/NullPointerException)
+  backtrace=java/lang/StackTraceElement[5]
+  detailMessage=String(\"\")
+  cause=Object(class java/lang/NullPointerException)
   stackTrace=java/lang/StackTraceElement[0]
-  depth=int(4)
+  depth=int(5)
   suppressedExceptions=Object(class java/util/Collections$EmptyList)
+  extendedMessageState=int(1)
+  extendedMessage=Object(null)
 ):
 stdout: === Basic Class.forName ===
 Loaded String class: java.lang.String
@@ -20,7 +22,7 @@ Component type: int
 String matrix class: [[Ljava.lang.String;
 
 === Primitive Class Loading ===
-ERROR: Should not be able to load primitive via forName
+Correctly failed to load primitive 'int': int
 Int primitive class: int
 Is primitive: true
 
