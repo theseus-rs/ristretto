@@ -1,1 +1,29 @@
-ERROR ThreadId(34) Panic (int) Users/brianheineman/development/ristretto/tests/reflection/arrays: Any { .. }
+InternalError("Throwable(Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[9]
+  detailMessage=String(\"Test$A::stringArray cannot be accessed reflectively before java.lang.invoke is initialized\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(9)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
+stdout: String array class name: [Ljava.lang.String;
+Is array: true
+Component type: java.lang.String
+Int matrix class name: [[I
+Component type: int
+Component is array: false
+Int array class name: [I
+Component type: int
+Component is primitive: true
+Created array type: [Ljava.lang.String;
+Array length: 3
+Array element at index 1: second
+Created matrix type: [[I
+Matrix length: 2
+Matrix[0][0] value: 100
+Multi-dimensional array type: [[[Ljava.lang.String;
+Int array[0] = 0
+Int array[1] = 10
+Int array[2] = 20
+Int array[3] = 30
+Int array[4] = 40
