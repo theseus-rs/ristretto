@@ -208,7 +208,7 @@ impl Class {
 
     /// Transform the class name to a descriptor.
     #[must_use]
-    pub fn to_descriptor(class_name: &str) -> String {
+    pub fn convert_to_descriptor(class_name: &str) -> String {
         match class_name {
             "boolean" => "Z".to_string(),
             "byte" => "B".to_string(),
@@ -969,37 +969,37 @@ mod tests {
     }
 
     #[test]
-    fn test_to_descriptor() {
-        assert_eq!("Z", Class::to_descriptor("boolean"));
-        assert_eq!("B", Class::to_descriptor("byte"));
-        assert_eq!("C", Class::to_descriptor("char"));
-        assert_eq!("D", Class::to_descriptor("double"));
-        assert_eq!("F", Class::to_descriptor("float"));
-        assert_eq!("I", Class::to_descriptor("int"));
-        assert_eq!("J", Class::to_descriptor("long"));
-        assert_eq!("S", Class::to_descriptor("short"));
-        assert_eq!("V", Class::to_descriptor("void"));
+    fn test_convert_to_descriptor() {
+        assert_eq!("Z", Class::convert_to_descriptor("boolean"));
+        assert_eq!("B", Class::convert_to_descriptor("byte"));
+        assert_eq!("C", Class::convert_to_descriptor("char"));
+        assert_eq!("D", Class::convert_to_descriptor("double"));
+        assert_eq!("F", Class::convert_to_descriptor("float"));
+        assert_eq!("I", Class::convert_to_descriptor("int"));
+        assert_eq!("J", Class::convert_to_descriptor("long"));
+        assert_eq!("S", Class::convert_to_descriptor("short"));
+        assert_eq!("V", Class::convert_to_descriptor("void"));
         assert_eq!(
             "Ljava/lang/String;",
-            Class::to_descriptor("java.lang.String")
+            Class::convert_to_descriptor("java.lang.String")
         );
         assert_eq!(
             "Ljava/lang/String;",
-            Class::to_descriptor("java/lang/String")
+            Class::convert_to_descriptor("java/lang/String")
         );
         assert_eq!(
             "[Ljava/lang/String;",
-            Class::to_descriptor("[Ljava/lang/String;")
+            Class::convert_to_descriptor("[Ljava/lang/String;")
         );
-        assert_eq!("[Z", Class::to_descriptor("[Z"));
-        assert_eq!("[B", Class::to_descriptor("[B"));
-        assert_eq!("[C", Class::to_descriptor("[C"));
-        assert_eq!("[D", Class::to_descriptor("[D"));
-        assert_eq!("[F", Class::to_descriptor("[F"));
-        assert_eq!("[I", Class::to_descriptor("[I"));
-        assert_eq!("[J", Class::to_descriptor("[J"));
-        assert_eq!("[S", Class::to_descriptor("[S"));
-        assert_eq!("[V", Class::to_descriptor("[V"));
+        assert_eq!("[Z", Class::convert_to_descriptor("[Z"));
+        assert_eq!("[B", Class::convert_to_descriptor("[B"));
+        assert_eq!("[C", Class::convert_to_descriptor("[C"));
+        assert_eq!("[D", Class::convert_to_descriptor("[D"));
+        assert_eq!("[F", Class::convert_to_descriptor("[F"));
+        assert_eq!("[I", Class::convert_to_descriptor("[I"));
+        assert_eq!("[J", Class::convert_to_descriptor("[J"));
+        assert_eq!("[S", Class::convert_to_descriptor("[S"));
+        assert_eq!("[V", Class::convert_to_descriptor("[V"));
     }
 
     #[test]

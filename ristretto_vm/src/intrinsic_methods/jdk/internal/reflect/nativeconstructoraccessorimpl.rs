@@ -1,3 +1,4 @@
+use crate::Error::InternalError;
 use crate::Result;
 use crate::intrinsic_methods::java::lang::class;
 use crate::parameters::Parameters;
@@ -5,9 +6,28 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
-use ristretto_classloader::{Object, Value};
+use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
+
+/// Converts an object in a vector to a primitive value if it is a primitive object.
+///
+/// # Errors
+///
+/// If the object is not a primitive or cannot be converted to a primitive.
+pub(crate) fn unbox_primitive(values: &mut [Value], index: usize) -> Result<()> {
+    let Some(value) = values.get(index) else {
+        return Err(InternalError(format!("index out of bounds: {index}")));
+    };
+    let Value::Object(Some(Reference::Object(object))) = value else {
+        return Err(InternalError(format!(
+            "Expected object at index {index}, found: {value:?}"
+        )));
+    };
+    let value = object.value("value")?;
+    values[index] = value;
+    Ok(())
+}
 
 #[intrinsic_method(
     "jdk/internal/reflect/NativeConstructorAccessorImpl.newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;",
@@ -18,7 +38,7 @@ pub(crate) async fn new_instance_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let arguments: Vec<Value> = parameters.pop()?.try_into()?;
+    let mut arguments: Vec<Value> = parameters.pop()?.try_into()?;
     let method = parameters.pop_object()?;
 
     let class_object: Object = method.value("clazz")?.try_into()?;
@@ -26,14 +46,18 @@ pub(crate) async fn new_instance_0(
     let class_name = class.name();
     let parameter_types: Vec<Value> = method.value("parameterTypes")?.try_into()?;
     let mut descriptor = String::new();
-    for parameter_type in parameter_types {
-        let parameter_type: Object = parameter_type.try_into()?;
-        let parameter_type_class = class::get_class(&thread, &parameter_type).await?;
-        if parameter_type_class.is_array() || parameter_type_class.is_primitive() {
-            descriptor.push_str(parameter_type_class.name());
-        } else {
-            let parameter_type = format!("L{};", parameter_type_class.name());
-            descriptor.push_str(parameter_type.as_str());
+    for (index, parameter_type) in parameter_types.iter().enumerate() {
+        let Value::Object(Some(Reference::Object(parameter_type))) = parameter_type else {
+            return Err(InternalError(format!(
+                "Expected object at parameter index {index}, found: {parameter_type:?}"
+            )));
+        };
+        let parameter_type_class = class::get_class(&thread, parameter_type).await?;
+        let class_name = parameter_type_class.name();
+        let class_descriptor = Class::convert_to_descriptor(class_name);
+        descriptor.push_str(class_descriptor.as_str());
+        if parameter_type_class.is_primitive() {
+            unbox_primitive(&mut arguments, index)?;
         }
     }
 
