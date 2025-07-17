@@ -1,0 +1,91 @@
+expected
+Integer instanceof Integer: true
+Integer instanceof Number: true
+Integer instanceof Object: true
+Integer instanceof Comparable: true
+Integer instanceof java.io.Serializable: true
+Number (Integer) instanceof Number: true
+Number (Integer) instanceof Integer: true
+Number (Integer) instanceof Double: false
+Number (Double) instanceof Number: true
+Number (Double) instanceof Double: true
+Number (Double) instanceof Integer: false
+Boolean instanceof Boolean: true
+Boolean instanceof Object: true
+Boolean instanceof Comparable: true
+Boolean instanceof java.io.Serializable: true
+Character instanceof Character: true
+Character instanceof Object: true
+Character instanceof Comparable: true
+Character instanceof java.io.Serializable: true
+Integer[] instanceof Object: true
+Integer[] instanceof Integer[]: true
+Integer[] instanceof Number[]: true
+Integer[] instanceof Object[]: true
+Integer[] instanceof Comparable[]: true
+Integer[][] instanceof Object: true
+Integer[][] instanceof Integer[][]: true
+Integer[][] instanceof Number[][]: true
+Integer[][] instanceof Object[][]: true
+Integer[][] instanceof Object[]: true
+String[0] instanceof String[]: true
+String[0] instanceof Object[]: true
+String[0] instanceof Object: true
+Object[] instanceof Object[]: true
+Object[] instanceof String[]: false
+Object[] instanceof Integer[]: false
+Object[] instanceof Object: true
+String[] as Object instanceof Object: true
+String[] as Object instanceof String[]: true
+String[] as Object instanceof Object[]: true
+String[] as Object instanceof int[]: false
+int[] as Object instanceof Object: true
+int[] as Object instanceof int[]: true
+int[] as Object instanceof Object[]: false
+int[] as Object instanceof Integer[]: false
+
+actual
+Integer instanceof Integer: true
+Integer instanceof Number: true
+Integer instanceof Object: true
+Integer instanceof Comparable: true
+Integer instanceof java.io.Serializable: true
+Number (Integer) instanceof Number: true
+Number (Integer) instanceof Integer: true
+Number (Integer) instanceof Double: false
+Number (Double) instanceof Number: true
+Number (Double) instanceof Double: true
+Number (Double) instanceof Integer: false
+Boolean instanceof Boolean: true
+Boolean instanceof Object: true
+Boolean instanceof Comparable: true
+Boolean instanceof java.io.Serializable: true
+Character instanceof Character: true
+Character instanceof Object: true
+Character instanceof Comparable: true
+Character instanceof java.io.Serializable: true
+Integer[] instanceof Object: true
+Integer[] instanceof Integer[]: true
+Integer[] instanceof Number[]: false
+Integer[] instanceof Object[]: true
+Integer[] instanceof Comparable[]: false
+Integer[][] instanceof Object: true
+Integer[][] instanceof Integer[][]: true
+Integer[][] instanceof Number[][]: false
+Integer[][] instanceof Object[][]: true
+Integer[][] instanceof Object[]: true
+String[0] instanceof String[]: true
+String[0] instanceof Object[]: true
+String[0] instanceof Object: true
+Object[] instanceof Object[]: true
+Object[] instanceof String[]: false
+Object[] instanceof Integer[]: false
+Object[] instanceof Object: true
+String[] as Object instanceof Object: true
+String[] as Object instanceof String[]: true
+String[] as Object instanceof Object[]: true
+String[] as Object instanceof int[]: false
+int[] as Object instanceof Object: false
+int[] as Object instanceof int[]: true
+int[] as Object instanceof Object[]: false
+int[] as Object instanceof Integer[]: false

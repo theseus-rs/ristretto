@@ -1,0 +1,91 @@
+expected
+Color.RED instanceof Color: true
+Color.RED instanceof Enum: true
+Color.RED instanceof Object: true
+Color.RED instanceof Comparable: true
+Color.RED instanceof java.io.Serializable: true
+Color.GREEN instanceof Color: true
+Color.BLUE instanceof Color: true
+Color.GREEN instanceof Enum: true
+Color.BLUE instanceof Enum: true
+Size.MEDIUM instanceof Size: true
+Size.MEDIUM instanceof Enum: true
+Size.MEDIUM instanceof Object: true
+Size.MEDIUM instanceof Comparable: true
+Enum ref (Color.RED) instanceof Enum: true
+Enum ref (Color.RED) instanceof Color: true
+Enum ref (Color.RED) instanceof Size: false
+Enum ref (Color.RED) instanceof Object: true
+Enum ref (Color.RED) instanceof Comparable: true
+Color[] instanceof Object: true
+Color[] instanceof Color[]: true
+Color[] instanceof Enum[]: true
+Color[] instanceof Object[]: true
+Color[] instanceof Comparable[]: true
+AnnotatedClass instanceof AnnotatedClass: true
+AnnotatedClass instanceof Object: true
+Color.class instanceof Class: true
+Color.class instanceof Object: true
+null Color instanceof Color: false
+null Color instanceof Enum: false
+null Color instanceof Object: false
+Color as Object instanceof Object: true
+Color as Object instanceof Color: true
+Color as Object instanceof Enum: true
+Color as Object instanceof Size: false
+Color as Object instanceof String: false
+Color as Comparable instanceof Comparable: true
+Color as Comparable instanceof Color: true
+Color as Comparable instanceof Enum: true
+Color as Comparable instanceof Object: true
+Color[][] instanceof Object: true
+Color[][] instanceof Color[][]: true
+Color[][] instanceof Enum[][]: true
+Color[][] instanceof Object[][]: true
+Color[][] instanceof Object[]: true
+
+actual
+Color.RED instanceof Color: true
+Color.RED instanceof Enum: true
+Color.RED instanceof Object: true
+Color.RED instanceof Comparable: true
+Color.RED instanceof java.io.Serializable: true
+Color.GREEN instanceof Color: true
+Color.BLUE instanceof Color: true
+Color.GREEN instanceof Enum: true
+Color.BLUE instanceof Enum: true
+Size.MEDIUM instanceof Size: true
+Size.MEDIUM instanceof Enum: true
+Size.MEDIUM instanceof Object: true
+Size.MEDIUM instanceof Comparable: true
+Enum ref (Color.RED) instanceof Enum: true
+Enum ref (Color.RED) instanceof Color: true
+Enum ref (Color.RED) instanceof Size: false
+Enum ref (Color.RED) instanceof Object: true
+Enum ref (Color.RED) instanceof Comparable: true
+Color[] instanceof Object: true
+Color[] instanceof Color[]: true
+Color[] instanceof Enum[]: false
+Color[] instanceof Object[]: true
+Color[] instanceof Comparable[]: false
+AnnotatedClass instanceof AnnotatedClass: true
+AnnotatedClass instanceof Object: true
+Color.class instanceof Class: true
+Color.class instanceof Object: true
+null Color instanceof Color: false
+null Color instanceof Enum: false
+null Color instanceof Object: false
+Color as Object instanceof Object: true
+Color as Object instanceof Color: true
+Color as Object instanceof Enum: true
+Color as Object instanceof Size: false
+Color as Object instanceof String: false
+Color as Comparable instanceof Comparable: true
+Color as Comparable instanceof Color: true
+Color as Comparable instanceof Enum: true
+Color as Comparable instanceof Object: true
+Color[][] instanceof Object: true
+Color[][] instanceof Color[][]: true
+Color[][] instanceof Enum[][]: false
+Color[][] instanceof Object[][]: true
+Color[][] instanceof Object[]: true

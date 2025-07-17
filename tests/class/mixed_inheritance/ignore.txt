@@ -1,0 +1,97 @@
+expected
+Rectangle instanceof Rectangle: true
+Rectangle instanceof Shape: true
+Rectangle instanceof Drawable: true
+Rectangle instanceof Resizable: true
+Rectangle instanceof Colorable: true
+Rectangle instanceof Object: true
+Circle instanceof Circle: true
+Circle instanceof Shape: true
+Circle instanceof Drawable: true
+Circle instanceof Resizable: true
+Circle instanceof Colorable: false
+Triangle instanceof Triangle: true
+Triangle instanceof Shape: true
+Triangle instanceof Drawable: true
+Triangle instanceof Resizable: false
+Triangle instanceof Colorable: false
+ColoredRectangle instanceof ColoredRectangle: true
+ColoredRectangle instanceof Rectangle: true
+ColoredRectangle instanceof Shape: true
+ColoredRectangle instanceof Drawable: true
+ColoredRectangle instanceof Resizable: true
+ColoredRectangle instanceof Colorable: true
+Drawable ref (Rectangle) instanceof Drawable: true
+Drawable ref (Rectangle) instanceof Rectangle: true
+Drawable ref (Rectangle) instanceof Shape: true
+Drawable ref (Rectangle) instanceof Resizable: true
+Drawable ref (Rectangle) instanceof Colorable: true
+Resizable ref (Circle) instanceof Resizable: true
+Resizable ref (Circle) instanceof Circle: true
+Resizable ref (Circle) instanceof Shape: true
+Resizable ref (Circle) instanceof Drawable: true
+Resizable ref (Circle) instanceof Colorable: false
+Shape ref (Triangle) instanceof Shape: true
+Shape ref (Triangle) instanceof Triangle: true
+Shape ref (Triangle) instanceof Drawable: true
+Shape ref (Triangle) instanceof Resizable: false
+Shape ref (Triangle) instanceof Rectangle: false
+Rectangle[] instanceof Object: true
+Rectangle[] instanceof Rectangle[]: true
+Rectangle[] instanceof Shape[]: true
+Rectangle[] instanceof Drawable[]: true
+Rectangle[] instanceof Resizable[]: true
+Rectangle[] instanceof Object[]: true
+Shape[] instanceof Shape[]: true
+Shape[] instanceof Drawable[]: true
+Shape[] instanceof Object[]: true
+Shape[] instanceof Rectangle[]: false
+
+actual
+Rectangle instanceof Rectangle: true
+Rectangle instanceof Shape: true
+Rectangle instanceof Drawable: true
+Rectangle instanceof Resizable: true
+Rectangle instanceof Colorable: true
+Rectangle instanceof Object: true
+Circle instanceof Circle: true
+Circle instanceof Shape: true
+Circle instanceof Drawable: true
+Circle instanceof Resizable: true
+Circle instanceof Colorable: false
+Triangle instanceof Triangle: true
+Triangle instanceof Shape: true
+Triangle instanceof Drawable: true
+Triangle instanceof Resizable: false
+Triangle instanceof Colorable: false
+ColoredRectangle instanceof ColoredRectangle: true
+ColoredRectangle instanceof Rectangle: true
+ColoredRectangle instanceof Shape: true
+ColoredRectangle instanceof Drawable: true
+ColoredRectangle instanceof Resizable: true
+ColoredRectangle instanceof Colorable: true
+Drawable ref (Rectangle) instanceof Drawable: true
+Drawable ref (Rectangle) instanceof Rectangle: true
+Drawable ref (Rectangle) instanceof Shape: true
+Drawable ref (Rectangle) instanceof Resizable: true
+Drawable ref (Rectangle) instanceof Colorable: true
+Resizable ref (Circle) instanceof Resizable: true
+Resizable ref (Circle) instanceof Circle: true
+Resizable ref (Circle) instanceof Shape: true
+Resizable ref (Circle) instanceof Drawable: true
+Resizable ref (Circle) instanceof Colorable: false
+Shape ref (Triangle) instanceof Shape: true
+Shape ref (Triangle) instanceof Triangle: true
+Shape ref (Triangle) instanceof Drawable: true
+Shape ref (Triangle) instanceof Resizable: false
+Shape ref (Triangle) instanceof Rectangle: false
+Rectangle[] instanceof Object: true
+Rectangle[] instanceof Rectangle[]: true
+Rectangle[] instanceof Shape[]: false
+Rectangle[] instanceof Drawable[]: false
+Rectangle[] instanceof Resizable[]: false
+Rectangle[] instanceof Object[]: true
+Shape[] instanceof Shape[]: true
+Shape[] instanceof Drawable[]: false
+Shape[] instanceof Object[]: true
+Shape[] instanceof Rectangle[]: false
