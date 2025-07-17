@@ -479,7 +479,6 @@ mod tests {
     use super::*;
     use crate::VM;
     use crate::handles::ThreadHandle;
-    use ristretto_classloader::Class;
 
     /// Helper function to create a thread object for testing
     async fn create_thread(vm: &Arc<VM>) -> Result<Value> {
@@ -584,7 +583,7 @@ mod tests {
         let value = get_threads(thread, Parameters::default())
             .await?
             .expect("threads");
-        let (_class, threads): (Arc<Class>, Vec<Option<Reference>>) = value.try_into()?;
+        let threads: Vec<Value> = value.try_into()?;
         assert_eq!(threads.len(), 1);
         Ok(())
     }

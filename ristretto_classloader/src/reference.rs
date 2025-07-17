@@ -1,7 +1,6 @@
 use crate::Error::InvalidValueType;
 use crate::concurrent_vec::ConcurrentVec;
 use crate::{Class, Object, Result, Value};
-use ristretto_classfile::{ClassFile, ConstantPool};
 use ristretto_gc::{GarbageCollector, Trace};
 use std::fmt;
 use std::fmt::Display;
@@ -56,30 +55,6 @@ impl Reference {
             Reference::Array(object_array) => object_array.class.name(),
             Reference::Object(value) => value.class().name(),
         }
-    }
-
-    /// Get the class of the reference
-    ///
-    /// # Errors
-    ///
-    /// if the class cannot be created
-    pub fn class(&self) -> Result<Arc<Class>> {
-        let class = match self {
-            Reference::Array(object_array) => object_array.class.clone(),
-            Reference::Object(value) => value.class().clone(),
-            _ => {
-                let class_name = self.class_name();
-                let mut constant_pool = ConstantPool::default();
-                let class_index = constant_pool.add_class(class_name)?;
-                let class_file = ClassFile {
-                    constant_pool,
-                    this_class: class_index,
-                    ..Default::default()
-                };
-                Class::from(None, class_file)?
-            }
-        };
-        Ok(class)
     }
 
     /// Returns the reference to `Vec<i8>`.
@@ -886,20 +861,6 @@ impl TryInto<String> for Reference {
     }
 }
 
-impl TryInto<Arc<Class>> for Reference {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Arc<Class>> {
-        match self {
-            Reference::Object(object) => {
-                let class: Arc<Class> = object.try_into()?;
-                Ok(class)
-            }
-            _ => self.class(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -912,12 +873,10 @@ mod tests {
     }
 
     #[test]
-    fn test_display_byte_array() -> Result<()> {
+    fn test_display_byte_array() {
         let reference = Reference::from(vec![1i8, 2i8, 3i8]);
         assert_eq!(reference.class_name(), "[B");
-        assert_eq!(reference.class()?.name(), "[B");
         assert_eq!(reference.to_string(), "byte[1, 2, 3]");
-        Ok(())
     }
 
     #[test]
@@ -940,7 +899,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_trace_object() -> Result<()> {
-        let class = Class::new_named("java.lang.Object")?;
+        let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object);
         let collector = GarbageCollector::new();
@@ -983,12 +942,10 @@ mod tests {
     }
 
     #[test]
-    fn test_display_char_array() -> Result<()> {
+    fn test_display_char_array() {
         let reference = Reference::from(vec![1 as char, 2 as char, 3 as char]);
         assert_eq!(reference.class_name(), "[C");
-        assert_eq!(reference.class()?.name(), "[C");
         assert_eq!(reference.to_string(), "char[1, 2, 3]");
-        Ok(())
     }
 
     #[test]
@@ -1024,12 +981,10 @@ mod tests {
     }
 
     #[test]
-    fn test_display_short_array() -> Result<()> {
+    fn test_display_short_array() {
         let reference = Reference::from(vec![1i16, 2i16, 3i16]);
         assert_eq!(reference.class_name(), "[S");
-        assert_eq!(reference.class()?.name(), "[S");
         assert_eq!(reference.to_string(), "short[1, 2, 3]");
-        Ok(())
     }
 
     #[test]
@@ -1066,12 +1021,10 @@ mod tests {
     }
 
     #[test]
-    fn test_display_int_array() -> Result<()> {
+    fn test_display_int_array() {
         let reference = Reference::from(vec![1i32, 2i32, 3i32]);
         assert_eq!(reference.class_name(), "[I");
-        assert_eq!(reference.class()?.name(), "[I");
         assert_eq!(reference.to_string(), "int[1, 2, 3]");
-        Ok(())
     }
 
     #[test]
@@ -1108,12 +1061,10 @@ mod tests {
     }
 
     #[test]
-    fn test_display_long_array() -> Result<()> {
+    fn test_display_long_array() {
         let reference = Reference::from(vec![1i64, 2i64, 3i64]);
         assert_eq!(reference.class_name(), "[J");
-        assert_eq!(reference.class()?.name(), "[J");
         assert_eq!(reference.to_string(), "long[1, 2, 3]");
-        Ok(())
     }
 
     #[test]
@@ -1150,12 +1101,10 @@ mod tests {
     }
 
     #[test]
-    fn test_display_float_array() -> Result<()> {
+    fn test_display_float_array() {
         let reference = Reference::from(vec![1.0f32, 2.0f32, 3.0f32]);
         assert_eq!(reference.class_name(), "[F");
-        assert_eq!(reference.class()?.name(), "[F");
         assert_eq!(reference.to_string(), "float[1.0, 2.0, 3.0]");
-        Ok(())
     }
 
     #[test]
@@ -1195,12 +1144,10 @@ mod tests {
     }
 
     #[test]
-    fn test_display_double_array() -> Result<()> {
+    fn test_display_double_array() {
         let reference = Reference::from(vec![1.0f64, 2.0f64, 3.0f64]);
         assert_eq!(reference.class_name(), "[D");
-        assert_eq!(reference.class()?.name(), "[D");
         assert_eq!(reference.to_string(), "double[1.0, 2.0, 3.0]");
-        Ok(())
     }
 
     #[test]
@@ -1239,19 +1186,18 @@ mod tests {
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
-    #[test]
-    fn test_display_reference_array() -> Result<()> {
-        let class = Class::new_named("[Ljava/lang/Object;")?;
+    #[tokio::test]
+    async fn test_display_reference_array() -> Result<()> {
+        let class = load_class("[Ljava/lang/Object;").await?;
         let reference = Reference::from((class, vec![None]));
         assert_eq!(reference.class_name(), "[Ljava/lang/Object;");
-        assert_eq!(reference.class()?.name(), "[Ljava/lang/Object;");
         assert_eq!(reference.to_string(), "java/lang/Object[1]");
         Ok(())
     }
 
-    #[test]
-    fn test_as_class_vec_ref() -> Result<()> {
-        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+    #[tokio::test]
+    async fn test_as_class_vec_ref() -> Result<()> {
+        let original_class = load_class("[Ljava/lang/Object;").await?;
         let original_value = vec![None];
         let reference = Reference::from((original_class.clone(), original_value.clone()));
         let (class, value) = reference.as_class_vec_ref()?;
@@ -1267,9 +1213,9 @@ mod tests {
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
-    #[test]
-    fn test_as_class_vec_mut() -> Result<()> {
-        let object_class = Class::new_named("[Ljava/lang/Object;")?;
+    #[tokio::test]
+    async fn test_as_class_vec_mut() -> Result<()> {
+        let object_class = load_class("[Ljava/lang/Object;").await?;
         let reference = Reference::from((object_class.clone(), vec![]));
         {
             let (_class, mut mutable_reference) = reference.as_class_vec_mut()?;
@@ -1293,7 +1239,6 @@ mod tests {
         let object = Object::new(class)?;
         let reference = Reference::from(object);
         assert_eq!(reference.class_name(), "java/lang/Object");
-        assert_eq!(reference.class()?.name(), "java/lang/Object");
         assert!(
             reference
                 .to_string()
@@ -1973,9 +1918,9 @@ mod tests {
         assert!(matches!(reference, Reference::DoubleArray(_)));
     }
 
-    #[test]
-    fn test_from_class_vec() -> Result<()> {
-        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+    #[tokio::test]
+    async fn test_from_class_vec() -> Result<()> {
+        let original_class = load_class("[Ljava/lang/Object;").await?;
         let original_value = vec![None];
         let reference = Reference::from((original_class.clone(), original_value.clone()));
         assert!(matches!(reference, Reference::Array(_)));
@@ -1984,7 +1929,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_from_class_vec() -> Result<()> {
-        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+        let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java/lang/Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
@@ -1998,7 +1943,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_from_class_vec_error() -> Result<()> {
-        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+        let original_class = load_class("[Ljava/lang/Object;").await?;
         let value = Value::from(42);
         let original_value = vec![value];
         let reference = Reference::try_from((original_class.clone(), original_value.clone()));
@@ -2143,7 +2088,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_vec_value() -> Result<()> {
-        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+        let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class.clone())?;
@@ -2158,7 +2103,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_into_class_vec() -> Result<()> {
-        let original_class = Class::new_named("[Ljava/lang/Object;")?;
+        let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let object = Object::new(class.clone())?;
@@ -2357,27 +2302,6 @@ mod tests {
         object.set_value("value", string_value)?;
         let result: String = object.try_into()?;
         assert_eq!("foo".to_string(), result);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_class() -> Result<()> {
-        let class_name = "java.lang.Integer";
-        let class = load_class(class_name).await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(42))?;
-        let reference = Reference::from(object);
-        let value: Arc<Class> = reference.try_into()?;
-        assert_eq!("java/lang/Integer", value.name());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_class_array() -> Result<()> {
-        let array = vec![42];
-        let reference = Reference::from(array);
-        let value: Arc<Class> = reference.try_into()?;
-        assert_eq!("[I", value.name());
         Ok(())
     }
 }

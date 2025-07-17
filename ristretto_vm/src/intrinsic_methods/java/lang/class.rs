@@ -1179,11 +1179,15 @@ mod tests {
         let class = thread.class("java.lang.String").await?;
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
-        let result = get_declared_classes_0(thread, parameters).await?;
-        let (class, values) = result.expect("interfaces").try_into()?;
-        assert_eq!(class.name(), "[Ljava/lang/Class;");
+        let value = get_declared_classes_0(thread, parameters)
+            .await?
+            .expect("interfaces");
+        let reference = value.to_reference()?.expect("interfaces");
+        let class_name = reference.class_name().to_string();
+        let values: Vec<Value> = reference.try_into()?;
+        assert_eq!(class_name, "[Ljava/lang/Class;");
         let mut class_names = Vec::new();
-        for reference in values.into_iter().flatten() {
+        for reference in values.into_iter() {
             let object: Object = reference.try_into()?;
             let class_name = object.value("name")?;
             let class_name: String = class_name.try_into()?;
@@ -1202,9 +1206,13 @@ mod tests {
         let class = thread.class("java.lang.Integer").await?;
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object, Value::from(false)]);
-        let result = get_declared_constructors_0(thread, parameters).await?;
-        let (class, values) = result.expect("constructors").try_into()?;
-        assert_eq!(class.name(), "[Ljava/lang/reflect/Constructor;");
+        let value = get_declared_constructors_0(thread, parameters)
+            .await?
+            .expect("constructors");
+        let reference = value.to_reference()?.expect("constructors");
+        let class_name = reference.class_name().to_string();
+        let values: Vec<Value> = reference.try_into()?;
+        assert_eq!(class_name, "[Ljava/lang/reflect/Constructor;");
         assert_eq!(2, values.len());
         // TODO: Enable test assertions when invokedynamic is implemented
         // let mut signatures = Vec::new();
@@ -1238,16 +1246,20 @@ mod tests {
         let class = thread.class("java.lang.Integer").await?;
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object, Value::from(false)]);
-        let result = get_declared_fields_0(thread, parameters).await?;
-        let (class, values) = result.expect("fields").try_into()?;
-        assert_eq!(class.name(), "[Ljava/lang/reflect/Field;");
+        let value = get_declared_fields_0(thread, parameters)
+            .await?
+            .expect("fields");
+        let reference = value.to_reference()?.expect("fields");
+        let class_name = reference.class_name().to_string();
+        let values: Vec<Value> = reference.try_into()?;
+        assert_eq!(class_name, "[Ljava/lang/reflect/Field;");
         let mut signatures = Vec::new();
-        for reference in values.into_iter().flatten() {
+        for value in values.into_iter() {
             let result = vm
                 .invoke(
                     "java.lang.reflect.Field",
                     "toString()Ljava/lang/String;",
-                    &[Value::from(reference.clone())],
+                    &[value],
                 )
                 .await?;
             let signature: String = result.expect("string").try_into()?;
@@ -1278,16 +1290,20 @@ mod tests {
         let class = thread.class("java.lang.Boolean").await?;
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object, Value::from(false)]);
-        let result = get_declared_methods_0(thread, parameters).await?;
-        let (class, values) = result.expect("methods").try_into()?;
-        assert_eq!(class.name(), "[Ljava/lang/reflect/Method;");
+        let value = get_declared_methods_0(thread, parameters)
+            .await?
+            .expect("methods");
+        let reference = value.to_reference()?.expect("methods");
+        let class_name = reference.class_name().to_string();
+        let values: Vec<Value> = reference.try_into()?;
+        assert_eq!(class_name, "[Ljava/lang/reflect/Method;");
         let mut method_names = Vec::new();
-        for reference in values.into_iter().flatten() {
+        for value in values.into_iter() {
             let result = vm
                 .invoke(
                     "java.lang.reflect.Method",
                     "getName()Ljava/lang/String;",
-                    &[Value::from(reference.clone())],
+                    &[value],
                 )
                 .await?;
             let method_name: String = result.expect("string").try_into()?;
@@ -1415,11 +1431,15 @@ mod tests {
         let class = thread.class("java.lang.String").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
-        let result = get_interfaces_0(thread, parameters).await?;
-        let (class, values) = result.expect("interfaces").try_into()?;
-        assert_eq!(class.name(), "[Ljava/lang/Class;");
+        let value = get_interfaces_0(thread, parameters)
+            .await?
+            .expect("interfaces");
+        let reference = value.to_reference()?.expect("interfaces");
+        let class_name = reference.class_name().to_string();
+        let values: Vec<Value> = reference.try_into()?;
+        assert_eq!(class_name, "[Ljava/lang/Class;");
         let mut class_names = Vec::new();
-        for reference in values.into_iter().flatten() {
+        for reference in values.into_iter() {
             let object: Object = reference.try_into()?;
             let class_name = object.value("name")?;
             let class_name: String = class_name.try_into()?;

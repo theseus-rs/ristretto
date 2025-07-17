@@ -729,30 +729,17 @@ pub(crate) mod tests {
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
-        let result = get_member_ref_info_at(thread, parameters)
+        let value = get_member_ref_info_at(thread, parameters)
             .await?
             .expect("value");
-        let (class, values) = result.try_into()?;
-        assert_eq!("java/lang/String", class.name());
+        let result: Reference = value.try_into()?;
+        let class_name = result.class_name().to_string();
+        let values: Vec<Value> = result.try_into()?;
+        assert_eq!("java/lang/String", class_name);
         assert_eq!(3, values.len());
-        let class_name: String = values
-            .first()
-            .expect("value")
-            .clone()
-            .expect("class name")
-            .try_into()?;
-        let name: String = values
-            .get(1)
-            .expect("value")
-            .clone()
-            .expect("name")
-            .try_into()?;
-        let descriptor: String = values
-            .get(2)
-            .expect("value")
-            .clone()
-            .expect("descriptor")
-            .try_into()?;
+        let class_name: String = values.first().expect("value").clone().try_into()?;
+        let name: String = values.get(1).expect("value").clone().try_into()?;
+        let descriptor: String = values.get(2).expect("value").clone().try_into()?;
         assert_eq!("TestClass", class_name);
         assert_eq!("x", name);
         assert_eq!("I", descriptor);
@@ -769,30 +756,17 @@ pub(crate) mod tests {
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
-        let result = get_member_ref_info_at(thread, parameters)
+        let value = get_member_ref_info_at(thread, parameters)
             .await?
             .expect("value");
-        let (class, values) = result.try_into()?;
-        assert_eq!("java/lang/String", class.name());
+        let reference: Reference = value.try_into()?;
+        let class_name = reference.class_name().to_string();
+        let values: Vec<Value> = reference.try_into()?;
+        assert_eq!("java/lang/String", class_name);
         assert_eq!(3, values.len());
-        let class_name: String = values
-            .first()
-            .expect("value")
-            .clone()
-            .expect("class name")
-            .try_into()?;
-        let name: String = values
-            .get(1)
-            .expect("value")
-            .clone()
-            .expect("name")
-            .try_into()?;
-        let descriptor: String = values
-            .get(2)
-            .expect("value")
-            .clone()
-            .expect("descriptor")
-            .try_into()?;
+        let class_name: String = values.first().expect("value").clone().try_into()?;
+        let name: String = values.get(1).expect("value").clone().try_into()?;
+        let descriptor: String = values.get(2).expect("value").clone().try_into()?;
         assert_eq!("java/lang/Object", class_name);
         assert_eq!("<init>", name);
         assert_eq!("()V", descriptor);
@@ -906,24 +880,16 @@ pub(crate) mod tests {
     async fn test_get_name_and_type_ref_info_at_0_field() -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
-        let result = get_name_and_type_ref_info_at_0(thread, parameters)
+        let value = get_name_and_type_ref_info_at_0(thread, parameters)
             .await?
             .expect("value");
-        let (class, values) = result.try_into()?;
-        assert_eq!("java/lang/String", class.name());
+        let reference = value.to_reference()?.expect("value");
+        let class_name = reference.class_name().to_string();
+        let values: Vec<Value> = reference.try_into()?;
+        assert_eq!("java/lang/String", class_name);
         assert_eq!(2, values.len());
-        let name: String = values
-            .first()
-            .expect("value")
-            .clone()
-            .expect("name")
-            .try_into()?;
-        let descriptor: String = values
-            .get(1)
-            .expect("value")
-            .clone()
-            .expect("descriptor")
-            .try_into()?;
+        let name: String = values.first().expect("value").clone().try_into()?;
+        let descriptor: String = values.get(1).expect("value").clone().try_into()?;
         assert_eq!("x", name);
         assert_eq!("I", descriptor);
         Ok(())
@@ -933,24 +899,16 @@ pub(crate) mod tests {
     async fn test_get_name_and_type_ref_info_at_0_method() -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
-        let result = get_name_and_type_ref_info_at_0(thread, parameters)
+        let value = get_name_and_type_ref_info_at_0(thread, parameters)
             .await?
             .expect("value");
-        let (class, values) = result.try_into()?;
-        assert_eq!("java/lang/String", class.name());
+        let reference = value.to_reference()?.expect("value");
+        let class_name = reference.class_name().to_string();
+        let values: Vec<Value> = reference.try_into()?;
+        assert_eq!("java/lang/String", class_name);
         assert_eq!(2, values.len());
-        let name: String = values
-            .first()
-            .expect("value")
-            .clone()
-            .expect("name")
-            .try_into()?;
-        let descriptor: String = values
-            .get(1)
-            .expect("value")
-            .clone()
-            .expect("descriptor")
-            .try_into()?;
+        let name: String = values.first().expect("value").clone().try_into()?;
+        let descriptor: String = values.get(1).expect("value").clone().try_into()?;
         assert_eq!("<init>", name);
         assert_eq!("()V", descriptor);
         Ok(())

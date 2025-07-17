@@ -1,5 +1,6 @@
 use crate::Error::ClassNotFound;
 use crate::{Class, ClassPath, Result, Value};
+use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::{Arc, Weak};
@@ -63,7 +64,7 @@ impl ClassLoader {
     /// # Errors
     ///
     /// if the class file cannot be read.
-    pub async fn load<S: AsRef<str>>(&self, name: S) -> Result<Arc<Class>> {
+    pub async fn load(&self, name: &str) -> Result<Arc<Class>> {
         self.load_with_status(name).await.map(|(class, _)| class)
     }
 
@@ -72,19 +73,16 @@ impl ClassLoader {
     /// # Errors
     ///
     /// if the class file cannot be read.
-    pub async fn load_with_status<S: AsRef<str>>(
-        &self,
-        class_name: S,
-    ) -> Result<(Arc<Class>, bool)> {
-        let class_name = class_name.as_ref().to_string().replace('.', "/");
-        let class_name = class_name.as_str();
-
+    pub async fn load_with_status(&self, class_name: &str) -> Result<(Arc<Class>, bool)> {
         // Attempt to load the class from the parent class loader first.
         if let Some(parent) = self.parent().await
             && let Ok((class, loaded)) = Box::pin(parent.load_with_status(class_name)).await
         {
             return Ok((class, loaded));
         }
+
+        let class_name = class_name.replace('.', "/");
+        let class_name = class_name.as_str();
 
         // Check if the class is already loaded in this class loader.
         {
@@ -94,32 +92,59 @@ impl ClassLoader {
             }
         }
 
-        let class_path = self.class_path();
-        if let Ok(class_file) = class_path.read_class(class_name).await {
-            let mut classes = self.classes.write().await;
-            // Check if the class was loaded while waiting for the lock.
-            if let Some(class) = classes.get(class_name) {
-                return Ok((class.clone(), true));
-            }
-            let class = Class::from(Some(self.this.clone()), class_file)?;
-            classes.insert(class_name.to_string(), class.clone());
-            return Ok((class, false));
-        }
-
-        // Handle array classes, which start with '['
-        // TODO: array class loading needs to be updated to only load array classes in the class
-        // loader that is responsible for the component:
-        // https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html#jvms-5.3.3
         if class_name.starts_with('[') {
-            let class = Class::new_named(class_name)?;
-            {
-                let mut classes = self.classes.write().await;
-                classes.insert(class_name.to_string(), Arc::clone(&class));
+            if let Ok(class) = self.create_array_class(class_name) {
+                return Ok(self.cache_class(class_name, class).await);
             }
-            return Ok((class, false));
+        } else {
+            let class_path = self.class_path();
+            if let Ok(class_file) = class_path.read_class(class_name).await {
+                let class = Class::from(Some(self.this.clone()), class_file)?;
+                return Ok(self.cache_class(class_name, class).await);
+            }
         }
 
         Err(ClassNotFound(class_name.to_string()))
+    }
+
+    /// Cache a class in the class loader.
+    async fn cache_class(&self, class_name: &str, class: Arc<Class>) -> (Arc<Class>, bool) {
+        let mut classes = self.classes.write().await;
+        // Check if the class was loaded while waiting for the lock.
+        if let Some(class) = classes.get(class_name) {
+            return (class.clone(), true);
+        }
+        classes.insert(class_name.to_string(), class.clone());
+        (class, false)
+    }
+
+    /// Create an array class.
+    ///
+    /// Array classes are created by the JVM, not loaded from class files. The array class is
+    /// created in the same class loader as its component type.
+    ///
+    /// # Reference
+    ///
+    /// - [JLS §5.3.3 Creating Array Classes](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html#jvms-5.3.3)
+    fn create_array_class(&self, class_name: &str) -> Result<Arc<Class>> {
+        let mut constant_pool = ConstantPool::new();
+        let this_class_index = constant_pool.add_class(class_name)?;
+        let super_class_index = constant_pool.add_class("java/lang/Object")?;
+        let serializable_index = constant_pool.add_class("java/io/Serializable")?;
+        let cloneable_index = constant_pool.add_class("java/lang/Cloneable")?;
+        let class_file = ClassFile {
+            version: JAVA_1_0_2,
+            constant_pool,
+            access_flags: ClassAccessFlags::PUBLIC
+                | ClassAccessFlags::FINAL
+                | ClassAccessFlags::ABSTRACT,
+            this_class: this_class_index,
+            super_class: super_class_index,
+            interfaces: vec![serializable_index, cloneable_index],
+            ..Default::default()
+        };
+
+        Class::from(Some(self.this.clone()), class_file)
     }
 
     /// Register a class with the class loader.
