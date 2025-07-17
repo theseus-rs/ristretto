@@ -1,6 +1,8 @@
+/** Test primitive type conversions and their class types. */
 public class Test {
     public static void main(String[] args) {
         // Test all primitive type conversions with bounds checking
+        System.out.println("=== Primitive Type Conversions ===");
         testIntToByte();
         testIntToShort();
         testIntToChar();
@@ -34,431 +36,221 @@ public class Test {
         testCharToLong();
         testCharToFloat();
         testCharToDouble();
-
-        testBoundsChecking();
     }
 
-    // INT to other types (i2b, i2s, i2c, i2l, i2f, i2d)
-    public static void testIntToByte() {
-        int value = 300;
-        byte result = (byte) value;
-        System.out.println(result);
-
-        value = 127;
-        result = (byte) value;
-        System.out.println(result);
-
-        value = -129;
-        result = (byte) value;
-        System.out.println(result);
+    static void testIntToByte() {
+        System.out.println("--- Int to Byte ---");
+        int[] values = {0, 127, 128, -128, -129, Integer.MAX_VALUE, Integer.MIN_VALUE};
+        for (int value : values) {
+            System.out.println(value + " -> " + (byte)value);
+        }
     }
 
-    public static void testIntToShort() {
-        int value = 70000;
-        short result = (short) value;
-        System.out.println(result);
-
-        value = 32767;
-        result = (short) value;
-        System.out.println(result);
-
-        value = -32769;
-        result = (short) value;
-        System.out.println(result);
+    static void testIntToShort() {
+        System.out.println("--- Int to Short ---");
+        int[] values = {0, 32767, 32768, -32768, -32769, Integer.MAX_VALUE, Integer.MIN_VALUE};
+        for (int value : values) {
+            System.out.println(value + " -> " + (short)value);
+        }
     }
 
-    public static void testIntToChar() {
-        int value = 65;
-        char result = (char) value;
-        System.out.println((int) result);
-
-        value = -1;
-        result = (char) value;
-        System.out.println((int) result);
-
-        value = 70000;
-        result = (char) value;
-        System.out.println((int) result);
+    static void testIntToChar() {
+        System.out.println("--- Int to Char ---");
+        int[] values = {0, 65535, 65536, -1, Integer.MAX_VALUE, Integer.MIN_VALUE};
+        for (int value : values) {
+            System.out.println(value + " -> " + (int)(char)value);
+        }
     }
 
-    public static void testIntToLong() {
-        int value = 2147483647;
-        long result = (long) value;
-        System.out.println(result);
-
-        value = -2147483648;
-        result = (long) value;
-        System.out.println(result);
+    static void testIntToLong() {
+        System.out.println("--- Int to Long ---");
+        int[] values = {0, Integer.MAX_VALUE, Integer.MIN_VALUE};
+        for (int value : values) {
+            System.out.println(value + " -> " + (long)value);
+        }
     }
 
-    public static void testIntToFloat() {
-        int value = 2147483647;
-        float result = (float) value;
-        System.out.println(result);
-
-        value = 16777217;
-        result = (float) value;
-        System.out.println(result);
+    static void testIntToFloat() {
+        System.out.println("--- Int to Float ---");
+        int[] values = {0, Integer.MAX_VALUE, Integer.MIN_VALUE};
+        for (int value : values) {
+            System.out.println(value + " -> " + (float)value);
+        }
     }
 
-    public static void testIntToDouble() {
-        int value = 2147483647;
-        double result = (double) value;
-        System.out.println(result);
-
-        value = -2147483648;
-        result = (double) value;
-        System.out.println(result);
+    static void testIntToDouble() {
+        System.out.println("--- Int to Double ---");
+        int[] values = {0, Integer.MAX_VALUE, Integer.MIN_VALUE};
+        for (int value : values) {
+            System.out.println(value + " -> " + (double)value);
+        }
     }
 
-    // LONG to other types (l2i, l2f, l2d)
-    public static void testLongToInt() {
-        long value = 2147483648L;
-        int result = (int) value;
-        System.out.println(result);
-
-        value = -2147483649L;
-        result = (int) value;
-        System.out.println(result);
-
-        value = 2147483647L;
-        result = (int) value;
-        System.out.println(result);
+    static void testLongToInt() {
+        System.out.println("--- Long to Int ---");
+        long[] values = {0L, Integer.MAX_VALUE, (long)Integer.MAX_VALUE + 1, Integer.MIN_VALUE, (long)Integer.MIN_VALUE - 1, Long.MAX_VALUE, Long.MIN_VALUE};
+        for (long value : values) {
+            System.out.println(value + " -> " + (int)value);
+        }
     }
 
-    public static void testLongToFloat() {
-        long value = 9223372036854775807L;
-        float result = (float) value;
-        System.out.println(result);
-
-        value = 16777217L;
-        result = (float) value;
-        System.out.println(result);
+    static void testLongToFloat() {
+        System.out.println("--- Long to Float ---");
+        long[] values = {0L, Long.MAX_VALUE, Long.MIN_VALUE};
+        for (long value : values) {
+            System.out.println(value + " -> " + (float)value);
+        }
     }
 
-    public static void testLongToDouble() {
-        long value = 9223372036854775807L;
-        double result = (double) value;
-        System.out.println(result);
-
-        value = 9007199254740993L;
-        result = (double) value;
-        System.out.println(result);
+    static void testLongToDouble() {
+        System.out.println("--- Long to Double ---");
+        long[] values = {0L, Long.MAX_VALUE, Long.MIN_VALUE};
+        for (long value : values) {
+            System.out.println(value + " -> " + (double)value);
+        }
     }
 
-    // FLOAT to other types (f2i, f2l, f2d)
-    public static void testFloatToInt() {
-        float value = 2.5f;
-        int result = (int) value;
-        System.out.println(result);
-
-        value = 2147483648.0f;
-        result = (int) value;
-        System.out.println(result);
-
-        value = -2147483649.0f;
-        result = (int) value;
-        System.out.println(result);
-
-        value = Float.NaN;
-        result = (int) value;
-        System.out.println(result);
-
-        value = Float.POSITIVE_INFINITY;
-        result = (int) value;
-        System.out.println(result);
-
-        value = Float.NEGATIVE_INFINITY;
-        result = (int) value;
-        System.out.println(result);
+    static void testFloatToInt() {
+        System.out.println("--- Float to Int ---");
+        float[] values = {0.0f, 1.5f, -1.5f, Float.MAX_VALUE, Float.MIN_VALUE, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NaN};
+        for (float value : values) {
+            System.out.println(value + " -> " + (int)value);
+        }
     }
 
-    public static void testFloatToLong() {
-        float value = 2.5f;
-        long result = (long) value;
-        System.out.println(result);
-
-        value = 9.223372e18f;
-        result = (long) value;
-        System.out.println(result);
-
-        value = -9.223372e18f;
-        result = (long) value;
-        System.out.println(result);
-
-        value = Float.NaN;
-        result = (long) value;
-        System.out.println(result);
-
-        value = Float.POSITIVE_INFINITY;
-        result = (long) value;
-        System.out.println(result);
-
-        value = Float.NEGATIVE_INFINITY;
-        result = (long) value;
-        System.out.println(result);
+    static void testFloatToLong() {
+        System.out.println("--- Float to Long ---");
+        float[] values = {0.0f, 1.5f, -1.5f, Float.MAX_VALUE, Float.MIN_VALUE, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NaN};
+        for (float value : values) {
+            System.out.println(value + " -> " + (long)value);
+        }
     }
 
-    public static void testFloatToDouble() {
-        float value = 3.14159f;
-        double result = (double) value;
-        System.out.println(result);
-
-        value = Float.MAX_VALUE;
-        result = (double) value;
-        System.out.println(result);
-
-        value = Float.NaN;
-        result = (double) value;
-        System.out.println(Double.isNaN(result));
-
-        value = Float.POSITIVE_INFINITY;
-        result = (double) value;
-        System.out.println(Double.isInfinite(result) && result > 0);
+    static void testFloatToDouble() {
+        System.out.println("--- Float to Double ---");
+        float[] values = {0.0f, 1.5f, -1.5f, Float.MAX_VALUE, Float.MIN_VALUE, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NaN};
+        for (float value : values) {
+            System.out.println(value + " -> " + (double)value);
+        }
     }
 
-    // DOUBLE to other types (d2i, d2l, d2f)
-    public static void testDoubleToInt() {
-        double value = 2.7;
-        int result = (int) value;
-        System.out.println(result);
-
-        value = 2147483648.0;
-        result = (int) value;
-        System.out.println(result);
-
-        value = -2147483649.0;
-        result = (int) value;
-        System.out.println(result);
-
-        value = Double.NaN;
-        result = (int) value;
-        System.out.println(result);
-
-        value = Double.POSITIVE_INFINITY;
-        result = (int) value;
-        System.out.println(result);
-
-        value = Double.NEGATIVE_INFINITY;
-        result = (int) value;
-        System.out.println(result);
+    static void testDoubleToInt() {
+        System.out.println("--- Double to Int ---");
+        double[] values = {0.0d, 1.5d, -1.5d, Double.MAX_VALUE, Double.MIN_VALUE, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NaN};
+        for (double value : values) {
+            System.out.println(value + " -> " + (int)value);
+        }
     }
 
-    public static void testDoubleToLong() {
-        double value = 2.7;
-        long result = (long) value;
-        System.out.println(result);
-
-        value = 9.223372036854776e18;
-        result = (long) value;
-        System.out.println(result);
-
-        value = -9.223372036854776e18;
-        result = (long) value;
-        System.out.println(result);
-
-        value = Double.NaN;
-        result = (long) value;
-        System.out.println(result);
-
-        value = Double.POSITIVE_INFINITY;
-        result = (long) value;
-        System.out.println(result);
-
-        value = Double.NEGATIVE_INFINITY;
-        result = (long) value;
-        System.out.println(result);
+    static void testDoubleToLong() {
+        System.out.println("--- Double to Long ---");
+        double[] values = {0.0d, 1.5d, -1.5d, Double.MAX_VALUE, Double.MIN_VALUE, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NaN};
+        for (double value : values) {
+            System.out.println(value + " -> " + (long)value);
+        }
     }
 
-    public static void testDoubleToFloat() {
-        double value = 3.141592653589793;
-        float result = (float) value;
-        System.out.println(result);
-
-        value = 1.7976931348623157e308;
-        result = (float) value;
-        System.out.println(Float.isInfinite(result));
-
-        value = Double.MIN_VALUE;
-        result = (float) value;
-        System.out.println(result);
-
-        value = Double.NaN;
-        result = (float) value;
-        System.out.println(Float.isNaN(result));
+    static void testDoubleToFloat() {
+        System.out.println("--- Double to Float ---");
+        double[] values = {0.0d, 1.5d, -1.5d, Double.MAX_VALUE, Double.MIN_VALUE, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NaN};
+        for (double value : values) {
+            System.out.println(value + " -> " + (float)value);
+        }
     }
 
-    // BYTE to other types (implicit conversions - no specific bytecode instructions)
-    public static void testByteToInt() {
-        byte value = 127;
-        int result = value;
-        System.out.println(result);
-
-        value = -128;
-        result = value;
-        System.out.println(result);
+    static void testByteToInt() {
+        System.out.println("--- Byte to Int ---");
+        byte[] values = {0, Byte.MAX_VALUE, Byte.MIN_VALUE};
+        for (byte value : values) {
+            System.out.println(value + " -> " + (int)value);
+        }
     }
 
-    public static void testByteToLong() {
-        byte value = 127;
-        long result = value;
-        System.out.println(result);
-
-        value = -128;
-        result = value;
-        System.out.println(result);
+    static void testByteToLong() {
+        System.out.println("--- Byte to Long ---");
+        byte[] values = {0, Byte.MAX_VALUE, Byte.MIN_VALUE};
+        for (byte value : values) {
+            System.out.println(value + " -> " + (long)value);
+        }
     }
 
-    public static void testByteToFloat() {
-        byte value = 127;
-        float result = value;
-        System.out.println(result);
-
-        value = -128;
-        result = value;
-        System.out.println(result);
+    static void testByteToFloat() {
+        System.out.println("--- Byte to Float ---");
+        byte[] values = {0, Byte.MAX_VALUE, Byte.MIN_VALUE};
+        for (byte value : values) {
+            System.out.println(value + " -> " + (float)value);
+        }
     }
 
-    public static void testByteToDouble() {
-        byte value = 127;
-        double result = value;
-        System.out.println(result);
-
-        value = -128;
-        result = value;
-        System.out.println(result);
+    static void testByteToDouble() {
+        System.out.println("--- Byte to Double ---");
+        byte[] values = {0, Byte.MAX_VALUE, Byte.MIN_VALUE};
+        for (byte value : values) {
+            System.out.println(value + " -> " + (double)value);
+        }
     }
 
-    // SHORT to other types (implicit conversions - no specific bytecode instructions)
-    public static void testShortToInt() {
-        short value = 32767;
-        int result = value;
-        System.out.println(result);
-
-        value = -32768;
-        result = value;
-        System.out.println(result);
+    static void testShortToInt() {
+        System.out.println("--- Short to Int ---");
+        short[] values = {0, Short.MAX_VALUE, Short.MIN_VALUE};
+        for (short value : values) {
+            System.out.println(value + " -> " + (int)value);
+        }
     }
 
-    public static void testShortToLong() {
-        short value = 32767;
-        long result = value;
-        System.out.println(result);
-
-        value = -32768;
-        result = value;
-        System.out.println(result);
+    static void testShortToLong() {
+        System.out.println("--- Short to Long ---");
+        short[] values = {0, Short.MAX_VALUE, Short.MIN_VALUE};
+        for (short value : values) {
+            System.out.println(value + " -> " + (long)value);
+        }
     }
 
-    public static void testShortToFloat() {
-        short value = 32767;
-        float result = value;
-        System.out.println(result);
-
-        value = -32768;
-        result = value;
-        System.out.println(result);
+    static void testShortToFloat() {
+        System.out.println("--- Short to Float ---");
+        short[] values = {0, Short.MAX_VALUE, Short.MIN_VALUE};
+        for (short value : values) {
+            System.out.println(value + " -> " + (float)value);
+        }
     }
 
-    public static void testShortToDouble() {
-        short value = 32767;
-        double result = value;
-        System.out.println(result);
-
-        value = -32768;
-        result = value;
-        System.out.println(result);
+    static void testShortToDouble() {
+        System.out.println("--- Short to Double ---");
+        short[] values = {0, Short.MAX_VALUE, Short.MIN_VALUE};
+        for (short value : values) {
+            System.out.println(value + " -> " + (double)value);
+        }
     }
 
-    // CHAR to other types (implicit conversions - no specific bytecode instructions)
-    public static void testCharToInt() {
-        char value = 'A';
-        int result = value;
-        System.out.println(result);
-
-        value = '\u0000';
-        result = value;
-        System.out.println(result);
-
-        value = '\uffff';
-        result = value;
-        System.out.println(result);
+    static void testCharToInt() {
+        System.out.println("--- Char to Int ---");
+        char[] values = {0, 'A', Character.MAX_VALUE, Character.MIN_VALUE};
+        for (char value : values) {
+            System.out.println((int)value + " -> " + (int)value);
+        }
     }
 
-    public static void testCharToLong() {
-        char value = 'A';
-        long result = value;
-        System.out.println(result);
-
-        value = '\uffff';
-        result = value;
-        System.out.println(result);
+    static void testCharToLong() {
+        System.out.println("--- Char to Long ---");
+        char[] values = {0, 'A', Character.MAX_VALUE, Character.MIN_VALUE};
+        for (char value : values) {
+            System.out.println((int)value + " -> " + (long)value);
+        }
     }
 
-    public static void testCharToFloat() {
-        char value = 'A';
-        float result = value;
-        System.out.println(result);
-
-        value = '\uffff';
-        result = value;
-        System.out.println(result);
+    static void testCharToFloat() {
+        System.out.println("--- Char to Float ---");
+        char[] values = {0, 'A', Character.MAX_VALUE, Character.MIN_VALUE};
+        for (char value : values) {
+            System.out.println((int)value + " -> " + (float)value);
+        }
     }
 
-    public static void testCharToDouble() {
-        char value = 'A';
-        double result = value;
-        System.out.println(result);
-
-        value = '\uffff';
-        result = value;
-        System.out.println(result);
-    }
-
-    // Additional bounds checking tests
-    public static void testBoundsChecking() {
-        // Test extreme values for each conversion
-
-        // Test int to byte with extreme values
-        int intMax = Integer.MAX_VALUE;
-        byte byteFromIntMax = (byte) intMax;
-        System.out.println(byteFromIntMax);
-
-        int intMin = Integer.MIN_VALUE;
-        byte byteFromIntMin = (byte) intMin;
-        System.out.println(byteFromIntMin);
-
-        // Test long to int with extreme values
-        long longMax = Long.MAX_VALUE;
-        int intFromLongMax = (int) longMax;
-        System.out.println(intFromLongMax);
-
-        long longMin = Long.MIN_VALUE;
-        int intFromLongMin = (int) longMin;
-        System.out.println(intFromLongMin);
-
-        // Test float/double special values
-        float floatNaN = Float.NaN;
-        int intFromNaN = (int) floatNaN;
-        System.out.println(intFromNaN);
-
-        double doubleInf = Double.POSITIVE_INFINITY;
-        long longFromInf = (long) doubleInf;
-        System.out.println(longFromInf);
-
-        double doubleNegInf = Double.NEGATIVE_INFINITY;
-        long longFromNegInf = (long) doubleNegInf;
-        System.out.println(longFromNegInf);
-
-        // Test precision loss in float/double conversions
-        long precisionTest = 9007199254740993L;
-        float floatFromLong = (float) precisionTest;
-        long longFromFloat = (long) floatFromLong;
-        System.out.println(longFromFloat != precisionTest);
-
-        double doubleFromLong = (double) precisionTest;
-        long longFromDouble = (long) doubleFromLong;
-        System.out.println(longFromDouble == precisionTest);
+    static void testCharToDouble() {
+        System.out.println("--- Char to Double ---");
+        char[] values = {0, 'A', Character.MAX_VALUE, Character.MIN_VALUE};
+        for (char value : values) {
+            System.out.println((int)value + " -> " + (double)value);
+        }
     }
 }
-

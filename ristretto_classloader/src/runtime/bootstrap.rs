@@ -1,7 +1,8 @@
 use crate::runtime::util;
-use crate::{ClassLoader, ClassPath, Error, Result};
+use crate::{Class, ClassLoader, ClassPath, Error, Result};
 use flate2::bufread::GzDecoder;
 use ristretto_classfile::Error::IoError;
+use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, io};
@@ -63,6 +64,7 @@ pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, 
 
     let class_path = get_class_path(&java_version, java_home)?;
     let class_loader = ClassLoader::new("bootstrap", class_path);
+    register_primitives(&class_loader).await?;
     Ok((java_home.clone(), java_version, class_loader))
 }
 
@@ -95,7 +97,41 @@ pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Arc
 
     let class_path = get_class_path(&version, &installation_dir)?;
     let class_loader = ClassLoader::new("bootstrap", class_path);
+    register_primitives(&class_loader).await?;
     Ok((installation_dir, version, class_loader))
+}
+
+/// Register all primitive classes in the class loader.
+async fn register_primitives(class_loader: &Arc<ClassLoader>) -> Result<()> {
+    register_primitive(class_loader, "boolean").await?;
+    register_primitive(class_loader, "byte").await?;
+    register_primitive(class_loader, "char").await?;
+    register_primitive(class_loader, "double").await?;
+    register_primitive(class_loader, "float").await?;
+    register_primitive(class_loader, "int").await?;
+    register_primitive(class_loader, "long").await?;
+    register_primitive(class_loader, "short").await?;
+    register_primitive(class_loader, "void").await?;
+    Ok(())
+}
+
+/// Register a primitive class in the class loader.
+async fn register_primitive(class_loader: &Arc<ClassLoader>, primitive: &str) -> Result<()> {
+    let mut constant_pool = ConstantPool::new();
+    let this_class_index = constant_pool.add_class(primitive)?;
+    let class_file = ClassFile {
+        version: JAVA_1_0_2,
+        constant_pool,
+        access_flags: ClassAccessFlags::PUBLIC
+            | ClassAccessFlags::FINAL
+            | ClassAccessFlags::ABSTRACT,
+        this_class: this_class_index,
+        ..Default::default()
+    };
+
+    let class = Class::from(Some(Arc::downgrade(class_loader)), class_file)?;
+    class_loader.register(class).await?;
+    Ok(())
 }
 
 /// Get the class path for the given version.
