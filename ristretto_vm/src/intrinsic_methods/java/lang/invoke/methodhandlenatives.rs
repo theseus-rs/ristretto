@@ -221,13 +221,13 @@ pub(crate) async fn resolve(
         for parameter in parameters {
             let class_object: Object = parameter.try_into()?;
             let class_name: String = class_object.value("name")?.try_into()?;
-            let descriptor = Class::to_descriptor(&class_name);
+            let descriptor = Class::convert_to_descriptor(&class_name);
             parameter_descriptors.push(descriptor);
         }
         let class_name: String = class_object.value("name")?.try_into()?;
         let return_type: Object = method_type.value("rtype")?.try_into()?;
         let return_class_name: String = return_type.value("name")?.try_into()?;
-        let return_descriptor = Class::to_descriptor(&return_class_name);
+        let return_descriptor = Class::convert_to_descriptor(&return_class_name);
 
         let method_name: String = name.try_into()?;
         let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
