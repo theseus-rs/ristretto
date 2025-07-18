@@ -332,6 +332,11 @@ impl Object {
     ///
     /// if the fields cannot be cloned.
     pub fn deep_clone(&self) -> Result<Self> {
+        if self.class.name() == "java/lang/Class" {
+            // Special case for Class objects, which should not be deep cloned.
+            return Ok(self.clone());
+        }
+
         let mut values = Vec::new();
         for value_lock in self.values.iter() {
             let value = value_lock
@@ -741,9 +746,20 @@ mod tests {
         object.set_value("value", Value::Int(1))?;
         let clone = object.deep_clone()?;
         assert_eq!(object, clone);
+        assert!(!object.ptr_eq(&clone));
 
         clone.set_value("value", Value::Int(2))?;
         assert_ne!(object, clone);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_deep_clone_class() -> Result<()> {
+        let class = load_class("java.lang.Class").await?;
+        let object = Object::new(class)?;
+        let clone = object.deep_clone()?;
+        assert_eq!(object, clone);
+        assert!(object.ptr_eq(&clone));
         Ok(())
     }
 

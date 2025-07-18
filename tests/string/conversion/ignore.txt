@@ -1,22 +1,2 @@
-InternalError("Throwable(Object(java/lang/IllegalArgumentException)
-  backtrace=java/lang/StackTraceElement[34]
-  detailMessage=String(\"not primitive: int\")
-  cause=Object(class java/lang/IllegalArgumentException)
-  stackTrace=java/lang/StackTraceElement[0]
-  depth=int(34)
-  suppressedExceptions=Object(class java/util/Collections$EmptyList)
-):
-stdout: === String.valueOf Tests ===
-valueOf(true): true
-valueOf(false): false
-valueOf('A'): A
-valueOf(42): 42
-valueOf(42L): 42
-valueOf(3.14f): 3.14
-valueOf(3.14159): 3.14159
-valueOf(char[]): Hello
-valueOf(char[], 1, 3): ell
-valueOf(Object): java.lang.Object@1974a4e0
-valueOf(null): null
-
-=== String.format Tests ===
+thread '<unknown>' has overflowed its stack
+fatal runtime error: stack overflow, aborting

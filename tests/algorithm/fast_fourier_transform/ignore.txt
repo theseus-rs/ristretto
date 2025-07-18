@@ -1,8 +1,2 @@
-InternalError("Throwable(Object(java/lang/IllegalArgumentException)
-  backtrace=java/lang/StackTraceElement[36]
-  detailMessage=String(\"not primitive: int\")
-  cause=Object(class java/lang/IllegalArgumentException)
-  stackTrace=java/lang/StackTraceElement[0]
-  depth=int(36)
-  suppressedExceptions=Object(class java/util/Collections$EmptyList)
-):
+thread '<unknown>' has overflowed its stack
+fatal runtime error: stack overflow, aborting

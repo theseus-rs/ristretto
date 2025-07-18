@@ -1,13 +1,2 @@
-InternalError("Throwable(Object(java/lang/IllegalArgumentException)
-  backtrace=java/lang/StackTraceElement[35]
-  detailMessage=String(\"not primitive: int\")
-  cause=Object(class java/lang/IllegalArgumentException)
-  stackTrace=java/lang/StackTraceElement[0]
-  depth=int(35)
-  suppressedExceptions=Object(class java/util/Collections$EmptyList)
-):
-stdout: PageRank Algorithm
-Damping factor: 0.85
-Converged after 32 iterations
-
-PageRank values:
+thread '<unknown>' has overflowed its stack
+fatal runtime error: stack overflow, aborting
