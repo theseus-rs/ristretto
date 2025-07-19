@@ -127,11 +127,32 @@ impl Class {
         }
 
         match class_file.class_name()? {
+            "java/lang/invoke/DelegatingMethodHandle$Holder" => {
+                Self::add_synthetic_methods(
+                    &mut class_file,
+                    &mut methods,
+                    &[("delegate", "([Ljava/lang/Object;)Ljava/lang/Object;")],
+                )?;
+            }
             "java/lang/invoke/DirectMethodHandle$Holder" => {
-                Self::add_direct_method_handle_methods(&mut class_file, &mut methods)?;
+                Self::add_synthetic_methods(
+                    &mut class_file,
+                    &mut methods,
+                    &[
+                        ("getReference", "([Ljava/lang/Object;)Ljava/lang/Object;"),
+                        ("invokeInterface", "([Ljava/lang/Object;)Ljava/lang/Object;"),
+                        ("invokeSpecial", "([Ljava/lang/Object;)Ljava/lang/Object;"),
+                        ("invokeStatic", "([Ljava/lang/Object;)Ljava/lang/Object;"),
+                        ("invokeVirtual", "([Ljava/lang/Object;)Ljava/lang/Object;"),
+                    ],
+                )?;
             }
             "java/lang/invoke/Invokers$Holder" => {
-                Self::add_invokers_methods(&mut class_file, &mut methods)?;
+                Self::add_synthetic_methods(
+                    &mut class_file,
+                    &mut methods,
+                    &[("invoker", "([Ljava/lang/Object;)Ljava/lang/Object;")],
+                )?;
             }
             _ => {}
         }
@@ -150,6 +171,35 @@ impl Class {
             object: Arc::new(RwLock::new(None)),
         });
         Ok(class)
+    }
+
+    /// Add synthetic methods for the class.  This is used to add methods that are not present in
+    /// the class file, but are required for the class to function correctly.
+    fn add_synthetic_methods(
+        class_file: &mut ClassFile,
+        methods: &mut HashMap<String, Arc<Method>>,
+        method_signatures: &[(&str, &str)],
+    ) -> Result<()> {
+        for (name, descriptor) in method_signatures {
+            let constant_pool = &mut class_file.constant_pool;
+            let method_index =
+                constant_pool.add_method_ref(class_file.this_class, name, descriptor)?;
+            let (_class_index, name_and_type_index) =
+                constant_pool.try_get_method_ref(method_index)?;
+            let (name_index, descriptor_index) =
+                constant_pool.try_get_name_and_type(*name_and_type_index)?;
+            let access_flags =
+                MethodAccessFlags::PRIVATE | MethodAccessFlags::STATIC | MethodAccessFlags::NATIVE;
+            let method = ristretto_classfile::Method {
+                name_index: *name_index,
+                descriptor_index: *descriptor_index,
+                access_flags,
+                attributes: vec![],
+            };
+            let method = Method::from(class_file, &method)?;
+            methods.insert(method.signature(), Arc::new(method));
+        }
+        Ok(())
     }
 
     /// Get the class loader.
@@ -344,74 +394,6 @@ impl Class {
             .write()
             .map_err(|error| PoisonedLock(error.to_string()))?;
         *interfaces_guard = interfaces;
-        Ok(())
-    }
-
-    /// Add synthetic methods for `java.lang.invoke.DirectMethodHandle$Holder`.  Method signatures
-    /// are expected to be added dynamically at runtime during
-    /// `java/lang/invoke/MethodHandleNatives.resolve(...)`, but for the sake of simplicity, and to
-    /// avoid needing put `methods` in an `Arc<RwLock<>>`, we add them here for now.
-    fn add_direct_method_handle_methods(
-        class_file: &mut ClassFile,
-        methods: &mut HashMap<String, Arc<Method>>,
-    ) -> Result<()> {
-        let method_signatures = [
-            ("getReference", "([Ljava/lang/Object;)Ljava/lang/Object;"),
-            ("invokeInterface", "([Ljava/lang/Object;)Ljava/lang/Object;"),
-            ("invokeSpecial", "([Ljava/lang/Object;)Ljava/lang/Object;"),
-            ("invokeStatic", "([Ljava/lang/Object;)Ljava/lang/Object;"),
-            ("invokeVirtual", "([Ljava/lang/Object;)Ljava/lang/Object;"),
-        ];
-        for (name, descriptor) in method_signatures {
-            let constant_pool = &mut class_file.constant_pool;
-            let method_index =
-                constant_pool.add_method_ref(class_file.this_class, name, descriptor)?;
-            let (_class_index, name_and_type_index) =
-                constant_pool.try_get_method_ref(method_index)?;
-            let (name_index, descriptor_index) =
-                constant_pool.try_get_name_and_type(*name_and_type_index)?;
-            let access_flags =
-                MethodAccessFlags::PRIVATE | MethodAccessFlags::STATIC | MethodAccessFlags::NATIVE;
-            let method = ristretto_classfile::Method {
-                name_index: *name_index,
-                descriptor_index: *descriptor_index,
-                access_flags,
-                attributes: vec![],
-            };
-            let method = Method::from(class_file, &method)?;
-            methods.insert(method.signature(), Arc::new(method));
-        }
-        Ok(())
-    }
-
-    /// Add synthetic methods for `java.lang.invoke.Invokers$Holder`.  Method signatures
-    /// are expected to be added dynamically at runtime during
-    /// `java/lang/invoke/MethodHandleNatives.resolve(...)`, but for the sake of simplicity, and to
-    /// avoid needing put `methods` in an `Arc<RwLock<>>`, we add them here for now.
-    fn add_invokers_methods(
-        class_file: &mut ClassFile,
-        methods: &mut HashMap<String, Arc<Method>>,
-    ) -> Result<()> {
-        let method_signatures = [("invoker", "([Ljava/lang/Object;)Ljava/lang/Object;")];
-        for (name, descriptor) in method_signatures {
-            let constant_pool = &mut class_file.constant_pool;
-            let method_index =
-                constant_pool.add_method_ref(class_file.this_class, name, descriptor)?;
-            let (_class_index, name_and_type_index) =
-                constant_pool.try_get_method_ref(method_index)?;
-            let (name_index, descriptor_index) =
-                constant_pool.try_get_name_and_type(*name_and_type_index)?;
-            let access_flags =
-                MethodAccessFlags::PRIVATE | MethodAccessFlags::STATIC | MethodAccessFlags::NATIVE;
-            let method = ristretto_classfile::Method {
-                name_index: *name_index,
-                descriptor_index: *descriptor_index,
-                access_flags,
-                attributes: vec![],
-            };
-            let method = Method::from(class_file, &method)?;
-            methods.insert(method.signature(), Arc::new(method));
-        }
         Ok(())
     }
 
