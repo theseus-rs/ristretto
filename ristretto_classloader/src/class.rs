@@ -350,6 +350,7 @@ impl Class {
         methods: &mut HashMap<String, Arc<Method>>,
     ) -> Result<()> {
         let method_signatures = [
+            ("getReference", "([Ljava/lang/Object;)Ljava/lang/Object;"),
             ("invokeInterface", "([Ljava/lang/Object;)Ljava/lang/Object;"),
             ("invokeSpecial", "([Ljava/lang/Object;)Ljava/lang/Object;"),
             ("invokeStatic", "([Ljava/lang/Object;)Ljava/lang/Object;"),
