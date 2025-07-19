@@ -447,11 +447,25 @@ pub(crate) async fn get_reference_0(
 }
 
 #[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getReference(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+    "java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_reference_1(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!(
+        "java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;"
+    )
+}
+
+#[intrinsic_method(
+    "java/lang/invoke/DirectMethodHandle$Holder.getReference(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn get_reference_2(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1427,11 +1441,20 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.DirectMethodHandle$Holder.getReference(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
+        expected = "not yet implemented: java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;"
     )]
     async fn test_get_reference_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = get_reference_1(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.DirectMethodHandle$Holder.getReference(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_get_reference_2() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_reference_2(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
