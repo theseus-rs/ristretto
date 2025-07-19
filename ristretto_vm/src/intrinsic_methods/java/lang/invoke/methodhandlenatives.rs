@@ -187,6 +187,21 @@ fn resolve_direct_method_handle_holder(
     Ok(method)
 }
 
+/// Resolves a method handle for the `Invokers$Holder` class; this is a special case that
+/// handles the method resolution for invokers in the JVM.
+fn resolve_invokers_holder(
+    class: Arc<Class>,
+    method_name: &str,
+    method_descriptor: &str,
+) -> Result<Arc<Method>> {
+    if let Ok(method) = class.try_get_method(method_name, method_descriptor) {
+        return Ok(method);
+    }
+    let method_descriptor = "([Ljava/lang/Object;)Ljava/lang/Object;";
+    let method = class.try_get_method(method_name, method_descriptor)?;
+    Ok(method)
+}
+
 #[intrinsic_method("java/lang/invoke/MethodHandleNatives.registerNatives()V", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn register_natives(
@@ -231,10 +246,16 @@ pub(crate) async fn resolve(
 
         let method_name: String = name.try_into()?;
         let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
-        let method = if &class_name == "java.lang.invoke.DirectMethodHandle$Holder" {
-            resolve_direct_method_handle_holder(class.clone(), &method_name, &method_descriptor)?
-        } else {
-            class.try_get_method(method_name.clone(), method_descriptor.clone())?
+        let method = match class_name.as_str() {
+            "java.lang.invoke.DirectMethodHandle$Holder" => resolve_direct_method_handle_holder(
+                class.clone(),
+                &method_name,
+                &method_descriptor,
+            )?,
+            "java.lang.invoke.Invokers$Holder" => {
+                resolve_invokers_holder(class.clone(), &method_name, &method_descriptor)?
+            }
+            _ => class.try_get_method(method_name.clone(), method_descriptor.clone())?,
         };
 
         // Access control enforcement
