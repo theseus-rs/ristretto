@@ -6,7 +6,7 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, GreaterThanOrEqual};
-use ristretto_classfile::{BaseType, JAVA_11, JAVA_17};
+use ristretto_classfile::{BaseType, FieldAccessFlags, JAVA_11, JAVA_17};
 use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -588,8 +588,14 @@ fn get_reference_type(
             Value::Object(reference)
         }
         Reference::Object(object) => {
-            let field_name = object.class().field_name(offset)?;
-            object.value(&field_name)?
+            let class = object.class();
+            let field_name = class.field_name(offset)?;
+            let field = class.declared_field(&field_name)?;
+            if field.access_flags().contains(FieldAccessFlags::STATIC) {
+                class.static_value(&field_name)?
+            } else {
+                object.value(&field_name)?
+            }
         }
     };
     Ok(Some(value))
@@ -725,8 +731,14 @@ fn put_reference_type(
             object_array.elements.set(offset, object_value)?;
         }
         Reference::Object(object) => {
-            let field_name = object.class().field_name(offset)?;
-            object.set_value(&field_name, value)?;
+            let class = object.class();
+            let field_name = class.field_name(offset)?;
+            let field = class.declared_field(&field_name)?;
+            if field.access_flags().contains(FieldAccessFlags::STATIC) {
+                class.set_static_value(&field_name, value)?;
+            } else {
+                object.set_value(&field_name, value)?;
+            }
         }
     };
 
