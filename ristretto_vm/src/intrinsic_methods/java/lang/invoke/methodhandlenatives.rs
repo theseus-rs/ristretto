@@ -172,24 +172,8 @@ pub(crate) async fn object_field_offset(
     Ok(Some(Value::Long(offset)))
 }
 
-/// Resolves a method handle for the `DirectMethodHandle$Holder` class; this is a special case that
-/// handles the method resolution for direct method handles in the JVM.
-fn resolve_direct_method_handle_holder(
-    class: Arc<Class>,
-    method_name: &str,
-    method_descriptor: &str,
-) -> Result<Arc<Method>> {
-    if let Ok(method) = class.try_get_method(method_name, method_descriptor) {
-        return Ok(method);
-    }
-    let method_descriptor = "([Ljava/lang/Object;)Ljava/lang/Object;";
-    let method = class.try_get_method(method_name, method_descriptor)?;
-    Ok(method)
-}
-
-/// Resolves a method handle for the `Invokers$Holder` class; this is a special case that
-/// handles the method resolution for invokers in the JVM.
-fn resolve_invokers_holder(
+/// Resolves synthetic methods for `...$Holder` classes.
+fn resolve_holder_methods(
     class: Arc<Class>,
     method_name: &str,
     method_descriptor: &str,
@@ -247,13 +231,10 @@ pub(crate) async fn resolve(
         let method_name: String = name.try_into()?;
         let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
         let method = match class_name.as_str() {
-            "java.lang.invoke.DirectMethodHandle$Holder" => resolve_direct_method_handle_holder(
-                class.clone(),
-                &method_name,
-                &method_descriptor,
-            )?,
-            "java.lang.invoke.Invokers$Holder" => {
-                resolve_invokers_holder(class.clone(), &method_name, &method_descriptor)?
+            "java.lang.invoke.DelegatingMethodHandle$Holder"
+            | "java.lang.invoke.DirectMethodHandle$Holder"
+            | "java.lang.invoke.Invokers$Holder" => {
+                resolve_holder_methods(class.clone(), &method_name, &method_descriptor)?
             }
             _ => class.try_get_method(method_name.clone(), method_descriptor.clone())?,
         };
