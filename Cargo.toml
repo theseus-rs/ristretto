@@ -31,6 +31,7 @@ rust-version = "1.88.0"
 version = "0.23.0"
 
 [workspace.dependencies]
+anstyle = "1.0.11"
 anyhow = "1.0.98"
 async-recursion = "1.1.1"
 bitflags = "2.9.1"

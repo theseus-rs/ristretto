@@ -2062,6 +2062,7 @@ dependencies = [
 name = "ristretto_cli"
 version = "0.23.0"
 dependencies = [
+ "anstyle",
  "clap",
  "os_info",
  "ristretto_vm",

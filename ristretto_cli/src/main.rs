@@ -1,9 +1,13 @@
-#![forbid(unsafe_code)]
+#![allow(dead_code)]
+#![deny(clippy::pedantic)]
+#![deny(clippy::unwrap_in_result)]
+#![deny(clippy::unwrap_used)]
 
 mod logging;
 mod version;
 
-use clap::{ArgGroup, Parser};
+use anstyle::AnsiColor;
+use clap::{ArgGroup, CommandFactory, Parser, command};
 use ristretto_vm::Error::{InternalError, Throwable};
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Reference, Result, VM, Value};
 use std::env;
@@ -11,17 +15,31 @@ use std::env::consts::{ARCH, OS};
 use std::path::PathBuf;
 use tracing::debug;
 
+fn styles() -> clap::builder::Styles {
+    clap::builder::Styles::styled()
+        .header(AnsiColor::Green.on_default().bold())
+        .usage(AnsiColor::Green.on_default().bold())
+        .literal(AnsiColor::Cyan.on_default())
+        .placeholder(AnsiColor::Cyan.on_default())
+        .error(AnsiColor::Red.on_default().bold())
+        .valid(AnsiColor::Green.on_default())
+        .invalid(AnsiColor::Yellow.on_default())
+}
+
+#[expect(clippy::struct_excessive_bools)]
 #[derive(Debug, Parser)]
 #[command(
     name = "java",
     about = "Ristretto CLI",
     help_expected = true,
-    trailing_var_arg = true
+    trailing_var_arg = true,
+    disable_help_flag = true
 )]
 #[command(group(
     ArgGroup::new("execution")
     .args(&["mainclass", "jar"])
 ))]
+#[clap(styles=styles())]
 struct Cli {
     #[arg(help = "The main class to execute")]
     mainclass: Option<String>,
@@ -35,6 +53,7 @@ struct Cli {
 
     #[arg(
         long = "classpath",
+        visible_aliases = ["cp", "class-path"],
         help = "Class search path of directories and zip/jar files"
     )]
     classpath: Option<String>,
@@ -57,6 +76,36 @@ struct Cli {
     /// Display the version of this tool
     #[arg(long)]
     version: bool,
+
+    /// Display help information
+    #[arg(short = 'h', long = "help", help = "print help information")]
+    help: bool,
+}
+
+impl Cli {
+    fn parse() -> Self {
+        let args = Self::preprocess_args(env::args().collect());
+        Self::parse_from(args)
+    }
+
+    /// Preprocesses the command line arguments to replace short options with long options.
+    fn preprocess_args(mut arguments: Vec<String>) -> Vec<String> {
+        for argument in &mut arguments {
+            match argument.as_str() {
+                "-help" => {
+                    *argument = "-h".to_string();
+                }
+                "-cp" => {
+                    *argument = "--cp".to_string();
+                }
+                "-version" => {
+                    *argument = "--version".to_string();
+                }
+                _ => {}
+            }
+        }
+        arguments
+    }
 }
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -64,8 +113,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(target_family = "wasm")]
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
-    logging::initialize()?;
     let cli = Cli::parse();
+    logging::initialize()?;
     if common_main(cli).await.is_err() {
         std::process::exit(1);
     }
@@ -75,8 +124,8 @@ async fn main() -> Result<()> {
 #[cfg(not(target_family = "wasm"))]
 #[tokio::main]
 async fn main() -> Result<()> {
-    logging::initialize()?;
     let cli = Cli::parse();
+    logging::initialize()?;
     if common_main(cli).await.is_err() {
         std::process::exit(1);
     }
@@ -84,6 +133,11 @@ async fn main() -> Result<()> {
 }
 
 async fn common_main(cli: Cli) -> Result<()> {
+    if cli.help {
+        Cli::command().print_help()?;
+        return Ok(());
+    }
+
     if cli.version {
         let version = version::full();
         println!("{version}");
@@ -149,7 +203,7 @@ fn process_error(error: Error) -> Result<()> {
         return Err(error);
     };
 
-    let mut throwable = throwable.clone();
+    let throwable = throwable.clone();
     let mut first_throwable = true;
 
     loop {
@@ -157,7 +211,7 @@ fn process_error(error: Error) -> Result<()> {
         let class_name = class.name();
         let message: String = throwable
             .value("detailMessage")
-            .and_then(|value| value.try_into())?;
+            .and_then(TryInto::try_into)?;
         let prelude = if first_throwable {
             first_throwable = false;
             "Exception"
@@ -182,7 +236,7 @@ fn process_error(error: Error) -> Result<()> {
             let file = stack_trace_element.value("fileName")?;
             if let Value::Object(Some(ref _file_object)) = file {
                 source = file.try_into()?;
-            };
+            }
             let line = stack_trace_element.value("lineNumber")?.to_int()?;
             if line > 0 {
                 if source.is_empty() {
@@ -204,8 +258,6 @@ fn process_error(error: Error) -> Result<()> {
         };
         if throwable == cause {
             break;
-        } else {
-            throwable = cause;
         }
     }
     Err(error)
