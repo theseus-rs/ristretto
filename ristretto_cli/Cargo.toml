@@ -23,6 +23,7 @@ name = "java"
 path = "src/main.rs"
 
 [dependencies]
+anstyle = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 os_info = { workspace = true }
 ristretto_vm = { path = "../ristretto_vm", version = "0.23.0" }
