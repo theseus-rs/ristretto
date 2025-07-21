@@ -3,110 +3,18 @@
 #![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
 
+mod argument;
 mod logging;
 mod version;
 
-use anstyle::AnsiColor;
-use clap::{ArgGroup, CommandFactory, Parser, command};
+use argument::Cli;
+use clap::CommandFactory;
 use ristretto_vm::Error::{InternalError, Throwable};
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Reference, Result, VM, Value};
 use std::env;
 use std::env::consts::{ARCH, OS};
 use std::path::PathBuf;
 use tracing::debug;
-
-fn styles() -> clap::builder::Styles {
-    clap::builder::Styles::styled()
-        .header(AnsiColor::Green.on_default().bold())
-        .usage(AnsiColor::Green.on_default().bold())
-        .literal(AnsiColor::Cyan.on_default())
-        .placeholder(AnsiColor::Cyan.on_default())
-        .error(AnsiColor::Red.on_default().bold())
-        .valid(AnsiColor::Green.on_default())
-        .invalid(AnsiColor::Yellow.on_default())
-}
-
-#[expect(clippy::struct_excessive_bools)]
-#[derive(Debug, Parser)]
-#[command(
-    name = "java",
-    about = "Ristretto CLI",
-    help_expected = true,
-    trailing_var_arg = true,
-    disable_help_flag = true
-)]
-#[command(group(
-    ArgGroup::new("execution")
-    .args(&["mainclass", "jar"])
-))]
-#[clap(styles=styles())]
-struct Cli {
-    #[arg(help = "The main class to execute")]
-    mainclass: Option<String>,
-
-    #[arg(
-        long = "jar",
-        help = "Execute a jar file",
-        conflicts_with = "mainclass"
-    )]
-    jar: Option<String>,
-
-    #[arg(
-        long = "classpath",
-        visible_aliases = ["cp", "class-path"],
-        help = "Class search path of directories and zip/jar files"
-    )]
-    classpath: Option<String>,
-
-    #[arg(short = 'D', help = "Define a system property")]
-    properties: Option<Vec<String>>,
-
-    #[arg(help = "Additional parameters to pass to the main class")]
-    parameters: Option<Vec<String>>,
-
-    #[arg(long = "int", help = "Disable JIT compilation")]
-    interpreted: bool,
-
-    #[arg(
-        long = "enable-preview",
-        help = "Allow classes to depend on preview features of this release"
-    )]
-    enable_preview: bool,
-
-    /// Display the version of this tool
-    #[arg(long)]
-    version: bool,
-
-    /// Display help information
-    #[arg(short = 'h', long = "help", help = "print help information")]
-    help: bool,
-}
-
-impl Cli {
-    fn parse() -> Self {
-        let args = Self::preprocess_args(env::args().collect());
-        Self::parse_from(args)
-    }
-
-    /// Preprocesses the command line arguments to replace short options with long options.
-    fn preprocess_args(mut arguments: Vec<String>) -> Vec<String> {
-        for argument in &mut arguments {
-            match argument.as_str() {
-                "-help" => {
-                    *argument = "-h".to_string();
-                }
-                "-cp" => {
-                    *argument = "--cp".to_string();
-                }
-                "-version" => {
-                    *argument = "--version".to_string();
-                }
-                _ => {}
-            }
-        }
-        arguments
-    }
-}
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -135,6 +43,11 @@ async fn main() -> Result<()> {
 async fn common_main(cli: Cli) -> Result<()> {
     if cli.help {
         Cli::command().print_help()?;
+        return Ok(());
+    }
+
+    if cli.x_options.x_help {
+        argument::print_x_help();
         return Ok(());
     }
 
@@ -174,7 +87,7 @@ async fn common_main(cli: Cli) -> Result<()> {
         }
     }
 
-    if cli.interpreted {
+    if cli.x_options.interpreted {
         configuration_builder = configuration_builder.interpreted();
     }
 
@@ -266,6 +179,7 @@ fn process_error(error: Error) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::Parser;
 
     #[tokio::test]
     async fn test_common_main_no_parameters_error() -> Result<()> {
