@@ -7,6 +7,114 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/v0.23.0...v0.24.0) - 2025-07-22
+
+### Added
+- add background jit compiler
+- improve class loader reflection; initial class loader and module support
+- implement java/lang/reflect/Array
+- implement java/lang/String.intern()Ljava/lang/String;
+- add initial string pool
+
+### Fixed
+- update cli to allow -cp argument for classpath
+- do not deep clone java.lang.Class objects
+- unbox primitives for constructor reflection
+- correct class loading hierarchy logic
+- correct java/lang/Class.getRawAnnotations()[B and java/lang/Class.getRawTypeAnnotations()[B to return zero length in byte array when there are no annotations
+- correct private method invocation
+- reduce gc memory utilization
+- add Unsafe support for getting/setting Class static fields
+- update java/lang/invoke/MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J to get the correct class name
+- update java/lang/Class.forName0 to throw ClassNotFoundException for primitive types
+- correct multinewarray instruction
+- correct jdk.internal.misc.Unsafe put methods
+- correct inherited static method invocation
+- correct java/lang/System.arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V
+
+### Other
+- introduce -X cli arguments and move --int to -Xint
+- stub java/lang/invoke/DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;
+- stub java/lang/invoke/DelegatingMethodHandle$Holder.delegate([Ljava/lang/Object;)Ljava/lang/Object;
+- stub java/lang/invoke/Invokers$Holder.invoker([Ljava/lang/Object;)Ljava/lang/Object;
+- stub java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;
+- consolidate array class creation
+- upgrade default java version to 21.0.8.9.1
+- move primitive and array class creation into class loader
+- remove use of custom garbage collector box
+- update jit and main readme
+- add timing to compatibility tests
+- Merge pull request #482 from theseus-rs/impl-string-intern
+- add method and string integration tests
+
+## `ristretto_vm` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.23.0...ristretto_vm-v0.24.0) - 2025-07-22
+
+### Added
+- add background jit compiler
+- implement java/lang/reflect/Array
+- implement java/lang/String.intern()Ljava/lang/String;
+- add initial string pool
+- improve class loader reflection; initial class loader and module support
+
+### Fixed
+- add Unsafe support for getting/setting Class static fields
+- update java/lang/invoke/MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J to get the correct class name
+- unbox primitives for constructor reflection
+- update java/lang/Class.forName0 to throw ClassNotFoundException for primitive types
+- correct java/lang/Class.getRawAnnotations()[B and java/lang/Class.getRawTypeAnnotations()[B to return zero length in byte array when there are no annotations
+- correct multinewarray instruction
+- correct jdk.internal.misc.Unsafe put methods
+- correct private method invocation
+- correct inherited static method invocation
+- correct java/lang/System.arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V
+
+### Other
+- stub java/lang/invoke/DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;
+- stub java/lang/invoke/DelegatingMethodHandle$Holder.delegate([Ljava/lang/Object;)Ljava/lang/Object;
+- stub java/lang/invoke/Invokers$Holder.invoker([Ljava/lang/Object;)Ljava/lang/Object;
+- stub java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;
+- consolidate array class creation
+- upgrade default java version to 21.0.8.9.1
+- move primitive and array class creation into class loader
+- add timing to compatibility tests
+- Merge pull request #482 from theseus-rs/impl-string-intern
+- add method and string integration tests
+
+## `ristretto_jit` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.23.0...ristretto_jit-v0.24.0) - 2025-07-22
+
+### Other
+- update jit and main readme
+
+## `ristretto_classloader` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.23.0...ristretto_classloader-v0.24.0) - 2025-07-22
+
+### Added
+- improve class loader reflection; initial class loader and module support
+
+### Fixed
+- do not deep clone java.lang.Class objects
+- unbox primitives for constructor reflection
+- correct class loading hierarchy logic
+- correct java/lang/Class.getRawAnnotations()[B and java/lang/Class.getRawTypeAnnotations()[B to return zero length in byte array when there are no annotations
+- correct private method invocation
+
+### Other
+- stub java/lang/invoke/DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;
+- stub java/lang/invoke/DelegatingMethodHandle$Holder.delegate([Ljava/lang/Object;)Ljava/lang/Object;
+- stub java/lang/invoke/Invokers$Holder.invoker([Ljava/lang/Object;)Ljava/lang/Object;
+- stub java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;
+- consolidate array class creation
+- upgrade default java version to 21.0.8.9.1
+- move primitive and array class creation into class loader
+
+## `ristretto_gc` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.23.0...ristretto_gc-v0.24.0) - 2025-07-22
+
+### Fixed
+- correct private method invocation
+- reduce gc memory utilization
+
+### Other
+- remove use of custom garbage collector box
+
 ## `ristretto_cli` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/v0.22.0...v0.23.0) - 2025-07-13
 
 ### Added
