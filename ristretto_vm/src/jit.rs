@@ -230,16 +230,16 @@ async fn initialize_batch_compiler() {
     *queue = Some(sender);
     drop(queue);
 
+    let cpus = System::physical_core_count().unwrap_or(1);
+    // cpus + 5 ensures that if there is a remainder it rounds to the nearest whole number
+    let compiler_threads = ((cpus + 5) / 10).max(1);
+    info!("JIT parallel compiler configured with {compiler_threads} threads");
+
     // Spawn the background compilation task
     tokio::spawn(async move {
         let mut batch = Vec::new();
         const BATCH_SIZE: usize = 10;
         const BATCH_TIMEOUT_MS: u64 = 50;
-
-        let cpus = System::physical_core_count().unwrap_or(1);
-        let compiler_threads = ((cpus as f64) * 0.1).ceil() as usize;
-        let compiler_threads = compiler_threads.min(1);
-        info!("JIT parallel compiler configured with {compiler_threads} threads");
 
         loop {
             // Try to collect a batch of compilation requests
@@ -276,10 +276,10 @@ fn process_compilation_batch(compiler_threads: usize, batch: &mut Vec<Compilatio
     debug!("Processing compilation batch of {} methods", batch.len());
     let thread_pool = match ThreadPoolBuilder::new()
         .num_threads(compiler_threads)
-        .thread_name(|i| format!("jit-{i}"))
+        .thread_name(|thread_index| format!("jit-{thread_index}"))
         .build()
     {
-        Ok(pool) => pool,
+        Ok(thread_pool) => thread_pool,
         Err(error) => {
             error!("Failed to create thread pool for JIT compilation: {error}");
             return;
