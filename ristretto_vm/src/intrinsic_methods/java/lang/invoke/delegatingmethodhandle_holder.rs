@@ -26,6 +26,20 @@ pub(crate) async fn delegate(
     )
 }
 
+#[intrinsic_method(
+    "java/lang/invoke/DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn reinvoke_l(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!(
+        "java.lang.invoke.DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;"
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -37,5 +51,14 @@ mod tests {
     async fn test_delegate() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = delegate(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: java.lang.invoke.DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;"
+    )]
+    async fn test_reinvoke_l() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = reinvoke_l(thread, Parameters::default()).await;
     }
 }

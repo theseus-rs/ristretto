@@ -131,7 +131,10 @@ impl Class {
                 Self::add_synthetic_methods(
                     &mut class_file,
                     &mut methods,
-                    &[("delegate", "([Ljava/lang/Object;)Ljava/lang/Object;")],
+                    &[
+                        ("delegate", "([Ljava/lang/Object;)Ljava/lang/Object;"),
+                        ("reinvoke_L", "([Ljava/lang/Object;)Ljava/lang/Object;"),
+                    ],
                 )?;
             }
             "java/lang/invoke/DirectMethodHandle$Holder" => {
