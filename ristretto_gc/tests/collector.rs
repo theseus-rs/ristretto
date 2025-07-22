@@ -10,6 +10,7 @@ use std::time::Duration;
 #[test_log::test]
 fn test_custom_gc_config() -> Result<()> {
     let config = Configuration {
+        threads: 1,
         allocation_threshold: 16 * 1024 * 1024, // 16MB
         max_pause_time_us: 50,
         incremental_step_size: 2000,

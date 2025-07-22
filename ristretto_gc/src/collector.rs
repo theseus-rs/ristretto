@@ -7,11 +7,13 @@ use crate::pointers::{SafePtr, TracePtr};
 use crate::root_guard::GcRootGuard;
 use dashmap::DashMap;
 use rayon::prelude::*;
+use rayon::{ThreadPool, ThreadPoolBuilder};
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, LazyLock, Mutex, RwLock, Weak};
 use std::thread;
-use tracing::{debug, error, trace, warn};
+use sysinfo::System;
+use tracing::{debug, error, info, trace, warn};
 
 /// Global garbage collector instance
 pub static GC: LazyLock<Arc<GarbageCollector>> = LazyLock::new(|| {
@@ -53,7 +55,8 @@ enum GcPhase {
 pub struct GarbageCollector {
     this: Weak<Self>,
     configuration: Configuration,
-    stats: Arc<RwLock<Statistics>>,
+    thread_pool: ThreadPool,
+    statistics: Arc<RwLock<Statistics>>,
     roots: Arc<DashMap<usize, TracePtr>>,
     next_root_id: AtomicUsize,
 
@@ -82,12 +85,36 @@ impl GarbageCollector {
     }
 
     /// Creates a new garbage collector with custom configuration.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the thread pool cannot be created.
     #[must_use]
-    pub fn with_config(config: Configuration) -> Arc<Self> {
+    pub fn with_config(configuration: Configuration) -> Arc<Self> {
+        let threads = if configuration.threads == 0 {
+            let cpus = System::physical_core_count().unwrap_or(1);
+            // Default to 50% of available CPU cores, but at least 1 thread
+            (cpus >> 1).max(1)
+        } else {
+            configuration.threads
+        };
+        info!("garbage collector configured with {threads} threads");
+        let thread_pool = match ThreadPoolBuilder::new()
+            .num_threads(threads)
+            .thread_name(|thread_index| format!("gc-{thread_index}"))
+            .build()
+        {
+            Ok(thread_pool) => thread_pool,
+            Err(error) => {
+                panic!("Failed to create thread pool for GC: {error}");
+            }
+        };
+
         Arc::new_cyclic(|this| Self {
             this: this.clone(),
-            configuration: config,
-            stats: Arc::new(RwLock::new(Statistics::default())),
+            configuration,
+            thread_pool,
+            statistics: Arc::new(RwLock::new(Statistics::default())),
             roots: Arc::new(DashMap::new()),
             next_root_id: AtomicUsize::new(0),
             objects: Arc::new(RwLock::new(HashMap::new())),
@@ -150,7 +177,7 @@ impl GarbageCollector {
         };
 
         let collector = Arc::clone(&collector);
-        let stats = Arc::clone(&self.stats);
+        let stats = Arc::clone(&self.statistics);
         let roots = Arc::clone(&self.roots);
         let objects = Arc::clone(&self.objects);
         let phase = Arc::clone(&self.phase);
@@ -244,7 +271,7 @@ impl GarbageCollector {
     /// Returns an error if the stats lock acquisition fails.
     pub fn statistics(&self) -> Result<Statistics> {
         let mut statistics = self
-            .stats
+            .statistics
             .read()
             .map_err(|error| Error::StatsError(format!("Failed to read stats: {error}")))?
             .clone();
@@ -526,16 +553,25 @@ impl GarbageCollector {
         }
 
         // Unmark all objects first
-        if let Ok(mut objects) = objects.write() {
-            let configuration = &collector.configuration;
-            let number_of_objects = objects.len();
-            if number_of_objects > configuration.parallel_threshold {
-                debug!("unmarking {number_of_objects} objects (parallel)");
-                objects.par_iter_mut().for_each(|(_, metadata)| {
-                    metadata.unmark();
-                });
-            } else {
-                debug!("unmarking {number_of_objects} objects (sequential)");
+        let number_of_objects = if let Ok(objects) = objects.write() {
+            objects.len()
+        } else {
+            0
+        };
+
+        let configuration = &collector.configuration;
+        if number_of_objects > configuration.parallel_threshold {
+            debug!("unmarking {number_of_objects} objects (parallel)");
+            collector.thread_pool.install(|| {
+                if let Ok(mut objects) = objects.write() {
+                    objects.par_iter_mut().for_each(|(_, metadata)| {
+                        metadata.unmark();
+                    });
+                }
+            });
+        } else if number_of_objects > 0 {
+            debug!("unmarking {number_of_objects} objects (sequential)");
+            if let Ok(mut objects) = objects.write() {
                 for metadata in objects.values_mut() {
                     metadata.unmark();
                 }
@@ -688,19 +724,21 @@ impl GarbageCollector {
                 let number_of_objects = objects.len();
                 if number_of_objects > configuration.parallel_threshold {
                     debug!("sweeping {number_of_objects} objects (parallel)");
-                    objects
-                        .par_iter()
-                        .filter_map(|(ptr, metadata)| {
-                            if metadata.is_marked() {
-                                None // Keep marked objects
-                            } else {
-                                Some((
-                                    *ptr,
-                                    ObjectMetadata::new_for_gc::<u8>(*ptr, metadata.size()),
-                                ))
-                            }
-                        })
-                        .collect()
+                    collector.thread_pool.install(|| {
+                        objects
+                            .par_iter()
+                            .filter_map(|(ptr, metadata)| {
+                                if metadata.is_marked() {
+                                    None // Keep marked objects
+                                } else {
+                                    Some((
+                                        *ptr,
+                                        ObjectMetadata::new_for_gc::<u8>(*ptr, metadata.size()),
+                                    ))
+                                }
+                            })
+                            .collect()
+                    })
                 } else {
                     debug!("sweeping {number_of_objects} objects (sequential)");
                     objects

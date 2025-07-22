@@ -2078,6 +2078,7 @@ dependencies = [
  "criterion",
  "dashmap",
  "rayon",
+ "sysinfo",
  "test-log",
  "thiserror",
  "tracing",

@@ -3,6 +3,9 @@
 /// Configuration for the garbage collector
 #[derive(Debug, Clone)]
 pub struct Configuration {
+    /// Number of threads to use for garbage collection. A value of `0` means the collector will use
+    /// 50% of available CPU cores.
+    pub threads: usize,
     /// Target allocation rate threshold before triggering collection (bytes)
     pub allocation_threshold: usize,
     /// Maximum pause time per incremental step (microseconds)
@@ -16,11 +19,13 @@ pub struct Configuration {
 impl Default for Configuration {
     /// Creates a default configuration for the garbage collector.
     /// This sets:
+    /// - `threads` to `0` (use 50% of available CPU cores)
     /// - `allocation_threshold` to 8MB
     /// - `max_pause_time_us` to 100 microseconds
     /// - `incremental_step_size` to 1000 objects
     fn default() -> Self {
         Self {
+            threads: 0,
             allocation_threshold: 8 * 1024 * 1024,
             max_pause_time_us: 100,
             incremental_step_size: 1000,
@@ -52,6 +57,7 @@ mod tests {
     #[test]
     fn default_configuration() {
         let config = Configuration::default();
+        assert_eq!(config.threads, 0);
         assert_eq!(config.allocation_threshold, 8 * 1024 * 1024);
         assert_eq!(config.max_pause_time_us, 100);
         assert_eq!(config.incremental_step_size, 1000);
