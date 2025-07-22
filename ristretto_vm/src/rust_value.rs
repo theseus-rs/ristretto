@@ -3,11 +3,12 @@ use crate::thread::Thread;
 use crate::{Result, Value};
 use ristretto_classfile::{ClassFile, ConstantPool};
 use ristretto_classloader::{Class, Object, Reference};
+use std::fmt::Debug;
 
 const STRING_PREFIX: &str = "str:";
 
 /// Trait for converting Rust values to `Value`.
-pub trait RustValue {
+pub trait RustValue: Debug {
     fn to_value(&self) -> Value;
 }
 

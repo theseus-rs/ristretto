@@ -22,6 +22,7 @@ pub struct Configuration {
     java_version: Option<String>,
     system_properties: HashMap<String, String>,
     interpreted: bool,
+    batch_compilation: bool,
     preview_features: bool,
     stdin: Arc<Mutex<dyn Read + Send + Sync>>,
     stdout: Arc<Mutex<dyn Write + Send + Sync>>,
@@ -127,6 +128,15 @@ impl Configuration {
     pub fn stderr(&self) -> Arc<Mutex<dyn Write + Send + Sync>> {
         self.stderr.clone()
     }
+
+    /// Returns whether background batch compilation is enabled.
+    ///
+    /// When `true`, the VM will perform compilation in the background, allowing
+    /// for faster startup times in some cases.
+    #[must_use]
+    pub fn batch_compilation(&self) -> bool {
+        self.batch_compilation
+    }
 }
 
 #[expect(clippy::missing_fields_in_debug)]
@@ -140,6 +150,7 @@ impl Debug for Configuration {
             .field("java_version", &self.java_version)
             .field("system_properties", &self.system_properties)
             .field("interpreted", &self.interpreted)
+            .field("batch_compilation", &self.batch_compilation)
             .field("preview_features", &self.preview_features)
             .finish()
     }
@@ -157,6 +168,7 @@ pub struct ConfigurationBuilder {
     java_version: Option<String>,
     system_properties: HashMap<String, String>,
     interpreted: bool,
+    batch_compilation: bool,
     preview_features: bool,
     stdin: Arc<Mutex<dyn Read + Send + Sync>>,
     stdout: Arc<Mutex<dyn Write + Send + Sync>>,
@@ -175,6 +187,7 @@ impl ConfigurationBuilder {
     /// - Default Java version (will be set when building if no Java home is provided)
     /// - Empty system properties
     /// - JIT mode enabled
+    /// - Background batch compilation enabled
     /// - Preview features disabled
     /// - Standard output and error streams directed to system stdout/stderr
     #[must_use]
@@ -187,6 +200,7 @@ impl ConfigurationBuilder {
             java_version: None,
             system_properties: HashMap::new(),
             interpreted: false,
+            batch_compilation: true,
             preview_features: false,
             stdin: Arc::new(Mutex::new(stdin())),
             stdout: Arc::new(Mutex::new(stdout())),
@@ -249,10 +263,17 @@ impl ConfigurationBuilder {
         self
     }
 
-    /// Enable interpreted mode
+    /// Configure the VM to run in interpreted mode
     #[must_use]
-    pub fn interpreted(mut self) -> Self {
-        self.interpreted = true;
+    pub fn interpreted(mut self, interpreted: bool) -> Self {
+        self.interpreted = interpreted;
+        self
+    }
+
+    /// Configure the VM to use background batch compilation
+    #[must_use]
+    pub fn batch_compilation(mut self, batch_compilation: bool) -> Self {
+        self.batch_compilation = batch_compilation;
         self
     }
 
@@ -318,6 +339,7 @@ impl ConfigurationBuilder {
             java_version,
             system_properties: self.system_properties,
             interpreted: self.interpreted,
+            batch_compilation: self.batch_compilation,
             preview_features: self.preview_features,
             stdin: self.stdin,
             stdout: self.stdout,
@@ -339,6 +361,7 @@ impl Debug for ConfigurationBuilder {
             .field("java_version", &self.java_version)
             .field("system_properties", &self.system_properties)
             .field("interpreted", &self.interpreted)
+            .field("batch_compilation", &self.batch_compilation)
             .field("preview_features", &self.preview_features)
             .finish()
     }

@@ -87,9 +87,9 @@ async fn common_main(cli: Cli) -> Result<()> {
         }
     }
 
-    if cli.x_options.interpreted {
-        configuration_builder = configuration_builder.interpreted();
-    }
+    configuration_builder =
+        configuration_builder.batch_compilation(cli.x_options.batch_compilation);
+    configuration_builder = configuration_builder.interpreted(cli.x_options.interpreted);
 
     if cli.enable_preview {
         configuration_builder = configuration_builder.preview_features();

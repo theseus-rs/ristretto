@@ -1,5 +1,5 @@
 use anstyle::AnsiColor;
-use clap::{ArgGroup, Parser};
+use clap::{ArgAction, ArgGroup, Parser};
 use std::env;
 use std::io::{self, Write};
 
@@ -20,8 +20,8 @@ pub struct XOptions {
     #[arg(short = 'X', help = "print help on extra options to the error stream")]
     pub x_help: bool,
 
-    #[arg(long = "Xbatch", hide = true)]
-    pub batch: bool,
+    #[arg(long = "Xbatch", hide = true, action = ArgAction::SetFalse)]
+    pub batch_compilation: bool,
 
     #[arg(long = "Xcomp", hide = true)]
     pub compilation: bool,

@@ -14,6 +14,7 @@ use ristretto_classloader::{
 use ristretto_gc::{GC, Statistics};
 use ristretto_jit::Compiler;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
@@ -377,7 +378,10 @@ impl VM {
     /// # Errors
     ///
     /// if the class cannot be loaded
-    pub async fn class<S: AsRef<str>>(&self, class_name: S) -> Result<Arc<Class>> {
+    pub async fn class<S>(&self, class_name: S) -> Result<Arc<Class>>
+    where
+        S: AsRef<str> + Debug,
+    {
         let thread = self.primordial_thread().await?;
         thread.class(class_name).await
     }
@@ -390,7 +394,10 @@ impl VM {
     /// - if the main class is not specified
     /// - if the main class does not specify a main method
     /// - if the main method cannot be invoked
-    pub async fn invoke_main<S: AsRef<str>>(&self, parameters: &[S]) -> Result<Option<Value>> {
+    pub async fn invoke_main<S>(&self, parameters: &[S]) -> Result<Option<Value>>
+    where
+        S: AsRef<str> + Debug,
+    {
         let Some(main_class_name) = &self.main_class else {
             return Err(InternalError("No main class specified".into()));
         };
@@ -433,8 +440,8 @@ impl VM {
         parameters: &[impl RustValue],
     ) -> Result<Option<Value>>
     where
-        C: AsRef<str>,
-        M: AsRef<str>,
+        C: AsRef<str> + Debug,
+        M: AsRef<str> + Debug,
     {
         let thread = self.primordial_thread().await?;
         thread.invoke(&class, &method, parameters).await
@@ -453,8 +460,8 @@ impl VM {
         parameters: &[impl RustValue],
     ) -> Result<Value>
     where
-        C: AsRef<str>,
-        M: AsRef<str>,
+        C: AsRef<str> + Debug,
+        M: AsRef<str> + Debug,
     {
         let thread = self.primordial_thread().await?;
         thread.try_invoke(&class, &method, parameters).await
@@ -472,8 +479,8 @@ impl VM {
         parameters: &[impl RustValue],
     ) -> Result<Value>
     where
-        C: AsRef<str>,
-        M: AsRef<str>,
+        C: AsRef<str> + Debug,
+        M: AsRef<str> + Debug,
     {
         let thread = self.primordial_thread().await?;
         thread.object(class_name, descriptor, parameters).await
