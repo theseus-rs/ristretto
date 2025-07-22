@@ -9,7 +9,7 @@ pub(crate) fn initialize() -> Result<()> {
         .with_level(true)
         .with_target(false)
         .with_thread_ids(false)
-        .with_thread_names(false)
+        .with_thread_names(true)
         .with_timer(fmt::time::uptime())
         .compact();
 

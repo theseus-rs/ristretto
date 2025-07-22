@@ -1,6 +1,8 @@
 use crate::Error::{InternalError, JitError};
 use crate::{Result, VM};
 use dashmap::DashMap;
+use rayon::ThreadPoolBuilder;
+use rayon::prelude::*;
 use ristretto_classfile::MethodAccessFlags;
 use ristretto_classloader::{Class, Method, Value};
 use ristretto_jit::Error::{
@@ -9,9 +11,10 @@ use ristretto_jit::Error::{
 use ristretto_jit::Function;
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
+use sysinfo::System;
 use tokio::sync::{Mutex, mpsc, oneshot};
 use tokio::time::sleep;
-use tracing::{Instrument, debug, error, info, info_span};
+use tracing::{debug, error, info};
 
 /// A thread-safe global cache for JIT-compiled functions.
 ///
@@ -102,7 +105,7 @@ pub(crate) async fn compile(
 
     // If batch compilation is disabled, compile synchronously (original behavior)
     if !vm.configuration().batch_compilation() {
-        return compile_method(vm, class, method, &fully_qualified_method_name, false).await;
+        return compile_method(vm, class, method, &fully_qualified_method_name, false);
     }
 
     // If the method is already being compiled, return None to indicate it's not ready yet
@@ -137,7 +140,7 @@ pub(crate) async fn compile(
 }
 
 /// Shared method compilation logic with optional pending compilation notification
-async fn compile_method(
+fn compile_method(
     vm: &Arc<VM>,
     class: &Arc<Class>,
     method: &Method,
@@ -228,53 +231,64 @@ async fn initialize_batch_compiler() {
     drop(queue);
 
     // Spawn the background compilation task
-    tokio::spawn(
-        async move {
-            let mut batch = Vec::new();
-            const BATCH_SIZE: usize = 10;
-            const BATCH_TIMEOUT_MS: u64 = 50;
+    tokio::spawn(async move {
+        let mut batch = Vec::new();
+        const BATCH_SIZE: usize = 10;
+        const BATCH_TIMEOUT_MS: u64 = 50;
 
-            loop {
-                // Try to collect a batch of compilation requests
-                let timeout = sleep(Duration::from_millis(BATCH_TIMEOUT_MS));
-                tokio::pin!(timeout);
+        let cpus = System::physical_core_count().unwrap_or(1);
+        let compiler_threads = ((cpus as f64) * 0.1).ceil() as usize;
+        let compiler_threads = compiler_threads.min(1);
+        info!("JIT parallel compiler configured with {compiler_threads} threads");
 
-                let should_process;
+        loop {
+            // Try to collect a batch of compilation requests
+            let timeout = sleep(Duration::from_millis(BATCH_TIMEOUT_MS));
+            tokio::pin!(timeout);
 
-                tokio::select! {
-                    request = receiver.recv() => {
-                        match request {
-                            Some(request) => {
-                                batch.push(request);
-                                should_process = batch.len() >= BATCH_SIZE;
-                            }
-                            None => break, // Channel closed
+            let should_process;
+
+            tokio::select! {
+                request = receiver.recv() => {
+                    match request {
+                        Some(request) => {
+                            batch.push(request);
+                            should_process = batch.len() >= BATCH_SIZE;
                         }
-                    }
-                    _ = &mut timeout => {
-                        should_process = !batch.is_empty();
+                        None => break, // Channel closed
                     }
                 }
-
-                // Process the batch if we have requests and either hit batch size or timeout
-                if should_process {
-                    process_compilation_batch(&mut batch).await;
+                _ = &mut timeout => {
+                    should_process = !batch.is_empty();
                 }
             }
+
+            // Process the batch if we have requests and either hit batch size or timeout
+            if should_process {
+                process_compilation_batch(compiler_threads, &mut batch);
+            }
         }
-        .instrument(info_span!("jit")),
-    );
+    });
 }
 
 /// Process a batch of compilation requests
-async fn process_compilation_batch(batch: &mut Vec<CompilationRequest>) {
+fn process_compilation_batch(compiler_threads: usize, batch: &mut Vec<CompilationRequest>) {
     debug!("Processing compilation batch of {} methods", batch.len());
+    let thread_pool = match ThreadPoolBuilder::new()
+        .num_threads(compiler_threads)
+        .thread_name(|i| format!("jit-{i}"))
+        .build()
+    {
+        Ok(pool) => pool,
+        Err(error) => {
+            error!("Failed to create thread pool for JIT compilation: {error}");
+            return;
+        }
+    };
 
-    // Process all requests in the batch
-    for request in batch.drain(..) {
-        // Move the compilation logic to a blocking task since it may involve significant
-        // computation
-        let handle = tokio::task::spawn_blocking(async move || {
+    let batch_requests = std::mem::take(batch);
+    thread_pool.install(|| {
+        batch_requests.into_par_iter().for_each(|request| {
             let class_name = request.class.name();
             let method_name = request.method.name();
             let method_descriptor = request.method.descriptor();
@@ -286,14 +300,10 @@ async fn process_compilation_batch(batch: &mut Vec<CompilationRequest>) {
                 &request.method,
                 &fully_qualified_method_name,
                 true,
-            )
-            .await;
+            );
             let _ = request.response_sender.send(result);
         });
-        if let Err(error) = handle.await {
-            error!("Failed to join compilation task: {error}");
-        }
-    }
+    });
 }
 
 /// Executes a previously JIT-compiled method with the given parameters. It handles the conversion

@@ -34,6 +34,7 @@ filetime = { workspace = true }
 indexmap = { workspace = true }
 os_info = { workspace = true }
 phf = { workspace = true }
+rayon = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.24.0" }
 ristretto_classloader = { path = "../ristretto_classloader", version = "0.24.0" }
 ristretto_gc = { path = "../ristretto_gc", version = "0.24.0" }
