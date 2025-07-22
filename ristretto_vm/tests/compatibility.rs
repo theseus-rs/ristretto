@@ -286,7 +286,11 @@ async fn run_test(
         .stderr(stderr.clone());
 
     if interpreted {
-        configuration_builder = configuration_builder.interpreted();
+        // Enable interpreted mode to test the interpreter.
+        configuration_builder = configuration_builder.interpreted(true);
+    } else {
+        // Disable batch compilation for JIT tests so that we can test the JIT compilation
+        configuration_builder = configuration_builder.batch_compilation(false);
     }
 
     let configuration = configuration_builder.build()?;

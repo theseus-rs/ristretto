@@ -8,7 +8,10 @@ use ristretto_jit::Error::{
 };
 use ristretto_jit::Function;
 use std::sync::{Arc, LazyLock};
-use tracing::{debug, error, info};
+use std::time::Duration;
+use tokio::sync::{Mutex, mpsc, oneshot};
+use tokio::time::sleep;
+use tracing::{Instrument, debug, error, info, info_span};
 
 /// A thread-safe global cache for JIT-compiled functions.
 ///
@@ -45,6 +48,25 @@ use tracing::{debug, error, info};
 static FUNCTION_CACHE: LazyLock<DashMap<String, Option<Arc<Function>>>> =
     LazyLock::new(DashMap::new);
 
+/// A compilation request for the background batch compiler
+#[derive(Debug)]
+struct CompilationRequest {
+    vm: Arc<VM>,
+    class: Arc<Class>,
+    method: Method,
+    response_sender: oneshot::Sender<Result<Option<Arc<Function>>>>,
+}
+
+/// A thread-safe global compilation queue for batch processing
+static COMPILATION_QUEUE: LazyLock<Mutex<Option<mpsc::UnboundedSender<CompilationRequest>>>> =
+    LazyLock::new(|| Mutex::new(None));
+
+/// A thread-safe global set to track methods currently being compiled
+#[expect(clippy::type_complexity)]
+static PENDING_COMPILATIONS: LazyLock<
+    DashMap<String, Vec<oneshot::Sender<Result<Option<Arc<Function>>>>>>,
+> = LazyLock::new(DashMap::new);
+
 /// Attempts to compile a Java method to native code using the Just-In-Time compiler. It first
 /// checks if the method has already been compiled and cached, and returns the cached function if
 /// available. Otherwise, it attempts to compile the method and caches the result.
@@ -53,7 +75,13 @@ static FUNCTION_CACHE: LazyLock<DashMap<String, Option<Arc<Function>>>> =
 ///
 /// Successfully compiled functions are cached in order to avoid recompilation. Failed compilation
 /// attempts are also cached (as `None`) to avoid retrying incompatible methods.
-pub(crate) fn compile(
+///
+/// # Background Compilation
+///
+/// When batch compilation is enabled, methods are queued for background compilation and this
+/// function returns `None` immediately while compilation proceeds asynchronously. Subsequent calls
+/// for the same method will return the compiled function once ready.
+pub(crate) async fn compile(
     vm: &Arc<VM>,
     class: &Arc<Class>,
     method: &Method,
@@ -62,7 +90,6 @@ pub(crate) fn compile(
         return Ok(None);
     }
 
-    let definition = method.definition();
     let class_name = class.name();
     let method_name = method.name();
     let method_descriptor = method.descriptor();
@@ -72,38 +99,79 @@ pub(crate) fn compile(
         debug!("Using cached function for {fully_qualified_method_name}");
         return Ok(function.clone());
     }
+
+    // If batch compilation is disabled, compile synchronously (original behavior)
+    if !vm.configuration().batch_compilation() {
+        return compile_method(vm, class, method, &fully_qualified_method_name, false).await;
+    }
+
+    // If the method is already being compiled, return None to indicate it's not ready yet
+    if PENDING_COMPILATIONS.contains_key(&fully_qualified_method_name) {
+        debug!("Method {fully_qualified_method_name} is already being compiled in background");
+        return Ok(None);
+    }
+
+    // Initialize the batch compiler if not already done
+    initialize_batch_compiler().await;
+
+    // Mark this method as pending compilation
+    PENDING_COMPILATIONS.insert(fully_qualified_method_name.clone(), Vec::new());
+
+    // Send the compilation request to the background compiler
+    let (response_sender, _response_receiver) = oneshot::channel();
+    let request = CompilationRequest {
+        vm: vm.clone(),
+        class: class.clone(),
+        method: method.clone(),
+        response_sender,
+    };
+
+    if let Some(queue) = COMPILATION_QUEUE.lock().await.as_ref() {
+        let _ = queue.send(request);
+    }
+
+    debug!("Queued method {fully_qualified_method_name} for background compilation");
+
+    // Return None immediately to indicate the function is not ready yet
+    Ok(None)
+}
+
+/// Shared method compilation logic with optional pending compilation notification
+async fn compile_method(
+    vm: &Arc<VM>,
+    class: &Arc<Class>,
+    method: &Method,
+    fully_qualified_method_name: &str,
+    notify_pending: bool,
+) -> Result<Option<Arc<Function>>> {
     let Some(compiler) = vm.compiler() else {
         return Ok(None);
     };
 
     let class_file = class.class_file();
+    let definition = method.definition();
 
-    match compiler.compile(class_file, definition) {
+    let function = match compiler.compile(class_file, definition) {
         Ok(function) => {
             let function = Arc::new(function);
             info!("compiled method {fully_qualified_method_name}");
-            FUNCTION_CACHE.insert(fully_qualified_method_name, Some(function.clone()));
-            Ok(Some(function))
+            Some(function)
         }
         Err(UnsupportedInstruction(instruction)) => {
             debug!("Unsupported instruction: {instruction:?}");
-            FUNCTION_CACHE.insert(fully_qualified_method_name, None);
-            Ok(None)
+            None
         }
         Err(UnsupportedMethod(message)) => {
             debug!("Unsupported method: {message}");
-            FUNCTION_CACHE.insert(fully_qualified_method_name, None);
-            Ok(None)
+            None
         }
         Err(UnsupportedTargetISA(message)) => {
             debug!("Unsupported target ISA: {message}");
-            FUNCTION_CACHE.insert(fully_qualified_method_name, None);
-            Ok(None)
+            None
         }
         Err(UnsupportedType(vm_type)) => {
             debug!("Unsupported type: {vm_type}");
-            FUNCTION_CACHE.insert(fully_qualified_method_name, None);
-            Ok(None)
+            None
         }
         Err(error) => {
             let constant_pool = class.constant_pool();
@@ -116,7 +184,114 @@ pub(crate) fn compile(
                 Method:\n\
                 {method:?}"
             );
-            Err(JitError(error))
+
+            let err = JitError(error);
+            if notify_pending {
+                if let Some((_, pending_senders)) =
+                    PENDING_COMPILATIONS.remove(fully_qualified_method_name)
+                {
+                    for sender in pending_senders {
+                        let _ =
+                            sender.send(Err(InternalError("JIT compilation failed".to_string())));
+                    }
+                }
+            }
+
+            return Err(err);
+        }
+    };
+
+    // Notify any pending waiters for this method if requested
+    if notify_pending {
+        if let Some((_, pending_senders)) = PENDING_COMPILATIONS.remove(fully_qualified_method_name)
+        {
+            for sender in pending_senders {
+                let _ = sender.send(Ok(function.clone()));
+            }
+        }
+    }
+
+    FUNCTION_CACHE.insert(fully_qualified_method_name.to_string(), function.clone());
+    Ok(function)
+}
+
+/// Initialize the background batch compilation system
+async fn initialize_batch_compiler() {
+    let mut queue = COMPILATION_QUEUE.lock().await;
+    if queue.is_some() {
+        // Already initialized
+        return;
+    }
+
+    let (sender, mut receiver) = mpsc::unbounded_channel::<CompilationRequest>();
+    *queue = Some(sender);
+    drop(queue);
+
+    // Spawn the background compilation task
+    tokio::spawn(
+        async move {
+            let mut batch = Vec::new();
+            const BATCH_SIZE: usize = 10;
+            const BATCH_TIMEOUT_MS: u64 = 50;
+
+            loop {
+                // Try to collect a batch of compilation requests
+                let timeout = sleep(Duration::from_millis(BATCH_TIMEOUT_MS));
+                tokio::pin!(timeout);
+
+                let should_process;
+
+                tokio::select! {
+                    request = receiver.recv() => {
+                        match request {
+                            Some(request) => {
+                                batch.push(request);
+                                should_process = batch.len() >= BATCH_SIZE;
+                            }
+                            None => break, // Channel closed
+                        }
+                    }
+                    _ = &mut timeout => {
+                        should_process = !batch.is_empty();
+                    }
+                }
+
+                // Process the batch if we have requests and either hit batch size or timeout
+                if should_process {
+                    process_compilation_batch(&mut batch).await;
+                }
+            }
+        }
+        .instrument(info_span!("jit")),
+    );
+}
+
+/// Process a batch of compilation requests
+async fn process_compilation_batch(batch: &mut Vec<CompilationRequest>) {
+    debug!("Processing compilation batch of {} methods", batch.len());
+
+    // Process all requests in the batch
+    for request in batch.drain(..) {
+        // Move the compilation logic to a blocking task since it may involve significant
+        // computation
+        let handle = tokio::task::spawn_blocking(async move || {
+            let class_name = request.class.name();
+            let method_name = request.method.name();
+            let method_descriptor = request.method.descriptor();
+            let fully_qualified_method_name =
+                format!("{class_name}.{method_name}{method_descriptor}");
+            let result = compile_method(
+                &request.vm,
+                &request.class,
+                &request.method,
+                &fully_qualified_method_name,
+                true,
+            )
+            .await;
+            let _ = request.response_sender.send(result);
+        });
+        if let Err(error) = handle.await {
+            error!("Failed to join compilation task: {error}");
         }
     }
 }

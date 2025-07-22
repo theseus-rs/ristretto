@@ -8,7 +8,8 @@ pub(crate) fn initialize() -> Result<()> {
     let format = tracing_subscriber::fmt::format()
         .with_level(true)
         .with_target(false)
-        .with_thread_names(true)
+        .with_thread_ids(false)
+        .with_thread_names(false)
         .with_timer(fmt::time::uptime())
         .compact();
 
