@@ -44,7 +44,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - remove use of custom garbage collector box
 - update jit and main readme
 - add timing to compatibility tests
-- Merge pull request #482 from theseus-rs/impl-string-intern
 - add method and string integration tests
 
 ## `ristretto_vm` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.23.0...ristretto_vm-v0.24.0) - 2025-07-22
@@ -77,7 +76,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - upgrade default java version to 21.0.8.9.1
 - move primitive and array class creation into class loader
 - add timing to compatibility tests
-- Merge pull request #482 from theseus-rs/impl-string-intern
 - add method and string integration tests
 
 ## `ristretto_jit` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.23.0...ristretto_jit-v0.24.0) - 2025-07-22
