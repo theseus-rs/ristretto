@@ -130,8 +130,8 @@ impl ClassLoader {
         let mut constant_pool = ConstantPool::new();
         let this_class_index = constant_pool.add_class(class_name)?;
         let super_class_index = constant_pool.add_class("java/lang/Object")?;
-        let serializable_index = constant_pool.add_class("java/io/Serializable")?;
         let cloneable_index = constant_pool.add_class("java/lang/Cloneable")?;
+        let serializable_index = constant_pool.add_class("java/io/Serializable")?;
         let class_file = ClassFile {
             version: JAVA_1_0_2,
             constant_pool,
@@ -140,7 +140,7 @@ impl ClassLoader {
                 | ClassAccessFlags::ABSTRACT,
             this_class: this_class_index,
             super_class: super_class_index,
-            interfaces: vec![serializable_index, cloneable_index],
+            interfaces: vec![cloneable_index, serializable_index],
             ..Default::default()
         };
 

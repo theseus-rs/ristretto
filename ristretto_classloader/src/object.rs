@@ -41,15 +41,6 @@ impl Object {
         &self.class
     }
 
-    /// Check if the object is an instance of the given class.
-    ///
-    /// # Errors
-    ///
-    /// if the parent class cannot be read.
-    pub fn instance_of(&self, class: &Arc<Class>) -> Result<bool> {
-        class.is_assignable_from(&self.class)
-    }
-
     /// Get field and value lock by key.
     ///
     /// # Errors
@@ -684,14 +675,6 @@ mod tests {
         let object = Object::new(class)?;
         let object_class = object.class();
         assert_eq!("java/lang/String", object_class.name());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_instance_of() -> Result<()> {
-        let class = load_class("java.lang.Object").await?;
-        let object = Object::new(class.clone())?;
-        assert!(object.instance_of(&class)?);
         Ok(())
     }
 
