@@ -776,7 +776,7 @@ impl Class {
     /// # Errors
     ///
     /// if the parent class cannot be accessed due to a poisoned lock.
-    pub fn is_subclass_of(&self, class: &Arc<Class>) -> Result<bool> {
+    pub fn is_subclass_of(&self, class: &Class) -> Result<bool> {
         let mut current: Option<Arc<Class>> = self.parent()?;
         while let Some(ref parent) = current {
             if parent.name() == class.name() {

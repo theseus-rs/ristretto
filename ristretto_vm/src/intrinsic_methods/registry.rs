@@ -176,7 +176,7 @@ mod tests {
         let mut registry_methods = method_registry
             .methods()
             .keys()
-            .map(|method| method.to_string())
+            .map(ToString::to_string)
             .collect::<Vec<String>>();
         registry_methods.sort();
         Ok(registry_methods)

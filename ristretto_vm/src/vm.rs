@@ -314,7 +314,7 @@ impl VM {
     /// if the primordial thread cannot be initialized
     async fn initialize_primordial_thread(&self) -> Result<()> {
         let thread_id = self.next_thread_id()?;
-        let thread = Thread::new(&self.vm, thread_id)?;
+        let thread = Thread::new(&self.vm, thread_id);
         self.thread_handles
             .insert(thread.id(), ThreadHandle::from(thread.clone()))
             .await?;

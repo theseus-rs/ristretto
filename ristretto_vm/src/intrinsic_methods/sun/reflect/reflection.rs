@@ -38,7 +38,7 @@ pub(crate) async fn get_caller_class_2(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let depth = parameters.pop_int()? as usize;
+    let depth = usize::try_from(parameters.pop_int()?)?;
     let frames = thread.frames().await?;
     if frames.len() <= depth {
         return Ok(Some(Value::Object(None)));

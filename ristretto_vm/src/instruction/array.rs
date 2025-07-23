@@ -148,14 +148,13 @@ async fn create_multidimensional_array(
         }
 
         // Build the array class name for this dimension
-        let mut array_class_name = String::new();
-        for _ in 0..(dimension_sizes.len() - depth) {
-            array_class_name.push('[');
-        }
+        let mut array_class_name = "[".repeat(dimension_sizes.len() - depth);
         if component_type.len() == 1 {
             array_class_name.push_str(component_type);
         } else {
-            array_class_name.push_str(&format!("L{component_type};"));
+            array_class_name.push('L');
+            array_class_name.push_str(component_type);
+            array_class_name.push(';');
         }
 
         let array_class = thread.class(&array_class_name).await?;

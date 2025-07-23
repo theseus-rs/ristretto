@@ -384,7 +384,7 @@ pub(crate) async fn start_0(
     let thread_id: u64 = thread_object.value("tid")?.try_into()?;
     let vm = thread.vm()?;
     let weak_vm = Arc::downgrade(&vm);
-    let new_thread = Thread::new(&weak_vm, thread_id)?;
+    let new_thread = Thread::new(&weak_vm, thread_id);
 
     // Associate the Java Thread object with the new internal thread and set its ID in `eetop`
     thread_object.set_value("eetop", Value::from(thread_id))?;
@@ -486,7 +486,7 @@ mod tests {
         let thread_object: Object = thread_value.try_into()?;
         let thread_id = vm.next_thread_id()?;
         let weak_vm = Arc::downgrade(vm);
-        let thread = Thread::new(&weak_vm, thread_id)?;
+        let thread = Thread::new(&weak_vm, thread_id);
         let thread_handle = ThreadHandle::from(thread);
         let mut thread_handles = vm.thread_handles().write().await;
         thread_handles.insert(thread_id, thread_handle);

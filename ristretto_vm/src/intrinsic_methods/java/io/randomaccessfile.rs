@@ -263,7 +263,8 @@ pub(crate) async fn read_0(
     }
     if result > 0 {
         let bytes: Vec<i8> = bytes.try_into()?;
-        let byte = bytes.first().cloned().unwrap_or_default();
+        let byte = bytes.first().copied().unwrap_or_default();
+        #[expect(clippy::cast_sign_loss)]
         let byte = byte as u8;
         result = i32::from(byte);
     }

@@ -585,7 +585,7 @@ mod tests {
             .build()?;
         let vm = VM::new(configuration).await?;
         let weak_vm = Arc::downgrade(&vm);
-        let thread = Thread::new(&weak_vm, 3)?;
+        let thread = Thread::new(&weak_vm, 3);
         let class = thread.class(class_name).await?;
         Ok((thread, class))
     }

@@ -1191,7 +1191,7 @@ mod tests {
         let values: Vec<Value> = reference.try_into()?;
         assert_eq!(class_name, "[Ljava/lang/Class;");
         let mut class_names = Vec::new();
-        for reference in values.into_iter() {
+        for reference in values {
             let object: Object = reference.try_into()?;
             let class_name = object.value("name")?;
             let class_name: String = class_name.try_into()?;
@@ -1258,7 +1258,7 @@ mod tests {
         let values: Vec<Value> = reference.try_into()?;
         assert_eq!(class_name, "[Ljava/lang/reflect/Field;");
         let mut signatures = Vec::new();
-        for value in values.into_iter() {
+        for value in values {
             let result = vm
                 .invoke(
                     "java.lang.reflect.Field",
@@ -1302,7 +1302,7 @@ mod tests {
         let values: Vec<Value> = reference.try_into()?;
         assert_eq!(class_name, "[Ljava/lang/reflect/Method;");
         let mut method_names = Vec::new();
-        for value in values.into_iter() {
+        for value in values {
             let result = vm
                 .invoke(
                     "java.lang.reflect.Method",
@@ -1443,7 +1443,7 @@ mod tests {
         let values: Vec<Value> = reference.try_into()?;
         assert_eq!(class_name, "[Ljava/lang/Class;");
         let mut class_names = Vec::new();
-        for reference in values.into_iter() {
+        for reference in values {
             let object: Object = reference.try_into()?;
             let class_name = object.value("name")?;
             let class_name: String = class_name.try_into()?;

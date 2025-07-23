@@ -59,7 +59,7 @@ pub(crate) async fn cleanup_close_0(
             let mut file_handle: tokio::fs::File = handle.try_into()?;
             file_handle.shutdown().await?;
         }
-    };
+    }
 
     Ok(None)
 }

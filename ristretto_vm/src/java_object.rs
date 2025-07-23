@@ -172,11 +172,12 @@ impl JavaObject for &str {
                 // All chars fit in Latin1
                 (0, self.chars().map(|c| c as i8).collect())
             } else {
+                #[expect(clippy::cast_possible_wrap)]
                 // Must use UTF-16
                 (
                     1,
                     self.encode_utf16()
-                        .flat_map(|u| u.to_be_bytes())
+                        .flat_map(u16::to_be_bytes)
                         .map(|b| b as i8)
                         .collect(),
                 )

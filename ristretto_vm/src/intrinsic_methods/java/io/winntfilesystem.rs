@@ -116,7 +116,7 @@ pub(crate) async fn get_drive_directory(
     let drive_letter = {
         let base = b'A';
         let max = b'Z';
-        let letter_code = base.saturating_add(drive_number as u8);
+        let letter_code = base.saturating_add(u8::try_from(drive_number)?);
         let letter_code = if letter_code > max {
             return Ok(Some(Value::Object(None)));
         } else {
@@ -410,10 +410,12 @@ mod tests {
     #[tokio::test]
     async fn test_get_last_modified_time() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let start_time = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|e| RuntimeException(e.to_string()))?
-            .as_millis() as i64;
+        let start_time = i64::try_from(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| RuntimeException(e.to_string()))?
+                .as_millis(),
+        )?;
         let (_file, file_object) = create_file(&thread, "get_last_modified_time").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);

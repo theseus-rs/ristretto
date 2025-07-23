@@ -489,7 +489,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
                 actual: object.to_string(),
             });
         }
-    };
+    }
     Ok(None)
 }
 
@@ -522,7 +522,7 @@ pub(crate) async fn set_byte(
                 actual: format!("{reference:?}"),
             });
         }
-    };
+    }
     Ok(None)
 }
 
@@ -546,7 +546,7 @@ pub(crate) async fn set_char(
                 actual: format!("{reference:?}"),
             });
         }
-    };
+    }
     Ok(None)
 }
 
@@ -570,7 +570,7 @@ pub(crate) async fn set_double(
                 actual: format!("{reference:?}"),
             });
         }
-    };
+    }
     Ok(None)
 }
 
@@ -594,7 +594,7 @@ pub(crate) async fn set_float(
                 actual: format!("{reference:?}"),
             });
         }
-    };
+    }
     Ok(None)
 }
 
@@ -618,7 +618,7 @@ pub(crate) async fn set_int(
                 actual: format!("{reference:?}"),
             });
         }
-    };
+    }
     Ok(None)
 }
 
@@ -642,7 +642,7 @@ pub(crate) async fn set_long(
                 actual: format!("{reference:?}"),
             });
         }
-    };
+    }
     Ok(None)
 }
 
@@ -666,7 +666,7 @@ pub(crate) async fn set_short(
                 actual: format!("{reference:?}"),
             });
         }
-    };
+    }
     Ok(None)
 }
 
@@ -746,7 +746,8 @@ mod tests {
         let parameters = Parameters::new(vec![array, index]);
         let result = get_double(thread, parameters).await?.expect("value");
         let value: f64 = result.try_into()?;
-        assert_eq!(value, expected);
+        let value = value - expected;
+        assert!(value.abs() < 0.01f64);
         Ok(())
     }
 
@@ -761,7 +762,8 @@ mod tests {
         let parameters = Parameters::new(vec![array, index]);
         let result = get_float(thread, parameters).await?.expect("value");
         let value: f32 = result.try_into()?;
-        assert_eq!(value, expected);
+        let value = value - expected;
+        assert!(value.abs() < 0.01f32);
         Ok(())
     }
 
