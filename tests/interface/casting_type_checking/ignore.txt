@@ -1,0 +1,34 @@
+InternalError("Throwable(Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[4]
+  detailMessage=String(\"Operand stack overflow\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(4)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
+stdout: === Interface Casting and Type Checking Test ===
+Upcasting tests:
+MultiCastImpl.methodA
+MultiCastImpl.methodB
+MultiCastImpl.methodA
+MultiCastImpl.methodB
+Downcast from CastableA successful
+MultiCastImpl.methodB
+Cross-cast from CastableA to CastableB successful
+HierarchyCastImpl.methodC
+HierarchyCastImpl.methodA
+HierarchyCastImpl.methodA
+HierarchyCastImpl.methodA
+Cast from CastableC to CastableA successful
+
+Invalid cast tests:
+aOnlyRef instanceof CastableB: false
+aOnlyRef instanceof CastableC: false
+ClassCastException caught as expected: class OnlyAImpl cannot be cast to class CastableB
+
+Null casting tests:
+null instanceof CastableA: false
+null instanceof CastableB: false
+Null cast successful: true
+
+Array casting tests:

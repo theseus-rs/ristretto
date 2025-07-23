@@ -1,0 +1,11 @@
+InternalError("Throwable(Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[8]
+  detailMessage=String(\"Method not found: java/lang/invoke/VarHandle.set([BIS)V\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(8)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
+stdout: === Interface Serialization and Cloning Test ===
+Processing data: test data
+Transient value: 100
