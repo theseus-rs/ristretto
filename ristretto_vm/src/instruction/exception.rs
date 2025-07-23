@@ -1,4 +1,5 @@
 use crate::Error::{InternalError, JavaError, Throwable};
+use crate::assignable::Assignable;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 use crate::{Error, Result, VM};
@@ -48,7 +49,9 @@ pub(crate) async fn process_throwable(
             let exception_class_name =
                 constant_pool.try_get_class(exception_table_entry.catch_type)?;
             let exception_class = thread.class(exception_class_name).await?;
-            exception_class.is_assignable_from(throwable_class)?
+            exception_class
+                .is_assignable_from(&thread, throwable_class)
+                .await?
         };
 
         if matching_exception_handler {

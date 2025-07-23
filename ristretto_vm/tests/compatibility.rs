@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tracing::metadata::LevelFilter;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, trace};
 use tracing_subscriber::{EnvFilter, fmt};
 
 const TEST_ENDS_WITH_FILTER: Option<&str> = None;
@@ -168,7 +168,7 @@ fn compile_test(java_home: &Path, tests_root_dir: &Path, test_dir: &PathBuf) -> 
         let java_file_modified = java_file.metadata()?.modified()?;
         let class_file_modified = class_file.metadata()?.modified()?;
         if class_file_modified >= java_file_modified {
-            debug!("Skipping compilation for {test_name} as .class file is up to date.");
+            trace!("Skipping compilation for {test_name} as .class file is up to date.");
             return Ok(());
         }
     }

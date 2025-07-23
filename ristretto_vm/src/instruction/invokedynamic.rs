@@ -152,6 +152,7 @@
 
 use crate::Error::InternalError;
 use crate::JavaError::BootstrapMethodError;
+use crate::assignable::Assignable;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
@@ -874,7 +875,10 @@ async fn validate_call_site(
     if let Reference::Object(object) = call_site_reference {
         // Check if the object's class is assignable from CallSite class
         let object_class = object.class();
-        if !call_site_class.is_assignable_from(object_class)? {
+        if !call_site_class
+            .is_assignable_from(thread, object_class)
+            .await?
+        {
             return Err(BootstrapMethodError(format!(
                 "Bootstrap method returned object of type {} which is not a CallSite",
                 object_class.name()

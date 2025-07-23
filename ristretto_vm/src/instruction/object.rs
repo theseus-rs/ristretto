@@ -1,9 +1,11 @@
 use crate::Error::{InternalError, InvalidStackValue};
 use crate::JavaError::{ArrayIndexOutOfBoundsException, ClassCastException, NullPointerException};
+use crate::assignable::Assignable;
 use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue, Frame};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
+use crate::thread::Thread;
 use crate::{Result, Value};
 use ristretto_classloader::{Class, Object, Reference};
 use std::sync::Arc;
@@ -259,7 +261,7 @@ pub(crate) async fn checkcast(
     let class_name = constant_pool.try_get_class(class_index)?;
     let thread = frame.thread()?;
     let class = thread.class(class_name).await?;
-    if !is_instance_of(&object, &class)? {
+    if !is_instance_of(&thread, &object, &class).await? {
         let source_class_name = object.class_name().replace('/', ".");
         let target_class_name = class_name.replace('/', ".");
         return Err(ClassCastException {
@@ -289,7 +291,7 @@ pub(crate) async fn instanceof(
     let class_name = constant_pool.try_get_class(class_index)?;
     let thread = frame.thread()?;
     let class = thread.class(class_name).await?;
-    if is_instance_of(&object, &class)? {
+    if is_instance_of(&thread, &object, &class).await? {
         stack.push_int(1)?;
     } else {
         stack.push_int(0)?;
@@ -298,7 +300,7 @@ pub(crate) async fn instanceof(
 }
 
 #[inline]
-fn is_instance_of(object: &Reference, class: &Arc<Class>) -> Result<bool> {
+async fn is_instance_of(thread: &Thread, object: &Reference, class: &Arc<Class>) -> Result<bool> {
     match object {
         Reference::ByteArray(_)
         | Reference::CharArray(_)
@@ -308,10 +310,13 @@ fn is_instance_of(object: &Reference, class: &Arc<Class>) -> Result<bool> {
         | Reference::FloatArray(_)
         | Reference::DoubleArray(_) => {
             let reference_class_name = object.class_name();
-            Ok(reference_class_name == class.name())
+            let object_class = thread.class(reference_class_name).await?;
+            Ok(class.is_assignable_from(thread, &object_class).await?)
         }
-        Reference::Array(object_array) => Ok(class.is_assignable_from(&object_array.class)?),
-        Reference::Object(object) => Ok(object.instance_of(class)?),
+        Reference::Array(object_array) => Ok(class
+            .is_assignable_from(thread, &object_array.class)
+            .await?),
+        Reference::Object(object) => Ok(class.is_assignable_from(thread, object.class()).await?),
     }
 }
 

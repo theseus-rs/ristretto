@@ -1,6 +1,7 @@
 use crate::Error::InternalError;
 use crate::JavaError::{ClassNotFoundException, NullPointerException};
 use crate::Result;
+use crate::assignable::Assignable;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::rust_value::RustValue;
@@ -927,7 +928,7 @@ pub(crate) async fn is_assignable_from(
         return Err(InternalError("isAssignableFrom: no instance".to_string()));
     };
     let class = get_class(&thread, &object).await?;
-    if class.is_assignable_from(&class_parameter)? {
+    if class.is_assignable_from(&thread, &class_parameter).await? {
         Ok(Some(Value::from(true)))
     } else {
         Ok(Some(Value::from(false)))
@@ -956,7 +957,10 @@ pub(crate) async fn is_instance(
     let self_object = parameters.pop_object()?;
     let self_class = get_class(&thread, &self_object).await?;
 
-    if compare_object.instance_of(&self_class)? {
+    if self_class
+        .is_assignable_from(&thread, compare_object.class())
+        .await?
+    {
         Ok(Some(Value::from(true)))
     } else {
         Ok(Some(Value::from(false)))
