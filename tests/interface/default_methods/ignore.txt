@@ -1,0 +1,12 @@
+InternalError("Throwable(Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[4]
+  detailMessage=String(\"Internal error: No virtual method found for class\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(4)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+):
+stdout: === Default Methods Test ===
+ConflictResolver.sharedMethod - resolving conflict
+DefaultMethodA.sharedMethod
+DefaultMethodB.sharedMethod
