@@ -35,24 +35,24 @@
 //! 1.3 Resolve the `CONSTANT_InvokeDynamic_info` entry at that index
 //!
 //! 1.4 Validate that the entry contains: (e.g. `ClassFile.verify()`, also occurs at runtime)
-//!   - bootstrap_method_attr_index (points to BootstrapMethods attribute)
-//!   - name_and_type_index (method name and descriptor)
+//!   - `bootstrap_method_attr_index` (points to `BootstrapMethods` attribute)
+//!   - `name_and_type_index` (method name and descriptor)
 //!
 //! ## Step 2: Bootstrap Method Resolution
 //!
-//! 2.1 Use bootstrap_method_attr_index to locate the specific bootstrap method entry
+//! 2.1 Use `bootstrap_method_attr_index` to locate the specific bootstrap method entry
 //!
 //! 2.2 The bootstrap method entry contains:
-//!   - bootstrap_method_ref (CONSTANT_MethodHandle_info index)
-//!   - num_bootstrap_arguments (count of static arguments)
-//!   - bootstrap_arguments[] (array of constant pool indices)
+//!   - `bootstrap_method_ref` (`CONSTANT_MethodHandle_info` index)
+//!   - `num_bootstrap_arguments` (count of static arguments)
+//!   - `bootstrap_arguments[]` (array of constant pool indices)
 //!
-//! 2.3 Extract method name from name_and_type_index:
-//!   - Resolve CONSTANT_NameAndType_info entry
+//! 2.3 Extract method name from `name_and_type_index`:
+//!   - Resolve `CONSTANT_NameAndType_info` entry
 //!   - Extract UTF8 string for method name
 //!
 //! 2.4 Validate bootstrap method signature matches required pattern:
-//!     (MethodHandles.Lookup, String, MethodType, ...additionalArgs) -> CallSite
+//!     (`MethodHandles.Lookup`, `String`, `MethodType`, ...additionalArgs) -> `CallSite`
 //!
 //! ## Step 3: Argument Preparation
 //!
@@ -61,12 +61,12 @@
 //!   - Set access modes based on the calling class's access rights
 //!   - Lookup modes include: MODULE, PACKAGE, PROTECTED, PUBLIC
 //!
-//! 3.2 Create MethodType from method descriptor:
+//! 3.2 Create `MethodType` from method descriptor:
 //!   - Parse method descriptor string (e.g., "(Ljava/lang/String;I)V")
 //!   - Resolve all parameter and return types
-//!   - Construct MethodType object with resolved types
+//!   - Construct `MethodType` object with resolved types
 //!
-//! 3.3 Resolve the bootstrap_method_ref to get the actual MethodHandle
+//! 3.3 Resolve the `bootstrap_method_ref` to get the actual `MethodHandle`
 //!
 //! 3.4 Prepare additional static arguments:
 //!   - For each `bootstrap_arguments[i]`:
@@ -95,7 +95,7 @@
 //!   }
 //!   ```
 //!
-//! 4.2 Invoke bootstrap method using MethodHandle.invoke():
+//! 4.2 Invoke bootstrap method using `MethodHandle.invoke()`:
 //!   ```text
 //!   try {
 //!       CallSite result = (CallSite) bootstrapMethodHandle.invoke(args);
@@ -104,28 +104,28 @@
 //!   }
 //!   ```
 //!
-//! 4.3 Validate returned CallSite:
+//! 4.3 Validate returned `CallSite`:
 //!   - Must not be null
-//!   - CallSite.type() must exactly match the expected MethodType
-//!   - If validation fails, throw BootstrapMethodError
+//!   - `CallSite.type()` must exactly match the expected `MethodType`
+//!   - If validation fails, throw `BootstrapMethodError`
 //!
 //! ## Step 5: Call Site Linkage and Caching
 //!
-//! 5.1 Extract target MethodHandle from CallSite:
-//!     MethodHandle target = callSite.getTarget();
+//! 5.1 Extract target `MethodHandle` from `CallSite`:
+//!     `MethodHandle` target = `callSite.getTarget()`;
 //!
-//! 5.2 Validate target MethodHandle:
+//! 5.2 Validate target `MethodHandle`:
 //!   - Must not be null
-//!   - target.type() must exactly match expected MethodType
-//!   - If validation fails, throw BootstrapMethodError
+//!   - `target.type()` must exactly match expected `MethodType`
+//!   - If validation fails, throw `BootstrapMethodError`
 //!
 //! 5.3 Create call site cache entry:
-//!   - Store CallSite object indexed by the invokedynamic instruction location
-//!   - Store target MethodHandle for fast access
+//!   - Store `CallSite` object indexed by the invokedynamic instruction location
+//!   - Store target `MethodHandle` for fast access
 //!   - Mark call site as resolved
 //!
 //! 5.4 Set up call site invalidation handling:
-//!   - If CallSite is MutableCallSite or VolatileCallSite:
+//!   - If `CallSite` is `MutableCallSite` or `VolatileCallSite`:
 //!     - Register for target change notifications
 //!     - Set up invalidation callbacks for JIT compiler
 //!
@@ -133,15 +133,15 @@
 //!
 //! 6.1 Prepare for actual method invocation:
 //!   - Stack frame contains the runtime arguments for the dynamic method
-//!   - Target MethodHandle is now available for invocation
+//!   - Target `MethodHandle` is now available for invocation
 //!
 //! 6.2 Configure JIT compilation hints:
 //!   - Mark call site for potential inlining
-//!   - If ConstantCallSite, mark target as stable for aggressive optimization
+//!   - If `ConstantCallSite`, mark target as stable for aggressive optimization
 //!   - If mutable call site, set up guard conditions for speculative inlining
 //!
 //! 6.3 Execute the target method:
-//!   - Use MethodHandle.invoke() or invokeExact()
+//!   - Use `MethodHandle.invoke()` or `invokeExact()`
 //!   - Pass runtime arguments from the current stack frame
 //!   - Handle return value according to method descriptor
 //!
@@ -192,7 +192,7 @@ fn get_bootstrap_method_attribute_name_and_type(
     }
 }
 
-/// **Step 2.1** Use bootstrap_method_attr_index to locate the specific bootstrap method entry
+/// **Step 2.1** Use `bootstrap_method_attr_index` to locate the specific bootstrap method entry
 ///
 /// Get the bootstrap method definition for the specified class.
 ///
@@ -233,9 +233,9 @@ fn get_bootstrap_method_attribute(
 }
 
 /// **Step 2.2 / 2.3 / 2.4** The bootstrap method entry contains:
-///   - bootstrap_method_ref (CONSTANT_MethodHandle_info index)
-///   - num_bootstrap_arguments (count of static arguments)
-///   - bootstrap_arguments[] (array of constant pool indices)
+///   - `bootstrap_method_ref` (`CONSTANT_MethodHandle_info` index)
+///   - `num_bootstrap_arguments` (count of static arguments)
+///   - `bootstrap_arguments[]` (array of constant pool indices)
 ///
 /// Resolves the bootstrap method reference and retrieves the method handle, class, and method name
 /// and method descriptor for the invokedynamic instruction.
@@ -327,10 +327,10 @@ async fn get_field_type_class(thread: &Thread, field_type: Option<FieldType>) ->
     class.to_object(thread).await
 }
 
-/// **Step 3.2** Create MethodType from method descriptor:
+/// **Step 3.2** Create `MethodType` from method descriptor:
 ///   - Parse method descriptor string (e.g., "(Ljava/lang/String;I)V")
 ///   - Resolve all parameter and return types
-///   - Construct MethodType object with resolved types
+///   - Construct `MethodType` object with resolved types
 ///
 /// Constructs a `java.lang.invoke.MethodType` object from a method descriptor string.
 ///
@@ -392,6 +392,7 @@ async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Val
 ///
 /// Returns an error if the target constant is not a valid field or method reference, or if the
 /// class or method/field cannot be resolved.
+#[expect(clippy::too_many_lines)]
 pub async fn get_method_handle(
     thread: &Arc<Thread>,
     constant_pool: &ConstantPool,
@@ -524,7 +525,7 @@ pub async fn get_method_handle(
                 )
                 .await?
         }
-        (ReferenceKind::GetField, false) | (ReferenceKind::GetStatic, false) => {
+        (ReferenceKind::GetField | ReferenceKind::GetStatic, false) => {
             let method_name = if *reference_kind == ReferenceKind::GetField {
                 "findGetter"
             } else {
@@ -546,7 +547,7 @@ pub async fn get_method_handle(
                 )
                 .await?
         }
-        (ReferenceKind::PutField, false) | (ReferenceKind::PutStatic, false) => {
+        (ReferenceKind::PutField | ReferenceKind::PutStatic, false) => {
             let method_name = if *reference_kind == ReferenceKind::PutField {
                 "findSetter"
             } else {
@@ -590,7 +591,7 @@ pub async fn get_method_handle(
     Ok(method_handle)
 }
 
-/// **Step 3.3** Resolve the bootstrap_method_ref to get the actual MethodHandle
+/// **Step 3.3** Resolve the `bootstrap_method_ref` to get the actual `MethodHandle`
 ///
 /// Retrieves a `MethodHandle` object for the current execution context.
 ///
@@ -806,7 +807,7 @@ pub async fn resolve_call_site(frame: &Frame, method_index: u16) -> Result<Value
     Ok(call_site_result)
 }
 
-/// **Step 4.2** Invokes the bootstrap method using MethodHandle.invoke().
+/// **Step 4.2** Invokes the bootstrap method using `MethodHandle.invoke()`.
 ///
 /// # Errors
 ///
@@ -846,16 +847,16 @@ async fn invoke_bootstrap_method(
     Ok(call_site_result)
 }
 
-/// **Step 4.3** Validates the CallSite returned by the bootstrap method.
+/// **Step 4.3** Validates the `CallSite` returned by the bootstrap method.
 ///
-/// Validate returned CallSite:
+/// Validate returned `CallSite`:
 ///   - Must not be null
-///   - CallSite.type() must exactly match the expected MethodType
-///   - If validation fails, throw BootstrapMethodError
+///   - `CallSite.type()` must exactly match the expected `MethodType`
+///   - If validation fails, throw `BootstrapMethodError`
 ///
 /// # Errors
 ///
-/// Returns an error if the CallSite is null, if it does not match the expected type, or if it does
+/// Returns an error if the `CallSite` is null, if it does not match the expected type, or if it does
 /// not implement the `CallSite` interface.
 async fn validate_call_site(
     thread: &Arc<Thread>,

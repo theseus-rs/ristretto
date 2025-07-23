@@ -32,7 +32,7 @@ pub(crate) async fn address_size_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let pointer_size = REFERENCE_SIZE as i32;
+    let pointer_size = i32::try_from(REFERENCE_SIZE)?;
     Ok(Some(Value::Int(pointer_size)))
 }
 
@@ -103,7 +103,7 @@ pub(crate) async fn array_index_scale_0(
             )));
         }
     };
-    Ok(Some(Value::Int(scale as i32)))
+    Ok(Some(Value::Int(i32::try_from(scale)?)))
 }
 
 #[intrinsic_method(
@@ -610,15 +610,20 @@ fn put_reference_type(
     let value = parameters.pop()?;
     // validate the value type
     match (base_type, &value) {
-        (Some(BaseType::Boolean), Value::Int(_))
-        | (Some(BaseType::Byte), Value::Int(_))
-        | (Some(BaseType::Char), Value::Int(_))
-        | (Some(BaseType::Short), Value::Int(_))
-        | (Some(BaseType::Int), Value::Int(_))
+        (
+            Some(
+                BaseType::Boolean
+                | BaseType::Byte
+                | BaseType::Char
+                | BaseType::Int
+                | BaseType::Short,
+            ),
+            Value::Int(_),
+        )
         | (Some(BaseType::Long), Value::Long(_))
         | (Some(BaseType::Float), Value::Float(_))
-        | (Some(BaseType::Double), Value::Double(_)) => {}
-        (None, Value::Object(_)) => {}
+        | (Some(BaseType::Double), Value::Double(_))
+        | (None, Value::Object(_)) => {}
         _ => {
             return Err(InternalError(
                 "putReferenceType: Invalid value type".to_string(),
@@ -671,61 +676,46 @@ fn put_reference_type(
             array.set(offset, short_value)?;
         }
         Reference::IntArray(array) => {
-            let int_value = match value {
-                Value::Int(int_val) => int_val,
-                _ => {
-                    return Err(InternalError(
-                        "putReferenceType: Invalid value type for int array".to_string(),
-                    ));
-                }
+            let Value::Int(int_value) = value else {
+                return Err(InternalError(
+                    "putReferenceType: Invalid value type for int array".to_string(),
+                ));
             };
             let offset = offset / INT_SIZE;
             array.set(offset, int_value)?;
         }
         Reference::LongArray(array) => {
-            let long_value = match value {
-                Value::Long(long_val) => long_val,
-                _ => {
-                    return Err(InternalError(
-                        "putReferenceType: Invalid value type for long array".to_string(),
-                    ));
-                }
+            let Value::Long(long_value) = value else {
+                return Err(InternalError(
+                    "putReferenceType: Invalid value type for long array".to_string(),
+                ));
             };
             let offset = offset / LONG_SIZE;
             array.set(offset, long_value)?;
         }
         Reference::FloatArray(array) => {
-            let float_value = match value {
-                Value::Float(float_val) => float_val,
-                _ => {
-                    return Err(InternalError(
-                        "putReferenceType: Invalid value type for float array".to_string(),
-                    ));
-                }
+            let Value::Float(float_value) = value else {
+                return Err(InternalError(
+                    "putReferenceType: Invalid value type for float array".to_string(),
+                ));
             };
             let offset = offset / FLOAT_SIZE;
             array.set(offset, float_value)?;
         }
         Reference::DoubleArray(array) => {
-            let double_value = match value {
-                Value::Double(double_val) => double_val,
-                _ => {
-                    return Err(InternalError(
-                        "putReferenceType: Invalid value type for double array".to_string(),
-                    ));
-                }
+            let Value::Double(double_value) = value else {
+                return Err(InternalError(
+                    "putReferenceType: Invalid value type for double array".to_string(),
+                ));
             };
             let offset = offset / DOUBLE_SIZE;
             array.set(offset, double_value)?;
         }
         Reference::Array(object_array) => {
-            let object_value = match value {
-                Value::Object(obj_ref) => obj_ref,
-                _ => {
-                    return Err(InternalError(
-                        "putReferenceType: Invalid value type for object array".to_string(),
-                    ));
-                }
+            let Value::Object(object_value) = value else {
+                return Err(InternalError(
+                    "putReferenceType: Invalid value type for object array".to_string(),
+                ));
             };
             let offset = offset / REFERENCE_SIZE;
             object_array.elements.set(offset, object_value)?;
@@ -740,7 +730,7 @@ fn put_reference_type(
                 object.set_value(&field_name, value)?;
             }
         }
-    };
+    }
 
     Ok(None)
 }
@@ -1487,7 +1477,7 @@ mod tests {
     async fn test_address_size_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = address_size_0(thread, Parameters::default()).await?;
-        let pointer_size = REFERENCE_SIZE as i32;
+        let pointer_size = i32::try_from(REFERENCE_SIZE)?;
         assert_eq!(result, Some(Value::Int(pointer_size)));
         Ok(())
     }

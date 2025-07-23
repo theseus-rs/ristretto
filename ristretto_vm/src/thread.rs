@@ -25,7 +25,7 @@ struct ParkState {
 }
 
 impl ParkState {
-    /// Create a new ParkState.
+    /// Create a new `ParkState`.
     fn new() -> Self {
         Self {
             permit: AtomicBool::new(false),
@@ -53,11 +53,11 @@ pub struct Thread {
 
 impl Thread {
     /// Create a new thread.
-    pub fn new(vm: &Weak<VM>, id: u64) -> Result<Arc<Self>> {
+    pub fn new(vm: &Weak<VM>, id: u64) -> Arc<Self> {
         let vm_ref = vm.clone();
         let name = format!("Thread-{id}");
         let java_object = Value::Object(None);
-        let thread = Arc::new_cyclic(|thread| Thread {
+        Arc::new_cyclic(|thread| Thread {
             id,
             vm: vm_ref,
             thread: thread.clone(),
@@ -65,8 +65,7 @@ impl Thread {
             java_object: Arc::new(RwLock::new(java_object)),
             frames: Arc::new(RwLock::new(Vec::new())),
             park_state: ParkState::new(),
-        });
-        Ok(thread)
+        })
     }
 
     /// Get the identifier of the thread.
@@ -180,10 +179,12 @@ impl Thread {
             }
         } else if is_absolute {
             // Absolute timestamp (milliseconds since epoch)
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map_err(|error| RuntimeException(format!("Time went backwards: {error}")))?
-                .as_millis() as u64;
+            let now = u64::try_from(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_err(|error| RuntimeException(format!("Time went backwards: {error}")))?
+                    .as_millis(),
+            )?;
             let duration = if time > now {
                 time.saturating_sub(now)
             } else {

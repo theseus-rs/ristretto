@@ -58,7 +58,7 @@ pub(crate) async fn invoke_exact(
     Ok(Some(result))
 }
 
-/// Helper: Actually invokes the target referenced by a MethodHandle.
+/// Helper: Actually invokes the target referenced by a `MethodHandle`.
 pub async fn call_method_handle_target(
     thread: Arc<Thread>,
     member: Object,
@@ -91,7 +91,7 @@ pub async fn call_method_handle_target(
             Some(descriptor) => descriptor.try_into()?,
             _ => return Err(InternalError("Invalid MethodType".to_string())),
         }
-    } else if let Ok(descriptor) = member.value("descriptor").and_then(|v| v.try_into()) {
+    } else if let Ok(descriptor) = member.value("descriptor").and_then(TryInto::try_into) {
         descriptor
     } else {
         return Err(InternalError(

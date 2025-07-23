@@ -173,6 +173,7 @@ pub(crate) async fn object_field_offset(
 }
 
 /// Resolves synthetic methods for `...$Holder` classes.
+#[expect(clippy::needless_pass_by_value)]
 fn resolve_holder_methods(
     class: Arc<Class>,
     method_name: &str,
@@ -241,7 +242,7 @@ pub(crate) async fn resolve(
 
         // Access control enforcement
         let method_access_flags = method.access_flags();
-        if !check_method_access(caller, &class, method_access_flags, lookup_mode_flags)? {
+        if !check_method_access(caller, &class, *method_access_flags, *lookup_mode_flags)? {
             return if speculative_resolve {
                 // If speculative, return None (fail silently)
                 Ok(None)
@@ -271,7 +272,7 @@ pub(crate) async fn resolve(
         let field_name: String = name.try_into()?;
         let field = class.declared_field(&field_name)?;
         let field_access_flags = field.access_flags();
-        if !check_field_access(caller, &class, field_access_flags, lookup_mode_flags)? {
+        if !check_field_access(caller, &class, *field_access_flags, *lookup_mode_flags)? {
             return if speculative_resolve {
                 Ok(None)
             } else {
@@ -305,11 +306,12 @@ pub(crate) async fn resolve(
 /// # References
 ///
 /// - [JLS §6.6 Access Control](https://docs.oracle.com/javase/specs/jls/se24/html/jls-6.html#jls-6.6)
+#[expect(clippy::needless_pass_by_value)]
 pub fn check_method_access(
     caller: Option<Arc<Class>>,
     declaring: &Arc<Class>,
-    method_access_flags: &MethodAccessFlags,
-    lookup_mode_flags: &LookupModeFlags,
+    method_access_flags: MethodAccessFlags,
+    lookup_mode_flags: LookupModeFlags,
 ) -> Result<bool> {
     if lookup_mode_flags.contains(LookupModeFlags::TRUSTED) {
         return Ok(true);
@@ -356,11 +358,12 @@ pub fn check_method_access(
 /// # References
 ///
 /// - [JLS §6.6 Access Control](https://docs.oracle.com/javase/specs/jls/se24/html/jls-6.html#jls-6.6)
+#[expect(clippy::needless_pass_by_value)]
 pub fn check_field_access(
     caller: Option<Arc<Class>>,
     declaring: &Arc<Class>,
-    field_access_flags: &FieldAccessFlags,
-    lookup_mode_flags: &LookupModeFlags,
+    field_access_flags: FieldAccessFlags,
+    lookup_mode_flags: LookupModeFlags,
 ) -> Result<bool> {
     if lookup_mode_flags.contains(LookupModeFlags::TRUSTED) {
         return Ok(true);

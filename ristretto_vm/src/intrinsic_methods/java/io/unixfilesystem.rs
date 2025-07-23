@@ -316,11 +316,13 @@ pub(crate) async fn get_last_modified_time_0(
     {
         let path = PathBuf::from(&path);
         let metadata = tokio::fs::metadata(&path).await?;
-        last_modified = metadata
-            .modified()?
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|error| RuntimeException(error.to_string()))?
-            .as_millis() as i64;
+        last_modified = i64::try_from(
+            metadata
+                .modified()?
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|error| RuntimeException(error.to_string()))?
+                .as_millis(),
+        )?;
     }
 
     Ok(Some(Value::Long(last_modified)))
@@ -368,7 +370,7 @@ pub(crate) async fn get_length_0(
     {
         let path = PathBuf::from(&path);
         let metadata = tokio::fs::metadata(&path).await?;
-        length = metadata.len() as i64;
+        length = i64::try_from(metadata.len())?;
     }
 
     Ok(Some(Value::Long(length)))
@@ -437,9 +439,8 @@ pub(crate) async fn get_space_0(
 
         result = if let Some(disk) = disk {
             match space_type {
-                0 => disk.total_space() as i64,     // total
-                1 => disk.available_space() as i64, // free
-                2 => disk.available_space() as i64, // usable
+                0 => i64::try_from(disk.total_space()).unwrap_or(i64::MAX), // 0: total
+                1 | 2 => i64::try_from(disk.available_space()).unwrap_or(i64::MAX), // 1: free | 2: usable
                 _ => 0,
             }
         } else {
@@ -511,11 +512,9 @@ pub(crate) async fn list_0(
 
         #[cfg(not(target_family = "wasm"))]
         {
-            let read_directory = match tokio::fs::read_dir(&path).await {
-                Ok(directory) => directory,
-                Err(_) => return Ok(None),
+            let Ok(read_directory) = tokio::fs::read_dir(&path).await else {
+                return Ok(None);
             };
-
             let mut directory = read_directory;
             while let Ok(Some(entry)) = directory.next_entry().await {
                 if let Some(name) = entry.file_name().to_str() {
@@ -604,7 +603,7 @@ pub(crate) async fn set_last_modified_time_0(
     #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
     {
         let seconds = time.saturating_div(1000);
-        let nanoseconds = (time % 1000).saturating_mul(1_000_000) as u32;
+        let nanoseconds = u32::try_from(time % 1000)?.saturating_mul(1_000_000);
         let mtime = FileTime::from_unix_time(seconds, nanoseconds);
         modified = set_file_mtime(&path, mtime).is_ok();
     }
@@ -919,10 +918,12 @@ mod tests {
     #[tokio::test]
     async fn test_get_last_modified_time() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let start_time = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|e| RuntimeException(e.to_string()))?
-            .as_millis() as i64;
+        let start_time = i64::try_from(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| RuntimeException(e.to_string()))?
+                .as_millis(),
+        )?;
         let (_file, file_object) = create_file(&thread, "get_last_modified_time").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
@@ -937,10 +938,12 @@ mod tests {
     #[tokio::test]
     async fn test_get_last_modified_time_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let start_time = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|e| RuntimeException(e.to_string()))?
-            .as_millis() as i64;
+        let start_time = i64::try_from(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| RuntimeException(e.to_string()))?
+                .as_millis(),
+        )?;
         let (_file, file_object) = create_file(&thread, "get_last_modified_time_0").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);

@@ -281,7 +281,7 @@ async fn invoke_method(
 
             // Check if 'this' reference is null - this should throw NullPointerException
             let Some(reference) = this_ref else {
-                return Err(NullPointerException("".to_string()).into());
+                return Err(NullPointerException("'this' reference is null".to_string()).into());
             };
 
             // Private methods have special resolution rules: they are always resolved

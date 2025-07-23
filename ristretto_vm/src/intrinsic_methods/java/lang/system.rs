@@ -690,13 +690,13 @@ mod tests {
             "world".to_string(),
             "test".to_string(),
         ]);
-        let destination = ConcurrentVec::from(vec!["".to_string(), "".to_string(), "".to_string()]);
+        let destination = ConcurrentVec::from(vec![String::new(), String::new(), String::new()]);
 
         arraycopy_vec(&source, 0, &destination, 0, 2)?;
 
         assert_eq!(destination.get(0)?, Some("hello".to_string()));
         assert_eq!(destination.get(1)?, Some("world".to_string()));
-        assert_eq!(destination.get(2)?, Some("".to_string())); // Unchanged
+        assert_eq!(destination.get(2)?, Some(String::new())); // Unchanged
         Ok(())
     }
 

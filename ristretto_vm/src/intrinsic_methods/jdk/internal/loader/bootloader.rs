@@ -37,7 +37,7 @@ pub(crate) async fn get_system_package_location(
         let class_names = class_path_entry.class_names().await?;
         for class_name in class_names {
             if class_name.starts_with(&package_path) && class_name.contains('/') {
-                let class_package = class_name.rsplit_once('/').map(|x| x.0).unwrap_or("");
+                let class_package = class_name.rsplit_once('/').map_or("", |x| x.0);
                 if class_package == package_path {
                     let location = class_path_entry.name().to_object(&thread).await?;
                     return Ok(Some(location));

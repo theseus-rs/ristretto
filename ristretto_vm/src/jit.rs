@@ -16,6 +16,9 @@ use tokio::sync::{Mutex, mpsc, oneshot};
 use tokio::time::sleep;
 use tracing::{debug, error, info};
 
+const BATCH_SIZE: usize = 10;
+const BATCH_TIMEOUT_MS: u64 = 50;
+
 /// A thread-safe global cache for JIT-compiled functions.
 ///
 /// # Overview
@@ -238,8 +241,6 @@ async fn initialize_batch_compiler() {
     // Spawn the background compilation task
     tokio::spawn(async move {
         let mut batch = Vec::new();
-        const BATCH_SIZE: usize = 10;
-        const BATCH_TIMEOUT_MS: u64 = 50;
 
         loop {
             // Try to collect a batch of compilation requests
@@ -258,7 +259,7 @@ async fn initialize_batch_compiler() {
                         None => break, // Channel closed
                     }
                 }
-                _ = &mut timeout => {
+                () = &mut timeout => {
                     should_process = !batch.is_empty();
                 }
             }

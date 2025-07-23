@@ -260,7 +260,8 @@ pub(crate) async fn read_0(
     }
     if result > 0 {
         let bytes: Vec<i8> = bytes.try_into()?;
-        let byte = bytes.first().cloned().unwrap_or_default();
+        let byte = bytes.first().copied().unwrap_or_default();
+        #[expect(clippy::cast_sign_loss)]
         let byte = byte as u8;
         result = i32::from(byte);
     }
@@ -284,45 +285,39 @@ pub(crate) async fn read_bytes(
     let capacity = length.saturating_sub(offset);
     let mut buffer = vec![0u8; capacity];
 
-    let bytes_read = match fd {
-        0 => {
-            let configuration = vm.configuration();
-            let stdin_lock = configuration.stdin();
-            let mut stdin = stdin_lock.lock().await;
-            stdin
-                .read(&mut buffer[0..length])
+    let bytes_read = if fd == 0 {
+        let configuration = vm.configuration();
+        let stdin_lock = configuration.stdin();
+        let mut stdin = stdin_lock.lock().await;
+        stdin
+            .read(&mut buffer[0..length])
+            .map_err(|error| IoException(error.to_string()))?
+    } else {
+        let file_handles = vm.file_handles();
+        let handle_identifier = file_handle_identifier(fd);
+        let mut file_handle = file_handles
+            .get_mut(&handle_identifier)
+            .await
+            .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
+        let file = &mut file_handle.file;
+
+        #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
+        {
+            let _ = file;
+            0
+        }
+
+        #[cfg(target_os = "wasi")]
+        {
+            file.read(&mut buffer[0..length])
                 .map_err(|error| IoException(error.to_string()))?
         }
-        _ => {
-            let file_handles = vm.file_handles();
-            let handle_identifier = file_handle_identifier(fd);
-            let mut file_handle =
-                file_handles
-                    .get_mut(&handle_identifier)
-                    .await
-                    .ok_or_else(|| {
-                        IoException(format!("File handle not found: {handle_identifier}"))
-                    })?;
-            let file = &mut file_handle.file;
 
-            #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-            {
-                let _ = file;
-                0
-            }
-
-            #[cfg(target_os = "wasi")]
-            {
-                file.read(&mut buffer[0..length])
-                    .map_err(|error| IoException(error.to_string()))?
-            }
-
-            #[cfg(not(target_family = "wasm"))]
-            {
-                file.read(&mut buffer[0..length])
-                    .await
-                    .map_err(|error| IoException(error.to_string()))?
-            }
+        #[cfg(not(target_family = "wasm"))]
+        {
+            file.read(&mut buffer[0..length])
+                .await
+                .map_err(|error| IoException(error.to_string()))?
         }
     };
 

@@ -273,6 +273,7 @@ fn write_intrinsic_method_map(
         map_builder.entry(signature, function);
     }
     writeln!(file)?;
+    writeln!(file, "#[expect(clippy::unreadable_literal)]")?;
     let intrinsic_method_signature = "IntrinsicMethod";
     writeln!(
         file,
