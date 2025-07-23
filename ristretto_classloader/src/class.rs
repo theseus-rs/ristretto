@@ -7,6 +7,7 @@ use ristretto_classfile::{
 };
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
+use std::hash::Hash;
 use std::sync::{Arc, LazyLock, RwLock, Weak};
 
 /// A list of methods that are designated as polymorphic in the Java Virtual Machine.
@@ -788,7 +789,19 @@ impl Class {
     }
 }
 
+impl Display for Class {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name())
+    }
+}
+
 impl Eq for Class {}
+
+impl Hash for Class {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
 
 impl PartialEq for Class {
     fn eq(&self, other: &Self) -> bool {
@@ -807,12 +820,6 @@ impl PartialEq for Class {
             && self.object_fields == other.object_fields
             && self.methods == other.methods
             && *self.object.read().expect("parent") == *other.object.read().expect("parent")
-    }
-}
-
-impl Display for Class {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name())
     }
 }
 

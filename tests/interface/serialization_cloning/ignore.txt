@@ -1,9 +1,9 @@
-InternalError("Throwable(Object(java/lang/InternalError)
-  backtrace=java/lang/StackTraceElement[8]
-  detailMessage=String(\"Method not found: java/lang/invoke/VarHandle.set([BIS)V\")
-  cause=Object(class java/lang/InternalError)
+InternalError("Throwable(Object(java/lang/NoSuchMethodError)
+  backtrace=java/lang/StackTraceElement[9]
+  detailMessage=String(\"Method set([BIS)V not found in class java/lang/invoke/VarHandle\")
+  cause=Object(class java/lang/NoSuchMethodError)
   stackTrace=java/lang/StackTraceElement[0]
-  depth=int(8)
+  depth=int(9)
   suppressedExceptions=Object(class java/util/Collections$EmptyList)
 ):
 stdout: === Interface Serialization and Cloning Test ===

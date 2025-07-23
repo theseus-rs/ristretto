@@ -120,6 +120,14 @@ impl Method {
             .contains(MethodAccessFlags::STATIC)
     }
 
+    /// Check if the method is abstract.
+    #[must_use]
+    pub fn is_abstract(&self) -> bool {
+        self.definition
+            .access_flags
+            .contains(MethodAccessFlags::ABSTRACT)
+    }
+
     /// Get the method name.
     #[must_use]
     pub fn name(&self) -> &str {
@@ -251,6 +259,7 @@ mod tests {
         assert!(!method.is_private());
         assert!(!method.is_native());
         assert!(!method.is_static());
+        assert!(!method.is_abstract());
         assert_eq!(method.name(), "test");
         assert_eq!(method.descriptor(), "()V");
         assert_eq!(method.signature(), "test()V");

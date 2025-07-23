@@ -1,6 +1,10 @@
 /// Errors that can occur when loading classes
 #[derive(Debug, thiserror::Error)]
 pub enum JavaError {
+    /// `AbstractMethodError`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/AbstractMethodError.html>
+    #[error("{0}")]
+    AbstractMethodError(String),
     /// `AccessControlException`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/security/AccessControlException.html>
     #[error("{0}")]
@@ -36,10 +40,18 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/io/FileNotFoundException.html>
     #[error("{0}")]
     FileNotFoundException(String),
+    /// `IllegalAccessError`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IllegalAccessError.html>
+    #[error("{0}")]
+    IllegalAccessError(String),
     /// `IllegalArgumentException`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IllegalArgumentException.html>
     #[error("{0}")]
     IllegalArgumentException(String),
+    /// `IncompatibleClassChangeError`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IncompatibleClassChangeError.html>
+    #[error("{0}")]
+    IncompatibleClassChangeError(String),
     /// `IndexOutOfBoundsException`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IndexOutOfBoundsException.html>
     #[error("Index: {index}, Size {size}")]
@@ -52,6 +64,10 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NoClassDefFoundError.html>
     #[error("{0}")]
     NoClassDefFoundError(String),
+    /// `NoSuchMethodError`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NoSuchMethodError.html>
+    #[error("{0}")]
+    NoSuchMethodError(String),
     /// `NullPointerException`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NullPointerException.html>
     #[error("{0}")]
@@ -71,6 +87,7 @@ impl JavaError {
     #[must_use]
     pub fn class_name(&self) -> &str {
         match self {
+            JavaError::AbstractMethodError(_) => "java.lang.AbstractMethodError",
             JavaError::AccessControlException { .. } => "java.security.AccessControlException",
             JavaError::ArrayIndexOutOfBoundsException { .. } => {
                 "java.lang.ArrayIndexOutOfBoundsException"
@@ -81,10 +98,13 @@ impl JavaError {
             JavaError::ClassFormatError(_) => "java.lang.ClassFormatError",
             JavaError::ClassNotFoundException(_) => "java.lang.ClassNotFoundException",
             JavaError::FileNotFoundException(_) => "java.io.FileNotFoundException",
+            JavaError::IllegalAccessError(_) => "java.lang.IllegalAccessError",
             JavaError::IllegalArgumentException(_) => "java.lang.IllegalArgumentException",
-            JavaError::IoException(_) => "java.io.IOException",
+            JavaError::IncompatibleClassChangeError(_) => "java.lang.IncompatibleClassChangeError",
             JavaError::IndexOutOfBoundsException { .. } => "java.lang.IndexOutOfBoundsException",
+            JavaError::IoException(_) => "java.io.IOException",
             JavaError::NoClassDefFoundError(_) => "java.lang.NoClassDefFoundError",
+            JavaError::NoSuchMethodError(_) => "java.lang.NoSuchMethodError",
             JavaError::NullPointerException(_) => "java.lang.NullPointerException",
             JavaError::RuntimeException(_) => "java.lang.RuntimeException",
             JavaError::UnsupportedOperationException(_) => {
@@ -103,6 +123,13 @@ impl JavaError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_abstract_method_error() {
+        let error = JavaError::AbstractMethodError("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.AbstractMethodError");
+        assert_eq!(error.message(), "foo");
+    }
 
     #[test]
     fn test_access_control_exception() {
@@ -173,6 +200,13 @@ mod tests {
     }
 
     #[test]
+    fn test_illegal_access_error() {
+        let error = JavaError::IllegalAccessError("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.IllegalAccessError");
+        assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
     fn test_illegal_argument_exception() {
         let error = JavaError::IllegalArgumentException("invalid argument".to_string());
         assert_eq!(error.class_name(), "java.lang.IllegalArgumentException");
@@ -187,6 +221,13 @@ mod tests {
     }
 
     #[test]
+    fn test_incompatible_class_change_error() {
+        let error = JavaError::IncompatibleClassChangeError("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.IncompatibleClassChangeError");
+        assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
     fn test_io_exception() {
         let error = JavaError::IoException("foo".to_string());
         assert_eq!(error.class_name(), "java.io.IOException");
@@ -198,6 +239,13 @@ mod tests {
         let error = JavaError::NoClassDefFoundError("java.lang.String".to_string());
         assert_eq!(error.class_name(), "java.lang.NoClassDefFoundError");
         assert_eq!(error.message(), "java.lang.String");
+    }
+
+    #[test]
+    fn test_no_such_method_error() {
+        let error = JavaError::NoSuchMethodError("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.NoSuchMethodError");
+        assert_eq!(error.message(), "foo");
     }
 
     #[test]
