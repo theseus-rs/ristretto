@@ -1,0 +1,15 @@
+[package]
+edition.workspace = true
+name = "embedded_jvm"
+publish = false
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+ristretto_vm = { path = "../../ristretto_vm" }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+tokio = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread"] }
