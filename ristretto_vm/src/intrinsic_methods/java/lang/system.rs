@@ -382,8 +382,9 @@ pub(crate) async fn java_lang_ref_access_class(
     let vm = thread.vm()?;
     let java_class_file_version = vm.java_class_file_version();
     let mut constant_pool = ConstantPool::default();
-    let this_class = constant_pool.add_class("ristretto.internal.access.JavaLangRefAccess")?;
-    let interface_class = constant_pool.add_class(format!("{package_name}/JavaLangRefAccess"))?;
+    let this_class = constant_pool.add_class("ristretto/internal/access/JavaLangRefAccess")?;
+    let interface_name = format!("{package_name}/JavaLangRefAccess");
+    let interface_class = constant_pool.add_class(&interface_name)?;
     let code_index = constant_pool.add_utf8("Code")?;
     let start_threads_index = constant_pool.add_utf8("startThreads")?;
     let start_threads_descriptor_index = constant_pool.add_utf8("()V")?;
@@ -413,6 +414,8 @@ pub(crate) async fn java_lang_ref_access_class(
     };
 
     let java_lang_ref_access = Class::from(None, class_file)?;
+    let interface = thread.class(&interface_name).await?;
+    java_lang_ref_access.set_interfaces(vec![interface])?;
     thread.register_class(java_lang_ref_access.clone()).await?;
     Ok(java_lang_ref_access)
 }
