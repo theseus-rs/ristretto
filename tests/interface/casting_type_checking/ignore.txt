@@ -1,4 +1,4 @@
-InternalError("Throwable(Object(java/lang/InternalError)
+ InternalError("Throwable(Object(java/lang/InternalError)
   backtrace=java/lang/StackTraceElement[4]
   detailMessage=String(\"Operand stack overflow\")
   cause=Object(class java/lang/InternalError)
