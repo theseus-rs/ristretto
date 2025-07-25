@@ -98,14 +98,10 @@ impl LocalVariables {
         &mut self,
         function_builder: &mut FunctionBuilder,
         index: usize,
-        value_type: Type,
         value: Value,
     ) -> Result<()> {
         let variable = Variable::new(index);
         if function_builder.try_def_var(variable, value).is_err() {
-            function_builder
-                .try_declare_var(variable, value_type)
-                .map_err(|error| InternalError(error.to_string()))?;
             function_builder
                 .try_def_var(variable, value)
                 .map_err(|error| InternalError(error.to_string()))?;
@@ -131,7 +127,7 @@ impl LocalVariables {
                 "Expected {expected_type:?}, found {value_type:?}",
             )));
         }
-        self.set(function_builder, index, expected_type, value)
+        self.set(function_builder, index, value)
     }
 
     /// Set an int in the local variables.
@@ -197,6 +193,18 @@ mod tests {
     use crate::test::create_function_builder_contexts;
     use cranelift::prelude::InstBuilder;
 
+    fn create_locals(
+        function_builder: &mut FunctionBuilder,
+        number_of_locals: usize,
+        local_type: Type,
+    ) {
+        for _ in 0..number_of_locals {
+            let variable = function_builder.declare_var(local_type);
+            let value = function_builder.ins().iconst(local_type, 0);
+            function_builder.def_var(variable, value);
+        }
+    }
+
     #[test]
     fn test_get_and_set() -> Result<()> {
         let (mut module_context, mut function_context) = create_function_builder_contexts()?;
@@ -204,6 +212,7 @@ mod tests {
             FunctionBuilder::new(&mut module_context.func, &mut function_context);
         let block = function_builder.create_block();
         function_builder.switch_to_block(block);
+        create_locals(&mut function_builder, 1, types::I32);
 
         let mut local_variables = LocalVariables::new();
         let index = 0;
@@ -235,6 +244,7 @@ mod tests {
             FunctionBuilder::new(&mut module_context.func, &mut function_context);
         let block = function_builder.create_block();
         function_builder.switch_to_block(block);
+        create_locals(&mut function_builder, 1, types::I32);
 
         let mut local_variables = LocalVariables::new();
         let index = 0;
@@ -252,6 +262,7 @@ mod tests {
             FunctionBuilder::new(&mut module_context.func, &mut function_context);
         let block = function_builder.create_block();
         function_builder.switch_to_block(block);
+        create_locals(&mut function_builder, 1, types::I64);
 
         let mut local_variables = LocalVariables::new();
         let index = 0;
@@ -269,6 +280,7 @@ mod tests {
             FunctionBuilder::new(&mut module_context.func, &mut function_context);
         let block = function_builder.create_block();
         function_builder.switch_to_block(block);
+        create_locals(&mut function_builder, 1, types::F32);
 
         let mut local_variables = LocalVariables::new();
         let index = 0;
@@ -286,6 +298,7 @@ mod tests {
             FunctionBuilder::new(&mut module_context.func, &mut function_context);
         let block = function_builder.create_block();
         function_builder.switch_to_block(block);
+        create_locals(&mut function_builder, 1, types::F64);
 
         let mut local_variables = LocalVariables::new();
         let index = 0;
@@ -303,6 +316,7 @@ mod tests {
             FunctionBuilder::new(&mut module_context.func, &mut function_context);
         let block = function_builder.create_block();
         function_builder.switch_to_block(block);
+        create_locals(&mut function_builder, 1, types::I32);
 
         let mut local_variables = LocalVariables::new();
         let index = 0;
@@ -320,6 +334,7 @@ mod tests {
             FunctionBuilder::new(&mut module_context.func, &mut function_context);
         let block = function_builder.create_block();
         function_builder.switch_to_block(block);
+        create_locals(&mut function_builder, 1, types::I32);
 
         let mut local_variables = LocalVariables::new();
         let index = 0;
