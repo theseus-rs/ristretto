@@ -1,9 +1,9 @@
-InternalError("Throwable(Object(java/lang/BootstrapMethodError)
-  backtrace=java/lang/StackTraceElement[7]
-  detailMessage=String(\"Bootstrap method invocation failed: java.lang.Throwable: Object(class java/lang/InternalError)\")
-  cause=Object(class java/lang/BootstrapMethodError)
+InternalError("Throwable(Object(java/lang/IllegalArgumentException)
+  backtrace=java/lang/StackTraceElement[11]
+  detailMessage=String(\"illegal lookupClass: class java.lang.invoke.LambdaMetafactory\")
+  cause=Object(class java/lang/IllegalArgumentException)
   stackTrace=java/lang/StackTraceElement[0]
-  depth=int(7)
+  depth=int(11)
   suppressedExceptions=Object(class java/util/Collections$EmptyList)
 ):
 stdout: === Interface Reflection Test ===

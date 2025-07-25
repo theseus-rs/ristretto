@@ -84,4 +84,3 @@ name = "vm"
 
 [lints.clippy]
 result_large_err = { level = "allow", priority = 1 }
-
