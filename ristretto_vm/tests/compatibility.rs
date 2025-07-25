@@ -11,7 +11,7 @@ use tracing::metadata::LevelFilter;
 use tracing::{debug, error, info, trace};
 use tracing_subscriber::{EnvFilter, fmt};
 
-const TEST_ENDS_WITH_FILTER: Option<&str> = Some("math/double");
+const TEST_ENDS_WITH_FILTER: Option<&str> = None;
 const TEST_CLASS_NAME: &str = "Test";
 const TEST_FILE: &str = "Test.java";
 const IGNORE_FILE: &str = "ignore.txt";

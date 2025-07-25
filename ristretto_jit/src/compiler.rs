@@ -138,9 +138,6 @@ impl Compiler {
         let (arguments_pointer, _arguments_length_pointer, return_pointer) =
             Self::function_pointers(&mut function_builder, block)?;
 
-        if method_name == "stringSize" {
-            println!("Function: {function_name}");
-        }
         let mut locals = Self::locals(
             &mut function_builder,
             method_descriptor,
