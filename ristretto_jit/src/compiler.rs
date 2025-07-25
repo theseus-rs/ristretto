@@ -21,6 +21,7 @@ use crate::instruction::{
     lxor, monitorenter, monitorexit, nop, pop, pop2, ret, ret_w, r#return, sipush, swap,
     tableswitch, wide,
 };
+use crate::local_type::LocalType;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{JitValue, Result, control_flow_graph};
@@ -137,7 +138,15 @@ impl Compiler {
         let (arguments_pointer, _arguments_length_pointer, return_pointer) =
             Self::function_pointers(&mut function_builder, block)?;
 
-        let mut locals = Self::locals(method_descriptor, &mut function_builder, arguments_pointer)?;
+        if method_name == "stringSize" {
+            println!("Function: {function_name}");
+        }
+        let mut locals = Self::locals(
+            &mut function_builder,
+            method_descriptor,
+            instructions,
+            arguments_pointer,
+        )?;
 
         let mut stack = OperandStack::with_capacity(max_stack);
         for (program_counter, instruction) in instructions.iter().enumerate() {
@@ -241,15 +250,16 @@ impl Compiler {
     ///
     /// If the locals array cannot be created
     fn locals(
-        descriptor: &str,
         function_builder: &mut FunctionBuilder,
+        descriptor: &str,
+        instructions: &[Instruction],
         arguments_pointer: Value,
     ) -> Result<LocalVariables> {
         let size_of = i64::try_from(size_of::<JitValue>())
             .map_err(|error| InternalError(format!("{error:?}")))?;
         let struct_size = function_builder.ins().iconst(types::I64, size_of);
+        let mut local_types = Vec::new();
 
-        let mut variable_index = 0;
         let (parameter_types, _return_type) = FieldType::parse_method_descriptor(descriptor)?;
         for (index, parameter_type) in parameter_types.iter().enumerate() {
             let index =
@@ -259,27 +269,87 @@ impl Compiler {
             let address = function_builder.ins().iadd(arguments_pointer, offset);
 
             // Ignore the discriminant
-            let variable = Variable::new(variable_index);
-            variable_index = variable_index
-                .checked_add(1)
-                .ok_or_else(|| InternalError("variable index overflow".to_string()))?;
             let native_type = Self::native_type(parameter_type)?;
-            function_builder.declare_var(variable, native_type);
+            let variable = function_builder.declare_var(native_type);
+            local_types.push(native_type);
             let value = function_builder
                 .ins()
                 .load(native_type, MemFlags::trusted(), address, 8);
             function_builder.def_var(variable, value);
-            if let FieldType::Base(BaseType::Long | BaseType::Double) = parameter_type {
-                // The JVM specification requires that Long and Double take two places in the
-                // locals list when passed to a method. This method adjusts the variables index
-                // to account for this.
-                //
-                // See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6.1>
-                variable_index = variable_index
-                    .checked_add(1)
-                    .ok_or_else(|| InternalError("variable index overflow".to_string()))?;
+
+            // The JVM specification requires that Long and Double take two places in the
+            // locals list when passed to a method. This method adjusts the variables index
+            // to account for this.
+            //
+            // See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6.1>
+            //
+            // NOTE: if the jit compiler is ever updated to re-write the original instructions, this
+            //       logic should probably be removed and the instructions should be rewritten to
+            //       use sequential variable indices instead.
+            match parameter_type {
+                FieldType::Base(BaseType::Double) => {
+                    local_types.push(native_type);
+                    let variable = function_builder.declare_var(native_type);
+                    let value = function_builder.ins().f64const(0.0);
+                    function_builder.def_var(variable, value);
+                }
+                FieldType::Base(BaseType::Long) => {
+                    local_types.push(native_type);
+                    let variable = function_builder.declare_var(native_type);
+                    let value = function_builder.ins().iconst(types::I64, 0);
+                    function_builder.def_var(variable, value);
+                }
+                _ => {}
             }
         }
+
+        let non_method_argument_locals_start_index = local_types.len();
+
+        // Add the locals for the method body
+        for instruction in instructions {
+            let Some((index, field_type)) = instruction.local_type()? else {
+                continue;
+            };
+            let native_type = Self::native_type(&field_type)?;
+            // If the index is greater than the current length of the types, we need to
+            // extend the vector with default values until we reach the index.
+            while index >= local_types.len() {
+                // Default to I8 to indicate an uninitialized local; this is a placeholder type and
+                // should be replaced with the correct type later.
+                local_types.push(types::I8);
+            }
+
+            let existing_type = local_types[index];
+            if existing_type == types::I8 {
+                local_types[index] = native_type;
+            } else if existing_type != native_type {
+                // TODO: the jit compiler should handle this case gracefully and rewrite the
+                //       instructions to use unique local variables with types that do not conflict.
+                return Err(UnsupportedType(format!(
+                    "Incompatible local variable type at index {index}: expected {native_type}, found {existing_type}"
+                )));
+            }
+        }
+
+        for mut native_type in local_types
+            .into_iter()
+            .skip(non_method_argument_locals_start_index)
+        {
+            if native_type == types::I8 {
+                // Default to I32 for uninitialized locals
+                native_type = types::I32;
+            }
+
+            // Create a variable for the local
+            let variable = function_builder.declare_var(native_type);
+            let value = match native_type {
+                types::F32 => function_builder.ins().f32const(0.0),
+                types::F64 => function_builder.ins().f64const(0.0),
+                _ => function_builder.ins().iconst(native_type, 0),
+            };
+            function_builder.def_var(variable, value);
+        }
+
         Ok(LocalVariables::new())
     }
 
