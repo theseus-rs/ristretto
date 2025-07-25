@@ -19,7 +19,7 @@ mod com;
 /// Mapping of intrinsic method names to their implementations
 mod intrinsics;
 /// Core Java standard library methods
-mod java;
+pub(crate) mod java;
 /// JDK-specific internal methods
 mod jdk;
 /// Methods for handling Java properties
