@@ -17,8 +17,11 @@
 //! * `field` - Field access instructions (e.g., `getfield`, `putfield`)
 //! * `float` - Floating point instructions
 //! * `integer` - Integer arithmetic and logic instructions
-//! * `invoke` - Method invocation instructions (e.g., `invokevirtual`, `invokespecial`)
 //! * `invokedynamic` - Dynamic method invocation instructions
+//! * `invokeinterface` - Interface method invocation instructions
+//! * `invokespecial` - Special method invocation instructions (e.g., constructors)
+//! * `invokestatic` - Static method invocation instructions
+//! * `invokevirtual` - Virtual method invocation instructions
 //! * `ldc` - Constant loading instructions
 //! * `long` - Long integer instructions
 //! * `monitor` - Monitor-related instructions for synchronization

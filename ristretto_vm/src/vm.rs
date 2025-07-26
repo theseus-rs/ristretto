@@ -1,4 +1,5 @@
 use crate::Error::InternalError;
+use crate::call_site_cache::CallSiteCache;
 use crate::handles::{FileHandle, HandleManager, ThreadHandle};
 use crate::intrinsic_methods::MethodRegistry;
 use crate::java_object::JavaObject;
@@ -43,6 +44,7 @@ pub struct VM {
     thread_handles: HandleManager<u64, ThreadHandle>,
     file_handles: HandleManager<String, FileHandle>,
     string_pool: StringPool,
+    call_site_cache: CallSiteCache,
 }
 
 /// VM
@@ -154,6 +156,7 @@ impl VM {
             thread_handles: HandleManager::new(),
             file_handles: HandleManager::new(),
             string_pool: StringPool::new(),
+            call_site_cache: CallSiteCache::new(),
         });
         vm.initialize().await?;
         Ok(vm)
@@ -271,6 +274,7 @@ impl VM {
     /// if the VM cannot be initialized
     async fn initialize(&self) -> Result<()> {
         self.initialize_primordial_thread().await?;
+
         if self.java_class_file_version <= JAVA_8 {
             self.invoke(
                 "java.lang.System",
@@ -489,6 +493,11 @@ impl VM {
     /// The string pool is used to store and intern strings for the VM.
     pub(crate) fn string_pool(&self) -> &StringPool {
         &self.string_pool
+    }
+
+    /// Get the call site cache for invokedynamic recursion prevention
+    pub(crate) fn call_site_cache(&self) -> &CallSiteCache {
+        &self.call_site_cache
     }
 }
 

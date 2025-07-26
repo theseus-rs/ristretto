@@ -61,6 +61,7 @@
 #![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
 mod assignable;
+mod call_site_cache;
 mod configuration;
 mod error;
 mod frame;

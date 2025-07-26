@@ -201,8 +201,8 @@ fn test_concurrent_roots_management() -> Result<()> {
     collection_handle.join().unwrap();
 
     // All objects should remain accessible
-    for obj in &objects {
-        assert!(obj.id < 5);
+    for object in &objects {
+        assert!(object.id < 5);
     }
 
     Ok(())
@@ -314,8 +314,8 @@ fn test_high_frequency_allocation_deallocation() {
                 }
 
                 // Use the objects briefly
-                for obj in &local_objects {
-                    let _sum: usize = obj.iter().sum();
+                for object in &local_objects {
+                    let _sum: usize = object.iter().sum();
                 }
 
                 // Objects become unreachable when local_objects is dropped
