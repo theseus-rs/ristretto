@@ -524,8 +524,8 @@ mod tests {
     #[test]
     fn test_laload() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::from(vec![42i64]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![42i64]);
+        stack.push(array)?;
         stack.push_int(0)?;
         let result = laload(stack)?;
         assert_eq!(Continue, result);
@@ -536,8 +536,8 @@ mod tests {
     #[test]
     fn test_laload_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Reference::from(vec![42i32]);
-        stack.push_object(Some(object))?;
+        let object = Value::from(vec![42i32]);
+        stack.push(object)?;
         stack.push_int(2)?;
         let result = laload(stack);
         assert!(matches!(
@@ -553,8 +553,8 @@ mod tests {
     #[test]
     fn test_laload_invalid_index_negative() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::from(vec![42i64]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![42i64]);
+        stack.push(array)?;
         stack.push_int(-1)?;
         let result = laload(stack);
         assert!(matches!(
@@ -568,8 +568,8 @@ mod tests {
     #[test]
     fn test_laload_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::from(vec![42i64]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![42i64]);
+        stack.push(array)?;
         stack.push_int(2)?;
         let result = laload(stack);
         assert!(matches!(
@@ -593,8 +593,8 @@ mod tests {
     #[test]
     fn test_lastore() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::from(vec![3i64]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![3i64]);
+        stack.push(array)?;
         stack.push_int(0)?;
         stack.push_long(42)?;
         let result = lastore(stack)?;
@@ -605,8 +605,8 @@ mod tests {
     #[test]
     fn test_lastore_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Reference::from(vec![42i32]);
-        stack.push_object(Some(object))?;
+        let object = Value::from(vec![42i32]);
+        stack.push(object)?;
         stack.push_int(2)?;
         stack.push_long(42)?;
         let result = lastore(stack);
@@ -623,8 +623,8 @@ mod tests {
     #[test]
     fn test_lastore_invalid_index_negative() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::from(vec![3i64]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![3i64]);
+        stack.push(array)?;
         stack.push_int(-1)?;
         stack.push_long(42)?;
         let result = lastore(stack);
@@ -639,8 +639,8 @@ mod tests {
     #[test]
     fn test_lastore_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::from(vec![3i64]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![3i64]);
+        stack.push(array)?;
         stack.push_int(2)?;
         stack.push_long(42)?;
         let result = lastore(stack);

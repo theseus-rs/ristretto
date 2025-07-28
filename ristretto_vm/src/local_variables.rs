@@ -346,11 +346,11 @@ mod tests {
     #[test]
     fn test_get_object() -> Result<()> {
         let mut locals = LocalVariables::with_max_size(2);
-        let object = Reference::from(vec![42i8]);
+        let object = Value::from(vec![42i8]);
         locals.set_object(0, None)?;
-        locals.set_object(1, Some(object.clone()))?;
+        locals.set(1, object.clone())?;
         assert_eq!(locals.get_object(0)?, None);
-        assert_eq!(locals.get_object(1)?, Some(object));
+        assert_eq!(locals.get(1)?, object);
         Ok(())
     }
 

@@ -71,12 +71,13 @@ pub(crate) fn bastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
 mod test {
     use super::*;
     use crate::Error::JavaError;
+    use ristretto_classloader::Value;
 
     #[test]
     fn test_baload() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::from(vec![42i8]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![42i8]);
+        stack.push(array)?;
         stack.push_int(0)?;
         let result = baload(stack)?;
         assert_eq!(Continue, result);
@@ -87,8 +88,8 @@ mod test {
     #[test]
     fn test_baload_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Reference::from(vec![42i32]);
-        stack.push_object(Some(object))?;
+        let object = Value::from(vec![42i32]);
+        stack.push(object)?;
         stack.push_int(2)?;
         let result = baload(stack);
         assert!(matches!(
@@ -104,8 +105,8 @@ mod test {
     #[test]
     fn test_baload_invalid_index_negative() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::from(vec![42i8]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![42i8]);
+        stack.push(array)?;
         stack.push_int(-1)?;
         let result = baload(stack);
         assert!(matches!(
@@ -119,8 +120,8 @@ mod test {
     #[test]
     fn test_baload_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::from(vec![42i8]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![42i8]);
+        stack.push(array)?;
         stack.push_int(2)?;
         let result = baload(stack);
         assert!(matches!(
@@ -144,8 +145,8 @@ mod test {
     #[test]
     fn test_bastore() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::from(vec![3i8]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![3i8]);
+        stack.push(array)?;
         stack.push_int(0)?;
         stack.push_int(42)?;
         let result = bastore(stack)?;
@@ -156,8 +157,8 @@ mod test {
     #[test]
     fn test_bastore_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Reference::from(vec![42i32]);
-        stack.push_object(Some(object))?;
+        let object = Value::from(vec![42i32]);
+        stack.push(object)?;
         stack.push_int(2)?;
         stack.push_int(42)?;
         let result = bastore(stack);
@@ -174,8 +175,8 @@ mod test {
     #[test]
     fn test_bastore_invalid_index_negative() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::from(vec![3i8]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![3i8]);
+        stack.push(array)?;
         stack.push_int(-1)?;
         stack.push_int(42)?;
         let result = bastore(stack);
@@ -190,8 +191,8 @@ mod test {
     #[test]
     fn test_bastore_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::from(vec![3i8]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![3i8]);
+        stack.push(array)?;
         stack.push_int(2)?;
         stack.push_int(42)?;
         let result = bastore(stack);

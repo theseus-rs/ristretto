@@ -6,7 +6,7 @@ use crate::{JavaObject, Result};
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{Constant, FieldType, JAVA_11};
-use ristretto_classloader::{Object, Reference, Value};
+use ristretto_classloader::{Object, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -228,8 +228,8 @@ pub(crate) async fn get_member_ref_info_at_0(
     let descriptor = descriptor.to_object(&thread).await?.to_reference()?;
     let string_class = thread.class("java/lang/String").await?;
     let string_array = vec![class_name, name, descriptor];
-    let results = Reference::from((string_class, string_array));
-    Ok(Some(Value::from(results)))
+    let results = Value::from((string_class, string_array));
+    Ok(Some(results))
 }
 
 #[intrinsic_method(
@@ -390,8 +390,8 @@ pub(crate) async fn get_name_and_type_ref_info_at_0(
     let descriptor = descriptor.to_object(&thread).await?.to_reference()?;
     let string_class = thread.class("java/lang/String").await?;
     let string_array = vec![name, descriptor];
-    let results = Reference::from((string_class, string_array));
-    Ok(Some(Value::from(results)))
+    let results = Value::from((string_class, string_array));
+    Ok(Some(results))
 }
 
 #[intrinsic_method(
@@ -479,7 +479,7 @@ pub(crate) mod tests {
         BaseType, ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, FieldType,
         MethodAccessFlags,
     };
-    use ristretto_classloader::Class;
+    use ristretto_classloader::{Class, Reference};
 
     pub(crate) async fn test_object() -> Result<(Arc<VM>, Arc<Thread>, Value)> {
         let (vm, thread) = crate::test::thread().await.expect("thread");

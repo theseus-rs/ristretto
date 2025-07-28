@@ -7,7 +7,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_17, JAVA_21};
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -27,7 +27,7 @@ pub(crate) async fn platform_properties(
     let java_version = vm.java_major_version();
 
     // VM properties must be returned in a specific order as they are accessed by array index.
-    let mut properties: Vec<Option<Reference>> = Vec::new();
+    let mut properties: Vec<Value> = Vec::new();
     push_property(system_properties, &mut properties, "user.country")?;
     push_property(system_properties, &mut properties, "user.language")?;
     push_property(system_properties, &mut properties, "user.script")?;
@@ -78,17 +78,16 @@ pub(crate) async fn platform_properties(
     push_property(system_properties, &mut properties, "user.home")?;
     push_property(system_properties, &mut properties, "user.name")?;
 
-    let properties = properties;
-    let result = Value::from((string_array_class, properties));
+    let result = Value::try_from((string_array_class, properties))?;
     Ok(Some(result))
 }
 
 fn push_property(
     system_properties: &mut HashMap<&str, Value>,
-    properties: &mut Vec<Option<Reference>>,
+    properties: &mut Vec<Value>,
     property_name: &str,
 ) -> Result<()> {
-    let Some(Value::Object(value)) = system_properties.remove(property_name) else {
+    let Some(value) = system_properties.remove(property_name) else {
         return Err(InternalError(format!(
             "Property not found: {property_name}"
         )));
@@ -127,23 +126,15 @@ pub(crate) async fn vm_properties(
     system_properties.insert("java.vm.version".to_string(), vm_version.to_string());
     system_properties.insert("java.vm.name".to_string(), vm_name);
 
-    let mut properties: Vec<Option<Reference>> = Vec::new();
+    let mut properties: Vec<Value> = Vec::new();
     for (key, value) in system_properties {
-        let Value::Object(key) = key.to_object(&thread).await? else {
-            return Err(InternalError(format!(
-                "Unable to convert key to string: {key}"
-            )));
-        };
+        let key = key.to_object(&thread).await?;
+        let value = value.to_object(&thread).await?;
         properties.push(key);
-        let Value::Object(value) = value.to_object(&thread).await? else {
-            return Err(InternalError(format!(
-                "Unable to convert value to string: {value}"
-            )));
-        };
         properties.push(value);
     }
 
     let string_array_class = thread.class("[Ljava/lang/String;").await?;
-    let result = Value::from((string_array_class, properties));
+    let result = Value::try_from((string_array_class, properties))?;
     Ok(Some(result))
 }

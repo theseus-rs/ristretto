@@ -555,7 +555,6 @@ pub(crate) async fn static_field_offset(
 mod tests {
     use super::*;
     use crate::JavaObject;
-    use ristretto_classloader::Reference;
 
     #[tokio::test]
     #[should_panic(
@@ -635,11 +634,11 @@ mod tests {
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
         let member_name = Object::new(member_name_class)?;
         let class_object = thread.class("java.lang.Integer").await?;
-        let class = Reference::from(Object::new(class_object)?);
-        member_name.set_value("clazz", Value::from(class))?;
+        let class = Value::from(Object::new(class_object)?);
+        member_name.set_value("clazz", class)?;
         let value_string = "value".to_object(&thread).await?;
         member_name.set_value("name", value_string)?;
-        parameters.push_reference(Some(Reference::from(member_name)));
+        parameters.push(Value::from(member_name));
         let result = object_field_offset(thread, parameters).await?;
         assert_eq!(Some(Value::Long(7)), result);
         Ok(())
@@ -658,11 +657,11 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let method_handle_class = thread.class("java.lang.invoke.MethodHandle").await?;
-        let method_handle = Reference::from(Object::new(method_handle_class)?);
-        parameters.push_reference(Some(method_handle));
+        let method_handle = Value::from(Object::new(method_handle_class)?);
+        parameters.push(method_handle);
         let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
-        let call_site = Reference::from(Object::new(call_site_class)?);
-        parameters.push_reference(Some(call_site));
+        let call_site = Value::from(Object::new(call_site_class)?);
+        parameters.push(call_site);
         let result = set_call_site_target_normal(thread, parameters).await?;
         assert_eq!(None, result);
         Ok(())
@@ -673,11 +672,11 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let method_handle_class = thread.class("java.lang.invoke.MethodHandle").await?;
-        let method_handle = Reference::from(Object::new(method_handle_class)?);
-        parameters.push_reference(Some(method_handle));
+        let method_handle = Value::from(Object::new(method_handle_class)?);
+        parameters.push(method_handle);
         let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
-        let call_site = Reference::from(Object::new(call_site_class)?);
-        parameters.push_reference(Some(call_site));
+        let call_site = Value::from(Object::new(call_site_class)?);
+        parameters.push(call_site);
         let result = set_call_site_target_volatile(thread, parameters).await?;
         assert_eq!(None, result);
         Ok(())
@@ -690,11 +689,11 @@ mod tests {
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
         let member_name = Object::new(member_name_class)?;
         let class_object = thread.class("java.lang.Integer").await?;
-        let class = Reference::from(Object::new(class_object)?);
-        member_name.set_value("clazz", Value::from(class.clone()))?;
-        parameters.push_reference(Some(Reference::from(member_name)));
+        let class = Value::from(Object::new(class_object)?);
+        member_name.set_value("clazz", class.clone())?;
+        parameters.push(Value::from(member_name));
         let result = static_field_base(thread, parameters).await?;
-        assert_eq!(Some(Value::from(class)), result);
+        assert_eq!(Some(class), result);
         Ok(())
     }
 
@@ -705,11 +704,11 @@ mod tests {
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
         let member_name = Object::new(member_name_class)?;
         let class_object = thread.class("java.lang.Integer").await?;
-        let class = Reference::from(Object::new(class_object)?);
-        member_name.set_value("clazz", Value::from(class))?;
+        let class = Value::from(Object::new(class_object)?);
+        member_name.set_value("clazz", class)?;
         let value_string = "MAX_VALUE".to_object(&thread).await?;
         member_name.set_value("name", value_string)?;
-        parameters.push_reference(Some(Reference::from(member_name)));
+        parameters.push(Value::from(member_name));
         let result = static_field_offset(thread, parameters).await?;
         assert_eq!(Some(Value::Long(2)), result);
         Ok(())

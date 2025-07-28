@@ -503,8 +503,8 @@ mod tests {
     #[test]
     fn test_faload() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::from(vec![42f32]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![42f32]);
+        stack.push(array)?;
         stack.push_int(0)?;
         let result = faload(stack)?;
         assert_eq!(Continue, result);
@@ -516,8 +516,8 @@ mod tests {
     #[test]
     fn test_faload_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Reference::from(vec![42i32]);
-        stack.push_object(Some(object))?;
+        let object = Value::from(vec![42i32]);
+        stack.push(object)?;
         stack.push_int(2)?;
         let result = faload(stack);
         assert!(matches!(
@@ -533,8 +533,8 @@ mod tests {
     #[test]
     fn test_faload_invalid_index_negative() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::from(vec![42f32]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![42f32]);
+        stack.push(array)?;
         stack.push_int(-1)?;
         let result = faload(stack);
         assert!(matches!(
@@ -548,8 +548,8 @@ mod tests {
     #[test]
     fn test_faload_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Reference::from(vec![42f32]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![42f32]);
+        stack.push(array)?;
         stack.push_int(2)?;
         let result = faload(stack);
         assert!(matches!(
@@ -573,8 +573,8 @@ mod tests {
     #[test]
     fn test_fastore() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::from(vec![3f32]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![3f32]);
+        stack.push(array)?;
         stack.push_int(0)?;
         stack.push_float(42f32)?;
         let result = fastore(stack)?;
@@ -585,8 +585,8 @@ mod tests {
     #[test]
     fn test_fastore_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Reference::from(vec![42i32]);
-        stack.push_object(Some(object))?;
+        let object = Value::from(vec![42i32]);
+        stack.push(object)?;
         stack.push_int(2)?;
         stack.push_float(42f32)?;
         let result = fastore(stack);
@@ -603,8 +603,8 @@ mod tests {
     #[test]
     fn test_fastore_invalid_index_negative() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::from(vec![3f32]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![3f32]);
+        stack.push(array)?;
         stack.push_int(-1)?;
         stack.push_float(42f32)?;
         let result = fastore(stack);
@@ -619,8 +619,8 @@ mod tests {
     #[test]
     fn test_fastore_invalid_index() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Reference::from(vec![3f32]);
-        stack.push_object(Some(array))?;
+        let array = Value::from(vec![3f32]);
+        stack.push(array)?;
         stack.push_int(2)?;
         stack.push_float(42f32)?;
         let result = fastore(stack);

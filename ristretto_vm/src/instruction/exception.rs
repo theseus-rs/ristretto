@@ -3,7 +3,7 @@ use crate::assignable::Assignable;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 use crate::{Error, Result, VM};
-use ristretto_classloader::{Object, Reference};
+use ristretto_classloader::{Object, Reference, Value};
 use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.athrow>
@@ -56,7 +56,7 @@ pub(crate) async fn process_throwable(
 
         if matching_exception_handler {
             let handler_program_counter = usize::from(exception_table_entry.handler_pc);
-            stack.push_object(Some(Reference::from(throwable)))?;
+            stack.push(Value::from(throwable))?;
             return Ok(handler_program_counter);
         }
     }

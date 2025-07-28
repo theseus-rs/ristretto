@@ -89,17 +89,16 @@ pub(crate) async fn floats_to_bytes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ristretto_classloader::Reference;
 
     #[tokio::test]
     async fn test_doubles_to_bytes() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
-        let source = Reference::from(vec![3.0f64, 42.0f64]);
-        let destination = Reference::from(vec![0i8; 16]); // 2 doubles * 8 bytes each
-        parameters.push_reference(Some(source));
+        let source = Value::from(vec![3.0f64, 42.0f64]);
+        let destination = Value::from(vec![0i8; 16]); // 2 doubles * 8 bytes each
+        parameters.push(source);
         parameters.push_int(0); // source position
-        parameters.push_reference(Some(destination.clone()));
+        parameters.push(destination.clone());
         parameters.push_int(0); // destination position
         parameters.push_int(2); // number of doubles
 
@@ -116,11 +115,11 @@ mod tests {
     async fn test_floats_to_bytes() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
-        let source = Reference::from(vec![3.0f32, 42.0f32]);
-        let destination = Reference::from(vec![0i8; 8]); // 2 floats * 4 bytes each
-        parameters.push_reference(Some(source));
+        let source = Value::from(vec![3.0f32, 42.0f32]);
+        let destination = Value::from(vec![0i8; 8]); // 2 floats * 4 bytes each
+        parameters.push(source);
         parameters.push_int(0); // source position
-        parameters.push_reference(Some(destination.clone()));
+        parameters.push(destination.clone());
         parameters.push_int(0); // destination position
         parameters.push_int(2); // number of floats
 
