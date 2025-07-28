@@ -1,4 +1,4 @@
-use crate::Error::{InternalError, InvalidStackValue};
+use crate::Error::{InternalError, InvalidStackValue, PoisonedLock};
 use crate::JavaError::{ArrayIndexOutOfBoundsException, ClassCastException, NullPointerException};
 use crate::assignable::Assignable;
 use crate::frame::ExecutionResult::Return;
@@ -162,20 +162,24 @@ pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::Array(object_array)) => {
+            let array = object_array
+                .elements
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let original_index = index;
-            let length = object_array.elements.len()?;
+            let length = array.len();
             let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
                 index: original_index,
                 length,
             })?;
-            let Some(value) = object_array.elements.get(index)? else {
+            let Some(value) = array.get(index) else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: original_index,
                     length,
                 }
                 .into());
             };
-            stack.push_object(value)?;
+            stack.push_object(value.clone())?;
             Ok(Continue)
         }
         Some(object) => Err(InvalidStackValue {
@@ -192,23 +196,28 @@ pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::Array(ref mut object_array)) => {
-            let length = object_array.elements.capacity()?;
+        Some(Reference::Array(object_array)) => {
+            let mut array = object_array
+                .elements
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let length = array.capacity();
             let original_index = index;
             let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
                 index: original_index,
                 length,
             })?;
-            if index >= length {
+            // TODO: validate object type is compatible with array type
+            // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aastore
+            if let Some(element) = array.get_mut(index) {
+                *element = value;
+            } else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: original_index,
                     length,
                 }
                 .into());
             }
-            // TODO: validate object type is compatible with array type
-            // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aastore
-            object_array.elements.set(index, value)?;
             Ok(Continue)
         }
         Some(object) => Err(InvalidStackValue {

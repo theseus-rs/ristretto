@@ -1,4 +1,4 @@
-use crate::Error::InternalError;
+use crate::Error::{InternalError, PoisonedLock};
 use crate::JavaError::IllegalArgumentException;
 use crate::Result;
 use crate::intrinsic_methods::java::lang::object::hash_code;
@@ -12,17 +12,18 @@ use ristretto_classfile::attributes::{Attribute, Instruction};
 use ristretto_classfile::{
     ClassAccessFlags, ClassFile, ConstantPool, JAVA_8, JAVA_11, JAVA_17, MethodAccessFlags,
 };
-use ristretto_classloader::{Class, ConcurrentVec, Object, Reference, Value};
+use ristretto_classloader::{Class, Object, Reference, Value};
+use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
 use std::env::consts::OS;
 use std::fmt::Debug;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn arraycopy_vec<T: Clone + Debug + PartialEq + Send + Sync>(
-    source: &ConcurrentVec<T>,
+    source: &Gc<RwLock<Vec<T>>>,
     source_position: usize,
-    destination: &ConcurrentVec<T>,
+    destination: &Gc<RwLock<Vec<T>>>,
     destination_position: usize,
     length: usize,
 ) -> Result<()> {
@@ -32,8 +33,18 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq + Send + Sync>(
     }
 
     // Validate bounds before copying; get lengths once to avoid multiple lock acquisitions
-    let source_len = source.len()?;
-    let destination_len = destination.len()?;
+    let source_len = {
+        let source = source
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        source.len()
+    };
+    let destination_len = {
+        let destination = destination
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        destination.len()
+    };
 
     if source_position + length > source_len {
         return Err(
@@ -49,7 +60,9 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq + Send + Sync>(
     // Check if source and destination are the same array
     if source.ptr_eq(destination) {
         // Same array; need to handle overlapping regions
-        let mut array = destination.as_mut()?;
+        let mut array = destination
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
         // Handle overlapping regions correctly
         let regions_overlap = (source_position < destination_position
@@ -80,13 +93,17 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq + Send + Sync>(
         }
     } else {
         // Different arrays; can optimize with bulk operations
-        let source_guard = source.as_ref()?;
-        let mut destination_guard = destination.as_mut()?;
+        let source = source
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let mut destination = destination
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
         // Use slice operations for maximum efficiency
-        let source_slice = &source_guard[source_position..source_position + length];
+        let source_slice = &source[source_position..source_position + length];
         let destination_slice =
-            &mut destination_guard[destination_position..destination_position + length];
+            &mut destination[destination_position..destination_position + length];
 
         destination_slice.clone_from_slice(source_slice);
     }
@@ -477,113 +494,133 @@ pub(crate) async fn set_security_manager(
 mod tests {
     use super::*;
     use crate::Error::JavaError;
-    use ristretto_classloader::ConcurrentVec;
 
     #[test]
     fn test_arraycopy_vec_basic_copy() -> Result<()> {
-        let source = ConcurrentVec::from(vec![1, 2, 3, 4, 5]);
-        let destination = ConcurrentVec::from(vec![0, 0, 0, 0, 0]);
+        let source = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5]));
+        let destination = Gc::new(RwLock::new(vec![0, 0, 0, 0, 0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 3)?;
+        let destination = destination
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
-        assert_eq!(destination.get(0)?, Some(1));
-        assert_eq!(destination.get(1)?, Some(2));
-        assert_eq!(destination.get(2)?, Some(3));
-        assert_eq!(destination.get(3)?, Some(0)); // Unchanged
-        assert_eq!(destination.get(4)?, Some(0)); // Unchanged
+        assert_eq!(destination.first(), Some(&1));
+        assert_eq!(destination.get(1), Some(&2));
+        assert_eq!(destination.get(2), Some(&3));
+        assert_eq!(destination.get(3), Some(&0)); // Unchanged
+        assert_eq!(destination.get(4), Some(&0)); // Unchanged
         Ok(())
     }
 
     #[test]
     fn test_arraycopy_vec_offset_copy() -> Result<()> {
-        let source = ConcurrentVec::from(vec![1, 2, 3, 4, 5]);
-        let destination = ConcurrentVec::from(vec![0, 0, 0, 0, 0]);
+        let source = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5]));
+        let destination = Gc::new(RwLock::new(vec![0, 0, 0, 0, 0]));
 
         // Copy from source[1..3] to destination[2..4]
         arraycopy_vec(&source, 1, &destination, 2, 2)?;
+        let destination = destination
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
-        assert_eq!(destination.get(0)?, Some(0)); // Unchanged
-        assert_eq!(destination.get(1)?, Some(0)); // Unchanged
-        assert_eq!(destination.get(2)?, Some(2)); // source[1]
-        assert_eq!(destination.get(3)?, Some(3)); // source[2]
-        assert_eq!(destination.get(4)?, Some(0)); // Unchanged
+        assert_eq!(destination.first(), Some(&0)); // Unchanged
+        assert_eq!(destination.get(1), Some(&0)); // Unchanged
+        assert_eq!(destination.get(2), Some(&2)); // source[1]
+        assert_eq!(destination.get(3), Some(&3)); // source[2]
+        assert_eq!(destination.get(4), Some(&0)); // Unchanged
         Ok(())
     }
 
     #[test]
     fn test_arraycopy_vec_full_array_copy() -> Result<()> {
-        let source = ConcurrentVec::from(vec![10, 20, 30]);
-        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+        let source = Gc::new(RwLock::new(vec![10, 20, 30]));
+        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 3)?;
+        let destination = destination
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
-        assert_eq!(destination.get(0)?, Some(10));
-        assert_eq!(destination.get(1)?, Some(20));
-        assert_eq!(destination.get(2)?, Some(30));
+        assert_eq!(destination.first(), Some(&10));
+        assert_eq!(destination.get(1), Some(&20));
+        assert_eq!(destination.get(2), Some(&30));
         Ok(())
     }
 
     #[test]
     fn test_arraycopy_vec_zero_length() -> Result<()> {
-        let source = ConcurrentVec::from(vec![1, 2, 3]);
-        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+        let source = Gc::new(RwLock::new(vec![1, 2, 3]));
+        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 0)?;
+        let destination = destination
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
         // Nothing should be copied
-        assert_eq!(destination.get(0)?, Some(0));
-        assert_eq!(destination.get(1)?, Some(0));
-        assert_eq!(destination.get(2)?, Some(0));
+        assert_eq!(destination.first(), Some(&0));
+        assert_eq!(destination.get(1), Some(&0));
+        assert_eq!(destination.get(2), Some(&0));
         Ok(())
     }
 
     #[test]
     fn test_arraycopy_vec_single_element() -> Result<()> {
-        let source = ConcurrentVec::from(vec![42]);
-        let destination = ConcurrentVec::from(vec![0]);
+        let source = Gc::new(RwLock::new(vec![42]));
+        let destination = Gc::new(RwLock::new(vec![0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 1)?;
+        let destination = destination
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
-        assert_eq!(destination.get(0)?, Some(42));
+        assert_eq!(destination.first(), Some(&42));
         Ok(())
     }
 
     #[test]
     fn test_arraycopy_vec_copy_to_end() -> Result<()> {
-        let source = ConcurrentVec::from(vec![1, 2, 3, 4, 5]);
-        let destination = ConcurrentVec::from(vec![0, 0, 0, 0, 0]);
+        let source = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5]));
+        let destination = Gc::new(RwLock::new(vec![0, 0, 0, 0, 0]));
 
         // Copy last 2 elements of source to last 2 positions of destination
         arraycopy_vec(&source, 3, &destination, 3, 2)?;
+        let destination = destination
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
-        assert_eq!(destination.get(0)?, Some(0)); // Unchanged
-        assert_eq!(destination.get(1)?, Some(0)); // Unchanged
-        assert_eq!(destination.get(2)?, Some(0)); // Unchanged
-        assert_eq!(destination.get(3)?, Some(4)); // source[3]
-        assert_eq!(destination.get(4)?, Some(5)); // source[4]
+        assert_eq!(destination.first(), Some(&0)); // Unchanged
+        assert_eq!(destination.get(1), Some(&0)); // Unchanged
+        assert_eq!(destination.get(2), Some(&0)); // Unchanged
+        assert_eq!(destination.get(3), Some(&4)); // source[3]
+        assert_eq!(destination.get(4), Some(&5)); // source[4]
         Ok(())
     }
 
     #[test]
     fn test_arraycopy_vec_overlapping_arrays_different_objects() -> Result<()> {
-        let source = ConcurrentVec::from(vec![1, 2, 3, 4, 5]);
-        let destination = ConcurrentVec::from(vec![10, 11, 12, 13, 14]);
+        let source = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5]));
+        let destination = Gc::new(RwLock::new(vec![10, 11, 12, 13, 14]));
 
         // This should work fine since they're different arrays
         arraycopy_vec(&source, 1, &destination, 0, 3)?;
+        let destination = destination
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
-        assert_eq!(destination.get(0)?, Some(2)); // source[1]
-        assert_eq!(destination.get(1)?, Some(3)); // source[2]
-        assert_eq!(destination.get(2)?, Some(4)); // source[3]
-        assert_eq!(destination.get(3)?, Some(13)); // Unchanged
-        assert_eq!(destination.get(4)?, Some(14)); // Unchanged
+        assert_eq!(destination.first(), Some(&2)); // source[1]
+        assert_eq!(destination.get(1), Some(&3)); // source[2]
+        assert_eq!(destination.get(2), Some(&4)); // source[3]
+        assert_eq!(destination.get(3), Some(&13)); // Unchanged
+        assert_eq!(destination.get(4), Some(&14)); // Unchanged
         Ok(())
     }
 
     #[test]
     fn test_arraycopy_vec_source_bounds_error() {
-        let source = ConcurrentVec::from(vec![1, 2, 3]);
-        let destination = ConcurrentVec::from(vec![0, 0, 0, 0, 0]);
+        let source = Gc::new(RwLock::new(vec![1, 2, 3]));
+        let destination = Gc::new(RwLock::new(vec![0, 0, 0, 0, 0]));
 
         // Try to copy 3 elements starting from position 2 (would need source[2,3,4] but only have [0,1,2])
         let result = arraycopy_vec(&source, 2, &destination, 0, 2);
@@ -596,8 +633,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_destination_bounds_error() {
-        let source = ConcurrentVec::from(vec![1, 2, 3, 4, 5]);
-        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+        let source = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5]));
+        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
 
         // Try to copy 3 elements to position 1 (would need dest[1,2,3] but only have [0,1,2])
         let result = arraycopy_vec(&source, 0, &destination, 1, 3);
@@ -609,8 +646,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_source_position_out_of_bounds() {
-        let source = ConcurrentVec::from(vec![1, 2, 3]);
-        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+        let source = Gc::new(RwLock::new(vec![1, 2, 3]));
+        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
 
         // Try to start copying from position 3 (doesn't exist)
         let result = arraycopy_vec(&source, 3, &destination, 0, 1);
@@ -623,8 +660,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_destination_position_out_of_bounds() {
-        let source = ConcurrentVec::from(vec![1, 2, 3]);
-        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+        let source = Gc::new(RwLock::new(vec![1, 2, 3]));
+        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
 
         // Try to start copying to position 3 (doesn't exist)
         let result = arraycopy_vec(&source, 0, &destination, 3, 1);
@@ -637,22 +674,25 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_exact_boundary() -> Result<()> {
-        let source = ConcurrentVec::from(vec![1, 2, 3]);
-        let destination = ConcurrentVec::from(vec![0, 0, 0]);
+        let source = Gc::new(RwLock::new(vec![1, 2, 3]));
+        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
 
         // Copy exactly to the boundary - should work
         arraycopy_vec(&source, 0, &destination, 0, 3)?;
+        let destination = destination
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
-        assert_eq!(destination.get(0)?, Some(1));
-        assert_eq!(destination.get(1)?, Some(2));
-        assert_eq!(destination.get(2)?, Some(3));
+        assert_eq!(destination.first(), Some(&1));
+        assert_eq!(destination.get(1), Some(&2));
+        assert_eq!(destination.get(2), Some(&3));
         Ok(())
     }
 
     #[test]
     fn test_arraycopy_vec_empty_arrays() -> Result<()> {
-        let source: ConcurrentVec<i32> = ConcurrentVec::from(vec![]);
-        let destination: ConcurrentVec<i32> = ConcurrentVec::from(vec![]);
+        let source = Gc::new(RwLock::new(Vec::<i32>::new()));
+        let destination = Gc::new(RwLock::new(Vec::<i32>::new()));
 
         // Copying 0 elements from empty arrays should work
         arraycopy_vec(&source, 0, &destination, 0, 0)?;
@@ -661,8 +701,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_empty_source_error() {
-        let source: ConcurrentVec<i32> = ConcurrentVec::from(vec![]);
-        let destination = ConcurrentVec::from(vec![0]);
+        let source = Gc::new(RwLock::new(Vec::<i32>::new()));
+        let destination = Gc::new(RwLock::new(vec![0]));
 
         // Try to copy from empty array
         let result = arraycopy_vec(&source, 0, &destination, 0, 1);
@@ -674,8 +714,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_empty_destination_error() {
-        let source = ConcurrentVec::from(vec![1]);
-        let destination: ConcurrentVec<i32> = ConcurrentVec::from(vec![]);
+        let source = Gc::new(RwLock::new(vec![1]));
+        let destination = Gc::new(RwLock::new(Vec::<i32>::new()));
 
         // Try to copy to empty array
         let result = arraycopy_vec(&source, 0, &destination, 0, 1);
@@ -687,18 +727,25 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_string_copy() -> Result<()> {
-        let source = ConcurrentVec::from(vec![
+        let source = Gc::new(RwLock::new(vec![
             "hello".to_string(),
             "world".to_string(),
             "test".to_string(),
-        ]);
-        let destination = ConcurrentVec::from(vec![String::new(), String::new(), String::new()]);
+        ]));
+        let destination = Gc::new(RwLock::new(vec![
+            String::new(),
+            String::new(),
+            String::new(),
+        ]));
 
         arraycopy_vec(&source, 0, &destination, 0, 2)?;
+        let destination = destination
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
-        assert_eq!(destination.get(0)?, Some("hello".to_string()));
-        assert_eq!(destination.get(1)?, Some("world".to_string()));
-        assert_eq!(destination.get(2)?, Some(String::new())); // Unchanged
+        assert_eq!(destination.first(), Some(&"hello".to_string()));
+        assert_eq!(destination.get(1), Some(&"world".to_string()));
+        assert_eq!(destination.get(2), Some(&String::new())); // Unchanged
         Ok(())
     }
 
@@ -707,19 +754,22 @@ mod tests {
         let source_data: Vec<i32> = (0..1000).collect();
         let dest_data: Vec<i32> = vec![0; 1000];
 
-        let source = ConcurrentVec::from(source_data);
-        let destination = ConcurrentVec::from(dest_data);
+        let source = Gc::new(RwLock::new(source_data));
+        let destination = Gc::new(RwLock::new(dest_data));
 
         arraycopy_vec(&source, 100, &destination, 200, 500)?;
+        let destination = destination
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
         // Verify first few and last few elements
-        assert_eq!(destination.get(200)?, Some(100));
-        assert_eq!(destination.get(201)?, Some(101));
-        assert_eq!(destination.get(699)?, Some(599)); // 200 + 500 - 1
+        assert_eq!(destination.get(200), Some(&100));
+        assert_eq!(destination.get(201), Some(&101));
+        assert_eq!(destination.get(699), Some(&599)); // 200 + 500 - 1
 
         // Verify boundaries weren't affected
-        assert_eq!(destination.get(199)?, Some(0)); // Before copy region
-        assert_eq!(destination.get(700)?, Some(0)); // After copy region
+        assert_eq!(destination.get(199), Some(&0)); // Before copy region
+        assert_eq!(destination.get(700), Some(&0)); // After copy region
         Ok(())
     }
 
@@ -759,60 +809,71 @@ mod tests {
     #[test]
     fn test_arraycopy_vec_overlapping_same_array_forward_shift() -> Result<()> {
         // Test shifting elements to the right within the same array (like StringBuilder insert)
-        let array = ConcurrentVec::from(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']);
+        let array = Gc::new(RwLock::new(vec![
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+        ]));
 
         // Shift "cdef" to the right by 2 positions to make room for insertion
         // This simulates what StringBuilder does when inserting text
         arraycopy_vec(&array, 2, &array, 4, 4)?;
+        let array = array
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
-        assert_eq!(array.get(0)?, Some('a')); // Unchanged
-        assert_eq!(array.get(1)?, Some('b')); // Unchanged
-        assert_eq!(array.get(2)?, Some('c')); // Original position
-        assert_eq!(array.get(3)?, Some('d')); // Original position
-        assert_eq!(array.get(4)?, Some('c')); // Shifted from position 2
-        assert_eq!(array.get(5)?, Some('d')); // Shifted from position 3
-        assert_eq!(array.get(6)?, Some('e')); // Shifted from position 4
-        assert_eq!(array.get(7)?, Some('f')); // Shifted from position 5
-        assert_eq!(array.get(8)?, Some('i')); // Unchanged
-        assert_eq!(array.get(9)?, Some('j')); // Unchanged
+        assert_eq!(array.first(), Some(&'a')); // Unchanged
+        assert_eq!(array.get(1), Some(&'b')); // Unchanged
+        assert_eq!(array.get(2), Some(&'c')); // Original position
+        assert_eq!(array.get(3), Some(&'d')); // Original position
+        assert_eq!(array.get(4), Some(&'c')); // Shifted from position 2
+        assert_eq!(array.get(5), Some(&'d')); // Shifted from position 3
+        assert_eq!(array.get(6), Some(&'e')); // Shifted from position 4
+        assert_eq!(array.get(7), Some(&'f')); // Shifted from position 5
+        assert_eq!(array.get(8), Some(&'i')); // Unchanged
+        assert_eq!(array.get(9), Some(&'j')); // Unchanged
         Ok(())
     }
 
     #[test]
     fn test_arraycopy_vec_overlapping_same_array_backward_shift() -> Result<()> {
         // Test shifting elements to the left within the same array
-        let array = ConcurrentVec::from(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+        let array = Gc::new(RwLock::new(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']));
 
         // Shift "cdefgh" to the left by 1 position
         arraycopy_vec(&array, 2, &array, 1, 6)?;
+        let array = array
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
-        assert_eq!(array.get(0)?, Some('a')); // Unchanged
-        assert_eq!(array.get(1)?, Some('c')); // Shifted from position 2
-        assert_eq!(array.get(2)?, Some('d')); // Shifted from position 3
-        assert_eq!(array.get(3)?, Some('e')); // Shifted from position 4
-        assert_eq!(array.get(4)?, Some('f')); // Shifted from position 5
-        assert_eq!(array.get(5)?, Some('g')); // Shifted from position 6
-        assert_eq!(array.get(6)?, Some('h')); // Shifted from position 7
-        assert_eq!(array.get(7)?, Some('h')); // Original value still here
+        assert_eq!(array.first(), Some(&'a')); // Unchanged
+        assert_eq!(array.get(1), Some(&'c')); // Shifted from position 2
+        assert_eq!(array.get(2), Some(&'d')); // Shifted from position 3
+        assert_eq!(array.get(3), Some(&'e')); // Shifted from position 4
+        assert_eq!(array.get(4), Some(&'f')); // Shifted from position 5
+        assert_eq!(array.get(5), Some(&'g')); // Shifted from position 6
+        assert_eq!(array.get(6), Some(&'h')); // Shifted from position 7
+        assert_eq!(array.get(7), Some(&'h')); // Original value still here
         Ok(())
     }
 
     #[test]
     fn test_arraycopy_vec_non_overlapping_same_array() -> Result<()> {
         // Test copying within the same array but with non-overlapping regions
-        let array = ConcurrentVec::from(vec![1, 2, 3, 4, 5, 6, 7, 8]);
+        let array = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5, 6, 7, 8]));
 
         // Copy first 3 elements to positions 5-7 (no overlap)
         arraycopy_vec(&array, 0, &array, 5, 3)?;
+        let array = array
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
 
-        assert_eq!(array.get(0)?, Some(1)); // Unchanged
-        assert_eq!(array.get(1)?, Some(2)); // Unchanged
-        assert_eq!(array.get(2)?, Some(3)); // Unchanged
-        assert_eq!(array.get(3)?, Some(4)); // Unchanged
-        assert_eq!(array.get(4)?, Some(5)); // Unchanged
-        assert_eq!(array.get(5)?, Some(1)); // Copied from position 0
-        assert_eq!(array.get(6)?, Some(2)); // Copied from position 1
-        assert_eq!(array.get(7)?, Some(3)); // Copied from position 2
+        assert_eq!(array.first(), Some(&1)); // Unchanged
+        assert_eq!(array.get(1), Some(&2)); // Unchanged
+        assert_eq!(array.get(2), Some(&3)); // Unchanged
+        assert_eq!(array.get(3), Some(&4)); // Unchanged
+        assert_eq!(array.get(4), Some(&5)); // Unchanged
+        assert_eq!(array.get(5), Some(&1)); // Copied from position 0
+        assert_eq!(array.get(6), Some(&2)); // Copied from position 1
+        assert_eq!(array.get(7), Some(&3)); // Copied from position 2
         Ok(())
     }
 }

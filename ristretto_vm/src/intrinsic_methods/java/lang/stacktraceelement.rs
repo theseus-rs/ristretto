@@ -1,4 +1,5 @@
-use crate::Error::InternalError;
+use crate::Error::{InternalError, PoisonedLock};
+use crate::JavaError::ArrayIndexOutOfBoundsException;
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -52,10 +53,31 @@ pub(crate) async fn init_stack_trace_elements_1(
         return Err(InternalError("No stack trace object found".to_string()));
     };
     for index in 0..depth {
-        let Some(value) = back_trace_array.elements.get(index)? else {
-            return Err(InternalError("No back trace element found".to_string()));
+        // Limit the scope of the read lock on the back_trace_array
+        let value = {
+            let back_trace_array = back_trace_array
+                .elements
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = back_trace_array.get(index) else {
+                return Err(InternalError("No back trace element found".to_string()));
+            };
+            value.clone()
         };
-        stack_trace_array.elements.set(index, value)?;
+
+        let mut stack_trace_array = stack_trace_array
+            .elements
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        if let Some(element) = stack_trace_array.get_mut(index) {
+            *element = value;
+        } else {
+            return Err(ArrayIndexOutOfBoundsException {
+                index: i32::try_from(index)?,
+                length: stack_trace_array.len(),
+            }
+            .into());
+        }
     }
     Ok(None)
 }

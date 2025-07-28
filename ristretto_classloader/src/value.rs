@@ -810,10 +810,16 @@ mod tests {
         let clone = value.clone();
         assert_eq!(value, clone);
 
-        let Value::Object(Some(Reference::IntArray(ref array))) = clone else {
+        let Value::Object(Some(ref reference)) = clone else {
             unreachable!("Expected an IntArray reference");
         };
-        array.set(0, 2)?;
+
+        {
+            let mut array = reference.as_int_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_eq!(value, clone);
         Ok(())
     }
@@ -824,10 +830,16 @@ mod tests {
         let clone = value.deep_clone()?;
         assert_eq!(value, clone);
 
-        let Value::Object(Some(Reference::IntArray(ref array))) = clone else {
+        let Value::Object(Some(ref reference)) = clone else {
             unreachable!("Expected an IntArray reference");
         };
-        array.set(0, 2)?;
+
+        {
+            let mut array = reference.as_int_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_ne!(value, clone);
         Ok(())
     }

@@ -1,3 +1,4 @@
+use crate::Error::PoisonedLock;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use crate::JavaError::{AccessControlException, IllegalArgumentException};
 use crate::JavaError::{FileNotFoundException, IoException};
@@ -338,7 +339,9 @@ pub(crate) async fn read_bytes_0(
     let bytes_read = if bytes_read == 0 && length > 0 {
         -1
     } else {
-        let mut bytes = bytes.as_mut()?;
+        let mut bytes = bytes
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
         let buffer: &[i8] = transmute_ref!(buffer.as_slice());
         if bytes_read > 0 {
             bytes[offset..offset + bytes_read].copy_from_slice(&buffer[..bytes_read]);

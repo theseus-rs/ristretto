@@ -1,4 +1,4 @@
-use crate::Error::InvalidStackValue;
+use crate::Error::{InvalidStackValue, PoisonedLock};
 use crate::JavaError::{ArrayIndexOutOfBoundsException, NullPointerException};
 use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue};
@@ -173,20 +173,23 @@ pub(crate) fn faload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::FloatArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let original_index = index;
-            let length = array.len()?;
+            let length = array.len();
             let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
                 index: original_index,
                 length,
             })?;
-            let Some(value) = array.get(index)? else {
+            let Some(value) = array.get(index) else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: original_index,
                     length,
                 }
                 .into());
             };
-            stack.push_float(value)?;
+            stack.push_float(*value)?;
             Ok(Continue)
         }
         Some(object) => Err(InvalidStackValue {
@@ -203,21 +206,25 @@ pub(crate) fn fastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::FloatArray(ref mut array)) => {
-            let length = array.capacity()?;
+        Some(Reference::FloatArray(array)) => {
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let length = array.capacity();
             let original_index = index;
             let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
                 index: original_index,
                 length,
             })?;
-            if index >= length {
+            if let Some(element) = array.get_mut(index) {
+                *element = value;
+            } else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: original_index,
                     length,
                 }
                 .into());
             }
-            array.set(index, value)?;
             Ok(Continue)
         }
         Some(object) => Err(InvalidStackValue {
