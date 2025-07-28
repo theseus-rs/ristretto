@@ -339,12 +339,13 @@ mod tests {
         let mut parameters = Parameters::default();
         let value = Value::from(vec![42]);
         parameters.push(value);
+        let result = parameters.pop_object();
         assert!(matches!(
-            parameters.pop_object(),
+            result,
             Err(InvalidOperand {
                 expected,
                 actual
-            }) if expected == "object" && actual == "Some(IntArray([42]))"
+            }) if expected == "object" && actual.starts_with("Some(IntArray(")
         ));
     }
 

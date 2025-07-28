@@ -1,3 +1,4 @@
+use crate::Error::PoisonedLock;
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -70,6 +71,15 @@ pub(crate) async fn get_process_pids_0(
     let Some(Reference::LongArray(pids)) = parameters.pop_reference()? else {
         return Ok(Some(Value::Int(-1)));
     };
+    let mut start_times = start_times
+        .write()
+        .map_err(|error| PoisonedLock(error.to_string()))?;
+    let mut ppids = ppids
+        .write()
+        .map_err(|error| PoisonedLock(error.to_string()))?;
+    let mut pids = pids
+        .write()
+        .map_err(|error| PoisonedLock(error.to_string()))?;
     let pid = parameters.pop_long()?;
     let mut system = System::new_all();
 
@@ -78,20 +88,20 @@ pub(crate) async fn get_process_pids_0(
         let processes = system.processes();
         for (index, (pid, process)) in processes.iter().enumerate() {
             // Determine if we have enough space to store the next pid
-            if index > pids.capacity()? {
+            if index > pids.capacity() {
                 break;
             }
 
             let pid = pid.as_u32();
             let pid = i64::from(pid);
-            pids.push(pid)?;
+            pids.push(pid);
             let parent = process.parent().map(Pid::as_u32).unwrap_or_default();
             let parent = i64::from(parent);
-            ppids.push(parent)?;
+            ppids.push(parent);
             let run_time = Duration::from_secs(process.run_time());
             let duration = run_time.as_millis();
             let duration = i64::try_from(duration).unwrap_or_default();
-            start_times.push(duration)?;
+            start_times.push(duration);
         }
         i32::try_from(processes.len())?
     } else {
@@ -101,14 +111,14 @@ pub(crate) async fn get_process_pids_0(
         if let Some(process) = system.process(pid) {
             let pid = pid.as_u32();
             let pid = i64::from(pid);
-            pids.push(pid)?;
+            pids.push(pid);
             let parent = process.parent().map(Pid::as_u32).unwrap_or_default();
             let parent = i64::from(parent);
-            ppids.push(parent)?;
+            ppids.push(parent);
             let run_time = Duration::from_secs(process.run_time());
             let duration = run_time.as_millis();
             let duration = i64::try_from(duration).unwrap_or_default();
-            start_times.push(duration)?;
+            start_times.push(duration);
             1
         } else {
             -1

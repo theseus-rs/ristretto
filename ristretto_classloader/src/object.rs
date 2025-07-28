@@ -606,13 +606,17 @@ impl TryInto<String> for Object {
                 let coder = self.value("coder")?.to_int()?;
                 if coder == 0 {
                     // Latin-1 encoded string
-                    let bytes = bytes.to_vec()?;
+                    let bytes = bytes
+                        .read()
+                        .map_err(|error| PoisonedLock(error.to_string()))?;
                     #[expect(clippy::cast_sign_loss)]
                     let value = bytes.iter().map(|&byte| char::from(byte as u8)).collect();
                     Ok(value)
                 } else {
                     // UTF-16 encoded string
-                    let bytes = bytes.to_vec()?;
+                    let bytes = bytes
+                        .read()
+                        .map_err(|error| PoisonedLock(error.to_string()))?;
                     #[expect(clippy::cast_sign_loss)]
                     let code_units = bytes
                         .chunks(2)
@@ -624,7 +628,9 @@ impl TryInto<String> for Object {
                 }
             }
             CharArray(bytes) => {
-                let bytes = bytes.to_vec()?;
+                let bytes = bytes
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
                 let value =
                     String::from_utf16(&bytes).map_err(|error| ParseError(error.to_string()))?;
                 Ok(value)

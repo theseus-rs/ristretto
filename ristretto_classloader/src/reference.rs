@@ -1,41 +1,40 @@
-use crate::Error::InvalidValueType;
-use crate::concurrent_vec::ConcurrentVec;
+use crate::Error::{InvalidValueType, PoisonedLock};
 use crate::{Class, Object, Result, Value};
-use ristretto_gc::{GarbageCollector, Trace};
+use ristretto_gc::{GarbageCollector, Gc, Trace};
 use std::fmt;
-use std::fmt::Display;
-use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
+use std::fmt::{Debug, Display};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use zerocopy::transmute_ref;
 
 /// Represents an array of objects in the Ristretto VM.
 ///
 /// `ObjectArray` groups the array's class `Arc<Class>` and its elements
-/// `ConcurrentVec<Option<Reference>>` together in order to reduce the amount of memory required by
+/// `Gc<RwLock<<Option<Reference>>>>` together in order to reduce the amount of memory required by
 /// values in the Reference enum.
 #[derive(Clone, Debug)]
 pub struct ObjectArray {
     pub class: Arc<Class>,
-    pub elements: ConcurrentVec<Option<Reference>>,
+    pub elements: Gc<RwLock<Vec<Option<Reference>>>>,
 }
 
 impl Eq for ObjectArray {}
 
 impl PartialEq for ObjectArray {
     fn eq(&self, other: &Self) -> bool {
-        self.class == other.class && self.elements == other.elements
+        self.class == other.class && Gc::ptr_eq(&self.elements, &other.elements)
     }
 }
 
 /// Represents a reference to an object in the Ristretto VM.
 #[derive(Clone, Debug)]
 pub enum Reference {
-    ByteArray(ConcurrentVec<i8>),
-    CharArray(ConcurrentVec<u16>),
-    ShortArray(ConcurrentVec<i16>),
-    IntArray(ConcurrentVec<i32>),
-    LongArray(ConcurrentVec<i64>),
-    FloatArray(ConcurrentVec<f32>),
-    DoubleArray(ConcurrentVec<f64>),
+    ByteArray(Gc<RwLock<Vec<i8>>>),
+    CharArray(Gc<RwLock<Vec<u16>>>),
+    ShortArray(Gc<RwLock<Vec<i16>>>),
+    IntArray(Gc<RwLock<Vec<i32>>>),
+    LongArray(Gc<RwLock<Vec<i64>>>),
+    FloatArray(Gc<RwLock<Vec<f32>>>),
+    DoubleArray(Gc<RwLock<Vec<f64>>>),
     Array(ObjectArray),
     Object(Object),
 }
@@ -64,7 +63,12 @@ impl Reference {
     /// if the value is not a `ByteArray`.
     pub fn as_byte_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i8>>> {
         match self {
-            Reference::ByteArray(value) => Ok(value.as_ref()?),
+            Reference::ByteArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected byte array".to_string())),
         }
     }
@@ -76,7 +80,12 @@ impl Reference {
     /// if the value is not a `ByteArray`.
     pub fn as_byte_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i8>>> {
         match self {
-            Reference::ByteArray(value) => Ok(value.as_mut()?),
+            Reference::ByteArray(value) => {
+                let guard = value
+                    .write()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected byte array".to_string())),
         }
     }
@@ -88,7 +97,12 @@ impl Reference {
     /// if the value is not a `CharArray`.
     pub fn as_char_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<u16>>> {
         match self {
-            Reference::CharArray(value) => Ok(value.as_ref()?),
+            Reference::CharArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected char array".to_string())),
         }
     }
@@ -100,7 +114,12 @@ impl Reference {
     /// if the value is not a `CharArray`.
     pub fn as_char_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<u16>>> {
         match self {
-            Reference::CharArray(value) => Ok(value.as_mut()?),
+            Reference::CharArray(value) => {
+                let guard = value
+                    .write()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected char array".to_string())),
         }
     }
@@ -112,7 +131,12 @@ impl Reference {
     /// if the value is not a `ShortArray`.
     pub fn as_short_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i16>>> {
         match self {
-            Reference::ShortArray(value) => Ok(value.as_ref()?),
+            Reference::ShortArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected short array".to_string())),
         }
     }
@@ -124,7 +148,12 @@ impl Reference {
     /// if the value is not a `ShortArray`.
     pub fn as_short_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i16>>> {
         match self {
-            Reference::ShortArray(value) => Ok(value.as_mut()?),
+            Reference::ShortArray(value) => {
+                let guard = value
+                    .write()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected short array".to_string())),
         }
     }
@@ -136,7 +165,12 @@ impl Reference {
     /// if the value is not a `IntArray`.
     pub fn as_int_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i32>>> {
         match self {
-            Reference::IntArray(value) => Ok(value.as_ref()?),
+            Reference::IntArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected int array".to_string())),
         }
     }
@@ -148,7 +182,12 @@ impl Reference {
     /// if the value is not a `IntArray`.
     pub fn as_int_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i32>>> {
         match self {
-            Reference::IntArray(value) => Ok(value.as_mut()?),
+            Reference::IntArray(value) => {
+                let guard = value
+                    .write()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected int array".to_string())),
         }
     }
@@ -160,7 +199,12 @@ impl Reference {
     /// if the value is not a `LongArray`.
     pub fn as_long_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i64>>> {
         match self {
-            Reference::LongArray(value) => Ok(value.as_ref()?),
+            Reference::LongArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected long array".to_string())),
         }
     }
@@ -172,7 +216,12 @@ impl Reference {
     /// if the value is not a `LongArray`.
     pub fn as_long_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i64>>> {
         match self {
-            Reference::LongArray(value) => Ok(value.as_mut()?),
+            Reference::LongArray(value) => {
+                let guard = value
+                    .write()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected long array".to_string())),
         }
     }
@@ -184,7 +233,12 @@ impl Reference {
     /// if the value is not a `FloatArray`.
     pub fn as_float_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<f32>>> {
         match self {
-            Reference::FloatArray(value) => Ok(value.as_ref()?),
+            Reference::FloatArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected float array".to_string())),
         }
     }
@@ -196,7 +250,12 @@ impl Reference {
     /// if the value is not a `FloatArray`.
     pub fn as_float_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<f32>>> {
         match self {
-            Reference::FloatArray(value) => Ok(value.as_mut()?),
+            Reference::FloatArray(value) => {
+                let guard = value
+                    .write()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected float array".to_string())),
         }
     }
@@ -208,7 +267,12 @@ impl Reference {
     /// if the value is not a `DoubleArray`.
     pub fn as_double_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<f64>>> {
         match self {
-            Reference::DoubleArray(value) => Ok(value.as_ref()?),
+            Reference::DoubleArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected double array".to_string())),
         }
     }
@@ -220,7 +284,12 @@ impl Reference {
     /// if the value is not a `DoubleArray`.
     pub fn as_double_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<f64>>> {
         match self {
-            Reference::DoubleArray(value) => Ok(value.as_mut()?),
+            Reference::DoubleArray(value) => {
+                let guard = value
+                    .write()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok(guard)
+            }
             _ => Err(InvalidValueType("Expected double array".to_string())),
         }
     }
@@ -236,7 +305,11 @@ impl Reference {
     ) -> Result<(&Arc<Class>, RwLockReadGuard<'_, Vec<Option<Reference>>>)> {
         match self {
             Reference::Array(object_array) => {
-                Ok((&object_array.class, object_array.elements.as_ref()?))
+                let guard = object_array
+                    .elements
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok((&object_array.class, guard))
             }
             _ => Err(InvalidValueType("Expected array".to_string())),
         }
@@ -253,7 +326,11 @@ impl Reference {
     ) -> Result<(&Arc<Class>, RwLockWriteGuard<'_, Vec<Option<Reference>>>)> {
         match self {
             Reference::Array(object_array) => {
-                Ok((&object_array.class, object_array.elements.as_mut()?))
+                let guard = object_array
+                    .elements
+                    .write()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Ok((&object_array.class, guard))
             }
             _ => Err(InvalidValueType("Expected array".to_string())),
         }
@@ -275,14 +352,30 @@ impl Reference {
     #[must_use]
     pub fn hash_code(&self) -> usize {
         match self {
-            Reference::ByteArray(reference) => reference.hash_code(),
-            Reference::CharArray(reference) => reference.hash_code(),
-            Reference::ShortArray(reference) => reference.hash_code(),
-            Reference::IntArray(reference) => reference.hash_code(),
-            Reference::LongArray(reference) => reference.hash_code(),
-            Reference::FloatArray(reference) => reference.hash_code(),
-            Reference::DoubleArray(reference) => reference.hash_code(),
-            Reference::Array(reference) => reference.elements.hash_code(),
+            Reference::ByteArray(reference) => {
+                Gc::as_ptr(reference).cast::<Vec<RwLock<i8>>>() as usize
+            }
+            Reference::CharArray(reference) => {
+                Gc::as_ptr(reference).cast::<Vec<RwLock<u16>>>() as usize
+            }
+            Reference::ShortArray(reference) => {
+                Gc::as_ptr(reference).cast::<Vec<RwLock<i16>>>() as usize
+            }
+            Reference::IntArray(reference) => {
+                Gc::as_ptr(reference).cast::<Vec<RwLock<i32>>>() as usize
+            }
+            Reference::LongArray(reference) => {
+                Gc::as_ptr(reference).cast::<Vec<RwLock<i64>>>() as usize
+            }
+            Reference::FloatArray(reference) => {
+                Gc::as_ptr(reference).cast::<Vec<RwLock<f32>>>() as usize
+            }
+            Reference::DoubleArray(reference) => {
+                Gc::as_ptr(reference).cast::<Vec<RwLock<f64>>>() as usize
+            }
+            Reference::Array(reference) => {
+                Gc::as_ptr(&reference.elements).cast::<Vec<RwLock<Option<Reference>>>>() as usize
+            }
             Reference::Object(reference) => reference.hash_code(),
         }
     }
@@ -313,15 +406,54 @@ impl Reference {
     /// if the reference cannot be cloned.
     pub fn deep_clone(&self) -> Result<Reference> {
         let value = match self {
-            Reference::ByteArray(value) => Reference::ByteArray(value.deep_clone()?),
-            Reference::CharArray(value) => Reference::CharArray(value.deep_clone()?),
-            Reference::ShortArray(value) => Reference::ShortArray(value.deep_clone()?),
-            Reference::IntArray(value) => Reference::IntArray(value.deep_clone()?),
-            Reference::LongArray(value) => Reference::LongArray(value.deep_clone()?),
-            Reference::FloatArray(value) => Reference::FloatArray(value.deep_clone()?),
-            Reference::DoubleArray(value) => Reference::DoubleArray(value.deep_clone()?),
+            Reference::ByteArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Reference::ByteArray(Gc::new(RwLock::new(guard.clone())))
+            }
+            Reference::CharArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Reference::CharArray(Gc::new(RwLock::new(guard.to_vec())))
+            }
+            Reference::ShortArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Reference::ShortArray(Gc::new(RwLock::new(guard.to_vec())))
+            }
+            Reference::IntArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Reference::IntArray(Gc::new(RwLock::new(guard.to_vec())))
+            }
+            Reference::LongArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Reference::LongArray(Gc::new(RwLock::new(guard.to_vec())))
+            }
+            Reference::FloatArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Reference::FloatArray(Gc::new(RwLock::new(guard.to_vec())))
+            }
+            Reference::DoubleArray(value) => {
+                let guard = value
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Reference::DoubleArray(Gc::new(RwLock::new(guard.to_vec())))
+            }
             Reference::Array(object_array) => {
-                let values = object_array.elements.to_vec()?;
+                let guard = object_array
+                    .elements
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                let values = guard.to_vec();
                 let mut cloned_values = Vec::with_capacity(values.len());
                 for value in values {
                     match value {
@@ -331,7 +463,7 @@ impl Reference {
                 }
                 let object_array = ObjectArray {
                     class: object_array.class.clone(),
-                    elements: ConcurrentVec::from(cloned_values),
+                    elements: Gc::new(RwLock::new(cloned_values)),
                 };
                 Reference::Array(object_array)
             }
@@ -343,17 +475,41 @@ impl Reference {
 
 impl Display for Reference {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fn fmt_vec<T: Debug>(
+            f: &mut fmt::Formatter<'_>,
+            name: &str,
+            value: &Gc<RwLock<Vec<T>>>,
+        ) -> fmt::Result {
+            let guard = value.read().map_err(|_| fmt::Error)?;
+            let slice = guard.as_slice();
+            let mut values = Vec::with_capacity(slice.len());
+            for value in slice {
+                let value = format!("{value:?}");
+                if value.len() > 100 {
+                    values.push(format!("{}...", &value[..97]));
+                } else {
+                    values.push(value);
+                }
+            }
+            write!(f, "{name}[{}]", values.join(", "))
+        }
+
         match self {
-            Reference::ByteArray(value) => write!(f, "byte{value}"),
-            Reference::CharArray(value) => write!(f, "char{value}"),
-            Reference::ShortArray(value) => write!(f, "short{value}"),
-            Reference::IntArray(value) => write!(f, "int{value}"),
-            Reference::LongArray(value) => write!(f, "long{value}"),
-            Reference::FloatArray(value) => write!(f, "float{value}"),
-            Reference::DoubleArray(value) => write!(f, "double{value}"),
+            Reference::ByteArray(value) => fmt_vec(f, "byte", value),
+            Reference::CharArray(value) => fmt_vec(f, "char", value),
+            Reference::ShortArray(value) => fmt_vec(f, "short", value),
+            Reference::IntArray(value) => fmt_vec(f, "int", value),
+            Reference::LongArray(value) => fmt_vec(f, "long", value),
+            Reference::FloatArray(value) => fmt_vec(f, "float", value),
+            Reference::DoubleArray(value) => fmt_vec(f, "double", value),
             Reference::Array(object_array) => {
-                let length = object_array.elements.len().unwrap_or_default();
-                write!(f, "{}[{length}]", object_array.class.array_component_type())
+                let guard = object_array.elements.read().map_err(|_| fmt::Error)?;
+                write!(
+                    f,
+                    "{}[{}]",
+                    object_array.class.array_component_type(),
+                    guard.len()
+                )
             }
             Reference::Object(value) => {
                 write!(f, "{value}")
@@ -366,10 +522,7 @@ impl Trace for Reference {
     fn trace(&self, collector: &GarbageCollector) {
         match self {
             Reference::Array(object_array) => {
-                let references = object_array
-                    .elements
-                    .as_ref()
-                    .expect("object_array.elements");
+                let references = object_array.elements.read().expect("object_array.elements");
                 for reference in references.iter().flatten() {
                     reference.trace(collector);
                 }
@@ -384,15 +537,39 @@ impl Eq for Reference {}
 
 impl PartialEq for Reference {
     fn eq(&self, other: &Self) -> bool {
+        fn vec_eq<T: PartialEq>(a: &Gc<RwLock<Vec<T>>>, b: &Gc<RwLock<Vec<T>>>) -> bool {
+            if Gc::ptr_eq(a, b) {
+                return true;
+            }
+            // Use try_read to avoid blocking if locks are contended
+            if let (Ok(a_guard), Ok(b_guard)) = (a.try_read(), b.try_read()) {
+                *a_guard == *b_guard
+            } else {
+                let a_guard = a.read().expect("poisoned lock");
+                let b_guard = b.read().expect("poisoned lock");
+                *a_guard == *b_guard
+            }
+        }
+
         match (self, other) {
-            (Reference::ByteArray(a), Reference::ByteArray(b)) => a == b,
-            (Reference::CharArray(a), Reference::CharArray(b)) => a == b,
-            (Reference::ShortArray(a), Reference::ShortArray(b)) => a == b,
-            (Reference::IntArray(a), Reference::IntArray(b)) => a == b,
-            (Reference::LongArray(a), Reference::LongArray(b)) => a == b,
+            (Reference::ByteArray(a), Reference::ByteArray(b)) => vec_eq(a, b),
+            (Reference::CharArray(a), Reference::CharArray(b)) => vec_eq(a, b),
+            (Reference::ShortArray(a), Reference::ShortArray(b)) => vec_eq(a, b),
+            (Reference::IntArray(a), Reference::IntArray(b)) => vec_eq(a, b),
+            (Reference::LongArray(a), Reference::LongArray(b)) => vec_eq(a, b),
             (Reference::FloatArray(a), Reference::FloatArray(b)) => {
-                let a = a.as_ref().expect("a.Vec<f32>");
-                let b = b.as_ref().expect("b.Vec<f32>");
+                if Gc::ptr_eq(a, b) {
+                    return true;
+                }
+                // Use try_read to avoid blocking if locks are contended
+                let (a, b) = if let (Ok(a_guard), Ok(b_guard)) = (a.try_read(), b.try_read()) {
+                    (a_guard, b_guard)
+                } else {
+                    let a_guard = a.read().expect("poisoned lock");
+                    let b_guard = b.read().expect("poisoned lock");
+                    (a_guard, b_guard)
+                };
+
                 if a.len() != b.len() {
                     return false;
                 }
@@ -401,8 +578,18 @@ impl PartialEq for Reference {
                     .all(|(&a, &b)| a.to_bits() == b.to_bits())
             }
             (Reference::DoubleArray(a), Reference::DoubleArray(b)) => {
-                let a = a.as_ref().expect("a.Vec<f64>");
-                let b = b.as_ref().expect("b.Vec<f64>");
+                if Gc::ptr_eq(a, b) {
+                    return true;
+                }
+                // Use try_read to avoid blocking if locks are contended
+                let (a, b) = if let (Ok(a_guard), Ok(b_guard)) = (a.try_read(), b.try_read()) {
+                    (a_guard, b_guard)
+                } else {
+                    let a_guard = a.read().expect("poisoned lock");
+                    let b_guard = b.read().expect("poisoned lock");
+                    (a_guard, b_guard)
+                };
+
                 if a.len() != b.len() {
                     return false;
                 }
@@ -411,7 +598,7 @@ impl PartialEq for Reference {
                     .all(|(&a, &b)| a.to_bits() == b.to_bits())
             }
             (Reference::Array(a), Reference::Array(b)) => {
-                a.class == b.class && a.elements == b.elements
+                a.class == b.class && vec_eq(&a.elements, &b.elements)
             }
             (Reference::Object(a), Reference::Object(b)) => a == b,
             _ => false,
@@ -422,73 +609,73 @@ impl PartialEq for Reference {
 impl From<Vec<bool>> for Reference {
     fn from(value: Vec<bool>) -> Self {
         let value: Vec<i8> = value.into_iter().map(i8::from).collect();
-        Reference::ByteArray(ConcurrentVec::from(value))
+        Reference::ByteArray(Gc::new(RwLock::new(value)))
     }
 }
 
 impl From<Vec<i8>> for Reference {
     fn from(value: Vec<i8>) -> Self {
-        Reference::ByteArray(ConcurrentVec::from(value))
+        Reference::ByteArray(Gc::new(RwLock::new(value)))
     }
 }
 
 impl From<Vec<u8>> for Reference {
     fn from(value: Vec<u8>) -> Self {
         let value: &[i8] = transmute_ref!(value.as_slice());
-        Reference::ByteArray(ConcurrentVec::from(value.to_vec()))
+        Reference::ByteArray(Gc::new(RwLock::new(value.to_vec())))
     }
 }
 
 impl From<Vec<char>> for Reference {
     fn from(value: Vec<char>) -> Self {
         let value: Vec<u16> = value.into_iter().map(|v| v as u16).collect();
-        Reference::CharArray(ConcurrentVec::from(value))
+        Reference::CharArray(Gc::new(RwLock::new(value)))
     }
 }
 
 impl From<Vec<i16>> for Reference {
     fn from(value: Vec<i16>) -> Self {
-        Reference::ShortArray(ConcurrentVec::from(value))
+        Reference::ShortArray(Gc::new(RwLock::new(value)))
     }
 }
 
 impl From<Vec<u16>> for Reference {
     fn from(value: Vec<u16>) -> Self {
         let value: &[i16] = transmute_ref!(value.as_slice());
-        Reference::ShortArray(ConcurrentVec::from(value.to_vec()))
+        Reference::ShortArray(Gc::new(RwLock::new(value.to_vec())))
     }
 }
 
 impl From<Vec<i32>> for Reference {
     fn from(value: Vec<i32>) -> Self {
-        Reference::IntArray(ConcurrentVec::from(value))
+        Reference::IntArray(Gc::new(RwLock::new(value)))
     }
 }
 
 impl From<Vec<u32>> for Reference {
     fn from(value: Vec<u32>) -> Self {
         let value: &[i32] = transmute_ref!(value.as_slice());
-        Reference::IntArray(ConcurrentVec::from(value.to_vec()))
+        Reference::IntArray(Gc::new(RwLock::new(value.to_vec())))
     }
 }
 
 impl From<Vec<i64>> for Reference {
     fn from(value: Vec<i64>) -> Self {
-        Reference::LongArray(ConcurrentVec::from(value))
+        Reference::LongArray(Gc::new(RwLock::new(value)))
     }
 }
 
 impl From<Vec<u64>> for Reference {
     fn from(value: Vec<u64>) -> Self {
         let value: &[i64] = transmute_ref!(value.as_slice());
-        Reference::LongArray(ConcurrentVec::from(value.to_vec()))
+        Reference::LongArray(Gc::new(RwLock::new(value.to_vec())))
     }
 }
 
 impl From<Vec<isize>> for Reference {
     fn from(value: Vec<isize>) -> Self {
         let value: Vec<i64> = value.into_iter().map(|v| v as i64).collect();
-        Reference::LongArray(ConcurrentVec::from(value))
+        Reference::LongArray(Gc::new(RwLock::new(value)))
     }
 }
 
@@ -496,19 +683,19 @@ impl From<Vec<usize>> for Reference {
     fn from(value: Vec<usize>) -> Self {
         #[expect(clippy::cast_possible_wrap)]
         let value: Vec<i64> = value.into_iter().map(|v| v as i64).collect();
-        Reference::LongArray(ConcurrentVec::from(value))
+        Reference::LongArray(Gc::new(RwLock::new(value)))
     }
 }
 
 impl From<Vec<f32>> for Reference {
     fn from(value: Vec<f32>) -> Self {
-        Reference::FloatArray(ConcurrentVec::from(value))
+        Reference::FloatArray(Gc::new(RwLock::new(value)))
     }
 }
 
 impl From<Vec<f64>> for Reference {
     fn from(value: Vec<f64>) -> Self {
-        Reference::DoubleArray(ConcurrentVec::from(value))
+        Reference::DoubleArray(Gc::new(RwLock::new(value)))
     }
 }
 
@@ -516,7 +703,7 @@ impl From<(Arc<Class>, Vec<Option<Reference>>)> for Reference {
     fn from((class, value): (Arc<Class>, Vec<Option<Reference>>)) -> Self {
         let object_array = ObjectArray {
             class: class.clone(),
-            elements: ConcurrentVec::from(value),
+            elements: Gc::new(RwLock::new(value)),
         };
         Reference::Array(object_array)
     }
@@ -538,7 +725,7 @@ impl TryFrom<(Arc<Class>, Vec<Value>)> for Reference {
 
         let object_array = ObjectArray {
             class,
-            elements: ConcurrentVec::from(references),
+            elements: Gc::new(RwLock::new(references)),
         };
         Ok(Reference::Array(object_array))
     }
@@ -1288,10 +1475,12 @@ mod tests {
         let clone = reference.clone();
         assert_eq!(reference, clone);
 
-        let Reference::ByteArray(ref array) = clone else {
-            unreachable!("Expected byte array");
-        };
-        array.set(0, 2i8)?;
+        {
+            let mut array = clone.as_byte_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_eq!(reference, clone);
         Ok(())
     }
@@ -1302,10 +1491,12 @@ mod tests {
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
 
-        let Reference::ByteArray(ref array) = clone else {
-            unreachable!("Expected byte array");
-        };
-        array.set(0, 2i8)?;
+        {
+            let mut array = clone.as_byte_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_ne!(reference, clone);
         Ok(())
     }
@@ -1332,10 +1523,12 @@ mod tests {
         let clone = reference.clone();
         assert_eq!(reference, clone);
 
-        let Reference::CharArray(ref array) = clone else {
-            unreachable!("Expected char array");
-        };
-        array.set(0, 2)?;
+        {
+            let mut array = clone.as_char_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_eq!(reference, clone);
         Ok(())
     }
@@ -1346,10 +1539,12 @@ mod tests {
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
 
-        let Reference::CharArray(ref array) = clone else {
-            unreachable!("Expected char array");
-        };
-        array.set(0, 2)?;
+        {
+            let mut array = clone.as_char_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_ne!(reference, clone);
         Ok(())
     }
@@ -1376,10 +1571,12 @@ mod tests {
         let clone = reference.clone();
         assert_eq!(reference, clone);
 
-        let Reference::ShortArray(ref array) = clone else {
-            unreachable!("Expected short array");
-        };
-        array.set(0, 2)?;
+        {
+            let mut array = clone.as_short_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_eq!(reference, clone);
         Ok(())
     }
@@ -1390,10 +1587,12 @@ mod tests {
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
 
-        let Reference::ShortArray(ref array) = clone else {
-            unreachable!("Expected short array");
-        };
-        array.set(0, 2)?;
+        {
+            let mut array = clone.as_short_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_ne!(reference, clone);
         Ok(())
     }
@@ -1420,10 +1619,12 @@ mod tests {
         let clone = reference.clone();
         assert_eq!(reference, clone);
 
-        let Reference::IntArray(ref array) = clone else {
-            unreachable!("Expected int array");
-        };
-        array.set(0, 2)?;
+        {
+            let mut array = clone.as_int_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_eq!(reference, clone);
         Ok(())
     }
@@ -1434,10 +1635,12 @@ mod tests {
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
 
-        let Reference::IntArray(ref array) = clone else {
-            unreachable!("Expected int array");
-        };
-        array.set(0, 2)?;
+        {
+            let mut array = clone.as_int_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_ne!(reference, clone);
         Ok(())
     }
@@ -1464,10 +1667,12 @@ mod tests {
         let clone = reference.clone();
         assert_eq!(reference, clone);
 
-        let Reference::LongArray(ref array) = clone else {
-            unreachable!("Expected long array");
-        };
-        array.set(0, 2)?;
+        {
+            let mut array = clone.as_long_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_eq!(reference, clone);
         Ok(())
     }
@@ -1478,10 +1683,12 @@ mod tests {
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
 
-        let Reference::LongArray(ref array) = clone else {
-            unreachable!("Expected long array");
-        };
-        array.set(0, 2)?;
+        {
+            let mut array = clone.as_long_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2;
+            }
+        }
         assert_ne!(reference, clone);
         Ok(())
     }
@@ -1508,10 +1715,12 @@ mod tests {
         let clone = reference.clone();
         assert_eq!(reference, clone);
 
-        let Reference::FloatArray(ref array) = clone else {
-            unreachable!("Expected float array");
-        };
-        array.set(0, 2.0)?;
+        {
+            let mut array = clone.as_float_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2.0;
+            }
+        }
         assert_eq!(reference, clone);
         Ok(())
     }
@@ -1522,10 +1731,12 @@ mod tests {
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
 
-        let Reference::FloatArray(ref array) = clone else {
-            unreachable!("Expected float array");
-        };
-        array.set(0, 2.0)?;
+        {
+            let mut array = clone.as_float_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2.0;
+            }
+        }
         assert_ne!(reference, clone);
         Ok(())
     }
@@ -1552,10 +1763,12 @@ mod tests {
         let clone = reference.clone();
         assert_eq!(reference, clone);
 
-        let Reference::DoubleArray(ref array) = clone else {
-            unreachable!("Expected double array");
-        };
-        array.set(0, 2.0)?;
+        {
+            let mut array = clone.as_double_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2.0;
+            }
+        }
         assert_eq!(reference, clone);
         Ok(())
     }
@@ -1566,10 +1779,12 @@ mod tests {
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
 
-        let Reference::DoubleArray(ref array) = clone else {
-            unreachable!("Expected double array");
-        };
-        array.set(0, 2.0)?;
+        {
+            let mut array = clone.as_double_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = 2.0;
+            }
+        }
         assert_ne!(reference, clone);
         Ok(())
     }
@@ -1601,12 +1816,12 @@ mod tests {
         let clone = reference.clone();
         assert_eq!(reference, clone);
 
-        let Reference::Array(ref object_array) = clone else {
-            unreachable!("Expected reference array");
-        };
-        object_array
-            .elements
-            .set(0, Some(Reference::from(vec![1i8])))?;
+        {
+            let (_class, mut array) = clone.as_class_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = Some(Reference::from(vec![1i8]));
+            }
+        }
         assert_eq!(reference, clone);
         Ok(())
     }
@@ -1618,12 +1833,12 @@ mod tests {
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
 
-        let Reference::Array(ref object_array) = clone else {
-            unreachable!("Expected reference array");
-        };
-        object_array
-            .elements
-            .set(0, Some(Reference::from(vec![1i8])))?;
+        {
+            let (_class, mut array) = clone.as_class_vec_mut()?;
+            if let Some(element) = array.get_mut(0) {
+                *element = Some(Reference::from(vec![1i8]));
+            }
+        }
         assert_ne!(reference, clone);
         Ok(())
     }

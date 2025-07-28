@@ -1,4 +1,4 @@
-use crate::Error::{InternalError, InvalidOperand};
+use crate::Error::{InternalError, InvalidOperand, PoisonedLock};
 use crate::JavaError::ArrayIndexOutOfBoundsException;
 use crate::Result;
 use crate::intrinsic_methods::java::lang::class::get_class;
@@ -10,6 +10,7 @@ use ristretto_classfile::{BaseType, FieldAccessFlags, JAVA_11, JAVA_17};
 use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
+use zerocopy::transmute_ref;
 
 pub(crate) const BOOLEAN_SIZE: usize = 1;
 pub(crate) const BYTE_SIZE: usize = 1;
@@ -265,16 +266,19 @@ pub(crate) async fn compare_and_set_reference(
     let offset = usize::try_from(offset)?;
     let reference: Reference = parameters.pop()?.try_into()?;
 
-    // TODO: the compare and set operation should be atomic
     let result = match reference {
-        Reference::Array(object_array) => {
+        Reference::Array(ref object_array) => {
             let offset = offset / REFERENCE_SIZE;
-            let Some(reference) = object_array.elements.get(offset)? else {
+            let mut elements = object_array
+                .elements
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(reference) = elements.get(offset) else {
                 return Err(InternalError(
                     "compareAndSetReference: Invalid reference index".to_string(),
                 ));
             };
-            let Value::Object(expected_reference) = expected else {
+            let Value::Object(ref expected_reference) = expected else {
                 return Err(InvalidOperand {
                     expected: "object".to_string(),
                     actual: expected.to_string(),
@@ -288,13 +292,14 @@ pub(crate) async fn compare_and_set_reference(
                         actual: x.to_string(),
                     });
                 };
-                object_array.elements.set(offset, x_reference)?;
+                elements[offset] = x_reference;
                 1
             } else {
                 0
             }
         }
         Reference::Object(object) => {
+            // TODO: the compare and set operation should be atomic
             let field_name = object.class().field_name(offset)?;
             let value = object.value(&field_name)?;
             if value == expected {
@@ -441,8 +446,11 @@ fn get_reference_type(
 
     let offset = usize::try_from(offset)?;
     let value = match &reference {
-        Reference::ByteArray(_) => {
-            let bytes: Vec<u8> = reference.try_into()?;
+        Reference::ByteArray(array) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array: &[u8] = transmute_ref!(array.as_slice());
             let Some(base_type) = base_type else {
                 return Err(InternalError(
                     "getReferenceType: Invalid base type".to_string(),
@@ -458,18 +466,18 @@ fn get_reference_type(
             };
 
             // If offset is beyond the array, throw proper Java exception
-            if offset >= bytes.len() {
+            if offset >= array.len() {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
-                    length: bytes.len(),
+                    length: array.len(),
                 }
                 .into());
             }
 
             // Create a zero-filled buffer and copy available bytes
             let mut buffer = vec![0u8; required_bytes];
-            let available_bytes = (bytes.len() - offset).min(required_bytes);
-            buffer[..available_bytes].copy_from_slice(&bytes[offset..offset + available_bytes]);
+            let available_bytes = (array.len() - offset).min(required_bytes);
+            buffer[..available_bytes].copy_from_slice(&array[offset..offset + available_bytes]);
 
             match base_type {
                 BaseType::Boolean | BaseType::Byte => {
@@ -511,81 +519,103 @@ fn get_reference_type(
             }
         }
         Reference::CharArray(array) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let offset = offset / CHAR_SIZE;
-            let Some(char) = array.get(offset)? else {
+            let Some(char) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
-                    length: array.len()?,
+                    length: array.len(),
                 }
                 .into());
             };
-            Value::Int(i32::from(char))
+            Value::Int(i32::from(*char))
         }
         Reference::ShortArray(array) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let offset = offset / SHORT_SIZE;
-            let Some(short) = array.get(offset)? else {
+            let Some(short) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
-                    length: array.len()?,
+                    length: array.len(),
                 }
                 .into());
             };
-            Value::Int(i32::from(short))
+            Value::Int(i32::from(*short))
         }
         Reference::IntArray(array) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let offset = offset / INT_SIZE;
-            let Some(int) = array.get(offset)? else {
+            let Some(int) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
-                    length: array.len()?,
+                    length: array.len(),
                 }
                 .into());
             };
-            Value::Int(int)
+            Value::Int(*int)
         }
         Reference::LongArray(array) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let offset = offset / LONG_SIZE;
-            let Some(long) = array.get(offset)? else {
+            let Some(long) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
-                    length: array.len()?,
+                    length: array.len(),
                 }
                 .into());
             };
-            Value::Long(long)
+            Value::Long(*long)
         }
         Reference::FloatArray(array) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let offset = offset / FLOAT_SIZE;
-            let Some(float) = array.get(offset)? else {
+            let Some(float) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
-                    length: array.len()?,
+                    length: array.len(),
                 }
                 .into());
             };
-            Value::Float(float)
+            Value::Float(*float)
         }
         Reference::DoubleArray(array) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let offset = offset / DOUBLE_SIZE;
-            let Some(double) = array.get(offset)? else {
+            let Some(double) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
-                    length: array.len()?,
+                    length: array.len(),
                 }
                 .into());
             };
-            Value::Double(double)
+            Value::Double(*double)
         }
         Reference::Array(object_array) => {
+            let array = object_array
+                .elements
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let offset = offset / REFERENCE_SIZE;
-            let Some(reference) = object_array.elements.get(offset)? else {
+            let Some(reference) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
-                    length: object_array.elements.len()?,
+                    length: array.len(),
                 }
                 .into());
             };
-            Value::Object(reference)
+            Value::Object(reference.clone())
         }
         Reference::Object(object) => {
             let class = object.class();
@@ -649,7 +679,18 @@ fn put_reference_type(
                     ));
                 }
             };
-            array.set(offset, byte_value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(offset) {
+                *element = byte_value;
+            } else {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            }
         }
         Reference::CharArray(array) => {
             let char_value = match value {
@@ -661,7 +702,18 @@ fn put_reference_type(
                 }
             };
             let offset = offset / CHAR_SIZE;
-            array.set(offset, char_value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(offset) {
+                *element = char_value;
+            } else {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            }
         }
         Reference::ShortArray(array) => {
             let short_value = match value {
@@ -673,7 +725,18 @@ fn put_reference_type(
                 }
             };
             let offset = offset / SHORT_SIZE;
-            array.set(offset, short_value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(offset) {
+                *element = short_value;
+            } else {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            }
         }
         Reference::IntArray(array) => {
             let Value::Int(int_value) = value else {
@@ -682,7 +745,18 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / INT_SIZE;
-            array.set(offset, int_value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(offset) {
+                *element = int_value;
+            } else {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            }
         }
         Reference::LongArray(array) => {
             let Value::Long(long_value) = value else {
@@ -691,7 +765,18 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / LONG_SIZE;
-            array.set(offset, long_value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(offset) {
+                *element = long_value;
+            } else {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            }
         }
         Reference::FloatArray(array) => {
             let Value::Float(float_value) = value else {
@@ -700,7 +785,18 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / FLOAT_SIZE;
-            array.set(offset, float_value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(offset) {
+                *element = float_value;
+            } else {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            }
         }
         Reference::DoubleArray(array) => {
             let Value::Double(double_value) = value else {
@@ -709,7 +805,18 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / DOUBLE_SIZE;
-            array.set(offset, double_value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(offset) {
+                *element = double_value;
+            } else {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            }
         }
         Reference::Array(object_array) => {
             let Value::Object(object_value) = value else {
@@ -718,7 +825,19 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / REFERENCE_SIZE;
-            object_array.elements.set(offset, object_value)?;
+            let mut array = object_array
+                .elements
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(offset) {
+                *element = object_value;
+            } else {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            }
         }
         Reference::Object(object) => {
             let class = object.class();

@@ -1,4 +1,4 @@
-use crate::Error::{InvalidOperand, InvalidStackValue};
+use crate::Error::{InvalidOperand, InvalidStackValue, PoisonedLock};
 use crate::JavaError::{IndexOutOfBoundsException, NullPointerException};
 use crate::Result;
 use crate::intrinsic_methods::java::lang::class::get_class;
@@ -26,61 +26,86 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     let reference = parameters.pop_reference()?;
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::ByteArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::ByteArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
-        Some(Reference::CharArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::CharArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
-        Some(Reference::FloatArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::FloatArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
-        Some(Reference::DoubleArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::DoubleArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
-        Some(Reference::ShortArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::ShortArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
-        Some(Reference::IntArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::IntArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
-        Some(Reference::LongArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::LongArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
-        Some(Reference::Array(ref object_array)) => {
-            let Some(value) = object_array.elements.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(object_array.elements.len()?)?;
+        Some(Reference::Array(object_array)) => {
+            let array = object_array
+                .elements
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(value.clone())
         }
         Some(object) => {
             return Err(InvalidStackValue {
@@ -111,12 +136,15 @@ pub(crate) async fn get_byte(
     let reference = parameters.pop_reference()?;
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::ByteArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::ByteArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
         _ => {
             return Err(InvalidStackValue {
@@ -138,12 +166,15 @@ pub(crate) async fn get_char(
     let reference = parameters.pop_reference()?;
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::CharArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::CharArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
         _ => {
             return Err(InvalidStackValue {
@@ -165,12 +196,15 @@ pub(crate) async fn get_double(
     let reference = parameters.pop_reference()?;
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::DoubleArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::DoubleArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
         _ => {
             return Err(InvalidStackValue {
@@ -192,12 +226,15 @@ pub(crate) async fn get_float(
     let reference = parameters.pop_reference()?;
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::FloatArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::FloatArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
         _ => {
             return Err(InvalidStackValue {
@@ -219,12 +256,15 @@ pub(crate) async fn get_int(
     let reference = parameters.pop_reference()?;
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::IntArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::IntArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
         _ => {
             return Err(InvalidStackValue {
@@ -245,14 +285,55 @@ pub(crate) async fn get_length(
     let array = parameters.pop_reference()?;
     let length = match array {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::ByteArray(ref array)) => array.len()?,
-        Some(Reference::CharArray(ref array)) => array.len()?,
-        Some(Reference::FloatArray(ref array)) => array.len()?,
-        Some(Reference::DoubleArray(ref array)) => array.len()?,
-        Some(Reference::ShortArray(ref array)) => array.len()?,
-        Some(Reference::IntArray(ref array)) => array.len()?,
-        Some(Reference::LongArray(ref array)) => array.len()?,
-        Some(Reference::Array(ref object_array)) => object_array.elements.len()?,
+        Some(Reference::ByteArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            array.len()
+        }
+        Some(Reference::CharArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            array.len()
+        }
+        Some(Reference::FloatArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            array.len()
+        }
+        Some(Reference::DoubleArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            array.len()
+        }
+        Some(Reference::ShortArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            array.len()
+        }
+        Some(Reference::IntArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            array.len()
+        }
+        Some(Reference::LongArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            array.len()
+        }
+        Some(Reference::Array(object_array)) => {
+            let array = object_array
+                .elements
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            array.len()
+        }
         Some(object) => {
             return Err(InvalidStackValue {
                 expected: "array".to_string(),
@@ -274,12 +355,15 @@ pub(crate) async fn get_long(
     let reference = parameters.pop_reference()?;
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::LongArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::LongArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
         _ => {
             return Err(InvalidStackValue {
@@ -301,12 +385,15 @@ pub(crate) async fn get_short(
     let reference = parameters.pop_reference()?;
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::ShortArray(ref array)) => {
-            let Some(value) = array.get(usize::try_from(index)?)? else {
-                let size = i32::try_from(array.len()?)?;
+        Some(Reference::ShortArray(array)) => {
+            let array = array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
             };
-            Value::from(value)
+            Value::from(*value)
         }
         _ => {
             return Err(InvalidStackValue {
@@ -441,46 +528,111 @@ pub(crate) async fn new_array(
 #[async_recursion(?Send)]
 pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let value = parameters.pop()?;
-    let index = usize::try_from(parameters.pop_int()?)?;
+    let index = parameters.pop_int()?;
     let reference = parameters.pop_reference()?;
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::ByteArray(ref array)) => {
+        Some(Reference::ByteArray(array)) => {
             let value = i8::try_from(value.to_int()?)?;
-            array.set(index, value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
-        Some(Reference::CharArray(ref array)) => {
+        Some(Reference::CharArray(array)) => {
             let value = u16::try_from(value.to_int()?)?;
-            array.set(index, value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
-        Some(Reference::FloatArray(ref array)) => {
+        Some(Reference::FloatArray(array)) => {
             let value = value.to_float()?;
-            array.set(index, value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
-        Some(Reference::DoubleArray(ref array)) => {
+        Some(Reference::DoubleArray(array)) => {
             let value = value.to_double()?;
-            array.set(index, value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
-        Some(Reference::ShortArray(ref array)) => {
+        Some(Reference::ShortArray(array)) => {
             let value = i16::try_from(value.to_int()?)?;
-            array.set(index, value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
-        Some(Reference::IntArray(ref array)) => {
+        Some(Reference::IntArray(array)) => {
             let value = value.to_int()?;
-            array.set(index, value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
-        Some(Reference::LongArray(ref array)) => {
+        Some(Reference::LongArray(array)) => {
             let value = value.to_long()?;
-            array.set(index, value)?;
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
-        Some(Reference::Array(ref object_array)) => {
+        Some(Reference::Array(object_array)) => {
             let Value::Object(value) = value else {
                 return Err(InvalidOperand {
                     expected: "reference".to_string(),
                     actual: format!("{value:?}"),
                 });
             };
-            object_array.elements.set(index, value)?;
+            let mut array = object_array
+                .elements
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
         Some(object) => {
             return Err(InvalidStackValue {
@@ -508,16 +660,24 @@ pub(crate) async fn set_byte(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let value = i8::try_from(parameters.pop_int()?)?;
-    let index = usize::try_from(parameters.pop_int()?)?;
+    let index = parameters.pop_int()?;
     let reference = parameters.pop_reference()?;
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::ByteArray(ref array)) => {
-            array.set(index, value)?;
+        Some(Reference::ByteArray(array)) => {
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
         _ => {
             return Err(InvalidStackValue {
-                expected: "array".to_string(),
+                expected: "byte array".to_string(),
                 actual: format!("{reference:?}"),
             });
         }
@@ -532,16 +692,24 @@ pub(crate) async fn set_char(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let value = u16::try_from(parameters.pop_int()?)?;
-    let index = usize::try_from(parameters.pop_int()?)?;
+    let index = parameters.pop_int()?;
     let reference = parameters.pop_reference()?;
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::CharArray(ref array)) => {
-            array.set(index, value)?;
+        Some(Reference::CharArray(array)) => {
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
         _ => {
             return Err(InvalidStackValue {
-                expected: "array".to_string(),
+                expected: "char array".to_string(),
                 actual: format!("{reference:?}"),
             });
         }
@@ -556,16 +724,24 @@ pub(crate) async fn set_double(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let value = parameters.pop_double()?;
-    let index = usize::try_from(parameters.pop_int()?)?;
+    let index = parameters.pop_int()?;
     let reference = parameters.pop_reference()?;
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::DoubleArray(ref array)) => {
-            array.set(index, value)?;
+        Some(Reference::DoubleArray(array)) => {
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
         _ => {
             return Err(InvalidStackValue {
-                expected: "array".to_string(),
+                expected: "double array".to_string(),
                 actual: format!("{reference:?}"),
             });
         }
@@ -580,16 +756,24 @@ pub(crate) async fn set_float(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let value = parameters.pop_float()?;
-    let index = usize::try_from(parameters.pop_int()?)?;
+    let index = parameters.pop_int()?;
     let reference = parameters.pop_reference()?;
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::FloatArray(ref array)) => {
-            array.set(index, value)?;
+        Some(Reference::FloatArray(array)) => {
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
         _ => {
             return Err(InvalidStackValue {
-                expected: "array".to_string(),
+                expected: "float array".to_string(),
                 actual: format!("{reference:?}"),
             });
         }
@@ -604,16 +788,24 @@ pub(crate) async fn set_int(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let value = parameters.pop_int()?;
-    let index = usize::try_from(parameters.pop_int()?)?;
+    let index = parameters.pop_int()?;
     let reference = parameters.pop_reference()?;
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::IntArray(ref array)) => {
-            array.set(index, value)?;
+        Some(Reference::IntArray(array)) => {
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
         _ => {
             return Err(InvalidStackValue {
-                expected: "array".to_string(),
+                expected: "int array".to_string(),
                 actual: format!("{reference:?}"),
             });
         }
@@ -628,16 +820,24 @@ pub(crate) async fn set_long(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let value = parameters.pop_long()?;
-    let index = usize::try_from(parameters.pop_int()?)?;
+    let index = parameters.pop_int()?;
     let reference = parameters.pop_reference()?;
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::LongArray(ref array)) => {
-            array.set(index, value)?;
+        Some(Reference::LongArray(array)) => {
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
         _ => {
             return Err(InvalidStackValue {
-                expected: "array".to_string(),
+                expected: "long array".to_string(),
                 actual: format!("{reference:?}"),
             });
         }
@@ -652,16 +852,24 @@ pub(crate) async fn set_short(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let value = i16::try_from(parameters.pop_int()?)?;
-    let index = usize::try_from(parameters.pop_int()?)?;
+    let index = parameters.pop_int()?;
     let reference = parameters.pop_reference()?;
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::ShortArray(ref array)) => {
-            array.set(index, value)?;
+        Some(Reference::ShortArray(array)) => {
+            let mut array = array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
         }
         _ => {
             return Err(InvalidStackValue {
-                expected: "array".to_string(),
+                expected: "short array".to_string(),
                 actual: format!("{reference:?}"),
             });
         }
@@ -855,14 +1063,8 @@ mod tests {
         let array = multi_new_array(thread.clone(), parameters)
             .await?
             .expect("array");
-        if let Value::Object(Some(Reference::IntArray(array))) = array {
-            assert_eq!(array.len()?, 5);
-            for i in 0..5 {
-                assert_eq!(array.get(i)?, Some(0i32));
-            }
-        } else {
-            panic!("Expected IntArray but got {array:?}");
-        }
+        let array: Vec<i32> = array.try_into()?;
+        assert_eq!(array, vec![0; 5]);
         Ok(())
     }
 
@@ -878,13 +1080,20 @@ mod tests {
             .await?
             .expect("array");
         if let Value::Object(Some(Reference::Array(outer_array))) = array {
-            assert_eq!(outer_array.elements.len()?, 3);
+            let outer_array = outer_array
+                .elements
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
+            assert_eq!(outer_array.len(), 3);
             for i in 0..3 {
-                let inner_array = outer_array.elements.get(i)?.expect("inner array");
+                let inner_array = outer_array.get(i).expect("inner array");
                 if let Some(Reference::IntArray(inner_array)) = inner_array {
-                    assert_eq!(inner_array.len()?, 4);
+                    let inner_array = inner_array
+                        .read()
+                        .map_err(|error| PoisonedLock(error.to_string()))?;
+                    assert_eq!(inner_array.len(), 4);
                     for j in 0..4 {
-                        assert_eq!(inner_array.get(j)?, Some(0i32));
+                        assert_eq!(inner_array.get(j), Some(&0i32));
                     }
                 } else {
                     panic!("Expected IntArray but got {inner_array:?}");
