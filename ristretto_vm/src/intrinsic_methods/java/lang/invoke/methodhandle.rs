@@ -70,7 +70,7 @@ pub async fn call_method_handle_target(
     let member_name: String = member.value("name")?.try_into()?;
 
     // Get flags to determine the kind of member and operation
-    let flags = member.value("flags")?.to_int()?;
+    let flags: i32 = member.value("flags")?.try_into()?;
     let reference_kind_value = (flags
         & (MemberNameFlags::REFERENCE_KIND_MASK.bits()
             << MemberNameFlags::REFERENCE_KIND_SHIFT.bits()))

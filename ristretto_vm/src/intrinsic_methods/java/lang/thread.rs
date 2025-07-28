@@ -17,7 +17,7 @@ use tracing::error;
 
 /// Get the thread from the thread ID in the `eetop` field of the thread object.
 async fn get_thread(thread: &Arc<Thread>, thread_object: &Object) -> Result<Arc<Thread>> {
-    let thread_id = thread_object.value("eetop")?.to_long()?;
+    let thread_id: i64 = thread_object.value("eetop")?.try_into()?;
     let thread_id = u64::try_from(thread_id)?;
     let vm = thread.vm()?;
     let thread_handles = vm.thread_handles();
@@ -563,7 +563,7 @@ mod tests {
     async fn test_get_next_thread_id_offset() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = get_next_thread_id_offset(thread, Parameters::default()).await?;
-        let thread_id = result.unwrap_or(Value::Long(0)).to_long()?;
+        let thread_id: i64 = result.unwrap_or(Value::Long(0)).try_into()?;
         assert!(thread_id > 0);
         Ok(())
     }

@@ -262,6 +262,7 @@ mod tests {
     use super::*;
     use crate::JavaError::RuntimeException;
     use crate::JavaObject;
+    use ristretto_classloader::Reference;
     use std::path::Path;
     use tempfile::NamedTempFile;
 
@@ -491,7 +492,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = list(thread, parameters).await?.expect("paths");
-        let reference = value.to_reference()?.expect("paths");
+        let reference: Reference = value.clone().try_into()?;
         let class_name = reference.class_name().to_string();
         let elements: Vec<Value> = value.try_into()?;
         assert_eq!(class_name, "java/lang/String");

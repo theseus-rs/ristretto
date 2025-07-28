@@ -63,9 +63,8 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let value = encoding(thread, Parameters::default())
             .await?
-            .expect("encoding")
-            .to_reference()?;
-        assert!(value.is_none());
+            .expect("encoding");
+        assert!(value.is_null());
         Ok(())
     }
 

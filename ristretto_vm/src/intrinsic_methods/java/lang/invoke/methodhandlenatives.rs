@@ -207,7 +207,7 @@ pub(crate) async fn resolve(
     let class_name: String = class_object.value("name")?.try_into()?;
     let class = thread.class(class_name.clone()).await?;
     let name = member_self.value("name")?;
-    let flags = member_self.value("flags")?.to_int()?;
+    let flags: i32 = member_self.value("flags")?.try_into()?;
     let member_name_flags = MemberNameFlags::from_bits_truncate(flags);
 
     // Handle methods/constructors

@@ -17,62 +17,20 @@ pub enum Value {
 }
 
 impl Value {
-    /// Returns the value as an `i32`.
-    ///
-    /// # Errors
-    ///
-    /// if the value is not an `Int`.
-    pub fn to_int(&self) -> Result<i32> {
-        match self {
-            Value::Int(value) => Ok(*value),
-            _ => Err(InvalidValueType("Expected an int value".to_string())),
-        }
+    /// Returns true if the value is null.
+    #[must_use]
+    pub fn is_null(&self) -> bool {
+        matches!(self, Value::Object(None))
     }
 
-    /// Returns the value as an `i64`.
+    /// Returns a reference to the value if it is an object.
     ///
     /// # Errors
     ///
-    /// if the value is not a `Long`
-    pub fn to_long(&self) -> Result<i64> {
+    /// If the value is not an object or if it cannot be converted to a reference.
+    pub fn as_reference(&self) -> Result<&Reference> {
         match self {
-            Value::Long(value) => Ok(*value),
-            _ => Err(InvalidValueType("Expected a long value".to_string())),
-        }
-    }
-
-    /// Returns the value as an `f32`.
-    ///
-    /// # Errors
-    ///
-    /// if the value is not a `Float`
-    pub fn to_float(&self) -> Result<f32> {
-        match self {
-            Value::Float(value) => Ok(*value),
-            _ => Err(InvalidValueType("Expected a float value".to_string())),
-        }
-    }
-
-    /// Returns the value as an `f64`.
-    ///
-    /// # Errors
-    ///
-    /// if the value is not a `Double`
-    pub fn to_double(&self) -> Result<f64> {
-        match self {
-            Value::Double(value) => Ok(*value),
-            _ => Err(InvalidValueType("Expected a double value".to_string())),
-        }
-    }
-
-    /// Returns the value as an `Option<Reference>`.
-    ///
-    /// # Errors
-    ///
-    /// if the value is not a `Reference`
-    pub fn to_reference(&self) -> Result<Option<Reference>> {
-        match self {
-            Value::Object(value) => Ok(value.clone()),
+            Value::Object(Some(reference)) => Ok(reference),
             _ => Err(InvalidValueType("Expected a reference value".to_string())),
         }
     }
@@ -689,88 +647,63 @@ mod tests {
     }
 
     #[test]
-    fn test_int_format() -> Result<()> {
+    fn test_int_format() {
         let value = Value::Int(42);
-        assert_eq!(42, value.to_int()?);
         assert_eq!("int(42)", value.to_string());
         assert!(value.is_category_1());
         assert!(!value.is_category_2());
-        Ok(())
     }
 
     #[test]
-    fn test_to_int_error() {
-        let result = Value::Long(42).to_int();
-        assert!(matches!(result, Err(InvalidValueType(_))));
-    }
-
-    #[test]
-    fn test_long_format() -> Result<()> {
+    fn test_long_format() {
         let value = Value::Long(42);
-        assert_eq!(42, value.to_long()?);
         assert_eq!("long(42)", value.to_string());
         assert!(!value.is_category_1());
         assert!(value.is_category_2());
-        Ok(())
     }
 
     #[test]
-    fn test_to_long_error() {
-        let result = Value::Int(42).to_long();
-        assert!(matches!(result, Err(InvalidValueType(_))));
-    }
-
-    #[test]
-    fn test_float_format() -> Result<()> {
+    fn test_float_format() {
         let value = Value::Float(42.1);
-        let compare_value = value.to_float()? - 42.1f32;
-        assert!(compare_value.abs() < 0.1f32);
         assert_eq!("float(42.1)", value.to_string());
         assert!(value.is_category_1());
         assert!(!value.is_category_2());
-        Ok(())
     }
 
     #[test]
-    fn test_to_float_error() {
-        let result = Value::Int(42).to_float();
-        assert!(matches!(result, Err(InvalidValueType(_))));
-    }
-
-    #[test]
-    fn test_double_format() -> Result<()> {
+    fn test_double_format() {
         let value = Value::Double(42.1);
-        let compare_value = value.to_double()? - 42.1f64;
-        assert!(compare_value.abs() < 0.1f64);
         assert_eq!("double(42.1)", value.to_string());
         assert!(!value.is_category_1());
         assert!(value.is_category_2());
-        Ok(())
     }
 
     #[test]
-    fn test_to_double_error() {
-        let result = Value::Int(42).to_double();
-        assert!(matches!(result, Err(InvalidValueType(_))));
-    }
-
-    #[test]
-    fn test_object_format() -> Result<()> {
+    fn test_object_format() {
         let value = Value::Object(None);
-        assert_eq!(None, value.to_reference()?);
         assert_eq!("Object(null)", value.to_string());
+        assert!(value.is_null());
         assert!(value.is_category_1());
         assert!(!value.is_category_2());
         assert_eq!(
             "byte[1, 2, 3]",
             format!("{}", Value::from(vec![1i8, 2i8, 3i8]))
         );
+    }
+
+    #[test]
+    fn test_as_reference() -> Result<()> {
+        let reference = Reference::from(vec![1i8, 2i8, 3i8]);
+        let value = Value::Object(Some(reference));
+        let reference = value.as_reference()?;
+        let array = reference.as_byte_vec_ref()?;
+        assert_eq!(array.to_vec(), vec![1, 2, 3]);
         Ok(())
     }
 
     #[test]
-    fn test_to_object_error() {
-        let result = Value::Int(42).to_reference();
+    fn test_as_reference_error() {
+        let result: Result<&Reference> = Value::Int(42).as_reference();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
@@ -782,6 +715,7 @@ mod tests {
         let object = Object::new(class)?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
+        assert!(!string_value.is_null());
         object.set_value("value", string_value)?;
         let value = Value::from(object);
         assert_eq!("String(\"foo\")", value.to_string());
@@ -1322,7 +1256,7 @@ mod tests {
         let value = Value::from(object);
         let original_values = vec![value];
         let value = Value::try_from((original_class.clone(), original_values.clone()))?;
-        let reference = value.to_reference()?.expect("vec");
+        let reference: Reference = value.try_into()?;
         let reference_class_name = reference.class_name().to_string();
         let reference_values: Vec<Value> = reference.try_into()?;
         assert_eq!(original_class.name(), reference_class_name);

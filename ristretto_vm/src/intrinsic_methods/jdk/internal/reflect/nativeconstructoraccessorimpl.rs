@@ -6,7 +6,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
-use ristretto_classloader::{Class, Object, Reference, Value};
+use ristretto_classloader::{Class, Object, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -19,11 +19,8 @@ pub(crate) fn unbox_primitive(values: &mut [Value], index: usize) -> Result<()> 
     let Some(value) = values.get(index) else {
         return Err(InternalError(format!("index out of bounds: {index}")));
     };
-    let Value::Object(Some(Reference::Object(object))) = value else {
-        return Err(InternalError(format!(
-            "Expected object at index {index}, found: {value:?}"
-        )));
-    };
+    let reference = value.as_reference()?;
+    let object = reference.as_object_ref()?;
     let value = object.value("value")?;
     values[index] = value;
     Ok(())
@@ -47,11 +44,8 @@ pub(crate) async fn new_instance_0(
     let parameter_types: Vec<Value> = method.value("parameterTypes")?.try_into()?;
     let mut descriptor = String::new();
     for (index, parameter_type) in parameter_types.iter().enumerate() {
-        let Value::Object(Some(Reference::Object(parameter_type))) = parameter_type else {
-            return Err(InternalError(format!(
-                "Expected object at parameter index {index}, found: {parameter_type:?}"
-            )));
-        };
+        let reference = parameter_type.as_reference()?;
+        let parameter_type = reference.as_object_ref()?;
         let parameter_type_class = class::get_class(&thread, parameter_type).await?;
         let class_name = parameter_type_class.name();
         let class_descriptor = Class::convert_to_descriptor(class_name);

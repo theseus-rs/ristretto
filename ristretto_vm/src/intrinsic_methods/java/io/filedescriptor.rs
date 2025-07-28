@@ -26,16 +26,16 @@ pub(crate) fn file_descriptor_from_java_object(
     let fd = if vm.java_class_file_version() >= &JAVA_11 {
         #[cfg(not(target_os = "windows"))]
         {
-            let fd = file_descriptor.value("fd")?.to_int()?;
+            let fd: i32 = file_descriptor.value("fd")?.try_into()?;
             i64::from(fd)
         }
         #[cfg(target_os = "windows")]
         {
-            let fd: i64 = file_descriptor.value("handle")?.to_long()?;
+            let fd: i64 = file_descriptor.value("handle")?.try_into()?;
             fd
         }
     } else {
-        let fd = file_descriptor.value("fd")?.to_int()?;
+        let fd: i32 = file_descriptor.value("fd")?.try_into()?;
         i64::from(fd)
     };
     Ok(fd)

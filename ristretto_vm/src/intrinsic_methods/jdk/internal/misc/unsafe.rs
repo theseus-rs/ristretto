@@ -183,7 +183,7 @@ pub(crate) async fn compare_and_set_int(
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
-        let value = object.value(&field_name)?.to_int()?;
+        let value: i32 = object.value(&field_name)?.try_into()?;
         if value == expected {
             object.set_value(&field_name, Value::Int(x))?;
             1
@@ -223,7 +223,7 @@ pub(crate) async fn compare_and_set_long(
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
-        let value = object.value(&field_name)?.to_long()?;
+        let value: i64 = object.value(&field_name)?.try_into()?;
         if value == expected {
             object.set_value(&field_name, Value::Long(x))?;
             1
