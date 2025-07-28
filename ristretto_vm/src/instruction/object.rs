@@ -237,8 +237,8 @@ pub(crate) async fn new(
     let class_name = constant_pool.try_get_class(index)?;
     let class = thread.class(class_name).await?;
     let object = Object::new(class)?;
-    let reference = Reference::from(object);
-    stack.push_object(Some(reference))?;
+    let reference = Value::from(object);
+    stack.push(reference)?;
     Ok(Continue)
 }
 
@@ -326,7 +326,6 @@ mod tests {
     use crate::Error::{InvalidOperand, JavaError};
     use crate::JavaError::NullPointerException;
     use crate::java_object::JavaObject;
-    use ristretto_classloader::ConcurrentVec;
     use std::sync::Arc;
 
     #[test]
@@ -475,21 +474,21 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
         let class = thread.class("java/lang/Object").await?;
-        let object = Reference::from(vec![42i32]);
-        let array = Reference::from((class, vec![Some(object.clone())]));
-        stack.push_object(Some(array))?;
+        let object = Value::from(vec![42i32]);
+        let array = Value::try_from((class, vec![object.clone()]))?;
+        stack.push(array)?;
         stack.push_int(0)?;
         let result = aaload(stack)?;
         assert_eq!(Continue, result);
-        assert_eq!(Some(object), stack.pop_object()?);
+        assert_eq!(object, stack.pop()?);
         Ok(())
     }
 
     #[test]
     fn test_aaload_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Reference::from(vec![42i32]);
-        stack.push_object(Some(object))?;
+        let object = Value::from(vec![42i32]);
+        stack.push(object)?;
         stack.push_int(2)?;
         let result = aaload(stack);
         assert!(matches!(
@@ -507,9 +506,9 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
         let class = thread.class("java/lang/Object").await?;
-        let object = Reference::from(vec![42i32]);
-        let array = Reference::from((class, vec![Some(object.clone())]));
-        stack.push_object(Some(array))?;
+        let object = Value::from(vec![42i32]);
+        let array = Value::try_from((class, vec![object.clone()]))?;
+        stack.push(array)?;
         stack.push_int(-1)?;
         let result = aaload(stack);
         assert!(matches!(
@@ -525,9 +524,9 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
         let class = thread.class("java/lang/Object").await?;
-        let object = Reference::from(vec![42i32]);
-        let array = Reference::from((class, vec![Some(object.clone())]));
-        stack.push_object(Some(array))?;
+        let object = Value::from(vec![42i32]);
+        let array = Value::try_from((class, vec![object.clone()]))?;
+        stack.push(array)?;
         stack.push_int(2)?;
         let result = aaload(stack);
         assert!(matches!(
@@ -553,11 +552,11 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
         let class = thread.class("java/lang/Object").await?;
-        let object = Reference::from(vec![3i32]);
-        let array = Reference::from((class, vec![Some(object)]));
-        stack.push_object(Some(array))?;
+        let object = Value::from(vec![3i32]);
+        let array = Value::try_from((class, vec![object]))?;
+        stack.push(array)?;
         stack.push_int(0)?;
-        stack.push_object(Some(Reference::from(vec![3i32])))?;
+        stack.push(Value::from(vec![3i32]))?;
         let result = aastore(stack)?;
         assert_eq!(Continue, result);
         Ok(())
@@ -566,10 +565,10 @@ mod tests {
     #[test]
     fn test_aastore_invalid_value() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Reference::from(vec![42i32]);
-        stack.push_object(Some(object.clone()))?;
+        let object = Value::from(vec![42i32]);
+        stack.push(object.clone())?;
         stack.push_int(0)?;
-        stack.push_object(Some(object))?;
+        stack.push(object)?;
         let result = aastore(stack);
         assert!(matches!(
             result,
@@ -586,11 +585,11 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
         let class = thread.class("java/lang/Object").await?;
-        let object = Reference::from(vec![3i32]);
-        let array = Reference::from((class, vec![Some(object.clone())]));
-        stack.push_object(Some(array))?;
+        let object = Value::from(vec![3i32]);
+        let array = Value::try_from((class, vec![object.clone()]))?;
+        stack.push(array)?;
         stack.push_int(-1)?;
-        stack.push_object(Some(object))?;
+        stack.push(object)?;
         let result = aastore(stack);
         assert!(matches!(
             result,
@@ -605,11 +604,11 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
         let class = thread.class("java/lang/Object").await?;
-        let object = Reference::from(vec![3i32]);
-        let array = Reference::from((class, vec![Some(object.clone())]));
-        stack.push_object(Some(array))?;
+        let object = Value::from(vec![3i32]);
+        let array = Value::try_from((class, vec![object.clone()]))?;
+        stack.push(array)?;
         stack.push_int(2)?;
-        stack.push_object(Some(object))?;
+        stack.push(object)?;
         let result = aastore(stack);
         assert!(matches!(
             result,
@@ -622,10 +621,10 @@ mod tests {
     #[test]
     fn test_aastore_null_pointer() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Reference::from(vec![3i32]);
+        let object = Value::from(vec![3i32]);
         stack.push_object(None)?;
         stack.push_int(0)?;
-        stack.push_object(Some(object))?;
+        stack.push(object)?;
         let result = aastore(stack);
         assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
         Ok(())
@@ -634,8 +633,8 @@ mod tests {
     #[test]
     fn test_areturn_object() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let object = Reference::from(vec![42i8]);
-        stack.push_object(Some(object))?;
+        let object = Value::from(vec![42i8]);
+        stack.push(object)?;
         let result = areturn(stack)?;
         assert!(matches!(result, Return(Some(Value::Object(_)))));
         Ok(())
@@ -715,7 +714,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let object_class = thread.class("java/lang/Object").await?;
         let object = Object::new(object_class)?;
-        stack.push_object(Some(Reference::from(object)))?;
+        stack.push(Value::from(object))?;
         let class_index = get_class_index(&mut frame, "java/lang/String")?;
         let result = checkcast(&frame, stack, class_index).await;
         assert!(matches!(
@@ -731,8 +730,8 @@ mod tests {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         let string_class = thread.class("[Ljava/lang/String;").await?;
-        let string_array = Reference::from((string_class, Vec::new()));
-        stack.push_object(Some(string_array))?;
+        let string_array = Value::from((string_class, Vec::new()));
+        stack.push(string_array)?;
         let class_index = get_class_index(&mut frame, "[Ljava/lang/Object;")?;
         let result = checkcast(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
@@ -770,7 +769,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let object_class = thread.class("java/lang/Object").await?;
         let object = Object::new(object_class)?;
-        stack.push_object(Some(Reference::from(object)))?;
+        stack.push(Value::from(object))?;
         let class_index = get_class_index(&mut frame, "java/lang/String")?;
         let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
@@ -783,8 +782,8 @@ mod tests {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         let string_class = thread.class("[Ljava/lang/String;").await?;
-        let string_array = Reference::from((string_class, Vec::new()));
-        stack.push_object(Some(string_array))?;
+        let string_array = Value::try_from((string_class, Vec::<Value>::new()))?;
+        stack.push(string_array)?;
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;
         let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
@@ -797,8 +796,8 @@ mod tests {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         let object_class = thread.class("[Ljava/lang/Object;").await?;
-        let object_array = Reference::from((object_class, Vec::new()));
-        stack.push_object(Some(object_array))?;
+        let object_array = Value::try_from((object_class, Vec::<Value>::new()))?;
+        stack.push(object_array)?;
         let class_index = get_class_index(&mut frame, "java/lang/String")?;
         let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
@@ -810,8 +809,8 @@ mod tests {
     async fn test_instanceof_int_array_to_int_array() -> Result<()> {
         let (_vm, _thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
-        let int_array = Reference::from(vec![0i32; 0]);
-        stack.push_object(Some(int_array))?;
+        let int_array = Value::from(vec![0i32; 0]);
+        stack.push(int_array)?;
         let class_index = get_class_index(&mut frame, "[I")?;
         let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
@@ -823,8 +822,8 @@ mod tests {
     async fn test_instanceof_long_array_to_int_array() -> Result<()> {
         let (_vm, _thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
-        let long_array = Reference::LongArray(ConcurrentVec::default());
-        stack.push_object(Some(long_array))?;
+        let long_array = Value::from(Vec::<i64>::new());
+        stack.push(long_array)?;
         let class_index = get_class_index(&mut frame, "[I")?;
         let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);

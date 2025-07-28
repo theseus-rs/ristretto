@@ -7,7 +7,7 @@ use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use ristretto_classfile::BaseType;
 use ristretto_classfile::attributes::ArrayType;
-use ristretto_classloader::Reference;
+use ristretto_classloader::{Reference, Value};
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.newarray>
 #[inline]
@@ -18,15 +18,15 @@ pub(crate) fn newarray(
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
     let array = match array_type {
-        ArrayType::Char => Reference::from(vec![0 as char; count]),
-        ArrayType::Float => Reference::from(vec![0.0f32; count]),
-        ArrayType::Double => Reference::from(vec![0.0f64; count]),
-        ArrayType::Boolean | ArrayType::Byte => Reference::from(vec![0i8; count]),
-        ArrayType::Short => Reference::from(vec![0i16; count]),
-        ArrayType::Int => Reference::from(vec![0i32; count]),
-        ArrayType::Long => Reference::from(vec![0i64; count]),
+        ArrayType::Char => Value::from(vec![0 as char; count]),
+        ArrayType::Float => Value::from(vec![0.0f32; count]),
+        ArrayType::Double => Value::from(vec![0.0f64; count]),
+        ArrayType::Boolean | ArrayType::Byte => Value::from(vec![0i8; count]),
+        ArrayType::Short => Value::from(vec![0i16; count]),
+        ArrayType::Int => Value::from(vec![0i32; count]),
+        ArrayType::Long => Value::from(vec![0i64; count]),
     };
-    stack.push_object(Some(array))?;
+    stack.push(array)?;
     Ok(Continue)
 }
 
@@ -44,8 +44,8 @@ pub(crate) async fn anewarray(
     let class = thread.class(array_class_name.as_str()).await?;
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
-    let array = Reference::from((class, vec![None; count]));
-    stack.push_object(Some(array))?;
+    let array = Value::from((class, vec![None; count]));
+    stack.push(array)?;
     Ok(Continue)
 }
 

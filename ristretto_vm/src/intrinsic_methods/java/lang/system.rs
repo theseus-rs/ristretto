@@ -360,8 +360,7 @@ pub(crate) async fn register_natives(
         "jdk/internal/access"
     };
     let java_lang_ref_access = java_lang_ref_access_class(&thread, package_name).await?;
-    let java_lang_ref_access =
-        Value::Object(Some(Reference::Object(Object::new(java_lang_ref_access)?)));
+    let java_lang_ref_access = Value::from(Object::new(java_lang_ref_access)?);
     let shared_secrets_class = format!("{package_name}/SharedSecrets");
     thread
         .invoke(

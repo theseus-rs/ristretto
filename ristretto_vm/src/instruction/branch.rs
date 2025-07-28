@@ -274,7 +274,7 @@ pub(crate) fn ifnonnull(stack: &mut OperandStack, address: u16) -> Result<Execut
 mod test {
     use super::*;
     use crate::java_object::JavaObject;
-    use ristretto_classloader::Reference;
+    use ristretto_classloader::Value;
 
     #[test]
     fn test_ifeq_equal() -> Result<()> {
@@ -565,9 +565,9 @@ mod test {
     #[test]
     fn test_if_acmpeq_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Reference::from(vec![42i8]);
-        stack.push_object(Some(object.clone()))?;
-        stack.push_object(Some(object.clone()))?;
+        let object = Value::from(vec![42i8]);
+        stack.push(object.clone())?;
+        stack.push(object.clone())?;
         let result = if_acmpeq(stack, 3)?;
         assert_eq!(ContinueAtPosition(3), result);
         Ok(())
@@ -576,13 +576,13 @@ mod test {
     #[test]
     fn test_if_acmpeq_not_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Reference::from(vec![42i8]);
+        let object = Value::from(vec![42i8]);
         stack.push_object(None)?;
-        stack.push_object(Some(object.clone()))?;
+        stack.push(object.clone())?;
         let result = if_acmpeq(stack, 3)?;
         assert_eq!(Continue, result);
-        stack.push_object(Some(object.clone()))?;
-        stack.push_object(Some(object.clone()))?;
+        stack.push(object.clone())?;
+        stack.push(object.clone())?;
         let result = if_acmpeq(stack, 3)?;
         assert_eq!(ContinueAtPosition(3), result);
         Ok(())
@@ -632,9 +632,9 @@ mod test {
     #[test]
     fn test_if_acmpne_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Reference::from(vec![42i8]);
-        stack.push_object(Some(object.clone()))?;
-        stack.push_object(Some(object.clone()))?;
+        let object = Value::from(vec![42i8]);
+        stack.push(object.clone())?;
+        stack.push(object.clone())?;
         let result = if_acmpne(stack, 3)?;
         assert_eq!(Continue, result);
         Ok(())
@@ -643,9 +643,9 @@ mod test {
     #[test]
     fn test_if_acmpne_not_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Reference::from(vec![42i8]);
+        let object = Value::from(vec![42i8]);
         stack.push_object(None)?;
-        stack.push_object(Some(object.clone()))?;
+        stack.push(object.clone())?;
         let result = if_acmpne(stack, 3)?;
         assert_eq!(ContinueAtPosition(3), result);
         Ok(())
@@ -802,8 +802,8 @@ mod test {
     #[test]
     fn test_ifnull_not_null() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let object = Reference::from(vec![42i8]);
-        stack.push_object(Some(object))?;
+        let object = Value::from(vec![42i8]);
+        stack.push(object)?;
         let result = ifnull(stack, 3)?;
         assert_eq!(Continue, result);
         Ok(())
@@ -821,8 +821,8 @@ mod test {
     #[test]
     fn test_ifnonnull_not_null() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let object = Reference::from(vec![42i8]);
-        stack.push_object(Some(object))?;
+        let object = Value::from(vec![42i8]);
+        stack.push(object)?;
         let result = ifnonnull(stack, 3)?;
         assert_eq!(ContinueAtPosition(3), result);
         Ok(())

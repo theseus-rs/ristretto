@@ -1100,8 +1100,8 @@ mod tests {
     #[tokio::test]
     async fn test_from_class_vec() -> Result<()> {
         let original_class = load_class("[Ljava/lang/Object;").await?;
-        let original_value = vec![None];
-        let value = Value::from((original_class.clone(), original_value.clone()));
+        let original_value = vec![Value::Object(None)];
+        let value = Value::try_from((original_class.clone(), original_value.clone()))?;
         assert!(matches!(value, Value::Object(Some(Reference::Array(_)))));
         Ok(())
     }

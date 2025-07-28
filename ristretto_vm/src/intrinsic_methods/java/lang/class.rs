@@ -582,8 +582,8 @@ pub(crate) async fn get_enclosing_method_0(
             let object_array_class = thread.class("[Ljava/lang/Object;").await?;
             let enclosing_information = vec![class, method_name, method_descriptor];
             let enclosing_information_array =
-                Reference::try_from((object_array_class, enclosing_information))?;
-            return Ok(Some(Value::from(enclosing_information_array)));
+                Value::try_from((object_array_class, enclosing_information))?;
+            return Ok(Some(enclosing_information_array));
         }
     }
 

@@ -417,22 +417,21 @@ pub(crate) async fn new_array(
     let class_name = get_class_name(parameters.pop()?)?;
 
     let array = match class_name.as_str() {
-        "boolean" | "byte" => Reference::from(vec![0i8; length]),
-        "char" => Reference::from(vec![0 as char; length]),
-        "float" => Reference::from(vec![0.0f32; length]),
-        "double" => Reference::from(vec![0.0f64; length]),
-        "int" => Reference::from(vec![0i32; length]),
-        "long" => Reference::from(vec![0i64; length]),
-        "short" => Reference::from(vec![0i16; length]),
+        "boolean" | "byte" => Value::from(vec![0i8; length]),
+        "char" => Value::from(vec![0 as char; length]),
+        "float" => Value::from(vec![0.0f32; length]),
+        "double" => Value::from(vec![0.0f64; length]),
+        "int" => Value::from(vec![0i32; length]),
+        "long" => Value::from(vec![0i64; length]),
+        "short" => Value::from(vec![0i16; length]),
         _ => {
             let class_name = format!("[L{class_name};");
             let class = thread.class(&class_name).await?;
-            Reference::from((class, vec![None; length]))
+            Value::from((class, vec![None; length]))
         }
     };
 
-    let value = Value::from(array);
-    Ok(Some(value))
+    Ok(Some(array))
 }
 
 #[intrinsic_method(

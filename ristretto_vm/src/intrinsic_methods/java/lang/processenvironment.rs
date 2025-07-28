@@ -4,7 +4,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::mutf8;
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -13,12 +13,12 @@ use std::sync::Arc;
 pub(crate) async fn environ(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let mut values = Vec::new();
     for (key, value) in std::env::vars() {
-        let key = Some(Reference::from(mutf8::to_bytes(key)?));
+        let key = Value::from(mutf8::to_bytes(key)?);
         values.push(key);
-        let value = Some(Reference::from(mutf8::to_bytes(value)?));
+        let value = Value::from(mutf8::to_bytes(value)?);
         values.push(value);
     }
     let class = thread.class("[[B").await?;
-    let result = Reference::from((class, values));
-    Ok(Some(Value::Object(Some(result))))
+    let value = Value::try_from((class, values))?;
+    Ok(Some(value))
 }

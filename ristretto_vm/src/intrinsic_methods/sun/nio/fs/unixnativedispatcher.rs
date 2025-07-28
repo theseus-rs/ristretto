@@ -9,7 +9,7 @@ use ristretto_classfile::VersionSpecification::{
     Any, Between, Equal, GreaterThanOrEqual, LessThan, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_24};
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -338,8 +338,8 @@ pub(crate) async fn getcwd(_thread: Arc<Thread>, _parameters: Parameters) -> Res
         .iter()
         .map(|&b| b as i8)
         .collect::<Vec<i8>>();
-    let current_dir_bytes = Reference::from(current_dir);
-    Ok(Some(Value::Object(Some(current_dir_bytes))))
+    let current_dir_bytes = Value::from(current_dir);
+    Ok(Some(current_dir_bytes))
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getgrgid(I)[B", Any)]

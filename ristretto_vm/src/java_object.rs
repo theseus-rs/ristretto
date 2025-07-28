@@ -160,7 +160,7 @@ impl JavaObject for &str {
         let array = if java_class_file_version <= &JAVA_8 {
             // Java 8 and below: store as UTF-16 char array
             let chars = self.encode_utf16().collect::<Vec<u16>>();
-            Reference::CharArray(ConcurrentVec::from(chars))
+            Value::from(Reference::CharArray(ConcurrentVec::from(chars)))
         } else {
             if java_class_file_version >= &JAVA_17 {
                 object.set_value("hashIsZero", Value::Int(0))?;
@@ -184,10 +184,10 @@ impl JavaObject for &str {
             };
 
             object.set_value("coder", Value::Int(coder))?;
-            Reference::from(bytes)
+            Value::from(bytes)
         };
 
-        object.set_value("value", Value::Object(Some(array)))?;
+        object.set_value("value", array)?;
         object.set_value("hash", Value::Int(0))?;
 
         let value = Value::from(object);
