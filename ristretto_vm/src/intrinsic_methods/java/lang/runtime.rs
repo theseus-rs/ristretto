@@ -109,7 +109,7 @@ mod tests {
     async fn test_available_processors() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = available_processors(thread, Parameters::default()).await?;
-        let available_processors = result.unwrap_or(Value::Int(0)).to_int()?;
+        let available_processors: i32 = result.unwrap_or(Value::Int(0)).try_into()?;
         assert!(available_processors >= 1);
         Ok(())
     }
@@ -118,7 +118,7 @@ mod tests {
     async fn test_free_memory() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = free_memory(thread, Parameters::default()).await?;
-        let free_memory = result.unwrap_or(Value::Long(0)).to_long()?;
+        let free_memory: i64 = result.unwrap_or(Value::Long(0)).try_into()?;
         assert!(free_memory >= 1);
         Ok(())
     }
@@ -135,7 +135,7 @@ mod tests {
     async fn test_max_memory() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = max_memory(thread, Parameters::default()).await?;
-        let max_memory = result.unwrap_or(Value::Long(0)).to_long()?;
+        let max_memory: i64 = result.unwrap_or(Value::Long(0)).try_into()?;
         assert!(max_memory >= 1);
         Ok(())
     }
@@ -166,7 +166,7 @@ mod tests {
     async fn test_total_memory() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = total_memory(thread, Parameters::default()).await?;
-        let total_memory = result.unwrap_or(Value::Long(0)).to_long()?;
+        let total_memory: i64 = result.unwrap_or(Value::Long(0)).try_into()?;
         assert!(total_memory >= 1);
         Ok(())
     }

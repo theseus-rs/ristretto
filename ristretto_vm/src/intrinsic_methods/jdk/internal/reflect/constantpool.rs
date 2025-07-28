@@ -220,15 +220,15 @@ pub(crate) async fn get_member_ref_info_at_0(
         }
     };
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class_name = class_name.to_object(&thread).await?.to_reference()?;
+    let class_name = class_name.to_object(&thread).await?;
     let (name_index, type_index) = constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let name = constant_pool.try_get_utf8(*name_index)?;
-    let name = name.to_object(&thread).await?.to_reference()?;
+    let name = name.to_object(&thread).await?;
     let descriptor = constant_pool.try_get_utf8(*type_index)?;
-    let descriptor = descriptor.to_object(&thread).await?.to_reference()?;
+    let descriptor = descriptor.to_object(&thread).await?;
     let string_class = thread.class("java/lang/String").await?;
     let string_array = vec![class_name, name, descriptor];
-    let results = Value::from((string_class, string_array));
+    let results = Value::try_from((string_class, string_array))?;
     Ok(Some(results))
 }
 
@@ -385,12 +385,12 @@ pub(crate) async fn get_name_and_type_ref_info_at_0(
     };
     let (name_index, type_index) = constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let name = constant_pool.try_get_utf8(*name_index)?;
-    let name = name.to_object(&thread).await?.to_reference()?;
+    let name = name.to_object(&thread).await?;
     let descriptor = constant_pool.try_get_utf8(*type_index)?;
-    let descriptor = descriptor.to_object(&thread).await?.to_reference()?;
+    let descriptor = descriptor.to_object(&thread).await?;
     let string_class = thread.class("java/lang/String").await?;
     let string_array = vec![name, descriptor];
-    let results = Value::from((string_class, string_array));
+    let results = Value::try_from((string_class, string_array))?;
     Ok(Some(results))
 }
 
@@ -883,7 +883,7 @@ pub(crate) mod tests {
         let value = get_name_and_type_ref_info_at_0(thread, parameters)
             .await?
             .expect("value");
-        let reference = value.to_reference()?.expect("value");
+        let reference: Reference = value.try_into()?;
         let class_name = reference.class_name().to_string();
         let values: Vec<Value> = reference.try_into()?;
         assert_eq!("java/lang/String", class_name);
@@ -902,7 +902,7 @@ pub(crate) mod tests {
         let value = get_name_and_type_ref_info_at_0(thread, parameters)
             .await?
             .expect("value");
-        let reference = value.to_reference()?.expect("value");
+        let reference: Reference = value.try_into()?;
         let class_name = reference.class_name().to_string();
         let values: Vec<Value> = reference.try_into()?;
         assert_eq!("java/lang/String", class_name);

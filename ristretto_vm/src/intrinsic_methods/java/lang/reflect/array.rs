@@ -533,7 +533,8 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ByteArray(array)) => {
-            let value = i8::try_from(value.to_int()?)?;
+            let value: i32 = value.try_into()?;
+            let value = i8::try_from(value)?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -545,7 +546,8 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::CharArray(array)) => {
-            let value = u16::try_from(value.to_int()?)?;
+            let value: i32 = value.try_into()?;
+            let value = u16::try_from(value)?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -557,7 +559,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::FloatArray(array)) => {
-            let value = value.to_float()?;
+            let value: f32 = value.try_into()?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -569,7 +571,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::DoubleArray(array)) => {
-            let value = value.to_double()?;
+            let value: f64 = value.try_into()?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -581,7 +583,8 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::ShortArray(array)) => {
-            let value = i16::try_from(value.to_int()?)?;
+            let value: i32 = value.try_into()?;
+            let value = i16::try_from(value)?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -593,7 +596,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::IntArray(array)) => {
-            let value = value.to_int()?;
+            let value: i32 = value.try_into()?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -605,7 +608,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::LongArray(array)) => {
-            let value = value.to_long()?;
+            let value: i64 = value.try_into()?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -1079,28 +1082,22 @@ mod tests {
         let array = multi_new_array(thread.clone(), parameters)
             .await?
             .expect("array");
-        if let Value::Object(Some(Reference::Array(outer_array))) = array {
-            let outer_array = outer_array
-                .elements
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
-            assert_eq!(outer_array.len(), 3);
-            for i in 0..3 {
-                let inner_array = outer_array.get(i).expect("inner array");
-                if let Some(Reference::IntArray(inner_array)) = inner_array {
-                    let inner_array = inner_array
-                        .read()
-                        .map_err(|error| PoisonedLock(error.to_string()))?;
-                    assert_eq!(inner_array.len(), 4);
-                    for j in 0..4 {
-                        assert_eq!(inner_array.get(j), Some(&0i32));
-                    }
-                } else {
-                    panic!("Expected IntArray but got {inner_array:?}");
+        let reference = array.as_reference()?;
+        let (_outer_class, outer_array) = reference.as_class_vec_ref()?;
+        assert_eq!(outer_array.len(), 3);
+        for i in 0..3 {
+            let inner_array = outer_array.get(i).expect("inner array");
+            if let Some(Reference::IntArray(inner_array)) = inner_array {
+                let inner_array = inner_array
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                assert_eq!(inner_array.len(), 4);
+                for j in 0..4 {
+                    assert_eq!(inner_array.get(j), Some(&0i32));
                 }
+            } else {
+                panic!("Expected IntArray but got {inner_array:?}");
             }
-        } else {
-            panic!("Expected Array but got {array:?}");
         }
         Ok(())
     }

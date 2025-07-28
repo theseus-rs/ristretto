@@ -146,7 +146,7 @@ fn process_error(error: Error) -> Result<()> {
             if let Value::Object(Some(ref _file_object)) = file {
                 source = file.try_into()?;
             }
-            let line = stack_trace_element.value("lineNumber")?.to_int()?;
+            let line: i32 = stack_trace_element.value("lineNumber")?.try_into()?;
             if line > 0 {
                 if source.is_empty() {
                     source = format!("{line}");

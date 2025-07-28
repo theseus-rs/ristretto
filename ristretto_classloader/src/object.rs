@@ -449,7 +449,7 @@ impl TryInto<bool> for Object {
 
     fn try_into(self) -> Result<bool> {
         let value = self.class_value("java/lang/Boolean")?;
-        let value = value.to_int()?;
+        let value: i32 = value.try_into()?;
         Ok(value != 0)
     }
 }
@@ -459,8 +459,9 @@ impl TryInto<char> for Object {
 
     fn try_into(self) -> Result<char> {
         let value = self.class_value("java/lang/Character")?;
+        let value: i32 = value.try_into()?;
         #[expect(clippy::cast_sign_loss)]
-        let value = value.to_int()? as u32;
+        let value = value as u32;
         let character = char::try_from(value)
             .map_err(|_| InvalidValueType("Invalid character value".to_string()))?;
         Ok(character)
@@ -472,7 +473,7 @@ impl TryInto<i8> for Object {
 
     fn try_into(self) -> Result<i8> {
         let value = self.class_value("java/lang/Byte")?;
-        let value = value.to_int()?;
+        let value: i32 = value.try_into()?;
         let value =
             i8::try_from(value).map_err(|_| InvalidValueType("Invalid byte value".to_string()))?;
         Ok(value)
@@ -494,7 +495,7 @@ impl TryInto<i16> for Object {
 
     fn try_into(self) -> Result<i16> {
         let value = self.class_value("java/lang/Short")?;
-        let value = value.to_int()?;
+        let value: i32 = value.try_into()?;
         let value = i16::try_from(value)
             .map_err(|_| InvalidValueType("Invalid short value".to_string()))?;
         Ok(value)
@@ -516,7 +517,7 @@ impl TryInto<i32> for Object {
 
     fn try_into(self) -> Result<i32> {
         let value = self.class_value("java/lang/Integer")?;
-        let value = value.to_int()?;
+        let value: i32 = value.try_into()?;
         Ok(value)
     }
 }
@@ -536,7 +537,7 @@ impl TryInto<i64> for Object {
 
     fn try_into(self) -> Result<i64> {
         let value = self.class_value("java/lang/Long")?;
-        let value = value.to_long()?;
+        let value = value.try_into()?;
         Ok(value)
     }
 }
@@ -576,7 +577,7 @@ impl TryInto<f32> for Object {
 
     fn try_into(self) -> Result<f32> {
         let value = self.class_value("java/lang/Float")?;
-        let value = value.to_float()?;
+        let value = value.try_into()?;
         Ok(value)
     }
 }
@@ -586,7 +587,7 @@ impl TryInto<f64> for Object {
 
     fn try_into(self) -> Result<f64> {
         let value = self.class_value("java/lang/Double")?;
-        let value = value.to_double()?;
+        let value = value.try_into()?;
         Ok(value)
     }
 }
@@ -603,7 +604,7 @@ impl TryInto<String> for Object {
         };
         match reference {
             ByteArray(bytes) => {
-                let coder = self.value("coder")?.to_int()?;
+                let coder: i32 = self.value("coder")?.try_into()?;
                 if coder == 0 {
                     // Latin-1 encoded string
                     let bytes = bytes

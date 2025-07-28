@@ -177,7 +177,7 @@ mod tests {
     async fn test_get_random_seed_for_dumping() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = get_random_seed_for_dumping(thread, Parameters::default()).await?;
-        let hash = result.unwrap_or(Value::Long(0)).to_long()?;
+        let hash: i64 = result.unwrap_or(Value::Long(0)).try_into()?;
         assert_ne!(0, hash);
         Ok(())
     }

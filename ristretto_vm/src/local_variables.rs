@@ -215,7 +215,8 @@ mod tests {
     fn test_get() -> Result<()> {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Int(42))?;
-        assert_eq!(locals.get(0)?.to_int()?, 42);
+        let value: i32 = locals.get(0)?.try_into()?;
+        assert_eq!(value, 42);
         Ok(())
     }
 
@@ -379,7 +380,7 @@ mod tests {
     fn test_set() -> Result<()> {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Int(42))?;
-        assert_eq!(locals.get(0)?.to_int()?, 42);
+        assert_eq!(locals.get_int(0)?, 42);
         Ok(())
     }
 

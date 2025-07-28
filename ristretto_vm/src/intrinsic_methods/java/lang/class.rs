@@ -1186,7 +1186,7 @@ mod tests {
         let value = get_declared_classes_0(thread, parameters)
             .await?
             .expect("interfaces");
-        let reference = value.to_reference()?.expect("interfaces");
+        let reference: Reference = value.try_into()?;
         let class_name = reference.class_name().to_string();
         let values: Vec<Value> = reference.try_into()?;
         assert_eq!(class_name, "[Ljava/lang/Class;");
@@ -1213,7 +1213,7 @@ mod tests {
         let value = get_declared_constructors_0(thread, parameters)
             .await?
             .expect("constructors");
-        let reference = value.to_reference()?.expect("constructors");
+        let reference: Reference = value.try_into()?;
         let class_name = reference.class_name().to_string();
         let values: Vec<Value> = reference.try_into()?;
         assert_eq!(class_name, "[Ljava/lang/reflect/Constructor;");
@@ -1253,7 +1253,7 @@ mod tests {
         let value = get_declared_fields_0(thread, parameters)
             .await?
             .expect("fields");
-        let reference = value.to_reference()?.expect("fields");
+        let reference: Reference = value.try_into()?;
         let class_name = reference.class_name().to_string();
         let values: Vec<Value> = reference.try_into()?;
         assert_eq!(class_name, "[Ljava/lang/reflect/Field;");
@@ -1297,7 +1297,7 @@ mod tests {
         let value = get_declared_methods_0(thread, parameters)
             .await?
             .expect("methods");
-        let reference = value.to_reference()?.expect("methods");
+        let reference: Reference = value.try_into()?;
         let class_name = reference.class_name().to_string();
         let values: Vec<Value> = reference.try_into()?;
         assert_eq!(class_name, "[Ljava/lang/reflect/Method;");
@@ -1438,7 +1438,7 @@ mod tests {
         let value = get_interfaces_0(thread, parameters)
             .await?
             .expect("interfaces");
-        let reference = value.to_reference()?.expect("interfaces");
+        let reference: Reference = value.try_into()?;
         let class_name = reference.class_name().to_string();
         let values: Vec<Value> = reference.try_into()?;
         assert_eq!(class_name, "[Ljava/lang/Class;");
