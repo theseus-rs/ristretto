@@ -6,6 +6,7 @@ use ristretto_classfile::JAVA_8;
 use ristretto_gc::{GarbageCollector, Gc, Trace};
 use std::collections::HashSet;
 use std::fmt::{Debug, Display};
+use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock};
 
 /// Represents an object in the Ristretto VM.
@@ -305,7 +306,8 @@ impl Object {
         true
     }
 
-    /// Returns hash code implementation based on memory address.
+    /// Returns hash code implementation based on memory address. This is used by the Java
+    /// `Object.hash_code()` implementation.
     #[must_use]
     pub fn hash_code(&self) -> usize {
         Gc::as_ptr(&self.values).cast::<Vec<Value>>() as usize
@@ -421,6 +423,18 @@ impl Display for Object {
                 write!(f, "Class({value})")
             }
             _ => write!(f, "Object(class {class_name})"),
+        }
+    }
+}
+
+impl Hash for Object {
+    /// Hash an `Object` based on its class name and field values.
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.class.name().hash(state);
+        for value_lock in self.values.iter() {
+            if let Ok(value_guard) = value_lock.read() {
+                value_guard.hash(state);
+            }
         }
     }
 }
@@ -660,6 +674,7 @@ impl TryInto<Arc<Class>> for Object {
 mod tests {
     use super::*;
     use crate::runtime;
+    use std::hash::DefaultHasher;
 
     async fn java8_string_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) =
@@ -686,6 +701,16 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_hash_code() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let object1 = Object::new(class.clone())?;
+        let object2 = Object::new(class)?;
+        assert_ne!(0, object1.hash_code());
+        assert_ne!(object1.hash_code(), object2.hash_code());
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_clone() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
@@ -699,21 +724,32 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_hash_code() -> Result<()> {
-        let class = load_class("java.lang.Object").await?;
-        let object1 = Object::new(class.clone())?;
-        let object2 = Object::new(class)?;
-        assert_ne!(0, object1.hash_code());
-        assert_ne!(object1.hash_code(), object2.hash_code());
+    async fn test_debug() -> Result<()> {
+        let class = load_class("java.lang.Integer").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        assert_eq!(
+            "Object(java/lang/Integer)\n  value=int(42)\n",
+            format!("{object:?}")
+        );
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_trace() -> Result<()> {
-        let class = load_class("java.lang.Object").await?;
-        let object = Object::new(class)?;
-        let collector = GarbageCollector::new();
-        object.trace(&collector);
+    async fn test_hash() -> Result<()> {
+        let class = load_class("java.lang.Integer").await?;
+        let object1 = Object::new(class.clone())?;
+        object1.set_value("value", Value::Int(42))?;
+        let object2 = Object::new(class)?;
+        object2.set_value("value", Value::Int(42))?;
+        assert_eq!(object1, object2);
+        let mut hasher1 = DefaultHasher::new();
+        object1.hash(&mut hasher1);
+        let hash1 = hasher1.finish();
+        let mut hasher2 = DefaultHasher::new();
+        object2.hash(&mut hasher2);
+        let hash2 = hasher2.finish();
+        assert_eq!(hash1, hash2);
         Ok(())
     }
 
@@ -726,6 +762,15 @@ mod tests {
         assert!(object1.ptr_eq(&object1));
         assert!(!object1.ptr_eq(&object2));
         assert!(object1.ptr_eq(&object3));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_trace() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let object = Object::new(class)?;
+        let collector = GarbageCollector::new();
+        object.trace(&collector);
         Ok(())
     }
 
@@ -750,18 +795,6 @@ mod tests {
         let clone = object.deep_clone()?;
         assert_eq!(object, clone);
         assert!(object.ptr_eq(&clone));
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_debug() -> Result<()> {
-        let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(42))?;
-        assert_eq!(
-            "Object(java/lang/Integer)\n  value=int(42)\n",
-            format!("{object:?}")
-        );
         Ok(())
     }
 

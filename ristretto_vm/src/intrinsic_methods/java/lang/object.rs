@@ -43,10 +43,10 @@ pub(crate) async fn hash_code(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let Some(object) = parameters.pop_reference()? else {
+    let Some(reference) = parameters.pop_reference()? else {
         return Err(InternalError("no object reference defined".to_string()));
     };
-    let hash_code = object.hash_code();
+    let hash_code = reference.hash_code();
     #[expect(clippy::cast_possible_truncation)]
     let hash_code = (hash_code ^ (hash_code >> 32)) as u32;
     #[expect(clippy::cast_possible_wrap)]

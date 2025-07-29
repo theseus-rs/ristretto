@@ -3,6 +3,7 @@ use crate::reference::Reference;
 use crate::{Class, Object, Result};
 use std::fmt;
 use std::fmt::Display;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 /// Represents a value in the Ristretto VM.
@@ -82,6 +83,27 @@ impl Display for Value {
 }
 
 impl Eq for Value {}
+
+impl Hash for Value {
+    /// Computes a hash for the `Value` instance.  Handles the following cases:
+    ///
+    /// - `Int` and `Long` values are hashed directly.
+    /// - `Float` and `Double` values are hashed using their bit representations to avoid issues
+    ///   with floating-point precision.
+    /// - `Object` values are hashed by their references, allowing for `None` values to be
+    ///   considered equal.
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Value::Int(value) => value.hash(state),
+            Value::Long(value) => value.hash(state),
+            Value::Float(value) => value.to_bits().hash(state),
+            Value::Double(value) => value.to_bits().hash(state),
+            Value::Object(Some(reference)) => reference.hash(state),
+            Value::Object(None) => 0.hash(state),
+            Value::Unused => (-1).hash(state),
+        }
+    }
+}
 
 impl PartialEq for Value {
     /// Compares two `Value` instances for equality.  Handles the following cases:
@@ -639,6 +661,7 @@ impl TryInto<String> for Value {
 mod tests {
     use super::*;
     use crate::{Class, Object, runtime};
+    use std::hash::DefaultHasher;
     use std::sync::Arc;
 
     async fn load_class(class: &str) -> Result<Arc<Class>> {
@@ -779,12 +802,34 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_int() {
+        let mut hasher = DefaultHasher::new();
+        Value::Int(42).hash(&mut hasher);
+        let hash1 = hasher.finish();
+        hasher = DefaultHasher::new();
+        Value::Int(42).hash(&mut hasher);
+        let hash2 = hasher.finish();
+        assert_eq!(hash1, hash2);
+    }
+
+    #[test]
     fn test_eq_int() {
         assert_eq!(Value::Int(1), Value::Int(1));
         assert_ne!(Value::Int(1), Value::Int(2));
         assert_ne!(Value::Int(1), Value::Long(1));
         let value = Value::Int(42);
         assert_eq!(value, value);
+    }
+
+    #[test]
+    fn test_hash_long() {
+        let mut hasher = DefaultHasher::new();
+        Value::Long(42).hash(&mut hasher);
+        let hash1 = hasher.finish();
+        hasher = DefaultHasher::new();
+        Value::Long(42).hash(&mut hasher);
+        let hash2 = hasher.finish();
+        assert_eq!(hash1, hash2);
     }
 
     #[test]
@@ -797,6 +842,17 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_float() {
+        let mut hasher = DefaultHasher::new();
+        Value::Float(42.1).hash(&mut hasher);
+        let hash1 = hasher.finish();
+        hasher = DefaultHasher::new();
+        Value::Float(42.1).hash(&mut hasher);
+        let hash2 = hasher.finish();
+        assert_eq!(hash1, hash2);
+    }
+
+    #[test]
     fn test_eq_float() {
         assert_eq!(Value::Float(1.0), Value::Float(1.0));
         assert_ne!(Value::Float(1.0), Value::Float(2.0));
@@ -806,12 +862,51 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_double() {
+        let mut hasher = DefaultHasher::new();
+        Value::Double(42.1).hash(&mut hasher);
+        let hash1 = hasher.finish();
+        hasher = DefaultHasher::new();
+        Value::Double(42.1).hash(&mut hasher);
+        let hash2 = hasher.finish();
+        assert_eq!(hash1, hash2);
+    }
+
+    #[test]
     fn test_eq_double() {
         assert_eq!(Value::Double(1.0), Value::Double(1.0));
         assert_ne!(Value::Double(1.0), Value::Double(2.0));
         assert_ne!(Value::Double(1.0), Value::Int(1));
         let value = Value::Double(42.0);
         assert_eq!(value, value);
+    }
+
+    #[tokio::test]
+    async fn test_hash_object() -> Result<()> {
+        let class_name = "java.lang.Object";
+        let class = load_class(class_name).await?;
+        let value1 = Value::from(Object::new(class.clone())?);
+        let value2 = Value::from(Object::new(class.clone())?);
+
+        let mut hasher = DefaultHasher::new();
+        value1.hash(&mut hasher);
+        let hash1 = hasher.finish();
+        hasher = DefaultHasher::new();
+        value2.hash(&mut hasher);
+        let hash2 = hasher.finish();
+        assert_eq!(hash1, hash2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_hash_object_none() {
+        let mut hasher = DefaultHasher::new();
+        Value::Object(None).hash(&mut hasher);
+        let hash1 = hasher.finish();
+        hasher = DefaultHasher::new();
+        Value::Object(None).hash(&mut hasher);
+        let hash2 = hasher.finish();
+        assert_eq!(hash1, hash2);
     }
 
     #[tokio::test]
@@ -837,6 +932,17 @@ mod tests {
         let value2 = value1.clone();
         assert_eq!(value1, value2);
         Ok(())
+    }
+
+    #[test]
+    fn test_hash_unused() {
+        let mut hasher = DefaultHasher::new();
+        Value::Unused.hash(&mut hasher);
+        let hash1 = hasher.finish();
+        hasher = DefaultHasher::new();
+        Value::Unused.hash(&mut hasher);
+        let hash2 = hasher.finish();
+        assert_eq!(hash1, hash2);
     }
 
     #[test]
