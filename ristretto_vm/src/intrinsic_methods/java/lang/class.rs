@@ -1186,13 +1186,12 @@ mod tests {
         let value = get_declared_classes_0(thread, parameters)
             .await?
             .expect("interfaces");
-        let reference: Reference = value.try_into()?;
-        let class_name = reference.class_name().to_string();
-        let values: Vec<Value> = reference.try_into()?;
-        assert_eq!(class_name, "[Ljava/lang/Class;");
+        let (class, values) = value.as_class_vec_ref()?;
+        assert_eq!(class.name(), "[Ljava/lang/Class;");
         let mut class_names = Vec::new();
-        for reference in values {
-            let object: Object = reference.try_into()?;
+        for reference in values.iter().cloned() {
+            let reference = reference.expect("interfaces");
+            let object = reference.as_object_ref()?;
             let class_name = object.value("name")?;
             let class_name: String = class_name.try_into()?;
             class_names.push(class_name);
@@ -1213,10 +1212,8 @@ mod tests {
         let value = get_declared_constructors_0(thread, parameters)
             .await?
             .expect("constructors");
-        let reference: Reference = value.try_into()?;
-        let class_name = reference.class_name().to_string();
-        let values: Vec<Value> = reference.try_into()?;
-        assert_eq!(class_name, "[Ljava/lang/reflect/Constructor;");
+        let (class, values) = value.as_class_vec_ref()?;
+        assert_eq!(class.name(), "[Ljava/lang/reflect/Constructor;");
         assert_eq!(2, values.len());
         // TODO: Enable test assertions when invokedynamic is implemented
         // let mut signatures = Vec::new();
@@ -1253,12 +1250,19 @@ mod tests {
         let value = get_declared_fields_0(thread, parameters)
             .await?
             .expect("fields");
-        let reference: Reference = value.try_into()?;
-        let class_name = reference.class_name().to_string();
-        let values: Vec<Value> = reference.try_into()?;
-        assert_eq!(class_name, "[Ljava/lang/reflect/Field;");
+        let (class, references) = {
+            let (class, values) = value.as_class_vec_ref()?;
+            let references = values
+                .iter()
+                .cloned()
+                .map(|reference| reference.expect("reference"))
+                .collect::<Vec<Reference>>();
+            (class, references)
+        };
+        assert_eq!(class.name(), "[Ljava/lang/reflect/Field;");
         let mut signatures = Vec::new();
-        for value in values {
+        for reference in references.into_iter() {
+            let value = Value::from(reference);
             let result = vm
                 .invoke(
                     "java.lang.reflect.Field",
@@ -1297,12 +1301,19 @@ mod tests {
         let value = get_declared_methods_0(thread, parameters)
             .await?
             .expect("methods");
-        let reference: Reference = value.try_into()?;
-        let class_name = reference.class_name().to_string();
-        let values: Vec<Value> = reference.try_into()?;
-        assert_eq!(class_name, "[Ljava/lang/reflect/Method;");
+        let (class, references) = {
+            let (class, values) = value.as_class_vec_ref()?;
+            let references = values
+                .iter()
+                .cloned()
+                .map(|reference| reference.expect("reference"))
+                .collect::<Vec<Reference>>();
+            (class, references)
+        };
+        assert_eq!(class.name(), "[Ljava/lang/reflect/Method;");
         let mut method_names = Vec::new();
-        for value in values {
+        for reference in references.into_iter() {
+            let value = Value::from(reference);
             let result = vm
                 .invoke(
                     "java.lang.reflect.Method",
@@ -1438,13 +1449,12 @@ mod tests {
         let value = get_interfaces_0(thread, parameters)
             .await?
             .expect("interfaces");
-        let reference: Reference = value.try_into()?;
-        let class_name = reference.class_name().to_string();
-        let values: Vec<Value> = reference.try_into()?;
-        assert_eq!(class_name, "[Ljava/lang/Class;");
+        let (class, values) = value.as_class_vec_ref()?;
+        assert_eq!(class.name(), "[Ljava/lang/Class;");
         let mut class_names = Vec::new();
-        for reference in values {
-            let object: Object = reference.try_into()?;
+        for reference in values.iter().cloned() {
+            let reference = reference.expect("reference");
+            let object = reference.as_object_ref()?;
             let class_name = object.value("name")?;
             let class_name: String = class_name.try_into()?;
             class_names.push(class_name);
