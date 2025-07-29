@@ -967,7 +967,7 @@ impl TryInto<bool> for Reference {
 
     fn try_into(self) -> Result<bool> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_bool()
     }
 }
 
@@ -976,7 +976,7 @@ impl TryInto<char> for Reference {
 
     fn try_into(self) -> Result<char> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_char()
     }
 }
 
@@ -985,7 +985,7 @@ impl TryInto<i8> for Reference {
 
     fn try_into(self) -> Result<i8> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_i8()
     }
 }
 
@@ -994,7 +994,7 @@ impl TryInto<u8> for Reference {
 
     fn try_into(self) -> Result<u8> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_u8()
     }
 }
 
@@ -1003,7 +1003,7 @@ impl TryInto<i16> for Reference {
 
     fn try_into(self) -> Result<i16> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_i16()
     }
 }
 
@@ -1012,7 +1012,7 @@ impl TryInto<u16> for Reference {
 
     fn try_into(self) -> Result<u16> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_u16()
     }
 }
 
@@ -1021,7 +1021,7 @@ impl TryInto<i32> for Reference {
 
     fn try_into(self) -> Result<i32> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_i32()
     }
 }
 
@@ -1030,7 +1030,7 @@ impl TryInto<u32> for Reference {
 
     fn try_into(self) -> Result<u32> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_u32()
     }
 }
 
@@ -1039,7 +1039,7 @@ impl TryInto<i64> for Reference {
 
     fn try_into(self) -> Result<i64> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_i64()
     }
 }
 
@@ -1048,7 +1048,7 @@ impl TryInto<u64> for Reference {
 
     fn try_into(self) -> Result<u64> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_u64()
     }
 }
 
@@ -1057,7 +1057,7 @@ impl TryInto<isize> for Reference {
 
     fn try_into(self) -> Result<isize> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_isize()
     }
 }
 
@@ -1066,7 +1066,7 @@ impl TryInto<usize> for Reference {
 
     fn try_into(self) -> Result<usize> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_usize()
     }
 }
 
@@ -1075,7 +1075,7 @@ impl TryInto<f32> for Reference {
 
     fn try_into(self) -> Result<f32> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_f32()
     }
 }
 
@@ -1084,7 +1084,7 @@ impl TryInto<f64> for Reference {
 
     fn try_into(self) -> Result<f64> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_f64()
     }
 }
 
@@ -1104,7 +1104,7 @@ impl TryInto<String> for Reference {
 
     fn try_into(self) -> Result<String> {
         let object: Object = self.try_into()?;
-        object.try_into()
+        object.as_string()
     }
 }
 
@@ -2697,7 +2697,7 @@ mod tests {
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
         object.set_value("value", string_value)?;
-        let result: String = object.try_into()?;
+        let result = object.as_string()?;
         assert_eq!("foo".to_string(), result);
         Ok(())
     }

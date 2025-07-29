@@ -56,7 +56,7 @@ pub(crate) async fn for_name_0(
         return Err(NullPointerException("className cannot be null".to_string()).into());
     };
 
-    let class_name: String = object.try_into()?;
+    let class_name = object.as_string()?;
     let class = match thread.class(&class_name).await {
         Ok(class) => class,
         Err(_error) => {
@@ -728,7 +728,7 @@ pub(crate) async fn get_primitive_class(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let primitive: Object = parameters.pop_object()?;
-    let class_name: String = primitive.try_into()?;
+    let class_name = primitive.as_string()?;
     let class = thread.class(class_name).await?;
     let class = class.to_object(&thread).await?;
     Ok(Some(class))

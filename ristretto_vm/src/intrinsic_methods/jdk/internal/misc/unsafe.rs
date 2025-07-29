@@ -1149,7 +1149,7 @@ pub(crate) async fn object_field_offset_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let field_name: String = parameters.pop_object()?.try_into()?;
+    let field_name = parameters.pop_object()?.as_string()?;
     let class_object = parameters.pop_object()?;
     let class_name: String = class_object.value("name")?.try_into()?;
     let class = thread.class(&class_name).await?;

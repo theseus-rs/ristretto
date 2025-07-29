@@ -30,8 +30,8 @@ pub(crate) async fn canonicalize_with_prefix_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let path: String = parameters.pop_object()?.try_into()?;
-    let prefix: String = parameters.pop_object()?.try_into()?;
+    let path = parameters.pop_object()?.as_string()?;
+    let prefix = parameters.pop_object()?.as_string()?;
     let canonical_path: String;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]

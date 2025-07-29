@@ -41,7 +41,7 @@ pub(crate) async fn canonicalize_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let path: String = parameters.pop_object()?.try_into()?;
+    let path = parameters.pop_object()?.as_string()?;
     let canonical_path: String;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -174,7 +174,7 @@ pub(crate) async fn create_file_exclusively_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let path: String = parameters.pop_object()?.try_into()?;
+    let path = parameters.pop_object()?.as_string()?;
     let created: bool;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -385,7 +385,7 @@ pub(crate) async fn get_name_max_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _path: String = parameters.pop_object()?.try_into()?;
+    let _path = parameters.pop_object()?.as_string()?;
 
     // The default on windows is 255 characters for the maximum filename length, but this can be
     // extended to 32,767 characters when long paths are enabled.
