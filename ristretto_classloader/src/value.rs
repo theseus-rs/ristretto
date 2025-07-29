@@ -4,7 +4,8 @@ use crate::{Class, Object, Result};
 use std::fmt;
 use std::fmt::Display;
 use std::hash::{Hash, Hasher};
-use std::sync::Arc;
+use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
+use zerocopy::transmute_ref;
 
 /// Represents a value in the Ristretto VM.
 #[derive(Clone, Debug)]
@@ -60,6 +61,42 @@ impl Value {
         };
 
         Ok(value)
+    }
+
+    /// Returns a reference to `Vec<Option<Reference>>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `Reference::Array`
+    #[expect(clippy::type_complexity)]
+    pub fn as_class_vec_ref(
+        &self,
+    ) -> Result<(&Arc<Class>, RwLockReadGuard<'_, Vec<Option<Reference>>>)> {
+        let reference = self.as_reference()?;
+        reference.as_class_vec_ref()
+    }
+
+    /// Returns a mutable reference to `Vec<Option<Reference>>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `Reference::Array`
+    #[expect(clippy::type_complexity)]
+    pub fn as_class_vec_mut(
+        &self,
+    ) -> Result<(&Arc<Class>, RwLockWriteGuard<'_, Vec<Option<Reference>>>)> {
+        let reference = self.as_reference()?;
+        reference.as_class_vec_mut()
+    }
+
+    /// Returns a reference to an `Object`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not an Object.
+    pub fn as_object_ref(&self) -> Result<&Object> {
+        let reference = self.as_reference()?;
+        reference.as_object_ref()
     }
 }
 
@@ -336,7 +373,9 @@ impl TryInto<Vec<bool>> for Value {
 
     fn try_into(self) -> Result<Vec<bool>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        let value = reference.as_byte_vec_ref()?.to_vec();
+        let value = value.into_iter().map(|v| v != 0).collect();
+        Ok(value)
     }
 }
 
@@ -345,7 +384,15 @@ impl TryInto<Vec<char>> for Value {
 
     fn try_into(self) -> Result<Vec<char>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        let values = reference.as_char_vec_ref()?.to_vec();
+        let mut result = Vec::with_capacity(values.len());
+        for value in values {
+            let value = u32::from(value);
+            let value = char::from_u32(value)
+                .ok_or(InvalidValueType(format!("Invalid char value {value}")))?;
+            result.push(value);
+        }
+        Ok(result)
     }
 }
 
@@ -354,7 +401,7 @@ impl TryInto<Vec<i8>> for Value {
 
     fn try_into(self) -> Result<Vec<i8>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        Ok(reference.as_byte_vec_ref()?.to_vec())
     }
 }
 
@@ -363,7 +410,9 @@ impl TryInto<Vec<u8>> for Value {
 
     fn try_into(self) -> Result<Vec<u8>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        let value = reference.as_byte_vec_ref()?.to_vec();
+        let value: &[u8] = transmute_ref!(value.as_slice());
+        Ok(value.to_vec())
     }
 }
 
@@ -372,7 +421,7 @@ impl TryInto<Vec<i16>> for Value {
 
     fn try_into(self) -> Result<Vec<i16>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        Ok(reference.as_short_vec_ref()?.to_vec())
     }
 }
 
@@ -381,7 +430,9 @@ impl TryInto<Vec<u16>> for Value {
 
     fn try_into(self) -> Result<Vec<u16>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        let value = reference.as_short_vec_ref()?.to_vec();
+        let value: &[u16] = transmute_ref!(value.as_slice());
+        Ok(value.to_vec())
     }
 }
 
@@ -390,7 +441,7 @@ impl TryInto<Vec<i32>> for Value {
 
     fn try_into(self) -> Result<Vec<i32>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        Ok(reference.as_int_vec_ref()?.to_vec())
     }
 }
 
@@ -399,7 +450,9 @@ impl TryInto<Vec<u32>> for Value {
 
     fn try_into(self) -> Result<Vec<u32>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        let value = reference.as_int_vec_ref()?.to_vec();
+        let value: &[u32] = transmute_ref!(value.as_slice());
+        Ok(value.to_vec())
     }
 }
 
@@ -408,7 +461,7 @@ impl TryInto<Vec<i64>> for Value {
 
     fn try_into(self) -> Result<Vec<i64>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        Ok(reference.as_long_vec_ref()?.to_vec())
     }
 }
 
@@ -417,7 +470,9 @@ impl TryInto<Vec<u64>> for Value {
 
     fn try_into(self) -> Result<Vec<u64>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        let value = reference.as_long_vec_ref()?.to_vec();
+        let value: &[u64] = transmute_ref!(value.as_slice());
+        Ok(value.to_vec())
     }
 }
 
@@ -425,8 +480,10 @@ impl TryInto<Vec<isize>> for Value {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<isize>> {
-        let reference: Reference = self.try_into()?;
-        reference.try_into()
+        let value: Vec<i64> = self.try_into()?;
+        #[expect(clippy::cast_possible_truncation)]
+        let value = value.into_iter().map(|v| v as isize).collect();
+        Ok(value)
     }
 }
 
@@ -434,8 +491,10 @@ impl TryInto<Vec<usize>> for Value {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<usize>> {
-        let reference: Reference = self.try_into()?;
-        reference.try_into()
+        let value: Vec<u64> = self.try_into()?;
+        #[expect(clippy::cast_possible_truncation)]
+        let value = value.into_iter().map(|v| v as usize).collect();
+        Ok(value)
     }
 }
 
@@ -444,7 +503,7 @@ impl TryInto<Vec<f32>> for Value {
 
     fn try_into(self) -> Result<Vec<f32>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        Ok(reference.as_float_vec_ref()?.to_vec())
     }
 }
 
@@ -453,7 +512,7 @@ impl TryInto<Vec<f64>> for Value {
 
     fn try_into(self) -> Result<Vec<f64>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        Ok(reference.as_double_vec_ref()?.to_vec())
     }
 }
 
@@ -462,7 +521,19 @@ impl TryInto<Vec<Value>> for Value {
 
     fn try_into(self) -> Result<Vec<Value>> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        let (_class, values) = reference.as_class_vec_ref()?;
+        let values = values
+            .iter()
+            .cloned()
+            .map(|value| {
+                if let Some(value) = value {
+                    Value::Object(Some(value))
+                } else {
+                    Value::Object(None)
+                }
+            })
+            .collect();
+        Ok(values)
     }
 }
 
@@ -474,7 +545,7 @@ impl TryInto<bool> for Value {
             Ok(value != 0)
         } else {
             let reference: Reference = self.try_into()?;
-            reference.try_into()
+            reference.as_bool()
         }
     }
 }
@@ -491,7 +562,7 @@ impl TryInto<char> for Value {
             Ok(value)
         } else {
             let reference: Reference = self.try_into()?;
-            reference.try_into()
+            reference.as_char()
         }
     }
 }
@@ -504,7 +575,7 @@ impl TryInto<i8> for Value {
             Ok(i8::try_from(value)?)
         } else {
             let reference: Reference = self.try_into()?;
-            reference.try_into()
+            reference.as_i8()
         }
     }
 }
@@ -526,7 +597,7 @@ impl TryInto<i16> for Value {
             Ok(i16::try_from(value)?)
         } else {
             let reference: Reference = self.try_into()?;
-            reference.try_into()
+            reference.as_i16()
         }
     }
 }
@@ -548,7 +619,7 @@ impl TryInto<i32> for Value {
             Ok(value)
         } else {
             let reference: Reference = self.try_into()?;
-            reference.try_into()
+            reference.as_i32()
         }
     }
 }
@@ -570,7 +641,7 @@ impl TryInto<i64> for Value {
             Ok(value)
         } else {
             let reference: Reference = self.try_into()?;
-            reference.try_into()
+            reference.as_i64()
         }
     }
 }
@@ -610,7 +681,7 @@ impl TryInto<f32> for Value {
             Ok(value)
         } else {
             let reference: Reference = self.try_into()?;
-            reference.try_into()
+            reference.as_f32()
         }
     }
 }
@@ -623,7 +694,7 @@ impl TryInto<f64> for Value {
             Ok(value)
         } else {
             let reference: Reference = self.try_into()?;
-            reference.try_into()
+            reference.as_f64()
         }
     }
 }
@@ -633,7 +704,8 @@ impl TryInto<Object> for Value {
 
     fn try_into(self) -> Result<Object> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        let object = reference.as_object_ref()?.clone();
+        Ok(object)
     }
 }
 
@@ -653,7 +725,7 @@ impl TryInto<String> for Value {
 
     fn try_into(self) -> Result<String> {
         let reference: Reference = self.try_into()?;
-        reference.try_into()
+        reference.as_string()
     }
 }
 
@@ -1353,20 +1425,36 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_try_into_class_vec() -> Result<()> {
+    async fn test_as_class_vec_ref() -> Result<()> {
         let original_class = load_class("[Ljava/lang/Object;").await?;
-        let class_name = "java/lang/Integer";
-        let class = load_class(class_name).await?;
-        let object = Object::new(class.clone())?;
-        object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
-        let original_values = vec![value];
-        let value = Value::try_from((original_class.clone(), original_values.clone()))?;
-        let reference: Reference = value.try_into()?;
-        let reference_class_name = reference.class_name().to_string();
-        let reference_values: Vec<Value> = reference.try_into()?;
-        assert_eq!(original_class.name(), reference_class_name);
-        assert_eq!(original_values.len(), reference_values.len());
+        let original_value = vec![None];
+        let value = Value::from((original_class.clone(), original_value.clone()));
+        let (class, value) = value.as_class_vec_ref()?;
+        assert_eq!(&original_class, class);
+        assert_eq!(original_value, value.to_vec());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_class_vec_mut() -> Result<()> {
+        let object_class = load_class("[Ljava/lang/Object;").await?;
+        let value = Value::from((object_class.clone(), vec![]));
+        {
+            let (_class, mut mutable_reference) = value.as_class_vec_mut()?;
+            mutable_reference.push(None);
+        }
+        let (_class, array) = value.as_class_vec_ref()?;
+        assert_eq!(array.to_vec(), vec![None]);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_object_ref() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let object = Object::new(class)?;
+        let reference = Reference::from(object.clone());
+        let result = reference.as_object_ref()?;
+        assert_eq!(&object, result);
         Ok(())
     }
 

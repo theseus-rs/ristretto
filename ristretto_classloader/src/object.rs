@@ -392,7 +392,7 @@ impl Object {
     /// if the object is not an instance of `java/lang/Byte` or if the value cannot be converted to
     /// an unsigned byte.
     pub fn as_u8(&self) -> Result<u8> {
-        let value: i8 = self.as_i8()?;
+        let value = self.as_i8()?;
         #[expect(clippy::cast_sign_loss)]
         Ok(value as u8)
     }
@@ -418,7 +418,7 @@ impl Object {
     /// if the object is not an instance of `java/lang/Short` or if the value cannot be converted to
     /// an unsigned short.
     pub fn as_u16(&self) -> Result<u16> {
-        let value: i16 = self.as_i16()?;
+        let value = self.as_i16()?;
         #[expect(clippy::cast_sign_loss)]
         Ok(value as u16)
     }
@@ -442,7 +442,7 @@ impl Object {
     /// if the object is not an instance of `java/lang/Integer` or if the value cannot be converted
     /// to an unsigned integer.
     pub fn as_u32(&self) -> Result<u32> {
-        let value: i32 = self.as_i32()?;
+        let value = self.as_i32()?;
         #[expect(clippy::cast_sign_loss)]
         Ok(value as u32)
     }
@@ -455,7 +455,7 @@ impl Object {
     /// a signed long.
     pub fn as_i64(&self) -> Result<i64> {
         let value = self.class_value("java/lang/Long")?;
-        let value = value.try_into()?;
+        let value: i64 = value.try_into()?;
         Ok(value)
     }
 
@@ -466,7 +466,7 @@ impl Object {
     /// if the object is not an instance of `java/lang/Long` or if the value cannot be converted to
     /// an unsigned long.
     pub fn as_u64(&self) -> Result<u64> {
-        let value: i64 = self.as_i64()?;
+        let value = self.as_i64()?;
         #[expect(clippy::cast_sign_loss)]
         Ok(value as u64)
     }
@@ -478,7 +478,7 @@ impl Object {
     /// if the object is not an instance of `java/lang/Long` or if the value cannot be converted to
     /// a signed isize.
     pub fn as_isize(&self) -> Result<isize> {
-        let value: i64 = self.as_i64()?;
+        let value = self.as_i64()?;
         #[expect(clippy::cast_possible_truncation)]
         Ok(value as isize)
     }
@@ -490,7 +490,7 @@ impl Object {
     /// if the object is not an instance of `java/lang/Long` or if the value cannot be converted to
     /// an unsigned usize.
     pub fn as_usize(&self) -> Result<usize> {
-        let value: u64 = self.as_u64()?;
+        let value = self.as_u64()?;
         #[expect(clippy::cast_possible_truncation)]
         Ok(value as usize)
     }
@@ -503,7 +503,7 @@ impl Object {
     /// a floating-point value.
     pub fn as_f32(&self) -> Result<f32> {
         let value = self.class_value("java/lang/Float")?;
-        let value = value.try_into()?;
+        let value: f32 = value.try_into()?;
         Ok(value)
     }
 
@@ -515,7 +515,7 @@ impl Object {
     /// to a double-precision floating-point value.
     pub fn as_f64(&self) -> Result<f64> {
         let value = self.class_value("java/lang/Double")?;
-        let value = value.try_into()?;
+        let value: f64 = value.try_into()?;
         Ok(value)
     }
 

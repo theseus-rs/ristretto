@@ -45,7 +45,7 @@ async fn class_object_from_bytes(
     }
 
     if let Some(source_file) = source_file {
-        let _source_file: String = source_file.try_into()?;
+        let _source_file = source_file.as_string()?;
         // TODO: implement setting the source file
     }
 
@@ -70,7 +70,7 @@ pub(crate) async fn define_class_0_0(
     let bytes: Vec<u8> = parameters.pop()?.try_into()?;
     let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
-        let expected_class_name: String = expected_class_name.try_into()?;
+        let expected_class_name = expected_class_name.as_string()?;
         let class_name = class.class().name();
         if class_name != expected_class_name {
             return Err(NoClassDefFoundError(class_name.to_string()).into());
@@ -95,7 +95,7 @@ pub(crate) async fn define_class_1_0(
     let bytes: Vec<u8> = parameters.pop()?.try_into()?;
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
-        let expected_class_name: String = expected_class_name.try_into()?;
+        let expected_class_name = expected_class_name.as_string()?;
         let class_name = class.class().name();
         if class_name != expected_class_name {
             return Err(NoClassDefFoundError(class_name.to_string()).into());
@@ -123,7 +123,7 @@ pub(crate) async fn define_class_2_0(
     let bytes: Vec<u8> = buffer.into_iter().skip(buffer_offset).collect();
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
-        let expected_class_name: String = expected_class_name.try_into()?;
+        let expected_class_name = expected_class_name.as_string()?;
         let class_name = class.class().name();
         if class_name != expected_class_name {
             return Err(NoClassDefFoundError(class_name.to_string()).into());
