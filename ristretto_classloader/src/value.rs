@@ -1654,7 +1654,7 @@ mod tests {
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
         object.set_value("value", string_value)?;
-        let result: String = object.try_into()?;
+        let result = object.as_string()?;
         assert_eq!("foo".to_string(), result);
         Ok(())
     }

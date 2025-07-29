@@ -342,136 +342,26 @@ impl Object {
             values: Gc::new(values),
         })
     }
-}
 
-impl Debug for Object {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Object({})", self.class.name())?;
-        let object_fields = self
-            .class
-            .all_object_fields()
-            .map_err(|_| std::fmt::Error)?;
-        if !object_fields.is_empty() {
-            writeln!(f)?;
-        }
-
-        // Print fields by name to ensure consistent output
-        for (index, field) in object_fields.iter().enumerate() {
-            let name = field.name();
-            let value_lock = self.values.get(index).ok_or(std::fmt::Error)?;
-            let value = value_lock.read().map_err(|_| std::fmt::Error)?;
-            writeln!(f, "  {name}={value}")?;
-        }
-
-        Ok(())
-    }
-}
-
-impl Display for Object {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let class_name = self.class().name();
-        match class_name {
-            "java/lang/Boolean" => {
-                let object = self.clone();
-                let value: bool = object.try_into().unwrap_or_default();
-                write!(f, "Boolean({value})")
-            }
-            "java/lang/Character" => {
-                let object = self.clone();
-                let value: char = object.try_into().unwrap_or_default();
-                write!(f, "Character('{value}')")
-            }
-            "java/lang/Byte" => {
-                let object = self.clone();
-                let value: i8 = object.try_into().unwrap_or_default();
-                write!(f, "Byte({value})")
-            }
-            "java/lang/Short" => {
-                let object = self.clone();
-                let value: i16 = object.try_into().unwrap_or_default();
-                write!(f, "Short({value})")
-            }
-            "java/lang/Integer" => {
-                let object = self.clone();
-                let value: i32 = object.try_into().unwrap_or_default();
-                write!(f, "Integer({value})")
-            }
-            "java/lang/Long" => {
-                let object = self.clone();
-                let value: i64 = object.try_into().unwrap_or_default();
-                write!(f, "Long({value})")
-            }
-            "java/lang/Float" => {
-                let object = self.clone();
-                let value: f32 = object.try_into().unwrap_or_default();
-                write!(f, "Float({value})")
-            }
-            "java/lang/Double" => {
-                let object = self.clone();
-                let value: f64 = object.try_into().unwrap_or_default();
-                write!(f, "Double({value})")
-            }
-            "java/lang/String" => {
-                let object = self.clone();
-                let value: String = object.try_into().unwrap_or_default();
-                write!(f, "String(\"{value}\")")
-            }
-            "java/lang/Class" => {
-                let object = self.clone();
-                let value = object.value("name").unwrap_or(Value::Unused);
-                let value: String = value.try_into().unwrap_or_default();
-                write!(f, "Class({value})")
-            }
-            _ => write!(f, "Object(class {class_name})"),
-        }
-    }
-}
-
-impl Hash for Object {
-    /// Hash an `Object` based on its class name and field values.
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.class.name().hash(state);
-        for value_lock in self.values.iter() {
-            if let Ok(value_guard) = value_lock.read() {
-                value_guard.hash(state);
-            }
-        }
-    }
-}
-
-impl Trace for Object {
-    fn trace(&self, collector: &GarbageCollector) {
-        for value_lock in self.values.iter() {
-            if let Ok(value_guard) = value_lock.read()
-                && let Value::Object(Some(value)) = &*value_guard
-            {
-                value.trace(collector);
-            }
-        }
-    }
-}
-
-impl PartialEq for Object {
-    fn eq(&self, other: &Self) -> bool {
-        let mut visited = HashSet::new();
-        self.equal_with_visited(other, &mut visited)
-    }
-}
-
-impl TryInto<bool> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<bool> {
+    /// Convert the object to a boolean value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Boolean` or if the value cannot be converted
+    /// to a boolean.
+    pub fn as_bool(&self) -> Result<bool> {
         let value = self.class_value("java/lang/Boolean")?;
         let value: i32 = value.try_into()?;
         Ok(value != 0)
     }
-}
 
-impl TryInto<char> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<char> {
+    /// Convert the object to a character value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Character` or if the value cannot be
+    /// converted to a character.
+    pub fn as_char(&self) -> Result<char> {
         let value = self.class_value("java/lang/Character")?;
         let value: i32 = value.try_into()?;
         #[expect(clippy::cast_sign_loss)]
@@ -480,136 +370,162 @@ impl TryInto<char> for Object {
             .map_err(|_| InvalidValueType("Invalid character value".to_string()))?;
         Ok(character)
     }
-}
 
-impl TryInto<i8> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<i8> {
+    /// Convert the object to a signed byte value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Byte` or if the value cannot be converted to
+    /// a signed byte.
+    pub fn as_i8(&self) -> Result<i8> {
         let value = self.class_value("java/lang/Byte")?;
         let value: i32 = value.try_into()?;
         let value =
             i8::try_from(value).map_err(|_| InvalidValueType("Invalid byte value".to_string()))?;
         Ok(value)
     }
-}
 
-impl TryInto<u8> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<u8> {
-        let value: i8 = self.try_into()?;
+    /// Convert the object to an unsigned byte value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Byte` or if the value cannot be converted to
+    /// an unsigned byte.
+    pub fn as_u8(&self) -> Result<u8> {
+        let value: i8 = self.as_i8()?;
         #[expect(clippy::cast_sign_loss)]
         Ok(value as u8)
     }
-}
 
-impl TryInto<i16> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<i16> {
+    /// Convert the object to a signed short value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Short` or if the value cannot be converted to
+    /// a signed short.
+    pub fn as_i16(&self) -> Result<i16> {
         let value = self.class_value("java/lang/Short")?;
         let value: i32 = value.try_into()?;
         let value = i16::try_from(value)
             .map_err(|_| InvalidValueType("Invalid short value".to_string()))?;
         Ok(value)
     }
-}
 
-impl TryInto<u16> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<u16> {
-        let value: i16 = self.try_into()?;
+    /// Convert the object to an unsigned short value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Short` or if the value cannot be converted to
+    /// an unsigned short.
+    pub fn as_u16(&self) -> Result<u16> {
+        let value: i16 = self.as_i16()?;
         #[expect(clippy::cast_sign_loss)]
         Ok(value as u16)
     }
-}
 
-impl TryInto<i32> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<i32> {
+    /// Convert the object to a signed integer value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Integer` or if the value cannot be converted
+    /// to a signed integer.
+    pub fn as_i32(&self) -> Result<i32> {
         let value = self.class_value("java/lang/Integer")?;
         let value: i32 = value.try_into()?;
         Ok(value)
     }
-}
 
-impl TryInto<u32> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<u32> {
-        let value: i32 = self.try_into()?;
+    /// Convert the object to an unsigned integer value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Integer` or if the value cannot be converted
+    /// to an unsigned integer.
+    pub fn as_u32(&self) -> Result<u32> {
+        let value: i32 = self.as_i32()?;
         #[expect(clippy::cast_sign_loss)]
         Ok(value as u32)
     }
-}
 
-impl TryInto<i64> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<i64> {
+    /// Convert the object to a signed long value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Long` or if the value cannot be converted to
+    /// a signed long.
+    pub fn as_i64(&self) -> Result<i64> {
         let value = self.class_value("java/lang/Long")?;
         let value = value.try_into()?;
         Ok(value)
     }
-}
 
-impl TryInto<u64> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<u64> {
-        let value: i64 = self.try_into()?;
+    /// Convert the object to an unsigned long value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Long` or if the value cannot be converted to
+    /// an unsigned long.
+    pub fn as_u64(&self) -> Result<u64> {
+        let value: i64 = self.as_i64()?;
         #[expect(clippy::cast_sign_loss)]
         Ok(value as u64)
     }
-}
 
-impl TryInto<isize> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<isize> {
-        let value: i64 = self.try_into()?;
+    /// Convert the object to a signed isize value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Long` or if the value cannot be converted to
+    /// a signed isize.
+    pub fn as_isize(&self) -> Result<isize> {
+        let value: i64 = self.as_i64()?;
         #[expect(clippy::cast_possible_truncation)]
         Ok(value as isize)
     }
-}
 
-impl TryInto<usize> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<usize> {
-        let value: u64 = self.try_into()?;
+    /// Convert the object to an unsigned usize value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Long` or if the value cannot be converted to
+    /// an unsigned usize.
+    pub fn as_usize(&self) -> Result<usize> {
+        let value: u64 = self.as_u64()?;
         #[expect(clippy::cast_possible_truncation)]
         Ok(value as usize)
     }
-}
 
-impl TryInto<f32> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<f32> {
+    /// Convert the object to a floating-point value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Float` or if the value cannot be converted to
+    /// a floating-point value.
+    pub fn as_f32(&self) -> Result<f32> {
         let value = self.class_value("java/lang/Float")?;
         let value = value.try_into()?;
         Ok(value)
     }
-}
 
-impl TryInto<f64> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<f64> {
+    /// Convert the object to a double-precision floating-point value.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/Double` or if the value cannot be converted
+    /// to a double-precision floating-point value.
+    pub fn as_f64(&self) -> Result<f64> {
         let value = self.class_value("java/lang/Double")?;
         let value = value.try_into()?;
         Ok(value)
     }
-}
 
-impl TryInto<String> for Object {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<String> {
+    /// Convert a Java string object to a `String`.
+    ///
+    /// # Errors
+    ///
+    /// if the object is not an instance of `java/lang/String`, or if the value cannot be converted
+    /// to a `String`.
+    pub fn as_string(&self) -> Result<String> {
         let value = self.class_value("java/lang/String")?;
         let Value::Object(Some(reference)) = value else {
             return Err(InvalidValueType(
@@ -662,11 +578,108 @@ impl TryInto<String> for Object {
     }
 }
 
-impl TryInto<Arc<Class>> for Object {
-    type Error = crate::Error;
+impl Debug for Object {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Object({})", self.class.name())?;
+        let object_fields = self
+            .class
+            .all_object_fields()
+            .map_err(|_| std::fmt::Error)?;
+        if !object_fields.is_empty() {
+            writeln!(f)?;
+        }
 
-    fn try_into(self) -> Result<Arc<Class>> {
-        Ok(self.class)
+        // Print fields by name to ensure consistent output
+        for (index, field) in object_fields.iter().enumerate() {
+            let name = field.name();
+            let value_lock = self.values.get(index).ok_or(std::fmt::Error)?;
+            let value = value_lock.read().map_err(|_| std::fmt::Error)?;
+            writeln!(f, "  {name}={value}")?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Display for Object {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let class_name = self.class().name();
+        match class_name {
+            "java/lang/Boolean" => match self.as_bool() {
+                Ok(value) => write!(f, "Boolean({value})"),
+                Err(error) => write!(f, "Boolean({error:?})"),
+            },
+            "java/lang/Character" => match self.as_char() {
+                Ok(value) => write!(f, "Character('{value}')"),
+                Err(error) => write!(f, "Character({error:?})"),
+            },
+            "java/lang/Byte" => match self.as_i8() {
+                Ok(value) => write!(f, "Byte({value})"),
+                Err(error) => write!(f, "Byte({error:?})"),
+            },
+            "java/lang/Short" => match self.as_i16() {
+                Ok(value) => write!(f, "Short({value})"),
+                Err(error) => write!(f, "Short({error:?})"),
+            },
+            "java/lang/Integer" => match self.as_i32() {
+                Ok(value) => write!(f, "Integer({value})"),
+                Err(error) => write!(f, "Integer({error:?})"),
+            },
+            "java/lang/Long" => match self.as_i64() {
+                Ok(value) => write!(f, "Long({value})"),
+                Err(error) => write!(f, "Long({error:?})"),
+            },
+            "java/lang/Float" => match self.as_f32() {
+                Ok(value) => write!(f, "Float({value})"),
+                Err(error) => write!(f, "Float({error:?})"),
+            },
+            "java/lang/Double" => match self.as_f64() {
+                Ok(value) => write!(f, "Double({value})"),
+                Err(error) => write!(f, "Double({error:?})"),
+            },
+            "java/lang/String" => match self.as_string() {
+                Ok(value) => write!(f, "String(\"{value}\")"),
+                Err(error) => write!(f, "String({error:?})"),
+            },
+            "java/lang/Class" => {
+                // TODO: improve error handling for class name retrieval
+                let value = self.value("name").unwrap_or(Value::Unused);
+                let value: String = value.try_into().unwrap_or_default();
+                write!(f, "Class({value})")
+            }
+            _ => write!(f, "Object(class {class_name})"),
+        }
+    }
+}
+
+impl Hash for Object {
+    /// Hash an `Object` based on its class name and field values.
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.class.name().hash(state);
+        for value_lock in self.values.iter() {
+            if let Ok(value_guard) = value_lock.read() {
+                value_guard.hash(state);
+            }
+        }
+    }
+}
+
+impl Trace for Object {
+    fn trace(&self, collector: &GarbageCollector) {
+        for value_lock in self.values.iter() {
+            if let Ok(value_guard) = value_lock.read()
+                && let Value::Object(Some(value)) = &*value_guard
+            {
+                value.trace(collector);
+            }
+        }
+    }
+}
+
+impl PartialEq for Object {
+    fn eq(&self, other: &Self) -> bool {
+        let mut visited = HashSet::new();
+        self.equal_with_visited(other, &mut visited)
     }
 }
 
@@ -943,167 +956,167 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_try_into_bool() -> Result<()> {
+    async fn test_as_bool() -> Result<()> {
         let class = load_class("java.lang.Boolean").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
-        let value: bool = object.try_into()?;
+        let value = object.as_bool()?;
         assert!(value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_char() -> Result<()> {
+    async fn test_as_char() -> Result<()> {
         let class = load_class("java.lang.Character").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value: char = object.try_into()?;
+        let value = object.as_char()?;
         assert_eq!('*', value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_i8() -> Result<()> {
+    async fn test_as_i8() -> Result<()> {
         let class = load_class("java.lang.Byte").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value: i8 = object.try_into()?;
+        let value = object.as_i8()?;
         assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_u8() -> Result<()> {
+    async fn test_as_u8() -> Result<()> {
         let class = load_class("java.lang.Byte").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value: u8 = object.try_into()?;
+        let value = object.as_u8()?;
         assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_i16() -> Result<()> {
+    async fn test_as_i16() -> Result<()> {
         let class = load_class("java.lang.Short").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value: i16 = object.try_into()?;
+        let value = object.as_i16()?;
         assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_u16() -> Result<()> {
+    async fn test_as_u16() -> Result<()> {
         let class = load_class("java.lang.Short").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value: u16 = object.try_into()?;
+        let value = object.as_u16()?;
         assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_i32() -> Result<()> {
+    async fn test_as_i32() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value: i32 = object.try_into()?;
+        let value = object.as_i32()?;
         assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_u32() -> Result<()> {
+    async fn test_as_u32() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value: u32 = object.try_into()?;
+        let value = object.as_u32()?;
         assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_i64() -> Result<()> {
+    async fn test_as_i64() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value: i64 = object.try_into()?;
+        let value = object.as_i64()?;
         assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_u64() -> Result<()> {
+    async fn test_as_u64() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value: u64 = object.try_into()?;
+        let value = object.as_u64()?;
         assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_isize() -> Result<()> {
+    async fn test_as_isize() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value: isize = object.try_into()?;
+        let value = object.as_isize()?;
         assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_usize() -> Result<()> {
+    async fn test_as_usize() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value: usize = object.try_into()?;
+        let value = object.as_usize()?;
         assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_f32() -> Result<()> {
+    async fn test_as_f32() -> Result<()> {
         let class = load_class("java.lang.Float").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Float(42.1))?;
-        let value: f32 = object.try_into()?;
+        let value = object.as_f32()?;
         let value = value - 42.1f32;
         assert!(value.abs() < 0.1f32);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_f64() -> Result<()> {
+    async fn test_as_f64() -> Result<()> {
         let class = load_class("java.lang.Double").await?;
         let object = Object::new(class)?;
         object.set_value("value", Value::Double(42.1))?;
-        let value: f64 = object.try_into()?;
+        let value = object.as_f64()?;
         let value = value - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_string_invalid_class() -> Result<()> {
+    async fn test_as_string_invalid_class() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
-        let result: Result<String> = object.try_into();
+        let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_string_invalid_value() -> Result<()> {
+    async fn test_as_string_invalid_value() -> Result<()> {
         let class = string_class().await?;
         let object = Object::new(class)?;
-        let result: Result<String> = object.try_into();
+        let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_string_java8() -> Result<()> {
+    async fn test_as_string_java8() -> Result<()> {
         let class = java8_string_class().await?;
         let object = Object::new(class)?;
         let string_chars: Vec<char> = "foo"
@@ -1114,39 +1127,39 @@ mod tests {
             .collect();
         let string_value = Value::from(string_chars);
         object.set_value("value", string_value)?;
-        let result: String = object.try_into()?;
+        let result = object.as_string()?;
         assert_eq!("foo".to_string(), result);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_string_java8_invalid_byte_array_value() -> Result<()> {
+    async fn test_as_string_java8_invalid_byte_array_value() -> Result<()> {
         let class = java8_string_class().await?;
         let object = Object::new(class)?;
         let string_value = Value::from(Vec::<i32>::new());
         object.set_value("value", string_value)?;
-        let result: Result<String> = object.try_into();
+        let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));
         Ok(())
     }
 
     #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
-    async fn test_try_into_latin1_byte_array_string() -> Result<()> {
+    async fn test_as_string_latin1_byte_array() -> Result<()> {
         let class = string_class().await?;
         let object = Object::new(class)?;
         object.set_value("coder", Value::Int(0))?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
         object.set_value("value", string_value)?;
-        let result: String = object.try_into()?;
+        let result = object.as_string()?;
         assert_eq!("foo".to_string(), result);
         Ok(())
     }
 
     #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
-    async fn test_try_into_utf16_byte_array_string() -> Result<()> {
+    async fn test_as_string_utf16_byte_array() -> Result<()> {
         let value = "😃";
         let class = string_class().await?;
         let object = Object::new(class)?;
@@ -1158,29 +1171,19 @@ mod tests {
             .collect();
         let string_value = Value::from(string_bytes);
         object.set_value("value", string_value)?;
-        let result: String = object.try_into()?;
+        let result = object.as_string()?;
         assert_eq!(value.to_string(), result);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_string_invalid_char_array_value() -> Result<()> {
+    async fn test_as_string_invalid_char_array_value() -> Result<()> {
         let class = string_class().await?;
         let object = Object::new(class)?;
         let string_value = Value::from(Vec::<i32>::new());
         object.set_value("value", string_value)?;
-        let result: Result<String> = object.try_into();
+        let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_class() -> Result<()> {
-        let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(42))?;
-        let value: Arc<Class> = object.try_into()?;
-        assert_eq!("java/lang/Integer", value.name());
         Ok(())
     }
 }

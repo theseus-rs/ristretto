@@ -18,7 +18,7 @@ pub(crate) async fn find_signal_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let signal_name: String = parameters.pop_object()?.try_into()?;
+    let signal_name = parameters.pop_object()?.as_string()?;
 
     // See: https://github.com/torvalds/linux/blob/master/arch/x86/include/uapi/asm/signal.h
     let signal = match signal_name.as_str() {

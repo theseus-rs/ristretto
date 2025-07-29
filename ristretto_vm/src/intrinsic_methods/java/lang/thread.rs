@@ -256,7 +256,7 @@ pub(crate) async fn set_native_name(
     let Some(Reference::Object(name)) = parameters.pop_reference()? else {
         return Err(NullPointerException("name cannot be null".to_string()).into());
     };
-    let name: String = name.try_into()?;
+    let name = name.as_string()?;
     thread.set_name(name).await;
     Ok(None)
 }
