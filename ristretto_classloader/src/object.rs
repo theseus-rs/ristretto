@@ -343,7 +343,7 @@ impl Object {
         })
     }
 
-    /// Convert the object to a boolean value.
+    /// Convert the object to a bool value.
     ///
     /// # Errors
     ///
@@ -351,7 +351,7 @@ impl Object {
     /// to a boolean.
     pub fn as_bool(&self) -> Result<bool> {
         let value = self.class_value("java/lang/Boolean")?;
-        let value: i32 = value.try_into()?;
+        let value = value.as_i32()?;
         Ok(value != 0)
     }
 
@@ -363,7 +363,7 @@ impl Object {
     /// converted to a character.
     pub fn as_char(&self) -> Result<char> {
         let value = self.class_value("java/lang/Character")?;
-        let value: i32 = value.try_into()?;
+        let value = value.as_i32()?;
         #[expect(clippy::cast_sign_loss)]
         let value = value as u32;
         let character = char::try_from(value)
@@ -379,7 +379,7 @@ impl Object {
     /// a signed byte.
     pub fn as_i8(&self) -> Result<i8> {
         let value = self.class_value("java/lang/Byte")?;
-        let value: i32 = value.try_into()?;
+        let value = value.as_i32()?;
         let value =
             i8::try_from(value).map_err(|_| InvalidValueType("Invalid byte value".to_string()))?;
         Ok(value)
@@ -405,7 +405,7 @@ impl Object {
     /// a signed short.
     pub fn as_i16(&self) -> Result<i16> {
         let value = self.class_value("java/lang/Short")?;
-        let value: i32 = value.try_into()?;
+        let value = value.as_i32()?;
         let value = i16::try_from(value)
             .map_err(|_| InvalidValueType("Invalid short value".to_string()))?;
         Ok(value)
@@ -431,7 +431,7 @@ impl Object {
     /// to a signed integer.
     pub fn as_i32(&self) -> Result<i32> {
         let value = self.class_value("java/lang/Integer")?;
-        let value: i32 = value.try_into()?;
+        let value = value.as_i32()?;
         Ok(value)
     }
 
@@ -455,7 +455,7 @@ impl Object {
     /// a signed long.
     pub fn as_i64(&self) -> Result<i64> {
         let value = self.class_value("java/lang/Long")?;
-        let value: i64 = value.try_into()?;
+        let value = value.as_i64()?;
         Ok(value)
     }
 
@@ -503,7 +503,7 @@ impl Object {
     /// a floating-point value.
     pub fn as_f32(&self) -> Result<f32> {
         let value = self.class_value("java/lang/Float")?;
-        let value: f32 = value.try_into()?;
+        let value = value.as_f32()?;
         Ok(value)
     }
 
@@ -515,7 +515,7 @@ impl Object {
     /// to a double-precision floating-point value.
     pub fn as_f64(&self) -> Result<f64> {
         let value = self.class_value("java/lang/Double")?;
-        let value: f64 = value.try_into()?;
+        let value = value.as_f64()?;
         Ok(value)
     }
 
@@ -534,7 +534,7 @@ impl Object {
         };
         match reference {
             ByteArray(bytes) => {
-                let coder: i32 = self.value("coder")?.try_into()?;
+                let coder = self.value("coder")?.as_i32()?;
                 if coder == 0 {
                     // Latin-1 encoded string
                     let bytes = bytes
@@ -642,10 +642,14 @@ impl Display for Object {
                 Err(error) => write!(f, "String({error:?})"),
             },
             "java/lang/Class" => {
-                // TODO: improve error handling for class name retrieval
-                let value = self.value("name").unwrap_or(Value::Unused);
-                let value: String = value.try_into().unwrap_or_default();
-                write!(f, "Class({value})")
+                let value = match self.value("name") {
+                    Ok(value) => value,
+                    Err(error) => return write!(f, "Class({error:?})"),
+                };
+                match value.as_string() {
+                    Ok(value) => write!(f, "Class({value})"),
+                    Err(error) => write!(f, "Class({error:?})"),
+                }
             }
             _ => write!(f, "Object(class {class_name})"),
         }

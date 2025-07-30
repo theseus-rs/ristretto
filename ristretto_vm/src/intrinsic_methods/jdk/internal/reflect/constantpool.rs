@@ -6,7 +6,7 @@ use crate::{JavaObject, Result};
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{Constant, FieldType, JAVA_11};
-use ristretto_classloader::{Object, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -20,8 +20,9 @@ pub(crate) async fn get_class_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
     let class = thread.class(class_name).await?;
@@ -39,8 +40,9 @@ pub(crate) async fn get_class_at_if_loaded_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
     let class = thread.class(class_name).await?;
@@ -58,8 +60,9 @@ pub(crate) async fn get_class_ref_index_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let class_index = match constant_pool.try_get(index)? {
         Constant::FieldRef { class_index, .. }
@@ -85,8 +88,9 @@ pub(crate) async fn get_double_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let double = constant_pool.try_get_double(index)?;
     Ok(Some(Value::Double(*double)))
@@ -102,8 +106,9 @@ pub(crate) async fn get_field_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
@@ -146,8 +151,9 @@ pub(crate) async fn get_float_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let float = constant_pool.try_get_float(index)?;
     Ok(Some(Value::Float(*float)))
@@ -163,8 +169,9 @@ pub(crate) async fn get_int_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let integer = constant_pool.try_get_integer(index)?;
     Ok(Some(Value::Int(*integer)))
@@ -180,8 +187,9 @@ pub(crate) async fn get_long_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let long = constant_pool.try_get_long(index)?;
     Ok(Some(Value::Long(*long)))
@@ -197,8 +205,9 @@ pub(crate) async fn get_member_ref_info_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = match constant_pool.try_get(index)? {
         Constant::FieldRef {
@@ -242,8 +251,9 @@ pub(crate) async fn get_method_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
@@ -309,8 +319,9 @@ pub(crate) async fn get_name_and_type_ref_index_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let name_and_type_index = match constant_pool.try_get(index)? {
         Constant::Dynamic {
@@ -353,8 +364,9 @@ pub(crate) async fn get_name_and_type_ref_info_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let name_and_type_index = match constant_pool.try_get(index)? {
         Constant::Dynamic {
@@ -403,8 +415,9 @@ pub(crate) async fn get_size_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let size = i32::try_from(constant_pool.len())?;
     Ok(Some(Value::from(size)))
@@ -420,8 +433,9 @@ pub(crate) async fn get_string_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let utf8 = constant_pool.try_get_string(index)?;
     let result = utf8.to_object(&thread).await?;
@@ -438,8 +452,9 @@ pub(crate) async fn get_tag_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let constant = constant_pool.try_get(index)?;
     thread
@@ -461,8 +476,9 @@ pub(crate) async fn get_utf_8_at_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
-    let object: Object = parameters.pop()?.try_into()?;
-    let class = class::get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class = class::get_class(&thread, object).await?;
     let constant_pool = class.constant_pool();
     let utf8 = constant_pool.try_get_utf8(index)?;
     let result = utf8.to_object(&thread).await?;
@@ -479,7 +495,7 @@ pub(crate) mod tests {
         BaseType, ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, FieldType,
         MethodAccessFlags,
     };
-    use ristretto_classloader::{Class, Reference};
+    use ristretto_classloader::{Class, Object, Reference};
 
     pub(crate) async fn test_object() -> Result<(Arc<VM>, Arc<Thread>, Value)> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
@@ -574,8 +590,8 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(8)]);
         let result = get_class_at(thread, parameters).await?.expect("value");
-        let object: Object = result.try_into()?;
-        let class_name: String = object.value("name")?.try_into()?;
+        let object = result.as_object_ref()?;
+        let class_name = object.value("name")?.as_string()?;
         assert_eq!("TestClass", class_name);
         Ok(())
     }
@@ -593,8 +609,8 @@ pub(crate) mod tests {
         let result = get_class_at_if_loaded(thread, parameters)
             .await?
             .expect("value");
-        let object: Object = result.try_into()?;
-        let class_name: String = object.value("name")?.try_into()?;
+        let object = result.as_object_ref()?;
+        let class_name = object.value("name")?.as_string()?;
         assert_eq!("TestClass", class_name);
         Ok(())
     }
@@ -611,7 +627,7 @@ pub(crate) mod tests {
         let result = get_class_ref_index_at_0(thread, parameters)
             .await?
             .expect("value");
-        let class_index: u16 = result.try_into()?;
+        let class_index = result.as_u16()?;
         assert_eq!(8, class_index);
         Ok(())
     }
@@ -623,7 +639,7 @@ pub(crate) mod tests {
         let result = get_class_ref_index_at_0(thread, parameters)
             .await?
             .expect("value");
-        let class_index: u16 = result.try_into()?;
+        let class_index = result.as_u16()?;
         assert_eq!(2, class_index);
         Ok(())
     }
@@ -632,7 +648,7 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(13)]);
         let result = get_double_at(thread, parameters).await?.expect("value");
-        let value: f64 = result.try_into()?;
+        let value = result.as_f64()?;
         let value = value - 4.0f64;
         assert!(value.abs() < 0.01f64);
         Ok(())
@@ -647,10 +663,10 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
         let result = get_field_at(thread, parameters).await?.expect("value");
-        let object: Object = result.try_into()?;
+        let object = result.as_object_ref()?;
         let class = object.class();
         assert_eq!("java/lang/reflect/Field", class.name());
-        let name: String = object.value("name")?.try_into()?;
+        let name = object.value("name")?.as_string()?;
         assert_eq!("x", name);
         Ok(())
     }
@@ -668,10 +684,10 @@ pub(crate) mod tests {
         let result = get_field_at_if_loaded(thread, parameters)
             .await?
             .expect("value");
-        let object: Object = result.try_into()?;
+        let object = result.as_object_ref()?;
         let class = object.class();
         assert_eq!("java/lang/reflect/Field", class.name());
-        let name: String = object.value("name")?.try_into()?;
+        let name = object.value("name")?.as_string()?;
         assert_eq!("x", name);
         Ok(())
     }
@@ -685,7 +701,7 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(12)]);
         let result = get_float_at(thread, parameters).await?.expect("value");
-        let value: f32 = result.try_into()?;
+        let value = result.as_f32()?;
         let value = value - 3.0f32;
         assert!(value.abs() < 0.01f32);
         Ok(())
@@ -700,7 +716,7 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(9)]);
         let result = get_int_at(thread, parameters).await?.expect("value");
-        let value: i32 = result.try_into()?;
+        let value = result.as_i32()?;
         assert_eq!(1, value);
         Ok(())
     }
@@ -714,7 +730,7 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(10)]);
         let result = get_long_at(thread, parameters).await?.expect("value");
-        let value: i64 = result.try_into()?;
+        let value = result.as_i64()?;
         assert_eq!(2, value);
         Ok(())
     }
@@ -790,7 +806,7 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
         let result = get_method_at(thread, parameters).await?.expect("value");
-        let object: Object = result.try_into()?;
+        let object = result.as_object_ref()?;
         let class = object.class();
         assert_eq!("java/lang/reflect/Constructor", class.name());
         Ok(())
@@ -805,10 +821,10 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(25)]);
         let result = get_method_at(thread, parameters).await?.expect("value");
-        let object: Object = result.try_into()?;
+        let object = result.as_object_ref()?;
         let class = object.class();
         assert_eq!("java/lang/reflect/Method", class.name());
-        let method_name: String = object.value("name")?.try_into()?;
+        let method_name = object.value("name")?.as_string()?;
         assert_eq!("main", method_name);
         Ok(())
     }
@@ -826,7 +842,7 @@ pub(crate) mod tests {
         let result = get_method_at_if_loaded(thread, parameters)
             .await?
             .expect("value");
-        let object: Object = result.try_into()?;
+        let object = result.as_object_ref()?;
         let class = object.class();
         assert_eq!("java/lang/reflect/Constructor", class.name());
         Ok(())
@@ -845,10 +861,10 @@ pub(crate) mod tests {
         let result = get_method_at_if_loaded(thread, parameters)
             .await?
             .expect("value");
-        let object: Object = result.try_into()?;
+        let object = result.as_object_ref()?;
         let class = object.class();
         assert_eq!("java/lang/reflect/Method", class.name());
-        let method_name: String = object.value("name")?.try_into()?;
+        let method_name = object.value("name")?.as_string()?;
         assert_eq!("main", method_name);
         Ok(())
     }
@@ -865,7 +881,7 @@ pub(crate) mod tests {
         let result = get_name_and_type_ref_index_at_0(thread, parameters)
             .await?
             .expect("value");
-        let class_index: u16 = result.try_into()?;
+        let class_index = result.as_u16()?;
         assert_eq!(19, class_index);
         Ok(())
     }
@@ -877,7 +893,7 @@ pub(crate) mod tests {
         let result = get_name_and_type_ref_index_at_0(thread, parameters)
             .await?
             .expect("value");
-        let class_index: u16 = result.try_into()?;
+        let class_index = result.as_u16()?;
         assert_eq!(5, class_index);
         Ok(())
     }
@@ -930,7 +946,7 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_size(thread, parameters).await?.expect("value");
-        let class_index: u16 = result.try_into()?;
+        let class_index = result.as_u16()?;
         assert_eq!(25, class_index);
         Ok(())
     }
@@ -944,7 +960,7 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(16)]);
         let result = get_string_at(thread, parameters).await?.expect("value");
-        let value: String = result.try_into()?;
+        let value = result.as_string()?;
         assert_eq!("foo", value);
         Ok(())
     }
@@ -959,10 +975,10 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(16)]);
         let result = get_tag_at_0(thread, parameters).await?.expect("value");
-        let value: Object = result.try_into()?;
+        let value = result.as_object_ref()?;
         let class = value.class();
         assert_eq!("jdk/internal/reflect/ConstantPool$Tag", class.name());
-        let name: String = value.value("name")?.try_into()?;
+        let name = value.value("name")?.as_string()?;
         assert_eq!("STRING", name);
         Ok(())
     }
@@ -971,7 +987,7 @@ pub(crate) mod tests {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(15)]);
         let result = get_utf_8_at(thread, parameters).await?.expect("value");
-        let value: String = result.try_into()?;
+        let value = result.as_string()?;
         assert_eq!("foo", value);
         Ok(())
     }

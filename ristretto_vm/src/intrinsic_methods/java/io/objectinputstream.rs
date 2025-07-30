@@ -108,8 +108,8 @@ mod tests {
         parameters.push_int(2); // number of doubles
 
         let _ = bytes_to_doubles(thread, parameters).await?;
-        let bytes: Vec<f64> = destination.try_into()?;
-        assert_eq!(bytes, vec![3.0f64, 42.0f64]);
+        let bytes = destination.as_double_vec_ref()?;
+        assert_eq!(bytes.as_slice(), vec![3.0f64, 42.0f64]);
         Ok(())
     }
 
@@ -127,8 +127,8 @@ mod tests {
         parameters.push_int(2); // number of floats
 
         let _ = bytes_to_floats(thread, parameters).await?;
-        let bytes: Vec<f32> = destination.try_into()?;
-        assert_eq!(bytes, vec![3.0f32, 42.0f32]);
+        let bytes = destination.as_float_vec_ref()?;
+        assert_eq!(bytes.as_slice(), vec![3.0f32, 42.0f32]);
         Ok(())
     }
 }

@@ -709,6 +709,7 @@ pub(crate) async fn write_0(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use zerocopy::transmute_ref;
 
     #[tokio::test]
     #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.access0(JI)V")]
@@ -941,8 +942,10 @@ mod tests {
     async fn test_getcwd() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = getcwd(thread, Parameters::default()).await?;
-        let bytes: Vec<u8> = result.expect("cwd").try_into()?;
-        let cwd = String::from_utf8_lossy(&bytes);
+        let bytes = result.expect("cwd");
+        let bytes = bytes.as_byte_vec_ref()?;
+        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        let cwd = String::from_utf8_lossy(bytes);
         let current_dir_path =
             std::env::current_dir().map_err(|error| InternalError(format!("getcwd: {error}")))?;
         let expected = current_dir_path.to_string_lossy();
@@ -1169,7 +1172,7 @@ mod tests {
             .await?;
         let parameters = Parameters::new(vec![Value::Long(0), unix_file_attributes]);
         let result = stat_0_1(thread, parameters).await?;
-        let result: i32 = result.expect("stat").try_into()?;
+        let result = result.expect("stat").as_i32()?;
         assert_eq!(result, 0);
         Ok(())
     }

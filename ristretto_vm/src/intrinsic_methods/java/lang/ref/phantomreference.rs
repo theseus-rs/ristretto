@@ -31,7 +31,6 @@ pub(crate) async fn refers_to_0(
 mod tests {
     use super::*;
     use crate::JavaObject;
-    use ristretto_classloader::Object;
 
     #[tokio::test]
     async fn test_clear_0() -> Result<()> {
@@ -52,7 +51,7 @@ mod tests {
 
         let result = clear_0(thread, parameters).await?;
         assert_eq!(result, None);
-        let phantom_reference: Object = phantom_reference.try_into()?;
+        let phantom_reference = phantom_reference.as_object_ref()?;
         let referent = phantom_reference.value("referent")?;
         assert_eq!(referent, Value::Object(None));
         Ok(())
@@ -77,7 +76,7 @@ mod tests {
         parameters.push(value.clone());
 
         let value = refers_to_0(thread, parameters).await?.expect("refers to");
-        let refers_to: bool = value.try_into()?;
+        let refers_to = value.as_bool()?;
         assert!(refers_to);
         Ok(())
     }

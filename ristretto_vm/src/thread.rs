@@ -679,7 +679,7 @@ mod tests {
     async fn test_new_object_integer() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let object = thread.object("java/lang/Integer", "I", &[42]).await?;
-        let value: i32 = object.try_into()?;
+        let value = object.as_i32()?;
         assert_eq!(42, value);
         Ok(())
     }

@@ -82,9 +82,9 @@ pub(crate) async fn check_access_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let access_mode: i32 = parameters.pop_int()?;
+    let access_mode = parameters.pop_int()?;
     let file = parameters.pop_object()?;
-    let path: String = file.value("path")?.try_into()?;
+    let path = file.value("path")?.as_string()?;
     let path = Path::new(&path);
 
     let Ok(metadata) = path.metadata() else {
@@ -129,7 +129,7 @@ pub(crate) async fn create_directory_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop_object()?;
-    let path: String = file.value("path")?.try_into()?;
+    let path = file.value("path")?.as_string()?;
     let created: bool;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -212,7 +212,7 @@ pub(crate) async fn delete_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop_object()?;
-    let path: String = file.value("path")?.try_into()?;
+    let path = file.value("path")?.as_string()?;
     let deleted: bool;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -247,7 +247,7 @@ pub(crate) async fn get_boolean_attributes_0(
             "getBooleanAttributes0: expected file parameter".to_string(),
         ));
     };
-    let path: String = file.value("path")?.try_into()?;
+    let path = file.value("path")?.as_string()?;
     let path = PathBuf::from(path);
     let mut attributes = if path.exists() {
         BooleanAttributeFlags::EXISTS
@@ -292,7 +292,7 @@ pub(crate) async fn get_last_modified_time_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop_object()?;
-    let path: String = file.value("path")?.try_into()?;
+    let path = file.value("path")?.as_string()?;
     let last_modified: i64;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -350,7 +350,7 @@ pub(crate) async fn get_length_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop_object()?;
-    let path: String = file.value("path")?.try_into()?;
+    let path = file.value("path")?.as_string()?;
     let length: i64;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -416,9 +416,9 @@ pub(crate) async fn get_space_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let space_type: i32 = parameters.pop_int()?;
+    let space_type = parameters.pop_int()?;
     let file = parameters.pop_object()?;
-    let path: String = file.value("path")?.try_into()?;
+    let path = file.value("path")?.as_string()?;
     let path = PathBuf::from(path);
     let result: i64;
 
@@ -479,7 +479,7 @@ pub(crate) async fn list_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop_object()?;
-    let path: String = file.value("path")?.try_into()?;
+    let path = file.value("path")?.as_string()?;
     let path = std::path::PathBuf::from(path);
     let entries;
 
@@ -540,8 +540,8 @@ pub(crate) async fn rename_0(
 ) -> Result<Option<Value>> {
     let destination_file = parameters.pop_object()?;
     let source_file = parameters.pop_object()?;
-    let source_path: String = source_file.value("path")?.try_into()?;
-    let destination_path: String = destination_file.value("path")?.try_into()?;
+    let source_path = source_file.value("path")?.as_string()?;
+    let destination_path = destination_file.value("path")?.as_string()?;
     let source = std::path::PathBuf::from(source_path);
     let destination = std::path::PathBuf::from(destination_path);
     let success: bool;
@@ -589,7 +589,7 @@ pub(crate) async fn set_last_modified_time_0(
 ) -> Result<Option<Value>> {
     let time = parameters.pop_long()?;
     let file = parameters.pop_object()?;
-    let path: String = file.value("path")?.try_into()?;
+    let path = file.value("path")?.as_string()?;
     let path = PathBuf::from(path);
     let modified: bool;
 
@@ -632,11 +632,11 @@ pub(crate) async fn set_permission_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let owner_only: bool = parameters.pop_bool()?;
-    let enable: bool = parameters.pop_bool()?;
-    let access: i32 = parameters.pop_int()?;
+    let owner_only = parameters.pop_bool()?;
+    let enable = parameters.pop_bool()?;
+    let access = parameters.pop_int()?;
     let file = parameters.pop_object()?;
-    let path: String = file.value("path")?.try_into()?;
+    let path = file.value("path")?.as_string()?;
     let path = std::path::PathBuf::from(path);
     let modified: bool;
 
@@ -718,7 +718,7 @@ pub(crate) async fn set_read_only_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop_object()?;
-    let path: String = file.value("path")?.try_into()?;
+    let path = file.value("path")?.as_string()?;
     let path = std::path::PathBuf::from(path);
     let modified: bool;
 
@@ -770,7 +770,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(path);
         let value = canonicalize_0(thread, parameters).await?.expect("value");
-        let canonical_path: String = value.try_into()?;
+        let canonical_path = value.as_string()?;
         assert_ne!(original_path, canonical_path);
         Ok(())
     }
@@ -783,7 +783,7 @@ mod tests {
         parameters.push(file_object);
         parameters.push_int(1); // Read access
         let value = check_access(thread, parameters).await?.expect("access");
-        let has_access: bool = value.try_into()?;
+        let has_access = value.as_bool()?;
         assert!(has_access);
         Ok(())
     }
@@ -796,7 +796,7 @@ mod tests {
         parameters.push(file_object);
         parameters.push_int(1); // Read access
         let value = check_access_0(thread, parameters).await?.expect("access");
-        let has_access: bool = value.try_into()?;
+        let has_access = value.as_bool()?;
         assert!(has_access);
         Ok(())
     }
@@ -817,7 +817,7 @@ mod tests {
         let value = create_directory(thread, parameters)
             .await?
             .expect("created");
-        let created: bool = value.try_into()?;
+        let created = value.as_bool()?;
         assert!(created);
         tokio::fs::remove_dir_all(path_name).await?;
         Ok(())
@@ -839,7 +839,7 @@ mod tests {
         let value = create_directory_0(thread, parameters)
             .await?
             .expect("created");
-        let created: bool = value.try_into()?;
+        let created = value.as_bool()?;
         assert!(created);
         tokio::fs::remove_dir_all(path_name).await?;
         Ok(())
@@ -859,7 +859,7 @@ mod tests {
         let value = create_file_exclusively(thread, parameters)
             .await?
             .expect("created");
-        let created: bool = value.try_into()?;
+        let created = value.as_bool()?;
         assert!(created);
         tokio::fs::remove_file(path_name).await?;
         Ok(())
@@ -879,7 +879,7 @@ mod tests {
         let value = create_file_exclusively_0(thread, parameters)
             .await?
             .expect("created");
-        let created: bool = value.try_into()?;
+        let created = value.as_bool()?;
         assert!(created);
         tokio::fs::remove_file(path_name).await?;
         Ok(())
@@ -889,13 +889,13 @@ mod tests {
     async fn test_delete_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let (file, file_object) = create_file(&thread, "delete").await?;
-        let path: String = file.path().to_string_lossy().to_string();
+        let path = file.path().to_string_lossy().to_string();
         assert!(Path::new(&path).exists());
 
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = delete_0(thread, parameters).await?.expect("deleted");
-        let deleted: bool = value.try_into()?;
+        let deleted = value.as_bool()?;
         assert!(deleted);
         assert!(!Path::new(&path).exists());
         Ok(())
@@ -910,7 +910,7 @@ mod tests {
         let value = get_boolean_attributes_0(thread, parameters)
             .await?
             .expect("attributes");
-        let attributes: i32 = value.try_into()?;
+        let attributes = value.as_i32()?;
         assert!(attributes > 0);
         Ok(())
     }
@@ -930,7 +930,7 @@ mod tests {
         let value = get_last_modified_time(thread, parameters)
             .await?
             .expect("last modified time");
-        let last_modified_time: i64 = value.try_into()?;
+        let last_modified_time = value.as_i64()?;
         assert!(last_modified_time >= start_time);
         Ok(())
     }
@@ -950,7 +950,7 @@ mod tests {
         let value = get_last_modified_time_0(thread, parameters)
             .await?
             .expect("last modified time");
-        let last_modified_time: i64 = value.try_into()?;
+        let last_modified_time = value.as_i64()?;
         assert!(last_modified_time >= start_time);
         Ok(())
     }
@@ -962,7 +962,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = get_length(thread, parameters).await?.expect("length");
-        let length: i64 = value.try_into()?;
+        let length = value.as_i64()?;
         assert_eq!(0, length);
         Ok(())
     }
@@ -974,7 +974,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = get_length_0(thread, parameters).await?.expect("length");
-        let length: i64 = value.try_into()?;
+        let length = value.as_i64()?;
         assert_eq!(0, length);
         Ok(())
     }
@@ -986,7 +986,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(path);
         let value = get_name_max_0(thread, parameters).await?.expect("name max");
-        let length: i64 = value.try_into()?;
+        let length = value.as_i64()?;
         assert_eq!(255, length);
         Ok(())
     }
@@ -1000,7 +1000,7 @@ mod tests {
             parameters.push(file_object);
             parameters.push_int(space_type);
             let value = get_space(thread, parameters).await?.expect("space");
-            let space: i64 = value.try_into()?;
+            let space = value.as_i64()?;
 
             if space_type > 2 {
                 assert_eq!(space, 0);
@@ -1020,7 +1020,7 @@ mod tests {
             parameters.push(file_object);
             parameters.push_int(space_type);
             let value = get_space_0(thread, parameters).await?.expect("space");
-            let space: i64 = value.try_into()?;
+            let space = value.as_i64()?;
 
             if space_type > 2 {
                 assert_eq!(space, 0);
@@ -1065,7 +1065,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = list_0(thread, parameters).await?.expect("paths");
-        let reference: Reference = value.clone().try_into()?;
+        let reference = value.as_reference()?;
         let class_name = reference.class_name().to_string();
         let elements: Vec<Value> = value.try_into()?;
         assert_eq!(class_name, "java/lang/String");
@@ -1077,7 +1077,7 @@ mod tests {
     async fn test_rename_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let (source_file, source_object) = create_file(&thread, "rename_source").await?;
-        let source_path: String = source_file.path().to_string_lossy().to_string();
+        let source_path = source_file.path().to_string_lossy().to_string();
         let destination_path = format!("{source_path}_destination");
         let destination_object: Value = destination_path.to_object(&thread).await?;
         let destination_object = thread
@@ -1087,7 +1087,7 @@ mod tests {
         parameters.push(source_object);
         parameters.push(destination_object);
         let value = rename_0(thread, parameters).await?.expect("renamed");
-        let renamed: bool = value.try_into()?;
+        let renamed = value.as_bool()?;
         assert!(renamed);
         assert!(!Path::new(&source_path).exists());
         assert!(Path::new(&destination_path).exists());
@@ -1104,7 +1104,7 @@ mod tests {
         let value = set_last_modified_time(thread, parameters)
             .await?
             .expect("success");
-        let success: bool = value.try_into()?;
+        let success = value.as_bool()?;
         assert!(success);
         Ok(())
     }
@@ -1119,7 +1119,7 @@ mod tests {
         let value = set_last_modified_time_0(thread, parameters)
             .await?
             .expect("success");
-        let success: bool = value.try_into()?;
+        let success = value.as_bool()?;
         assert!(success);
         Ok(())
     }
@@ -1134,7 +1134,7 @@ mod tests {
         parameters.push_bool(true); // enable
         parameters.push_int(1); // access (write)
         let value = set_permission(thread, parameters).await?.expect("success");
-        let success: bool = value.try_into()?;
+        let success = value.as_bool()?;
         assert!(success);
         Ok(())
     }
@@ -1151,7 +1151,7 @@ mod tests {
         let value = set_permission_0(thread, parameters)
             .await?
             .expect("success");
-        let success: bool = value.try_into()?;
+        let success = value.as_bool()?;
         assert!(success);
         Ok(())
     }
@@ -1163,7 +1163,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = set_read_only(thread, parameters).await?.expect("success");
-        let success: bool = value.try_into()?;
+        let success = value.as_bool()?;
         assert!(success);
         Ok(())
     }
@@ -1175,7 +1175,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = set_read_only_0(thread, parameters).await?.expect("success");
-        let success: bool = value.try_into()?;
+        let success = value.as_bool()?;
         assert!(success);
         Ok(())
     }

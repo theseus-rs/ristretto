@@ -2,7 +2,7 @@ use crate::Result;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
-use ristretto_classloader::{Class, Object};
+use ristretto_classloader::Class;
 use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.getfield>
@@ -14,7 +14,8 @@ pub(crate) async fn getfield(
     index: u16,
 ) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
-    let object: Object = stack.pop()?.try_into()?;
+    let object = stack.pop()?;
+    let object = object.as_object_ref()?;
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let field_class_name = constant_pool.try_get_class(*class_index)?;
@@ -37,7 +38,8 @@ pub(crate) async fn putfield(
 ) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
     let value = stack.pop()?;
-    let object: Object = stack.pop()?.try_into()?;
+    let object = stack.pop()?;
+    let object = object.as_object_ref()?;
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let field_class_name = constant_pool.try_get_class(*class_index)?;

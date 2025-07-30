@@ -17,7 +17,7 @@ use tracing::error;
 
 /// Get the thread from the thread ID in the `eetop` field of the thread object.
 async fn get_thread(thread: &Arc<Thread>, thread_object: &Object) -> Result<Arc<Thread>> {
-    let thread_id: i64 = thread_object.value("eetop")?.try_into()?;
+    let thread_id = thread_object.value("eetop")?.as_i64()?;
     let thread_id = u64::try_from(thread_id)?;
     let vm = thread.vm()?;
     let thread_handles = vm.thread_handles();
@@ -381,7 +381,7 @@ pub(crate) async fn start_0(
     let thread_value = Value::from(thread_object.clone());
 
     // Create a new internal thread (Arc<Thread>) and registered with the VM
-    let thread_id: u64 = thread_object.value("tid")?.try_into()?;
+    let thread_id = thread_object.value("tid")?.as_u64()?;
     let vm = thread.vm()?;
     let weak_vm = Arc::downgrade(&vm);
     let new_thread = Thread::new(&weak_vm, thread_id);
@@ -483,7 +483,7 @@ mod tests {
     /// Helper function to create a thread object for testing
     async fn create_thread(vm: &Arc<VM>) -> Result<Value> {
         let thread_value = vm.object("java/lang/Thread", "", &[] as &[Value]).await?;
-        let thread_object: Object = thread_value.try_into()?;
+        let thread_object = thread_value.as_object_ref()?;
         let thread_id = vm.next_thread_id()?;
         let weak_vm = Arc::downgrade(vm);
         let thread = Thread::new(&weak_vm, thread_id);
@@ -492,7 +492,7 @@ mod tests {
         thread_handles.insert(thread_id, thread_handle);
         thread_object.set_value("eetop", Value::from(thread_id))?;
         thread_object.set_value("tid", Value::from(thread_id))?;
-        Ok(Value::from(thread_object))
+        Ok(thread_value)
     }
 
     #[tokio::test]
@@ -563,7 +563,7 @@ mod tests {
     async fn test_get_next_thread_id_offset() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = get_next_thread_id_offset(thread, Parameters::default()).await?;
-        let thread_id: i64 = result.unwrap_or(Value::Long(0)).try_into()?;
+        let thread_id = result.unwrap_or(Value::Long(0)).as_i64()?;
         assert!(thread_id > 0);
         Ok(())
     }
@@ -618,7 +618,7 @@ mod tests {
         let result = is_interrupted(thread.clone(), parameters)
             .await?
             .expect("was_cleared");
-        let was_interrupted: bool = result.try_into()?;
+        let was_interrupted = result.as_bool()?;
         assert!(!was_interrupted);
 
         let mut parameters = Parameters::default();
@@ -632,7 +632,7 @@ mod tests {
         let result = is_interrupted(thread, parameters)
             .await?
             .expect("was_cleared");
-        let was_interrupted: bool = result.try_into()?;
+        let was_interrupted = result.as_bool()?;
         assert!(was_interrupted);
         Ok(())
     }

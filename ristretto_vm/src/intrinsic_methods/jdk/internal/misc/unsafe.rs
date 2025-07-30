@@ -7,7 +7,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{BaseType, FieldAccessFlags, JAVA_11, JAVA_17};
-use ristretto_classloader::{Class, Object, Reference, Value};
+use ristretto_classloader::{Class, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 use zerocopy::transmute_ref;
@@ -82,8 +82,9 @@ pub(crate) async fn array_index_scale_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object: Object = parameters.pop()?.try_into()?;
-    let class: Arc<Class> = get_class(&thread, &object).await?;
+    let object = parameters.pop()?;
+    let object = object.as_object_ref()?;
+    let class: Arc<Class> = get_class(&thread, object).await?;
     let class_name = class.name();
     let scale = match class_name {
         "[Z" => BOOLEAN_SIZE, // boolean
@@ -183,7 +184,7 @@ pub(crate) async fn compare_and_set_int(
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
-        let value: i32 = object.value(&field_name)?.try_into()?;
+        let value = object.value(&field_name)?.as_i32()?;
         if value == expected {
             object.set_value(&field_name, Value::Int(x))?;
             1
@@ -223,7 +224,7 @@ pub(crate) async fn compare_and_set_long(
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
-        let value: i64 = object.value(&field_name)?.try_into()?;
+        let value = object.value(&field_name)?.as_i64()?;
         if value == expected {
             object.set_value(&field_name, Value::Long(x))?;
             1
@@ -264,10 +265,11 @@ pub(crate) async fn compare_and_set_reference(
     let expected = parameters.pop()?;
     let offset = parameters.pop_long()?;
     let offset = usize::try_from(offset)?;
-    let reference: Reference = parameters.pop()?.try_into()?;
+    let reference = parameters.pop()?;
+    let reference = reference.as_reference()?;
 
     let result = match reference {
-        Reference::Array(ref object_array) => {
+        Reference::Array(object_array) => {
             let offset = offset / REFERENCE_SIZE;
             let mut elements = object_array
                 .elements
@@ -1151,7 +1153,7 @@ pub(crate) async fn object_field_offset_1(
 ) -> Result<Option<Value>> {
     let field_name = parameters.pop_object()?.as_string()?;
     let class_object = parameters.pop_object()?;
-    let class_name: String = class_object.value("name")?.try_into()?;
+    let class_name = class_object.value("name")?.as_string()?;
     let class = thread.class(&class_name).await?;
     let offset = class.field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
@@ -1648,7 +1650,7 @@ mod tests {
             let result = array_index_scale_0(thread.clone(), parameters)
                 .await?
                 .expect("scale");
-            let scale: i32 = result.try_into()?;
+            let scale = result.as_i32()?;
             assert_eq!(expected_scale, scale);
         }
 
@@ -1785,7 +1787,7 @@ mod tests {
         let value = object_field_offset_0(thread, parameters)
             .await?
             .expect("offset");
-        let offset: i64 = value.try_into()?;
+        let offset = value.as_i64()?;
         assert_eq!(offset, 0);
         Ok(())
     }
@@ -1796,7 +1798,7 @@ mod tests {
         let value = page_size(thread, Parameters::default())
             .await?
             .expect("page_size");
-        let page_size: i32 = value.try_into()?;
+        let page_size = value.as_i32()?;
         let expected_page_size;
 
         #[cfg(target_os = "macos")]
@@ -1884,7 +1886,7 @@ mod tests {
         let value = static_field_offset_0(thread, parameters)
             .await?
             .expect("offset");
-        let offset: i64 = value.try_into()?;
+        let offset = value.as_i64()?;
         assert_eq!(offset, 0);
         Ok(())
     }

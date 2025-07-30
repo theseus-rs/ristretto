@@ -62,7 +62,7 @@ impl Parameters {
 
     /// Pop a bool from the parameters.
     pub fn pop_bool(&mut self) -> Result<bool> {
-        let bool_value: bool = self.pop()?.try_into()?;
+        let bool_value = self.pop()?.as_bool()?;
         Ok(bool_value)
     }
 

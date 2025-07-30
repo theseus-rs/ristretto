@@ -6,7 +6,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
-use ristretto_classloader::{Class, Object, Value};
+use ristretto_classloader::{Class, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -38,8 +38,9 @@ pub(crate) async fn new_instance_0(
     let mut arguments: Vec<Value> = parameters.pop()?.try_into()?;
     let method = parameters.pop_object()?;
 
-    let class_object: Object = method.value("clazz")?.try_into()?;
-    let class = class::get_class(&thread, &class_object).await?;
+    let class_object = method.value("clazz")?;
+    let class_object = class_object.as_object_ref()?;
+    let class = class::get_class(&thread, class_object).await?;
     let class_name = class.name();
     let parameter_types: Vec<Value> = method.value("parameterTypes")?.try_into()?;
     let mut descriptor = String::new();
@@ -87,11 +88,9 @@ pub(crate) mod tests {
         let string_parameter = "42".to_object(&thread).await?;
         let parameters = Value::try_from((class, vec![string_parameter]))?;
         let parameters = Parameters::new(vec![constructor, parameters]);
-        let result: Object = new_instance(thread, parameters)
-            .await?
-            .expect("integer")
-            .try_into()?;
-        let value: i32 = result.value("value")?.try_into()?;
+        let result = new_instance(thread, parameters).await?.expect("integer");
+        let result = result.as_object_ref()?;
+        let value = result.value("value")?.as_i32()?;
         assert_eq!(42, value);
         Ok(())
     }

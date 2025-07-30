@@ -1,4 +1,3 @@
-use ristretto_classloader::Object;
 use ristretto_vm::{Result, VM};
 
 #[tokio::test]
@@ -13,7 +12,7 @@ async fn test_is_enum() -> Result<()> {
         .await?
         .expect("class object");
 
-    let modifiers: i32 = vm
+    let modifiers = vm
         .invoke(
             "java.lang.Class",
             "getModifiers()I",
@@ -21,26 +20,26 @@ async fn test_is_enum() -> Result<()> {
         )
         .await?
         .expect("modifiers")
-        .try_into()?;
+        .as_i32()?;
     assert_eq!(16_401, modifiers);
 
-    let super_class: Object = vm
+    let super_class = vm
         .invoke(
             "java.lang.Class",
             "getSuperclass()Ljava/lang/Class;",
             &[class_object.clone()],
         )
         .await?
-        .expect("super class")
-        .try_into()?;
-    let super_class_name: String = super_class.value("name")?.try_into()?;
+        .expect("super class");
+    let super_class = super_class.as_object_ref()?;
+    let super_class_name = super_class.value("name")?.as_string()?;
     assert_eq!("java.lang.Enum", super_class_name);
 
-    let is_enum: bool = vm
+    let is_enum = vm
         .invoke("java.lang.Class", "isEnum()Z", &[class_object])
         .await?
         .expect("is enum")
-        .try_into()?;
+        .as_bool()?;
     assert!(is_enum);
 
     Ok(())

@@ -11,6 +11,7 @@ use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::io::Cursor;
 use std::sync::Arc;
+use zerocopy::transmute_ref;
 
 /// Create a `java.lang.Class` object from a byte array.
 /// This method is used by the `defineClass0`, `defineClass1`, and `defineClass2` native methods.
@@ -21,7 +22,7 @@ async fn class_object_from_bytes(
     bytes: &[u8],
     offset: i32,
     length: i32,
-) -> Result<Object> {
+) -> Result<Value> {
     let bytes_length = i32::try_from(bytes.len())?;
     if offset < 0 || length < 0 || offset + length > bytes_length {
         return Err(IndexOutOfBoundsException {
@@ -51,7 +52,6 @@ async fn class_object_from_bytes(
 
     let class = Class::from(None, class_file)?;
     let class = class.to_object(thread).await?;
-    let class: Object = class.try_into()?;
     Ok(class)
 }
 
@@ -67,16 +67,22 @@ pub(crate) async fn define_class_0_0(
     let _protection_domain = parameters.pop_object()?;
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
-    let bytes: Vec<u8> = parameters.pop()?.try_into()?;
+    let bytes = parameters.pop()?;
+    let bytes = {
+        let bytes = bytes.as_byte_vec_ref()?;
+        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        bytes.to_vec()
+    };
     let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
         let expected_class_name = expected_class_name.as_string()?;
+        let class = class.as_object_ref()?;
         let class_name = class.class().name();
         if class_name != expected_class_name {
             return Err(NoClassDefFoundError(class_name.to_string()).into());
         }
     }
-    Ok(Some(Value::from(class)))
+    Ok(Some(class))
 }
 
 #[intrinsic_method(
@@ -92,16 +98,22 @@ pub(crate) async fn define_class_1_0(
     let _protection_domain = parameters.pop_object()?;
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
-    let bytes: Vec<u8> = parameters.pop()?.try_into()?;
+    let bytes = parameters.pop()?;
+    let bytes = {
+        let bytes = bytes.as_byte_vec_ref()?;
+        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        bytes.to_vec()
+    };
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
         let expected_class_name = expected_class_name.as_string()?;
-        let class_name = class.class().name();
+        let class_object = class.as_object_ref()?;
+        let class_name = class_object.class().name();
         if class_name != expected_class_name {
             return Err(NoClassDefFoundError(class_name.to_string()).into());
         }
     }
-    Ok(Some(Value::from(class)))
+    Ok(Some(class))
 }
 
 #[intrinsic_method(
@@ -118,18 +130,25 @@ pub(crate) async fn define_class_2_0(
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
     let byte_buffer = parameters.pop_object()?;
-    let buffer: Vec<u8> = byte_buffer.value("hb")?.try_into()?;
-    let buffer_offset = byte_buffer.value("offset")?.try_into()?;
-    let bytes: Vec<u8> = buffer.into_iter().skip(buffer_offset).collect();
+    let buffer = byte_buffer.value("hb")?;
+    let buffer = {
+        let buffer = buffer.as_byte_vec_ref()?;
+        let buffer: &[u8] = transmute_ref!(buffer.as_slice());
+        buffer.to_vec()
+    };
+
+    let buffer_offset = byte_buffer.value("offset")?.as_usize()?;
+    let bytes: Vec<u8> = buffer.iter().copied().skip(buffer_offset).collect();
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
         let expected_class_name = expected_class_name.as_string()?;
-        let class_name = class.class().name();
+        let class_object = class.as_object_ref()?;
+        let class_name = class_object.class().name();
         if class_name != expected_class_name {
             return Err(NoClassDefFoundError(class_name.to_string()).into());
         }
     }
-    Ok(Some(Value::from(class)))
+    Ok(Some(class))
 }
 
 #[intrinsic_method(
@@ -147,14 +166,20 @@ pub(crate) async fn define_class_0_1(
     let _protection_domain = parameters.pop_object()?;
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
-    let bytes: Vec<u8> = parameters.pop()?.try_into()?;
-    let _name: String = parameters.pop()?.try_into()?;
+    let bytes = parameters.pop()?;
+    let bytes = {
+        let bytes = bytes.as_byte_vec_ref()?;
+        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        bytes.to_vec()
+    };
+    let _name = parameters.pop()?.as_string()?;
     let lookup: Object = parameters.pop_object()?;
     let _lookup: Arc<Class> = get_class(&thread, &lookup).await?;
     let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
-    class.set_value("classLoader", class_loader)?;
-    Ok(Some(Value::from(class)))
+    let class_object = class.as_object_ref()?;
+    class_object.set_value("classLoader", class_loader)?;
+    Ok(Some(class))
 }
 
 #[intrinsic_method(
@@ -170,11 +195,17 @@ pub(crate) async fn define_class_1_1(
     let _protection_domain = parameters.pop_object()?;
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
-    let bytes: Vec<u8> = parameters.pop()?.try_into()?;
+    let bytes = parameters.pop()?;
+    let bytes = {
+        let bytes = bytes.as_byte_vec_ref()?;
+        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        bytes.to_vec()
+    };
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
-    class.set_value("classLoader", class_loader)?;
-    Ok(Some(Value::from(class)))
+    let class_object = class.as_object_ref()?;
+    class_object.set_value("classLoader", class_loader)?;
+    Ok(Some(class))
 }
 
 #[intrinsic_method(
@@ -191,13 +222,20 @@ pub(crate) async fn define_class_2_1(
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
     let byte_buffer = parameters.pop_object()?;
-    let buffer: Vec<u8> = byte_buffer.value("hb")?.try_into()?;
-    let buffer_offset = byte_buffer.value("offset")?.try_into()?;
-    let bytes: Vec<u8> = buffer.into_iter().skip(buffer_offset).collect();
+    let buffer = byte_buffer.value("hb")?;
+    let buffer = {
+        let buffer = buffer.as_byte_vec_ref()?;
+        let buffer: &[u8] = transmute_ref!(buffer.as_slice());
+        buffer.to_vec()
+    };
+
+    let buffer_offset = byte_buffer.value("offset")?.as_usize()?;
+    let bytes: Vec<u8> = buffer.iter().copied().skip(buffer_offset).collect();
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
-    class.set_value("classLoader", class_loader)?;
-    Ok(Some(Value::from(class)))
+    let class_object = class.as_object_ref()?;
+    class_object.set_value("classLoader", class_loader)?;
+    Ok(Some(class))
 }
 
 #[intrinsic_method(
@@ -209,7 +247,7 @@ pub(crate) async fn find_bootstrap_class(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let class_name: String = parameters.pop()?.try_into()?;
+    let class_name = parameters.pop()?.as_string()?;
     let Ok(class) = thread.class(class_name).await else {
         return Ok(Some(Value::Object(None)));
     };
@@ -239,7 +277,7 @@ pub(crate) async fn find_loaded_class_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let class_name: String = parameters.pop()?.try_into()?;
+    let class_name = parameters.pop()?.as_string()?;
     let Ok(class) = thread.class(class_name).await else {
         return Ok(Some(Value::Object(None)));
     };

@@ -793,7 +793,7 @@ mod tests {
     async fn test_nano_time() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = nano_time(thread, Parameters::default()).await?;
-        let time: i64 = result.unwrap_or(Value::Long(0)).try_into()?;
+        let time = result.unwrap_or(Value::Long(0)).as_i64()?;
         assert!(time > 0);
         Ok(())
     }

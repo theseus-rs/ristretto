@@ -34,7 +34,6 @@ pub(crate) async fn boot(thread: Arc<Thread>, _parameters: Parameters) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ristretto_classloader::Object;
 
     #[tokio::test]
     async fn test_boot() -> Result<()> {
@@ -42,7 +41,7 @@ mod tests {
         let result = boot(thread, Parameters::default())
             .await?
             .expect("module layer");
-        let object: Object = result.try_into()?;
+        let object = result.as_object_ref()?;
         let class = object.class();
         assert_eq!("java/lang/ModuleLayer", class.name());
         Ok(())

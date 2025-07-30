@@ -50,10 +50,10 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
         parameters.push_bool(true);
-        let enabled: bool = echo(thread, parameters)
+        let enabled = echo(thread, parameters)
             .await?
             .expect("enabled")
-            .try_into()?;
+            .as_bool()?;
         assert!(!enabled);
         Ok(())
     }
@@ -73,7 +73,7 @@ mod tests {
         // This test is mainly for coverage as the test is using the same state to verify the result
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = istty(thread, Parameters::default()).await?.expect("istty");
-        let is_tty: bool = result.try_into()?;
+        let is_tty = result.as_bool()?;
         let terminal = Term::stdout();
         let expected_is_terminal = terminal.is_term();
         assert_eq!(expected_is_terminal, is_tty);

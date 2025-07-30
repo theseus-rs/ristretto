@@ -5,7 +5,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
-use ristretto_classloader::{Object, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -25,14 +25,15 @@ pub(crate) async fn invoke_0(
     }
     let method = parameters.pop_object()?;
 
-    let name: String = method.value("name")?.try_into()?;
-    let class_object: Object = method.value("clazz")?.try_into()?;
-    let class = class::get_class(&thread, &class_object).await?;
+    let name = method.value("name")?.as_string()?;
+    let class_object = method.value("clazz")?;
+    let class_object = class_object.as_object_ref()?;
+    let class = class::get_class(&thread, class_object).await?;
     let parameter_types: Vec<Value> = method.value("parameterTypes")?.try_into()?;
     let mut parameters = String::new();
     for parameter_type in parameter_types {
-        let parameter_type: Object = parameter_type.try_into()?;
-        let parameter_type_class = class::get_class(&thread, &parameter_type).await?;
+        let parameter_type = parameter_type.as_object_ref()?;
+        let parameter_type_class = class::get_class(&thread, parameter_type).await?;
         if parameter_type_class.is_array() || parameter_type_class.is_primitive() {
             parameters.push_str(parameter_type_class.name());
         } else {
@@ -41,8 +42,9 @@ pub(crate) async fn invoke_0(
         }
     }
 
-    let return_type: Object = method.value("returnType")?.try_into()?;
-    let return_type_class = class::get_class(&thread, &return_type).await?;
+    let return_type = method.value("returnType")?;
+    let return_type = return_type.as_object_ref()?;
+    let return_type_class = class::get_class(&thread, return_type).await?;
     let return_type_class = if return_type_class.is_array() || return_type_class.is_primitive() {
         return_type_class.name().to_string()
     } else {
@@ -83,10 +85,10 @@ pub(crate) mod tests {
         let string_parameter = "42".to_object(&thread).await?;
         let parameters = Value::try_from((class, vec![string_parameter]))?;
         let parameters = Parameters::new(vec![method, Value::Object(None), parameters]);
-        let value: i32 = invoke(thread, parameters)
+        let value = invoke(thread, parameters)
             .await?
             .expect("integer")
-            .try_into()?;
+            .as_i32()?;
         assert_eq!(42, value);
         Ok(())
     }
