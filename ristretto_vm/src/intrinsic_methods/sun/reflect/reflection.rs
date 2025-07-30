@@ -60,8 +60,11 @@ pub(crate) async fn get_class_access_flags(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
-    let class_name = object.value("name")?.as_string()?;
+    let object = parameters.pop()?;
+    let class_name = {
+        let object = object.as_object_ref()?;
+        object.value("name")?.as_string()?
+    };
     let class = thread.class(&class_name).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags;

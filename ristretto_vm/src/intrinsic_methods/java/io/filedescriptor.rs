@@ -8,7 +8,7 @@ use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_11, JAVA_17};
-use ristretto_classloader::{Object, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
@@ -21,8 +21,9 @@ use tokio::io::AsyncWriteExt;
 /// earlier versions, or on non-windows platforms, it uses the `fd` field.
 pub(crate) fn file_descriptor_from_java_object(
     vm: &Arc<VM>,
-    file_descriptor: &Object,
+    file_descriptor: &Value,
 ) -> Result<i64> {
+    let file_descriptor = file_descriptor.as_object_ref()?;
     let fd = if vm.java_class_file_version() >= &JAVA_11 {
         #[cfg(not(target_os = "windows"))]
         {
@@ -47,15 +48,18 @@ pub(crate) async fn close_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file_descriptor = parameters.pop_object()?;
+    let file_descriptor = parameters.pop()?;
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
 
-    file_descriptor.set_value("fd", Value::Int(-1))?;
-    if vm.java_class_file_version() >= &JAVA_11 {
-        file_descriptor.set_value("handle", Value::Long(-1))?;
+    {
+        let mut file_descriptor = file_descriptor.as_object_mut()?;
+        file_descriptor.set_value("fd", Value::Int(-1))?;
+        if vm.java_class_file_version() >= &JAVA_11 {
+            file_descriptor.set_value("handle", Value::Long(-1))?;
+        }
     }
 
     let Some(handle) = file_handles.remove(&handle_identifier).await else {
@@ -146,7 +150,7 @@ pub(crate) async fn sync_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file_descriptor = parameters.pop_object()?;
+    let file_descriptor = parameters.pop()?;
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;

@@ -419,7 +419,7 @@ pub(crate) async fn multi_new_array(
         let dimensions = dimensions.as_int_vec_ref()?;
         dimensions.to_vec()
     };
-    let class_object = parameters.pop_object()?;
+    let class_object = parameters.pop()?;
     let class = get_class(&thread, &class_object).await?;
 
     if dimensions.is_empty() {

@@ -17,7 +17,7 @@ pub(crate) async fn has_static_initializer(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let class_object = parameters.pop_object()?;
+    let class_object = parameters.pop()?;
     let class = get_class(&thread, &class_object).await?;
     let has_initializer = class.method("<clinit>", "()V").is_some();
     Ok(Some(Value::from(has_initializer)))

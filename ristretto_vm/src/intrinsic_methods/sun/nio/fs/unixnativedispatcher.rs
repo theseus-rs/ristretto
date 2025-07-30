@@ -598,9 +598,10 @@ pub(crate) async fn stat_0_1(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let Ok(_attributes) = parameters.pop_object() else {
+    let attributes = parameters.pop()?;
+    if attributes.is_null() {
         return Err(NullPointerException("attributes is null".to_string()).into());
-    };
+    }
     let _path = parameters.pop_long()?;
     // TODO: Implement the stat0 method
 

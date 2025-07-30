@@ -338,7 +338,7 @@ mod tests {
         let Value::Object(Some(reference)) = stack.pop()? else {
             panic!("expected reference");
         };
-        assert_eq!("[Ljava/lang/Object;", reference.class_name());
+        assert_eq!("[Ljava/lang/Object;", reference.class_name()?);
         Ok(())
     }
 
@@ -493,7 +493,7 @@ mod tests {
         let object = stack.pop()?;
         assert!(matches!(
             object,
-            Value::Object(Some(ref reference)) if reference.class_name() == class_name
+            Value::Object(Some(ref reference)) if reference.class_name()? == class_name
         ));
         Ok(())
     }
@@ -556,7 +556,7 @@ mod tests {
         let object = stack.pop()?;
         assert!(matches!(
             object,
-            Value::Object(Some(ref reference)) if reference.class_name() == class_name
+            Value::Object(Some(ref reference)) if reference.class_name()? == class_name
         ));
         Ok(())
     }

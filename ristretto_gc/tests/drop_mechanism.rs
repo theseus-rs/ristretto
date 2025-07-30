@@ -12,11 +12,11 @@ struct TestObject {
 impl TestObject {
     fn new(id: usize) -> (Self, Arc<AtomicBool>) {
         let dropped = Arc::new(AtomicBool::new(false));
-        let obj = Self {
+        let object = Self {
             id,
             dropped: dropped.clone(),
         };
-        (obj, dropped)
+        (object, dropped)
     }
 }
 
@@ -45,12 +45,12 @@ impl TestObjectWithFinalizer {
     fn new(id: usize) -> (Self, Arc<AtomicBool>, Arc<AtomicBool>) {
         let finalized = Arc::new(AtomicBool::new(false));
         let dropped = Arc::new(AtomicBool::new(false));
-        let obj = Self {
+        let object = Self {
             id,
             finalized: finalized.clone(),
             dropped: dropped.clone(),
         };
-        (obj, finalized, dropped)
+        (object, finalized, dropped)
     }
 }
 
@@ -81,13 +81,13 @@ fn test_basic_drop_mechanism() {
     let (obj, dropped_flag) = TestObject::new(1);
 
     // Create a Gc object
-    let gc_obj = Gc::new(obj);
+    let gc_object = Gc::new(obj);
 
     // Verify the object is not dropped yet
     assert!(!dropped_flag.load(Ordering::Acquire));
 
     // Drop the Gc reference
-    drop(gc_obj);
+    drop(gc_object);
 
     // Force garbage collection
     GC.collect();
@@ -108,14 +108,14 @@ fn test_finalizer_mechanism() {
     let (obj, finalized_flag, dropped_flag) = TestObjectWithFinalizer::new(2);
 
     // Create a Gc object with finalizer
-    let gc_obj = Gc::new_with_finalizer(obj);
+    let gc_object = Gc::new_with_finalizer(obj);
 
     // Verify the object is not finalized or dropped yet
     assert!(!finalized_flag.load(Ordering::Acquire));
     assert!(!dropped_flag.load(Ordering::Acquire));
 
     // Drop the Gc reference
-    drop(gc_obj);
+    drop(gc_object);
 
     // Force garbage collection
     GC.collect();

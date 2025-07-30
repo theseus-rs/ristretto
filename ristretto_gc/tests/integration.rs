@@ -189,8 +189,8 @@ fn test_stress_test_rapid_allocation() {
 
     for i in 0..1000 {
         let data = vec![i; 100]; // Each object contains 100 elements
-        let gc_obj = Gc::with_collector(&collector, data);
-        objects.push(gc_obj);
+        let gc_object = Gc::with_collector(&collector, data);
+        objects.push(gc_object);
 
         // Trigger collection periodically
         if i % 100 == 0 {

@@ -14,7 +14,8 @@ pub(crate) async fn clear_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
+    let mut object = object.as_object_mut()?;
     object.set_value("referent", Value::Object(None))?;
     Ok(None)
 }
@@ -55,7 +56,8 @@ pub(crate) async fn refers_to_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object_parameter = parameters.pop()?;
-    let reference = parameters.pop_object()?;
+    let reference = parameters.pop()?;
+    let reference = reference.as_object_ref()?;
     let object = reference.value("referent")?;
     let refers_to = object == object_parameter;
     Ok(Some(Value::from(refers_to)))

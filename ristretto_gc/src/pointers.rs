@@ -71,8 +71,8 @@ impl TracePtr {
             // 3. T implements Trace so the cast is valid
             // 4. We only call this during controlled GC phases
             unsafe {
-                let obj = &*ptr.cast::<T>();
-                obj.trace(collector);
+                let object = &*ptr.cast::<T>();
+                object.trace(collector);
             }
         }
 
@@ -102,8 +102,8 @@ impl TracePtr {
             // 3. T implements Trace so the cast is valid
             // 4. The object is managed by the GC and should be alive during tracing
             unsafe {
-                let obj = &*ptr.cast::<T>();
-                obj.trace(collector);
+                let object = &*ptr.cast::<T>();
+                object.trace(collector);
             }
         }
 

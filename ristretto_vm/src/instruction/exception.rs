@@ -29,8 +29,10 @@ pub(crate) async fn process_throwable(
     throwable: Value,
 ) -> Result<usize> {
     let thread = frame.thread()?;
-    let throwable_object = throwable.as_object_ref()?;
-    let throwable_class = throwable_object.class();
+    let throwable_class = {
+        let throwable_object = throwable.as_object_ref()?;
+        throwable_object.class().clone()
+    };
     let class = frame.class();
     let constant_pool = class.constant_pool();
     let method = frame.method();
@@ -53,7 +55,7 @@ pub(crate) async fn process_throwable(
                 constant_pool.try_get_class(exception_table_entry.catch_type)?;
             let exception_class = thread.class(exception_class_name).await?;
             exception_class
-                .is_assignable_from(&thread, throwable_class)
+                .is_assignable_from(&thread, &throwable_class)
                 .await?
         };
 

@@ -19,9 +19,11 @@ pub(crate) fn unbox_primitive(values: &mut [Value], index: usize) -> Result<()> 
     let Some(value) = values.get(index) else {
         return Err(InternalError(format!("index out of bounds: {index}")));
     };
-    let reference = value.as_reference()?;
-    let object = reference.as_object_ref()?;
-    let value = object.value("value")?;
+    let value = {
+        let reference = value.as_reference()?;
+        let object = reference.as_object_ref()?;
+        object.value("value")?
+    };
     values[index] = value;
     Ok(())
 }
@@ -36,17 +38,17 @@ pub(crate) async fn new_instance_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let mut arguments: Vec<Value> = parameters.pop()?.try_into()?;
-    let method = parameters.pop_object()?;
-
-    let class_object = method.value("clazz")?;
-    let class_object = class_object.as_object_ref()?;
-    let class = class::get_class(&thread, class_object).await?;
+    let method = parameters.pop()?;
+    let (class_object, parameter_types) = {
+        let method = method.as_object_ref()?;
+        let class_object = method.value("clazz")?;
+        let parameter_types: Vec<Value> = method.value("parameterTypes")?.try_into()?;
+        (class_object, parameter_types)
+    };
+    let class = class::get_class(&thread, &class_object).await?;
     let class_name = class.name();
-    let parameter_types: Vec<Value> = method.value("parameterTypes")?.try_into()?;
     let mut descriptor = String::new();
     for (index, parameter_type) in parameter_types.iter().enumerate() {
-        let reference = parameter_type.as_reference()?;
-        let parameter_type = reference.as_object_ref()?;
         let parameter_type_class = class::get_class(&thread, parameter_type).await?;
         let class_name = parameter_type_class.name();
         let class_descriptor = Class::convert_to_descriptor(class_name);

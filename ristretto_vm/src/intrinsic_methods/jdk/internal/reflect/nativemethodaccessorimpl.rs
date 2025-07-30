@@ -23,16 +23,18 @@ pub(crate) async fn invoke_0(
     if let Some(object) = object {
         arguments.insert(0, Value::from(object));
     }
-    let method = parameters.pop_object()?;
-
-    let name = method.value("name")?.as_string()?;
-    let class_object = method.value("clazz")?;
-    let class_object = class_object.as_object_ref()?;
-    let class = class::get_class(&thread, class_object).await?;
-    let parameter_types: Vec<Value> = method.value("parameterTypes")?.try_into()?;
+    let method = parameters.pop()?;
+    let (name, class_object, parameter_types, return_type) = {
+        let method = method.as_object_ref()?;
+        let name = method.value("name")?.as_string()?;
+        let class_object = method.value("clazz")?;
+        let parameter_types: Vec<Value> = method.value("parameterTypes")?.try_into()?;
+        let return_type = method.value("returnType")?;
+        (name, class_object, parameter_types, return_type)
+    };
+    let class = class::get_class(&thread, &class_object).await?;
     let mut parameters = String::new();
-    for parameter_type in parameter_types {
-        let parameter_type = parameter_type.as_object_ref()?;
+    for parameter_type in &parameter_types {
         let parameter_type_class = class::get_class(&thread, parameter_type).await?;
         if parameter_type_class.is_array() || parameter_type_class.is_primitive() {
             parameters.push_str(parameter_type_class.name());
@@ -42,9 +44,7 @@ pub(crate) async fn invoke_0(
         }
     }
 
-    let return_type = method.value("returnType")?;
-    let return_type = return_type.as_object_ref()?;
-    let return_type_class = class::get_class(&thread, return_type).await?;
+    let return_type_class = class::get_class(&thread, &return_type).await?;
     let return_type_class = if return_type_class.is_array() || return_type_class.is_primitive() {
         return_type_class.name().to_string()
     } else {

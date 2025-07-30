@@ -550,12 +550,12 @@ pub async fn get_method_handle(
             // field type from descriptor
             let field_type = FieldType::parse(member_descriptor)?.class_name();
             let field_class = thread.class(field_type).await?;
-            let field_class_obj = field_class.to_object(thread).await?;
+            let field_class_object = field_class.to_object(thread).await?;
             thread
                 .try_execute(
                     &lookup_class,
                     &method_handle,
-                    &[lookup.clone(), class_object, name_value, field_class_obj],
+                    &[lookup.clone(), class_object, name_value, field_class_object],
                 )
                 .await?
         }
@@ -571,12 +571,12 @@ pub async fn get_method_handle(
             )?;
             let field_type = FieldType::parse(member_descriptor)?.class_name();
             let field_class = thread.class(field_type).await?;
-            let field_class_obj = field_class.to_object(thread).await?;
+            let field_class_object = field_class.to_object(thread).await?;
             thread
                 .try_execute(
                     &lookup_class,
                     &method_handle,
-                    &[lookup.clone(), class_object, name_value, field_class_obj],
+                    &[lookup.clone(), class_object, name_value, field_class_object],
                 )
                 .await?
         }
@@ -812,11 +812,12 @@ async fn invoke_bootstrap_method(
 
     // Extract the target member from the method handle and call it directly
     // to avoid infinite recursion through thread.try_execute()
-    let target_member = method_handle.as_object_ref()?;
-    let member = target_member.value("member")?;
-    let member = member.as_object_ref()?;
+    let member = {
+        let target_member = method_handle.as_object_ref()?;
+        target_member.value("member")?
+    };
 
-    let result = call_method_handle_target(thread.clone(), member, arguments).await?;
+    let result = call_method_handle_target(thread.clone(), &member, arguments).await?;
 
     // Validate call site result is not null
     if let Value::Object(None) = result {
@@ -842,33 +843,32 @@ async fn validate_call_site(
     bootstrap_method_descriptor: &str,
     call_site: &Value,
 ) -> Result<()> {
-    if let Value::Object(None) = call_site {
+    if call_site.is_null() {
         return Err(
             BootstrapMethodError("Bootstrap method returned null CallSite".to_string()).into(),
+        );
+    } else if !call_site.is_object() {
+        return Err(
+            BootstrapMethodError("Bootstrap method did not return an object".to_string()).into(),
         );
     }
 
     // Validate that the returned object is actually a CallSite
     let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
-    let call_site_reference = call_site.as_reference()?;
+    let object_class = {
+        let object = call_site.as_object_ref()?;
+        object.class().clone()
+    };
 
-    if let Reference::Object(object) = call_site_reference {
-        // Check if the object's class is assignable from CallSite class
-        let object_class = object.class();
-        if !call_site_class
-            .is_assignable_from(thread, object_class)
-            .await?
-        {
-            return Err(BootstrapMethodError(format!(
-                "Bootstrap method returned object of type {} which is not a CallSite",
-                object_class.name()
-            ))
-            .into());
-        }
-    } else {
-        return Err(
-            BootstrapMethodError("Bootstrap method did not return an object".to_string()).into(),
-        );
+    if !call_site_class
+        .is_assignable_from(thread, &object_class)
+        .await?
+    {
+        return Err(BootstrapMethodError(format!(
+            "Bootstrap method returned object of type {} which is not a CallSite",
+            object_class.name()
+        ))
+        .into());
     }
 
     // Validate CallSite.type() matches expected MethodType
@@ -959,11 +959,12 @@ pub(crate) async fn invokedynamic(
 
     // Step 5: Invoke the target MethodHandle directly using call_method_handle_target
     // to avoid infinite recursion through thread.try_execute()
-    let target_member = target_method_handle.as_object_ref()?;
-    let member = target_member.value("member")?;
-    let member = member.as_object_ref()?;
+    let member = {
+        let target_member = target_method_handle.as_object_ref()?;
+        target_member.value("member")?
+    };
 
-    let result = call_method_handle_target(thread.clone(), member, parameters).await?;
+    let result = call_method_handle_target(thread.clone(), &member, parameters).await?;
 
     // Step 6: Handle the return value based on the method descriptor
     if let Some(_return_type) = return_type {

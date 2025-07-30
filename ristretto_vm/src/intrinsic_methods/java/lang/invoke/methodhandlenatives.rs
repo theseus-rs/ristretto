@@ -10,7 +10,7 @@ use ristretto_classfile::VersionSpecification::{
 };
 use ristretto_classfile::{FieldAccessFlags, JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodAccessFlags};
 use ristretto_classloader::Error::IllegalAccessError;
-use ristretto_classloader::{Class, Method, Object, Value};
+use ristretto_classloader::{Class, Method, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -163,11 +163,14 @@ pub(crate) async fn object_field_offset(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let member_name = parameters.pop_object()?;
-    let class_object = member_name.value("clazz")?;
-    let class_object = class_object.as_object_ref()?;
-    let class = get_class(&thread, class_object).await?;
-    let field_name = member_name.value("name")?.as_string()?;
+    let member_name = parameters.pop()?;
+    let (class_object, field_name) = {
+        let member_name = member_name.as_object_ref()?;
+        let class_object = member_name.value("clazz")?;
+        let field_name = member_name.value("name")?.as_string()?;
+        (class_object, field_name)
+    };
+    let class = get_class(&thread, &class_object).await?;
     let offset = class.field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
     Ok(Some(Value::Long(offset)))
@@ -199,24 +202,33 @@ pub(crate) async fn register_natives(
 
 pub(crate) async fn resolve(
     thread: Arc<Thread>,
-    member_self: Object,
+    member_self: Value,
     caller: Option<Arc<Class>>,
     lookup_mode_flags: &LookupModeFlags,
     speculative_resolve: bool,
 ) -> Result<Option<Value>> {
-    let class_object = member_self.value("clazz")?;
-    let class_object = class_object.as_object_ref()?;
-    let class_name = class_object.value("name")?.as_string()?;
+    let (class_object, name, flags) = {
+        let member_self = member_self.as_object_ref()?;
+        let class_object = member_self.value("clazz")?;
+        let name = member_self.value("name")?;
+        let flags = member_self.value("flags")?.as_i32()?;
+        (class_object, name, flags)
+    };
+    let class_name = {
+        let class_object = class_object.as_object_ref()?;
+        class_object.value("name")?.as_string()?
+    };
     let class = thread.class(class_name.clone()).await?;
-    let name = member_self.value("name")?;
-    let flags = member_self.value("flags")?.as_i32()?;
     let member_name_flags = MemberNameFlags::from_bits_truncate(flags);
 
     // Handle methods/constructors
     if member_name_flags.contains(MemberNameFlags::IS_METHOD)
         || member_name_flags.contains(MemberNameFlags::IS_CONSTRUCTOR)
     {
-        let method_type = member_self.value("type")?;
+        let method_type = {
+            let member_self = member_self.as_object_ref()?;
+            member_self.value("type")?
+        };
         let method_type = method_type.as_object_ref()?;
         let parameter_types = method_type.value("ptypes")?;
         let parameters: Vec<Value> = parameter_types.try_into()?;
@@ -227,7 +239,6 @@ pub(crate) async fn resolve(
             let descriptor = Class::convert_to_descriptor(&class_name);
             parameter_descriptors.push(descriptor);
         }
-        let class_name = class_object.value("name")?.as_string()?;
         let return_type = method_type.value("rtype")?;
         let return_type = return_type.as_object_ref()?;
         let return_class_name = return_type.value("name")?.as_string()?;
@@ -268,8 +279,11 @@ pub(crate) async fn resolve(
 
         let modifiers = i32::from(method_access_flags.bits());
         let flags = flags | modifiers;
-        member_self.set_value("flags", Value::from(flags))?;
-        Ok(Some(member_self.into()))
+        {
+            let mut member_self = member_self.as_object_mut()?;
+            member_self.set_value("flags", Value::from(flags))?;
+        }
+        Ok(Some(member_self))
     }
     // Handle fields (for both normal field and VarHandle)
     else if member_name_flags.contains(MemberNameFlags::IS_FIELD) {
@@ -295,8 +309,11 @@ pub(crate) async fn resolve(
         }
         let modifiers = i32::from(field_access_flags.bits());
         let flags = flags | modifiers;
-        member_self.set_value("flags", Value::from(flags))?;
-        Ok(Some(member_self.into()))
+        {
+            let mut member_self = member_self.as_object_mut()?;
+            member_self.set_value("flags", Value::from(flags))?;
+        }
+        Ok(Some(member_self))
     } else {
         Err(InternalError(format!(
             "Unsupported member name flag: {member_name_flags:?}"
@@ -418,8 +435,8 @@ pub(crate) async fn resolve_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     // Correct parameter order: pop MemberName first, then caller (Class)
-    let member_self = parameters.pop_object()?;
-    let caller = match parameters.pop_object() {
+    let member_self = parameters.pop()?;
+    let caller = match parameters.pop() {
         Ok(caller) => {
             let caller = get_class(&thread, &caller).await?;
             Some(caller)
@@ -446,14 +463,14 @@ pub(crate) async fn resolve_1(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let speculative_resolve = parameters.pop_bool()?;
-    let caller = match parameters.pop_object() {
+    let caller = match parameters.pop() {
         Ok(caller) => {
             let caller = get_class(&thread, &caller).await?;
             Some(caller)
         }
         Err(_) => None,
     };
-    let member_self = parameters.pop_object()?;
+    let member_self = parameters.pop()?;
     resolve(
         thread,
         member_self,
@@ -475,14 +492,14 @@ pub(crate) async fn resolve_2(
 ) -> Result<Option<Value>> {
     let speculative_resolve = parameters.pop_bool()?;
     let lookup_mode = LookupModeFlags::from_bits_truncate(parameters.pop_int()?);
-    let caller = match parameters.pop_object() {
+    let caller = match parameters.pop() {
         Ok(caller) => {
             let caller = get_class(&thread, &caller).await?;
             Some(caller)
         }
         Err(_) => None,
     };
-    let member_self = parameters.pop_object()?;
+    let member_self = parameters.pop()?;
     resolve(
         thread,
         member_self,
@@ -502,9 +519,10 @@ pub(crate) async fn set_call_site_target_normal(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let call_site = parameters.pop_object()?;
-    let method_handle = parameters.pop_object()?;
-    call_site.set_value("target", Value::from(method_handle))?;
+    let call_site = parameters.pop()?;
+    let mut call_site = call_site.as_object_mut()?;
+    let method_handle = parameters.pop()?;
+    call_site.set_value("target", method_handle)?;
     Ok(None)
 }
 
@@ -517,9 +535,10 @@ pub(crate) async fn set_call_site_target_volatile(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let call_site = parameters.pop_object()?;
-    let method_handle = parameters.pop_object()?;
-    call_site.set_value("target", Value::from(method_handle))?;
+    let call_site = parameters.pop()?;
+    let mut call_site = call_site.as_object_mut()?;
+    let method_handle = parameters.pop()?;
+    call_site.set_value("target", method_handle)?;
     Ok(None)
 }
 
@@ -532,7 +551,8 @@ pub(crate) async fn static_field_base(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let member_name = parameters.pop_object()?;
+    let member_name = parameters.pop()?;
+    let member_name = member_name.as_object_ref()?;
     let class = member_name.value("clazz")?;
     Ok(Some(class))
 }
@@ -546,11 +566,14 @@ pub(crate) async fn static_field_offset(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let member_name = parameters.pop_object()?;
-    let class_object = member_name.value("clazz")?;
-    let class_object = class_object.as_object_ref()?;
-    let class = get_class(&thread, class_object).await?;
-    let field_name = member_name.value("name")?.as_string()?;
+    let member_name = parameters.pop()?;
+    let (class_object, field_name) = {
+        let member_name = member_name.as_object_ref()?;
+        let class_object = member_name.value("clazz")?;
+        let field_name = member_name.value("name")?.as_string()?;
+        (class_object, field_name)
+    };
+    let class = get_class(&thread, &class_object).await?;
     let offset = class.field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
     Ok(Some(Value::Long(offset)))
@@ -560,6 +583,7 @@ pub(crate) async fn static_field_offset(
 mod tests {
     use super::*;
     use crate::JavaObject;
+    use ristretto_classloader::Object;
 
     #[tokio::test]
     #[should_panic(
@@ -637,7 +661,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
-        let member_name = Object::new(member_name_class)?;
+        let mut member_name = Object::new(member_name_class)?;
         let class_object = thread.class("java.lang.Integer").await?;
         let class = Value::from(Object::new(class_object)?);
         member_name.set_value("clazz", class)?;
@@ -692,7 +716,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
-        let member_name = Object::new(member_name_class)?;
+        let mut member_name = Object::new(member_name_class)?;
         let class_object = thread.class("java.lang.Integer").await?;
         let class = Value::from(Object::new(class_object)?);
         member_name.set_value("clazz", class.clone())?;
@@ -707,7 +731,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
-        let member_name = Object::new(member_name_class)?;
+        let mut member_name = Object::new(member_name_class)?;
         let class_object = thread.class("java.lang.Integer").await?;
         let class = Value::from(Object::new(class_object)?);
         member_name.set_value("clazz", class)?;

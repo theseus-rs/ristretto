@@ -328,7 +328,7 @@ impl VM {
         // The internal structure of Thread changed in Java 19
         let new_thread = if java_version <= &JAVA_17 {
             let thread_class = self.class("java.lang.Thread").await?;
-            let new_thread = Object::new(thread_class)?;
+            let mut new_thread = Object::new(thread_class)?;
             new_thread.set_value("daemon", Value::Int(0))?;
             new_thread.set_value("eetop", Value::Long(thread_id))?;
             new_thread.set_value("group", thread_group.clone())?;
@@ -339,7 +339,7 @@ impl VM {
             Value::from(new_thread)
         } else {
             let field_holder_class = self.class("java.lang.Thread$FieldHolder").await?;
-            let field_holder = Object::new(field_holder_class)?;
+            let mut field_holder = Object::new(field_holder_class)?;
             field_holder.set_value("daemon", Value::Int(0))?;
             field_holder.set_value("group", thread_group.clone())?;
             field_holder.set_value("priority", Value::Int(5))?;
@@ -348,7 +348,7 @@ impl VM {
             let field_holder = Value::from(field_holder);
 
             let thread_class = self.class("java.lang.Thread").await?;
-            let new_thread = Object::new(thread_class)?;
+            let mut new_thread = Object::new(thread_class)?;
             new_thread.set_value("eetop", Value::Long(thread_id))?;
             new_thread.set_value("holder", field_holder)?;
             new_thread.set_value("interrupted", Value::Int(0))?;

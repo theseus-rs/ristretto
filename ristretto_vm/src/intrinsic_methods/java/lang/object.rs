@@ -31,7 +31,7 @@ pub(crate) async fn get_class(
         return Err(InternalError("no object reference defined".to_string()));
     };
 
-    let class_name = object.class_name();
+    let class_name = object.class_name()?;
     let class = thread.class(class_name).await?;
     let class = class.to_object(&thread).await?;
     Ok(Some(class))

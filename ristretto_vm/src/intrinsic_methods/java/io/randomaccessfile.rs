@@ -45,12 +45,14 @@ pub(crate) async fn get_file_pointer(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let random_access_file = parameters.pop_object()?;
-    let file_descriptor = random_access_file.value("fd")?;
-    let file_descriptor = file_descriptor.as_object_ref()?;
+    let random_access_file = parameters.pop()?;
+    let file_descriptor = {
+        let random_access_file = random_access_file.as_object_ref()?;
+        random_access_file.value("fd")?
+    };
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
-    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
     let mut file_handle = file_handles
         .get_mut(&handle_identifier)
@@ -100,12 +102,14 @@ pub(crate) async fn length_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let random_access_file = parameters.pop_object()?;
-    let file_descriptor = random_access_file.value("fd")?;
-    let file_descriptor = file_descriptor.as_object_ref()?;
+    let random_access_file = parameters.pop()?;
+    let file_descriptor = {
+        let random_access_file = random_access_file.as_object_ref()?;
+        random_access_file.value("fd")?
+    };
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
-    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
     let file_handle = file_handles
         .get(&handle_identifier)
@@ -145,9 +149,11 @@ pub(crate) async fn open_0(
     let mode = u16::try_from(parameters.pop_int()?)?;
     let mode = FileModeFlags::from_bits_truncate(mode);
     let path = parameters.pop()?.as_string()?;
-    let random_access_file = parameters.pop_object()?;
-    let file_descriptor = random_access_file.value("fd")?;
-    let file_descriptor = file_descriptor.as_object_ref()?;
+    let random_access_file = parameters.pop()?;
+    let file_descriptor = {
+        let random_access_file = random_access_file.as_object_ref()?;
+        random_access_file.value("fd")?
+    };
 
     if path.is_empty() {
         return Err(FileNotFoundException("File path is empty".to_string()).into());
@@ -218,12 +224,18 @@ pub(crate) async fn open_0(
                 let handle_identifier = file_handle_identifier(fd);
                 file_handles.insert(handle_identifier, file_handle).await?;
 
-                file_descriptor.set_value("fd", Value::Int(i32::try_from(fd)?))?;
-                if vm.java_class_file_version() >= &JAVA_11 {
-                    file_descriptor.set_value("handle", Value::Long(fd))?;
+                {
+                    let mut file_descriptor = file_descriptor.as_object_mut()?;
+                    file_descriptor.set_value("fd", Value::Int(i32::try_from(fd)?))?;
+                    if vm.java_class_file_version() >= &JAVA_11 {
+                        file_descriptor.set_value("handle", Value::Long(fd))?;
+                    }
                 }
-                let read_and_write = mode != FileModeFlags::READ_ONLY;
-                random_access_file.set_value("rw", Value::from(read_and_write))?;
+                {
+                    let mut random_access_file = random_access_file.as_object_mut()?;
+                    let read_and_write = mode != FileModeFlags::READ_ONLY;
+                    random_access_file.set_value("rw", Value::from(read_and_write))?;
+                }
                 Ok(None)
             }
             Err(error) => {
@@ -297,11 +309,13 @@ pub(crate) async fn read_bytes_0(
     let length = usize::try_from(parameters.pop_int()?)?;
     let offset = usize::try_from(parameters.pop_int()?)?;
     let bytes = parameters.pop_reference()?;
-    let random_access_file = parameters.pop_object()?;
-    let file_descriptor = random_access_file.value("fd")?;
-    let file_descriptor = file_descriptor.as_object_ref()?;
+    let random_access_file = parameters.pop()?;
+    let file_descriptor = {
+        let random_access_file = random_access_file.as_object_ref()?;
+        random_access_file.value("fd")?
+    };
     let vm = thread.vm()?;
-    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
 
     let file_handles = vm.file_handles();
     let handle_identifier = file_handle_identifier(fd);
@@ -362,12 +376,14 @@ pub(crate) async fn seek_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let position = u64::try_from(parameters.pop_long()?)?;
-    let random_access_file = parameters.pop_object()?;
-    let file_descriptor = random_access_file.value("fd")?;
-    let file_descriptor = file_descriptor.as_object_ref()?;
+    let random_access_file = parameters.pop()?;
+    let file_descriptor = {
+        let random_access_file = random_access_file.as_object_ref()?;
+        random_access_file.value("fd")?
+    };
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
-    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
     let mut file_handle = file_handles
         .get_mut(&handle_identifier)
@@ -406,12 +422,14 @@ pub(crate) async fn set_length_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let length = u64::try_from(parameters.pop_int()?)?;
-    let random_access_file = parameters.pop_object()?;
-    let file_descriptor = random_access_file.value("fd")?;
-    let file_descriptor = file_descriptor.as_object_ref()?;
+    let random_access_file = parameters.pop()?;
+    let file_descriptor = {
+        let random_access_file = random_access_file.as_object_ref()?;
+        random_access_file.value("fd")?
+    };
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
-    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
     let file_handle = file_handles
         .get_mut(&handle_identifier)
@@ -482,11 +500,13 @@ pub(crate) async fn write_bytes_0(
         let bytes: &[u8] = transmute_ref!(bytes.as_slice());
         bytes.to_vec()
     };
-    let file_output_stream = parameters.pop_object()?;
-    let file_descriptor = file_output_stream.value("fd")?;
-    let file_descriptor = file_descriptor.as_object_ref()?;
+    let file_output_stream = parameters.pop()?;
+    let file_descriptor = {
+        let file_output_stream = file_output_stream.as_object_ref()?;
+        file_output_stream.value("fd")?
+    };
     let vm = thread.vm()?;
-    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
 
     let file_handles = vm.file_handles();
     let handle_identifier = file_handle_identifier(fd);

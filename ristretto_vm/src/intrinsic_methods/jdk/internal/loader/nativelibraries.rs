@@ -32,9 +32,8 @@ pub(crate) async fn find_builtin_lib(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let library_file_name = parameters.pop()?.as_string()?;
     let vm = thread.vm()?;
-    let library_file_name = object.as_string()?;
     let library_path = vm
         .java_home()
         .join("lib")
@@ -74,7 +73,7 @@ pub(crate) async fn unload_0(
 ) -> Result<Option<Value>> {
     let _handle = parameters.pop_long()?;
     let _is_builtin = parameters.pop_bool()?;
-    let _name = parameters.pop_object()?.as_string()?;
+    let _name = parameters.pop()?.as_string()?;
     Ok(None)
 }
 
@@ -89,7 +88,7 @@ pub(crate) async fn unload_1(
 ) -> Result<Option<Value>> {
     let _handle = parameters.pop_long()?;
     let _is_builtin = parameters.pop_bool()?;
-    let _name = parameters.pop_object()?.as_string()?;
+    let _name = parameters.pop()?.as_string()?;
     Ok(None)
 }
 
