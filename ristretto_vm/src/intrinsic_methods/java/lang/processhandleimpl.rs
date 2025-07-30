@@ -246,7 +246,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let pid = Value::Long(i64::from(process::id()));
         let result = is_alive_0(thread, Parameters::new(vec![pid])).await?;
-        let run_time: i64 = result.unwrap_or(Value::Long(0)).try_into()?;
+        let run_time = result.unwrap_or(Value::Long(0)).as_i64()?;
         assert!(run_time > 0);
         Ok(())
     }

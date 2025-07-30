@@ -474,7 +474,7 @@ impl Reference {
         Ok(value)
     }
 
-    /// Convert the object to a boolean value.
+    /// Convert the object to a bool value.
     ///
     /// # Errors
     ///

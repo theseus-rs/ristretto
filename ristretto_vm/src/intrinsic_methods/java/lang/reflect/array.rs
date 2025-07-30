@@ -6,13 +6,13 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
-use ristretto_classloader::{Object, Reference, Value};
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 fn get_class_name(value: Value) -> Result<String> {
-    let component_type: Object = value.try_into()?;
-    let class_name: String = component_type.value("name")?.try_into()?;
+    let component_type = value.as_object_ref()?;
+    let class_name = component_type.value("name")?.as_string()?;
     Ok(class_name)
 }
 
@@ -414,7 +414,11 @@ pub(crate) async fn multi_new_array(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let dimensions: Vec<i32> = parameters.pop()?.try_into()?;
+    let dimensions = parameters.pop()?;
+    let dimensions = {
+        let dimensions = dimensions.as_int_vec_ref()?;
+        dimensions.to_vec()
+    };
     let class_object = parameters.pop_object()?;
     let class = get_class(&thread, &class_object).await?;
 
@@ -533,8 +537,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ByteArray(array)) => {
-            let value: i32 = value.try_into()?;
-            let value = i8::try_from(value)?;
+            let value = value.as_i8()?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -546,8 +549,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::CharArray(array)) => {
-            let value: i32 = value.try_into()?;
-            let value = u16::try_from(value)?;
+            let value = value.as_u16()?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -559,7 +561,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::FloatArray(array)) => {
-            let value: f32 = value.try_into()?;
+            let value = value.as_f32()?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -571,7 +573,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::DoubleArray(array)) => {
-            let value: f64 = value.try_into()?;
+            let value = value.as_f64()?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -583,8 +585,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::ShortArray(array)) => {
-            let value: i32 = value.try_into()?;
-            let value = i16::try_from(value)?;
+            let value = value.as_i16()?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -596,7 +597,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::IntArray(array)) => {
-            let value: i32 = value.try_into()?;
+            let value = value.as_i32()?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -608,7 +609,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             }
         }
         Some(Reference::LongArray(array)) => {
-            let value: i64 = value.try_into()?;
+            let value = value.as_i64()?;
             let mut array = array
                 .write()
                 .map_err(|error| PoisonedLock(error.to_string()))?;
@@ -895,7 +896,7 @@ mod tests {
         let _ = set(thread.clone(), parameters).await?;
         let parameters = Parameters::new(vec![array, index]);
         let result = get(thread, parameters).await?.expect("value");
-        let value: i32 = result.try_into()?;
+        let value = result.as_i32()?;
         assert_eq!(value, expected);
         Ok(())
     }
@@ -910,7 +911,7 @@ mod tests {
         let _ = set_boolean(thread.clone(), parameters).await?;
         let parameters = Parameters::new(vec![array, index]);
         let result = get_boolean(thread, parameters).await?.expect("value");
-        let value: bool = result.try_into()?;
+        let value = result.as_bool()?;
         assert_eq!(value, expected);
         Ok(())
     }
@@ -925,7 +926,7 @@ mod tests {
         let _ = set_byte(thread.clone(), parameters).await?;
         let parameters = Parameters::new(vec![array, index]);
         let result = get_byte(thread, parameters).await?.expect("value");
-        let value: i8 = result.try_into()?;
+        let value = result.as_i8()?;
         assert_eq!(value, expected);
         Ok(())
     }
@@ -940,7 +941,7 @@ mod tests {
         let _ = set_char(thread.clone(), parameters).await?;
         let parameters = Parameters::new(vec![array, index]);
         let result = get_char(thread, parameters).await?.expect("value");
-        let value: u16 = result.try_into()?;
+        let value = result.as_u16()?;
         assert_eq!(value, expected);
         Ok(())
     }
@@ -955,7 +956,7 @@ mod tests {
         let _ = set_double(thread.clone(), parameters).await?;
         let parameters = Parameters::new(vec![array, index]);
         let result = get_double(thread, parameters).await?.expect("value");
-        let value: f64 = result.try_into()?;
+        let value = result.as_f64()?;
         let value = value - expected;
         assert!(value.abs() < 0.01f64);
         Ok(())
@@ -971,7 +972,7 @@ mod tests {
         let _ = set_float(thread.clone(), parameters).await?;
         let parameters = Parameters::new(vec![array, index]);
         let result = get_float(thread, parameters).await?.expect("value");
-        let value: f32 = result.try_into()?;
+        let value = result.as_f32()?;
         let value = value - expected;
         assert!(value.abs() < 0.01f32);
         Ok(())
@@ -987,7 +988,7 @@ mod tests {
         let _ = set_int(thread.clone(), parameters).await?;
         let parameters = Parameters::new(vec![array, index]);
         let result = get_int(thread, parameters).await?.expect("value");
-        let value: i32 = result.try_into()?;
+        let value = result.as_i32()?;
         assert_eq!(value, expected);
         Ok(())
     }
@@ -998,7 +999,7 @@ mod tests {
         let array = Value::from(vec![1, 2, 3]);
         let parameters = Parameters::new(vec![array]);
         let result = get_length(thread, parameters).await?.expect("Array length");
-        let length: i32 = result.try_into()?;
+        let length = result.as_i32()?;
         assert_eq!(length, 3);
         Ok(())
     }
@@ -1013,7 +1014,7 @@ mod tests {
         let _ = set_long(thread.clone(), parameters).await?;
         let parameters = Parameters::new(vec![array, index]);
         let result = get_long(thread, parameters).await?.expect("value");
-        let value: i64 = result.try_into()?;
+        let value = result.as_i64()?;
         assert_eq!(value, expected);
         Ok(())
     }
@@ -1028,7 +1029,7 @@ mod tests {
         let _ = set_short(thread.clone(), parameters).await?;
         let parameters = Parameters::new(vec![array, index]);
         let result = get_short(thread, parameters).await?.expect("value");
-        let value: i16 = result.try_into()?;
+        let value = result.as_i16()?;
         assert_eq!(value, expected);
         Ok(())
     }
@@ -1066,8 +1067,8 @@ mod tests {
         let array = multi_new_array(thread.clone(), parameters)
             .await?
             .expect("array");
-        let array: Vec<i32> = array.try_into()?;
-        assert_eq!(array, vec![0; 5]);
+        let array = array.as_int_vec_ref()?;
+        assert_eq!(array.as_slice(), vec![0; 5]);
         Ok(())
     }
 

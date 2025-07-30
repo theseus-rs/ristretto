@@ -1202,7 +1202,7 @@ mod tests {
     #[tokio::test]
     async fn test_static_value() -> Result<()> {
         let class = string_class().await?;
-        let result: i64 = class.static_value("serialVersionUID")?.try_into()?;
+        let result = class.static_value("serialVersionUID")?.as_i64()?;
         assert_eq!(result, -6_849_794_470_754_667_710);
         Ok(())
     }
@@ -1235,7 +1235,7 @@ mod tests {
     async fn test_set_static_value() -> Result<()> {
         let class = static_class().await?;
         class.set_static_value("staticField", Value::Int(42))?;
-        let value: i32 = class.static_value("staticField")?.try_into()?;
+        let value = class.static_value("staticField")?.as_i32()?;
         assert_eq!(42, value);
         Ok(())
     }
@@ -1293,7 +1293,7 @@ mod tests {
     async fn test_set_static_value_unchecked() -> Result<()> {
         let class = static_class().await?;
         class.set_static_value_unchecked("staticField", Value::Int(42))?;
-        let value: i32 = class.static_value("staticField")?.try_into()?;
+        let value = class.static_value("staticField")?.as_i32()?;
         assert_eq!(42, value);
         Ok(())
     }
@@ -1302,7 +1302,7 @@ mod tests {
     async fn test_set_static_value_unchecked_final() -> Result<()> {
         let class = static_class().await?;
         class.set_static_value_unchecked("staticFinalField", Value::Int(42))?;
-        let value: i32 = class.static_value("staticFinalField")?.try_into()?;
+        let value = class.static_value("staticFinalField")?.as_i32()?;
         assert_eq!(42, value);
         Ok(())
     }
@@ -1311,7 +1311,7 @@ mod tests {
     async fn test_set_static_value_unchecked_invalid_type() -> Result<()> {
         let class = static_class().await?;
         class.set_static_value_unchecked("staticField", Value::Int(42))?;
-        let value: i32 = class.static_value("staticField")?.try_into()?;
+        let value = class.static_value("staticField")?.as_i32()?;
         assert_eq!(42, value);
         Ok(())
     }

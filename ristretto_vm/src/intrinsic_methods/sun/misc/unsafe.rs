@@ -1036,7 +1036,7 @@ mod tests {
             let result = array_index_scale(thread.clone(), parameters)
                 .await?
                 .expect("scale");
-            let scale: i32 = result.try_into()?;
+            let scale = result.as_i32()?;
             assert_eq!(expected_scale, scale);
         }
         Ok(())
@@ -1157,7 +1157,7 @@ mod tests {
         let value = object_field_offset(thread, parameters)
             .await?
             .expect("offset");
-        let offset: i64 = value.try_into()?;
+        let offset = value.as_i64()?;
         assert_eq!(offset, 0);
         Ok(())
     }
@@ -1168,7 +1168,7 @@ mod tests {
         let value = page_size(thread, Parameters::default())
             .await?
             .expect("page_size");
-        let page_size: i32 = value.try_into()?;
+        let page_size = value.as_i32()?;
         let expected_page_size;
 
         #[cfg(target_os = "macos")]
@@ -1306,7 +1306,7 @@ mod tests {
         let value = static_field_offset(thread, parameters)
             .await?
             .expect("offset");
-        let offset: i64 = value.try_into()?;
+        let offset = value.as_i64()?;
         assert_eq!(offset, 0);
         Ok(())
     }

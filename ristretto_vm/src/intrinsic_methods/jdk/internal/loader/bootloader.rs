@@ -29,7 +29,7 @@ pub(crate) async fn get_system_package_location(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let package_name: String = parameters.pop()?.try_into()?;
+    let package_name = parameters.pop()?.as_string()?;
     let boot_class_loader = boot_class_loader(&thread).await?;
     let package_path = package_name.replace('.', "/");
 
@@ -111,7 +111,7 @@ mod tests {
         let package_name = "java.lang".to_object(&thread).await?;
         let parameters = Parameters::new(vec![package_name]);
         let result = get_system_package_location(thread, parameters).await?;
-        let location: String = result.expect("location").try_into()?;
+        let location = result.expect("location").as_string()?;
         assert!(location.ends_with("java.base.jmod"));
         Ok(())
     }
@@ -124,7 +124,7 @@ mod tests {
         let mut package_names = Vec::new();
 
         for package_name_object in package_name_objects {
-            let package_name: String = package_name_object.try_into()?;
+            let package_name = package_name_object.as_string()?;
             package_names.push(package_name);
         }
 

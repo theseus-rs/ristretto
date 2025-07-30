@@ -215,7 +215,7 @@ mod tests {
     fn test_get() -> Result<()> {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set(0, Value::Int(42))?;
-        let value: i32 = locals.get(0)?.try_into()?;
+        let value = locals.get(0)?.as_i32()?;
         assert_eq!(value, 42);
         Ok(())
     }

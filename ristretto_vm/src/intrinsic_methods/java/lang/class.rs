@@ -23,7 +23,7 @@ use std::sync::Arc;
 pub async fn get_class(thread: &Thread, object: &Object) -> Result<Arc<Class>> {
     let class = object.class();
     if class.name() == "java/lang/Class" {
-        let class_name: String = object.value("name")?.try_into()?;
+        let class_name = object.value("name")?.as_string()?;
         let class = thread.class(class_name.as_str()).await?;
         return Ok(class);
     }
@@ -118,7 +118,7 @@ pub(crate) async fn get_component_type(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
-    let class_name: String = object.value("name")?.try_into()?;
+    let class_name = object.value("name")?.as_string()?;
     let class = thread.class(&class_name).await?;
 
     if !class.is_array() {
@@ -167,7 +167,7 @@ pub(crate) async fn get_declared_classes_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let class = parameters.pop_object()?;
-    let class_name: String = class.value("name")?.try_into()?;
+    let class_name = class.value("name")?.as_string()?;
     let class = thread.class(&class_name).await?;
     let mut declared_classes = Vec::new();
 
@@ -633,7 +633,7 @@ pub(crate) async fn get_interfaces_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let class = parameters.pop_object()?;
-    let class_name: String = class.value("name")?.try_into()?;
+    let class_name = class.value("name")?.as_string()?;
     let class = thread.class(class_name).await?;
     let mut interfaces = Vec::new();
 
@@ -1053,8 +1053,9 @@ mod tests {
             Value::Object(None),
         ]);
         let result = for_name_0(thread, parameters).await?;
-        let class_object: Object = result.expect("class").try_into()?;
-        let class_name: String = class_object.value("name")?.try_into()?;
+        let class_object = result.expect("class");
+        let class_object = class_object.as_object_ref()?;
+        let class_name = class_object.value("name")?.as_string()?;
         assert_eq!(class_name.as_str(), "java.lang.String");
         Ok(())
     }
@@ -1111,7 +1112,7 @@ mod tests {
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_class_access_flags_raw_0(thread, parameters).await?;
-        let access_flags: i32 = result.expect("access_flags").try_into()?;
+        let access_flags = result.expect("access_flags").as_i32()?;
         assert_eq!(access_flags, 49);
         Ok(())
     }
@@ -1123,7 +1124,7 @@ mod tests {
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_class_file_version_0(thread, parameters).await?;
-        let version: i32 = result.expect("version").try_into()?;
+        let version = result.expect("version").as_i32()?;
         assert_eq!(version, i32::from(Version::Java21 { minor: 0 }.major()));
         Ok(())
     }
@@ -1135,8 +1136,9 @@ mod tests {
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_component_type(thread, parameters).await?;
-        let class_object: Object = result.expect("class").try_into()?;
-        let class_name: String = class_object.value("name")?.try_into()?;
+        let class_object = result.expect("class");
+        let class_object = class_object.as_object_ref()?;
+        let class_name = class_object.value("name")?.as_string()?;
         assert_eq!(class_name.as_str(), "int");
         Ok(())
     }
@@ -1167,12 +1169,13 @@ mod tests {
         let class = thread.class("java.lang.String").await?;
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
-        let constant_pool: Object = get_constant_pool_1(thread, parameters)
+        let constant_pool = get_constant_pool_1(thread, parameters)
             .await?
-            .expect("constant pool")
-            .try_into()?;
-        let class_object: Object = constant_pool.value("constantPoolOop")?.try_into()?;
-        let class_name: String = class_object.value("name")?.try_into()?;
+            .expect("constant pool");
+        let constant_pool = constant_pool.as_object_ref()?;
+        let class_object = constant_pool.value("constantPoolOop")?;
+        let class_object = class_object.as_object_ref()?;
+        let class_name = class_object.value("name")?.as_string()?;
         assert_eq!(class_name, "java.lang.String");
         Ok(())
     }
@@ -1193,7 +1196,7 @@ mod tests {
             let reference = reference.expect("interfaces");
             let object = reference.as_object_ref()?;
             let class_name = object.value("name")?;
-            let class_name: String = class_name.try_into()?;
+            let class_name = class_name.as_string()?;
             class_names.push(class_name);
         }
         assert_eq!(
@@ -1227,7 +1230,7 @@ mod tests {
         //             vec![constructor],
         //         )
         //         .await?;
-        //     let signature: String = result.expect("string").try_into()?;
+        //     let signature = result.expect("string").as_string()?;
         //     signatures.push(signature);
         // }
         // signatures.sort()
@@ -1270,7 +1273,7 @@ mod tests {
                     &[value],
                 )
                 .await?;
-            let signature: String = result.expect("string").try_into()?;
+            let signature = result.expect("string").as_string()?;
             signatures.push(signature);
         }
         signatures.sort();
@@ -1321,7 +1324,7 @@ mod tests {
                     &[value],
                 )
                 .await?;
-            let method_name: String = result.expect("string").try_into()?;
+            let method_name = result.expect("string").as_string()?;
             method_names.push(method_name);
         }
         method_names.sort();
@@ -1358,7 +1361,7 @@ mod tests {
         //             vec![Value::from(reference.clone())],
         //         )
         //         .await?;
-        //     let signature: String = result.expect("string").try_into()?;
+        //     let signature = result.expect("string").as_string()?;
         //     signatures.push(signature);
         // }
         // signatures.sort();
@@ -1404,8 +1407,9 @@ mod tests {
             .await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_declaring_class_0(thread, parameters).await?;
-        let class_object: Object = result.expect("class").try_into()?;
-        let class_name: String = class_object.value("name")?.try_into()?;
+        let class_object = result.expect("class");
+        let class_object = class_object.as_object_ref()?;
+        let class_name = class_object.value("name")?.as_string()?;
         assert_eq!(class_name.as_str(), "java.util.HashMap");
         Ok(())
     }
@@ -1456,7 +1460,7 @@ mod tests {
             let reference = reference.expect("reference");
             let object = reference.as_object_ref()?;
             let class_name = object.value("name")?;
-            let class_name: String = class_name.try_into()?;
+            let class_name = class_name.as_string()?;
             class_names.push(class_name);
         }
         assert_eq!(
@@ -1478,7 +1482,7 @@ mod tests {
         let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_modifiers(thread, parameters).await?;
-        let modifiers: i32 = result.expect("modifiers").try_into()?;
+        let modifiers = result.expect("modifiers").as_i32()?;
         assert_eq!(modifiers, 17);
         Ok(())
     }
@@ -1489,7 +1493,7 @@ mod tests {
         let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_name_0(thread, parameters).await?;
-        let class_name: String = result.expect("object").try_into()?;
+        let class_name = result.expect("object").as_string()?;
         assert_eq!(class_name.as_str(), "java.lang.String");
         Ok(())
     }
@@ -1528,8 +1532,9 @@ mod tests {
         let object = "int".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_primitive_class(thread, parameters).await?;
-        let class_object: Object = result.expect("class").try_into()?;
-        let class_name: String = class_object.value("name")?.try_into()?;
+        let class_object = result.expect("class");
+        let class_object = class_object.as_object_ref()?;
+        let class_name = class_object.value("name")?.as_string()?;
         assert_eq!(class_name.as_str(), "int");
         Ok(())
     }
@@ -1552,7 +1557,8 @@ mod tests {
         let value = get_raw_annotations(thread, parameters)
             .await?
             .expect("bytes");
-        let bytes: Vec<u8> = value.try_into()?;
+        let bytes = value.as_byte_vec_ref()?;
+        let bytes = bytes.as_slice();
         assert_eq!(bytes, vec![0, 0]);
         Ok(())
     }
@@ -1566,7 +1572,8 @@ mod tests {
         let value = get_raw_type_annotations(thread, parameters)
             .await?
             .expect("bytes");
-        let bytes: Vec<u8> = value.try_into()?;
+        let bytes = value.as_byte_vec_ref()?;
+        let bytes = bytes.as_slice();
         assert_eq!(bytes, vec![0, 0]);
         Ok(())
     }
@@ -1605,7 +1612,7 @@ mod tests {
             .await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_simple_binary_name_0(thread, parameters).await?;
-        let result_object: String = result.expect("string").try_into()?;
+        let result_object = result.expect("string").as_string()?;
         assert_eq!(result_object.as_str(), "Node");
         Ok(())
     }
@@ -1626,8 +1633,8 @@ mod tests {
         let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_superclass(thread, parameters).await?.expect("result");
-        let result_object: Object = result.try_into()?;
-        let class_name: String = result_object.value("name")?.try_into()?;
+        let result_object = result.as_object_ref()?;
+        let class_name = result_object.value("name")?.as_string()?;
         assert_eq!(class_name, "java.lang.Object");
         Ok(())
     }
@@ -1671,7 +1678,7 @@ mod tests {
         let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = init_class_name(thread, parameters).await?.expect("result");
-        let result_object: String = result.try_into()?;
+        let result_object = result.as_string()?;
         assert_eq!(result_object, "java.lang.String");
         Ok(())
     }

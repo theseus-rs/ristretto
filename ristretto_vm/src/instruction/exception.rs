@@ -1,17 +1,19 @@
-use crate::Error::{InternalError, JavaError, Throwable};
+use crate::Error::{JavaError, Throwable};
+use crate::JavaError::NullPointerException;
 use crate::assignable::Assignable;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 use crate::{Error, Result, VM};
-use ristretto_classloader::{Object, Reference, Value};
+use ristretto_classloader::Value;
 use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.athrow>
 #[inline]
 pub(crate) async fn athrow(stack: &mut OperandStack) -> Result<ExecutionResult> {
-    let Some(Reference::Object(throwable)) = stack.pop_object()? else {
-        return Err(InternalError("Expected object on top of stack".to_string()));
-    };
+    let throwable = stack.pop()?;
+    if throwable.is_null() {
+        return Err(NullPointerException("Cannot throw null".to_string()).into());
+    }
     // Return the exception to the caller and let the frame error handler deal with it
     Err(Throwable(throwable))
 }
@@ -24,10 +26,11 @@ pub(crate) async fn athrow(stack: &mut OperandStack) -> Result<ExecutionResult> 
 pub(crate) async fn process_throwable(
     frame: &Frame,
     stack: &mut OperandStack,
-    throwable: Object,
+    throwable: Value,
 ) -> Result<usize> {
     let thread = frame.thread()?;
-    let throwable_class = throwable.class();
+    let throwable_object = throwable.as_object_ref()?;
+    let throwable_class = throwable_object.class();
     let class = frame.class();
     let constant_pool = class.constant_pool();
     let method = frame.method();
@@ -56,7 +59,7 @@ pub(crate) async fn process_throwable(
 
         if matching_exception_handler {
             let handler_program_counter = usize::from(exception_table_entry.handler_pc);
-            stack.push(Value::from(throwable))?;
+            stack.push(throwable)?;
             return Ok(handler_program_counter);
         }
     }
@@ -70,7 +73,7 @@ pub(crate) async fn process_throwable(
 /// # Errors
 ///
 /// if the error cannot be converted to a throwable
-pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Result<Object> {
+pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Result<Value> {
     let (class_name, message) = match error {
         JavaError(java_error) => {
             let class_name = java_error.class_name().to_string();
@@ -84,7 +87,6 @@ pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Res
     let throwable = vm
         .object(class_name, "Ljava/lang/String;", &[message])
         .await?;
-    let throwable: Object = throwable.try_into()?;
     Ok(throwable)
 }
 

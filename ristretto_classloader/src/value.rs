@@ -5,7 +5,6 @@ use std::fmt;
 use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
-use zerocopy::transmute_ref;
 
 /// Represents a value in the Ristretto VM.
 #[derive(Clone, Debug)]
@@ -19,10 +18,206 @@ pub enum Value {
 }
 
 impl Value {
+    /// Convert the object to a bool value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not an `Int`, and the object is not an instance of `java/lang/Boolean`.
+    /// - if the value cannot be converted to a boolean.
+    pub fn as_bool(&self) -> Result<bool> {
+        if let Value::Int(value) = self {
+            Ok(*value != 0)
+        } else {
+            let reference = self.as_reference()?;
+            reference.as_bool()
+        }
+    }
+
+    /// Convert the object to a char value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not an `Int`, and the object is not an instance of `java/lang/Character`.
+    /// - if the value cannot be converted to a char.
+    pub fn as_char(&self) -> Result<char> {
+        if let Value::Int(value) = self {
+            #[expect(clippy::cast_sign_loss)]
+            let value = *value as u32;
+            let value =
+                char::from_u32(value).ok_or(InvalidValueType("Invalid char value".to_string()))?;
+            Ok(value)
+        } else {
+            let reference = self.as_reference()?;
+            reference.as_char()
+        }
+    }
+
+    /// Convert the object to an `i8` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not an `Int`, and the object is not an instance of `java/lang/Byte`.
+    /// - if the value cannot be converted to an `i8`.
+    pub fn as_i8(&self) -> Result<i8> {
+        if let Value::Int(value) = self {
+            Ok(i8::try_from(*value)?)
+        } else {
+            let reference = self.as_reference()?;
+            reference.as_i8()
+        }
+    }
+
+    /// Convert the object to a `u8` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not an `Int`, and the object is not an instance of `java/lang/Byte`.
+    /// - if the value cannot be converted to a `u8`.
+    pub fn as_u8(&self) -> Result<u8> {
+        let value = self.as_i8()?;
+        Ok(u8::try_from(value)?)
+    }
+
+    /// Convert the object to an `i16` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not an `Int`, and the object is not an instance of `java/lang/Short`.
+    /// - if the value cannot be converted to an `i16`.
+    pub fn as_i16(&self) -> Result<i16> {
+        if let Value::Int(value) = self {
+            Ok(i16::try_from(*value)?)
+        } else {
+            let reference = self.as_reference()?;
+            reference.as_i16()
+        }
+    }
+
+    /// Convert the object to a `u16` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not an `Int`, and the object is not an instance of `java/lang/Short`.
+    /// - if the value cannot be converted to a `u16`.
+    pub fn as_u16(&self) -> Result<u16> {
+        let value = self.as_i16()?;
+        Ok(u16::try_from(value)?)
+    }
+
+    /// Convert the object to an `i32` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not an `Int`, and the object is not an instance of `java/lang/Integer`.
+    /// - if the value cannot be converted to an `i32`.
+    pub fn as_i32(&self) -> Result<i32> {
+        if let Value::Int(value) = self {
+            Ok(*value)
+        } else {
+            let reference = self.as_reference()?;
+            reference.as_i32()
+        }
+    }
+
+    /// Convert the object to a `u32` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not an `Int`, and the object is not an instance of `java/lang/Integer`.
+    /// - if the value cannot be converted to a `u32`.
+    pub fn as_u32(&self) -> Result<u32> {
+        let value = self.as_i32()?;
+        Ok(u32::try_from(value)?)
+    }
+
+    /// Convert the object to an `i64` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not a `Long`, and the object is not an instance of `java/lang/Long`.
+    /// - if the value cannot be converted to an `i64`.
+    pub fn as_i64(&self) -> Result<i64> {
+        if let Value::Long(value) = self {
+            Ok(*value)
+        } else {
+            let reference = self.as_reference()?;
+            reference.as_i64()
+        }
+    }
+
+    /// Convert the object to a `u64` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not a `Long`, and the object is not an instance of `java/lang/Long`.
+    /// - if the value cannot be converted to a `u64`.
+    pub fn as_u64(&self) -> Result<u64> {
+        let value = self.as_i64()?;
+        Ok(u64::try_from(value)?)
+    }
+
+    /// Convert the object to an `isize` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not a `Long`, and the object is not an instance of `java/lang/Long`.
+    /// - if the value cannot be converted to an `isize`.
+    pub fn as_isize(&self) -> Result<isize> {
+        let value = self.as_i64()?;
+        Ok(isize::try_from(value)?)
+    }
+
+    /// Convert the object to a `usize` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not a `Long`, and the object is not an instance of `java/lang/Long`.
+    /// - if the value cannot be converted to a `usize`.
+    pub fn as_usize(&self) -> Result<usize> {
+        let value = self.as_u64()?;
+        Ok(usize::try_from(value)?)
+    }
+
+    /// Convert the object to a `f32` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not a `Float`, and the object is not an instance of `java/lang/Float`.
+    /// - if the value cannot be converted to a `f32`.
+    pub fn as_f32(&self) -> Result<f32> {
+        if let Value::Float(value) = self {
+            Ok(*value)
+        } else {
+            let reference = self.as_reference()?;
+            reference.as_f32()
+        }
+    }
+
+    /// Convert the object to a `f64` value.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not a `Double`, and the object is not an instance of `java/lang/Double`.
+    /// - if the value cannot be converted to a `f64`.
+    pub fn as_f64(&self) -> Result<f64> {
+        if let Value::Double(value) = self {
+            Ok(*value)
+        } else {
+            let reference = self.as_reference()?;
+            reference.as_f64()
+        }
+    }
+
     /// Returns true if the value is null.
     #[must_use]
     pub fn is_null(&self) -> bool {
         matches!(self, Value::Object(None))
+    }
+
+    /// Returns true if the value is an object.
+    #[must_use]
+    pub fn is_object(&self) -> bool {
+        matches!(self, Value::Object(Some(_)))
     }
 
     /// Returns a reference to the value if it is an object.
@@ -63,6 +258,146 @@ impl Value {
         Ok(value)
     }
 
+    /// Returns the reference to `Vec<i8>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `ByteArray`.
+    pub fn as_byte_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i8>>> {
+        let reference = self.as_reference()?;
+        reference.as_byte_vec_ref()
+    }
+
+    /// Returns a mutable reference to `Vec<i8>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `ByteArray`.
+    pub fn as_byte_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i8>>> {
+        let reference = self.as_reference()?;
+        reference.as_byte_vec_mut()
+    }
+
+    /// Returns a reference to `Vec<char>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `CharArray`.
+    pub fn as_char_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<u16>>> {
+        let reference = self.as_reference()?;
+        reference.as_char_vec_ref()
+    }
+
+    /// Returns a mutable reference to `Vec<char>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `CharArray`.
+    pub fn as_char_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<u16>>> {
+        let reference = self.as_reference()?;
+        reference.as_char_vec_mut()
+    }
+
+    /// Returns a reference to `Vec<i16>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `ShortArray`.
+    pub fn as_short_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i16>>> {
+        let reference = self.as_reference()?;
+        reference.as_short_vec_ref()
+    }
+
+    /// Returns a mutable reference to `Vec<i16>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `ShortArray`.
+    pub fn as_short_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i16>>> {
+        let reference = self.as_reference()?;
+        reference.as_short_vec_mut()
+    }
+
+    /// Returns a reference to `Vec<i32>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `IntArray`.
+    pub fn as_int_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i32>>> {
+        let reference = self.as_reference()?;
+        reference.as_int_vec_ref()
+    }
+
+    /// Returns a mutable reference to `Vec<i32>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `IntArray`.
+    pub fn as_int_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i32>>> {
+        let reference = self.as_reference()?;
+        reference.as_int_vec_mut()
+    }
+
+    /// Returns a reference to `Vec<i64>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `LongArray`.
+    pub fn as_long_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i64>>> {
+        let reference = self.as_reference()?;
+        reference.as_long_vec_ref()
+    }
+
+    /// Returns a mutable reference to `Vec<i64>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `LongArray`.
+    pub fn as_long_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i64>>> {
+        let reference = self.as_reference()?;
+        reference.as_long_vec_mut()
+    }
+
+    /// Returns a reference to `Vec<f32>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `FloatArray`.
+    pub fn as_float_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<f32>>> {
+        let reference = self.as_reference()?;
+        reference.as_float_vec_ref()
+    }
+
+    /// Returns a mutable reference to `Vec<f32>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `FloatArray`.
+    pub fn as_float_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<f32>>> {
+        let reference = self.as_reference()?;
+        reference.as_float_vec_mut()
+    }
+
+    /// Returns a reference to`Vec<f64>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `DoubleArray`.
+    pub fn as_double_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<f64>>> {
+        let reference = self.as_reference()?;
+        reference.as_double_vec_ref()
+    }
+
+    /// Returns a mutable reference to`Vec<f64>`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `DoubleArray`.
+    pub fn as_double_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<f64>>> {
+        let reference = self.as_reference()?;
+        reference.as_double_vec_mut()
+    }
+
     /// Returns a reference to `Vec<Option<Reference>>`.
     ///
     /// # Errors
@@ -97,6 +432,17 @@ impl Value {
     pub fn as_object_ref(&self) -> Result<&Object> {
         let reference = self.as_reference()?;
         reference.as_object_ref()
+    }
+
+    /// Returns a reference to a `String`.
+    ///
+    /// # Errors
+    ///
+    /// - if the value is not a `String`, and the object is not an instance of `java/lang/String`.
+    /// - if the value cannot be converted to a `String`.
+    pub fn as_string(&self) -> Result<String> {
+        let reference = self.as_reference()?;
+        reference.as_string()
     }
 }
 
@@ -368,159 +714,11 @@ impl From<Option<Reference>> for Value {
     }
 }
 
-impl TryInto<Vec<bool>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<bool>> {
-        let reference: Reference = self.try_into()?;
-        let value = reference.as_byte_vec_ref()?.to_vec();
-        let value = value.into_iter().map(|v| v != 0).collect();
-        Ok(value)
-    }
-}
-
-impl TryInto<Vec<char>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<char>> {
-        let reference: Reference = self.try_into()?;
-        let values = reference.as_char_vec_ref()?.to_vec();
-        let mut result = Vec::with_capacity(values.len());
-        for value in values {
-            let value = u32::from(value);
-            let value = char::from_u32(value)
-                .ok_or(InvalidValueType(format!("Invalid char value {value}")))?;
-            result.push(value);
-        }
-        Ok(result)
-    }
-}
-
-impl TryInto<Vec<i8>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<i8>> {
-        let reference: Reference = self.try_into()?;
-        Ok(reference.as_byte_vec_ref()?.to_vec())
-    }
-}
-
-impl TryInto<Vec<u8>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<u8>> {
-        let reference: Reference = self.try_into()?;
-        let value = reference.as_byte_vec_ref()?.to_vec();
-        let value: &[u8] = transmute_ref!(value.as_slice());
-        Ok(value.to_vec())
-    }
-}
-
-impl TryInto<Vec<i16>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<i16>> {
-        let reference: Reference = self.try_into()?;
-        Ok(reference.as_short_vec_ref()?.to_vec())
-    }
-}
-
-impl TryInto<Vec<u16>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<u16>> {
-        let reference: Reference = self.try_into()?;
-        let value = reference.as_short_vec_ref()?.to_vec();
-        let value: &[u16] = transmute_ref!(value.as_slice());
-        Ok(value.to_vec())
-    }
-}
-
-impl TryInto<Vec<i32>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<i32>> {
-        let reference: Reference = self.try_into()?;
-        Ok(reference.as_int_vec_ref()?.to_vec())
-    }
-}
-
-impl TryInto<Vec<u32>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<u32>> {
-        let reference: Reference = self.try_into()?;
-        let value = reference.as_int_vec_ref()?.to_vec();
-        let value: &[u32] = transmute_ref!(value.as_slice());
-        Ok(value.to_vec())
-    }
-}
-
-impl TryInto<Vec<i64>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<i64>> {
-        let reference: Reference = self.try_into()?;
-        Ok(reference.as_long_vec_ref()?.to_vec())
-    }
-}
-
-impl TryInto<Vec<u64>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<u64>> {
-        let reference: Reference = self.try_into()?;
-        let value = reference.as_long_vec_ref()?.to_vec();
-        let value: &[u64] = transmute_ref!(value.as_slice());
-        Ok(value.to_vec())
-    }
-}
-
-impl TryInto<Vec<isize>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<isize>> {
-        let value: Vec<i64> = self.try_into()?;
-        #[expect(clippy::cast_possible_truncation)]
-        let value = value.into_iter().map(|v| v as isize).collect();
-        Ok(value)
-    }
-}
-
-impl TryInto<Vec<usize>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<usize>> {
-        let value: Vec<u64> = self.try_into()?;
-        #[expect(clippy::cast_possible_truncation)]
-        let value = value.into_iter().map(|v| v as usize).collect();
-        Ok(value)
-    }
-}
-
-impl TryInto<Vec<f32>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<f32>> {
-        let reference: Reference = self.try_into()?;
-        Ok(reference.as_float_vec_ref()?.to_vec())
-    }
-}
-
-impl TryInto<Vec<f64>> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Vec<f64>> {
-        let reference: Reference = self.try_into()?;
-        Ok(reference.as_double_vec_ref()?.to_vec())
-    }
-}
-
 impl TryInto<Vec<Value>> for Value {
     type Error = crate::Error;
 
     fn try_into(self) -> Result<Vec<Value>> {
-        let reference: Reference = self.try_into()?;
+        let reference = self.as_reference()?;
         let (_class, values) = reference.as_class_vec_ref()?;
         let values = values
             .iter()
@@ -534,198 +732,6 @@ impl TryInto<Vec<Value>> for Value {
             })
             .collect();
         Ok(values)
-    }
-}
-
-impl TryInto<bool> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<bool> {
-        if let Value::Int(value) = self {
-            Ok(value != 0)
-        } else {
-            let reference: Reference = self.try_into()?;
-            reference.as_bool()
-        }
-    }
-}
-
-impl TryInto<char> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<char> {
-        if let Value::Int(value) = self {
-            #[expect(clippy::cast_sign_loss)]
-            let value = value as u32;
-            let value =
-                char::from_u32(value).ok_or(InvalidValueType("Invalid char value".to_string()))?;
-            Ok(value)
-        } else {
-            let reference: Reference = self.try_into()?;
-            reference.as_char()
-        }
-    }
-}
-
-impl TryInto<i8> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<i8> {
-        if let Value::Int(value) = self {
-            Ok(i8::try_from(value)?)
-        } else {
-            let reference: Reference = self.try_into()?;
-            reference.as_i8()
-        }
-    }
-}
-
-impl TryInto<u8> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<u8> {
-        let value: i8 = self.try_into()?;
-        Ok(u8::try_from(value)?)
-    }
-}
-
-impl TryInto<i16> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<i16> {
-        if let Value::Int(value) = self {
-            Ok(i16::try_from(value)?)
-        } else {
-            let reference: Reference = self.try_into()?;
-            reference.as_i16()
-        }
-    }
-}
-
-impl TryInto<u16> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<u16> {
-        let value: i16 = self.try_into()?;
-        Ok(u16::try_from(value)?)
-    }
-}
-
-impl TryInto<i32> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<i32> {
-        if let Value::Int(value) = self {
-            Ok(value)
-        } else {
-            let reference: Reference = self.try_into()?;
-            reference.as_i32()
-        }
-    }
-}
-
-impl TryInto<u32> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<u32> {
-        let value: i32 = self.try_into()?;
-        Ok(u32::try_from(value)?)
-    }
-}
-
-impl TryInto<i64> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<i64> {
-        if let Value::Long(value) = self {
-            Ok(value)
-        } else {
-            let reference: Reference = self.try_into()?;
-            reference.as_i64()
-        }
-    }
-}
-
-impl TryInto<u64> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<u64> {
-        let value: i64 = self.try_into()?;
-        Ok(u64::try_from(value)?)
-    }
-}
-
-impl TryInto<isize> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<isize> {
-        let value: i64 = self.try_into()?;
-        Ok(isize::try_from(value)?)
-    }
-}
-
-impl TryInto<usize> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<usize> {
-        let value: u64 = self.try_into()?;
-        Ok(usize::try_from(value)?)
-    }
-}
-
-impl TryInto<f32> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<f32> {
-        if let Value::Float(value) = self {
-            Ok(value)
-        } else {
-            let reference: Reference = self.try_into()?;
-            reference.as_f32()
-        }
-    }
-}
-
-impl TryInto<f64> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<f64> {
-        if let Value::Double(value) = self {
-            Ok(value)
-        } else {
-            let reference: Reference = self.try_into()?;
-            reference.as_f64()
-        }
-    }
-}
-
-impl TryInto<Object> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Object> {
-        let reference: Reference = self.try_into()?;
-        let object = reference.as_object_ref()?.clone();
-        Ok(object)
-    }
-}
-
-impl TryInto<Reference> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Reference> {
-        match self {
-            Value::Object(Some(reference)) => Ok(reference),
-            _ => Err(InvalidValueType("Expected a reference value".to_string())),
-        }
-    }
-}
-
-impl TryInto<String> for Value {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<String> {
-        let reference: Reference = self.try_into()?;
-        reference.as_string()
     }
 }
 
@@ -787,6 +793,24 @@ mod tests {
     }
 
     #[test]
+    fn test_is_null() {
+        let value = Value::Object(None);
+        assert!(value.is_null());
+
+        let value = Value::Object(Some(Reference::from(vec![1i8, 2i8, 3i8])));
+        assert!(!value.is_null());
+    }
+
+    #[test]
+    fn test_is_object() {
+        let value = Value::Object(None);
+        assert!(!value.is_object());
+
+        let value = Value::Object(Some(Reference::from(vec![1i8, 2i8, 3i8])));
+        assert!(value.is_object());
+    }
+
+    #[test]
     fn test_as_reference() -> Result<()> {
         let reference = Reference::from(vec![1i8, 2i8, 3i8]);
         let value = Value::Object(Some(reference));
@@ -814,14 +838,14 @@ mod tests {
         object.set_value("value", string_value)?;
         let value = Value::from(object);
         assert_eq!("String(\"foo\")", value.to_string());
-        let value: String = value.try_into()?;
+        let value = value.as_string()?;
         assert_eq!("foo".to_string(), value);
         Ok(())
     }
 
     #[test]
     fn test_as_string_error() {
-        let result: Result<String> = Value::Int(42).try_into();
+        let result = Value::Int(42).as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
@@ -1284,133 +1308,263 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_bool() -> Result<()> {
-        let original_value = vec![true];
-        let value = Value::from(original_value.clone());
-        let value: Vec<bool> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_bool() -> Result<()> {
+        let value = Value::Int(1).as_bool()?;
+        assert!(value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_char() -> Result<()> {
-        let original_value = vec!['*'];
-        let value = Value::from(original_value.clone());
-        let value: Vec<char> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_bool_object() -> Result<()> {
+        let class = load_class("java.lang.Boolean").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(1))?;
+        let value = Value::from(object);
+        let value = value.as_bool()?;
+        assert!(value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_i8() -> Result<()> {
-        let original_value = vec![42i8];
-        let value = Value::from(original_value.clone());
-        let value: Vec<i8> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_char() -> Result<()> {
+        let value = Value::Int(42).as_char()?;
+        assert_eq!('*', value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_u8() -> Result<()> {
-        let original_value = vec![42u8];
-        let value = Value::from(original_value.clone());
-        let value: Vec<u8> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_char_object() -> Result<()> {
+        let class = load_class("java.lang.Character").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        let value = Value::from(object);
+        let value = value.as_char()?;
+        assert_eq!('*', value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_i16() -> Result<()> {
-        let original_value = vec![42i16];
-        let value = Value::from(original_value.clone());
-        let value: Vec<i16> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_i8() -> Result<()> {
+        let value = Value::Int(42).as_i8()?;
+        assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_u16() -> Result<()> {
-        let original_value = vec![42u16];
-        let value = Value::from(original_value.clone());
-        let value: Vec<u16> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_i8_object() -> Result<()> {
+        let class = load_class("java.lang.Byte").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        let value = Value::from(object);
+        let value = value.as_i8()?;
+        assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_i32() -> Result<()> {
-        let original_value = vec![42i32];
-        let value = Value::from(original_value.clone());
-        let value: Vec<i32> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_u8() -> Result<()> {
+        let value = Value::Int(42).as_u8()?;
+        assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_u32() -> Result<()> {
-        let original_value = vec![42u32];
-        let value = Value::from(original_value.clone());
-        let value: Vec<u32> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_u8_object() -> Result<()> {
+        let class = load_class("java.lang.Byte").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        let value = Value::from(object);
+        let value = value.as_u8()?;
+        assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_i64() -> Result<()> {
-        let original_value = vec![42i64];
-        let value = Value::from(original_value.clone());
-        let value: Vec<i64> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_i16() -> Result<()> {
+        let value = Value::Int(42).as_i16()?;
+        assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_u64() -> Result<()> {
-        let original_value = vec![42u64];
-        let value = Value::from(original_value.clone());
-        let value: Vec<u64> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_i16_object() -> Result<()> {
+        let class = load_class("java.lang.Short").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        let value = Value::from(object);
+        let value = value.as_i16()?;
+        assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_isize() -> Result<()> {
-        let original_value = vec![42isize];
-        let value = Value::from(original_value.clone());
-        let value: Vec<isize> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_u16() -> Result<()> {
+        let value = Value::Int(42).as_u16()?;
+        assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_usize() -> Result<()> {
-        let original_value = vec![42usize];
-        let value = Value::from(original_value.clone());
-        let value: Vec<usize> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_u16_object() -> Result<()> {
+        let class = load_class("java.lang.Short").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        let value = Value::from(object);
+        let value = value.as_u16()?;
+        assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_f32() -> Result<()> {
-        let original_value = vec![42.1f32];
-        let value = Value::from(original_value.clone());
-        let value: Vec<f32> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_i32() -> Result<()> {
+        let value = Value::Int(42).as_i32()?;
+        assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_f64() -> Result<()> {
-        let original_value = vec![42.1f64];
-        let value = Value::from(original_value.clone());
-        let value: Vec<f64> = value.try_into()?;
-        assert_eq!(original_value, value);
+    async fn test_as_i32_object() -> Result<()> {
+        let class = load_class("java.lang.Integer").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        let value = Value::from(object);
+        let value = value.as_i32()?;
+        assert_eq!(42, value);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_try_into_vec_value() -> Result<()> {
+    async fn test_as_u32() -> Result<()> {
+        let value = Value::Int(42).as_u32()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_u32_object() -> Result<()> {
+        let class = load_class("java.lang.Integer").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Int(42))?;
+        let value = Value::from(object);
+        let value = value.as_u32()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_i64() -> Result<()> {
+        let value = Value::Long(42).as_i64()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_i64_object() -> Result<()> {
+        let class = load_class("java.lang.Long").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Long(42))?;
+        let value = Value::from(object);
+        let value = value.as_i64()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_u64() -> Result<()> {
+        let value = Value::Long(42).as_u64()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_u64_object() -> Result<()> {
+        let class = load_class("java.lang.Long").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Long(42))?;
+        let value = Value::from(object);
+        let value = value.as_u64()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_isize() -> Result<()> {
+        let value = Value::Long(42).as_isize()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_isize_object() -> Result<()> {
+        let class = load_class("java.lang.Long").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Long(42))?;
+        let value = Value::from(object);
+        let value = value.as_isize()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_usize() -> Result<()> {
+        let value = Value::Long(42).as_usize()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_usize_object() -> Result<()> {
+        let class = load_class("java.lang.Long").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Long(42))?;
+        let value = Value::from(object);
+        let value = value.as_usize()?;
+        assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_f32() -> Result<()> {
+        let class = load_class("java.lang.Float").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Float(42.1))?;
+        let value = Value::from(object);
+        let value = value.as_f32()?;
+        let value = value - 42.1f32;
+        assert!(value.abs() < 0.1f32);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_f32_object() -> Result<()> {
+        let value = Value::Float(42.1).as_f32()?;
+        let value = value - 42.1f32;
+        assert!(value.abs() < 0.1f32);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_f64() -> Result<()> {
+        let value = Value::Double(42.1).as_f64()?;
+        let value = value - 42.1f64;
+        assert!(value.abs() < 0.1f64);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_f64_object() -> Result<()> {
+        let class = load_class("java.lang.Double").await?;
+        let object = Object::new(class)?;
+        object.set_value("value", Value::Double(42.1))?;
+        let value = Value::from(object);
+        let value = value.as_f64()?;
+        let value = value - 42.1f64;
+        assert!(value.abs() < 0.1f64);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_vec_value() -> Result<()> {
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java/lang/Integer";
         let class = load_class(class_name).await?;
@@ -1422,6 +1576,237 @@ mod tests {
         let values: Vec<Value> = value.try_into()?;
         assert_eq!(original_values, values);
         Ok(())
+    }
+
+    #[test]
+    fn test_as_byte_vec_ref() -> Result<()> {
+        let original_value = vec![42i8];
+        let value = Value::from(original_value.clone());
+        assert_eq!(original_value, value.as_byte_vec_ref()?.to_vec());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_byte_vec_ref_error() {
+        let value = Value::from(vec![42i32]);
+        let result = value.as_byte_vec_ref();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_byte_vec_mut() -> Result<()> {
+        let value = Value::from(vec![42i8]);
+        {
+            let mut mutable_value = value.as_byte_vec_mut()?;
+            mutable_value.push(3i8);
+        }
+        assert_eq!(value.as_byte_vec_ref()?.to_vec(), vec![42i8, 3i8]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_byte_vec_mut_error() {
+        let original_value = vec![42i32];
+        let value = Value::from(original_value.clone());
+        let result = value.as_byte_vec_mut();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_char_vec_ref() -> Result<()> {
+        let value = Value::from(vec!['*']);
+        assert_eq!(vec![42u16], value.as_char_vec_ref()?.to_vec());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_char_vec_ref_error() {
+        let value = Value::from(vec![42i32]);
+        let result = value.as_char_vec_ref();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_char_vec_mut() -> Result<()> {
+        let value = Value::from(vec!['*']);
+        {
+            let mut mutable_value = value.as_char_vec_mut()?;
+            mutable_value.push(50u16);
+        }
+        assert_eq!(value.as_char_vec_ref()?.to_vec(), vec![42u16, 50u16]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_char_vec_mut_error() {
+        let value = Value::from(vec![42i32]);
+        let result = value.as_char_vec_mut();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_short_vec_ref() -> Result<()> {
+        let original_value = vec![42i16];
+        let value = Value::from(original_value.clone());
+        assert_eq!(original_value, value.as_short_vec_ref()?.to_vec());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_short_vec_ref_error() {
+        let value = Value::from(vec![42i32]);
+        let result = value.as_short_vec_ref();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_short_vec_mut() -> Result<()> {
+        let value = Value::from(vec![42i16]);
+        {
+            let mut mutable_value = value.as_short_vec_mut()?;
+            mutable_value.push(3i16);
+        }
+        assert_eq!(value.as_short_vec_ref()?.to_vec(), vec![42i16, 3i16]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_short_vec_mut_error() {
+        let value = Value::from(vec![42i32]);
+        let result = value.as_short_vec_mut();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_int_vec_ref() -> Result<()> {
+        let original_value = vec![42i32];
+        let value = Value::from(original_value.clone());
+        assert_eq!(original_value, value.as_int_vec_ref()?.to_vec());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_int_vec_ref_error() {
+        let value = Value::from(vec![42i8]);
+        let result = value.as_int_vec_ref();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_int_vec_mut() -> Result<()> {
+        let value = Value::from(vec![42i32]);
+        {
+            let mut mutable_value = value.as_int_vec_mut()?;
+            mutable_value.push(3i32);
+        }
+        assert_eq!(value.as_int_vec_ref()?.to_vec(), vec![42i32, 3i32]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_int_vec_mut_error() {
+        let value = Value::from(vec![42i8]);
+        let result = value.as_int_vec_mut();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_long_vec_ref() -> Result<()> {
+        let original_value = vec![42i64];
+        let value = Value::from(original_value.clone());
+        assert_eq!(original_value, value.as_long_vec_ref()?.to_vec());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_long_vec_ref_error() {
+        let value = Value::from(vec![42i32]);
+        let result = value.as_long_vec_ref();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_long_vec_mut() -> Result<()> {
+        let value = Value::from(vec![42i64]);
+        {
+            let mut mutable_value = value.as_long_vec_mut()?;
+            mutable_value.push(3i64);
+        }
+        assert_eq!(value.as_long_vec_ref()?.to_vec(), vec![42i64, 3i64]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_long_vec_mut_error() {
+        let value = Value::from(vec![42i32]);
+        let result = value.as_long_vec_mut();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_float_vec_ref() -> Result<()> {
+        let original_value = vec![42.1f32];
+        let value = Value::from(original_value.clone());
+        assert_eq!(original_value, value.as_float_vec_ref()?.to_vec());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_float_vec_ref_error() {
+        let value = Value::from(vec![42i32]);
+        let result = value.as_float_vec_ref();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_float_vec_mut() -> Result<()> {
+        let value = Value::from(vec![42.1f32]);
+        {
+            let mut mutable_value = value.as_float_vec_mut()?;
+            mutable_value.push(3.45f32);
+        }
+        assert_eq!(value.as_float_vec_ref()?.to_vec(), vec![42.1f32, 3.45f32]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_float_vec_mut_error() {
+        let value = Value::from(vec![42i32]);
+        let result = value.as_float_vec_mut();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_double_vec_ref() -> Result<()> {
+        let original_value = vec![42.1f64];
+        let value = Value::from(original_value.clone());
+        assert_eq!(original_value, value.as_double_vec_ref()?.to_vec());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_double_vec_ref_error() {
+        let value = Value::from(vec![42i32]);
+        let result = value.as_double_vec_ref();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[test]
+    fn test_as_double_vec_mut() -> Result<()> {
+        let value = Value::from(vec![42.1f64]);
+        {
+            let mut mutable_value = value.as_double_vec_mut()?;
+            mutable_value.push(3.45f64);
+        }
+        assert_eq!(value.as_double_vec_ref()?.to_vec(), vec![42.1f64, 3.45f64]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_double_vec_mut_error() {
+        let value = Value::from(vec![42i32]);
+        let result = value.as_double_vec_mut();
+        assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[tokio::test]
@@ -1452,297 +1837,23 @@ mod tests {
     async fn test_as_object_ref() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
-        let reference = Reference::from(object.clone());
-        let result = reference.as_object_ref()?;
+        let value = Value::from(object.clone());
+        let result = value.as_object_ref()?;
         assert_eq!(&object, result);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_bool() -> Result<()> {
-        let value: bool = Value::Int(1).try_into()?;
-        assert!(value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_bool_object() -> Result<()> {
-        let class = load_class("java.lang.Boolean").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(1))?;
-        let value = Value::from(object);
-        let value: bool = value.try_into()?;
-        assert!(value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_char() -> Result<()> {
-        let value: char = Value::Int(42).try_into()?;
-        assert_eq!('*', value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_char_object() -> Result<()> {
-        let class = load_class("java.lang.Character").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
-        let value: char = value.try_into()?;
-        assert_eq!('*', value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_i8() -> Result<()> {
-        let value: i8 = Value::Int(42).try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_i8_object() -> Result<()> {
-        let class = load_class("java.lang.Byte").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
-        let value: i8 = value.try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_u8() -> Result<()> {
-        let value: u8 = Value::Int(42).try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_u8_object() -> Result<()> {
-        let class = load_class("java.lang.Byte").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
-        let value: u8 = value.try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_i16() -> Result<()> {
-        let value: i16 = Value::Int(42).try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_i16_object() -> Result<()> {
-        let class = load_class("java.lang.Short").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
-        let value: i16 = value.try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_u16() -> Result<()> {
-        let value: u16 = Value::Int(42).try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_u16_object() -> Result<()> {
-        let class = load_class("java.lang.Short").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
-        let value: u16 = value.try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_i32() -> Result<()> {
-        let value: i32 = Value::Int(42).try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_i32_object() -> Result<()> {
-        let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
-        let value: i32 = value.try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_u32() -> Result<()> {
-        let value: u32 = Value::Int(42).try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_u32_object() -> Result<()> {
-        let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
-        let value: u32 = value.try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_i64() -> Result<()> {
-        let value: i64 = Value::Long(42).try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_i64_object() -> Result<()> {
-        let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Long(42))?;
-        let value = Value::from(object);
-        let value: i64 = value.try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_u64() -> Result<()> {
-        let value: u64 = Value::Long(42).try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_u64_object() -> Result<()> {
-        let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Long(42))?;
-        let value = Value::from(object);
-        let value: u64 = value.try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_isize() -> Result<()> {
-        let value: isize = Value::Long(42).try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_isize_object() -> Result<()> {
-        let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Long(42))?;
-        let value = Value::from(object);
-        let value: isize = value.try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_usize() -> Result<()> {
-        let value: usize = Value::Long(42).try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_usize_object() -> Result<()> {
-        let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Long(42))?;
-        let value = Value::from(object);
-        let value: usize = value.try_into()?;
-        assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_f32() -> Result<()> {
-        let class = load_class("java.lang.Float").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Float(42.1))?;
-        let value = Value::from(object);
-        let value: f32 = value.try_into()?;
-        let value = value - 42.1f32;
-        assert!(value.abs() < 0.1f32);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_f32_object() -> Result<()> {
-        let value: f32 = Value::Float(42.1).try_into()?;
-        let value = value - 42.1f32;
-        assert!(value.abs() < 0.1f32);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_f64() -> Result<()> {
-        let value: f64 = Value::Double(42.1).try_into()?;
-        let value = value - 42.1f64;
-        assert!(value.abs() < 0.1f64);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_f64_object() -> Result<()> {
-        let class = load_class("java.lang.Double").await?;
-        let object = Object::new(class)?;
-        object.set_value("value", Value::Double(42.1))?;
-        let value = Value::from(object);
-        let value: f64 = value.try_into()?;
-        let value = value - 42.1f64;
-        assert!(value.abs() < 0.1f64);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_object() -> Result<()> {
-        let class_name = "java.lang.Object";
-        let class = load_class(class_name).await?;
-        let value = Value::from(Object::new(class)?);
-        let object: Object = value.try_into()?;
         assert_eq!("java/lang/Object", object.class().name());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_try_into_reference() -> Result<()> {
-        let class_name = "java/lang/Object";
-        let class = load_class(class_name).await?;
-        let value = Value::from(Object::new(class)?);
-        let reference: Reference = value.try_into()?;
-        assert_eq!(class_name, reference.class_name());
         Ok(())
     }
 
     #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
-    async fn test_try_into_string() -> Result<()> {
+    async fn test_as_string() -> Result<()> {
         let class = load_class("java.lang.String").await?;
         let object = Object::new(class)?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
         object.set_value("value", string_value)?;
-        let result = object.as_string()?;
+        let value = Value::from(object);
+        let result = value.as_string()?;
         assert_eq!("foo".to_string(), result);
         Ok(())
     }

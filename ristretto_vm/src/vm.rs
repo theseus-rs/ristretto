@@ -633,7 +633,7 @@ mod tests {
     async fn test_new_object_integer() -> Result<()> {
         let vm = test_vm().await?;
         let object = vm.object("java.lang.Integer", "I", &[42]).await?;
-        let value: i32 = object.try_into()?;
+        let value = object.as_i32()?;
         assert_eq!(42, value);
         Ok(())
     }
@@ -644,7 +644,7 @@ mod tests {
         let object = vm
             .object("java.lang.Integer", "Ljava/lang/String;", &["42"])
             .await?;
-        let value: i32 = object.try_into()?;
+        let value = object.as_i32()?;
         assert_eq!(42, value);
         Ok(())
     }
@@ -654,7 +654,7 @@ mod tests {
         let vm = test_vm().await?;
         let characters = "foo".chars().collect::<Vec<char>>();
         let object = vm.object("java.lang.String", "[C", &[characters]).await?;
-        let value: String = object.try_into()?;
+        let value = object.as_string()?;
         assert_eq!("foo", value);
         Ok(())
     }

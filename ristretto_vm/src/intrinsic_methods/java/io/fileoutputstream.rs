@@ -13,7 +13,7 @@ use ristretto_classfile::JAVA_8;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
-use ristretto_classloader::{Object, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 #[cfg(target_os = "wasi")]
 use std::fs::{File, OpenOptions};
@@ -26,6 +26,7 @@ use std::sync::Arc;
 use tokio::fs::{File, OpenOptions};
 #[cfg(not(target_family = "wasm"))]
 use tokio::io::{AsyncSeekExt, AsyncWriteExt};
+use zerocopy::transmute_ref;
 
 /// Generates a unique identifier for a file handle based on its integer value.  This is used to
 /// track file handles in the VM's handles table.
@@ -91,9 +92,11 @@ pub(crate) async fn open_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let append = parameters.pop_bool()?;
-    let path: String = parameters.pop()?.try_into()?;
+    let path = parameters.pop()?;
+    let path = path.as_string()?;
     let file_output_stream = parameters.pop_object()?;
-    let file_descriptor: Object = file_output_stream.value("fd")?.try_into()?;
+    let file_descriptor = file_output_stream.value("fd")?;
+    let file_descriptor = file_descriptor.as_object_ref()?;
 
     if path.is_empty() {
         return Err(FileNotFoundException("File path is empty".to_string()).into());
@@ -220,11 +223,17 @@ pub(crate) async fn write_bytes(
     let append = parameters.pop_bool()?;
     let length = usize::try_from(parameters.pop_int()?)?;
     let offset = usize::try_from(parameters.pop_int()?)?;
-    let bytes: Vec<u8> = parameters.pop()?.try_into()?;
+    let bytes = parameters.pop()?;
+    let bytes = {
+        let bytes = bytes.as_byte_vec_ref()?;
+        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        bytes.to_vec()
+    };
     let file_output_stream = parameters.pop_object()?;
-    let file_descriptor: Object = file_output_stream.value("fd")?.try_into()?;
+    let file_descriptor = file_output_stream.value("fd")?;
+    let file_descriptor = file_descriptor.as_object_ref()?;
     let vm = thread.vm()?;
-    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
 
     match fd {
         1 => {

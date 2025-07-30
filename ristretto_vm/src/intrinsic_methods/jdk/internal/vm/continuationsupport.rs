@@ -30,7 +30,7 @@ mod tests {
         let value = is_supported_0(thread, Parameters::default())
             .await?
             .expect("continuations support");
-        let supports_continuations: bool = value.try_into()?;
+        let supports_continuations = value.as_bool()?;
         assert!(!supports_continuations);
         Ok(())
     }

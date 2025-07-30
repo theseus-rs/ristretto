@@ -606,8 +606,8 @@ mod test {
         let class2 = class.to_object(&thread).await?;
 
         let stack = &mut OperandStack::with_max_size(2);
-        stack.push_object(Some(class1.try_into()?))?;
-        stack.push_object(Some(class2.try_into()?))?;
+        stack.push(class1)?;
+        stack.push(class2)?;
         let result = if_acmpeq(stack, 3)?;
         assert_eq!(ContinueAtPosition(3), result);
         Ok(())
@@ -622,8 +622,8 @@ mod test {
         let class2 = class2.to_object(&thread).await?;
 
         let stack = &mut OperandStack::with_max_size(2);
-        stack.push_object(Some(class1.try_into()?))?;
-        stack.push_object(Some(class2.try_into()?))?;
+        stack.push(class1)?;
+        stack.push(class2)?;
         let result = if_acmpeq(stack, 3)?;
         assert_eq!(Continue, result);
         Ok(())
@@ -669,8 +669,8 @@ mod test {
         let class2 = class.to_object(&thread).await?;
 
         let stack = &mut OperandStack::with_max_size(2);
-        stack.push_object(Some(class1.try_into()?))?;
-        stack.push_object(Some(class2.try_into()?))?;
+        stack.push(class1)?;
+        stack.push(class2)?;
         let result = if_acmpne(stack, 3)?;
         assert_eq!(Continue, result);
         Ok(())
@@ -685,8 +685,10 @@ mod test {
         let class2 = class2.to_object(&thread).await?;
 
         let stack = &mut OperandStack::with_max_size(2);
-        stack.push_object(Some(class1.try_into()?))?;
-        stack.push_object(Some(class2.try_into()?))?;
+        let class1 = class1.as_reference()?.clone();
+        stack.push_object(Some(class1))?;
+        let class2 = class2.as_reference()?.clone();
+        stack.push_object(Some(class2))?;
         let result = if_acmpne(stack, 3)?;
         assert_eq!(ContinueAtPosition(3), result);
         Ok(())

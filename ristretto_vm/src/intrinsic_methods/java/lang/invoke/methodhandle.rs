@@ -21,7 +21,8 @@ pub(crate) async fn invoke(
 ) -> Result<Option<Value>> {
     let arguments: Vec<Value> = parameters.pop()?.try_into()?;
     let method_handle = parameters.pop_object()?;
-    let target_member: Object = method_handle.value("member")?.try_into()?;
+    let target_member = method_handle.value("member")?;
+    let target_member = target_member.as_object_ref()?;
     let result = call_method_handle_target(thread, target_member, arguments).await?;
     Ok(Some(result))
 }
@@ -37,7 +38,8 @@ pub(crate) async fn invoke_basic(
 ) -> Result<Option<Value>> {
     let arguments: Vec<Value> = parameters.pop()?.try_into()?;
     let method_handle = parameters.pop_object()?;
-    let target_member: Object = method_handle.value("member")?.try_into()?;
+    let target_member = method_handle.value("member")?;
+    let target_member = target_member.as_object_ref()?;
     let result = call_method_handle_target(thread, target_member, arguments).await?;
     Ok(Some(result))
 }
@@ -53,7 +55,8 @@ pub(crate) async fn invoke_exact(
 ) -> Result<Option<Value>> {
     let arguments: Vec<Value> = parameters.pop()?.try_into()?;
     let method_handle = parameters.pop_object()?;
-    let target_member: Object = method_handle.value("member")?.try_into()?;
+    let member = method_handle.value("member")?;
+    let target_member = member.as_object_ref()?;
     let result = call_method_handle_target(thread, target_member, arguments).await?;
     Ok(Some(result))
 }
@@ -61,16 +64,17 @@ pub(crate) async fn invoke_exact(
 /// Helper: Actually invokes the target referenced by a `MethodHandle`.
 pub async fn call_method_handle_target(
     thread: Arc<Thread>,
-    member: Object,
+    member: &Object,
     mut arguments: Vec<Value>,
 ) -> Result<Value> {
-    let target_class_object: Object = member.value("clazz")?.try_into()?;
-    let target_class_name: String = target_class_object.value("name")?.try_into()?;
+    let member_class = member.value("clazz")?;
+    let target_class_object = member_class.as_object_ref()?;
+    let target_class_name = target_class_object.value("name")?.as_string()?;
     let target_class = thread.class(target_class_name).await?;
-    let member_name: String = member.value("name")?.try_into()?;
+    let member_name = member.value("name")?.as_string()?;
 
     // Get flags to determine the kind of member and operation
-    let flags: i32 = member.value("flags")?.try_into()?;
+    let flags = member.value("flags")?.as_i32()?;
     let reference_kind_value = (flags
         & (MemberNameFlags::REFERENCE_KIND_MASK.bits()
             << MemberNameFlags::REFERENCE_KIND_SHIFT.bits()))
@@ -79,7 +83,7 @@ pub async fn call_method_handle_target(
     let reference_kind = ReferenceKind::try_from(reference_kind_value)?;
 
     // Get the descriptor (method signature or field type)
-    let member_descriptor: String = if let Ok(method_type) = member.value("type") {
+    let member_descriptor = if let Ok(method_type) = member.value("type") {
         let method_descriptor = thread
             .invoke(
                 "java.lang.invoke.MethodType",
@@ -88,10 +92,13 @@ pub async fn call_method_handle_target(
             )
             .await?;
         match method_descriptor {
-            Some(descriptor) => descriptor.try_into()?,
+            Some(descriptor) => descriptor.as_string()?,
             _ => return Err(InternalError("Invalid MethodType".to_string())),
         }
-    } else if let Ok(descriptor) = member.value("descriptor").and_then(TryInto::try_into) {
+    } else if let Ok(descriptor) = member
+        .value("descriptor")
+        .and_then(|value| value.as_string())
+    {
         descriptor
     } else {
         return Err(InternalError(
@@ -125,7 +132,8 @@ pub async fn call_method_handle_target(
             .await
         }
         ReferenceKind::GetField => {
-            let receiver: Object = arguments.remove(0).try_into()?;
+            let argument = arguments.remove(0);
+            let receiver = argument.as_object_ref()?;
             Ok(receiver.value(&member_name)?)
         }
         ReferenceKind::GetStatic => {
@@ -133,7 +141,8 @@ pub async fn call_method_handle_target(
             Ok(value)
         }
         ReferenceKind::PutField => {
-            let receiver: Object = arguments.remove(0).try_into()?;
+            let argument = arguments.remove(0);
+            let receiver = argument.as_object_ref()?;
             let value = arguments.remove(0);
             receiver.set_value(&member_name, value)?;
             Ok(Value::Object(None))

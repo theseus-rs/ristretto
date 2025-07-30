@@ -14,7 +14,7 @@ pub(crate) async fn intern(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let value = parameters.pop()?;
-    let value: String = value.try_into()?;
+    let value = value.as_string()?;
 
     let vm = thread.vm()?;
     let string_pool = vm.string_pool();

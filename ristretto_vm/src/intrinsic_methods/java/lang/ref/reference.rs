@@ -78,7 +78,6 @@ pub(crate) async fn wait_for_reference_pending_list(
 mod tests {
     use super::*;
     use crate::JavaObject;
-    use ristretto_classloader::Object;
 
     #[tokio::test]
     async fn test_clear_0() -> Result<()> {
@@ -96,7 +95,7 @@ mod tests {
 
         let result = clear_0(thread, parameters).await?;
         assert_eq!(result, None);
-        let weak_reference: Object = weak_reference.try_into()?;
+        let weak_reference = weak_reference.as_object_ref()?;
         let referent = weak_reference.value("referent")?;
         assert_eq!(referent, Value::Object(None));
         Ok(())
@@ -118,7 +117,7 @@ mod tests {
         let value = has_reference_pending_list(thread, Parameters::default())
             .await?
             .expect("has pending list");
-        let has_pending_list: bool = value.try_into()?;
+        let has_pending_list = value.as_bool()?;
         assert!(!has_pending_list);
         Ok(())
     }
@@ -138,7 +137,7 @@ mod tests {
         parameters.push(weak_reference.clone());
         parameters.push(value);
         let value = refers_to_0(thread, parameters).await?.expect("refers to");
-        let refers_to: bool = value.try_into()?;
+        let refers_to = value.as_bool()?;
         assert!(refers_to);
         Ok(())
     }

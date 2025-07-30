@@ -331,7 +331,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = true;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: bool = value.try_into()?;
+        let value = value.as_bool()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -341,7 +341,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = '*';
         let value: Value = original_value.to_object(&thread).await?;
-        let value: char = value.try_into()?;
+        let value = value.as_char()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -351,7 +351,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42i8;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: i8 = value.try_into()?;
+        let value = value.as_i8()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -361,7 +361,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42u8;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: u8 = value.try_into()?;
+        let value = value.as_u8()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -371,7 +371,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42i16;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: i16 = value.try_into()?;
+        let value = value.as_i16()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -381,7 +381,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42u16;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: u16 = value.try_into()?;
+        let value = value.as_u16()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -391,7 +391,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42i32;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: i32 = value.try_into()?;
+        let value = value.as_i32()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -401,7 +401,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42u32;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: u32 = value.try_into()?;
+        let value = value.as_u32()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -411,7 +411,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42i64;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: i64 = value.try_into()?;
+        let value = value.as_i64()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -421,7 +421,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42u64;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: u64 = value.try_into()?;
+        let value = value.as_u64()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -431,7 +431,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42isize;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: isize = value.try_into()?;
+        let value = value.as_isize()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -441,7 +441,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42usize;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: usize = value.try_into()?;
+        let value = value.as_usize()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -451,7 +451,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42.1f32;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: f32 = value.try_into()?;
+        let value = value.as_f32()?;
         let value = value - original_value;
         assert!(value.abs() < 0.1f32);
         Ok(())
@@ -462,7 +462,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = 42.1f64;
         let value: Value = original_value.to_object(&thread).await?;
-        let value: f64 = value.try_into()?;
+        let value = value.as_f64()?;
         let value = value - original_value;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -473,7 +473,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = "foo";
         let value: Value = original_value.to_object(&thread).await?;
-        let value: String = value.try_into()?;
+        let value = value.as_string()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -483,7 +483,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = "foo".to_string();
         let value: Value = original_value.to_object(&thread).await?;
-        let value: String = value.try_into()?;
+        let value = value.as_string()?;
         assert_eq!(original_value, value);
         Ok(())
     }
@@ -493,7 +493,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let original_value = thread.class("[I").await?;
         let value: Value = original_value.to_object(&thread).await?;
-        let object: Object = value.try_into()?;
+        let object = value.as_object_ref()?;
         let class = object.class();
         assert_eq!("java/lang/Class", class.name());
         Ok(())

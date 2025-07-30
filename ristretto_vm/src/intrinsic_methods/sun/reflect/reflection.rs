@@ -61,7 +61,7 @@ pub(crate) async fn get_class_access_flags(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop_object()?;
-    let class_name: String = object.value("name")?.try_into()?;
+    let class_name = object.value("name")?.as_string()?;
     let class = thread.class(&class_name).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags;
@@ -100,7 +100,7 @@ mod tests {
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_class_access_flags(thread, parameters).await?;
-        let access_flags: i32 = result.expect("access_flags").try_into()?;
+        let access_flags = result.expect("access_flags").as_i32()?;
         assert_eq!(access_flags, 49);
         Ok(())
     }

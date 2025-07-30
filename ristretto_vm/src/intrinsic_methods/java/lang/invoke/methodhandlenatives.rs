@@ -164,9 +164,10 @@ pub(crate) async fn object_field_offset(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let member_name = parameters.pop_object()?;
-    let class_object: Object = member_name.value("clazz")?.try_into()?;
-    let class = get_class(&thread, &class_object).await?;
-    let field_name: String = member_name.value("name")?.try_into()?;
+    let class_object = member_name.value("clazz")?;
+    let class_object = class_object.as_object_ref()?;
+    let class = get_class(&thread, class_object).await?;
+    let field_name = member_name.value("name")?.as_string()?;
     let offset = class.field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
     Ok(Some(Value::Long(offset)))
@@ -203,33 +204,36 @@ pub(crate) async fn resolve(
     lookup_mode_flags: &LookupModeFlags,
     speculative_resolve: bool,
 ) -> Result<Option<Value>> {
-    let class_object: Object = member_self.value("clazz")?.try_into()?;
-    let class_name: String = class_object.value("name")?.try_into()?;
+    let class_object = member_self.value("clazz")?;
+    let class_object = class_object.as_object_ref()?;
+    let class_name = class_object.value("name")?.as_string()?;
     let class = thread.class(class_name.clone()).await?;
     let name = member_self.value("name")?;
-    let flags: i32 = member_self.value("flags")?.try_into()?;
+    let flags = member_self.value("flags")?.as_i32()?;
     let member_name_flags = MemberNameFlags::from_bits_truncate(flags);
 
     // Handle methods/constructors
     if member_name_flags.contains(MemberNameFlags::IS_METHOD)
         || member_name_flags.contains(MemberNameFlags::IS_CONSTRUCTOR)
     {
-        let method_type: Object = member_self.value("type")?.try_into()?;
+        let method_type = member_self.value("type")?;
+        let method_type = method_type.as_object_ref()?;
         let parameter_types = method_type.value("ptypes")?;
         let parameters: Vec<Value> = parameter_types.try_into()?;
         let mut parameter_descriptors = Vec::with_capacity(parameters.len());
         for parameter in parameters {
-            let class_object: Object = parameter.try_into()?;
-            let class_name: String = class_object.value("name")?.try_into()?;
+            let class_object = parameter.as_object_ref()?;
+            let class_name = class_object.value("name")?.as_string()?;
             let descriptor = Class::convert_to_descriptor(&class_name);
             parameter_descriptors.push(descriptor);
         }
-        let class_name: String = class_object.value("name")?.try_into()?;
-        let return_type: Object = method_type.value("rtype")?.try_into()?;
-        let return_class_name: String = return_type.value("name")?.try_into()?;
+        let class_name = class_object.value("name")?.as_string()?;
+        let return_type = method_type.value("rtype")?;
+        let return_type = return_type.as_object_ref()?;
+        let return_class_name = return_type.value("name")?.as_string()?;
         let return_descriptor = Class::convert_to_descriptor(&return_class_name);
 
-        let method_name: String = name.try_into()?;
+        let method_name = name.as_string()?;
         let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
         let method = match class_name.as_str() {
             "java.lang.invoke.DelegatingMethodHandle$Holder"
@@ -269,7 +273,7 @@ pub(crate) async fn resolve(
     }
     // Handle fields (for both normal field and VarHandle)
     else if member_name_flags.contains(MemberNameFlags::IS_FIELD) {
-        let field_name: String = name.try_into()?;
+        let field_name = name.as_string()?;
         let field = class.declared_field(&field_name)?;
         let field_access_flags = field.access_flags();
         if !check_field_access(caller, &class, *field_access_flags, *lookup_mode_flags)? {
@@ -543,9 +547,10 @@ pub(crate) async fn static_field_offset(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let member_name = parameters.pop_object()?;
-    let class_object: Object = member_name.value("clazz")?.try_into()?;
-    let class = get_class(&thread, &class_object).await?;
-    let field_name: String = member_name.value("name")?.try_into()?;
+    let class_object = member_name.value("clazz")?;
+    let class_object = class_object.as_object_ref()?;
+    let class = get_class(&thread, class_object).await?;
+    let field_name = member_name.value("name")?.as_string()?;
     let offset = class.field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
     Ok(Some(Value::Long(offset)))

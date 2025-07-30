@@ -262,7 +262,6 @@ mod tests {
     use super::*;
     use crate::JavaError::RuntimeException;
     use crate::JavaObject;
-    use ristretto_classloader::Reference;
     use std::path::Path;
     use tempfile::NamedTempFile;
 
@@ -284,7 +283,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(path);
         let value = canonicalize_0(thread, parameters).await?.expect("value");
-        let canonical_path: String = value.try_into()?;
+        let canonical_path = value.as_string()?;
         assert_ne!(original_path, canonical_path);
         Ok(())
     }
@@ -302,7 +301,7 @@ mod tests {
         let value = canonicalize_with_prefix_0(thread, parameters)
             .await?
             .expect("value");
-        let canonical_path: String = value.try_into()?;
+        let canonical_path = value.as_string()?;
         assert!(!canonical_path.contains(original_path_prefix));
         assert!(!canonical_path.contains(original_path));
         Ok(())
@@ -316,7 +315,7 @@ mod tests {
         parameters.push(file_object);
         parameters.push_int(1); // Read access
         let value = check_access(thread, parameters).await?.expect("name max");
-        let has_access: bool = value.try_into()?;
+        let has_access = value.as_bool()?;
         assert!(has_access);
         Ok(())
     }
@@ -337,7 +336,7 @@ mod tests {
         let value = create_directory(thread, parameters)
             .await?
             .expect("created");
-        let created: bool = value.try_into()?;
+        let created = value.as_bool()?;
         assert!(created);
         tokio::fs::remove_dir_all(path_name).await?;
         Ok(())
@@ -357,7 +356,7 @@ mod tests {
         let value = create_file_exclusively(thread, parameters)
             .await?
             .expect("created");
-        let created: bool = value.try_into()?;
+        let created = value.as_bool()?;
         assert!(created);
         tokio::fs::remove_file(path_name).await?;
         Ok(())
@@ -367,7 +366,7 @@ mod tests {
     async fn test_delete_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let (file, file_object) = create_file(&thread, "delete").await?;
-        let path: String = file.path().to_string_lossy().to_string();
+        let path = file.path().to_string_lossy().to_string();
         assert!(Path::new(&path).exists());
 
         let mut parameters = Parameters::default();
@@ -375,7 +374,7 @@ mod tests {
         let value = unixfilesystem::delete_0(thread, parameters)
             .await?
             .expect("deleted");
-        let deleted: bool = value.try_into()?;
+        let deleted = value.as_bool()?;
         assert!(deleted);
         assert!(!Path::new(&path).exists());
         Ok(())
@@ -390,7 +389,7 @@ mod tests {
         let value = get_boolean_attributes(thread, parameters)
             .await?
             .expect("attributes");
-        let attributes: i32 = value.try_into()?;
+        let attributes = value.as_i32()?;
         assert!(attributes > 0);
         Ok(())
     }
@@ -403,7 +402,7 @@ mod tests {
         let value = get_drive_directory(thread, parameters)
             .await?
             .expect("drive");
-        let drive: String = value.try_into()?;
+        let drive = value.as_string()?;
         assert_eq!(drive, "C:\\");
         Ok(())
     }
@@ -423,7 +422,7 @@ mod tests {
         let value = get_last_modified_time(thread, parameters)
             .await?
             .expect("last modified time");
-        let last_modified_time: i64 = value.try_into()?;
+        let last_modified_time = value.as_i64()?;
         assert!(last_modified_time >= start_time);
         Ok(())
     }
@@ -435,7 +434,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = get_length(thread, parameters).await?.expect("length");
-        let length: i64 = value.try_into()?;
+        let length = value.as_i64()?;
         assert_eq!(0, length);
         Ok(())
     }
@@ -449,7 +448,7 @@ mod tests {
         let value = unixfilesystem::get_name_max_0(thread, parameters)
             .await?
             .expect("name max");
-        let length: i64 = value.try_into()?;
+        let length = value.as_i64()?;
         assert_eq!(255, length);
         Ok(())
     }
@@ -463,7 +462,7 @@ mod tests {
             parameters.push(file_object);
             parameters.push_int(space_type);
             let value = get_space_0(thread, parameters).await?.expect("space");
-            let space: i64 = value.try_into()?;
+            let space = value.as_i64()?;
 
             if space_type > 2 {
                 assert_eq!(space, 0);
@@ -492,7 +491,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = list(thread, parameters).await?.expect("paths");
-        let reference: Reference = value.clone().try_into()?;
+        let reference = value.as_reference()?;
         let class_name = reference.class_name().to_string();
         let elements: Vec<Value> = value.try_into()?;
         assert_eq!(class_name, "java/lang/String");
@@ -508,7 +507,7 @@ mod tests {
         #[cfg(target_os = "windows")]
         {
             let value = result.expect("roots");
-            let count: i32 = value.try_into().expect("count");
+            let count = value.as_i32().expect("count");
             assert!(count > 0);
         }
 
@@ -522,7 +521,7 @@ mod tests {
     async fn test_rename_0() -> Result<()> {
         let (vm, thread) = crate::test::thread().await?;
         let (source_file, source_object) = create_file(&thread, "rename_source").await?;
-        let source_path: String = source_file.path().to_string_lossy().to_string();
+        let source_path = source_file.path().to_string_lossy().to_string();
         let destination_path = format!("{source_path}_destination");
         let destination_object: Value = destination_path.to_object(&thread).await?;
         let destination_object = vm
@@ -532,7 +531,7 @@ mod tests {
         parameters.push(source_object);
         parameters.push(destination_object);
         let value = rename_0(thread, parameters).await?.expect("renamed");
-        let renamed: bool = value.try_into()?;
+        let renamed = value.as_bool()?;
         assert!(renamed);
         assert!(!Path::new(&source_path).exists());
         assert!(Path::new(&destination_path).exists());
@@ -549,7 +548,7 @@ mod tests {
         let value = set_last_modified_time(thread, parameters)
             .await?
             .expect("success");
-        let success: bool = value.try_into()?;
+        let success = value.as_bool()?;
         assert!(success);
         Ok(())
     }
@@ -564,7 +563,7 @@ mod tests {
         parameters.push_bool(true); // enable
         parameters.push_int(1); // access (write)
         let value = set_permission(thread, parameters).await?.expect("success");
-        let success: bool = value.try_into()?;
+        let success = value.as_bool()?;
         assert!(success);
         Ok(())
     }
@@ -576,7 +575,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = set_read_only(thread, parameters).await?.expect("success");
-        let success: bool = value.try_into()?;
+        let success = value.as_bool()?;
         assert!(success);
         Ok(())
     }

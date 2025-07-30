@@ -362,7 +362,7 @@ async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Val
     let mut argument_classes = Vec::with_capacity(argument_types.len() - 1);
     for argument_type in argument_types.iter().skip(1) {
         let argument_class = get_field_type_class(thread, Some(argument_type.clone())).await?;
-        let argument_reference: Reference = argument_class.try_into()?;
+        let argument_reference = argument_class.as_reference()?.clone();
         argument_classes.push(Some(argument_reference));
     }
     let class_array = thread.class("[Ljava/lang/Class;").await?;
@@ -812,8 +812,9 @@ async fn invoke_bootstrap_method(
 
     // Extract the target member from the method handle and call it directly
     // to avoid infinite recursion through thread.try_execute()
-    let target_member: ristretto_classloader::Object = method_handle.try_into()?;
-    let member: ristretto_classloader::Object = target_member.value("member")?.try_into()?;
+    let target_member = method_handle.as_object_ref()?;
+    let member = target_member.value("member")?;
+    let member = member.as_object_ref()?;
 
     let result = call_method_handle_target(thread.clone(), member, arguments).await?;
 
@@ -849,7 +850,7 @@ async fn validate_call_site(
 
     // Validate that the returned object is actually a CallSite
     let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
-    let call_site_reference: Reference = call_site.clone().try_into()?;
+    let call_site_reference = call_site.as_reference()?;
 
     if let Reference::Object(object) = call_site_reference {
         // Check if the object's class is assignable from CallSite class
@@ -958,8 +959,9 @@ pub(crate) async fn invokedynamic(
 
     // Step 5: Invoke the target MethodHandle directly using call_method_handle_target
     // to avoid infinite recursion through thread.try_execute()
-    let target_member: ristretto_classloader::Object = target_method_handle.try_into()?;
-    let member: ristretto_classloader::Object = target_member.value("member")?.try_into()?;
+    let target_member = target_method_handle.as_object_ref()?;
+    let member = target_member.value("member")?;
+    let member = member.as_object_ref()?;
 
     let result = call_method_handle_target(thread.clone(), member, parameters).await?;
 

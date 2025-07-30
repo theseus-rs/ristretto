@@ -17,7 +17,7 @@ use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_24};
-use ristretto_classloader::{Object, Reference, Value};
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
 #[cfg(target_os = "wasi")]
 use std::fs::OpenOptions;
@@ -39,10 +39,11 @@ pub(crate) async fn available_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file_input_stream = parameters.pop_object()?;
-    let file_descriptor: Object = file_input_stream.value("fd")?.try_into()?;
+    let file_descriptor = file_input_stream.value("fd")?;
+    let file_descriptor = file_descriptor.as_object_ref()?;
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
-    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
     let mut file_handle = file_handles
         .get_mut(&handle_identifier)
@@ -112,10 +113,11 @@ pub(crate) async fn is_regular_file_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file_input_stream = parameters.pop_object()?;
-    let file_descriptor: Object = file_input_stream.value("fd")?.try_into()?;
+    let file_descriptor = file_input_stream.value("fd")?;
+    let file_descriptor = file_descriptor.as_object_ref()?;
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
-    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
     let file_handle = file_handles
         .get(&handle_identifier)
@@ -157,9 +159,11 @@ pub(crate) async fn open_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let path: String = parameters.pop()?.try_into()?;
+    let path = parameters.pop()?;
+    let path = path.as_string()?;
     let file_input_stream = parameters.pop_object()?;
-    let file_descriptor: Object = file_input_stream.value("fd")?.try_into()?;
+    let file_descriptor = file_input_stream.value("fd")?;
+    let file_descriptor = file_descriptor.as_object_ref()?;
 
     if path.is_empty() {
         return Err(FileNotFoundException("File path is empty".to_string()).into());
@@ -260,7 +264,7 @@ pub(crate) async fn read_0(
         result = read_result;
     }
     if result > 0 {
-        let bytes: Vec<i8> = bytes.try_into()?;
+        let bytes = bytes.as_byte_vec_ref()?;
         let byte = bytes.first().copied().unwrap_or_default();
         #[expect(clippy::cast_sign_loss)]
         let byte = byte as u8;
@@ -280,9 +284,10 @@ pub(crate) async fn read_bytes(
     let offset = usize::try_from(parameters.pop_int()?)?;
     let bytes = parameters.pop_reference()?;
     let file_input_stream = parameters.pop_object()?;
-    let file_descriptor: Object = file_input_stream.value("fd")?.try_into()?;
+    let file_descriptor = file_input_stream.value("fd")?;
+    let file_descriptor = file_descriptor.as_object_ref()?;
     let vm = thread.vm()?;
-    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
     let capacity = length.saturating_sub(offset);
     let mut buffer = vec![0u8; capacity];
 
@@ -349,10 +354,11 @@ pub(crate) async fn skip_0(
 ) -> Result<Option<Value>> {
     let skip_bytes = parameters.pop_long()?;
     let file_input_stream = parameters.pop_object()?;
-    let file_descriptor: Object = file_input_stream.value("fd")?.try_into()?;
+    let file_descriptor = file_input_stream.value("fd")?;
+    let file_descriptor = file_descriptor.as_object_ref()?;
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
-    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
     let handle_identifier = file_handle_identifier(fd);
     let mut file_handle = file_handles
         .get_mut(&handle_identifier)

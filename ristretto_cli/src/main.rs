@@ -10,7 +10,7 @@ mod version;
 use argument::Cli;
 use clap::CommandFactory;
 use ristretto_vm::Error::{InternalError, Throwable};
-use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Reference, Result, VM, Value};
+use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Result, VM, Value};
 use std::env;
 use std::env::consts::{ARCH, OS};
 use std::path::PathBuf;
@@ -120,11 +120,12 @@ fn process_error(error: Error) -> Result<()> {
     let mut first_throwable = true;
 
     loop {
-        let class = throwable.class();
+        let throwable_object = throwable.as_object_ref()?;
+        let class = throwable_object.class();
         let class_name = class.name();
-        let message: String = throwable
+        let message = throwable_object
             .value("detailMessage")
-            .and_then(TryInto::try_into)?;
+            .and_then(|value| value.as_string())?;
         let prelude = if first_throwable {
             first_throwable = false;
             "Exception"
@@ -132,21 +133,21 @@ fn process_error(error: Error) -> Result<()> {
             "Caused by"
         };
         eprintln!("{prelude} {class_name}: {message}");
-        let stack_trace: Vec<Value> = throwable.value("backtrace")?.try_into()?;
+        let stack_trace: Vec<Value> = throwable_object.value("backtrace")?.try_into()?;
         for stack_trace_element in stack_trace {
             let Value::Object(Some(reference)) = stack_trace_element else {
                 continue;
             };
             let stack_trace_element = reference.as_object_ref()?;
-            let class: String = stack_trace_element.value("declaringClass")?.try_into()?;
-            let method: String = stack_trace_element.value("methodName")?.try_into()?;
+            let class = stack_trace_element.value("declaringClass")?.as_string()?;
+            let method = stack_trace_element.value("methodName")?.as_string()?;
 
             let mut source = String::new();
             let file = stack_trace_element.value("fileName")?;
             if let Value::Object(Some(ref _file_object)) = file {
-                source = file.try_into()?;
+                source = file.as_string()?;
             }
-            let line: i32 = stack_trace_element.value("lineNumber")?.try_into()?;
+            let line = stack_trace_element.value("lineNumber")?.as_i32()?;
             if line > 0 {
                 if source.is_empty() {
                     source = format!("{line}");
@@ -161,11 +162,8 @@ fn process_error(error: Error) -> Result<()> {
             }
         }
 
-        let cause = throwable.value("cause")?;
-        let Value::Object(Some(Reference::Object(cause))) = cause else {
-            break;
-        };
-        if throwable == cause {
+        let cause = throwable_object.value("cause")?;
+        if cause.is_null() || throwable == cause {
             break;
         }
     }
