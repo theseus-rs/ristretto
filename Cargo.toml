@@ -37,7 +37,7 @@ async-recursion = "1.1.1"
 bitflags = "2.9.1"
 byteorder = "1.5.0"
 byte-unit = "5.1.6"
-clap = "4.5.41"
+clap = "4.5.42"
 console = "0.16.0"
 cranelift = "0.122.0"
 criterion = { version = "0.7.0", default-features = false }
