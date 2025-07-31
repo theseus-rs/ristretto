@@ -7,6 +7,96 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/v0.24.0...v0.25.0) - 2025-07-31
+
+### Added
+- add parallel jit compiler
+- update GC threads to be configurable; default to 50% of cpu cores
+
+### Fixed
+- correct default interface method resolution
+- correct instanceof operations
+- address stack overflow in invokedynamic instruction
+- correct definition of the ristretto/internal/access/JavaLangRefAccess class
+
+### Other
+- replace Value TryInto<type> with as_<type>
+- replace Value.to_<type> methods with TryInto
+- remove ConcurrentVec
+- update Cargo.toml dependencies
+- refactor Reference and Object to improve memory and lock utilization
+- replace Reference TryInto<type> with as_<type>
+- replace Object TryInto<type> with as_<type>
+- implement value, reference and object  hash
+- refactor usages of Reference to Value
+- correct clippy lint warnings
+- remove debugging code
+- update to cranelift=0.122.0, criterion=0.7.0
+
+## `ristretto_vm` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.24.0...ristretto_vm-v0.25.0) - 2025-07-31
+
+### Added
+- update GC threads to be configurable; default to 50% of cpu cores
+- add parallel jit compiler
+
+### Fixed
+- address stack overflow in invokedynamic instruction
+- correct default interface method resolution
+- correct definition of the ristretto/internal/access/JavaLangRefAccess class
+- correct instanceof operations
+
+### Other
+- refactor Reference and Object to improve memory and lock utilization
+- replace Value TryInto<type> with as_<type>
+- replace Reference TryInto<type> with as_<type>
+- replace Object TryInto<type> with as_<type>
+- implement value, reference and object  hash
+- replace Value.to_<type> methods with TryInto
+- remove ConcurrentVec
+- refactor usages of Reference to Value
+- remove debugging code
+- update to cranelift=0.122.0, criterion=0.7.0
+- correct clippy lint warnings
+
+## `ristretto_jit` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.24.0...ristretto_jit-v0.25.0) - 2025-07-31
+
+### Fixed
+- correct default interface method resolution
+
+### Other
+- remove debugging code
+- update to cranelift=0.122.0, criterion=0.7.0
+
+## `ristretto_classloader` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.24.0...ristretto_classloader-v0.25.0) - 2025-07-31
+
+### Fixed
+- correct default interface method resolution
+- correct instanceof operations
+
+### Other
+- refactor Reference and Object to improve memory and lock utilization
+- replace Value TryInto<type> with as_<type>
+- replace Reference TryInto<type> with as_<type>
+- replace Object TryInto<type> with as_<type>
+- implement value, reference and object  hash
+- replace Value.to_<type> methods with TryInto
+- remove ConcurrentVec
+- refactor usages of Reference to Value
+- correct clippy lint warnings
+
+## `ristretto_gc` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.24.0...ristretto_gc-v0.25.0) - 2025-07-31
+
+### Added
+- update GC threads to be configurable; default to 50% of cpu cores
+
+### Other
+- refactor Reference and Object to improve memory and lock utilization
+
+## `ristretto_classfile` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.24.0...ristretto_classfile-v0.25.0) - 2025-07-31
+
+### Other
+- update Cargo.toml dependencies
+
 ## `ristretto_cli` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/v0.23.0...v0.24.0) - 2025-07-22
 
 ### Added

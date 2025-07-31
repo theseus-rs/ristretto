@@ -14,8 +14,8 @@ version.workspace = true
 flate2 = { workspace = true }
 indexmap = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.24.0" }
-ristretto_gc = { path = "../ristretto_gc", version = "0.24.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.25.0" }
+ristretto_gc = { path = "../ristretto_gc", version = "0.25.0" }
 serde = { workspace = true, features = ["derive"] }
 serde_plain = { workspace = true }
 tar = { workspace = true }
