@@ -21,8 +21,7 @@ pub(crate) async fn get_class_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
     let class = thread.class(class_name).await?;
@@ -41,8 +40,7 @@ pub(crate) async fn get_class_at_if_loaded_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
     let class = thread.class(class_name).await?;
@@ -61,8 +59,7 @@ pub(crate) async fn get_class_ref_index_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let class_index = match constant_pool.try_get(index)? {
         Constant::FieldRef { class_index, .. }
@@ -89,8 +86,7 @@ pub(crate) async fn get_double_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let double = constant_pool.try_get_double(index)?;
     Ok(Some(Value::Double(*double)))
@@ -107,8 +103,7 @@ pub(crate) async fn get_field_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
@@ -152,8 +147,7 @@ pub(crate) async fn get_float_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let float = constant_pool.try_get_float(index)?;
     Ok(Some(Value::Float(*float)))
@@ -170,8 +164,7 @@ pub(crate) async fn get_int_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let integer = constant_pool.try_get_integer(index)?;
     Ok(Some(Value::Int(*integer)))
@@ -188,8 +181,7 @@ pub(crate) async fn get_long_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let long = constant_pool.try_get_long(index)?;
     Ok(Some(Value::Long(*long)))
@@ -206,8 +198,7 @@ pub(crate) async fn get_member_ref_info_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = match constant_pool.try_get(index)? {
         Constant::FieldRef {
@@ -252,8 +243,7 @@ pub(crate) async fn get_method_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
@@ -320,8 +310,7 @@ pub(crate) async fn get_name_and_type_ref_index_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let name_and_type_index = match constant_pool.try_get(index)? {
         Constant::Dynamic {
@@ -365,8 +354,7 @@ pub(crate) async fn get_name_and_type_ref_info_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let name_and_type_index = match constant_pool.try_get(index)? {
         Constant::Dynamic {
@@ -416,8 +404,7 @@ pub(crate) async fn get_size_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let size = i32::try_from(constant_pool.len())?;
     Ok(Some(Value::from(size)))
@@ -434,8 +421,7 @@ pub(crate) async fn get_string_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let utf8 = constant_pool.try_get_string(index)?;
     let result = utf8.to_object(&thread).await?;
@@ -453,8 +439,7 @@ pub(crate) async fn get_tag_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let constant = constant_pool.try_get(index)?;
     thread
@@ -477,8 +462,7 @@ pub(crate) async fn get_utf_8_at_0(
 ) -> Result<Option<Value>> {
     let index = u16::try_from(parameters.pop_int()?)?;
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class = class::get_class(&thread, object).await?;
+    let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let utf8 = constant_pool.try_get_utf8(index)?;
     let result = utf8.to_object(&thread).await?;

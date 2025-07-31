@@ -271,7 +271,7 @@ pub(crate) async fn checkcast(
     let thread = frame.thread()?;
     let class = thread.class(class_name).await?;
     if !is_instance_of(&thread, &object, &class).await? {
-        let source_class_name = object.class_name().replace('/', ".");
+        let source_class_name = object.class_name()?.replace('/', ".");
         let target_class_name = class_name.replace('/', ".");
         return Err(ClassCastException {
             source_class_name,
@@ -318,14 +318,22 @@ async fn is_instance_of(thread: &Thread, object: &Reference, class: &Arc<Class>)
         | Reference::LongArray(_)
         | Reference::FloatArray(_)
         | Reference::DoubleArray(_) => {
-            let reference_class_name = object.class_name();
+            let reference_class_name = object.class_name()?;
             let object_class = thread.class(reference_class_name).await?;
             Ok(class.is_assignable_from(thread, &object_class).await?)
         }
         Reference::Array(object_array) => Ok(class
             .is_assignable_from(thread, &object_array.class)
             .await?),
-        Reference::Object(object) => Ok(class.is_assignable_from(thread, object.class()).await?),
+        Reference::Object(object) => {
+            let object_class = {
+                let object = object
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                object.class().clone()
+            };
+            Ok(class.is_assignable_from(thread, &object_class).await?)
+        }
     }
 }
 

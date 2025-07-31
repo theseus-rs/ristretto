@@ -1,4 +1,3 @@
-use crate::Error::InternalError;
 use crate::Result;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
@@ -6,7 +5,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11};
-use ristretto_classloader::{Object, Reference, Value};
+use ristretto_classloader::{Object, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -17,11 +16,7 @@ pub(crate) async fn fill_in_stack_trace(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let _dummy = usize::try_from(parameters.pop_int()?)?;
-    let object = parameters.pop_reference()?;
-    let Some(Reference::Object(ref throwable)) = object else {
-        return Err(InternalError("No throwable object found".to_string()));
-    };
-
+    let throwable = parameters.pop()?;
     let vm = thread.vm()?;
     let stack_element_class = thread.class("java/lang/StackTraceElement").await?;
     let mut stack_elements = Vec::new();
@@ -32,7 +27,7 @@ pub(crate) async fn fill_in_stack_trace(
             continue;
         }
         let class_name = class_name.to_object(&thread).await?;
-        let stack_element_object = Object::new(stack_element_class.clone())?;
+        let mut stack_element_object = Object::new(stack_element_class.clone())?;
         stack_element_object.set_value("declaringClass", class_name)?;
 
         if let Some(source_file) = class.source_file() {
@@ -56,13 +51,17 @@ pub(crate) async fn fill_in_stack_trace(
         .class(format!("[L{stack_element_class};").as_str())
         .await?;
     let stack_trace = Value::try_from((stack_element_array_class, stack_elements))?;
-    throwable.set_value("backtrace", stack_trace)?;
 
-    if vm.java_major_version() >= JAVA_11.java() {
-        throwable.set_value("depth", Value::Int(depth))?;
+    {
+        let mut throwable = throwable.as_object_mut()?;
+        throwable.set_value("backtrace", stack_trace)?;
+
+        if vm.java_major_version() >= JAVA_11.java() {
+            throwable.set_value("depth", Value::Int(depth))?;
+        }
     }
 
-    Ok(Some(Value::Object(object)))
+    Ok(Some(throwable))
 }
 
 #[intrinsic_method("java/lang/Throwable.getStackTraceDepth()I", LessThanOrEqual(JAVA_8))]

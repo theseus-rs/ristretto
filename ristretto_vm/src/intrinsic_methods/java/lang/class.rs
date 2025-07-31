@@ -1,4 +1,3 @@
-use crate::Error::InternalError;
 use crate::JavaError::{ClassNotFoundException, NullPointerException};
 use crate::Result;
 use crate::assignable::Assignable;
@@ -15,19 +14,25 @@ use ristretto_classfile::attributes::{Attribute, InnerClass};
 use ristretto_classfile::{
     ClassAccessFlags, FieldAccessFlags, JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodAccessFlags,
 };
-use ristretto_classloader::{Class, Method, Object, Reference, Value};
+use ristretto_classloader::{Class, Method, Object, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 /// Get the class of an object, handling special cases for `java/lang/Class`.
-pub async fn get_class(thread: &Thread, object: &Object) -> Result<Arc<Class>> {
-    let class = object.class();
-    if class.name() == "java/lang/Class" {
-        let class_name = object.value("name")?.as_string()?;
-        let class = thread.class(class_name.as_str()).await?;
-        return Ok(class);
+pub async fn get_class(thread: &Thread, object: &Value) -> Result<Arc<Class>> {
+    {
+        let object = object.as_object_ref()?;
+        let class = object.class();
+        if class.name() != "java/lang/Class" {
+            return Ok(Arc::clone(class));
+        }
     }
-    Ok(Arc::clone(class))
+
+    let class_name = {
+        let object = object.as_object_ref()?;
+        object.value("name")?.as_string()?
+    };
+    thread.class(class_name.as_str()).await
 }
 
 #[intrinsic_method("java/lang/Class.desiredAssertionStatus0(Ljava/lang/Class;)Z", Any)]
@@ -52,9 +57,10 @@ pub(crate) async fn for_name_0(
     let _caller = parameters.pop_reference()?;
     let _class_loader = parameters.pop_reference()?;
     let _initialize = parameters.pop_bool()?;
-    let Ok(object) = parameters.pop_object() else {
+    let object = parameters.pop()?;
+    if object.is_null() {
         return Err(NullPointerException("className cannot be null".to_string()).into());
-    };
+    }
 
     let class_name = object.as_string()?;
     let class = match thread.class(&class_name).await {
@@ -81,7 +87,7 @@ pub(crate) async fn get_class_access_flags_raw_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags;
@@ -96,7 +102,7 @@ pub(crate) async fn get_class_file_version_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let version = &class_file.version;
@@ -117,8 +123,11 @@ pub(crate) async fn get_component_type(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
-    let class_name = object.value("name")?.as_string()?;
+    let object = parameters.pop()?;
+    let class_name = {
+        let object = object.as_object_ref()?;
+        object.value("name")?.as_string()?
+    };
     let class = thread.class(&class_name).await?;
 
     if !class.is_array() {
@@ -155,7 +164,7 @@ pub(crate) async fn get_constant_pool_1(
 ) -> Result<Option<Value>> {
     let class_object = parameters.pop()?;
     let class = thread.class("jdk.internal.reflect.ConstantPool").await?;
-    let constant_pool = Object::new(class)?;
+    let mut constant_pool = Object::new(class)?;
     constant_pool.set_value("constantPoolOop", class_object)?;
     Ok(Some(Value::from(constant_pool)))
 }
@@ -166,8 +175,11 @@ pub(crate) async fn get_declared_classes_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let class = parameters.pop_object()?;
-    let class_name = class.value("name")?.as_string()?;
+    let class = parameters.pop()?;
+    let class_name = {
+        let class = class.as_object_ref()?;
+        class.value("name")?.as_string()?
+    };
     let class = thread.class(&class_name).await?;
     let mut declared_classes = Vec::new();
 
@@ -212,7 +224,7 @@ pub(crate) async fn get_declared_constructors_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let public_only = parameters.pop_bool()?;
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     let class_object = class.to_object(&thread).await?;
 
@@ -311,7 +323,7 @@ pub(crate) async fn get_declared_fields_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let public_only = parameters.pop_bool()?;
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let vm = thread.vm()?;
     let class = get_class(&thread, &object).await?;
     let class_object = class.to_object(&thread).await?;
@@ -411,7 +423,7 @@ pub(crate) async fn get_declared_methods_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let public_only = parameters.pop_bool()?;
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     let class_object = class.to_object(&thread).await?;
 
@@ -527,7 +539,7 @@ pub(crate) async fn get_declaring_class_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
 
     if class.is_array() || class.is_primitive() {
@@ -554,7 +566,7 @@ pub(crate) async fn get_enclosing_method_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     for attribute in &class_file.attributes {
@@ -632,8 +644,11 @@ pub(crate) async fn get_interfaces_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let class = parameters.pop_object()?;
-    let class_name = class.value("name")?.as_string()?;
+    let class = parameters.pop()?;
+    let class_name = {
+        let class = class.as_object_ref()?;
+        class.value("name")?.as_string()?
+    };
     let class = thread.class(class_name).await?;
     let mut interfaces = Vec::new();
 
@@ -653,7 +668,7 @@ pub(crate) async fn get_modifiers(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags.bits();
@@ -675,7 +690,7 @@ pub(crate) async fn get_name_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     let class_name = class.name().replace('/', ".");
     let value = class_name.to_object(&thread).await?;
@@ -712,7 +727,7 @@ pub(crate) async fn get_permitted_subclasses_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let _class = get_class(&thread, &object).await?;
     // TODO: add support for sealed classes
     Ok(Some(Value::Object(None)))
@@ -727,7 +742,7 @@ pub(crate) async fn get_primitive_class(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let primitive: Object = parameters.pop_object()?;
+    let primitive = parameters.pop()?;
     let class_name = primitive.as_string()?;
     let class = thread.class(class_name).await?;
     let class = class.to_object(&thread).await?;
@@ -752,7 +767,7 @@ pub(crate) async fn get_raw_annotations(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let mut bytes = Vec::new();
@@ -782,7 +797,7 @@ pub(crate) async fn get_raw_type_annotations(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     let class_file = class.class_file();
     let mut bytes = Vec::new();
@@ -843,7 +858,7 @@ pub(crate) async fn get_simple_binary_name_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     let class_name = class.name();
     let class_name_parts = class_name.split('$').collect::<Vec<&str>>();
@@ -863,7 +878,7 @@ pub(crate) async fn get_superclass(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     if class.is_primitive() || class.is_interface() {
         return Ok(Some(Value::Object(None)));
@@ -890,7 +905,7 @@ pub(crate) async fn init_class_name(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     // TODO: implement support for hidden classes
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     let class_name = class.name().replace('/', ".");
     let value = class_name.to_object(&thread).await?;
@@ -903,7 +918,7 @@ pub(crate) async fn is_array(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     if class.is_array() {
         Ok(Some(Value::from(true)))
@@ -918,15 +933,12 @@ pub(crate) async fn is_assignable_from(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object_parameter = match parameters.pop_reference()? {
-        Some(Reference::Object(object)) => object,
-        None => return Err(NullPointerException("object cannot be null".to_string()).into()),
-        _ => return Err(InternalError("isAssignableFrom: no parameters".to_string())),
-    };
+    let object_parameter = parameters.pop()?;
+    if object_parameter.is_null() {
+        return Err(NullPointerException("object cannot be null".to_string()).into());
+    }
     let class_parameter = get_class(&thread, &object_parameter).await?;
-    let Some(Reference::Object(object)) = parameters.pop_reference()? else {
-        return Err(InternalError("isAssignableFrom: no instance".to_string()));
-    };
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     if class.is_assignable_from(&thread, &class_parameter).await? {
         Ok(Some(Value::from(true)))
@@ -951,14 +963,19 @@ pub(crate) async fn is_instance(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let Ok(compare_object) = parameters.pop_object() else {
-        return Ok(Some(Value::from(false)));
-    };
-    let self_object = parameters.pop_object()?;
+    let compare_object = parameters.pop()?;
+    let self_object = parameters.pop()?;
     let self_class = get_class(&thread, &self_object).await?;
 
+    if compare_object.is_null() {
+        return Ok(Some(Value::from(false)));
+    }
+    let compare_object_class = {
+        let compare_object = compare_object.as_object_ref()?;
+        compare_object.class().clone()
+    };
     if self_class
-        .is_assignable_from(&thread, compare_object.class())
+        .is_assignable_from(&thread, &compare_object_class)
         .await?
     {
         Ok(Some(Value::from(true)))
@@ -973,7 +990,7 @@ pub(crate) async fn is_interface(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     if class.is_interface() {
         Ok(Some(Value::from(true)))
@@ -988,7 +1005,7 @@ pub(crate) async fn is_primitive(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
+    let object = parameters.pop()?;
     let class = get_class(&thread, &object).await?;
     if class.is_primitive() {
         Ok(Some(Value::from(true)))
@@ -1033,6 +1050,7 @@ mod tests {
     use super::*;
     use crate::Error::JavaError;
     use ristretto_classfile::Version;
+    use ristretto_classloader::Reference;
 
     #[tokio::test]
     async fn test_desired_assertion_status_0() -> Result<()> {

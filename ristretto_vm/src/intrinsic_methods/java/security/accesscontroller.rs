@@ -17,14 +17,13 @@ pub(crate) async fn do_privileged_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
-    let class_name = object.class().name().to_string();
+    let object = parameters.pop()?;
+    let class_name = {
+        let object = object.as_object_ref()?;
+        object.class().name().to_string()
+    };
     thread
-        .invoke(
-            &class_name,
-            "run()Ljava/lang/Object;",
-            &[Value::from(object)],
-        )
+        .invoke(&class_name, "run()Ljava/lang/Object;", &[object])
         .await
 }
 
@@ -37,15 +36,14 @@ pub(crate) async fn do_privileged_2(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _context = parameters.pop_object()?;
-    let object = parameters.pop_object()?;
-    let class_name = object.class().name().to_string();
+    let _context = parameters.pop()?;
+    let object = parameters.pop()?;
+    let class_name = {
+        let object = object.as_object_ref()?;
+        object.class().name().to_string()
+    };
     thread
-        .invoke(
-            &class_name,
-            "run()Ljava/lang/Object;",
-            &[Value::from(object)],
-        )
+        .invoke(&class_name, "run()Ljava/lang/Object;", &[object])
         .await
 }
 
@@ -58,14 +56,13 @@ pub(crate) async fn do_privileged_3(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let object = parameters.pop_object()?;
-    let class_name = object.class().name().to_string();
+    let object = parameters.pop()?;
+    let class_name = {
+        let object = object.as_object_ref()?;
+        object.class().name().to_string()
+    };
     thread
-        .invoke(
-            &class_name,
-            "run()Ljava/lang/Object;",
-            &[Value::from(object)],
-        )
+        .invoke(&class_name, "run()Ljava/lang/Object;", &[object])
         .await
 }
 
@@ -78,15 +75,14 @@ pub(crate) async fn do_privileged_4(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _context = parameters.pop_object()?;
-    let object = parameters.pop_object()?;
-    let class_name = object.class().name().to_string();
+    let _context = parameters.pop()?;
+    let object = parameters.pop()?;
+    let class_name = {
+        let object = object.as_object_ref()?;
+        object.class().name().to_string()
+    };
     thread
-        .invoke(
-            &class_name,
-            "run()Ljava/lang/Object;",
-            &[Value::from(object)],
-        )
+        .invoke(&class_name, "run()Ljava/lang/Object;", &[object])
         .await
 }
 

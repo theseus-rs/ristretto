@@ -154,7 +154,7 @@ impl JavaObject for f64 {
 impl JavaObject for &str {
     async fn to_object(&self, thread: &Thread) -> Result<Value> {
         let class = thread.class("java.lang.String").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
 
         let vm = thread.vm()?;
         let java_class_file_version = vm.java_class_file_version();
@@ -269,7 +269,7 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
     }
 
     let java_lang_class = thread.class("java.lang.Class").await?;
-    let object = Object::new(java_lang_class)?;
+    let mut object = Object::new(java_lang_class)?;
     let class_name = class.name().replace('/', ".");
     let name = class_name.to_object(thread).await?;
     object.set_value("name", name)?;
@@ -294,17 +294,14 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
     }
     object.set_value_unchecked("classLoader", class_loader_object)?;
 
-    class.set_object(Some(Value::from(object.clone())))?;
     let value = Value::from(object);
+    class.set_object(Some(value.clone()))?;
     Ok(value)
 }
 
 impl JavaObject for Arc<Class> {
     async fn to_object(&self, thread: &Thread) -> Result<Value> {
         let class_object = to_class_object(thread, self).await?;
-        let Value::Object(Some(Reference::Object(ref object))) = class_object else {
-            return Err(InternalError("Expected class object".to_string()));
-        };
 
         let vm = thread.vm()?;
         if *vm.java_class_file_version() > JAVA_8 && self.is_array() {
@@ -315,7 +312,10 @@ impl JavaObject for Arc<Class> {
             };
             let component_type_class = thread.class(component_type).await?;
             let component_type_object = to_class_object(thread, &component_type_class).await?;
-            object.set_value("componentType", component_type_object)?;
+            {
+                let mut object = class_object.as_object_mut()?;
+                object.set_value("componentType", component_type_object)?;
+            }
         }
 
         Ok(class_object)

@@ -219,18 +219,28 @@ pub async fn process_values(thread: &Thread, values: &[impl RustValue]) -> Resul
     let mut results = Vec::with_capacity(values.len());
     for value in values {
         let value = value.to_value();
-        let Value::Object(Some(Reference::Object(ref object))) = value else {
+        if !matches!(value, Value::Object(Some(Reference::Object(_)))) {
             results.push(value);
             continue;
+        }
+
+        let push_value = {
+            let class = {
+                let object = value.as_object_ref()?;
+                object.class().clone()
+            };
+            let class_name = class.name();
+            if class_name.starts_with(STRING_PREFIX) {
+                let string_value = class_name.strip_prefix(STRING_PREFIX).unwrap_or_default();
+                let value = string_value.to_object(thread).await?;
+                results.push(value);
+                false
+            } else {
+                true
+            }
         };
 
-        let class = object.class();
-        let class_name = class.name();
-        if class_name.starts_with(STRING_PREFIX) {
-            let string_value = class_name.strip_prefix(STRING_PREFIX).unwrap_or_default();
-            let value = string_value.to_object(thread).await?;
-            results.push(value);
-        } else {
+        if push_value {
             results.push(value);
         }
     }

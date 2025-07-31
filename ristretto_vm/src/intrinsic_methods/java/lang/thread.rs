@@ -6,7 +6,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_24};
-use ristretto_classloader::{Object, Reference, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,8 +16,11 @@ use tokio::runtime::Builder;
 use tracing::error;
 
 /// Get the thread from the thread ID in the `eetop` field of the thread object.
-async fn get_thread(thread: &Arc<Thread>, thread_object: &Object) -> Result<Arc<Thread>> {
-    let thread_id = thread_object.value("eetop")?.as_i64()?;
+async fn get_thread(thread: &Arc<Thread>, thread_object: &Value) -> Result<Arc<Thread>> {
+    let thread_id = {
+        let thread_object = thread_object.as_object_ref()?;
+        thread_object.value("eetop")?.as_i64()?
+    };
     let thread_id = u64::try_from(thread_id)?;
     let vm = thread.vm()?;
     let thread_handles = vm.thread_handles();
@@ -33,7 +36,7 @@ pub(crate) async fn clear_interrupt_event(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let thread_object: Object = parameters.pop_object()?;
+    let thread_object = parameters.pop()?;
     let instance_thread = get_thread(&thread, &thread_object).await?;
     let _ = instance_thread.is_interrupted(true);
     Ok(None)
@@ -172,7 +175,7 @@ pub(crate) async fn interrupt_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let thread_object: Object = parameters.pop_object()?;
+    let thread_object = parameters.pop()?;
     let instance_thread = get_thread(&thread, &thread_object).await?;
     instance_thread.interrupt();
     Ok(None)
@@ -184,7 +187,7 @@ pub(crate) async fn is_alive(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let thread_object: Object = parameters.pop_object()?;
+    let thread_object = parameters.pop()?;
     let is_alive = get_thread(&thread, &thread_object).await.is_ok();
     Ok(Some(Value::from(is_alive)))
 }
@@ -196,7 +199,7 @@ pub(crate) async fn is_interrupted(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let clear_interrupt = parameters.pop_bool()?;
-    let thread_object: Object = parameters.pop_object()?;
+    let thread_object = parameters.pop()?;
     let instance_thread = get_thread(&thread, &thread_object).await?;
     let was_interrupted = instance_thread.is_interrupted(clear_interrupt);
     Ok(Some(Value::from(was_interrupted)))
@@ -253,9 +256,10 @@ pub(crate) async fn set_native_name(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(name)) = parameters.pop_reference()? else {
+    let name = parameters.pop()?;
+    if name.is_null() {
         return Err(NullPointerException("name cannot be null".to_string()).into());
-    };
+    }
     let name = name.as_string()?;
     thread.set_name(name).await;
     Ok(None)
@@ -375,22 +379,23 @@ pub(crate) async fn start_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let thread_object: Object = parameters.pop_object()?;
-    let thread_class = thread_object.class().clone();
+    let thread_object = parameters.pop()?;
+    let (thread_class, thread_id) = {
+        let mut thread_object = thread_object.as_object_mut()?;
+        let thread_class = thread_object.class().clone();
+        let thread_id = thread_object.value("tid")?.as_u64()?;
+        // Associate the Java Thread object with the new internal thread and set its ID in `eetop`
+        thread_object.set_value("eetop", Value::from(thread_id))?;
+        (thread_class, thread_id)
+    };
     let run_method = thread_class.try_get_method("run", "()V")?;
-    let thread_value = Value::from(thread_object.clone());
+    let thread_value = thread_object.clone();
 
     // Create a new internal thread (Arc<Thread>) and registered with the VM
-    let thread_id = thread_object.value("tid")?.as_u64()?;
     let vm = thread.vm()?;
     let weak_vm = Arc::downgrade(&vm);
     let new_thread = Thread::new(&weak_vm, thread_id);
-
-    // Associate the Java Thread object with the new internal thread and set its ID in `eetop`
-    thread_object.set_value("eetop", Value::from(thread_id))?;
-    new_thread
-        .set_java_object(Value::from(thread_object.clone()))
-        .await;
+    new_thread.set_java_object(thread_object.clone()).await;
 
     // Spawn a new OS thread to run the target's run() method in a Tokio runtime
     let spawn_vm = vm.clone();
@@ -407,8 +412,17 @@ pub(crate) async fn start_0(
                     .execute(&thread_class, &run_method, &[thread_value])
                     .await;
                 // Set `eetop` to 0 after execution to indicate the thread has finished
-                if let Err(error) = thread_object.set_value("eetop", Value::Long(0)) {
-                    error!("Failed to set eetop to 0: {error}");
+                {
+                    let mut thread_object = match thread_object.as_object_mut() {
+                        Ok(thread_object) => thread_object,
+                        Err(error) => {
+                            error!("Failed to get thread object: {error:?}");
+                            return;
+                        }
+                    };
+                    if let Err(error) = thread_object.set_value("eetop", Value::Long(0)) {
+                        error!("Failed to set eetop to 0: {error}");
+                    }
                 }
                 // Remove the thread from the VM's thread handles; this drops the JoinHandle which
                 // in turn will drop the OS thread.
@@ -483,15 +497,17 @@ mod tests {
     /// Helper function to create a thread object for testing
     async fn create_thread(vm: &Arc<VM>) -> Result<Value> {
         let thread_value = vm.object("java/lang/Thread", "", &[] as &[Value]).await?;
-        let thread_object = thread_value.as_object_ref()?;
         let thread_id = vm.next_thread_id()?;
         let weak_vm = Arc::downgrade(vm);
         let thread = Thread::new(&weak_vm, thread_id);
         let thread_handle = ThreadHandle::from(thread);
         let mut thread_handles = vm.thread_handles().write().await;
         thread_handles.insert(thread_id, thread_handle);
-        thread_object.set_value("eetop", Value::from(thread_id))?;
-        thread_object.set_value("tid", Value::from(thread_id))?;
+        {
+            let mut thread_object = thread_value.as_object_mut()?;
+            thread_object.set_value("eetop", Value::from(thread_id))?;
+            thread_object.set_value("tid", Value::from(thread_id))?;
+        }
         Ok(thread_value)
     }
 

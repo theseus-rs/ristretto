@@ -3,17 +3,17 @@ use crate::Reference::{ByteArray, CharArray};
 use crate::field::FieldKey;
 use crate::{Class, Field, Reference, Result, Value};
 use ristretto_classfile::JAVA_8;
-use ristretto_gc::{GarbageCollector, Gc, Trace};
+use ristretto_gc::{GarbageCollector, Trace};
 use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 /// Represents an object in the Ristretto VM.
 #[derive(Clone)]
 pub struct Object {
     class: Arc<Class>,
-    values: Gc<Vec<RwLock<Value>>>,
+    values: Vec<Value>,
 }
 
 impl Object {
@@ -24,16 +24,11 @@ impl Object {
     /// if the fields of the class cannot be read.
     pub fn new(class: Arc<Class>) -> Result<Self> {
         let object_fields = class.all_object_fields()?;
-        let mut values = Vec::with_capacity(object_fields.len());
-        for field in object_fields {
-            let value = field.default_value();
-            values.push(RwLock::new(value));
-        }
-
-        Ok(Self {
-            class,
-            values: Gc::new(values),
-        })
+        let values = object_fields
+            .iter()
+            .map(|field| field.default_value())
+            .collect::<Vec<_>>();
+        Ok(Self { class, values })
     }
 
     /// Get the class.
@@ -51,16 +46,16 @@ impl Object {
         &self,
         accessing_class: &Class,
         key: K,
-    ) -> Result<(Arc<Field>, &RwLock<Value>)> {
+    ) -> Result<(usize, Arc<Field>, &Value)> {
         // TODO: Optimize this function to avoid the field resolution for every access.
         let object_fields = self.class.all_object_fields()?;
 
         // Fast path for numeric keys (direct index access)
         if key.is_numeric_key() {
             if let Some((index, field)) = key.get_field(&object_fields)
-                && let Some(value_lock) = self.values.get(index)
+                && let Some(value) = self.values.get(index)
             {
-                return Ok((field.clone(), value_lock));
+                return Ok((index, field.clone(), value));
             }
             return Err(FieldNotFound {
                 class_name: accessing_class.name().to_string(),
@@ -76,9 +71,9 @@ impl Object {
             // Find the last (most derived) field that matches the key
             for (index, field) in object_fields.iter().enumerate().rev() {
                 if key.matches_field(field)
-                    && let Some(value_lock) = self.values.get(index)
+                    && let Some(value) = self.values.get(index)
                 {
-                    return Ok((field.clone(), value_lock));
+                    return Ok((index, field.clone(), value));
                 }
             }
         } else {
@@ -106,7 +101,6 @@ impl Object {
                 // use that one. If not, use the most derived version available
 
                 let mut field_offset = 0;
-                let mut found_field = None;
 
                 // Calculate field offset for classes above the accessing class (towards root)
                 for class in class_hierarchy.iter().skip(accessing_index + 1) {
@@ -118,33 +112,26 @@ impl Object {
                 for (local_index, field) in accessing_class_fields.iter().enumerate() {
                     if key.matches_field(field) {
                         let global_index = field_offset + local_index;
-                        if let Some(value_lock) = self.values.get(global_index) {
-                            return Ok((field.clone(), value_lock));
+                        if let Some(value) = self.values.get(global_index) {
+                            return Ok((global_index, field.clone(), value));
                         }
                     }
                 }
 
                 // If not found in accessing class, look in more derived classes (towards the
                 // object's actual class)
-                let mut current_offset = 0;
+                let mut current_offset = field_offset + accessing_class_fields.len();
                 for i in (0..accessing_index).rev() {
                     let current_class_fields = class_hierarchy[i].object_fields();
                     for (local_index, field) in current_class_fields.iter().enumerate() {
                         if key.matches_field(field) {
-                            let global_index = field_offset
-                                + accessing_class_fields.len()
-                                + current_offset
-                                + local_index;
-                            if let Some(value_lock) = self.values.get(global_index) {
-                                found_field = Some((field.clone(), value_lock));
+                            let global_index = current_offset + local_index;
+                            if let Some(value) = self.values.get(global_index) {
+                                return Ok((global_index, field.clone(), value));
                             }
                         }
                     }
                     current_offset += current_class_fields.len();
-                }
-
-                if let Some((field, value_lock)) = found_field {
-                    return Ok((field, value_lock));
                 }
             }
 
@@ -152,9 +139,9 @@ impl Object {
             // handles cases where we're accessing through an interface or other reference type
             for (index, field) in object_fields.iter().enumerate() {
                 if key.matches_field(field)
-                    && let Some(value_lock) = self.values.get(index)
+                    && let Some(value) = self.values.get(index)
                 {
-                    return Ok((field.clone(), value_lock));
+                    return Ok((index, field.clone(), value));
                 }
             }
         }
@@ -171,11 +158,8 @@ impl Object {
     ///
     /// if the field cannot be found.
     pub fn value_in_class<K: FieldKey>(&self, class: &Class, key: K) -> Result<Value> {
-        let (_field, value_lock) = self.field_value(class, key)?;
-        let value_guard = value_lock
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        Ok(value_guard.clone())
+        let (_index, _field, value) = self.field_value(class, key)?;
+        Ok(value.clone())
     }
 
     /// Get value for a field.
@@ -193,18 +177,22 @@ impl Object {
     ///
     /// if the field cannot be found.
     pub fn set_value_in_class<S: FieldKey>(
-        &self,
+        &mut self,
         class: &Class,
         key: S,
         value: Value,
     ) -> Result<()> {
-        let (field, value_lock) = self.field_value(class, key)?;
+        let (index, field, _value) = self.field_value(class, key)?;
         field.check_value(&value)?;
-        let mut value_guard = value_lock
-            .write()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        *value_guard = value;
-        Ok(())
+        if let Some(element) = self.values.get_mut(index) {
+            *element = value;
+            Ok(())
+        } else {
+            Err(FieldNotFound {
+                class_name: class.name().to_string(),
+                field_name: key.to_string(),
+            })
+        }
     }
 
     /// Sets value for field.
@@ -212,8 +200,9 @@ impl Object {
     /// # Errors
     ///
     /// if the field cannot be found.
-    pub fn set_value<S: FieldKey>(&self, key: S, value: Value) -> Result<()> {
-        self.set_value_in_class(&self.class, key, value)
+    pub fn set_value<S: FieldKey>(&mut self, key: S, value: Value) -> Result<()> {
+        let class = self.class().clone();
+        self.set_value_in_class(&class, key, value)
     }
 
     /// Sets value for field without checking the field constraints.
@@ -221,13 +210,18 @@ impl Object {
     /// # Errors
     ///
     /// if the field cannot be found.
-    pub fn set_value_unchecked<S: FieldKey>(&self, key: S, value: Value) -> Result<()> {
-        let (_field, value_lock) = self.field_value(&self.class, key)?;
-        let mut value_guard = value_lock
-            .write()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        *value_guard = value;
-        Ok(())
+    pub fn set_value_unchecked<S: FieldKey>(&mut self, key: S, value: Value) -> Result<()> {
+        let (index, _field, _value) = self.field_value(&self.class, key)?;
+        if let Some(element) = self.values.get_mut(index) {
+            *element = value;
+            Ok(())
+        } else {
+            let class = self.class();
+            Err(FieldNotFound {
+                class_name: class.name().to_string(),
+                field_name: key.to_string(),
+            })
+        }
     }
 
     /// Check if the object is an instance of the given class and return the "value".
@@ -251,8 +245,8 @@ impl Object {
         &self,
         other: &Object,
         visited: &mut HashSet<(
-            (*const Class, *const Vec<RwLock<Value>>),
-            (*const Class, *const Vec<RwLock<Value>>),
+            (*const Class, *const Vec<Value>),
+            (*const Class, *const Vec<Value>),
         )>,
     ) -> bool {
         // Optimization for the case where the two objects are the same reference.
@@ -260,8 +254,8 @@ impl Object {
             return true;
         }
 
-        let self_ptr = (Arc::as_ptr(&self.class), Gc::as_ptr(&self.values));
-        let other_ptr = (Arc::as_ptr(&other.class), Gc::as_ptr(&other.values));
+        let self_ptr = (Arc::as_ptr(&self.class), std::ptr::from_ref(&self.values));
+        let other_ptr = (Arc::as_ptr(&other.class), std::ptr::from_ref(&other.values));
         let object_ptr_pair = (self_ptr, other_ptr);
 
         // Check if we've already visited this pair to avoid infinite recursion
@@ -279,19 +273,25 @@ impl Object {
             return false;
         }
 
-        // Compare values by iterating over the Vec<RwLock<Value>>
-        for (self_value_lock, other_value_lock) in self.values.iter().zip(other.values.iter()) {
-            if std::ptr::eq(self_value_lock, other_value_lock) {
+        // Compare values by iterating over the Vec<Value>
+        for (self_value, other_value) in self.values.iter().zip(other.values.iter()) {
+            if std::ptr::eq(self_value, other_value) {
                 continue;
             }
-            let self_value = self_value_lock.read().expect("poisoned lock");
-            let other_value = other_value_lock.read().expect("poisoned lock");
-            match (&*self_value, &*other_value) {
+            match (self_value, other_value) {
                 (
                     Value::Object(Some(Reference::Object(self_object))),
                     Value::Object(Some(Reference::Object(other_object))),
                 ) => {
-                    if !self_object.equal_with_visited(other_object, visited) {
+                    let self_object = self_object
+                        .read()
+                        .map_err(|error| PoisonedLock(error.to_string()))
+                        .expect("poisoned lock");
+                    let other_object = other_object
+                        .read()
+                        .map_err(|error| PoisonedLock(error.to_string()))
+                        .expect("poisoned lock");
+                    if !self_object.equal_with_visited(&other_object, visited) {
                         return false;
                     }
                 }
@@ -306,17 +306,10 @@ impl Object {
         true
     }
 
-    /// Returns hash code implementation based on memory address. This is used by the Java
-    /// `Object.hash_code()` implementation.
-    #[must_use]
-    pub fn hash_code(&self) -> usize {
-        Gc::as_ptr(&self.values).cast::<Vec<Value>>() as usize
-    }
-
     /// Check if two references point to the same memory location.
     #[must_use]
     pub fn ptr_eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.class, &other.class) && Gc::ptr_eq(&self.values, &other.values)
+        std::ptr::eq(self, other)
     }
 
     /// Deep clone the object.
@@ -330,16 +323,13 @@ impl Object {
             return Ok(self.clone());
         }
 
-        let mut values = Vec::new();
-        for value_lock in self.values.iter() {
-            let value = value_lock
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
-            values.push(RwLock::new(value.clone()));
+        let mut values = Vec::with_capacity(self.values.len());
+        for value in &self.values {
+            values.push(value.deep_clone()?);
         }
         Ok(Self {
             class: self.class.clone(),
-            values: Gc::new(values),
+            values,
         })
     }
 
@@ -592,8 +582,7 @@ impl Debug for Object {
         // Print fields by name to ensure consistent output
         for (index, field) in object_fields.iter().enumerate() {
             let name = field.name();
-            let value_lock = self.values.get(index).ok_or(std::fmt::Error)?;
-            let value = value_lock.read().map_err(|_| std::fmt::Error)?;
+            let value = self.values.get(index).ok_or(std::fmt::Error)?;
             writeln!(f, "  {name}={value}")?;
         }
 
@@ -660,21 +649,17 @@ impl Hash for Object {
     /// Hash an `Object` based on its class name and field values.
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.class.name().hash(state);
-        for value_lock in self.values.iter() {
-            if let Ok(value_guard) = value_lock.read() {
-                value_guard.hash(state);
-            }
+        for value in &self.values {
+            value.hash(state);
         }
     }
 }
 
 impl Trace for Object {
     fn trace(&self, collector: &GarbageCollector) {
-        for value_lock in self.values.iter() {
-            if let Ok(value_guard) = value_lock.read()
-                && let Value::Object(Some(value)) = &*value_guard
-            {
-                value.trace(collector);
+        for value in &self.values {
+            if let Value::Object(Some(reference)) = value {
+                reference.trace(collector);
             }
         }
     }
@@ -718,21 +703,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_hash_code() -> Result<()> {
-        let class = load_class("java.lang.Object").await?;
-        let object1 = Object::new(class.clone())?;
-        let object2 = Object::new(class)?;
-        assert_ne!(0, object1.hash_code());
-        assert_ne!(object1.hash_code(), object2.hash_code());
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_clone() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
-        let clone = object.clone();
+        let mut clone = object.clone();
         assert_eq!(object, clone);
 
         clone.set_value("value", Value::Int(1))?;
@@ -743,7 +718,7 @@ mod tests {
     #[tokio::test]
     async fn test_debug() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!(
             "Object(java/lang/Integer)\n  value=int(42)\n",
@@ -755,9 +730,9 @@ mod tests {
     #[tokio::test]
     async fn test_hash() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object1 = Object::new(class.clone())?;
+        let mut object1 = Object::new(class.clone())?;
         object1.set_value("value", Value::Int(42))?;
-        let object2 = Object::new(class)?;
+        let mut object2 = Object::new(class)?;
         object2.set_value("value", Value::Int(42))?;
         assert_eq!(object1, object2);
         let mut hasher1 = DefaultHasher::new();
@@ -775,10 +750,8 @@ mod tests {
         let class = load_class("java.lang.Object").await?;
         let object1 = Object::new(class.clone())?;
         let object2 = Object::new(class)?;
-        let object3 = object1.clone();
         assert!(object1.ptr_eq(&object1));
         assert!(!object1.ptr_eq(&object2));
-        assert!(object1.ptr_eq(&object3));
         Ok(())
     }
 
@@ -794,9 +767,9 @@ mod tests {
     #[tokio::test]
     async fn test_deep_clone() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
-        let clone = object.deep_clone()?;
+        let mut clone = object.deep_clone()?;
         assert_eq!(object, clone);
         assert!(!object.ptr_eq(&clone));
 
@@ -811,14 +784,14 @@ mod tests {
         let object = Object::new(class)?;
         let clone = object.deep_clone()?;
         assert_eq!(object, clone);
-        assert!(object.ptr_eq(&clone));
+        assert!(!object.ptr_eq(&clone));
         Ok(())
     }
 
     #[tokio::test]
     async fn test_eq_same_references() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!(object, object);
         Ok(())
@@ -827,9 +800,9 @@ mod tests {
     #[tokio::test]
     async fn test_eq_different_references() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object1 = Object::new(class.clone())?;
+        let mut object1 = Object::new(class.clone())?;
         object1.set_value("value", Value::Int(42))?;
-        let object2 = Object::new(class)?;
+        let mut object2 = Object::new(class)?;
         object2.set_value("value", Value::Int(42))?;
         assert_eq!(object1, object2);
         Ok(())
@@ -838,9 +811,9 @@ mod tests {
     #[tokio::test]
     async fn test_eq_not_equal() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object1 = Object::new(class.clone())?;
+        let mut object1 = Object::new(class.clone())?;
         object1.set_value("value", Value::Int(3))?;
-        let object2 = Object::new(class)?;
+        let mut object2 = Object::new(class)?;
         object2.set_value("value", Value::Int(42))?;
         assert_ne!(object1, object2);
         Ok(())
@@ -849,7 +822,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_string_bool() -> Result<()> {
         let class = load_class("java.lang.Boolean").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         assert_eq!("Boolean(true)", object.to_string());
         Ok(())
@@ -858,7 +831,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_string_char() -> Result<()> {
         let class = load_class("java.lang.Character").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!("Character('*')", object.to_string());
         Ok(())
@@ -867,7 +840,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_string_byte() -> Result<()> {
         let class = load_class("java.lang.Byte").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!("Byte(42)", object.to_string());
         Ok(())
@@ -876,7 +849,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_string_short() -> Result<()> {
         let class = load_class("java.lang.Short").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!("Short(42)", object.to_string());
         Ok(())
@@ -885,7 +858,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_string_integer() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         assert_eq!("Integer(42)", object.to_string());
         Ok(())
@@ -894,7 +867,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_string_long() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         assert_eq!("Long(42)", object.to_string());
         Ok(())
@@ -903,7 +876,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_string_float() -> Result<()> {
         let class = load_class("java.lang.Float").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Float(42.1))?;
         assert_eq!("Float(42.1)", object.to_string());
         Ok(())
@@ -912,7 +885,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_string_double() -> Result<()> {
         let class = load_class("java.lang.Double").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Double(42.1))?;
         assert_eq!("Double(42.1)", object.to_string());
         Ok(())
@@ -921,7 +894,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_string_string() -> Result<()> {
         let class = load_class("java.lang.String").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         #[expect(clippy::cast_possible_wrap)]
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
@@ -933,7 +906,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_string_class() -> Result<()> {
         let string_class = load_class("java.lang.String").await?;
-        let string_object = Object::new(string_class)?;
+        let mut string_object = Object::new(string_class)?;
         #[expect(clippy::cast_possible_wrap)]
         let string_bytes: Vec<i8> = "java.lang.Integer"
             .as_bytes()
@@ -945,7 +918,7 @@ mod tests {
         string_object.set_value("value", string_value)?;
 
         let class = load_class("java.lang.Class").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("name", Value::from(string_object))?;
         assert_eq!("Class(java.lang.Integer)", object.to_string());
         Ok(())
@@ -962,7 +935,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_bool() -> Result<()> {
         let class = load_class("java.lang.Boolean").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         let value = object.as_bool()?;
         assert!(value);
@@ -972,7 +945,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_char() -> Result<()> {
         let class = load_class("java.lang.Character").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = object.as_char()?;
         assert_eq!('*', value);
@@ -982,7 +955,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i8() -> Result<()> {
         let class = load_class("java.lang.Byte").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = object.as_i8()?;
         assert_eq!(42, value);
@@ -992,7 +965,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u8() -> Result<()> {
         let class = load_class("java.lang.Byte").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = object.as_u8()?;
         assert_eq!(42, value);
@@ -1002,7 +975,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i16() -> Result<()> {
         let class = load_class("java.lang.Short").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = object.as_i16()?;
         assert_eq!(42, value);
@@ -1012,7 +985,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u16() -> Result<()> {
         let class = load_class("java.lang.Short").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = object.as_u16()?;
         assert_eq!(42, value);
@@ -1022,7 +995,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i32() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = object.as_i32()?;
         assert_eq!(42, value);
@@ -1032,7 +1005,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u32() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = object.as_u32()?;
         assert_eq!(42, value);
@@ -1042,7 +1015,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i64() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value = object.as_i64()?;
         assert_eq!(42, value);
@@ -1052,7 +1025,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u64() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value = object.as_u64()?;
         assert_eq!(42, value);
@@ -1062,7 +1035,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_isize() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value = object.as_isize()?;
         assert_eq!(42, value);
@@ -1072,7 +1045,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_usize() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value = object.as_usize()?;
         assert_eq!(42, value);
@@ -1082,7 +1055,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_f32() -> Result<()> {
         let class = load_class("java.lang.Float").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Float(42.1))?;
         let value = object.as_f32()?;
         let value = value - 42.1f32;
@@ -1093,7 +1066,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_f64() -> Result<()> {
         let class = load_class("java.lang.Double").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Double(42.1))?;
         let value = object.as_f64()?;
         let value = value - 42.1f64;
@@ -1122,7 +1095,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_string_java8() -> Result<()> {
         let class = java8_string_class().await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         let string_chars: Vec<char> = "foo"
             .as_bytes()
             .to_vec()
@@ -1139,7 +1112,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_string_java8_invalid_byte_array_value() -> Result<()> {
         let class = java8_string_class().await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         let string_value = Value::from(Vec::<i32>::new());
         object.set_value("value", string_value)?;
         let result = object.as_string();
@@ -1151,7 +1124,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_string_latin1_byte_array() -> Result<()> {
         let class = string_class().await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("coder", Value::Int(0))?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
@@ -1166,7 +1139,7 @@ mod tests {
     async fn test_as_string_utf16_byte_array() -> Result<()> {
         let value = "😃";
         let class = string_class().await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("coder", Value::Int(1))?;
         let string_bytes: Vec<i8> = value
             .encode_utf16()
@@ -1183,7 +1156,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_string_invalid_char_array_value() -> Result<()> {
         let class = string_class().await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         let string_value = Value::from(Vec::<i32>::new());
         object.set_value("value", string_value)?;
         let result = object.as_string();

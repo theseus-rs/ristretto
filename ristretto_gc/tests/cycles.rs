@@ -163,7 +163,7 @@ fn test_self_referencing_object() {
     }
 
     {
-        let mut obj = Gc::with_collector(
+        let mut object = Gc::with_collector(
             &collector,
             SelfRef {
                 value: 42,
@@ -173,24 +173,24 @@ fn test_self_referencing_object() {
 
         // Create self-reference using a scope to avoid borrow checker issues
         {
-            let obj_clone = obj.clone();
+            let obj_clone = object.clone();
             // Safety: This is safe because:
             // 1. We have exclusive access to the test environment
             // 2. No other threads are accessing this object
             // 3. This is a controlled test for self-referencing objects
             // 4. The mutation happens in a single-threaded test context
             unsafe {
-                let obj_mut = obj.get_mut_unchecked();
+                let obj_mut = object.get_mut_unchecked();
                 obj_mut.myself = Some(obj_clone);
             }
         }
 
         // Verify the self-reference works
-        assert_eq!(obj.value, 42);
-        assert!(obj.myself.is_some());
-        if let Some(ref myself) = obj.myself {
+        assert_eq!(object.value, 42);
+        assert!(object.myself.is_some());
+        if let Some(ref myself) = object.myself {
             assert_eq!(myself.value, 42);
-            assert!(Gc::ptr_eq(&obj, myself));
+            assert!(Gc::ptr_eq(&object, myself));
         }
     }
 

@@ -15,7 +15,6 @@ pub(crate) async fn getfield(
 ) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
     let object = stack.pop()?;
-    let object = object.as_object_ref()?;
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let field_class_name = constant_pool.try_get_class(*class_index)?;
@@ -23,6 +22,7 @@ pub(crate) async fn getfield(
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
+    let object = object.as_object_ref()?;
     let value = object.value_in_class(&field_class, field_name)?;
     stack.push(value)?;
     Ok(Continue)
@@ -39,7 +39,6 @@ pub(crate) async fn putfield(
     let thread = frame.thread()?;
     let value = stack.pop()?;
     let object = stack.pop()?;
-    let object = object.as_object_ref()?;
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let field_class_name = constant_pool.try_get_class(*class_index)?;
@@ -47,6 +46,7 @@ pub(crate) async fn putfield(
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
+    let mut object = object.as_object_mut()?;
     object.set_value_in_class(&field_class, field_name, value)?;
     Ok(Continue)
 }

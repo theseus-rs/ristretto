@@ -83,8 +83,7 @@ pub(crate) async fn array_index_scale_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let object = object.as_object_ref()?;
-    let class: Arc<Class> = get_class(&thread, object).await?;
+    let class: Arc<Class> = get_class(&thread, &object).await?;
     let class_name = class.name();
     let scale = match class_name {
         "[Z" => BOOLEAN_SIZE, // boolean
@@ -179,8 +178,9 @@ pub(crate) async fn compare_and_set_int(
         });
     };
 
-    // TODO: the compare and set operation should be atomic
-    let result = if let Some(Reference::Object(object)) = parameters.pop_reference()? {
+    let value = parameters.pop()?;
+    let result = if value.is_object() {
+        let mut object = value.as_object_mut()?;
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
@@ -219,8 +219,9 @@ pub(crate) async fn compare_and_set_long(
         });
     };
 
-    // TODO: the compare and set operation should be atomic
-    let result = if let Some(Reference::Object(object)) = parameters.pop_reference()? {
+    let value = parameters.pop()?;
+    let result = if value.is_object() {
+        let mut object = value.as_object_mut()?;
         let class = object.class();
         let offset = usize::try_from(*offset)?;
         let field_name = class.field_name(offset)?;
@@ -301,7 +302,9 @@ pub(crate) async fn compare_and_set_reference(
             }
         }
         Reference::Object(object) => {
-            // TODO: the compare and set operation should be atomic
+            let mut object = object
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let field_name = object.class().field_name(offset)?;
             let value = object.value(&field_name)?;
             if value == expected {
@@ -620,6 +623,9 @@ fn get_reference_type(
             Value::Object(reference.clone())
         }
         Reference::Object(object) => {
+            let object = object
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let class = object.class();
             let field_name = class.field_name(offset)?;
             let field = class.declared_field(&field_name)?;
@@ -842,6 +848,9 @@ fn put_reference_type(
             }
         }
         Reference::Object(object) => {
+            let mut object = object
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string()))?;
             let class = object.class();
             let field_name = class.field_name(offset)?;
             let field = class.declared_field(&field_name)?;
@@ -1135,9 +1144,13 @@ pub(crate) async fn object_field_offset_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let field = parameters.pop_object()?;
-    let class = field.value("clazz")?;
-    let name = field.value("name")?;
+    let field = parameters.pop()?;
+    let (class, name) = {
+        let field = field.as_object_ref()?;
+        let class = field.value("clazz")?;
+        let name = field.value("name")?;
+        (class, name)
+    };
     let parameters = Parameters::new(vec![class, name]);
     object_field_offset_1(thread, parameters).await
 }
@@ -1151,9 +1164,12 @@ pub(crate) async fn object_field_offset_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let field_name = parameters.pop_object()?.as_string()?;
-    let class_object = parameters.pop_object()?;
-    let class_name = class_object.value("name")?.as_string()?;
+    let field_name = parameters.pop()?.as_string()?;
+    let class_object = parameters.pop()?;
+    let class_name = {
+        let class_object = class_object.as_object_ref()?;
+        class_object.value("name")?.as_string()?
+    };
     let class = thread.class(&class_name).await?;
     let offset = class.field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
@@ -1483,7 +1499,7 @@ pub(crate) async fn static_field_base_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _ = parameters.pop_object()?;
+    let _ = parameters.pop()?;
     Ok(Some(Value::Object(None)))
 }
 
@@ -1496,7 +1512,7 @@ pub(crate) async fn static_field_offset_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _ = parameters.pop_object()?;
+    let _ = parameters.pop()?;
     Ok(Some(Value::Long(0)))
 }
 

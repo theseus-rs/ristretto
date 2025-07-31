@@ -429,9 +429,19 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not an Object.
-    pub fn as_object_ref(&self) -> Result<&Object> {
+    pub fn as_object_ref(&self) -> Result<RwLockReadGuard<'_, Object>> {
         let reference = self.as_reference()?;
         reference.as_object_ref()
+    }
+
+    /// Returns a mutable reference to an `Object`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not an Object.
+    pub fn as_object_mut(&self) -> Result<RwLockWriteGuard<'_, Object>> {
+        let reference = self.as_reference()?;
+        reference.as_object_mut()
     }
 
     /// Returns a reference to a `String`.
@@ -831,7 +841,7 @@ mod tests {
     async fn test_string_format() -> Result<()> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
         let class = class_loader.load("java.lang.String").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
         assert!(!string_value.is_null());
@@ -1022,9 +1032,8 @@ mod tests {
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
         let value1 = Value::from(object);
-        if let Value::Object(Some(Reference::Object(ref obj))) = value1 {
-            obj.set_value("value", value1.clone())?;
-        }
+        let mut object = value1.as_object_mut()?;
+        object.set_value("value", value1.clone())?;
         let value2 = value1.clone();
         assert_eq!(value1, value2);
         Ok(())
@@ -1259,7 +1268,7 @@ mod tests {
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = Value::from(object);
         let original_values = vec![value];
@@ -1317,7 +1326,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_bool_object() -> Result<()> {
         let class = load_class("java.lang.Boolean").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         let value = Value::from(object);
         let value = value.as_bool()?;
@@ -1335,7 +1344,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_char_object() -> Result<()> {
         let class = load_class("java.lang.Character").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = Value::from(object);
         let value = value.as_char()?;
@@ -1353,7 +1362,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i8_object() -> Result<()> {
         let class = load_class("java.lang.Byte").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = Value::from(object);
         let value = value.as_i8()?;
@@ -1371,7 +1380,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u8_object() -> Result<()> {
         let class = load_class("java.lang.Byte").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = Value::from(object);
         let value = value.as_u8()?;
@@ -1389,7 +1398,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i16_object() -> Result<()> {
         let class = load_class("java.lang.Short").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = Value::from(object);
         let value = value.as_i16()?;
@@ -1407,7 +1416,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u16_object() -> Result<()> {
         let class = load_class("java.lang.Short").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = Value::from(object);
         let value = value.as_u16()?;
@@ -1425,7 +1434,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i32_object() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = Value::from(object);
         let value = value.as_i32()?;
@@ -1443,7 +1452,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u32_object() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = Value::from(object);
         let value = value.as_u32()?;
@@ -1461,7 +1470,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i64_object() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value = Value::from(object);
         let value = value.as_i64()?;
@@ -1479,7 +1488,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u64_object() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value = Value::from(object);
         let value = value.as_u64()?;
@@ -1497,7 +1506,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_isize_object() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value = Value::from(object);
         let value = value.as_isize()?;
@@ -1515,7 +1524,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_usize_object() -> Result<()> {
         let class = load_class("java.lang.Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let value = Value::from(object);
         let value = value.as_usize()?;
@@ -1526,7 +1535,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_f32() -> Result<()> {
         let class = load_class("java.lang.Float").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Float(42.1))?;
         let value = Value::from(object);
         let value = value.as_f32()?;
@@ -1554,7 +1563,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_f64_object() -> Result<()> {
         let class = load_class("java.lang.Double").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Double(42.1))?;
         let value = Value::from(object);
         let value = value.as_f64()?;
@@ -1568,7 +1577,7 @@ mod tests {
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java/lang/Integer";
         let class = load_class(class_name).await?;
-        let object = Object::new(class.clone())?;
+        let mut object = Object::new(class.clone())?;
         object.set_value("value", Value::Int(42))?;
         let value = Value::from(object);
         let original_values = vec![value];
@@ -1838,9 +1847,19 @@ mod tests {
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
         let value = Value::from(object.clone());
-        let result = value.as_object_ref()?;
-        assert_eq!(&object, result);
+        let result = value.as_object_ref()?.clone();
+        assert_eq!(object, result);
         assert_eq!("java/lang/Object", object.class().name());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_object_mut() -> Result<()> {
+        let class = load_class("java.lang.Integer").await?;
+        let object = Object::new(class)?;
+        let value = Value::from(object.clone());
+        let mut result = value.as_object_mut()?;
+        result.set_value("value", Value::Int(42))?;
         Ok(())
     }
 
@@ -1848,7 +1867,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_string() -> Result<()> {
         let class = load_class("java.lang.String").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
         object.set_value("value", string_value)?;

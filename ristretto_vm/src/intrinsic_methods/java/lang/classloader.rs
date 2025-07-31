@@ -7,7 +7,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11};
-use ristretto_classloader::{Class, Object, Reference, Value};
+use ristretto_classloader::{Class, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::io::Cursor;
 use std::sync::Arc;
@@ -64,7 +64,7 @@ pub(crate) async fn define_class_0_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _protection_domain = parameters.pop_object()?;
+    let _protection_domain = parameters.pop()?;
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
     let bytes = parameters.pop()?;
@@ -95,7 +95,7 @@ pub(crate) async fn define_class_1_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let source_file = parameters.pop_reference()?;
-    let _protection_domain = parameters.pop_object()?;
+    let _protection_domain = parameters.pop()?;
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
     let bytes = parameters.pop()?;
@@ -126,18 +126,22 @@ pub(crate) async fn define_class_2_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let source_file = parameters.pop_reference()?;
-    let _protection_domain = parameters.pop_object()?;
+    let _protection_domain = parameters.pop()?;
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
-    let byte_buffer = parameters.pop_object()?;
-    let buffer = byte_buffer.value("hb")?;
+    let byte_buffer = parameters.pop()?;
+    let (buffer, buffer_offset) = {
+        let byte_buffer = byte_buffer.as_object_ref()?;
+        let buffer = byte_buffer.value("hb")?;
+        let buffer_offset = byte_buffer.value("offset")?.as_usize()?;
+        (buffer, buffer_offset)
+    };
     let buffer = {
         let buffer = buffer.as_byte_vec_ref()?;
         let buffer: &[u8] = transmute_ref!(buffer.as_slice());
         buffer.to_vec()
     };
 
-    let buffer_offset = byte_buffer.value("offset")?.as_usize()?;
     let bytes: Vec<u8> = buffer.iter().copied().skip(buffer_offset).collect();
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
@@ -163,7 +167,7 @@ pub(crate) async fn define_class_0_1(
     let _class_data = parameters.pop_reference()?;
     let _flags = parameters.pop_int()?;
     let _initialize = parameters.pop_bool()?;
-    let _protection_domain = parameters.pop_object()?;
+    let _protection_domain = parameters.pop()?;
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
     let bytes = parameters.pop()?;
@@ -173,12 +177,14 @@ pub(crate) async fn define_class_0_1(
         bytes.to_vec()
     };
     let _name = parameters.pop()?.as_string()?;
-    let lookup: Object = parameters.pop_object()?;
-    let _lookup: Arc<Class> = get_class(&thread, &lookup).await?;
+    let lookup = parameters.pop()?;
+    let _lookup = get_class(&thread, &lookup).await?;
     let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
-    let class_object = class.as_object_ref()?;
-    class_object.set_value("classLoader", class_loader)?;
+    {
+        let mut class_object = class.as_object_mut()?;
+        class_object.set_value("classLoader", class_loader)?;
+    }
     Ok(Some(class))
 }
 
@@ -192,7 +198,7 @@ pub(crate) async fn define_class_1_1(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let source_file = parameters.pop_reference()?;
-    let _protection_domain = parameters.pop_object()?;
+    let _protection_domain = parameters.pop()?;
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
     let bytes = parameters.pop()?;
@@ -203,8 +209,10 @@ pub(crate) async fn define_class_1_1(
     };
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
-    let class_object = class.as_object_ref()?;
-    class_object.set_value("classLoader", class_loader)?;
+    {
+        let mut class_object = class.as_object_mut()?;
+        class_object.set_value("classLoader", class_loader)?;
+    }
     Ok(Some(class))
 }
 
@@ -218,23 +226,29 @@ pub(crate) async fn define_class_2_1(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let source_file = parameters.pop_reference()?;
-    let _protection_domain = parameters.pop_object()?;
+    let _protection_domain = parameters.pop()?;
     let length = parameters.pop_int()?;
     let offset = parameters.pop_int()?;
-    let byte_buffer = parameters.pop_object()?;
-    let buffer = byte_buffer.value("hb")?;
+    let byte_buffer = parameters.pop()?;
+    let (buffer, buffer_offset) = {
+        let byte_buffer = byte_buffer.as_object_ref()?;
+        let buffer = byte_buffer.value("hb")?;
+        let buffer_offset = byte_buffer.value("offset")?.as_usize()?;
+        (buffer, buffer_offset)
+    };
     let buffer = {
         let buffer = buffer.as_byte_vec_ref()?;
         let buffer: &[u8] = transmute_ref!(buffer.as_slice());
         buffer.to_vec()
     };
 
-    let buffer_offset = byte_buffer.value("offset")?.as_usize()?;
     let bytes: Vec<u8> = buffer.iter().copied().skip(buffer_offset).collect();
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
-    let class_object = class.as_object_ref()?;
-    class_object.set_value("classLoader", class_loader)?;
+    {
+        let mut class_object = class.as_object_mut()?;
+        class_object.set_value("classLoader", class_loader)?;
+    }
     Ok(Some(class))
 }
 

@@ -1,4 +1,3 @@
-use crate::Error::InternalError;
 use crate::Result;
 use crate::intrinsic_methods::java::lang::class;
 use crate::java_object::JavaObject;
@@ -8,7 +7,7 @@ use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::attributes::Attribute;
-use ristretto_classloader::{Class, Reference, Value};
+use ristretto_classloader::{Class, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -21,17 +20,14 @@ pub(crate) async fn are_nest_mates(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let member_class_reference = parameters.pop_reference()?;
-    let Some(Reference::Object(member_class_object)) = member_class_reference else {
+    let member_class = parameters.pop()?;
+    let current_class = parameters.pop()?;
+    if member_class.is_null() || current_class.is_null() {
         return Ok(Some(Value::from(false)));
-    };
-    let current_class_reference = parameters.pop_reference()?;
-    let Some(Reference::Object(current_class_object)) = current_class_reference else {
-        return Ok(Some(Value::from(false)));
-    };
+    }
 
-    let member_class = class::get_class(&thread, &member_class_object).await?;
-    let current_class = class::get_class(&thread, &current_class_object).await?;
+    let member_class = class::get_class(&thread, &member_class).await?;
+    let current_class = class::get_class(&thread, &current_class).await?;
     if member_class == current_class {
         return Ok(Some(Value::from(true)));
     }
@@ -101,12 +97,11 @@ pub(crate) async fn get_class_access_flags(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = parameters.pop_reference()? else {
-        return Err(InternalError(
-            "getClassAccessFlags: no arguments".to_string(),
-        ));
+    let object = parameters.pop()?;
+    let class_name = {
+        let object = object.as_object_ref()?;
+        object.value("name")?.as_string()?
     };
-    let class_name = object.value("name")?.as_string()?;
     let class = thread.class(&class_name).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags;

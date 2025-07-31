@@ -44,7 +44,7 @@ pub(crate) async fn invokeinterface(
 
     let object_class = match parameters.first() {
         Some(Value::Object(Some(reference))) => {
-            let class_name = reference.class_name();
+            let class_name = reference.class_name()?;
             thread.class(class_name).await?
         }
         Some(Value::Object(None)) => {

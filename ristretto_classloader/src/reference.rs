@@ -37,24 +37,33 @@ pub enum Reference {
     FloatArray(Gc<RwLock<Vec<f32>>>),
     DoubleArray(Gc<RwLock<Vec<f64>>>),
     Array(ObjectArray),
-    Object(Object),
+    Object(Gc<RwLock<Object>>),
 }
 
 impl Reference {
     /// Get the class name of the reference
-    #[must_use]
-    pub fn class_name(&self) -> &str {
-        match self {
-            Reference::ByteArray(_) => "[B",
-            Reference::CharArray(_) => "[C",
-            Reference::ShortArray(_) => "[S",
-            Reference::IntArray(_) => "[I",
-            Reference::LongArray(_) => "[J",
-            Reference::FloatArray(_) => "[F",
-            Reference::DoubleArray(_) => "[D",
-            Reference::Array(object_array) => object_array.class.name(),
-            Reference::Object(value) => value.class().name(),
-        }
+    ///
+    /// # Errors
+    ///
+    /// if the `Object` read lock is poisoned
+    pub fn class_name(&self) -> Result<String> {
+        let class_name = match self {
+            Reference::ByteArray(_) => "[B".to_string(),
+            Reference::CharArray(_) => "[C".to_string(),
+            Reference::ShortArray(_) => "[S".to_string(),
+            Reference::IntArray(_) => "[I".to_string(),
+            Reference::LongArray(_) => "[J".to_string(),
+            Reference::FloatArray(_) => "[F".to_string(),
+            Reference::DoubleArray(_) => "[D".to_string(),
+            Reference::Array(object_array) => object_array.class.name().to_string(),
+            Reference::Object(object) => {
+                let object = object
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                object.class().name().to_string()
+            }
+        };
+        Ok(class_name)
     }
 
     /// Returns the reference to `Vec<i8>`.
@@ -64,12 +73,9 @@ impl Reference {
     /// if the value is not a `ByteArray`.
     pub fn as_byte_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i8>>> {
         match self {
-            Reference::ByteArray(array) => {
-                let array = array
-                    .read()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::ByteArray(array) => array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected byte array".to_string())),
         }
     }
@@ -81,12 +87,9 @@ impl Reference {
     /// if the value is not a `ByteArray`.
     pub fn as_byte_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i8>>> {
         match self {
-            Reference::ByteArray(array) => {
-                let array = array
-                    .write()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::ByteArray(array) => array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected byte array".to_string())),
         }
     }
@@ -98,12 +101,9 @@ impl Reference {
     /// if the value is not a `CharArray`.
     pub fn as_char_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<u16>>> {
         match self {
-            Reference::CharArray(array) => {
-                let array = array
-                    .read()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::CharArray(array) => array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected char array".to_string())),
         }
     }
@@ -115,12 +115,9 @@ impl Reference {
     /// if the value is not a `CharArray`.
     pub fn as_char_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<u16>>> {
         match self {
-            Reference::CharArray(array) => {
-                let array = array
-                    .write()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::CharArray(array) => array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected char array".to_string())),
         }
     }
@@ -132,12 +129,9 @@ impl Reference {
     /// if the value is not a `ShortArray`.
     pub fn as_short_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i16>>> {
         match self {
-            Reference::ShortArray(array) => {
-                let array = array
-                    .read()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::ShortArray(array) => array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected short array".to_string())),
         }
     }
@@ -149,12 +143,9 @@ impl Reference {
     /// if the value is not a `ShortArray`.
     pub fn as_short_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i16>>> {
         match self {
-            Reference::ShortArray(array) => {
-                let array = array
-                    .write()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::ShortArray(array) => array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected short array".to_string())),
         }
     }
@@ -166,12 +157,9 @@ impl Reference {
     /// if the value is not a `IntArray`.
     pub fn as_int_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i32>>> {
         match self {
-            Reference::IntArray(array) => {
-                let array = array
-                    .read()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::IntArray(array) => array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected int array".to_string())),
         }
     }
@@ -183,12 +171,9 @@ impl Reference {
     /// if the value is not a `IntArray`.
     pub fn as_int_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i32>>> {
         match self {
-            Reference::IntArray(array) => {
-                let array = array
-                    .write()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::IntArray(array) => array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected int array".to_string())),
         }
     }
@@ -200,12 +185,9 @@ impl Reference {
     /// if the value is not a `LongArray`.
     pub fn as_long_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i64>>> {
         match self {
-            Reference::LongArray(array) => {
-                let array = array
-                    .read()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::LongArray(array) => array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected long array".to_string())),
         }
     }
@@ -217,12 +199,9 @@ impl Reference {
     /// if the value is not a `LongArray`.
     pub fn as_long_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i64>>> {
         match self {
-            Reference::LongArray(array) => {
-                let array = array
-                    .write()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::LongArray(array) => array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected long array".to_string())),
         }
     }
@@ -234,12 +213,9 @@ impl Reference {
     /// if the value is not a `FloatArray`.
     pub fn as_float_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<f32>>> {
         match self {
-            Reference::FloatArray(array) => {
-                let array = array
-                    .read()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::FloatArray(array) => array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected float array".to_string())),
         }
     }
@@ -251,12 +227,9 @@ impl Reference {
     /// if the value is not a `FloatArray`.
     pub fn as_float_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<f32>>> {
         match self {
-            Reference::FloatArray(array) => {
-                let array = array
-                    .write()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::FloatArray(array) => array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected float array".to_string())),
         }
     }
@@ -268,12 +241,9 @@ impl Reference {
     /// if the value is not a `DoubleArray`.
     pub fn as_double_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<f64>>> {
         match self {
-            Reference::DoubleArray(array) => {
-                let array = array
-                    .read()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::DoubleArray(array) => array
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected double array".to_string())),
         }
     }
@@ -285,12 +255,9 @@ impl Reference {
     /// if the value is not a `DoubleArray`.
     pub fn as_double_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<f64>>> {
         match self {
-            Reference::DoubleArray(array) => {
-                let array = array
-                    .write()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
-                Ok(array)
-            }
+            Reference::DoubleArray(array) => array
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected double array".to_string())),
         }
     }
@@ -342,9 +309,25 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not an Object.
-    pub fn as_object_ref(&self) -> Result<&Object> {
+    pub fn as_object_ref(&self) -> Result<RwLockReadGuard<'_, Object>> {
         match self {
-            Reference::Object(object) => Ok(object),
+            Reference::Object(object) => object
+                .read()
+                .map_err(|error| PoisonedLock(error.to_string())),
+            _ => Err(InvalidValueType("Expected object".to_string())),
+        }
+    }
+
+    /// Returns a mutable reference to the `Object`.
+    ///
+    /// # Errors
+    ///
+    /// if the value is not an `Object`.
+    pub fn as_object_mut(&self) -> Result<RwLockWriteGuard<'_, Object>> {
+        match self {
+            Reference::Object(object) => object
+                .write()
+                .map_err(|error| PoisonedLock(error.to_string())),
             _ => Err(InvalidValueType("Expected object".to_string())),
         }
     }
@@ -354,31 +337,17 @@ impl Reference {
     #[must_use]
     pub fn hash_code(&self) -> usize {
         match self {
-            Reference::ByteArray(reference) => {
-                Gc::as_ptr(reference).cast::<Vec<RwLock<i8>>>() as usize
+            Reference::ByteArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<i8>>>() as usize,
+            Reference::CharArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<u16>>>() as usize,
+            Reference::ShortArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<i16>>>() as usize,
+            Reference::IntArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<i32>>>() as usize,
+            Reference::LongArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<i64>>>() as usize,
+            Reference::FloatArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<f32>>>() as usize,
+            Reference::DoubleArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<f64>>>() as usize,
+            Reference::Array(object_array) => {
+                Gc::as_ptr(&object_array.elements).cast::<Vec<RwLock<Option<Reference>>>>() as usize
             }
-            Reference::CharArray(reference) => {
-                Gc::as_ptr(reference).cast::<Vec<RwLock<u16>>>() as usize
-            }
-            Reference::ShortArray(reference) => {
-                Gc::as_ptr(reference).cast::<Vec<RwLock<i16>>>() as usize
-            }
-            Reference::IntArray(reference) => {
-                Gc::as_ptr(reference).cast::<Vec<RwLock<i32>>>() as usize
-            }
-            Reference::LongArray(reference) => {
-                Gc::as_ptr(reference).cast::<Vec<RwLock<i64>>>() as usize
-            }
-            Reference::FloatArray(reference) => {
-                Gc::as_ptr(reference).cast::<Vec<RwLock<f32>>>() as usize
-            }
-            Reference::DoubleArray(reference) => {
-                Gc::as_ptr(reference).cast::<Vec<RwLock<f64>>>() as usize
-            }
-            Reference::Array(reference) => {
-                Gc::as_ptr(&reference.elements).cast::<Vec<RwLock<Option<Reference>>>>() as usize
-            }
-            Reference::Object(reference) => reference.hash_code(),
+            Reference::Object(object) => Gc::as_ptr(object).cast::<RwLock<Object>>() as usize,
         }
     }
 
@@ -469,7 +438,12 @@ impl Reference {
                 };
                 Reference::Array(object_array)
             }
-            Reference::Object(object) => Reference::Object(object.deep_clone()?),
+            Reference::Object(object) => {
+                let object = object
+                    .read()
+                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                Reference::Object(Gc::new(RwLock::new(object.deep_clone()?)))
+            }
         };
         Ok(value)
     }
@@ -691,9 +665,14 @@ impl Display for Reference {
                     guard.len()
                 )
             }
-            Reference::Object(object) => {
-                write!(f, "{object}")
-            }
+            Reference::Object(object) => match object.read() {
+                Ok(object) => {
+                    write!(f, "{object}")
+                }
+                Err(error) => {
+                    write!(f, "{error:?}")
+                }
+            },
         }
     }
 }
@@ -752,6 +731,7 @@ impl Hash for Reference {
                 array.hash(state);
             }
             Reference::Object(object) => {
+                let object = object.read().expect("poisoned lock");
                 object.hash(state);
             }
         }
@@ -823,7 +803,15 @@ impl PartialEq for Reference {
             (Reference::Array(a), Reference::Array(b)) => {
                 a.class == b.class && vec_eq(&a.elements, &b.elements)
             }
-            (Reference::Object(a), Reference::Object(b)) => a == b,
+            (Reference::Object(a), Reference::Object(b)) => {
+                if Gc::ptr_eq(a, b) {
+                    return true;
+                }
+                // Use try_read to avoid blocking if locks are contended
+                let a_guard = a.try_read().expect("poisoned lock");
+                let b_guard = b.try_read().expect("poisoned lock");
+                *a_guard == *b_guard
+            }
             _ => false,
         }
     }
@@ -971,7 +959,7 @@ impl TryFrom<(Arc<Class>, Vec<Value>)> for Reference {
 
 impl From<Object> for Reference {
     fn from(value: Object) -> Self {
-        Reference::Object(value)
+        Reference::Object(Gc::new(RwLock::new(value)))
     }
 }
 
@@ -988,10 +976,11 @@ mod tests {
     }
 
     #[test]
-    fn test_display_byte_array() {
+    fn test_display_byte_array() -> Result<()> {
         let reference = Reference::from(vec![1i8, 2i8, 3i8]);
-        assert_eq!(reference.class_name(), "[B");
+        assert_eq!(reference.class_name()?, "[B");
         assert_eq!(reference.to_string(), "byte[1, 2, 3]");
+        Ok(())
     }
 
     #[test]
@@ -1005,7 +994,7 @@ mod tests {
     async fn test_trace_class_vec() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class.clone())?;
-        let values = vec![Some(Reference::Object(object))];
+        let values = vec![Some(Reference::from(object))];
         let reference = Reference::from((class, values));
         let collector = GarbageCollector::new();
         reference.trace(&collector);
@@ -1057,10 +1046,11 @@ mod tests {
     }
 
     #[test]
-    fn test_display_char_array() {
+    fn test_display_char_array() -> Result<()> {
         let reference = Reference::from(vec![1 as char, 2 as char, 3 as char]);
-        assert_eq!(reference.class_name(), "[C");
+        assert_eq!(reference.class_name()?, "[C");
         assert_eq!(reference.to_string(), "char[1, 2, 3]");
+        Ok(())
     }
 
     #[test]
@@ -1096,10 +1086,11 @@ mod tests {
     }
 
     #[test]
-    fn test_display_short_array() {
+    fn test_display_short_array() -> Result<()> {
         let reference = Reference::from(vec![1i16, 2i16, 3i16]);
-        assert_eq!(reference.class_name(), "[S");
+        assert_eq!(reference.class_name()?, "[S");
         assert_eq!(reference.to_string(), "short[1, 2, 3]");
+        Ok(())
     }
 
     #[test]
@@ -1136,10 +1127,11 @@ mod tests {
     }
 
     #[test]
-    fn test_display_int_array() {
+    fn test_display_int_array() -> Result<()> {
         let reference = Reference::from(vec![1i32, 2i32, 3i32]);
-        assert_eq!(reference.class_name(), "[I");
+        assert_eq!(reference.class_name()?, "[I");
         assert_eq!(reference.to_string(), "int[1, 2, 3]");
+        Ok(())
     }
 
     #[test]
@@ -1176,10 +1168,11 @@ mod tests {
     }
 
     #[test]
-    fn test_display_long_array() {
+    fn test_display_long_array() -> Result<()> {
         let reference = Reference::from(vec![1i64, 2i64, 3i64]);
-        assert_eq!(reference.class_name(), "[J");
+        assert_eq!(reference.class_name()?, "[J");
         assert_eq!(reference.to_string(), "long[1, 2, 3]");
+        Ok(())
     }
 
     #[test]
@@ -1216,10 +1209,11 @@ mod tests {
     }
 
     #[test]
-    fn test_display_float_array() {
+    fn test_display_float_array() -> Result<()> {
         let reference = Reference::from(vec![1.0f32, 2.0f32, 3.0f32]);
-        assert_eq!(reference.class_name(), "[F");
+        assert_eq!(reference.class_name()?, "[F");
         assert_eq!(reference.to_string(), "float[1.0, 2.0, 3.0]");
+        Ok(())
     }
 
     #[test]
@@ -1259,10 +1253,11 @@ mod tests {
     }
 
     #[test]
-    fn test_display_double_array() {
+    fn test_display_double_array() -> Result<()> {
         let reference = Reference::from(vec![1.0f64, 2.0f64, 3.0f64]);
-        assert_eq!(reference.class_name(), "[D");
+        assert_eq!(reference.class_name()?, "[D");
         assert_eq!(reference.to_string(), "double[1.0, 2.0, 3.0]");
+        Ok(())
     }
 
     #[test]
@@ -1305,7 +1300,7 @@ mod tests {
     async fn test_display_reference_array() -> Result<()> {
         let class = load_class("[Ljava/lang/Object;").await?;
         let reference = Reference::from((class, vec![None]));
-        assert_eq!(reference.class_name(), "[Ljava/lang/Object;");
+        assert_eq!(reference.class_name()?, "[Ljava/lang/Object;");
         assert_eq!(reference.to_string(), "java/lang/Object[1]");
         Ok(())
     }
@@ -1353,7 +1348,7 @@ mod tests {
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object);
-        assert_eq!(reference.class_name(), "java/lang/Object");
+        assert_eq!(reference.class_name()?, "java/lang/Object");
         assert!(
             reference
                 .to_string()
@@ -1368,8 +1363,8 @@ mod tests {
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object.clone());
-        let result = reference.as_object_ref()?;
-        assert_eq!(&object, result);
+        let result = reference.as_object_ref()?.clone();
+        assert_eq!(object, result);
         Ok(())
     }
 
@@ -1378,6 +1373,28 @@ mod tests {
         let original_value = vec![42i32];
         let reference = Reference::from(original_value.clone());
         let result = reference.as_object_ref();
+        assert!(matches!(result, Err(InvalidValueType(_))));
+    }
+
+    #[tokio::test]
+    async fn test_as_object_mut() -> Result<()> {
+        let class = load_class("java.lang.Integer").await?;
+        let object = Object::new(class)?;
+        let reference = Reference::from(object.clone());
+        let result = reference.as_object_mut()?;
+        assert_eq!(object, result.clone());
+        {
+            let mut object_mut = result;
+            object_mut.set_value("value", Value::Int(42))?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_object_mut_error() {
+        let original_value = vec![42i32];
+        let reference = Reference::from(original_value.clone());
+        let result = reference.as_object_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
@@ -1915,15 +1932,13 @@ mod tests {
     #[tokio::test]
     async fn test_clone_object() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         let reference = Reference::from(object);
         let clone = reference.clone();
         assert_eq!(reference, clone);
 
-        let Reference::Object(ref cloned_object) = clone else {
-            unreachable!("Expected object");
-        };
+        let mut cloned_object = clone.as_object_mut()?;
         cloned_object.set_value("value", Value::Int(2))?;
         assert_eq!(reference, clone);
         Ok(())
@@ -1932,16 +1947,16 @@ mod tests {
     #[tokio::test]
     async fn test_deep_clone_object() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         let reference = Reference::from(object);
         let clone = reference.deep_clone()?;
         assert_eq!(reference, clone);
 
-        let Reference::Object(ref cloned_object) = clone else {
-            unreachable!("Expected object");
-        };
-        cloned_object.set_value("value", Value::Int(2))?;
+        {
+            let mut cloned_object = clone.as_object_mut()?;
+            cloned_object.set_value("value", Value::Int(2))?;
+        }
         assert_ne!(reference, clone);
         Ok(())
     }
@@ -2196,7 +2211,7 @@ mod tests {
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java/lang/Integer";
         let class = load_class(class_name).await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let value = Value::from(object);
         let original_values = vec![value];
@@ -2227,7 +2242,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_bool() -> Result<()> {
         let class = load_class("java/lang/Boolean").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         let reference = Reference::from(object);
         let value = reference.as_bool()?;
@@ -2238,7 +2253,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_char() -> Result<()> {
         let class = load_class("java/lang/Character").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let reference = Reference::from(object);
         let value = reference.as_char()?;
@@ -2249,7 +2264,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i8() -> Result<()> {
         let class = load_class("java/lang/Byte").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let reference = Reference::from(object);
         let value = reference.as_i8()?;
@@ -2260,7 +2275,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u8() -> Result<()> {
         let class = load_class("java/lang/Byte").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let reference = Reference::from(object);
         let value = reference.as_u8()?;
@@ -2271,7 +2286,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i16() -> Result<()> {
         let class = load_class("java/lang/Short").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let reference = Reference::from(object);
         let value = reference.as_i16()?;
@@ -2282,7 +2297,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u16() -> Result<()> {
         let class = load_class("java/lang/Short").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let reference = Reference::from(object);
         let value = reference.as_u16()?;
@@ -2293,7 +2308,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i32() -> Result<()> {
         let class = load_class("java/lang/Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let reference = Reference::from(object);
         let value = reference.as_i32()?;
@@ -2304,7 +2319,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u32() -> Result<()> {
         let class = load_class("java/lang/Integer").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
         let reference = Reference::from(object);
         let value = reference.as_u32()?;
@@ -2315,7 +2330,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_i64() -> Result<()> {
         let class = load_class("java/lang/Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let reference = Reference::from(object);
         let value = reference.as_i64()?;
@@ -2326,7 +2341,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_u64() -> Result<()> {
         let class = load_class("java/lang/Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let reference = Reference::from(object);
         let value = reference.as_u64()?;
@@ -2337,7 +2352,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_isize() -> Result<()> {
         let class = load_class("java/lang/Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let reference = Reference::from(object);
         let value = reference.as_isize()?;
@@ -2348,7 +2363,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_usize() -> Result<()> {
         let class = load_class("java/lang/Long").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
         let reference = Reference::from(object);
         let value = reference.as_usize()?;
@@ -2359,7 +2374,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_f32() -> Result<()> {
         let class = load_class("java/lang/Float").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Float(42.1))?;
         let reference = Reference::from(object);
         let value = reference.as_f32()?;
@@ -2371,7 +2386,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_f64() -> Result<()> {
         let class = load_class("java/lang/Double").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         object.set_value("value", Value::Double(42.1))?;
         let reference = Reference::from(object);
         let value = reference.as_f64()?;
@@ -2384,7 +2399,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_string() -> Result<()> {
         let class = load_class("java/lang/String").await?;
-        let object = Object::new(class)?;
+        let mut object = Object::new(class)?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
         let string_value = Value::from(string_bytes);
         object.set_value("value", string_value)?;

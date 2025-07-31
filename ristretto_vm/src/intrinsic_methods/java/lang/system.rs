@@ -305,9 +305,7 @@ pub(crate) async fn map_library_name(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(object)) = parameters.pop_reference()? else {
-        return Err(InternalError("parameter must be an object".to_string()));
-    };
+    let object = parameters.pop()?;
     let library_name = object.as_string()?;
     let library_file_name = match OS {
         "macos" => format!("lib{library_name}.dylib"),

@@ -94,9 +94,11 @@ pub(crate) async fn open_0(
     let append = parameters.pop_bool()?;
     let path = parameters.pop()?;
     let path = path.as_string()?;
-    let file_output_stream = parameters.pop_object()?;
-    let file_descriptor = file_output_stream.value("fd")?;
-    let file_descriptor = file_descriptor.as_object_ref()?;
+    let file_output_stream = parameters.pop()?;
+    let file_descriptor = {
+        let file_output_stream = file_output_stream.as_object_ref()?;
+        file_output_stream.value("fd")?
+    };
 
     if path.is_empty() {
         return Err(FileNotFoundException("File path is empty".to_string()).into());
@@ -167,11 +169,14 @@ pub(crate) async fn open_0(
                 let handle_identifier = file_handle_identifier(fd);
                 file_handles.insert(handle_identifier, file_handle).await?;
 
-                file_descriptor.set_value("fd", Value::Int(i32::try_from(fd)?))?;
-                if vm.java_class_file_version() >= &JAVA_11 {
-                    file_descriptor.set_value("handle", Value::Long(fd))?;
+                {
+                    let mut file_descriptor = file_descriptor.as_object_mut()?;
+                    file_descriptor.set_value("fd", Value::Int(i32::try_from(fd)?))?;
+                    if vm.java_class_file_version() >= &JAVA_11 {
+                        file_descriptor.set_value("handle", Value::Long(fd))?;
+                    }
+                    file_descriptor.set_value("append", Value::from(append))?;
                 }
-                file_descriptor.set_value("append", Value::from(append))?;
                 Ok(None)
             }
             Err(error) => {
@@ -229,11 +234,13 @@ pub(crate) async fn write_bytes(
         let bytes: &[u8] = transmute_ref!(bytes.as_slice());
         bytes.to_vec()
     };
-    let file_output_stream = parameters.pop_object()?;
-    let file_descriptor = file_output_stream.value("fd")?;
-    let file_descriptor = file_descriptor.as_object_ref()?;
+    let file_output_stream = parameters.pop()?;
+    let file_descriptor = {
+        let file_output_stream = file_output_stream.as_object_ref()?;
+        file_output_stream.value("fd")?
+    };
     let vm = thread.vm()?;
-    let fd = file_descriptor_from_java_object(&vm, file_descriptor)?;
+    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
 
     match fd {
         1 => {

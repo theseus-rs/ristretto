@@ -31,8 +31,10 @@ async fn test_is_enum() -> Result<()> {
         )
         .await?
         .expect("super class");
-    let super_class = super_class.as_object_ref()?;
-    let super_class_name = super_class.value("name")?.as_string()?;
+    let super_class_name = {
+        let super_class = super_class.as_object_ref()?;
+        super_class.value("name")?.as_string()?
+    };
     assert_eq!("java.lang.Enum", super_class_name);
 
     let is_enum = vm

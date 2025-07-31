@@ -1,4 +1,3 @@
-use crate::Error::InternalError;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use crate::JavaError::RuntimeException;
 use crate::parameters::Parameters;
@@ -12,7 +11,7 @@ use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_11, JAVA_17};
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -41,7 +40,7 @@ pub(crate) async fn canonicalize_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let path = parameters.pop_object()?.as_string()?;
+    let path = parameters.pop()?.as_string()?;
     let canonical_path: String;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -83,7 +82,8 @@ pub(crate) async fn check_access_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let access_mode = parameters.pop_int()?;
-    let file = parameters.pop_object()?;
+    let file = parameters.pop()?;
+    let file = file.as_object_ref()?;
     let path = file.value("path")?.as_string()?;
     let path = Path::new(&path);
 
@@ -128,8 +128,11 @@ pub(crate) async fn create_directory_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop_object()?;
-    let path = file.value("path")?.as_string()?;
+    let file = parameters.pop()?;
+    let path = {
+        let file = file.as_object_ref()?;
+        file.value("path")?.as_string()?
+    };
     let created: bool;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -174,7 +177,7 @@ pub(crate) async fn create_file_exclusively_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let path = parameters.pop_object()?.as_string()?;
+    let path = parameters.pop()?.as_string()?;
     let created: bool;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -211,8 +214,11 @@ pub(crate) async fn delete_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop_object()?;
-    let path = file.value("path")?.as_string()?;
+    let file = parameters.pop()?;
+    let path = {
+        let file = file.as_object_ref()?;
+        file.value("path")?.as_string()?
+    };
     let deleted: bool;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -242,11 +248,8 @@ pub(crate) async fn get_boolean_attributes_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let Some(Reference::Object(file)) = parameters.pop_reference()? else {
-        return Err(InternalError(
-            "getBooleanAttributes0: expected file parameter".to_string(),
-        ));
-    };
+    let file = parameters.pop()?;
+    let file = file.as_object_ref()?;
     let path = file.value("path")?.as_string()?;
     let path = PathBuf::from(path);
     let mut attributes = if path.exists() {
@@ -291,8 +294,11 @@ pub(crate) async fn get_last_modified_time_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop_object()?;
-    let path = file.value("path")?.as_string()?;
+    let file = parameters.pop()?;
+    let path = {
+        let file = file.as_object_ref()?;
+        file.value("path")?.as_string()?
+    };
     let last_modified: i64;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -349,8 +355,11 @@ pub(crate) async fn get_length_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop_object()?;
-    let path = file.value("path")?.as_string()?;
+    let file = parameters.pop()?;
+    let path = {
+        let file = file.as_object_ref()?;
+        file.value("path")?.as_string()?
+    };
     let length: i64;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -385,7 +394,7 @@ pub(crate) async fn get_name_max_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _path = parameters.pop_object()?.as_string()?;
+    let _path = parameters.pop()?.as_string()?;
 
     // The default on windows is 255 characters for the maximum filename length, but this can be
     // extended to 32,767 characters when long paths are enabled.
@@ -417,7 +426,8 @@ pub(crate) async fn get_space_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let space_type = parameters.pop_int()?;
-    let file = parameters.pop_object()?;
+    let file = parameters.pop()?;
+    let file = file.as_object_ref()?;
     let path = file.value("path")?.as_string()?;
     let path = PathBuf::from(path);
     let result: i64;
@@ -478,8 +488,11 @@ pub(crate) async fn list_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop_object()?;
-    let path = file.value("path")?.as_string()?;
+    let file = parameters.pop()?;
+    let path = {
+        let file = file.as_object_ref()?;
+        file.value("path")?.as_string()?
+    };
     let path = std::path::PathBuf::from(path);
     let entries;
 
@@ -538,12 +551,18 @@ pub(crate) async fn rename_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let destination_file = parameters.pop_object()?;
-    let source_file = parameters.pop_object()?;
-    let source_path = source_file.value("path")?.as_string()?;
-    let destination_path = destination_file.value("path")?.as_string()?;
-    let source = std::path::PathBuf::from(source_path);
+    let destination_file = parameters.pop()?;
+    let destination_path = {
+        let destination_file = destination_file.as_object_ref()?;
+        destination_file.value("path")?.as_string()?
+    };
     let destination = std::path::PathBuf::from(destination_path);
+    let source_file = parameters.pop()?;
+    let source_path = {
+        let source_file = source_file.as_object_ref()?;
+        source_file.value("path")?.as_string()?
+    };
+    let source = std::path::PathBuf::from(source_path);
     let success: bool;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -588,7 +607,8 @@ pub(crate) async fn set_last_modified_time_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let time = parameters.pop_long()?;
-    let file = parameters.pop_object()?;
+    let file = parameters.pop()?;
+    let file = file.as_object_ref()?;
     let path = file.value("path")?.as_string()?;
     let path = PathBuf::from(path);
     let modified: bool;
@@ -635,8 +655,11 @@ pub(crate) async fn set_permission_0(
     let owner_only = parameters.pop_bool()?;
     let enable = parameters.pop_bool()?;
     let access = parameters.pop_int()?;
-    let file = parameters.pop_object()?;
-    let path = file.value("path")?.as_string()?;
+    let file = parameters.pop()?;
+    let path = {
+        let file = file.as_object_ref()?;
+        file.value("path")?.as_string()?
+    };
     let path = std::path::PathBuf::from(path);
     let modified: bool;
 
@@ -717,8 +740,11 @@ pub(crate) async fn set_read_only_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop_object()?;
-    let path = file.value("path")?.as_string()?;
+    let file = parameters.pop()?;
+    let path = {
+        let file = file.as_object_ref()?;
+        file.value("path")?.as_string()?
+    };
     let path = std::path::PathBuf::from(path);
     let modified: bool;
 
@@ -1066,7 +1092,7 @@ mod tests {
         parameters.push(file_object);
         let value = list_0(thread, parameters).await?.expect("paths");
         let reference = value.as_reference()?;
-        let class_name = reference.class_name().to_string();
+        let class_name = reference.class_name()?;
         let elements: Vec<Value> = value.try_into()?;
         assert_eq!(class_name, "java/lang/String");
         assert!(!elements.is_empty());

@@ -1,6 +1,6 @@
 use crate::Error::{InvalidOperand, ParametersUnderflow};
 use crate::Result;
-use ristretto_classloader::{Object, Reference, Value};
+use ristretto_classloader::{Reference, Value};
 use std::fmt::Display;
 
 /// Parameters for Ristretto VM methods
@@ -118,18 +118,6 @@ impl Parameters {
             value => Err(InvalidOperand {
                 expected: "reference".to_string(),
                 actual: value.to_string(),
-            }),
-        }
-    }
-
-    /// Pop an object from the parameters.
-    pub fn pop_object(&mut self) -> Result<Object> {
-        let value = self.pop_reference()?;
-        match value {
-            Some(Reference::Object(object)) => Ok(object),
-            value => Err(InvalidOperand {
-                expected: "object".to_string(),
-                actual: format!("{value:?}"),
             }),
         }
     }
@@ -320,32 +308,6 @@ mod tests {
                 expected,
                 actual
             }) if expected == "reference" && actual == "int(42)"
-        ));
-    }
-
-    #[test]
-    fn test_pop_object() -> Result<()> {
-        let mut parameters = Parameters::default();
-        let object = Reference::from(vec![42i8]);
-        parameters.push_reference(None);
-        parameters.push_reference(Some(object.clone()));
-        assert_eq!(parameters.pop_reference()?, Some(object));
-        assert_eq!(parameters.pop_reference()?, None);
-        Ok(())
-    }
-
-    #[test]
-    fn test_pop_object_invalid_operand() {
-        let mut parameters = Parameters::default();
-        let value = Value::from(vec![42]);
-        parameters.push(value);
-        let result = parameters.pop_object();
-        assert!(matches!(
-            result,
-            Err(InvalidOperand {
-                expected,
-                actual
-            }) if expected == "object" && actual.starts_with("Some(IntArray(")
         ));
     }
 

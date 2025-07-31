@@ -30,8 +30,8 @@ pub(crate) async fn canonicalize_with_prefix_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let path = parameters.pop_object()?.as_string()?;
-    let prefix = parameters.pop_object()?.as_string()?;
+    let path = parameters.pop()?.as_string()?;
+    let prefix = parameters.pop()?.as_string()?;
     let canonical_path: String;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -492,7 +492,7 @@ mod tests {
         parameters.push(file_object);
         let value = list(thread, parameters).await?.expect("paths");
         let reference = value.as_reference()?;
-        let class_name = reference.class_name().to_string();
+        let class_name = reference.class_name()?;
         let elements: Vec<Value> = value.try_into()?;
         assert_eq!(class_name, "java/lang/String");
         assert!(!elements.is_empty());
