@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.25.1](https://github.com/theseus-rs/ristretto/compare/v0.25.0...v0.25.1) - 2025-08-01
+
+### Fixed
+- never deep clone java.lang.Class objects
+
+## `ristretto_classloader` - [0.25.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.25.0...ristretto_classloader-v0.25.1) - 2025-08-01
+
+### Fixed
+- never deep clone java.lang.Class objects
+
 ## `ristretto_cli` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/v0.24.0...v0.25.0) - 2025-07-31
 
 ### Added
