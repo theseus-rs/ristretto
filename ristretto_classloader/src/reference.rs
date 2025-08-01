@@ -442,7 +442,12 @@ impl Reference {
                 let object = object
                     .read()
                     .map_err(|error| PoisonedLock(error.to_string()))?;
-                Reference::Object(Gc::new(RwLock::new(object.deep_clone()?)))
+                if object.class().name() == "java/lang/Class" {
+                    // Special case for Class objects, which should not be deep cloned.
+                    self.clone()
+                } else {
+                    Reference::Object(Gc::new(RwLock::new(object.deep_clone()?)))
+                }
             }
         };
         Ok(value)
