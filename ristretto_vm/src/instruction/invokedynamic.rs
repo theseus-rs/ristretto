@@ -153,6 +153,7 @@
 use crate::Error::InternalError;
 use crate::JavaError::BootstrapMethodError;
 use crate::assignable::Assignable;
+use crate::call_site_cache::CallSiteKey;
 use crate::frame::{ExecutionResult, Frame};
 use crate::intrinsic_methods::java::lang::invoke::methodhandle::call_method_handle_target;
 use crate::operand_stack::OperandStack;
@@ -697,7 +698,7 @@ async fn resolve_static_bootstrap_arguments(
 ///    - The method name for the dynamic call site
 ///    - The method type for the dynamic call site
 ///    - Any additional static arguments from the constant pool
-/// 4. Invokes the bootstrap method to obtain and return a callsite object
+/// 4. Invokes the bootstrap method to obtain and return a call site object
 ///
 /// # Errors
 ///
@@ -705,12 +706,41 @@ async fn resolve_static_bootstrap_arguments(
 /// - The bootstrap method cannot be found or resolved
 /// - The method name or descriptor cannot be resolved
 /// - The bootstrap method invocation fails
+/// - Recursive call site resolution is detected
 ///
 /// # References
 ///
 /// - [JVM Specification §4.7.3](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.23)
 /// - [JVM Specification §5.4.3.6](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html#jvms-5.4.3.6)
-pub async fn resolve_call_site(frame: &Frame, method_index: u16) -> Result<Value> {
+async fn resolve_call_site(frame: &Frame, method_index: u16) -> Result<Value> {
+    let thread = frame.thread()?;
+    let current_class = frame.class();
+    let cache_key = CallSiteKey::new(current_class.name().to_string(), method_index);
+
+    debug!(
+        "resolve_call_site: Attempting to resolve call site for class '{}' at CP index {}",
+        cache_key.class_name, cache_key.instruction_index
+    );
+
+    // Check if we can access the VM and cache
+    let vm = thread.vm()?;
+    let call_site_cache = vm.call_site_cache();
+
+    debug!("resolve_call_site: Got VM and cache references successfully");
+
+    call_site_cache
+        .resolve_with_cache(cache_key, || async {
+            debug!(
+                "resolve_call_site: Actually resolving (not cached) for class '{}' at CP index {method_index}",
+                current_class.name(),
+            );
+            resolve_call_site_uncached(frame, method_index).await
+        })
+        .await
+}
+
+/// Internal function that performs the actual call site resolution without caching.
+async fn resolve_call_site_uncached(frame: &Frame, method_index: u16) -> Result<Value> {
     let thread = frame.thread()?;
     let current_class = frame.class();
     let constant_pool = current_class.constant_pool();
@@ -810,8 +840,6 @@ async fn invoke_bootstrap_method(
         return Err(BootstrapMethodError("Bootstrap method handle is null".to_string()).into());
     }
 
-    // Extract the target member from the method handle and call it directly
-    // to avoid infinite recursion through thread.try_execute()
     let member = {
         let target_member = method_handle.as_object_ref()?;
         target_member.value("member")?
@@ -930,6 +958,13 @@ pub(crate) async fn invokedynamic(
     method_index: u16,
 ) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
+    let current_class = frame.class();
+
+    debug!(
+        "invokedynamic: Starting for class '{}' at CP index {}",
+        current_class.name(),
+        method_index
+    );
 
     // Step 1: Resolve the call site (this may be cached on subsequent calls)
     let call_site = resolve_call_site(frame, method_index).await?;
@@ -958,7 +993,6 @@ pub(crate) async fn invokedynamic(
     let parameters = stack.drain_last(argument_types.len());
 
     // Step 5: Invoke the target MethodHandle directly using call_method_handle_target
-    // to avoid infinite recursion through thread.try_execute()
     let member = {
         let target_member = target_method_handle.as_object_ref()?;
         target_member.value("member")?
