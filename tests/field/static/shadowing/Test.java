@@ -9,10 +9,7 @@ public class Test {
     }
 
     public static void main(String[] args) {
-        System.out.print("A.x = ");
-        System.out.println(A.x);
-
-        System.out.println("B.x = ");
-        System.out.println(B.x);
+        System.out.println("A.x = " + A.x);
+        System.out.println("B.x = " + B.x);
     }
 }

@@ -28,61 +28,24 @@ public class Test {
     public static final String EMBEDDED_NULL = "ABC\u0000DEF";
 
     public static void main(String[] args) {
-        System.out.print("EMPTY: ");
-        System.out.println(EMPTY);
-
-        System.out.print("SINGLE_A: ");
-        System.out.println(SINGLE_A);
-
-        System.out.print("ASCII_PRINTABLE: ");
-        System.out.println(ASCII_PRINTABLE);
-
-        System.out.print("ASCII_CONTROL: ");
-        System.out.println(ASCII_CONTROL);
-
-        System.out.print("ASCII_BOUNDARY_LOW (null): ");
-        System.out.println(ASCII_BOUNDARY_LOW);
-
-        System.out.print("ASCII_BOUNDARY_HIGH (DEL): ");
-        System.out.println(ASCII_BOUNDARY_HIGH);
-
-        System.out.print("LATIN1_MIN (¡): ");
-        System.out.println(LATIN1_MIN);
-
-        System.out.print("LATIN1_MAX (ÿ): ");
-        System.out.println(LATIN1_MAX);
-
-        System.out.print("BMP_MIN (Ā): ");
-        System.out.println(BMP_MIN);
-
-        System.out.print("BMP_MAX: ");
-        System.out.println(BMP_MAX);
-
-        System.out.print("NON_BMP_MIN (U+10000): ");
-        System.out.println(NON_BMP_MIN);
-
-        System.out.print("NON_BMP_MAX (U+10FFFF): ");
-        System.out.println(NON_BMP_MAX);
-
-        System.out.print("EMOJI: ");
-        System.out.println(EMOJI);
-
-        System.out.print("CHINESE: ");
-        System.out.println(CHINESE);
-
-        System.out.print("ARABIC: ");
-        System.out.println(ARABIC);
-
-        System.out.print("HEBREW: ");
-        System.out.println(HEBREW);
-
-        System.out.print("COMBINING: ");
-        System.out.println(COMBINING);
-
-        System.out.print("BIDIRECTIONAL: ");
-        System.out.println(BIDIRECTIONAL);
-
-        System.out.print("EMBEDDED_NULL: ");
-        System.out.println(EMBEDDED_NULL);
+        System.out.println("EMPTY: " + EMPTY);
+        System.out.println("SINGLE_A: " + SINGLE_A);
+        System.out.println("ASCII_PRINTABLE: " + ASCII_PRINTABLE);
+        System.out.println("ASCII_CONTROL: " + ASCII_CONTROL);
+        System.out.println("ASCII_BOUNDARY_LOW (null): " + ASCII_BOUNDARY_LOW);
+        System.out.println("ASCII_BOUNDARY_HIGH (DEL): " + ASCII_BOUNDARY_HIGH);
+        System.out.println("LATIN1_MIN (¡): " + LATIN1_MIN);
+        System.out.println("LATIN1_MAX (ÿ): " + LATIN1_MAX);
+        System.out.println("BMP_MIN (Ā): " + BMP_MIN);
+        System.out.println("BMP_MAX: " + BMP_MAX);
+        System.out.println("NON_BMP_MIN (U+10000): " + NON_BMP_MIN);
+        System.out.println("NON_BMP_MAX (U+10FFFF): " + NON_BMP_MAX);
+        System.out.println("EMOJI: " + EMOJI);
+        System.out.println("CHINESE: " + CHINESE);
+        System.out.println("ARABIC: " + ARABIC);
+        System.out.println("HEBREW: " + HEBREW);
+        System.out.println("COMBINING: " + COMBINING);
+        System.out.println("BIDIRECTIONAL: " + BIDIRECTIONAL);
+        System.out.println("EMBEDDED_NULL: " + EMBEDDED_NULL);
     }
 }

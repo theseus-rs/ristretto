@@ -285,10 +285,8 @@ async fn run_test(
         .stdout(stdout.clone())
         .stderr(stderr.clone());
 
-    if interpreted {
-        // Enable interpreted mode to test the interpreter.
-        configuration_builder = configuration_builder.interpreted(true);
-    } else {
+    configuration_builder = configuration_builder.interpreted(interpreted);
+    if !interpreted {
         // Disable batch compilation for JIT tests so that we can test the JIT compilation
         configuration_builder = configuration_builder.batch_compilation(false);
     }
