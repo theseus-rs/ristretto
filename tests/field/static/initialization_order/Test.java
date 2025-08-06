@@ -8,13 +8,11 @@ public class Test {
     }
 
     static int print(String message) {
-        System.out.print(message);
-        System.out.println(" initialized");
+        System.out.println(message + " initialized");
         return 0;
     }
 
     public static void main(String[] args) {
-        System.out.print("B.y = ");
-        System.out.println(B.y);
+        System.out.println("B.y = " + B.y);
     }
 }

@@ -7,7 +7,6 @@ public class Test {
     static class B extends A {}
 
     public static void main(String[] args) {
-        System.out.print("B.x = ");
-        System.out.println(B.x);
+        System.out.println("B.x = " + B.x);
     }
 }

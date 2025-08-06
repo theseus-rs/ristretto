@@ -26,7 +26,6 @@ public class Test {
         System.out.println(new String(readData, "UTF-8"));
 
         file.delete();
-        System.out.print("File deleted: ");
-        System.out.println(!file.exists());
+        System.out.println("File deleted: " + !file.exists());
     }
 }
