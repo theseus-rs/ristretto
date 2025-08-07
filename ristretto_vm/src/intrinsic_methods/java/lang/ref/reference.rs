@@ -132,7 +132,7 @@ mod tests {
             .object(
                 "java/lang/ref/WeakReference",
                 "Ljava/lang/Object;",
-                &[value.clone()],
+                std::slice::from_ref(&value),
             )
             .await?;
         let mut parameters = Parameters::default();

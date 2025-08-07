@@ -16,7 +16,7 @@ async fn test_is_enum() -> Result<()> {
         .invoke(
             "java.lang.Class",
             "getModifiers()I",
-            &[class_object.clone()],
+            std::slice::from_ref(&class_object),
         )
         .await?
         .expect("modifiers")
@@ -27,7 +27,7 @@ async fn test_is_enum() -> Result<()> {
         .invoke(
             "java.lang.Class",
             "getSuperclass()Ljava/lang/Class;",
-            &[class_object.clone()],
+            std::slice::from_ref(&class_object),
         )
         .await?
         .expect("super class");

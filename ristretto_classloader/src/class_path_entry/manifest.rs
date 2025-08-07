@@ -103,10 +103,10 @@ impl<'de> Deserialize<'de> for Manifest {
                         sections.insert(value.to_string(), IndexMap::new());
                     } else if current_section.is_none() {
                         attributes.insert(key.to_string(), value.to_string());
-                    } else if let Some(section) = &current_section {
-                        if let Some(section_map) = sections.get_mut(section) {
-                            section_map.insert(key.to_string(), value.to_string());
-                        }
+                    } else if let Some(section) = &current_section
+                        && let Some(section_map) = sections.get_mut(section)
+                    {
+                        section_map.insert(key.to_string(), value.to_string());
                     }
                 }
 

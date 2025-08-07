@@ -247,11 +247,11 @@ fn java_version_vec(call: &ExprCall) -> Vec<Version> {
 }
 /// Returns the Java version based on the provided expression.
 fn java_version(expression: Option<&Expr>) -> Version {
-    if let Some(Expr::Path(path)) = expression {
-        if let Some(segment) = path.path.segments.first() {
-            let version = segment.ident.to_string();
-            return parse_java_version(&version);
-        }
+    if let Some(Expr::Path(path)) = expression
+        && let Some(segment) = path.path.segments.first()
+    {
+        let version = segment.ident.to_string();
+        return parse_java_version(&version);
     }
     panic!("Unsupported Java version in intrinsic method attribute: {expression:?}");
 }

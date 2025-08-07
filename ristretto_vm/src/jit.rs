@@ -192,14 +192,12 @@ fn compile_method(
             );
 
             let err = JitError(error);
-            if notify_pending {
-                if let Some((_, pending_senders)) =
+            if notify_pending
+                && let Some((_, pending_senders)) =
                     PENDING_COMPILATIONS.remove(fully_qualified_method_name)
-                {
-                    for sender in pending_senders {
-                        let _ =
-                            sender.send(Err(InternalError("JIT compilation failed".to_string())));
-                    }
+            {
+                for sender in pending_senders {
+                    let _ = sender.send(Err(InternalError("JIT compilation failed".to_string())));
                 }
             }
 
@@ -208,12 +206,11 @@ fn compile_method(
     };
 
     // Notify any pending waiters for this method if requested
-    if notify_pending {
-        if let Some((_, pending_senders)) = PENDING_COMPILATIONS.remove(fully_qualified_method_name)
-        {
-            for sender in pending_senders {
-                let _ = sender.send(Ok(function.clone()));
-            }
+    if notify_pending
+        && let Some((_, pending_senders)) = PENDING_COMPILATIONS.remove(fully_qualified_method_name)
+    {
+        for sender in pending_senders {
+            let _ = sender.send(Ok(function.clone()));
         }
     }
 

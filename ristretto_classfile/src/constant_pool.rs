@@ -204,7 +204,7 @@ impl ConstantPool {
     /// assert_eq!(None, iterator.next());
     /// ```
     #[must_use]
-    pub fn iter(&self) -> ConstantPoolIterator {
+    pub fn iter(&self) -> ConstantPoolIterator<'_> {
         ConstantPoolIterator::new(self)
     }
 

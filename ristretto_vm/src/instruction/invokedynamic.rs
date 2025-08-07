@@ -902,7 +902,11 @@ async fn validate_call_site(
     // Validate CallSite.type() matches expected MethodType
     let type_method = call_site_class.try_get_method("type", "()Ljava/lang/invoke/MethodType;")?;
     let call_site_type = thread
-        .try_execute(&call_site_class, &type_method, &[call_site.clone()])
+        .try_execute(
+            &call_site_class,
+            &type_method,
+            std::slice::from_ref(call_site),
+        )
         .await?;
     let expected_method_type = get_method_type(thread, bootstrap_method_descriptor).await?;
 
