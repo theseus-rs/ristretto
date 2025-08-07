@@ -70,10 +70,9 @@ pub(crate) fn resolve_method(
         while let Some(interface) = interfaces.pop() {
             if let Ok((interface, method)) =
                 lookup_method_in_hierarchy(interface.clone(), name, descriptor)
+                && !method.is_abstract()
             {
-                if !method.is_abstract() {
-                    return Ok((interface, method));
-                }
+                return Ok((interface, method));
             }
             let super_interfaces = interface.interfaces()?;
             interfaces.extend(super_interfaces);

@@ -68,10 +68,10 @@ impl Assignable for Arc<Class> {
         }
 
         // Check inheritance hierarchy
-        if let Some(parent) = other.parent()? {
-            if Box::pin(self.is_assignable_from(thread, &parent)).await? {
-                return Ok(true);
-            }
+        if let Some(parent) = other.parent()?
+            && Box::pin(self.is_assignable_from(thread, &parent)).await?
+        {
+            return Ok(true);
         }
 
         // Check interfaces
