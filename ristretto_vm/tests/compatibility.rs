@@ -35,10 +35,10 @@ fn compatibility_tests() -> Result<()> {
         let test_name = test_dir.to_string_lossy().to_string();
         let test_dir = tests_root_dir.join(test_dir);
 
-        if let Some(filter) = TEST_ENDS_WITH_FILTER {
-            if !test_name.ends_with(filter) {
-                return;
-            }
+        if let Some(filter) = TEST_ENDS_WITH_FILTER
+            && !test_name.ends_with(filter)
+        {
+            return;
         }
 
         // Determine if the test should be ignored

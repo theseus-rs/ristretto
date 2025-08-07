@@ -286,7 +286,7 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
                 .try_invoke(
                     "java.lang.ClassLoader",
                     "getUnnamedModule()Ljava/lang/Module;",
-                    &[class_loader_object.clone()],
+                    std::slice::from_ref(&class_loader_object),
                 )
                 .await?;
             object.set_value_unchecked("module", module)?;

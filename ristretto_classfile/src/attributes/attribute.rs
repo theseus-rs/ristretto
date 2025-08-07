@@ -2068,14 +2068,12 @@ mod test {
         let mut bytes = Cursor::new(expected_bytes.to_vec());
 
         // Adjust the frame_type offest before comparing
-        if let Attribute::Code { attributes, .. } = &mut attribute {
-            if let Some(Attribute::StackMapTable { frames, .. }) = attributes.get_mut(2) {
-                if let Some(StackFrame::SameLocals1StackItemFrame { frame_type, .. }) =
-                    frames.get_mut(1)
-                {
-                    *frame_type = 66; // Update to match the expected frame type
-                }
-            }
+        if let Attribute::Code { attributes, .. } = &mut attribute
+            && let Some(Attribute::StackMapTable { frames, .. }) = attributes.get_mut(2)
+            && let Some(StackFrame::SameLocals1StackItemFrame { frame_type, .. }) =
+                frames.get_mut(1)
+        {
+            *frame_type = 66; // Update to match the expected frame type
         }
         let code_attribute = Attribute::from_bytes(&constant_pool, &mut bytes)?;
         assert_eq!(attribute, code_attribute);

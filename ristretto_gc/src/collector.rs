@@ -360,10 +360,10 @@ impl GarbageCollector {
     /// Checks if an object is already marked to avoid infinite loops during tracing. Used by
     /// the `Trace` implementations for cycle detection.
     pub(crate) fn is_object_marked(&self, ptr: SafePtr) -> bool {
-        if let Ok(objects) = self.objects.read() {
-            if let Some(metadata) = objects.get(&ptr) {
-                return metadata.is_marked();
-            }
+        if let Ok(objects) = self.objects.read()
+            && let Some(metadata) = objects.get(&ptr)
+        {
+            return metadata.is_marked();
         }
         false
     }
@@ -379,11 +379,11 @@ impl GarbageCollector {
     /// Marks an object as reachable in the object registry. Used during garbage collection to mark
     /// objects that are reachable from roots.
     pub(crate) fn mark_object(&self, ptr: SafePtr) {
-        if let Ok(mut objects) = self.objects.write() {
-            if let Some(metadata) = objects.get_mut(&ptr) {
-                trace!("object: {:#x} marked reachable", ptr.0);
-                metadata.mark();
-            }
+        if let Ok(mut objects) = self.objects.write()
+            && let Some(metadata) = objects.get_mut(&ptr)
+        {
+            trace!("object: {:#x} marked reachable", ptr.0);
+            metadata.mark();
         }
     }
 
@@ -391,16 +391,16 @@ impl GarbageCollector {
     /// the object, `false` if already marked. This is used for cycle detection during tracing to
     /// prevent infinite recursion.
     pub(crate) fn try_mark_object(&self, ptr: SafePtr) -> bool {
-        if let Ok(mut objects) = self.objects.write() {
-            if let Some(metadata) = objects.get_mut(&ptr) {
-                let was_unmarked = metadata.mark();
-                if was_unmarked {
-                    trace!("object: {:#x} marked reachable (first time)", ptr.0);
-                } else {
-                    trace!("object: {:#x} already marked, skipping trace", ptr.0);
-                }
-                return was_unmarked;
+        if let Ok(mut objects) = self.objects.write()
+            && let Some(metadata) = objects.get_mut(&ptr)
+        {
+            let was_unmarked = metadata.mark();
+            if was_unmarked {
+                trace!("object: {:#x} marked reachable (first time)", ptr.0);
+            } else {
+                trace!("object: {:#x} already marked, skipping trace", ptr.0);
             }
+            return was_unmarked;
         }
         false
     }
@@ -685,12 +685,11 @@ impl GarbageCollector {
             };
 
             let ptr = SafePtr::from_ptr(gc_trace_ptr.as_raw_ptr());
-            if let Ok(mut objects_guard) = objects.write() {
-                if let Some(metadata) = objects_guard.get_mut(&ptr) {
-                    if metadata.mark() {
-                        final_processed += 1;
-                    }
-                }
+            if let Ok(mut objects_guard) = objects.write()
+                && let Some(metadata) = objects_guard.get_mut(&ptr)
+                && metadata.mark()
+            {
+                final_processed += 1;
             }
         }
 

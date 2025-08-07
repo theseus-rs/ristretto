@@ -154,31 +154,31 @@ impl ObjectMetadata {
         }
 
         // First, run the finalizer if present
-        if let Ok(mut finalizer_guard) = self.finalizer.try_lock() {
-            if let Some(finalizer) = finalizer_guard.take() {
-                // Execute finalizer in a safe context
-                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    finalizer();
-                }))
-                .unwrap_or_else(|_| {
-                    // Log finalizer panic but don't propagate it
-                    eprintln!("Warning: Finalizer panicked during object cleanup");
-                });
-            }
+        if let Ok(mut finalizer_guard) = self.finalizer.try_lock()
+            && let Some(finalizer) = finalizer_guard.take()
+        {
+            // Execute finalizer in a safe context
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                finalizer();
+            }))
+            .unwrap_or_else(|_| {
+                // Log finalizer panic but don't propagate it
+                eprintln!("Warning: Finalizer panicked during object cleanup");
+            });
         }
 
         // Then, drop the object with additional safety checks
-        if let Ok(mut drop_fn_guard) = self.drop_fn.try_lock() {
-            if let Some(drop_fn) = drop_fn_guard.take() {
-                // Execute drop function in a safe context
-                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    drop_fn();
-                }))
-                .unwrap_or_else(|_| {
-                    // Log drop panic but don't propagate it
-                    eprintln!("Warning: Drop function panicked during object cleanup");
-                });
-            }
+        if let Ok(mut drop_fn_guard) = self.drop_fn.try_lock()
+            && let Some(drop_fn) = drop_fn_guard.take()
+        {
+            // Execute drop function in a safe context
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                drop_fn();
+            }))
+            .unwrap_or_else(|_| {
+                // Log drop panic but don't propagate it
+                eprintln!("Warning: Drop function panicked during object cleanup");
+            });
         }
     }
 }
