@@ -379,6 +379,13 @@ pub(crate) async fn start_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    if !matches!(
+        std::env::var("RISTRETTO_THREADING"),
+        Ok(v) if matches!(&*v.to_ascii_lowercase(), "1" | "true" | "yes" | "on")
+    ) {
+        return Ok(None);
+    }
+
     let thread_object = parameters.pop()?;
     let (thread_class, thread_id) = {
         let mut thread_object = thread_object.as_object_mut()?;
