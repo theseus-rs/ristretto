@@ -331,70 +331,6 @@ impl Reference {
         }
     }
 
-    /// Returns a deep clone of the reference.
-    ///
-    /// # Errors
-    ///
-    /// if the reference cannot be cloned.
-    pub fn deep_clone(&self) -> Result<Reference> {
-        let value = match self {
-            Reference::ByteArray(array) => {
-                let array = array.read();
-                Reference::ByteArray(Gc::new(RwLock::new(array.clone())))
-            }
-            Reference::CharArray(array) => {
-                let array = array.read();
-                Reference::CharArray(Gc::new(RwLock::new(array.to_vec())))
-            }
-            Reference::ShortArray(array) => {
-                let array = array.read();
-                Reference::ShortArray(Gc::new(RwLock::new(array.to_vec())))
-            }
-            Reference::IntArray(array) => {
-                let array = array.read();
-                Reference::IntArray(Gc::new(RwLock::new(array.to_vec())))
-            }
-            Reference::LongArray(array) => {
-                let array = array.read();
-                Reference::LongArray(Gc::new(RwLock::new(array.to_vec())))
-            }
-            Reference::FloatArray(array) => {
-                let array = array.read();
-                Reference::FloatArray(Gc::new(RwLock::new(array.to_vec())))
-            }
-            Reference::DoubleArray(array) => {
-                let array = array.read();
-                Reference::DoubleArray(Gc::new(RwLock::new(array.to_vec())))
-            }
-            Reference::Array(object_array) => {
-                let array = object_array.elements.read();
-                let array = array.to_vec();
-                let mut cloned_values = Vec::with_capacity(array.len());
-                for value in array {
-                    match value {
-                        Some(reference) => cloned_values.push(Some(reference.deep_clone()?)),
-                        None => cloned_values.push(value),
-                    }
-                }
-                let object_array = ObjectArray {
-                    class: object_array.class.clone(),
-                    elements: Gc::new(RwLock::new(cloned_values)),
-                };
-                Reference::Array(object_array)
-            }
-            Reference::Object(object) => {
-                let object = object.read();
-                if object.class().name() == "java/lang/Class" {
-                    // Special case for Class objects, which should not be deep cloned.
-                    self.clone()
-                } else {
-                    Reference::Object(Gc::new(RwLock::new(object.deep_clone()?)))
-                }
-            }
-        };
-        Ok(value)
-    }
-
     /// Convert the object to a bool value.
     ///
     /// # Errors
@@ -1370,22 +1306,6 @@ mod tests {
     }
 
     #[test]
-    fn test_deep_clone_byte_array() -> Result<()> {
-        let reference = Reference::from(vec![1i8]);
-        let clone = reference.deep_clone()?;
-        assert_eq!(reference, clone);
-
-        {
-            let mut array = clone.as_byte_vec_mut()?;
-            if let Some(element) = array.get_mut(0) {
-                *element = 2;
-            }
-        }
-        assert_ne!(reference, clone);
-        Ok(())
-    }
-
-    #[test]
     fn test_hash_code_char_array() {
         let reference = Reference::from(vec![1 as char]);
         assert_ne!(0, reference.hash_code());
@@ -1427,22 +1347,6 @@ mod tests {
             }
         }
         assert_eq!(reference, clone);
-        Ok(())
-    }
-
-    #[test]
-    fn test_deep_clone_char_array() -> Result<()> {
-        let reference = Reference::from(vec![1 as char]);
-        let clone = reference.deep_clone()?;
-        assert_eq!(reference, clone);
-
-        {
-            let mut array = clone.as_char_vec_mut()?;
-            if let Some(element) = array.get_mut(0) {
-                *element = 2;
-            }
-        }
-        assert_ne!(reference, clone);
         Ok(())
     }
 
@@ -1492,22 +1396,6 @@ mod tests {
     }
 
     #[test]
-    fn test_deep_clone_short_array() -> Result<()> {
-        let reference = Reference::from(vec![1i16]);
-        let clone = reference.deep_clone()?;
-        assert_eq!(reference, clone);
-
-        {
-            let mut array = clone.as_short_vec_mut()?;
-            if let Some(element) = array.get_mut(0) {
-                *element = 2;
-            }
-        }
-        assert_ne!(reference, clone);
-        Ok(())
-    }
-
-    #[test]
     fn test_hash_code_int_array() {
         let reference = Reference::from(vec![1i32]);
         assert_ne!(0, reference.hash_code());
@@ -1549,22 +1437,6 @@ mod tests {
             }
         }
         assert_eq!(reference, clone);
-        Ok(())
-    }
-
-    #[test]
-    fn test_deep_clone_int_array() -> Result<()> {
-        let reference = Reference::from(vec![1i32]);
-        let clone = reference.deep_clone()?;
-        assert_eq!(reference, clone);
-
-        {
-            let mut array = clone.as_int_vec_mut()?;
-            if let Some(element) = array.get_mut(0) {
-                *element = 2;
-            }
-        }
-        assert_ne!(reference, clone);
         Ok(())
     }
 
@@ -1614,22 +1486,6 @@ mod tests {
     }
 
     #[test]
-    fn test_deep_clone_long_array() -> Result<()> {
-        let reference = Reference::from(vec![1i64]);
-        let clone = reference.deep_clone()?;
-        assert_eq!(reference, clone);
-
-        {
-            let mut array = clone.as_long_vec_mut()?;
-            if let Some(element) = array.get_mut(0) {
-                *element = 2;
-            }
-        }
-        assert_ne!(reference, clone);
-        Ok(())
-    }
-
-    #[test]
     fn test_hash_code_float_array() {
         let reference = Reference::from(vec![1.0f32]);
         assert_ne!(0, reference.hash_code());
@@ -1675,22 +1531,6 @@ mod tests {
     }
 
     #[test]
-    fn test_deep_clone_float_array() -> Result<()> {
-        let reference = Reference::from(vec![1.0f32]);
-        let clone = reference.deep_clone()?;
-        assert_eq!(reference, clone);
-
-        {
-            let mut array = clone.as_float_vec_mut()?;
-            if let Some(element) = array.get_mut(0) {
-                *element = 2.0;
-            }
-        }
-        assert_ne!(reference, clone);
-        Ok(())
-    }
-
-    #[test]
     fn test_hash_code_double_array() {
         let reference = Reference::from(vec![1.0f64]);
         assert_ne!(0, reference.hash_code());
@@ -1732,22 +1572,6 @@ mod tests {
             }
         }
         assert_eq!(reference, clone);
-        Ok(())
-    }
-
-    #[test]
-    fn test_deep_clone_double_array() -> Result<()> {
-        let reference = Reference::from(vec![1.0f64]);
-        let clone = reference.deep_clone()?;
-        assert_eq!(reference, clone);
-
-        {
-            let mut array = clone.as_double_vec_mut()?;
-            if let Some(element) = array.get_mut(0) {
-                *element = 2.0;
-            }
-        }
-        assert_ne!(reference, clone);
         Ok(())
     }
 
@@ -1804,23 +1628,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_deep_clone_reference_array() -> Result<()> {
-        let class = load_class("java.lang.Object").await?;
-        let reference = Reference::from((class.clone(), vec![None]));
-        let clone = reference.deep_clone()?;
-        assert_eq!(reference, clone);
-
-        {
-            let (_class, mut array) = clone.as_class_vec_mut()?;
-            if let Some(element) = array.get_mut(0) {
-                *element = Some(Reference::from(vec![1i8]));
-            }
-        }
-        assert_ne!(reference, clone);
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_hash_code_object() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
         let reference = Reference::from(Object::new(class.clone())?);
@@ -1867,23 +1674,6 @@ mod tests {
         let mut cloned_object = clone.as_object_mut()?;
         cloned_object.set_value("value", Value::Int(2))?;
         assert_eq!(reference, clone);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_deep_clone_object() -> Result<()> {
-        let class = load_class("java.lang.Integer").await?;
-        let mut object = Object::new(class)?;
-        object.set_value("value", Value::Int(1))?;
-        let reference = Reference::from(object);
-        let clone = reference.deep_clone()?;
-        assert_eq!(reference, clone);
-
-        {
-            let mut cloned_object = clone.as_object_mut()?;
-            cloned_object.set_value("value", Value::Int(2))?;
-        }
-        assert_ne!(reference, clone);
         Ok(())
     }
 

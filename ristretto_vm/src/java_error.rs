@@ -36,6 +36,10 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ClassNotFoundException.html>
     #[error("{0}")]
     ClassNotFoundException(String),
+    /// `CloneNotSupportedException`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/CloneNotSupportedException.html>
+    #[error("{0}")]
+    CloneNotSupportedException(String),
     /// `FileNotFoundException`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/io/FileNotFoundException.html>
     #[error("{0}")]
@@ -97,6 +101,7 @@ impl JavaError {
             JavaError::ClassCastException { .. } => "java.lang.ClassCastException",
             JavaError::ClassFormatError(_) => "java.lang.ClassFormatError",
             JavaError::ClassNotFoundException(_) => "java.lang.ClassNotFoundException",
+            JavaError::CloneNotSupportedException(_) => "java.lang.CloneNotSupportedException",
             JavaError::FileNotFoundException(_) => "java.io.FileNotFoundException",
             JavaError::IllegalAccessError(_) => "java.lang.IllegalAccessError",
             JavaError::IllegalArgumentException(_) => "java.lang.IllegalArgumentException",
@@ -189,6 +194,13 @@ mod tests {
     fn test_class_not_found_error() {
         let error = JavaError::ClassNotFoundException("foo".to_string());
         assert_eq!(error.class_name(), "java.lang.ClassNotFoundException");
+        assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
+    fn test_clone_not_supported_exception() {
+        let error = JavaError::CloneNotSupportedException("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.CloneNotSupportedException");
         assert_eq!(error.message(), "foo");
     }
 

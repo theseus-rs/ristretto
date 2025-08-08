@@ -306,22 +306,6 @@ impl Object {
         std::ptr::eq(self, other)
     }
 
-    /// Deep clone the object.
-    ///
-    /// # Errors
-    ///
-    /// if the fields cannot be cloned.
-    pub fn deep_clone(&self) -> Result<Self> {
-        let mut values = Vec::with_capacity(self.values.len());
-        for value in &self.values {
-            values.push(value.deep_clone()?);
-        }
-        Ok(Self {
-            class: self.class.clone(),
-            values,
-        })
-    }
-
     /// Convert the object to a bool value.
     ///
     /// # Errors
@@ -744,20 +728,6 @@ mod tests {
         let object = Object::new(class)?;
         let collector = GarbageCollector::new();
         object.trace(&collector);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_deep_clone() -> Result<()> {
-        let class = load_class("java.lang.Integer").await?;
-        let mut object = Object::new(class)?;
-        object.set_value("value", Value::Int(1))?;
-        let mut clone = object.deep_clone()?;
-        assert_eq!(object, clone);
-        assert!(!object.ptr_eq(&clone));
-
-        clone.set_value("value", Value::Int(2))?;
-        assert_ne!(object, clone);
         Ok(())
     }
 
