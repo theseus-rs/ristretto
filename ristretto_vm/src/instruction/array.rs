@@ -40,7 +40,12 @@ pub(crate) async fn anewarray(
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let array_class_name = format!("[L{class_name};");
+    let array_class_name = if class_name.starts_with('[') {
+        format!("[{class_name}")
+    } else {
+        format!("[L{class_name};")
+    };
+
     let class = thread.class(array_class_name.as_str()).await?;
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
@@ -322,6 +327,23 @@ mod tests {
             panic!("expected reference");
         };
         assert_eq!("[Ljava/lang/Object;", reference.class_name()?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_anewarray_of_arrays() -> Result<()> {
+        let (_vm, _thread, mut frame) = crate::test::frame().await?;
+        let class = frame.class_mut();
+        let stack = &mut OperandStack::with_max_size(1);
+        let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
+        let class_index = constant_pool.add_class("[Ljava/lang/Object;")?;
+        stack.push_int(0)?;
+        let result = anewarray(&frame, stack, class_index).await?;
+        assert_eq!(Continue, result);
+        let Value::Object(Some(reference)) = stack.pop()? else {
+            panic!("expected reference");
+        };
+        assert_eq!("[[Ljava/lang/Object;", reference.class_name()?);
         Ok(())
     }
 

@@ -266,6 +266,13 @@ async fn extract_archive(
 mod tests {
     use super::*;
 
+    /// Load a class using the default class loader.
+    async fn load_class(class_name: &str) -> Result<Arc<Class>> {
+        let (_path, _version, class_loader) = default_class_loader().await?;
+        let (class, _loaded_previously) = class_loader.load_with_status(class_name).await?;
+        Ok(class)
+    }
+
     #[tokio::test]
     async fn test_class_loader_v8() -> Result<()> {
         let version = "8.462.08.1";
@@ -281,6 +288,78 @@ mod tests {
         let (_java_home, java_version, class_loader) = version_class_loader(version).await?;
         assert_eq!(version, java_version);
         assert_eq!("bootstrap", class_loader.name());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_primitive_classes() -> Result<()> {
+        let class_names = [
+            "boolean", "byte", "char", "double", "float", "int", "long", "short", "void",
+        ];
+        for class_name in class_names {
+            let class = load_class(class_name).await?;
+            assert_eq!(class.name(), class_name);
+            assert!(class.is_primitive());
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_primitive_array_classes() -> Result<()> {
+        let class_names = ["[Z", "[B", "[C", "[D", "[F", "[I", "[J", "[S"];
+        for class_name in class_names {
+            let class = load_class(class_name).await?;
+            assert_eq!(class.name(), class_name);
+            assert!(class.is_array());
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_object_class() -> Result<()> {
+        let class_name = "java.lang.Object";
+        let class = load_class(class_name).await?;
+        assert_eq!(class.name(), "java/lang/Object");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_object_array_class() -> Result<()> {
+        let class_name = "[Ljava.lang.Object;";
+        let class = load_class(class_name).await?;
+        assert_eq!(class.name(), "[Ljava/lang/Object;");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_object_multi_array_class() -> Result<()> {
+        let class_name = "[[Ljava.lang.Object;";
+        let class = load_class(class_name).await?;
+        assert_eq!(class.name(), "[[Ljava/lang/Object;");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_big_integer_class() -> Result<()> {
+        let class_name = "java.math.BigInteger";
+        let class = load_class(class_name).await?;
+        assert_eq!(class.name(), "java/math/BigInteger");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_big_integer_array_class() -> Result<()> {
+        let class_name = "[Ljava.math.BigInteger;";
+        let class = load_class(class_name).await?;
+        assert_eq!(class.name(), "[Ljava/math/BigInteger;");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_big_integer_multi_array_class() -> Result<()> {
+        let class_name = "[[Ljava.math.BigInteger;";
+        let class = load_class(class_name).await?;
+        assert_eq!(class.name(), "[[Ljava/math/BigInteger;");
         Ok(())
     }
 }
