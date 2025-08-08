@@ -1,4 +1,4 @@
-use crate::Error::{InternalError, PoisonedLock};
+use crate::Error::InternalError;
 use crate::JavaError::IllegalArgumentException;
 use crate::Result;
 use crate::intrinsic_methods::java::lang::object::hash_code;
@@ -7,6 +7,7 @@ use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use parking_lot::RwLock;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classfile::attributes::{Attribute, Instruction};
 use ristretto_classfile::{
@@ -17,7 +18,7 @@ use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
 use std::env::consts::OS;
 use std::fmt::Debug;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn arraycopy_vec<T: Clone + Debug + PartialEq + Send + Sync>(
@@ -34,15 +35,11 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq + Send + Sync>(
 
     // Validate bounds before copying; get lengths once to avoid multiple lock acquisitions
     let source_len = {
-        let source = source
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let source = source.read();
         source.len()
     };
     let destination_len = {
-        let destination = destination
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let destination = destination.read();
         destination.len()
     };
 
@@ -60,9 +57,7 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq + Send + Sync>(
     // Check if source and destination are the same array
     if source.ptr_eq(destination) {
         // Same array; need to handle overlapping regions
-        let mut array = destination
-            .write()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let mut array = destination.write();
 
         // Handle overlapping regions correctly
         let regions_overlap = (source_position < destination_position
@@ -93,12 +88,8 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq + Send + Sync>(
         }
     } else {
         // Different arrays; can optimize with bulk operations
-        let source = source
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
-        let mut destination = destination
-            .write()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let source = source.read();
+        let mut destination = destination.write();
 
         // Use slice operations for maximum efficiency
         let source_slice = &source[source_position..source_position + length];
@@ -499,9 +490,7 @@ mod tests {
         let destination = Gc::new(RwLock::new(vec![0, 0, 0, 0, 0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 3)?;
-        let destination = destination
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let destination = destination.read();
 
         assert_eq!(destination.first(), Some(&1));
         assert_eq!(destination.get(1), Some(&2));
@@ -518,9 +507,7 @@ mod tests {
 
         // Copy from source[1..3] to destination[2..4]
         arraycopy_vec(&source, 1, &destination, 2, 2)?;
-        let destination = destination
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let destination = destination.read();
 
         assert_eq!(destination.first(), Some(&0)); // Unchanged
         assert_eq!(destination.get(1), Some(&0)); // Unchanged
@@ -536,9 +523,7 @@ mod tests {
         let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 3)?;
-        let destination = destination
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let destination = destination.read();
 
         assert_eq!(destination.first(), Some(&10));
         assert_eq!(destination.get(1), Some(&20));
@@ -552,9 +537,7 @@ mod tests {
         let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 0)?;
-        let destination = destination
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let destination = destination.read();
 
         // Nothing should be copied
         assert_eq!(destination.first(), Some(&0));
@@ -569,9 +552,7 @@ mod tests {
         let destination = Gc::new(RwLock::new(vec![0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 1)?;
-        let destination = destination
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let destination = destination.read();
 
         assert_eq!(destination.first(), Some(&42));
         Ok(())
@@ -584,9 +565,7 @@ mod tests {
 
         // Copy last 2 elements of source to last 2 positions of destination
         arraycopy_vec(&source, 3, &destination, 3, 2)?;
-        let destination = destination
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let destination = destination.read();
 
         assert_eq!(destination.first(), Some(&0)); // Unchanged
         assert_eq!(destination.get(1), Some(&0)); // Unchanged
@@ -603,9 +582,7 @@ mod tests {
 
         // This should work fine since they're different arrays
         arraycopy_vec(&source, 1, &destination, 0, 3)?;
-        let destination = destination
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let destination = destination.read();
 
         assert_eq!(destination.first(), Some(&2)); // source[1]
         assert_eq!(destination.get(1), Some(&3)); // source[2]
@@ -677,9 +654,7 @@ mod tests {
 
         // Copy exactly to the boundary - should work
         arraycopy_vec(&source, 0, &destination, 0, 3)?;
-        let destination = destination
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let destination = destination.read();
 
         assert_eq!(destination.first(), Some(&1));
         assert_eq!(destination.get(1), Some(&2));
@@ -737,9 +712,7 @@ mod tests {
         ]));
 
         arraycopy_vec(&source, 0, &destination, 0, 2)?;
-        let destination = destination
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let destination = destination.read();
 
         assert_eq!(destination.first(), Some(&"hello".to_string()));
         assert_eq!(destination.get(1), Some(&"world".to_string()));
@@ -756,9 +729,7 @@ mod tests {
         let destination = Gc::new(RwLock::new(dest_data));
 
         arraycopy_vec(&source, 100, &destination, 200, 500)?;
-        let destination = destination
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let destination = destination.read();
 
         // Verify first few and last few elements
         assert_eq!(destination.get(200), Some(&100));
@@ -814,9 +785,7 @@ mod tests {
         // Shift "cdef" to the right by 2 positions to make room for insertion
         // This simulates what StringBuilder does when inserting text
         arraycopy_vec(&array, 2, &array, 4, 4)?;
-        let array = array
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let array = array.read();
 
         assert_eq!(array.first(), Some(&'a')); // Unchanged
         assert_eq!(array.get(1), Some(&'b')); // Unchanged
@@ -838,9 +807,7 @@ mod tests {
 
         // Shift "cdefgh" to the left by 1 position
         arraycopy_vec(&array, 2, &array, 1, 6)?;
-        let array = array
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let array = array.read();
 
         assert_eq!(array.first(), Some(&'a')); // Unchanged
         assert_eq!(array.get(1), Some(&'c')); // Shifted from position 2
@@ -860,9 +827,7 @@ mod tests {
 
         // Copy first 3 elements to positions 5-7 (no overlap)
         arraycopy_vec(&array, 0, &array, 5, 3)?;
-        let array = array
-            .read()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let array = array.read();
 
         assert_eq!(array.first(), Some(&1)); // Unchanged
         assert_eq!(array.get(1), Some(&2)); // Unchanged

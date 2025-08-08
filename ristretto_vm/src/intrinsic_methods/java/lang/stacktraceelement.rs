@@ -1,4 +1,4 @@
-use crate::Error::{InternalError, PoisonedLock};
+use crate::Error::InternalError;
 use crate::JavaError::ArrayIndexOutOfBoundsException;
 use crate::Result;
 use crate::parameters::Parameters;
@@ -55,20 +55,14 @@ pub(crate) async fn init_stack_trace_elements_1(
     for index in 0..depth {
         // Limit the scope of the read lock on the back_trace_array
         let value = {
-            let back_trace_array = back_trace_array
-                .elements
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let back_trace_array = back_trace_array.elements.read();
             let Some(value) = back_trace_array.get(index) else {
                 return Err(InternalError("No back trace element found".to_string()));
             };
             value.clone()
         };
 
-        let mut stack_trace_array = stack_trace_array
-            .elements
-            .write()
-            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let mut stack_trace_array = stack_trace_array.elements.write();
         if let Some(element) = stack_trace_array.get_mut(index) {
             *element = value;
         } else {

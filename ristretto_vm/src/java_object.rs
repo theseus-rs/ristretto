@@ -1,10 +1,11 @@
 use crate::Error::InternalError;
 use crate::Result;
 use crate::thread::Thread;
+use parking_lot::RwLock;
 use ristretto_classfile::{JAVA_8, JAVA_17};
 use ristretto_classloader::{Class, ClassLoader, Object, Reference, Value};
 use ristretto_gc::Gc;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 /// Trait for converting a Rust value to a Java object.  Converts to objects of the primitive
 /// wrapper, classes, and strings.

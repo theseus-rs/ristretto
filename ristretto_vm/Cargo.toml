@@ -33,6 +33,7 @@ dirs = { workspace = true }
 filetime = { workspace = true }
 indexmap = { workspace = true }
 os_info = { workspace = true }
+parking_lot = { workspace = true }
 phf = { workspace = true }
 rayon = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.25.0" }

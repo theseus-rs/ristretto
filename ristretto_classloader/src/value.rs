@@ -1,10 +1,11 @@
 use crate::Error::InvalidValueType;
 use crate::reference::Reference;
 use crate::{Class, Object, Result};
+use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use std::fmt;
 use std::fmt::Display;
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::Arc;
 
 /// Represents a value in the Ristretto VM.
 #[derive(Clone, Debug)]
