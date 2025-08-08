@@ -10,7 +10,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-fn get_class_name(value: Value) -> Result<String> {
+fn get_class_name(value: &Value) -> Result<String> {
     let component_type = value.as_object_ref()?;
     let class_name = component_type.value("name")?.as_string()?;
     Ok(class_name)
@@ -457,7 +457,7 @@ pub(crate) async fn new_array(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let length = usize::try_from(parameters.pop_int()?)?;
-    let class_name = get_class_name(parameters.pop()?)?;
+    let class_name = get_class_name(&parameters.pop()?)?;
 
     let array = match class_name.as_str() {
         "boolean" | "byte" => Value::from(vec![0i8; length]),

@@ -200,6 +200,7 @@ pub(crate) async fn register_natives(
     Ok(None)
 }
 
+#[expect(clippy::too_many_lines)]
 pub(crate) async fn resolve(
     thread: Arc<Thread>,
     member_self: Value,

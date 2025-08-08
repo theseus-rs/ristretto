@@ -141,6 +141,7 @@ pub(crate) async fn length_0(
 
 #[intrinsic_method("java/io/RandomAccessFile.open0(Ljava/lang/String;I)V", Any)]
 #[async_recursion(?Send)]
+#[expect(clippy::too_many_lines)]
 pub(crate) async fn open_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,

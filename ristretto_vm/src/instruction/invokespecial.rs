@@ -32,8 +32,7 @@ pub(crate) async fn invokespecial(
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-    let (resolved_class, resolved_method) =
-        resolve_method(class.clone(), method_name, method_descriptor)?;
+    let (resolved_class, resolved_method) = resolve_method(&class, method_name, method_descriptor)?;
 
     let parameters = stack.drain_last(resolved_method.parameters().len() + 1);
     let result = thread

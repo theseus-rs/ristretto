@@ -68,7 +68,7 @@ pub(crate) async fn invokeinterface(
 
     // Find the method implementation
     let (resolved_class, resolved_method) =
-        resolve_method(object_class, method_name, method_descriptor)?;
+        resolve_method(&object_class, method_name, method_descriptor)?;
 
     // Check resolved method accessibility
     if !resolved_method.is_public() {
