@@ -23,7 +23,7 @@ pub(crate) async fn invokevirtual(
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-    let (resolved_class, resolved_method) = resolve_method(class, method_name, method_descriptor)?;
+    let (resolved_class, resolved_method) = resolve_method(&class, method_name, method_descriptor)?;
 
     let parameters = stack.drain_last(resolved_method.parameters().len() + 1);
     let reference = match parameters.first() {
@@ -39,7 +39,7 @@ pub(crate) async fn invokevirtual(
     } else {
         let class_name = reference.class_name()?;
         let object_class = thread.class(class_name).await?;
-        resolve_method(object_class, method_name, method_descriptor)?
+        resolve_method(&object_class, method_name, method_descriptor)?
     };
 
     let result = thread.execute(&class, &method, &parameters).await?;
@@ -55,7 +55,7 @@ pub(crate) async fn invokevirtual(
 ///
 /// if the method is not found.
 pub(crate) fn resolve_method(
-    class: Arc<Class>,
+    class: &Arc<Class>,
     name: &str,
     descriptor: &str,
 ) -> Result<(Arc<Class>, Arc<Method>)> {

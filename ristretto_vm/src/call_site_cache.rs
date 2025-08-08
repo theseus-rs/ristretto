@@ -127,23 +127,22 @@ impl CallSiteCache {
         );
 
         // Update cache based on result
-        match &result {
-            Ok(value) => {
-                // Store successful resolution
-                let mut map = self.states.write().map_err(|error| {
-                    PoisonedLock(format!("Failed to acquire cache lock: {error}"))
-                })?;
-                debug!("CallSiteCache: Caching successful result for key: {key:?}",);
-                map.insert(key, CallSiteState::Resolved(value.clone()));
-            }
-            Err(_) => {
-                // Remove in-progress marker on failure to allow retry
-                let mut map = self.states.write().map_err(|error| {
-                    PoisonedLock(format!("Failed to acquire cache lock: {error}"))
-                })?;
-                debug!("CallSiteCache: Removing failed resolution from cache for key: {key:?}");
-                map.remove(&key);
-            }
+        if let Ok(value) = &result {
+            // Store successful resolution
+            let mut map = self
+                .states
+                .write()
+                .map_err(|error| PoisonedLock(format!("Failed to acquire cache lock: {error}")))?;
+            debug!("CallSiteCache: Caching successful result for key: {key:?}",);
+            map.insert(key, CallSiteState::Resolved(value.clone()));
+        } else {
+            // Remove in-progress marker on failure to allow retry
+            let mut map = self
+                .states
+                .write()
+                .map_err(|error| PoisonedLock(format!("Failed to acquire cache lock: {error}")))?;
+            debug!("CallSiteCache: Removing failed resolution from cache for key: {key:?}");
+            map.remove(&key);
         }
 
         result
