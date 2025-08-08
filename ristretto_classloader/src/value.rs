@@ -245,20 +245,6 @@ impl Value {
         matches!(self, Value::Long(_) | Value::Double(_))
     }
 
-    /// Returns a deep clone of the value.
-    ///
-    /// # Errors
-    ///
-    /// if the value cannot be cloned.
-    pub fn deep_clone(&self) -> Result<Self> {
-        let value = match self {
-            Value::Object(Some(reference)) => Value::Object(Some(reference.deep_clone()?)),
-            _ => self.clone(),
-        };
-
-        Ok(value)
-    }
-
     /// Returns the reference to `Vec<i8>`.
     ///
     /// # Errors
@@ -885,26 +871,6 @@ mod tests {
             }
         }
         assert_eq!(value, clone);
-        Ok(())
-    }
-
-    #[test]
-    fn test_deep_clone() -> Result<()> {
-        let value = Value::from(vec![1i32]);
-        let clone = value.deep_clone()?;
-        assert_eq!(value, clone);
-
-        let Value::Object(Some(ref reference)) = clone else {
-            unreachable!("Expected an IntArray reference");
-        };
-
-        {
-            let mut array = reference.as_int_vec_mut()?;
-            if let Some(element) = array.get_mut(0) {
-                *element = 2;
-            }
-        }
-        assert_ne!(value, clone);
         Ok(())
     }
 
