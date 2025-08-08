@@ -1,4 +1,4 @@
-use crate::Error::{InternalError, InvalidOperand, PoisonedLock};
+use crate::Error::{InternalError, InvalidOperand};
 use crate::JavaError::ArrayIndexOutOfBoundsException;
 use crate::Result;
 use crate::intrinsic_methods::java::lang::class::get_class;
@@ -272,10 +272,7 @@ pub(crate) async fn compare_and_set_reference(
     let result = match reference {
         Reference::Array(object_array) => {
             let offset = offset / REFERENCE_SIZE;
-            let mut elements = object_array
-                .elements
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut elements = object_array.elements.write();
             let Some(reference) = elements.get(offset) else {
                 return Err(InternalError(
                     "compareAndSetReference: Invalid reference index".to_string(),
@@ -302,9 +299,7 @@ pub(crate) async fn compare_and_set_reference(
             }
         }
         Reference::Object(object) => {
-            let mut object = object
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut object = object.write();
             let field_name = object.class().field_name(offset)?;
             let value = object.value(&field_name)?;
             if value == expected {
@@ -452,9 +447,7 @@ fn get_reference_type(
     let offset = usize::try_from(offset)?;
     let value = match &reference {
         Reference::ByteArray(array) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let array: &[u8] = transmute_ref!(array.as_slice());
             let Some(base_type) = base_type else {
                 return Err(InternalError(
@@ -524,9 +517,7 @@ fn get_reference_type(
             }
         }
         Reference::CharArray(array) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let offset = offset / CHAR_SIZE;
             let Some(char) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -538,9 +529,7 @@ fn get_reference_type(
             Value::Int(i32::from(*char))
         }
         Reference::ShortArray(array) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let offset = offset / SHORT_SIZE;
             let Some(short) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -552,9 +541,7 @@ fn get_reference_type(
             Value::Int(i32::from(*short))
         }
         Reference::IntArray(array) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let offset = offset / INT_SIZE;
             let Some(int) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -566,9 +553,7 @@ fn get_reference_type(
             Value::Int(*int)
         }
         Reference::LongArray(array) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let offset = offset / LONG_SIZE;
             let Some(long) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -580,9 +565,7 @@ fn get_reference_type(
             Value::Long(*long)
         }
         Reference::FloatArray(array) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let offset = offset / FLOAT_SIZE;
             let Some(float) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -594,9 +577,7 @@ fn get_reference_type(
             Value::Float(*float)
         }
         Reference::DoubleArray(array) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let offset = offset / DOUBLE_SIZE;
             let Some(double) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -608,10 +589,7 @@ fn get_reference_type(
             Value::Double(*double)
         }
         Reference::Array(object_array) => {
-            let array = object_array
-                .elements
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = object_array.elements.read();
             let offset = offset / REFERENCE_SIZE;
             let Some(reference) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -623,9 +601,7 @@ fn get_reference_type(
             Value::Object(reference.clone())
         }
         Reference::Object(object) => {
-            let object = object
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let object = object.read();
             let class = object.class();
             let field_name = class.field_name(offset)?;
             let field = class.declared_field(&field_name)?;
@@ -687,9 +663,7 @@ fn put_reference_type(
                     ));
                 }
             };
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = byte_value;
             } else {
@@ -710,9 +684,7 @@ fn put_reference_type(
                 }
             };
             let offset = offset / CHAR_SIZE;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = char_value;
             } else {
@@ -733,9 +705,7 @@ fn put_reference_type(
                 }
             };
             let offset = offset / SHORT_SIZE;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = short_value;
             } else {
@@ -753,9 +723,7 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / INT_SIZE;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = int_value;
             } else {
@@ -773,9 +741,7 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / LONG_SIZE;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = long_value;
             } else {
@@ -793,9 +759,7 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / FLOAT_SIZE;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = float_value;
             } else {
@@ -813,9 +777,7 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / DOUBLE_SIZE;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = double_value;
             } else {
@@ -833,10 +795,7 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / REFERENCE_SIZE;
-            let mut array = object_array
-                .elements
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = object_array.elements.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = object_value;
             } else {
@@ -848,9 +807,7 @@ fn put_reference_type(
             }
         }
         Reference::Object(object) => {
-            let mut object = object
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut object = object.write();
             let class = object.class();
             let field_name = class.field_name(offset)?;
             let field = class.declared_field(&field_name)?;

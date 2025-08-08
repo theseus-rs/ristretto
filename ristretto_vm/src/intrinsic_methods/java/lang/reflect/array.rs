@@ -1,4 +1,4 @@
-use crate::Error::{InvalidOperand, InvalidStackValue, PoisonedLock};
+use crate::Error::{InvalidOperand, InvalidStackValue};
 use crate::JavaError::{IndexOutOfBoundsException, NullPointerException};
 use crate::Result;
 use crate::intrinsic_methods::java::lang::class::get_class;
@@ -27,9 +27,7 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ByteArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -37,9 +35,7 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             Value::from(*value)
         }
         Some(Reference::CharArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -47,9 +43,7 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             Value::from(*value)
         }
         Some(Reference::FloatArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -57,9 +51,7 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             Value::from(*value)
         }
         Some(Reference::DoubleArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -67,9 +59,7 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             Value::from(*value)
         }
         Some(Reference::ShortArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -77,9 +67,7 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             Value::from(*value)
         }
         Some(Reference::IntArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -87,9 +75,7 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             Value::from(*value)
         }
         Some(Reference::LongArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -97,10 +83,7 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             Value::from(*value)
         }
         Some(Reference::Array(object_array)) => {
-            let array = object_array
-                .elements
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = object_array.elements.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -137,9 +120,7 @@ pub(crate) async fn get_byte(
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ByteArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -167,9 +148,7 @@ pub(crate) async fn get_char(
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::CharArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -197,9 +176,7 @@ pub(crate) async fn get_double(
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::DoubleArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -227,9 +204,7 @@ pub(crate) async fn get_float(
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::FloatArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -257,9 +232,7 @@ pub(crate) async fn get_int(
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::IntArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -286,52 +259,35 @@ pub(crate) async fn get_length(
     let length = match array {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ByteArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             array.len()
         }
         Some(Reference::CharArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             array.len()
         }
         Some(Reference::FloatArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             array.len()
         }
         Some(Reference::DoubleArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             array.len()
         }
         Some(Reference::ShortArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             array.len()
         }
         Some(Reference::IntArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             array.len()
         }
         Some(Reference::LongArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             array.len()
         }
         Some(Reference::Array(object_array)) => {
-            let array = object_array
-                .elements
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = object_array.elements.read();
             array.len()
         }
         Some(object) => {
@@ -356,9 +312,7 @@ pub(crate) async fn get_long(
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::LongArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -386,9 +340,7 @@ pub(crate) async fn get_short(
     let value = match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ShortArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -538,9 +490,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ByteArray(array)) => {
             let value = value.as_i8()?;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -550,9 +500,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
         }
         Some(Reference::CharArray(array)) => {
             let value = value.as_u16()?;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -562,9 +510,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
         }
         Some(Reference::FloatArray(array)) => {
             let value = value.as_f32()?;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -574,9 +520,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
         }
         Some(Reference::DoubleArray(array)) => {
             let value = value.as_f64()?;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -586,9 +530,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
         }
         Some(Reference::ShortArray(array)) => {
             let value = value.as_i16()?;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -598,9 +540,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
         }
         Some(Reference::IntArray(array)) => {
             let value = value.as_i32()?;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -610,9 +550,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
         }
         Some(Reference::LongArray(array)) => {
             let value = value.as_i64()?;
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -627,10 +565,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
                     actual: format!("{value:?}"),
                 });
             };
-            let mut array = object_array
-                .elements
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = object_array.elements.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -669,9 +604,7 @@ pub(crate) async fn set_byte(
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ByteArray(array)) => {
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -701,9 +634,7 @@ pub(crate) async fn set_char(
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::CharArray(array)) => {
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -733,9 +664,7 @@ pub(crate) async fn set_double(
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::DoubleArray(array)) => {
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -765,9 +694,7 @@ pub(crate) async fn set_float(
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::FloatArray(array)) => {
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -797,9 +724,7 @@ pub(crate) async fn set_int(
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::IntArray(array)) => {
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -829,9 +754,7 @@ pub(crate) async fn set_long(
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::LongArray(array)) => {
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -861,9 +784,7 @@ pub(crate) async fn set_short(
     match reference {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ShortArray(array)) => {
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
             } else {
@@ -1089,9 +1010,7 @@ mod tests {
         for i in 0..3 {
             let inner_array = outer_array.get(i).expect("inner array");
             if let Some(Reference::IntArray(inner_array)) = inner_array {
-                let inner_array = inner_array
-                    .read()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                let inner_array = inner_array.read();
                 assert_eq!(inner_array.len(), 4);
                 for j in 0..4 {
                     assert_eq!(inner_array.get(j), Some(&0i32));

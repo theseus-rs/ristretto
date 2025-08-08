@@ -1,4 +1,4 @@
-use crate::Error::{FieldNotFound, InvalidValueType, ParseError, PoisonedLock};
+use crate::Error::{FieldNotFound, InvalidValueType, ParseError};
 use crate::Reference::{ByteArray, CharArray};
 use crate::field::FieldKey;
 use crate::{Class, Field, Reference, Result, Value};
@@ -283,14 +283,8 @@ impl Object {
                     Value::Object(Some(Reference::Object(self_object))),
                     Value::Object(Some(Reference::Object(other_object))),
                 ) => {
-                    let self_object = self_object
-                        .read()
-                        .map_err(|error| PoisonedLock(error.to_string()))
-                        .expect("poisoned lock");
-                    let other_object = other_object
-                        .read()
-                        .map_err(|error| PoisonedLock(error.to_string()))
-                        .expect("poisoned lock");
+                    let self_object = self_object.read();
+                    let other_object = other_object.read();
                     if !self_object.equal_with_visited(&other_object, visited) {
                         return false;
                     }
@@ -522,17 +516,13 @@ impl Object {
                 let coder = self.value("coder")?.as_i32()?;
                 if coder == 0 {
                     // Latin-1 encoded string
-                    let bytes = bytes
-                        .read()
-                        .map_err(|error| PoisonedLock(error.to_string()))?;
+                    let bytes = bytes.read();
                     #[expect(clippy::cast_sign_loss)]
                     let value = bytes.iter().map(|&byte| char::from(byte as u8)).collect();
                     Ok(value)
                 } else {
                     // UTF-16 encoded string
-                    let bytes = bytes
-                        .read()
-                        .map_err(|error| PoisonedLock(error.to_string()))?;
+                    let bytes = bytes.read();
                     #[expect(clippy::cast_sign_loss)]
                     let code_units = bytes
                         .chunks(2)
@@ -544,9 +534,7 @@ impl Object {
                 }
             }
             CharArray(bytes) => {
-                let bytes = bytes
-                    .read()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                let bytes = bytes.read();
                 let value =
                     String::from_utf16(&bytes).map_err(|error| ParseError(error.to_string()))?;
                 Ok(value)

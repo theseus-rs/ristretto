@@ -1,4 +1,4 @@
-use crate::Error::{InternalError, InvalidStackValue, PoisonedLock};
+use crate::Error::{InternalError, InvalidStackValue};
 use crate::JavaError::{ArrayIndexOutOfBoundsException, ClassCastException, NullPointerException};
 use crate::assignable::Assignable;
 use crate::frame::ExecutionResult::Return;
@@ -162,10 +162,7 @@ pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::Array(object_array)) => {
-            let array = object_array
-                .elements
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = object_array.elements.read();
             let original_index = index;
             let length = array.len();
             let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
@@ -197,10 +194,7 @@ pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::Array(object_array)) => {
-            let mut array = object_array
-                .elements
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = object_array.elements.write();
             let length = array.capacity();
             let original_index = index;
             let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
@@ -327,9 +321,7 @@ async fn is_instance_of(thread: &Thread, object: &Reference, class: &Arc<Class>)
             .await?),
         Reference::Object(object) => {
             let object_class = {
-                let object = object
-                    .read()
-                    .map_err(|error| PoisonedLock(error.to_string()))?;
+                let object = object.read();
                 object.class().clone()
             };
             Ok(class.is_assignable_from(thread, &object_class).await?)

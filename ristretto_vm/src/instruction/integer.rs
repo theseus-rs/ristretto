@@ -1,4 +1,4 @@
-use crate::Error::{InvalidStackValue, PoisonedLock};
+use crate::Error::InvalidStackValue;
 use crate::JavaError::{ArrayIndexOutOfBoundsException, NullPointerException};
 use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue};
@@ -202,9 +202,7 @@ pub(crate) fn iaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::IntArray(array)) => {
-            let array = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let array = array.read();
             let original_index = index;
             let length = array.len();
             let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
@@ -236,9 +234,7 @@ pub(crate) fn iastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     match stack.pop_object()? {
         None => Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::IntArray(array)) => {
-            let mut array = array
-                .write()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let mut array = array.write();
             let length = array.capacity();
             let original_index = index;
             let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {

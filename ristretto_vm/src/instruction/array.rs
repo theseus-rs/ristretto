@@ -1,4 +1,4 @@
-use crate::Error::{InvalidStackValue, PoisonedLock};
+use crate::Error::InvalidStackValue;
 use crate::JavaError::NullPointerException;
 use crate::Result;
 use crate::frame::ExecutionResult::Continue;
@@ -55,52 +55,35 @@ pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let length = match stack.pop_object()? {
         None => return Err(NullPointerException("array cannot be null".to_string()).into()),
         Some(Reference::ByteArray(array)) => {
-            let guard = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let guard = array.read();
             guard.len()
         }
         Some(Reference::CharArray(array)) => {
-            let guard = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let guard = array.read();
             guard.len()
         }
         Some(Reference::FloatArray(array)) => {
-            let guard = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let guard = array.read();
             guard.len()
         }
         Some(Reference::DoubleArray(array)) => {
-            let guard = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let guard = array.read();
             guard.len()
         }
         Some(Reference::ShortArray(array)) => {
-            let guard = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let guard = array.read();
             guard.len()
         }
         Some(Reference::IntArray(array)) => {
-            let guard = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let guard = array.read();
             guard.len()
         }
         Some(Reference::LongArray(array)) => {
-            let guard = array
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let guard = array.read();
             guard.len()
         }
         Some(Reference::Array(object_array)) => {
-            let guard = object_array
-                .elements
-                .read()
-                .map_err(|error| PoisonedLock(error.to_string()))?;
+            let guard = object_array.elements.read();
             guard.len()
         }
         Some(object) => {

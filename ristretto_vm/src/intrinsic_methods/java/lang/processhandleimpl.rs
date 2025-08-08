@@ -1,4 +1,3 @@
-use crate::Error::PoisonedLock;
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -71,15 +70,9 @@ pub(crate) async fn get_process_pids_0(
     let Some(Reference::LongArray(pids)) = parameters.pop_reference()? else {
         return Ok(Some(Value::Int(-1)));
     };
-    let mut start_times = start_times
-        .write()
-        .map_err(|error| PoisonedLock(error.to_string()))?;
-    let mut ppids = ppids
-        .write()
-        .map_err(|error| PoisonedLock(error.to_string()))?;
-    let mut pids = pids
-        .write()
-        .map_err(|error| PoisonedLock(error.to_string()))?;
+    let mut start_times = start_times.write();
+    let mut ppids = ppids.write();
+    let mut pids = pids.write();
     let pid = parameters.pop_long()?;
     let mut system = System::new_all();
 
