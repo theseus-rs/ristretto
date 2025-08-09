@@ -7,7 +7,7 @@ async fn test_helloworld(java_verison: &str) -> Result<()> {
         .join("..")
         .join("classes")
         .join("classes.jar");
-    let class_path = ClassPath::from(classes_jar_path.to_string_lossy());
+    let class_path = ClassPath::from(&[classes_jar_path]);
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())
         .main_class("HelloWorld")

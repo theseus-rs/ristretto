@@ -2,6 +2,7 @@ use crate::Result;
 use crate::class_path_entry::directory::Directory;
 use crate::class_path_entry::jar::Jar;
 use ristretto_classfile::ClassFile;
+use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
 use std::path::PathBuf;
 
@@ -15,11 +16,15 @@ pub enum ClassPathEntry {
 /// Implementation for `ClassPathEntry`.
 impl ClassPathEntry {
     /// Create a new class path entry.
-    pub fn new<S: AsRef<str>>(path: S) -> Self {
+    pub fn new<S: AsRef<OsStr>>(path: S) -> Self {
         let path = path.as_ref();
+
         #[cfg(feature = "url")]
-        if path.starts_with("https://") || path.starts_with("http://") {
-            return ClassPathEntry::Jar(Jar::from_url(path));
+        {
+            let path_str = path.to_string_lossy();
+            if path_str.starts_with("https://") || path_str.starts_with("http://") {
+                return ClassPathEntry::Jar(Jar::from_url(path_str));
+            }
         }
 
         if PathBuf::from(path).is_file() {
@@ -31,7 +36,7 @@ impl ClassPathEntry {
 
     /// Get the name of the class path entry.
     #[must_use]
-    pub fn name(&self) -> &String {
+    pub fn name(&self) -> &OsString {
         match self {
             ClassPathEntry::Directory(directory) => directory.name(),
             ClassPathEntry::Jar(jar) => jar.name(),
@@ -83,11 +88,11 @@ mod tests {
     fn test_new_directory() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
-        let class_path_entry = ClassPathEntry::new(classes_directory.to_string_lossy());
+        let class_path_entry = ClassPathEntry::new(classes_directory.clone());
 
         assert!(matches!(class_path_entry, ClassPathEntry::Directory(_)));
         assert_eq!(
-            class_path_entry.name().to_string(),
+            class_path_entry.name().to_string_lossy(),
             classes_directory.to_string_lossy()
         );
     }
@@ -96,12 +101,12 @@ mod tests {
     async fn test_read_class_directory() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
-        let class_path_entry = ClassPathEntry::new(classes_directory.to_string_lossy());
+        let class_path_entry = ClassPathEntry::new(classes_directory.clone());
         let class_file = class_path_entry.read_class("HelloWorld").await?;
 
         assert!(matches!(class_path_entry, ClassPathEntry::Directory(_)));
         assert_eq!(
-            class_path_entry.name().to_string(),
+            class_path_entry.name().to_string_lossy(),
             classes_directory.to_string_lossy()
         );
         assert_eq!("HelloWorld", class_file.class_name()?);
@@ -112,7 +117,7 @@ mod tests {
     async fn test_class_names_directory() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
-        let class_path_entry = ClassPathEntry::new(classes_directory.to_string_lossy());
+        let class_path_entry = ClassPathEntry::new(classes_directory);
         let class_names = class_path_entry.class_names().await?;
         assert!(class_names.contains(&"HelloWorld".to_string()));
         Ok(())
@@ -129,11 +134,11 @@ mod tests {
             .join("..")
             .join("classes")
             .join("classes.jar");
-        let class_path_entry = ClassPathEntry::new(classes_jar.to_string_lossy());
+        let class_path_entry = ClassPathEntry::new(classes_jar.clone());
 
         assert!(matches!(class_path_entry, ClassPathEntry::Jar(_)));
         assert_eq!(
-            class_path_entry.name().to_string(),
+            class_path_entry.name().to_string_lossy(),
             classes_jar.to_string_lossy()
         );
     }
@@ -145,12 +150,12 @@ mod tests {
             .join("..")
             .join("classes")
             .join("classes.jar");
-        let class_path_entry = ClassPathEntry::new(classes_jar.to_string_lossy());
+        let class_path_entry = ClassPathEntry::new(classes_jar.clone());
         let class_file = class_path_entry.read_class("HelloWorld").await?;
 
         assert!(matches!(class_path_entry, ClassPathEntry::Jar(_)));
         assert_eq!(
-            class_path_entry.name().to_string(),
+            class_path_entry.name().to_string_lossy(),
             classes_jar.to_string_lossy()
         );
         assert_eq!("HelloWorld", class_file.class_name()?);
@@ -164,7 +169,7 @@ mod tests {
             .join("..")
             .join("classes")
             .join("classes.jar");
-        let class_path_entry = ClassPathEntry::new(classes_jar.to_string_lossy());
+        let class_path_entry = ClassPathEntry::new(classes_jar);
         let class_names = class_path_entry.class_names().await?;
         assert!(class_names.contains(&"HelloWorld".to_string()));
         Ok(())

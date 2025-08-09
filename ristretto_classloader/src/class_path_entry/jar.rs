@@ -3,6 +3,7 @@ use crate::Result;
 use crate::class_path_entry::manifest::Manifest;
 use reqwest::Client;
 use ristretto_classfile::ClassFile;
+use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -15,19 +16,19 @@ use zip::ZipArchive;
 /// See: <https://docs.oracle.com/en/java/javase/22/docs/specs/jar/jar.html>
 #[derive(Debug)]
 pub struct Jar {
-    name: String,
+    name: OsString,
     archive: Arc<RwLock<Archive>>,
 }
 
 /// Implement the `Jar` struct.
 impl Jar {
     /// Create new jar from a path.
-    pub fn new<S: AsRef<str>>(path: S) -> Self {
+    pub fn new<S: AsRef<OsStr>>(path: S) -> Self {
         let path = path.as_ref();
         let archive = Archive::from_path(PathBuf::from(path));
 
         Self {
-            name: path.to_string(),
+            name: path.to_os_string(),
             archive: Arc::new(RwLock::new(archive)),
         }
     }
@@ -39,23 +40,24 @@ impl Jar {
         let archive = Archive::from_url(url);
 
         Self {
-            name: url.to_string(),
+            name: OsString::from(url),
             archive: Arc::new(RwLock::new(archive)),
         }
     }
 
     /// Create new jar from bytes.
-    pub fn from_bytes<S: AsRef<str>>(name: S, bytes: Vec<u8>) -> Self {
+    pub fn from_bytes<S: AsRef<OsStr>>(name: S, bytes: Vec<u8>) -> Self {
+        let name = name.as_ref();
         let archive = Archive::from_bytes(bytes);
 
         Self {
-            name: name.as_ref().to_string(),
+            name: name.to_os_string(),
             archive: Arc::new(RwLock::new(archive)),
         }
     }
 
     /// Get the name of the jar.
-    pub fn name(&self) -> &String {
+    pub fn name(&self) -> &OsString {
         &self.name
     }
 
@@ -305,8 +307,8 @@ mod tests {
             .join("..")
             .join("classes")
             .join("classes.jar");
-        let jar = Jar::new(classes_jar.to_string_lossy());
-        assert!(jar.name().ends_with("classes.jar"));
+        let jar = Jar::new(classes_jar);
+        assert!(jar.name().to_string_lossy().ends_with("classes.jar"));
     }
 
     #[tokio::test]
@@ -318,7 +320,7 @@ mod tests {
             .join("classes.jar");
         let bytes = fs::read(classes_jar)?;
         let jar = Jar::from_bytes("test", bytes);
-        assert_eq!("test", jar.name().as_str());
+        assert_eq!("test", jar.name().to_string_lossy());
         let class_file = jar.read_class("HelloWorld").await?;
         assert_eq!("HelloWorld", class_file.class_name()?);
         Ok(())
@@ -331,8 +333,8 @@ mod tests {
             .join("..")
             .join("classes")
             .join("classes.jar");
-        let jar1 = Jar::new(classes_jar.to_string_lossy());
-        let jar2 = Jar::new(classes_jar.to_string_lossy());
+        let jar1 = Jar::new(classes_jar.clone());
+        let jar2 = Jar::new(classes_jar);
         assert_eq!(jar1, jar2);
     }
 
@@ -343,7 +345,7 @@ mod tests {
             .join("..")
             .join("classes")
             .join("classes.jar");
-        let jar = Jar::new(classes_jar.to_string_lossy());
+        let jar = Jar::new(classes_jar);
         // Read the class file twice to test caching
         for _ in 0..2 {
             let class_file = jar.read_class("HelloWorld").await?;
@@ -363,7 +365,7 @@ mod tests {
             .join("..")
             .join("classes")
             .join("classes.jar");
-        let jar = Jar::new(classes_jar.to_string_lossy());
+        let jar = Jar::new(classes_jar);
         let manifest = jar.manifest().await?;
         assert_eq!(Some("1.0"), manifest.attribute(MANIFEST_VERSION));
         assert_eq!(Some("HelloWorld"), manifest.attribute(MAIN_CLASS));
@@ -377,7 +379,7 @@ mod tests {
             .join("..")
             .join("classes")
             .join("classes.jar");
-        let jar = Jar::new(classes_jar.to_string_lossy());
+        let jar = Jar::new(classes_jar);
         let result = jar.read_class("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
     }
@@ -389,7 +391,7 @@ mod tests {
             .join("..")
             .join("classes")
             .join("classes.jar");
-        let jar = Jar::new(classes_jar.to_string_lossy());
+        let jar = Jar::new(classes_jar);
         let class_names = jar.class_names().await?;
         assert!(class_names.contains(&"HelloWorld".to_string()));
         Ok(())
@@ -407,7 +409,7 @@ mod tests {
         archive.finish()?;
 
         // Test reading the class file
-        let jar = Jar::new(jar_path.to_string_lossy());
+        let jar = Jar::new(jar_path);
         let result = jar.read_class("HelloWorld").await;
         assert!(matches!(result, Err(ClassFileError(_))));
         Ok(())
@@ -433,7 +435,7 @@ mod tests {
         archive.finish()?;
 
         // Test reading the class file
-        let jar = Jar::new(jar_path.to_string_lossy());
+        let jar = Jar::new(jar_path);
         let result = jar.read_class("HelloWorld").await;
         assert!(matches!(result, Err(ClassFileError(_))));
         Ok(())

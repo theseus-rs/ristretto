@@ -579,7 +579,7 @@ mod tests {
     async fn get_class(class_name: &str) -> Result<(Arc<Thread>, Arc<Class>)> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_path = cargo_manifest.join("..").join("classes");
-        let class_path = ClassPath::from(classes_path.to_string_lossy());
+        let class_path = ClassPath::from(&[classes_path]);
         let configuration = ConfigurationBuilder::new()
             .class_path(class_path.clone())
             .build()?;

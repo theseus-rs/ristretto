@@ -907,9 +907,7 @@ mod tests {
     async fn simple_class() -> Result<Arc<Class>> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
-        let class_path_entries = [classes_directory.to_string_lossy().to_string()];
-
-        let class_path = ClassPath::from(class_path_entries.join(":"));
+        let class_path = ClassPath::from(&[classes_directory]);
         let class_loader = ClassLoader::new("test", class_path);
         let class_name = "Simple";
         class_loader.load(class_name).await

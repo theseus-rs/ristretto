@@ -218,16 +218,16 @@ mod tests {
     #[tokio::test]
     async fn test_new() {
         let name = "test";
-        let class_path = ClassPath::from(".");
+        let class_path = ClassPath::from(&["."]);
         let class_loader = ClassLoader::new(name, class_path);
         assert_eq!(name, class_loader.name());
-        assert_eq!(&ClassPath::from("."), class_loader.class_path());
+        assert_eq!(&ClassPath::from(&["."]), class_loader.class_path());
         assert!(class_loader.parent().await.is_none());
     }
 
     #[test]
     fn test_equality() {
-        let class_path = ClassPath::from(".");
+        let class_path = ClassPath::from(&["."]);
         let class_loader = ClassLoader::new("test", class_path);
         let class_loader2 = class_loader.clone();
         assert_eq!(class_loader, class_loader2);
@@ -235,18 +235,18 @@ mod tests {
 
     #[test]
     fn test_inequality() {
-        let class_path1 = ClassPath::from(".");
+        let class_path1 = ClassPath::from(&["."]);
         let class_loader1 = ClassLoader::new("test1", class_path1);
-        let class_path2 = ClassPath::from(".");
+        let class_path2 = ClassPath::from(&["."]);
         let class_loader2 = ClassLoader::new("test2", class_path2);
         assert_ne!(class_loader1, class_loader2);
     }
 
     #[tokio::test]
     async fn test_set_parent() {
-        let class_path1 = ClassPath::from(".");
+        let class_path1 = ClassPath::from(&["."]);
         let class_loader1 = ClassLoader::new("test1", class_path1);
-        let class_path2 = ClassPath::from(".");
+        let class_path2 = ClassPath::from(&["."]);
         let class_loader2 = ClassLoader::new("test2", class_path2);
         class_loader2.set_parent(Some(class_loader1.clone())).await;
         assert_eq!(
@@ -261,9 +261,7 @@ mod tests {
     async fn test_load_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
-        let class_path_entries = [classes_directory.to_string_lossy().to_string()];
-
-        let class_path = ClassPath::from(class_path_entries.join(":"));
+        let class_path = ClassPath::from(&[classes_directory]);
         let class_loader = ClassLoader::new("test", class_path);
         let class_name = "HelloWorld";
         let class = class_loader.load(class_name).await?;
@@ -279,9 +277,7 @@ mod tests {
     async fn test_load_class_more_than_once() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
-        let class_path_entries = [classes_directory.to_string_lossy().to_string()];
-
-        let class_path = ClassPath::from(class_path_entries.join(":"));
+        let class_path = ClassPath::from(&[classes_directory]);
         let class_loader = ClassLoader::new("test", class_path);
         let class_name = "Simple";
 
@@ -301,10 +297,9 @@ mod tests {
     async fn test_load_class_parent() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
-        let class_path_entries = [classes_directory.to_string_lossy().to_string()];
-        let class_path = ClassPath::from(class_path_entries.join(":"));
+        let class_path = ClassPath::from(&[classes_directory]);
         let boot_class_loader = ClassLoader::new("test", class_path);
-        let foo_class_path = ClassPath::from("foo");
+        let foo_class_path = ClassPath::from(&["foo"]);
         let class_loader = ClassLoader::new("test", foo_class_path);
         class_loader.set_parent(Some(boot_class_loader)).await;
 
@@ -315,7 +310,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_class_not_found() {
-        let class_path = ClassPath::from(".");
+        let class_path = ClassPath::from(&["."]);
         let class_loader = ClassLoader::new("test", class_path);
         let result = class_loader.load("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
@@ -323,16 +318,16 @@ mod tests {
 
     #[test]
     fn test_to_string() {
-        let class_path = ClassPath::from(".");
+        let class_path = ClassPath::from(&["."]);
         let class_loader = ClassLoader::new("test", class_path);
         assert_eq!("test=.", class_loader.to_string());
     }
 
     #[tokio::test]
     async fn test_to_string_parent() {
-        let class_path1 = ClassPath::from(".");
+        let class_path1 = ClassPath::from(&["."]);
         let class_loader1 = ClassLoader::new("test1", class_path1);
-        let class_path2 = ClassPath::from(".");
+        let class_path2 = ClassPath::from(&["."]);
         let class_loader2 = ClassLoader::new("test2", class_path2);
         class_loader2.set_parent(Some(class_loader1)).await;
         // Note: Display implementation no longer shows parent chain due to async limitations
@@ -346,7 +341,7 @@ mod tests {
             .join("..")
             .join("classes")
             .join("classes.jar");
-        let class_path = ClassPath::from(classes_jar.to_string_lossy());
+        let class_path = ClassPath::from(&[classes_jar]);
         let class_loader = ClassLoader::new("test", class_path);
         let class_name = "HelloWorld";
         let _class = class_loader.load(class_name).await?;
