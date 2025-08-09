@@ -1,18 +1,22 @@
-use anstyle::AnsiColor;
+use anstyle::{AnsiColor, Style};
+use clap::builder::Styles;
 use clap::{ArgAction, ArgGroup, Parser};
 use std::env;
 use std::io::{self, Write};
 
-fn styles() -> clap::builder::Styles {
-    clap::builder::Styles::styled()
-        .header(AnsiColor::Green.on_default().bold())
-        .usage(AnsiColor::Green.on_default().bold())
-        .literal(AnsiColor::Cyan.on_default())
-        .placeholder(AnsiColor::Cyan.on_default())
-        .error(AnsiColor::Red.on_default().bold())
-        .valid(AnsiColor::Green.on_default())
-        .invalid(AnsiColor::Yellow.on_default())
-}
+const CYAN: Style = AnsiColor::Cyan.on_default();
+const GREEN: Style = AnsiColor::Green.on_default();
+const GREEN_BOLD: Style = AnsiColor::Green.on_default().bold();
+const RED_BOLD: Style = AnsiColor::Red.on_default().bold();
+const YELLOW: Style = AnsiColor::Yellow.on_default();
+const STYLES: Styles = Styles::styled()
+    .header(GREEN_BOLD)
+    .usage(GREEN_BOLD)
+    .literal(CYAN)
+    .placeholder(CYAN)
+    .error(RED_BOLD)
+    .valid(GREEN)
+    .invalid(YELLOW);
 
 #[expect(clippy::struct_excessive_bools)]
 #[derive(Debug, Parser)]
@@ -45,7 +49,7 @@ pub struct XOptions {
     ArgGroup::new("execution")
         .args(&["mainclass", "jar"])
 ))]
-#[clap(styles=styles())]
+#[clap(styles=STYLES)]
 pub struct Cli {
     #[arg(help = "the main class to execute")]
     pub mainclass: Option<String>,
@@ -126,8 +130,7 @@ impl Cli {
 
 /// Prints help for the X options.
 pub fn print_x_help() {
-    let styles = styles();
-    let literal_style = styles.get_literal();
+    let literal_style = STYLES.get_literal();
     let mut stderr = io::stderr();
 
     // Use literal style for option names to match clap's styling
