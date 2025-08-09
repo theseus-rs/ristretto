@@ -1,8 +1,8 @@
 use crate::Error::InternalError;
-use crate::Result;
 use crate::intrinsic_methods::java::lang::class::get_class;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
+use crate::{JavaObject, Result};
 use async_recursion::async_recursion;
 use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::{
@@ -202,7 +202,6 @@ pub(crate) async fn register_natives(
     Ok(None)
 }
 
-#[expect(clippy::too_many_lines)]
 pub(crate) async fn resolve(
     thread: Arc<Thread>,
     member_self: Value,
@@ -221,18 +220,62 @@ pub(crate) async fn resolve(
         let class_object = class_object.as_object_ref()?;
         class_object.value("name")?.as_string()?
     };
-    let class = thread.class(class_name.clone()).await?;
-    let _reference_kind = get_reference_kind(flags)?;
+    let class = thread.class(class_name).await?;
     let member_name_flags = MemberNameFlags::from_bits_truncate(flags);
 
-    // Handle methods/constructors
     if member_name_flags.contains(MemberNameFlags::IS_METHOD)
         || member_name_flags.contains(MemberNameFlags::IS_CONSTRUCTOR)
     {
-        let method_type = {
-            let member_self = member_self.as_object_ref()?;
-            member_self.value("type")?
-        };
+        resolve_method(
+            &thread,
+            member_self,
+            &caller,
+            lookup_mode_flags,
+            speculative_resolve,
+            &name,
+            flags,
+            &class,
+        )
+        .await
+    } else if member_name_flags.contains(MemberNameFlags::IS_FIELD) {
+        resolve_field(
+            &thread,
+            member_self,
+            caller,
+            lookup_mode_flags,
+            speculative_resolve,
+            name,
+            flags,
+            &class,
+        )
+        .await
+    } else {
+        Err(InternalError(format!(
+            "Unsupported member name flag: {member_name_flags:?}"
+        )))
+    }
+}
+
+/// Resolves a method in the given class, checking access permissions and returning the member self
+/// if successful.
+#[expect(clippy::too_many_arguments)]
+async fn resolve_method(
+    thread: &Thread,
+    member_self: Value,
+    caller: &Option<Arc<Class>>,
+    lookup_mode_flags: &LookupModeFlags,
+    speculative_resolve: bool,
+    name: &Value,
+    flags: i32,
+    class: &Arc<Class>,
+) -> Result<Option<Value>> {
+    let _reference_kind = get_reference_kind(flags)?;
+    let method_type = {
+        let member_self = member_self.as_object_ref()?;
+        member_self.value("type")?
+    };
+
+    let (parameter_descriptors, return_descriptor) = {
         let method_type = method_type.as_object_ref()?;
         let parameter_types = method_type.value("ptypes")?;
         let parameters: Vec<Value> = parameter_types.try_into()?;
@@ -247,82 +290,108 @@ pub(crate) async fn resolve(
         let return_type = return_type.as_object_ref()?;
         let return_class_name = return_type.value("name")?.as_string()?;
         let return_descriptor = Class::convert_to_descriptor(&return_class_name);
+        (parameter_descriptors, return_descriptor)
+    };
 
-        let method_name = name.as_string()?;
-        let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
-        let method = match class_name.as_str() {
-            "java.lang.invoke.DelegatingMethodHandle$Holder"
-            | "java.lang.invoke.DirectMethodHandle$Holder"
-            | "java.lang.invoke.Invokers$Holder" => {
-                resolve_holder_methods(class.clone(), &method_name, &method_descriptor)?
-            }
-            _ => class.try_get_method(method_name.clone(), method_descriptor.clone())?,
+    let method_name = name.as_string()?;
+    let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
+    let method = match class.name() {
+        "java.lang.invoke.DelegatingMethodHandle$Holder"
+        | "java.lang.invoke.DirectMethodHandle$Holder"
+        | "java.lang.invoke.Invokers$Holder" => {
+            resolve_holder_methods(class.clone(), &method_name, &method_descriptor)?
+        }
+        _ => class.try_get_method(&method_name, &method_descriptor)?,
+    };
+
+    // Access control enforcement
+    let method_access_flags = method.access_flags();
+    if !check_method_access(caller, class, *method_access_flags, *lookup_mode_flags)? {
+        return if speculative_resolve {
+            // If speculative, return None (fail silently)
+            Ok(None)
+        } else {
+            Err(IllegalAccessError(format!(
+                "member is {}: {}.{method_name}{method_descriptor}",
+                if method_access_flags.contains(MethodAccessFlags::PRIVATE) {
+                    "private"
+                } else {
+                    "inaccessible"
+                },
+                class.name(),
+            ))
+            .into())
         };
-
-        // Access control enforcement
-        let method_access_flags = method.access_flags();
-        if !check_method_access(caller, &class, *method_access_flags, *lookup_mode_flags)? {
-            return if speculative_resolve {
-                // If speculative, return None (fail silently)
-                Ok(None)
-            } else {
-                Err(IllegalAccessError(format!(
-                    "member is {}: {}.{}{}",
-                    if method_access_flags.contains(MethodAccessFlags::PRIVATE) {
-                        "private"
-                    } else {
-                        "inaccessible"
-                    },
-                    class_name,
-                    method_name,
-                    method_descriptor,
-                ))
-                .into())
-            };
-        }
-
-        let modifiers = i32::from(method_access_flags.bits());
-        let flags = flags | modifiers;
-        {
-            let mut member_self = member_self.as_object_mut()?;
-            member_self.set_value("flags", Value::from(flags))?;
-        }
-        Ok(Some(member_self))
     }
-    // Handle fields (for both normal field and VarHandle)
-    else if member_name_flags.contains(MemberNameFlags::IS_FIELD) {
-        let field_name = name.as_string()?;
-        let field = class.declared_field(&field_name)?;
-        let field_access_flags = field.access_flags();
-        if !check_field_access(caller, &class, *field_access_flags, *lookup_mode_flags)? {
-            return if speculative_resolve {
-                Ok(None)
-            } else {
-                Err(IllegalAccessError(format!(
-                    "member is {}: {}.{}",
-                    if field_access_flags.contains(FieldAccessFlags::PRIVATE) {
-                        "private"
-                    } else {
-                        "inaccessible"
-                    },
-                    class_name,
-                    field_name,
-                ))
-                .into())
-            };
-        }
-        let modifiers = i32::from(field_access_flags.bits());
-        let flags = flags | modifiers;
-        {
-            let mut member_self = member_self.as_object_mut()?;
-            member_self.set_value("flags", Value::from(flags))?;
-        }
-        Ok(Some(member_self))
-    } else {
-        Err(InternalError(format!(
-            "Unsupported member name flag: {member_name_flags:?}"
-        )))
+
+    let modifiers = i32::from(method_access_flags.bits());
+    let flags = flags | modifiers;
+    {
+        let vm = thread.vm()?;
+        let member_handles = vm.member_handles();
+        let method_signature =
+            format!("{}.{}{}", class.name(), method.name(), method.descriptor(),);
+        member_handles
+            .insert(method_signature, method.into())
+            .await?;
+        let _vmindex = method_descriptor.to_object(thread).await?;
+        let mut member_self = member_self.as_object_mut()?;
+        member_self.set_value("flags", Value::from(flags))?;
+        // member_self.set_value("vmindex", vmindex)?;
     }
+    Ok(Some(member_self))
+}
+
+/// Resolves a field in the given class, checking access permissions and returning the member self
+/// if successful.
+#[expect(clippy::too_many_arguments)]
+async fn resolve_field(
+    thread: &Thread,
+    member_self: Value,
+    caller: Option<Arc<Class>>,
+    lookup_mode_flags: &LookupModeFlags,
+    speculative_resolve: bool,
+    name: Value,
+    flags: i32,
+    class: &Arc<Class>,
+) -> Result<Option<Value>> {
+    let _reference_kind = get_reference_kind(flags)?;
+    let field_name = name.as_string()?;
+    let field = class.declared_field(&field_name)?;
+    let field_access_flags = field.access_flags();
+    if !check_field_access(caller, class, *field_access_flags, *lookup_mode_flags)? {
+        return if speculative_resolve {
+            Ok(None)
+        } else {
+            Err(IllegalAccessError(format!(
+                "member is {}: {}.{}",
+                if field_access_flags.contains(FieldAccessFlags::PRIVATE) {
+                    "private"
+                } else {
+                    "inaccessible"
+                },
+                class.name(),
+                field_name,
+            ))
+            .into())
+        };
+    }
+    let modifiers = i32::from(field_access_flags.bits());
+    let flags = flags | modifiers;
+    {
+        let vm = thread.vm()?;
+        let member_handles = vm.member_handles();
+        let field_offset = class.field_offset(&field_name)?;
+        let field_signature = format!("{}.{field_name}", class.name(),);
+        member_handles
+            .insert(field_signature.clone(), field_offset.into())
+            .await?;
+        let _vmindex = field_signature.to_object(thread).await?;
+        let mut member_self = member_self.as_object_mut()?;
+        member_self.set_value("flags", Value::from(flags))?;
+        // member_self.set_value("vmindex", vmindex)?;
+    }
+    Ok(Some(member_self))
 }
 
 /// Extracts the reference kind from the flags of a member name.
@@ -340,9 +409,8 @@ fn get_reference_kind(flags: i32) -> Result<ReferenceKind> {
 /// # References
 ///
 /// - [JLS §6.6 Access Control](https://docs.oracle.com/javase/specs/jls/se24/html/jls-6.html#jls-6.6)
-#[expect(clippy::needless_pass_by_value)]
 pub fn check_method_access(
-    caller: Option<Arc<Class>>,
+    caller: &Option<Arc<Class>>,
     declaring: &Arc<Class>,
     method_access_flags: MethodAccessFlags,
     lookup_mode_flags: LookupModeFlags,
@@ -356,7 +424,7 @@ pub fn check_method_access(
         return Ok(true);
     }
 
-    let Some(ref caller) = caller else {
+    let Some(caller) = caller else {
         return Ok(false);
     };
 
