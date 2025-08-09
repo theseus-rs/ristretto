@@ -5,8 +5,10 @@
 
 mod file;
 mod manager;
+mod member;
 mod thread;
 
 pub(crate) use file::{FileHandle, FileModeFlags};
 pub(crate) use manager::HandleManager;
+pub(crate) use member::MemberHandle;
 pub(crate) use thread::ThreadHandle;

@@ -1,6 +1,6 @@
 use crate::Error::InternalError;
 use crate::call_site_cache::CallSiteCache;
-use crate::handles::{FileHandle, HandleManager, ThreadHandle};
+use crate::handles::{FileHandle, HandleManager, MemberHandle, ThreadHandle};
 use crate::intrinsic_methods::MethodRegistry;
 use crate::java_object::JavaObject;
 use crate::rust_value::RustValue;
@@ -44,6 +44,7 @@ pub struct VM {
     next_thread_id: AtomicU64,
     thread_handles: HandleManager<u64, ThreadHandle>,
     file_handles: HandleManager<String, FileHandle>,
+    member_handles: HandleManager<String, MemberHandle>,
     string_pool: StringPool,
     call_site_cache: CallSiteCache,
 }
@@ -159,6 +160,7 @@ impl VM {
             next_thread_id: AtomicU64::new(1),
             thread_handles: HandleManager::new(),
             file_handles: HandleManager::new(),
+            member_handles: HandleManager::new(),
             string_pool: StringPool::new(),
             call_site_cache: CallSiteCache::new(),
         });
@@ -271,6 +273,11 @@ impl VM {
     /// Get the VM file handles
     pub(crate) fn file_handles(&self) -> &HandleManager<String, FileHandle> {
         &self.file_handles
+    }
+
+    /// Get the VM member handles used for dynamic invocation
+    pub(crate) fn member_handles(&self) -> &HandleManager<String, MemberHandle> {
+        &self.member_handles
     }
 
     /// Initialize the VM
