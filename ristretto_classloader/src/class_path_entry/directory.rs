@@ -4,7 +4,6 @@ use ristretto_classfile::ClassFile;
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::{fs, io};
-use tracing::instrument;
 use walkdir::WalkDir;
 
 /// A directory in the class path.
@@ -35,7 +34,6 @@ impl Directory {
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
-    #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
     pub fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         let name = name.as_ref();
         let parts = name.split('.').collect::<Vec<_>>();

@@ -9,7 +9,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::{fs, io};
 use tokio::sync::RwLock;
-use tracing::instrument;
 use zip::ZipArchive;
 
 /// A jar or zip in the class path.
@@ -80,7 +79,6 @@ impl Jar {
     /// # Errors
     ///
     /// if the file is not found or cannot be read.
-    #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
     pub async fn read_file<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
         let mut archive = self.archive.write().await;
         archive.load_file(name.as_ref()).await
@@ -91,7 +89,6 @@ impl Jar {
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
-    #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         let name = name.as_ref();
         let mut archive = self.archive.write().await;
@@ -236,7 +233,6 @@ impl Archive {
     /// # Errors
     ///
     /// if the jar cannot be read or the class file cannot be loaded.
-    #[instrument(level = "trace")]
     async fn load_class_file(&mut self, class_name: &str) -> Result<Option<ClassFile>> {
         let class_file_name = format!("{class_name}.class");
         let file = self.load_file(&class_file_name).await?;
@@ -254,7 +250,6 @@ impl Archive {
     /// # Errors
     ///
     /// if the jar cannot be read or the class file cannot be loaded.
-    #[instrument(level = "trace")]
     async fn load_file(&mut self, file_name: &str) -> Result<Option<Vec<u8>>> {
         let zip_archive = self.zip_archive().await?;
         if let Some(index) = zip_archive.index_for_name(file_name) {

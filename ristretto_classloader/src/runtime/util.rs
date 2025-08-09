@@ -5,7 +5,7 @@ use reqwest::header;
 use std::env;
 use std::env::consts;
 use std::sync::LazyLock;
-use tracing::{debug, instrument};
+use tracing::debug;
 
 const DEFAULT_MAJOR_VERSION: u64 = 21;
 const GITHUB_API_VERSION_HEADER: &str = "X-GitHub-Api-Version";
@@ -36,7 +36,6 @@ static USER_AGENT: LazyLock<String> = LazyLock::new(|| {
 /// # Errors
 ///
 /// An error will be returned if the request fails or if the version requirement is not supported.
-#[instrument(level = "debug")]
 pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String, Vec<u8>)> {
     let version = if version == "*" {
         DEFAULT_MAJOR_VERSION.to_string()
@@ -73,7 +72,6 @@ pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String
 /// # Errors
 ///
 /// An error will be returned if the request fails
-#[instrument(level = "debug")]
 async fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
     let client = Client::new();
     let mut headers = header::HeaderMap::new();
@@ -132,7 +130,6 @@ async fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
 /// # Errors
 ///
 /// An error will be returned if the request fails
-#[instrument(level = "debug")]
 async fn get_release_versions(major_version: &str) -> Result<Vec<String>> {
     let url = format!("https://api.github.com/repos/corretto/corretto-{major_version}/releases");
     let client = Client::new();

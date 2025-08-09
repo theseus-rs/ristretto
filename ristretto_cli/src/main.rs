@@ -37,8 +37,9 @@ async fn main() -> Result<()> {
 async fn main() -> Result<()> {
     startup_trace!("[cli] entry point");
     let cli = Cli::parse();
+    startup_trace!("[cli] argument parse");
     logging::initialize()?;
-    startup_trace!("[cli] initialization");
+    startup_trace!("[cli] logging initialize");
     if common_main(cli).await.is_err() {
         std::process::exit(1);
     }

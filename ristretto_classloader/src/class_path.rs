@@ -3,7 +3,7 @@ use crate::Result;
 use crate::class_path_entry::ClassPathEntry;
 use ristretto_classfile::ClassFile;
 use std::fmt::Display;
-use tracing::{info, instrument};
+use tracing::info;
 
 /// Represents a class path.
 ///
@@ -50,7 +50,6 @@ impl ClassPath {
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
-    #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         let name = name.as_ref();
 

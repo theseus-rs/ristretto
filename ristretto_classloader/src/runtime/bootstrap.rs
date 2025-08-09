@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, io};
 use tar::Archive;
-use tracing::{debug, instrument, warn};
+use tracing::{debug, warn};
 
 pub const DEFAULT_JAVA_VERSION: &str = "21.0.8.9.1";
 
@@ -26,8 +26,7 @@ pub async fn default_class_loader() -> Result<(PathBuf, String, Arc<ClassLoader>
 /// # Errors
 ///
 /// An error will be returned if the class loader cannot be created.
-#[instrument(level = "debug")]
-pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
+pub async fn home_class_loader(java_home: &Path) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
     let version_file = java_home.join("version.txt");
     // Corretto version 8 does not have a release file, but includes a version.txt file. Since most
     // versions of Corretto include a version.txt file, and it should be faster to process, we can
@@ -65,7 +64,7 @@ pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, 
     let class_path = get_class_path(&java_version, java_home)?;
     let class_loader = ClassLoader::new("bootstrap", class_path);
     register_primitives(&class_loader).await?;
-    Ok((java_home.clone(), java_version, class_loader))
+    Ok((java_home.to_path_buf(), java_version, class_loader))
 }
 
 /// Get a class loader for the given Java runtime version. If the version is not installed, the
@@ -75,7 +74,6 @@ pub async fn home_class_loader(java_home: &PathBuf) -> Result<(PathBuf, String, 
 /// # Errors
 ///
 /// An error will be returned if the class loader cannot be created.
-#[instrument(level = "debug")]
 pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
     let mut version = version.to_string();
     #[cfg(target_family = "wasm")]
@@ -172,7 +170,6 @@ fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
 /// # Errors
 ///
 /// An error will be returned if the archive cannot be extracted.
-#[instrument(level = "debug", skip(archive))]
 async fn extract_archive(
     version: &str,
     file_name: &str,
