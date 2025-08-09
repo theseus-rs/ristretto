@@ -633,7 +633,7 @@ mod tests {
 
     fn classes_jar_class_path() -> ClassPath {
         let classes_jar_path = classes_jar_path();
-        ClassPath::from(classes_jar_path.to_string_lossy())
+        ClassPath::from(&[classes_jar_path])
     }
 
     async fn test_vm() -> Result<Arc<VM>> {

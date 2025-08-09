@@ -2,6 +2,7 @@ use anstyle::{AnsiColor, Style};
 use clap::builder::Styles;
 use clap::{ArgAction, ArgGroup, Parser};
 use std::env;
+use std::ffi::{OsStr, OsString};
 use std::io::{self, Write};
 
 const CYAN: Style = AnsiColor::Cyan.on_default();
@@ -50,7 +51,7 @@ pub struct XOptions {
         .args(&["mainclass", "jar"])
 ))]
 #[clap(styles=STYLES)]
-pub struct Cli {
+pub struct Arguments {
     #[arg(help = "the main class to execute")]
     pub mainclass: Option<String>,
 
@@ -59,14 +60,14 @@ pub struct Cli {
         help = "execute a jar file",
         conflicts_with = "mainclass"
     )]
-    pub jar: Option<String>,
+    pub jar: Option<OsString>,
 
     #[arg(
         long = "classpath",
         visible_aliases = ["cp", "class-path"],
         help = "class search path of directories and zip/jar files"
     )]
-    pub classpath: Option<String>,
+    pub classpath: Option<OsString>,
 
     #[arg(short = 'D', help = "define a system property")]
     pub properties: Option<Vec<String>>,
@@ -90,37 +91,23 @@ pub struct Cli {
     pub x_options: XOptions,
 }
 
-impl Cli {
+impl Arguments {
     pub fn parse() -> Self {
-        let args = Self::preprocess_args(env::args().collect());
+        let args = Self::preprocess_args(env::args_os().collect());
         Self::parse_from(args)
     }
 
     /// Preprocesses the command line arguments to replace short options with long options.
-    fn preprocess_args(mut arguments: Vec<String>) -> Vec<String> {
+    fn preprocess_args(mut arguments: Vec<OsString>) -> Vec<OsString> {
         for argument in &mut arguments {
-            match argument.as_str() {
-                "-help" => {
-                    *argument = "-h".to_string();
-                }
-                "-cp" => {
-                    *argument = "--cp".to_string();
-                }
-                "-version" => {
-                    *argument = "--version".to_string();
-                }
-                "-Xbatch" => {
-                    *argument = "--Xbatch".to_string();
-                }
-                "-Xcomp" => {
-                    *argument = "--Xcomp".to_string();
-                }
-                "-Xdebug" => {
-                    *argument = "--Xdebug".to_string();
-                }
-                "-Xint" => {
-                    *argument = "--Xint".to_string();
-                }
+            match argument.as_os_str() {
+                s if s == OsStr::new("-help") => *argument = OsString::from("-h"),
+                s if s == OsStr::new("-cp") => *argument = OsString::from("--cp"),
+                s if s == OsStr::new("-version") => *argument = OsString::from("--version"),
+                s if s == OsStr::new("-Xbatch") => *argument = OsString::from("--Xbatch"),
+                s if s == OsStr::new("-Xcomp") => *argument = OsString::from("--Xcomp"),
+                s if s == OsStr::new("-Xdebug") => *argument = OsString::from("--Xdebug"),
+                s if s == OsStr::new("-Xint") => *argument = OsString::from("--Xint"),
                 _ => {}
             }
         }

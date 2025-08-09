@@ -140,8 +140,7 @@ async fn register_primitive(class_loader: &Arc<ClassLoader>, primitive: &str) ->
 fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
     let class_path = if util::parse_major_version(version) <= 8 {
         let rt_jar_path = installation_dir.join("jre").join("lib").join("rt.jar");
-        let class_path = rt_jar_path.to_string_lossy();
-        class_path.to_string()
+        vec![rt_jar_path]
     } else {
         let jmods_path = installation_dir.join("jmods");
         let jmod_files = std::fs::read_dir(jmods_path)?
@@ -155,14 +154,11 @@ fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
                 }
             })
             .collect::<Vec<_>>();
-        let mut class_paths = jmod_files
-            .iter()
-            .map(|path| path.to_string_lossy().to_string())
-            .collect::<Vec<_>>();
+        let mut class_paths = jmod_files.into_iter().collect::<Vec<_>>();
         class_paths.sort_by(Ord::cmp);
-        class_paths.join(":")
+        class_paths
     };
-    Ok(ClassPath::from(class_path))
+    Ok(ClassPath::from(&class_path))
 }
 
 /// Extract the archive to the installation directory.

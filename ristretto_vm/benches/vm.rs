@@ -41,7 +41,7 @@ async fn vm_init() -> Result<()> {
         .join("..")
         .join("classes")
         .join("classes.jar");
-    let class_path = ClassPath::from(classes_jar_path.to_string_lossy());
+    let class_path = ClassPath::from(&[classes_jar_path]);
     let configuration = ConfigurationBuilder::new().class_path(class_path).build()?;
     let _ = VM::new(configuration).await?;
     Ok(())
@@ -53,7 +53,7 @@ async fn hello_world() -> Result<()> {
         .join("..")
         .join("classes")
         .join("classes.jar");
-    let class_path = ClassPath::from(classes_jar_path.to_string_lossy());
+    let class_path = ClassPath::from(&[classes_jar_path]);
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path)
         .stdout(Arc::new(Mutex::new(std::io::sink())))

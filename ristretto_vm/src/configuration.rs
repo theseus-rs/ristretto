@@ -314,7 +314,7 @@ impl ConfigurationBuilder {
         let class_path = if let Some(class_path) = self.class_path {
             class_path
         } else {
-            ClassPath::from(".")
+            ClassPath::from(&["."])
         };
 
         let java_home = self.java_home;
@@ -382,13 +382,13 @@ mod tests {
     #[test]
     fn test_configuration_builder() -> Result<()> {
         let configuration = ConfigurationBuilder::new()
-            .class_path(ClassPath::from(".."))
+            .class_path(ClassPath::from(&[".."]))
             .main_class("Foo")
             .jar(PathBuf::from("test.jar"))
             .java_version("21")
             .preview_features()
             .build()?;
-        assert_eq!(&ClassPath::from(".."), configuration.class_path());
+        assert_eq!(&ClassPath::from(&[".."]), configuration.class_path());
         assert_eq!(Some(&"Foo".to_string()), configuration.main_class());
         assert_eq!(Some(&PathBuf::from("test.jar")), configuration.jar());
         assert_eq!(Some(&"21".to_string()), configuration.java_version());
@@ -400,7 +400,7 @@ mod tests {
     #[test]
     fn test_configuration_builder_new() -> Result<()> {
         let configuration = ConfigurationBuilder::new().build()?;
-        assert_eq!(&ClassPath::from("."), configuration.class_path());
+        assert_eq!(&ClassPath::from(&["."]), configuration.class_path());
         assert!(configuration.main_class().is_none());
         assert!(configuration.jar().is_none());
         assert_eq!(
@@ -415,7 +415,7 @@ mod tests {
     #[test]
     fn test_configuration_builder_default() -> Result<()> {
         let configuration = ConfigurationBuilder::default().build()?;
-        assert_eq!(&ClassPath::from("."), configuration.class_path());
+        assert_eq!(&ClassPath::from(&["."]), configuration.class_path());
         assert_eq!(
             Some(&DEFAULT_JAVA_VERSION.to_string()),
             configuration.java_version()

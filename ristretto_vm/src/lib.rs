@@ -27,7 +27,7 @@
 //! # async fn main() -> ristretto_vm::Result<()> {
 //! // Create a VM configuration
 //! let configuration = ConfigurationBuilder::new()
-//!     .class_path(ClassPath::from("/path/to/classes"))
+//!     .class_path(ClassPath::from(&["/path/to/classes"]))
 //!     .build()?;
 //!
 //! // Create the VM instance

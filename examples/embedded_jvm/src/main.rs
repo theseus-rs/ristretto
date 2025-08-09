@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
 /// Creates a simple embedded JVM that executes a Java class named `HelloWorld`.
 async fn common_main() -> Result<()> {
     let cargo_manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let class_path = ClassPath::from(cargo_manifest_dir.to_string_lossy());
+    let class_path = ClassPath::from(&[cargo_manifest_dir]);
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())
         .main_class("HelloWorld")

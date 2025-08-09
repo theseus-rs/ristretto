@@ -2,6 +2,7 @@ use crate::Error::ClassNotFound;
 use crate::Result;
 use crate::class_path_entry::ClassPathEntry;
 use ristretto_classfile::ClassFile;
+use std::ffi::OsStr;
 use std::fmt::Display;
 use tracing::info;
 
@@ -26,16 +27,22 @@ impl ClassPath {
     /// # Errors
     ///
     /// if the class path is not valid.
-    pub fn from<S: AsRef<str>>(class_path: S) -> Self {
-        let class_path = class_path.as_ref();
-        let class_paths = class_path.split(':').collect::<Vec<_>>();
-        let mut class_path_entries = Vec::with_capacity(class_paths.len());
-        for path in class_paths {
+    pub fn from<S>(class_path: &[S]) -> Self
+    where
+        S: AsRef<OsStr>,
+    {
+        let mut class_path_entries = Vec::new();
+        for class_path in class_path {
+            let class_path = class_path.as_ref();
             #[cfg(feature = "url")]
-            let path = path
-                .replace("http//", "http://")
-                .replace("https//", "https://");
-            class_path_entries.push(ClassPathEntry::new(path));
+            let class_path = {
+                let class_path = class_path.to_string_lossy().to_string();
+                let class_path = class_path
+                    .replace("http//", "http://")
+                    .replace("https//", "https://");
+                std::ffi::OsString::from(class_path)
+            };
+            class_path_entries.push(ClassPathEntry::new(class_path));
         }
         ClassPath::new(class_path_entries)
     }
@@ -55,7 +62,10 @@ impl ClassPath {
 
         for class_path_entry in self.iter() {
             if let Ok(class_file) = class_path_entry.read_class(name).await {
-                info!("load class {name} source: {}", class_path_entry.name());
+                info!(
+                    "load class {name} source: {}",
+                    class_path_entry.name().to_string_lossy()
+                );
                 return Ok(class_file);
             }
         }
@@ -91,12 +101,17 @@ impl IntoIterator for ClassPath {
 
 impl Display for ClassPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        #[cfg(target_os = "windows")]
+        let path_separator: &str = ";";
+        #[cfg(not(target_os = "windows"))]
+        let path_separator: &str = ":";
+
         let class_path = self
             .class_path
             .iter()
-            .map(|entry| entry.name().to_string())
+            .map(|entry| entry.name().to_string_lossy().to_string())
             .collect::<Vec<_>>()
-            .join(":");
+            .join(path_separator);
         write!(f, "{class_path}")
     }
 }
@@ -107,32 +122,65 @@ mod tests {
     use crate::Result;
     use std::path::PathBuf;
 
+    #[cfg(target_os = "windows")]
+    const PATH_SEPARATOR: &str = ";";
+    #[cfg(not(target_os = "windows"))]
+    const PATH_SEPARATOR: &str = ":";
+
     #[test]
     fn test_new() {
         let class_path = ClassPath::new(vec![ClassPathEntry::new("."), ClassPathEntry::new("..")]);
-        assert_eq!(".:..", class_path.to_string());
+        assert_eq!(format!(".{PATH_SEPARATOR}.."), class_path.to_string());
     }
 
     #[test]
     fn test_from() {
-        let class_path = ClassPath::from(".:..");
-        assert_eq!(".:..", class_path.to_string());
+        let class_path = ClassPath::from(&[".", ".."]);
+        assert_eq!(format!(".{PATH_SEPARATOR}.."), class_path.to_string());
     }
 
     #[test]
     fn test_iter() {
-        let class_path = ClassPath::from(".:..");
+        let class_path = ClassPath::from(&[".", ".."]);
         let mut iter = class_path.iter();
-        assert_eq!(".", iter.next().expect("next").name());
-        assert_eq!("..", iter.next().expect("next").name());
+        assert_eq!(
+            ".",
+            iter.next()
+                .expect("next")
+                .name()
+                .to_string_lossy()
+                .to_string()
+        );
+        assert_eq!(
+            "..",
+            iter.next()
+                .expect("next")
+                .name()
+                .to_string_lossy()
+                .to_string()
+        );
     }
 
     #[test]
     fn test_into_iter() {
-        let class_path = ClassPath::from(".:..");
+        let class_path = ClassPath::from(&[".", ".."]);
         let mut iter = class_path.into_iter();
-        assert_eq!(".", iter.next().expect("next").name());
-        assert_eq!("..", iter.next().expect("next").name());
+        assert_eq!(
+            ".",
+            iter.next()
+                .expect("next")
+                .name()
+                .to_string_lossy()
+                .to_string()
+        );
+        assert_eq!(
+            "..",
+            iter.next()
+                .expect("next")
+                .name()
+                .to_string_lossy()
+                .to_string()
+        );
     }
 
     #[tokio::test]
@@ -151,8 +199,7 @@ mod tests {
             "https//repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar".to_string(),
         ];
 
-        let class_path = class_path_entries.join(":");
-        let class_path_entry = ClassPath::from(&class_path);
+        let class_path_entry = ClassPath::from(&class_path_entries);
 
         let class_file = class_path_entry.read_class("HelloWorld").await?;
         assert_eq!("HelloWorld", class_file.class_name()?);
@@ -186,8 +233,7 @@ mod tests {
             "https//repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar".to_string(),
         ];
 
-        let class_path = class_path_entries.join(":");
-        let class_path_entry = ClassPath::from(&class_path);
+        let class_path_entry = ClassPath::from(&class_path_entries);
 
         let class_names = class_path_entry.class_names().await?;
         assert!(class_names.contains(&"HelloWorld".to_string()));

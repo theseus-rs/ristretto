@@ -15,6 +15,7 @@ use ristretto_classloader::{
 use ristretto_gc::{GC, Statistics};
 use ristretto_jit::Compiler;
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -99,8 +100,7 @@ impl VM {
         let mut main_class_name = configuration.main_class().cloned();
 
         let class_loader = if let Some(jar) = configuration.jar() {
-            let path = jar.to_string_lossy();
-            let jar_class_path = ClassPath::from(path);
+            let jar_class_path = ClassPath::from(&[jar]);
             let jar_class_loader = ClassLoader::new("jar", jar_class_path);
             jar_class_loader
                 .set_parent(Some(system_class_loader.clone()))
@@ -406,12 +406,12 @@ impl VM {
     /// - if the main method cannot be invoked
     pub async fn invoke_main<S>(&self, parameters: &[S]) -> Result<Option<Value>>
     where
-        S: AsRef<str> + Debug,
+        S: AsRef<OsStr> + Debug,
     {
         let Some(main_class_name) = &self.main_class else {
             return Err(InternalError("No main class specified".into()));
         };
-        let main_class = self.class(main_class_name).await?;
+        let main_class = self.class(&main_class_name).await?;
         let Some(main_method) = main_class.main_method() else {
             return Err(InternalError(format!(
                 "No main method found for {main_class_name}"
@@ -421,6 +421,7 @@ impl VM {
         let mut string_parameters = Vec::with_capacity(parameters.len());
         for parameter in parameters {
             let parameter = parameter.as_ref();
+            let parameter = parameter.to_string_lossy().to_string();
             let thread = self.primordial_thread().await?;
             let value = parameter.to_object(&thread).await?;
             string_parameters.push(value);
@@ -430,7 +431,7 @@ impl VM {
         let string_parameter = Value::try_from((string_array_class, string_parameters))?;
 
         self.invoke(
-            main_class_name,
+            &main_class_name,
             main_method.signature(),
             &[string_parameter],
         )
@@ -524,7 +525,7 @@ mod tests {
 
     fn classes_jar_class_path() -> ClassPath {
         let classes_jar_path = classes_jar_path();
-        ClassPath::from(classes_jar_path.to_string_lossy())
+        ClassPath::from(&[classes_jar_path])
     }
 
     async fn test_vm() -> Result<Arc<VM>> {

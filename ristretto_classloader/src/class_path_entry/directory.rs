@@ -1,6 +1,7 @@
 use crate::Error::ClassNotFound;
 use crate::Result;
 use ristretto_classfile::ClassFile;
+use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::{fs, io};
@@ -9,23 +10,23 @@ use walkdir::WalkDir;
 /// A directory in the class path.
 #[derive(Clone, Debug)]
 pub struct Directory {
-    name: String,
+    name: OsString,
     path: PathBuf,
 }
 
 /// Implement the `Directory` struct.
 impl Directory {
     /// Create a new directory from a path.
-    pub fn new<S: AsRef<str>>(path: S) -> Self {
+    pub fn new<S: AsRef<OsStr>>(path: S) -> Self {
         let path = path.as_ref();
         Self {
-            name: path.to_string(),
+            name: path.to_os_string(),
             path: PathBuf::from(path),
         }
     }
 
     /// Get the name of the directory.
-    pub fn name(&self) -> &String {
+    pub fn name(&self) -> &OsString {
         &self.name
     }
 
@@ -118,7 +119,7 @@ mod tests {
     fn test_read_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
-        let directory = Directory::new(classes_directory.to_string_lossy());
+        let directory = Directory::new(classes_directory);
         // Read the class file twice to test caching
         for _ in 0..2 {
             let class_file = directory.read_class("HelloWorld")?;
@@ -131,7 +132,7 @@ mod tests {
     fn test_read_class_invalid_class_name() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
-        let directory = Directory::new(classes_directory.to_string_lossy());
+        let directory = Directory::new(classes_directory);
         let result = directory.read_class("Foo");
         assert!(matches!(result, Err(ClassNotFound(_))));
     }
@@ -140,7 +141,7 @@ mod tests {
     async fn test_class_names() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
-        let directory = Directory::new(classes_directory.to_string_lossy());
+        let directory = Directory::new(classes_directory);
         let class_names = directory.class_names().await?;
         assert!(class_names.contains(&"HelloWorld".to_string()));
         Ok(())

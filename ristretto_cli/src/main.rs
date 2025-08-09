@@ -7,7 +7,7 @@ mod argument;
 mod logging;
 mod version;
 
-use argument::Cli;
+use argument::Arguments;
 use clap::CommandFactory;
 use ristretto_vm::Error::{InternalError, Throwable};
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Result, VM, Value, startup_trace};
@@ -22,7 +22,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     startup_trace!("[cli] entry point");
-    let cli = Cli::parse();
+    let cli = Arguments::parse();
     logging::initialize()?;
     startup_trace!("[cli] initialization");
     if common_main(cli).await.is_err() {
@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<()> {
     startup_trace!("[cli] entry point");
-    let cli = Cli::parse();
+    let cli = Arguments::parse();
     startup_trace!("[cli] argument parse");
     logging::initialize()?;
     startup_trace!("[cli] logging initialize");
@@ -47,9 +47,9 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn common_main(cli: Cli) -> Result<()> {
+async fn common_main(cli: Arguments) -> Result<()> {
     if cli.help {
-        Cli::command().print_help()?;
+        Arguments::command().print_help()?;
         return Ok(());
     }
 
@@ -67,7 +67,8 @@ async fn common_main(cli: Cli) -> Result<()> {
     debug!("ristretto/{VERSION}/{OS}/{ARCH}");
     let mut configuration_builder = ConfigurationBuilder::new();
     if let Some(class_path) = cli.classpath {
-        let class_path = ClassPath::from(class_path.as_str());
+        let class_paths = env::split_paths(&class_path).collect::<Vec<_>>();
+        let class_path = ClassPath::from(&class_paths);
         configuration_builder = configuration_builder.class_path(class_path);
     }
 
@@ -188,7 +189,7 @@ mod tests {
     #[tokio::test]
     async fn test_common_main_no_parameters_error() -> Result<()> {
         let parameters: Vec<String> = Vec::new();
-        let cli = Cli::parse_from(parameters);
+        let cli = Arguments::parse_from(parameters);
         let result = common_main(cli).await;
         assert!(result.is_err());
         Ok(())

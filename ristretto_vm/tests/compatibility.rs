@@ -275,7 +275,7 @@ async fn run_test(
     interpreted: bool,
 ) -> Result<(Duration, String)> {
     let start_time = Instant::now();
-    let class_path = ClassPath::from(test_dir.to_string_lossy());
+    let class_path = ClassPath::from(&[test_dir]);
     let stdout = Arc::new(Mutex::new(Vec::new()));
     let stderr = Arc::new(Mutex::new(Vec::new()));
     let mut configuration_builder = ConfigurationBuilder::new()
