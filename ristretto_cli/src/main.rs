@@ -10,7 +10,7 @@ mod version;
 use argument::Cli;
 use clap::CommandFactory;
 use ristretto_vm::Error::{InternalError, Throwable};
-use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Result, VM, Value};
+use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Result, VM, Value, startup_trace};
 use std::env;
 use std::env::consts::{ARCH, OS};
 use std::path::PathBuf;
@@ -21,22 +21,28 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(target_family = "wasm")]
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
+    startup_trace!("[cli] entry point");
     let cli = Cli::parse();
     logging::initialize()?;
+    startup_trace!("[cli] initialization");
     if common_main(cli).await.is_err() {
         std::process::exit(1);
     }
+    startup_trace!("[cli] main executed");
     Ok(())
 }
 
 #[cfg(not(target_family = "wasm"))]
 #[tokio::main]
 async fn main() -> Result<()> {
+    startup_trace!("[cli] entry point");
     let cli = Cli::parse();
     logging::initialize()?;
+    startup_trace!("[cli] initialization");
     if common_main(cli).await.is_err() {
         std::process::exit(1);
     }
+    startup_trace!("[cli] main executed");
     Ok(())
 }
 
@@ -96,14 +102,17 @@ async fn common_main(cli: Cli) -> Result<()> {
     }
 
     let configuration = configuration_builder.build()?;
+    startup_trace!("[cli] vm configuration");
+
     let vm = match VM::new(configuration).await {
         Ok(vm) => vm,
         Err(error) => {
             return process_error(error);
         }
     };
-    let parameters = cli.parameters.unwrap_or_default();
+    startup_trace!("[cli] vm created");
 
+    let parameters = cli.parameters.unwrap_or_default();
     match vm.invoke_main(&parameters).await {
         Ok(_) => Ok(()),
         Err(error) => process_error(error),

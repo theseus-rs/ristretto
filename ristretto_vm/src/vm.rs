@@ -6,7 +6,7 @@ use crate::java_object::JavaObject;
 use crate::rust_value::RustValue;
 use crate::string_pool::StringPool;
 use crate::thread::Thread;
-use crate::{Configuration, ConfigurationBuilder, Result};
+use crate::{Configuration, ConfigurationBuilder, Result, startup_trace};
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_PREVIEW_MINOR_VERSION, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
@@ -69,6 +69,7 @@ impl VM {
                     "Java version or Java home must be specified".to_string(),
                 ));
             };
+        startup_trace!("[vm] bootstrap class loader");
 
         debug!(
             "Java home: {}; version: {java_version}",
@@ -130,8 +131,10 @@ impl VM {
         } else {
             None
         };
+        startup_trace!("[vm] system class loader");
 
         let method_registry = MethodRegistry::new(&java_class_file_version);
+        startup_trace!("[vm] method registry");
 
         let compiler = match Compiler::new() {
             Ok(compiler) => Some(compiler),
@@ -140,6 +143,7 @@ impl VM {
                 None
             }
         };
+        startup_trace!("[vm] jit compiler");
 
         let vm = Arc::new_cyclic(|vm| VM {
             vm: vm.clone(),
@@ -158,6 +162,8 @@ impl VM {
             string_pool: StringPool::new(),
             call_site_cache: CallSiteCache::new(),
         });
+        startup_trace!("[vm] vm allocation");
+
         vm.initialize().await?;
         Ok(vm)
     }
@@ -274,6 +280,7 @@ impl VM {
     /// if the VM cannot be initialized
     async fn initialize(&self) -> Result<()> {
         self.initialize_primordial_thread().await?;
+        startup_trace!("[vm] primordial thread");
 
         if self.java_class_file_version <= JAVA_8 {
             self.invoke(
@@ -282,9 +289,11 @@ impl VM {
                 &[] as &[Value],
             )
             .await?;
+            startup_trace!("[vm] initialize system class");
         } else {
             self.invoke("java.lang.System", "initPhase1()V", &[] as &[Value])
                 .await?;
+            startup_trace!("[vm] init phase 1");
 
             let phase2_result = self
                 .invoke(
@@ -303,9 +312,11 @@ impl VM {
                     "System::initPhase2() call failed: {result}"
                 )));
             }
+            startup_trace!("[vm] init phase 2");
 
             self.invoke("java.lang.System", "initPhase3()V", &[] as &[Value])
                 .await?;
+            startup_trace!("[vm] init phase 3");
         }
 
         Ok(())

@@ -75,6 +75,7 @@ native-tls = [
 rustls-tls = [
     "ristretto_classloader/rustls-tls",
 ]
+startup-trace = []
 url = [
     "ristretto_classloader/url",
 ]
