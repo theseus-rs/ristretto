@@ -159,6 +159,23 @@ impl ClassLoader {
         Ok(())
     }
 
+    /// Register all classes with the class loader.
+    ///
+    /// # Errors
+    ///
+    /// if the class cannot be registered.
+    pub async fn register_all<I>(&self, class: I) -> Result<()>
+    where
+        I: IntoIterator<Item = Arc<Class>>,
+    {
+        let mut classes = self.classes.write().await;
+        for class in class {
+            let class_name = class.name().to_string();
+            classes.entry(class_name).or_insert_with(|| class);
+        }
+        Ok(())
+    }
+
     /// Get the object for the class loader.
     pub async fn object(&self) -> Option<Value> {
         let object_guard = self.object.read().await;
