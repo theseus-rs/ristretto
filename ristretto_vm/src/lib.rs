@@ -75,6 +75,7 @@ mod local_variables;
 mod operand_stack;
 mod parameters;
 mod rust_value;
+pub mod startup_trace;
 mod string_pool;
 #[cfg(test)]
 pub(crate) mod test;

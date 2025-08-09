@@ -44,6 +44,9 @@ native-tls = [
 rustls-tls = [
     "ristretto_vm/rustls-tls",
 ]
+startup-trace = [
+    "ristretto_vm/startup-trace",
+]
 url = [
     "ristretto_vm/url",
 ]
