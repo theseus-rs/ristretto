@@ -330,47 +330,42 @@ impl VM {
     async fn initialize_primordial_thread(&self) -> Result<()> {
         let thread_id = self.next_thread_id()?;
         let thread = Thread::new(&self.vm, thread_id);
-        self.thread_handles
-            .insert(thread.id(), ThreadHandle::from(thread.clone()))
-            .await?;
         let thread_id = i64::try_from(thread.id())?;
         let thread_group = thread
             .object("java.lang.ThreadGroup", "", &[] as &[Value])
             .await?;
-
         let java_version = self.java_class_file_version();
 
+        let thread_class = thread.class("java.lang.Thread").await?;
+        let mut new_thread = Object::new(thread_class)?;
+        new_thread.set_value("eetop", Value::Long(thread_id))?;
+        new_thread.set_value("tid", Value::Long(thread_id))?;
+
         // The internal structure of Thread changed in Java 19
-        let new_thread = if java_version <= &JAVA_17 {
-            let thread_class = self.class("java.lang.Thread").await?;
-            let mut new_thread = Object::new(thread_class)?;
+        if java_version <= &JAVA_17 {
             new_thread.set_value("daemon", Value::Int(0))?;
-            new_thread.set_value("eetop", Value::Long(thread_id))?;
-            new_thread.set_value("group", thread_group.clone())?;
+            new_thread.set_value("group", thread_group)?;
             new_thread.set_value("priority", Value::Int(5))?;
             new_thread.set_value("stackSize", Value::Long(0))?;
             new_thread.set_value("threadStatus", Value::Int(4))?; // Runnable
-            new_thread.set_value("tid", Value::Long(thread_id))?;
-            Value::from(new_thread)
         } else {
-            let field_holder_class = self.class("java.lang.Thread$FieldHolder").await?;
+            let field_holder_class = thread.class("java.lang.Thread$FieldHolder").await?;
             let mut field_holder = Object::new(field_holder_class)?;
             field_holder.set_value("daemon", Value::Int(0))?;
-            field_holder.set_value("group", thread_group.clone())?;
+            field_holder.set_value("group", thread_group)?;
             field_holder.set_value("priority", Value::Int(5))?;
             field_holder.set_value("stackSize", Value::Long(0))?;
             field_holder.set_value("threadStatus", Value::Int(4))?; // Runnable
             let field_holder = Value::from(field_holder);
 
-            let thread_class = self.class("java.lang.Thread").await?;
-            let mut new_thread = Object::new(thread_class)?;
-            new_thread.set_value("eetop", Value::Long(thread_id))?;
             new_thread.set_value("holder", field_holder)?;
             new_thread.set_value("interrupted", Value::Int(0))?;
-            new_thread.set_value("tid", Value::Long(thread_id))?;
-            Value::from(new_thread)
-        };
-        thread.set_java_object(new_thread).await;
+        }
+
+        thread.set_java_object(Value::from(new_thread)).await;
+        self.thread_handles
+            .insert(thread.id(), ThreadHandle::from(thread))
+            .await?;
 
         Ok(())
     }
