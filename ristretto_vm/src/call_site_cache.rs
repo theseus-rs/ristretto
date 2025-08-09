@@ -3,11 +3,10 @@
 //! This module provides a thread-safe cache that tracks the resolution state of invokedynamic call
 //! sites.
 
-use crate::Error::{InternalError, PoisonedLock};
+use crate::Error::InternalError;
 use crate::Result;
+use dashmap::DashMap;
 use ristretto_classloader::Value;
-use std::collections::HashMap;
-use std::sync::RwLock;
 
 /// Unique identifier for an invokedynamic call site
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -41,14 +40,14 @@ pub enum CallSiteState {
 #[derive(Debug)]
 pub struct CallSiteCache {
     /// Maps call site keys to their resolution states
-    states: RwLock<HashMap<CallSiteKey, CallSiteState>>,
+    states: DashMap<CallSiteKey, CallSiteState>,
 }
 
 impl CallSiteCache {
     /// Create a new empty call site cache
     pub fn new() -> Self {
         Self {
-            states: RwLock::new(HashMap::new()),
+            states: DashMap::new(),
         }
     }
 
@@ -83,40 +82,29 @@ impl CallSiteCache {
         debug!("CallSiteCache: Checking cache for key: {key:?}");
 
         // Check current state
-        {
-            let map = self
-                .states
-                .read()
-                .map_err(|error| PoisonedLock(format!("Failed to acquire cache lock: {error}")))?;
-
-            match map.get(&key) {
-                Some(CallSiteState::InProgress) => {
-                    debug!("CallSiteCache: RECURSION DETECTED for key: {key:?}",);
+        match self.states.get(&key) {
+            Some(ref state) => match &**state {
+                CallSiteState::InProgress => {
+                    debug!("CallSiteCache: RECURSION DETECTED for key: {key:?}");
                     return Err(InternalError(format!(
                         "Recursive invokedynamic call site resolution detected for class '{}' at index {}",
                         key.class_name, key.instruction_index
                     )));
                 }
-                Some(CallSiteState::Resolved(value)) => {
+                CallSiteState::Resolved(value) => {
                     debug!("CallSiteCache: Returning cached result for key: {key:?}");
                     return Ok(value.clone());
                 }
-                None => {
-                    debug!("CallSiteCache: Key not found in cache, will resolve: {key:?}");
-                    // Call site not yet resolved, continue to resolution
-                }
+            },
+            None => {
+                debug!("CallSiteCache: Key not found in cache, will resolve: {key:?}");
+                // Call site not yet resolved, continue to resolution
             }
         }
 
         // Mark as in progress
-        {
-            let mut map = self
-                .states
-                .write()
-                .map_err(|error| PoisonedLock(format!("Failed to acquire cache lock: {error}")))?;
-            debug!("CallSiteCache: Marking as InProgress: {key:?}");
-            map.insert(key.clone(), CallSiteState::InProgress);
-        }
+        debug!("CallSiteCache: Marking as InProgress: {key:?}");
+        self.states.insert(key.clone(), CallSiteState::InProgress);
 
         // Perform resolution
         debug!("CallSiteCache: Starting resolution for key: {key:?}");
@@ -129,51 +117,32 @@ impl CallSiteCache {
         // Update cache based on result
         if let Ok(value) = &result {
             // Store successful resolution
-            let mut map = self
-                .states
-                .write()
-                .map_err(|error| PoisonedLock(format!("Failed to acquire cache lock: {error}")))?;
             debug!("CallSiteCache: Caching successful result for key: {key:?}",);
-            map.insert(key, CallSiteState::Resolved(value.clone()));
+            self.states
+                .insert(key, CallSiteState::Resolved(value.clone()));
         } else {
             // Remove in-progress marker on failure to allow retry
-            let mut map = self
-                .states
-                .write()
-                .map_err(|error| PoisonedLock(format!("Failed to acquire cache lock: {error}")))?;
             debug!("CallSiteCache: Removing failed resolution from cache for key: {key:?}");
-            map.remove(&key);
+            self.states
+                .remove_if(&key, |_, state| matches!(state, CallSiteState::InProgress));
         }
 
         result
     }
 
     /// Clear all cached call sites
-    pub fn clear(&self) -> Result<()> {
-        let mut map = self
-            .states
-            .write()
-            .map_err(|error| PoisonedLock(format!("Failed to acquire cache lock: {error}")))?;
-        map.clear();
-        Ok(())
+    pub fn clear(&self) {
+        self.states.clear();
     }
 
     /// Get the number of cached call sites
-    pub fn len(&self) -> Result<usize> {
-        let map = self
-            .states
-            .read()
-            .map_err(|error| PoisonedLock(format!("Failed to acquire cache lock: {error}")))?;
-        Ok(map.len())
+    pub fn len(&self) -> usize {
+        self.states.len()
     }
 
     /// Check if the cache is empty
-    pub fn is_empty(&self) -> Result<bool> {
-        let map = self
-            .states
-            .read()
-            .map_err(|error| PoisonedLock(format!("Failed to acquire cache lock: {error}")))?;
-        Ok(map.is_empty())
+    pub fn is_empty(&self) -> bool {
+        self.states.is_empty()
     }
 }
 
