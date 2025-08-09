@@ -3,12 +3,16 @@ use ristretto_vm::Result;
 use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::fmt;
 
+const LOG_ENV_VAR: &str = "RISTRETTO_LOG";
+
 /// Initializes the logging system.
 pub(crate) fn initialize() -> Result<()> {
+    if std::env::var_os(LOG_ENV_VAR).is_none() {
+        return Ok(());
+    }
+
     let format = tracing_subscriber::fmt::format()
         .with_level(true)
-        .with_target(false)
-        .with_thread_ids(false)
         .with_thread_names(true)
         .with_timer(fmt::time::uptime())
         .compact();
@@ -16,7 +20,7 @@ pub(crate) fn initialize() -> Result<()> {
     let cranelift_directive = "cranelift=warn"
         .parse()
         .map_err(|error| InternalError(format!("{error}")))?;
-    let filter = EnvFilter::from_env("JAVA_LOG").add_directive(cranelift_directive);
+    let filter = EnvFilter::from_env(LOG_ENV_VAR).add_directive(cranelift_directive);
     tracing_subscriber::fmt()
         .with_env_filter(filter)
         .fmt_fields(fmt::format::DefaultFields::new())

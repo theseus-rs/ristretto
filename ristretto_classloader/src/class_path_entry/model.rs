@@ -4,7 +4,6 @@ use crate::class_path_entry::jar::Jar;
 use ristretto_classfile::ClassFile;
 use std::fmt::Debug;
 use std::path::PathBuf;
-use tracing::instrument;
 
 /// Represents a class path entry.
 #[derive(Clone, Debug, PartialEq)]
@@ -44,7 +43,6 @@ impl ClassPathEntry {
     /// # Errors
     ///
     /// if the class file cannot be read.
-    #[instrument(level = "trace", fields(name = ?name.as_ref()), skip(self))]
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         match self {
             ClassPathEntry::Directory(directory) => directory.read_class(name),
