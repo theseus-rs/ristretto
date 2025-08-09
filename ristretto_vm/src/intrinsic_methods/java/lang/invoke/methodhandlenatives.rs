@@ -35,7 +35,7 @@ bitflags! {
         /// refKind
         const REFERENCE_KIND_SHIFT = 24;
         /// 0x0F00_0000 >> REFERENCE_KIND_SHIFT
-        const REFERENCE_KIND_MASK = 0x0F00_0000 >> 24;
+        const REFERENCE_KIND_MASK = 0x0F00_0000 >> MemberNameFlags::REFERENCE_KIND_SHIFT.bits();
     }
 }
 
