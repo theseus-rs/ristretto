@@ -4,12 +4,22 @@ use flate2::bufread::GzDecoder;
 use ristretto_classfile::Error::IoError;
 use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use std::{env, io};
 use tar::Archive;
 use tracing::{debug, warn};
 
+/// The default Java version used by the class loader. This is the version that will be used if no
+/// version is specified when creating a class loader.
 pub const DEFAULT_JAVA_VERSION: &str = "21.0.8.9.1";
+
+/// The access flags for primitive classes in the Java runtime. These classes are public, final, and
+/// abstract, meaning they cannot be instantiated and do not have any methods or fields.
+const PRIMITIVE_CLASS_ACCESS_FLAGS: ClassAccessFlags = ClassAccessFlags::from_bits_retain(
+    ClassAccessFlags::PUBLIC.bits()
+        | ClassAccessFlags::FINAL.bits()
+        | ClassAccessFlags::ABSTRACT.bits(),
+);
 
 /// Get a class loader for the default Java runtime version. If the version is not installed, the
 /// archive will be downloaded and extracted.
@@ -85,8 +95,7 @@ pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Arc
     let mut installation_dir = base_path.join(&version);
     if !installation_dir.exists() {
         let (extracted_version, file_name, archive) = util::get_runtime_archive(&version).await?;
-        installation_dir =
-            extract_archive(version.as_str(), file_name.as_str(), &archive, &base_path).await?;
+        installation_dir = extract_archive(&version, &file_name, &archive, &base_path).await?;
         version = extracted_version;
     }
 
@@ -101,35 +110,35 @@ pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Arc
 
 /// Register all primitive classes in the class loader.
 async fn register_primitives(class_loader: &Arc<ClassLoader>) -> Result<()> {
-    register_primitive(class_loader, "boolean").await?;
-    register_primitive(class_loader, "byte").await?;
-    register_primitive(class_loader, "char").await?;
-    register_primitive(class_loader, "double").await?;
-    register_primitive(class_loader, "float").await?;
-    register_primitive(class_loader, "int").await?;
-    register_primitive(class_loader, "long").await?;
-    register_primitive(class_loader, "short").await?;
-    register_primitive(class_loader, "void").await?;
+    let class_loader_weak_ref = Arc::downgrade(class_loader);
+    let classes = [
+        create_primitive_class(&class_loader_weak_ref, "boolean")?,
+        create_primitive_class(&class_loader_weak_ref, "byte")?,
+        create_primitive_class(&class_loader_weak_ref, "char")?,
+        create_primitive_class(&class_loader_weak_ref, "double")?,
+        create_primitive_class(&class_loader_weak_ref, "float")?,
+        create_primitive_class(&class_loader_weak_ref, "int")?,
+        create_primitive_class(&class_loader_weak_ref, "long")?,
+        create_primitive_class(&class_loader_weak_ref, "short")?,
+        create_primitive_class(&class_loader_weak_ref, "void")?,
+    ];
+    class_loader.register_all(classes).await?;
     Ok(())
 }
 
-/// Register a primitive class in the class loader.
-async fn register_primitive(class_loader: &Arc<ClassLoader>, primitive: &str) -> Result<()> {
+/// Creates a primitive class in the class loader.
+fn create_primitive_class(class_loader: &Weak<ClassLoader>, primitive: &str) -> Result<Arc<Class>> {
     let mut constant_pool = ConstantPool::new();
     let this_class_index = constant_pool.add_class(primitive)?;
     let class_file = ClassFile {
         version: JAVA_1_0_2,
         constant_pool,
-        access_flags: ClassAccessFlags::PUBLIC
-            | ClassAccessFlags::FINAL
-            | ClassAccessFlags::ABSTRACT,
+        access_flags: PRIMITIVE_CLASS_ACCESS_FLAGS,
         this_class: this_class_index,
         ..Default::default()
     };
-
-    let class = Class::from(Some(Arc::downgrade(class_loader)), class_file)?;
-    class_loader.register(class).await?;
-    Ok(())
+    let class = Class::from(Some(class_loader.clone()), class_file)?;
+    Ok(class)
 }
 
 /// Get the class path for the given version.
