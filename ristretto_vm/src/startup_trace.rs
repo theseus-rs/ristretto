@@ -1,8 +1,7 @@
 #[cfg(feature = "startup-trace")]
-use std::time::{Duration, Instant};
-
-#[cfg(feature = "startup-trace")]
 use std::sync::{LazyLock, Mutex};
+#[cfg(feature = "startup-trace")]
+use std::time::{Duration, Instant};
 
 #[cfg(feature = "startup-trace")]
 pub static ENABLED: LazyLock<bool> = LazyLock::new(|| {
@@ -12,8 +11,11 @@ pub static ENABLED: LazyLock<bool> = LazyLock::new(|| {
     )
 });
 
+// First-call timestamp (set exactly on the first trace call)
 #[cfg(feature = "startup-trace")]
-static START: LazyLock<Instant> = LazyLock::new(Instant::now);
+static START: LazyLock<Mutex<Option<Instant>>> = LazyLock::new(|| Mutex::new(None));
+
+// Previous-call timestamp
 #[cfg(feature = "startup-trace")]
 static LAST: LazyLock<Mutex<Option<Instant>>> = LazyLock::new(|| Mutex::new(None));
 
@@ -26,14 +28,27 @@ pub fn startup_trace_log(message: &str) {
     }
 
     let now = Instant::now();
-    let mut last = LAST.lock().expect("failed to lock");
+    let mut start_guard = START.lock().expect("failed to lock START");
+    let mut last_guard = LAST.lock().expect("failed to lock LAST");
 
-    let (delta_elapsed, start_elapsed) = match *last {
-        Some(prev) => (now.duration_since(prev), now.duration_since(*START)),
-        None => (Duration::ZERO, Duration::ZERO),
-    };
+    if start_guard.is_none() {
+        *start_guard = Some(now);
+        *last_guard = Some(now);
+        println!(
+            "[startup]{message}: +{:.3?} (Σ {:.3?})",
+            Duration::ZERO,
+            Duration::ZERO
+        );
+        return;
+    }
 
-    *last = Some(now);
+    let start = start_guard.expect("START should be initialized");
+    let last = last_guard.expect("LAST should be initialized");
+    let delta_elapsed = now.checked_duration_since(last).unwrap_or(Duration::ZERO);
+    let start_elapsed = now.checked_duration_since(start).unwrap_or(Duration::ZERO);
+
+    *last_guard = Some(now);
+
     println!("[startup]{message}: +{delta_elapsed:.3?} (Σ {start_elapsed:.3?})");
 }
 
