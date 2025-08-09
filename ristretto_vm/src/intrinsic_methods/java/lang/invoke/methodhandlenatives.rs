@@ -8,7 +8,9 @@ use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::{
     Any, Between, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
-use ristretto_classfile::{FieldAccessFlags, JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodAccessFlags};
+use ristretto_classfile::{
+    FieldAccessFlags, JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodAccessFlags, ReferenceKind,
+};
 use ristretto_classloader::Error::IllegalAccessError;
 use ristretto_classloader::{Class, Method, Value};
 use ristretto_macros::intrinsic_method;
@@ -220,6 +222,7 @@ pub(crate) async fn resolve(
         class_object.value("name")?.as_string()?
     };
     let class = thread.class(class_name.clone()).await?;
+    let _reference_kind = get_reference_kind(flags)?;
     let member_name_flags = MemberNameFlags::from_bits_truncate(flags);
 
     // Handle methods/constructors
@@ -320,6 +323,15 @@ pub(crate) async fn resolve(
             "Unsupported member name flag: {member_name_flags:?}"
         )))
     }
+}
+
+/// Extracts the reference kind from the flags of a member name.
+fn get_reference_kind(flags: i32) -> Result<ReferenceKind> {
+    let flags = flags as u32;
+    let shift = MemberNameFlags::REFERENCE_KIND_SHIFT.bits();
+    let mask = MemberNameFlags::REFERENCE_KIND_MASK.bits() as u32;
+    let reference_kind = ((flags >> shift) & mask) as u8;
+    ReferenceKind::try_from(reference_kind).map_err(Into::into)
 }
 
 /// Returns true if `caller` is permitted to access a method of `declaring` with the given access
@@ -679,6 +691,15 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_reference_kind() -> Result<()> {
+        assert_eq!(
+            get_reference_kind(0x0601_0000)?,
+            ReferenceKind::InvokeStatic
+        );
         Ok(())
     }
 
