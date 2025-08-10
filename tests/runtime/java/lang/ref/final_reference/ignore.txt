@@ -1,0 +1,16 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[18]
+  detailMessage=String(\"Invalid value type: Expected a reference value\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(18)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === FinalReference Tests ===
+
+--- Testing FinalReference Creation ---
+Object with finalizer created: true
+Object name: FinalRefTest
+Initial final reference count: 0
+
+stderr: ")
