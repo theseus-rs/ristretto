@@ -7,7 +7,7 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{BaseType, FieldAccessFlags, JAVA_11, JAVA_17};
-use ristretto_classloader::{Class, Reference, Value};
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 use zerocopy::transmute_ref;
@@ -83,7 +83,7 @@ pub(crate) async fn array_index_scale_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class: Arc<Class> = get_class(&thread, &object).await?;
+    let class = get_class(&thread, &object).await?;
     let class_name = class.name();
     let scale = match class_name {
         "[Z" => BOOLEAN_SIZE, // boolean

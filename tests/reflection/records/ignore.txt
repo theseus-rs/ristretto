@@ -1,1 +1,1 @@
-not yet implemented: java.lang.Class.isRecord0()Z
+not yet implemented: java.lang.Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;
