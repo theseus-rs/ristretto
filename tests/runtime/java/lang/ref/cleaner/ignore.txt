@@ -1,0 +1,14 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[15]
+  detailMessage=String(\"Invalid value type: Expected a reference value\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(15)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === Cleaner Tests ===
+
+--- Testing Basic Cleaner ---
+Cleaner created: true
+
+stderr: ")

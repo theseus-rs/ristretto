@@ -1,0 +1,25 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[18]
+  detailMessage=String(\"Invalid value type: Expected a reference value\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(18)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === Garbage Collection Tests ===
+
+--- Testing Garbage Collection Behavior ---
+References created with limited scope objects
+WeakReference initially not null: true
+SoftReference initially not null: true
+PhantomReference always null: true
+After gc() suggestion - checking states...
+WeakReference state: still_referenced
+SoftReference state: still_referenced
+References found in queue after GC: 0
+
+--- Testing GC with Queue Notifications ---
+Multiple references created
+Queue initially empty: true
+
+stderr: ")
