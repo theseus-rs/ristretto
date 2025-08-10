@@ -1017,10 +1017,17 @@ pub(crate) async fn is_primitive(
 #[intrinsic_method("java/lang/Class.isRecord0()Z", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn is_record_0(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.isRecord0()Z")
+    let value = parameters.pop()?;
+    let class = get_class(&thread, &value).await?;
+    let Some(parent_class) = class.parent()? else {
+        return Ok(Some(Value::from(false)));
+    };
+    let parent_class_name = parent_class.name();
+    let is_record = parent_class_name == "java/lang/Record";
+    Ok(Some(Value::from(is_record)))
 }
 
 #[intrinsic_method("java/lang/Class.registerNatives()V", Any)]
@@ -1704,7 +1711,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let class: Arc<Class> = thread.class("[int").await?;
+        let class = thread.class("[int").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_array(thread, parameters).await?;
@@ -1715,7 +1722,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_array_false() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let class: Arc<Class> = thread.class("int").await?;
+        let class = thread.class("int").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_array(thread, parameters).await?;
@@ -1799,7 +1806,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_interface() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let class: Arc<Class> = thread.class("java.lang.Cloneable").await?;
+        let class = thread.class("java.lang.Cloneable").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_interface(thread, parameters).await?;
@@ -1810,7 +1817,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_interface_false() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let class: Arc<Class> = thread.class("java.lang.Integer").await?;
+        let class = thread.class("java.lang.Integer").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_interface(thread, parameters).await?;
@@ -1821,7 +1828,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_primitive() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let class: Arc<Class> = thread.class("int").await?;
+        let class = thread.class("int").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_primitive(thread, parameters).await?;
@@ -1832,7 +1839,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_primitive_false() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let class: Arc<Class> = thread.class("java.lang.Integer").await?;
+        let class = thread.class("java.lang.Integer").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_primitive(thread, parameters).await?;
@@ -1841,10 +1848,14 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Class.isRecord0()Z")]
-    async fn test_is_record_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_record_0(thread, Parameters::default()).await;
+    async fn test_is_record_0_false() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.Integer").await?;
+        let object = class.to_object(&thread).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = is_record_0(thread, parameters).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
     }
 
     #[tokio::test]
