@@ -1,0 +1,15 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[14]
+  detailMessage=String(\"Invalid value type: Expected a reference value\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(14)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === Thread Group Tests ===
+Test 1: Basic thread group
+Group name: TestGroup1
+Group parent: system
+Initial active count: 0
+
+stderr: ")
