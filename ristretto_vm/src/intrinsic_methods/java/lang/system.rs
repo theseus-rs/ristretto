@@ -9,11 +9,8 @@ use crate::thread::Thread;
 use async_recursion::async_recursion;
 use parking_lot::RwLock;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
-use ristretto_classfile::attributes::{Attribute, Instruction};
-use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, ConstantPool, JAVA_8, JAVA_11, JAVA_17, MethodAccessFlags,
-};
-use ristretto_classloader::{Class, Object, Reference, Value};
+use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
+use ristretto_classloader::{Reference, Value};
 use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
 use std::env::consts::OS;
@@ -328,14 +325,14 @@ pub(crate) async fn register_natives(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
+
     if vm.java_major_version() <= JAVA_8.java() {
         thread
             .invoke("java.lang.System", "setJavaLangAccess()V", &[] as &[Value])
             .await?;
-        return Ok(None);
     }
 
-    if vm.java_major_version() == JAVA_17.java() {
+    if vm.java_major_version() <= JAVA_17.java() {
         // Force the initialization of the system properties; this is required because no security
         // manager is installed and when System::initPhase1() is called, the resulting call chain:
         //
@@ -357,72 +354,7 @@ pub(crate) async fn register_natives(
             .await?;
     }
 
-    let java_major_version = vm.java_major_version();
-    let package_name = if java_major_version <= JAVA_8.java() {
-        "sun/misc"
-    } else if java_major_version <= JAVA_11.java() {
-        "jdk/internal/misc"
-    } else {
-        "jdk/internal/access"
-    };
-    let java_lang_ref_access = java_lang_ref_access_class(&thread, package_name).await?;
-    let java_lang_ref_access = Value::from(Object::new(java_lang_ref_access)?);
-    let shared_secrets_class = format!("{package_name}/SharedSecrets");
-    thread
-        .invoke(
-            &shared_secrets_class,
-            format!("setJavaLangRefAccess(L{package_name}/JavaLangRefAccess;)V"),
-            &[java_lang_ref_access],
-        )
-        .await?;
-
     Ok(None)
-}
-
-/// Create a class for `<package>.JavaLangRefAccess` to bootstrap the VM startup process.
-pub(crate) async fn java_lang_ref_access_class(
-    thread: &Arc<Thread>,
-    package_name: &str,
-) -> Result<Arc<Class>> {
-    let vm = thread.vm()?;
-    let java_class_file_version = vm.java_class_file_version();
-    let mut constant_pool = ConstantPool::default();
-    let this_class = constant_pool.add_class("ristretto/internal/access/JavaLangRefAccess")?;
-    let interface_name = format!("{package_name}/JavaLangRefAccess");
-    let interface_class = constant_pool.add_class(&interface_name)?;
-    let code_index = constant_pool.add_utf8("Code")?;
-    let start_threads_index = constant_pool.add_utf8("startThreads")?;
-    let start_threads_descriptor_index = constant_pool.add_utf8("()V")?;
-
-    let start_threads_method_attributes = vec![Attribute::Code {
-        name_index: code_index,
-        max_stack: 0,
-        max_locals: 1,
-        code: vec![Instruction::Return],
-        exception_table: Vec::new(),
-        attributes: Vec::new(),
-    }];
-    let start_threads_method = ristretto_classfile::Method {
-        access_flags: MethodAccessFlags::PUBLIC,
-        name_index: start_threads_index,
-        descriptor_index: start_threads_descriptor_index,
-        attributes: start_threads_method_attributes,
-    };
-    let class_file = ClassFile {
-        version: java_class_file_version.clone(),
-        access_flags: ClassAccessFlags::PUBLIC,
-        constant_pool,
-        this_class,
-        methods: vec![start_threads_method],
-        interfaces: vec![interface_class],
-        ..Default::default()
-    };
-
-    let java_lang_ref_access = Class::from(None, class_file)?;
-    let interface = thread.class(&interface_name).await?;
-    java_lang_ref_access.set_interfaces(vec![interface])?;
-    thread.register_class(java_lang_ref_access.clone()).await?;
-    Ok(java_lang_ref_access)
 }
 
 #[intrinsic_method("java/lang/System.setIn0(Ljava/io/InputStream;)V", Any)]

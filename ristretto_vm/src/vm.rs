@@ -289,6 +289,11 @@ impl VM {
         self.initialize_primordial_thread().await?;
         startup_trace!("[vm] primordial thread");
 
+        // Load the java.lang.ref.Reference class explicitly so that the class initializer calls
+        // SharedSecrets.setJavaLangRefAccess(...) at the appropriate time in the JVM initialization
+        // process.
+        let _ = self.class("java.lang.ref.Reference").await?;
+
         if self.java_class_file_version <= JAVA_8 {
             self.invoke(
                 "java.lang.System",
