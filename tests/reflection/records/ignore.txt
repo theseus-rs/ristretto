@@ -1,0 +1,1 @@
+not yet implemented: java.lang.Class.isRecord0()Z
