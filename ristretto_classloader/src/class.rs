@@ -71,13 +71,13 @@ pub struct Class {
     name: String,
     source_file: Option<String>,
     class_file: ClassFile,
-    parent: Arc<RwLock<Option<Arc<Class>>>>,
-    interfaces: Arc<RwLock<Vec<Arc<Class>>>>,
+    parent: RwLock<Option<Arc<Class>>>,
+    interfaces: RwLock<Vec<Arc<Class>>>,
     static_fields: Vec<Arc<Field>>,
     static_values: Vec<Arc<RwLock<Value>>>,
     object_fields: Vec<Arc<Field>>,
     methods: HashMap<String, Arc<Method>>,
-    object: Arc<RwLock<Option<Value>>>,
+    object: RwLock<Option<Value>>,
 }
 
 impl Class {
@@ -166,13 +166,13 @@ impl Class {
             name: class_file.class_name()?.to_string(),
             source_file,
             class_file,
-            parent: Arc::new(RwLock::new(None)),
-            interfaces: Arc::new(RwLock::new(Vec::new())),
+            parent: RwLock::new(None),
+            interfaces: RwLock::new(Vec::new()),
             static_fields,
             static_values,
             object_fields,
             methods,
-            object: Arc::new(RwLock::new(None)),
+            object: RwLock::new(None),
         });
         Ok(class)
     }
