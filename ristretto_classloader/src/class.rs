@@ -104,6 +104,14 @@ impl Class {
             }
         }
 
+        #[expect(clippy::single_match)]
+        match class_file.class_name()? {
+            "java/lang/invoke/MemberName" => {
+                Self::add_synthetic_fields(&mut class_file, &[("vmindex", "Ljava/lang/Object;")])?;
+            }
+            _ => {}
+        }
+
         let mut static_fields = Vec::new();
         let mut static_values = Vec::new();
         let mut object_fields = Vec::new();
@@ -177,6 +185,28 @@ impl Class {
         Ok(class)
     }
 
+    /// Add synthetic fields for the class. Ensures no duplicates are added.
+    fn add_synthetic_fields(
+        class_file: &mut ClassFile,
+        field_signatures: &[(&str, &str)],
+    ) -> Result<()> {
+        for (name, descriptor) in field_signatures {
+            let constant_pool = &mut class_file.constant_pool;
+            let name_index = constant_pool.add_utf8(name)?;
+            let descriptor_index = constant_pool.add_utf8(descriptor)?;
+            let field_type = ristretto_classfile::FieldType::parse(descriptor)?;
+            let field = ristretto_classfile::Field {
+                access_flags: FieldAccessFlags::PRIVATE | FieldAccessFlags::SYNTHETIC,
+                name_index,
+                descriptor_index,
+                field_type,
+                attributes: vec![],
+            };
+            class_file.fields.push(field);
+        }
+        Ok(())
+    }
+
     /// Add synthetic methods for the class.  This is used to add methods that are not present in
     /// the class file, but are required for the class to function correctly.
     fn add_synthetic_methods(
@@ -192,8 +222,10 @@ impl Class {
                 constant_pool.try_get_method_ref(method_index)?;
             let (name_index, descriptor_index) =
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
-            let access_flags =
-                MethodAccessFlags::PRIVATE | MethodAccessFlags::STATIC | MethodAccessFlags::NATIVE;
+            let access_flags = MethodAccessFlags::PRIVATE
+                | MethodAccessFlags::STATIC
+                | MethodAccessFlags::NATIVE
+                | MethodAccessFlags::SYNTHETIC;
             let method = ristretto_classfile::Method {
                 name_index: *name_index,
                 descriptor_index: *descriptor_index,
