@@ -2,7 +2,7 @@ use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
-use ristretto_classfile::JAVA_24;
+use ristretto_classfile::JAVA_25;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 #[intrinsic_method(
     "jdk/vm/ci/services/Services.readSystemPropertiesInfo([I)J",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn read_system_properties_info(

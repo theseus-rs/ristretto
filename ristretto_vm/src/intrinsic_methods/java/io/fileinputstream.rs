@@ -15,7 +15,7 @@ use async_recursion::async_recursion;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
-use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_24};
+use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25};
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
 #[cfg(target_os = "wasi")]
@@ -106,7 +106,7 @@ pub(crate) async fn init_ids(
 
 #[intrinsic_method(
     "java/io/FileInputStream.isRegularFile0(Ljava/io/FileDescriptor;)Z",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn is_regular_file_0(

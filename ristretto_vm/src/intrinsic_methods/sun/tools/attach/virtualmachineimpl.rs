@@ -2,8 +2,8 @@ use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
-use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::{JAVA_11, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -104,6 +104,20 @@ pub(crate) async fn write(_thread: Arc<Thread>, _parameters: Parameters) -> Resu
     todo!("sun.tools.attach.VirtualMachineImpl.write(I[BII)V")
 }
 
+#[intrinsic_method(
+    "sun/tools/attach/VirtualMachineImpl.checkCatchesAndSendQuitTo(IZ)Z",
+    GreaterThanOrEqual(JAVA_25)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn check_catches_and_send_quit_to(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _send_sigquit = parameters.pop_bool()?;
+    let _pid = parameters.pop_int()?;
+    todo!("sun.tools.attach.VirtualMachineImpl.checkCatchesAndSendQuitTo(IZ)Z")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -183,5 +197,15 @@ mod tests {
     async fn test_write() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = write(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.tools.attach.VirtualMachineImpl.checkCatchesAndSendQuitTo(IZ)Z"
+    )]
+    async fn test_check_catches_and_send_quit_to() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let parameters = Parameters::new(vec![Value::Int(1234), Value::from(true)]);
+        let _ = check_catches_and_send_quit_to(thread, parameters).await;
     }
 }

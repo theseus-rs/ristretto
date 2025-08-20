@@ -8,7 +8,7 @@ use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::{
     Any, Between, Equal, GreaterThanOrEqual, LessThan, LessThanOrEqual,
 };
-use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_24};
+use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -152,6 +152,34 @@ pub(crate) async fn fchmod_0(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     todo!("sun.nio.fs.UnixNativeDispatcher.fchmod0(II)V");
+}
+
+#[intrinsic_method(
+    "sun/nio/fs/UnixNativeDispatcher.fchmodat0(IJII)V",
+    GreaterThanOrEqual(JAVA_25)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn fchmodat_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _flags = parameters.pop_int()?;
+    let _mode = parameters.pop_int()?;
+    let _path = parameters.pop_long()?;
+    let _dirfd = parameters.pop_int()?;
+    todo!("sun.nio.fs.UnixNativeDispatcher.fchmodat0(IJII)V")
+}
+
+#[intrinsic_method(
+    "sun/nio/fs/UnixNativeDispatcher.fchmodatNoFollowSupported0()Z",
+    GreaterThanOrEqual(JAVA_25)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn fchmodat_no_follow_supported_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.nio.fs.UnixNativeDispatcher.fchmodatNoFollowSupported0()Z")
 }
 
 #[intrinsic_method(
@@ -676,7 +704,7 @@ pub(crate) async fn utimes_0(
 
 #[intrinsic_method(
     "sun/nio/fs/UnixNativeDispatcher.utimensat0(IJJJI)V",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn utimensat_0(

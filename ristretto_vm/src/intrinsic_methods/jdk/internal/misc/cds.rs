@@ -3,7 +3,7 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
-use ristretto_classfile::{JAVA_17, JAVA_21};
+use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::hash::{DefaultHasher, Hash, Hasher};
@@ -134,6 +134,19 @@ pub(crate) async fn log_lambda_form_invoker(
     todo!("jdk.internal.misc.CDS.logLambdaFormInvoker(Ljava/lang/String;)V")
 }
 
+#[intrinsic_method(
+    "jdk/internal/misc/CDS.needsClassInitBarrier0(Ljava/lang/Class;)Z",
+    GreaterThanOrEqual(JAVA_25)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn needs_class_init_barrier_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _class = parameters.pop_reference()?;
+    todo!("jdk.internal.misc.CDS.needsClassInitBarrier0(Ljava/lang/Class;)Z")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -222,5 +235,15 @@ mod tests {
     async fn test_log_lambda_form_invoker() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = log_lambda_form_invoker(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.misc.CDS.needsClassInitBarrier0(Ljava/lang/Class;)Z"
+    )]
+    async fn test_needs_class_init_barrier_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let parameters = Parameters::new(vec![Value::Object(None)]);
+        let _ = needs_class_init_barrier_0(thread, parameters).await;
     }
 }

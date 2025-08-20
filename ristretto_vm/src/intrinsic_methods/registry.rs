@@ -2,7 +2,7 @@ use crate::Result;
 use crate::intrinsic_methods::intrinsics;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_24, Version};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25, Version};
 use ristretto_classloader::Value;
 use std::future::Future;
 use std::pin::Pin;
@@ -69,8 +69,8 @@ impl MethodRegistry {
     /// A new empty `MethodRegistry` configured for the specified Java version.
     pub fn new(version: &Version) -> Self {
         let java_major_version = version.java();
-        let methods = if java_major_version >= JAVA_24.java() {
-            &intrinsics::JAVA_24
+        let methods = if java_major_version >= JAVA_25.java() {
+            &intrinsics::JAVA_25
         } else if java_major_version >= JAVA_21.java() {
             &intrinsics::JAVA_21
         } else if java_major_version >= JAVA_17.java() {
@@ -274,7 +274,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_runtime_v24() -> Result<()> {
-        test_runtime("24.0.2.12.1").await
+    async fn test_runtime_v25() -> Result<()> {
+        test_runtime("25.0.0.34.1").await
     }
 }

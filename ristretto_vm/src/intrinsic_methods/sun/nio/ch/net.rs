@@ -3,7 +3,7 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
-use ristretto_classfile::{JAVA_11, JAVA_17};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -382,6 +382,18 @@ pub(crate) async fn socket_0(
     todo!("sun.nio.ch.Net.socket0(ZZZZ)I")
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/Net.shouldShutdownWriteBeforeClose0()Z",
+    GreaterThanOrEqual(JAVA_25)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn should_shutdown_write_before_close_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.nio.ch.Net.shouldShutdownWriteBeforeClose0()Z")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -710,5 +722,14 @@ mod tests {
     async fn test_socket_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = socket_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.nio.ch.Net.shouldShutdownWriteBeforeClose0()Z"
+    )]
+    async fn test_should_shutdown_write_before_close_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = should_shutdown_write_before_close_0(thread, Parameters::default()).await;
     }
 }

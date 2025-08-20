@@ -2,8 +2,8 @@ use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
-use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::{JAVA_17, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -32,6 +32,18 @@ pub(crate) async fn register_natives(
     todo!("jdk.internal.vm.vector.VectorSupport.registerNatives()I")
 }
 
+#[intrinsic_method(
+    "jdk/internal/vm/vector/VectorSupport.getCPUFeatures()Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_25)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn get_cpu_features(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.internal.vm.vector.VectorSupport.getCPUFeatures()Ljava/lang/String;")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -52,5 +64,14 @@ mod tests {
     async fn test_register_natives() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = register_natives(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.vm.vector.VectorSupport.getCPUFeatures()Ljava/lang/String;"
+    )]
+    async fn test_get_cpu_features() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = get_cpu_features(thread, Parameters::default()).await;
     }
 }

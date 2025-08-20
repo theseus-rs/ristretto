@@ -3,7 +3,7 @@ use crate::intrinsic_methods::java::lang::r#ref::reference;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
-use ristretto_classfile::JAVA_24;
+use ristretto_classfile::JAVA_25;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 #[intrinsic_method(
     "java/lang/ref/PhantomReference.clear0()V",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn clear_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {

@@ -9,15 +9,18 @@ use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method(
-    "java/lang/StackFrameInfo.expandStackFrameInfo()V",
+    "jdk/internal/vm/ThreadSnapshot.create(Ljava/lang/Thread;)Ljdk/internal/vm/ThreadSnapshot;",
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
-pub(crate) async fn expand_stack_frame_info(
+pub(crate) async fn create(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.StackFrameInfo.expandStackFrameInfo()V")
+    let _thread_param = parameters.pop_reference()?;
+    todo!(
+        "jdk.internal.vm.ThreadSnapshot.create(Ljava/lang/Thread;)Ljdk/internal/vm/ThreadSnapshot;"
+    )
 }
 
 #[cfg(test)]
@@ -26,10 +29,11 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: java.lang.StackFrameInfo.expandStackFrameInfo()V"
+        expected = "not yet implemented: jdk.internal.vm.ThreadSnapshot.create(Ljava/lang/Thread;)Ljdk/internal/vm/ThreadSnapshot;"
     )]
-    async fn test_expand_stack_frame_info() {
+    async fn test_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = expand_stack_frame_info(thread, Parameters::default()).await;
+        let parameters = Parameters::new(vec![Value::Object(None)]);
+        let _ = create(thread, parameters).await;
     }
 }

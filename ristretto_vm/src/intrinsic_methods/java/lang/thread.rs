@@ -5,7 +5,7 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual, LessThanOrEqual};
-use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_24};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -357,7 +357,7 @@ pub(crate) async fn sleep_0(thread: Arc<Thread>, parameters: Parameters) -> Resu
     sleep(thread, parameters).await
 }
 
-#[intrinsic_method("java/lang/Thread.sleepNanos0(J)V", GreaterThanOrEqual(JAVA_24))]
+#[intrinsic_method("java/lang/Thread.sleepNanos0(J)V", GreaterThanOrEqual(JAVA_25))]
 #[async_recursion(?Send)]
 pub(crate) async fn sleep_nanos_0(
     _thread: Arc<Thread>,

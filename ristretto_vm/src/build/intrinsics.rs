@@ -3,7 +3,7 @@ extern crate syn;
 extern crate walkdir;
 
 use ristretto_classfile::{
-    JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_24, Version, VersionSpecification,
+    JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25, Version, VersionSpecification,
 };
 use std::collections::HashMap;
 use std::env;
@@ -25,7 +25,7 @@ const JAVA_VERSIONS: [(&str, &Version); 5] = [
     ("JAVA_11", &JAVA_11),
     ("JAVA_17", &JAVA_17),
     ("JAVA_21", &JAVA_21),
-    ("JAVA_24", &JAVA_24),
+    ("JAVA_25", &JAVA_25),
 ];
 
 /// Returns the Java version based on the provided version string.
@@ -35,7 +35,7 @@ fn parse_java_version(version: &str) -> Version {
         "JAVA_11" => JAVA_11,
         "JAVA_17" => JAVA_17,
         "JAVA_21" => JAVA_21,
-        "JAVA_24" => JAVA_24,
+        "JAVA_25" => JAVA_25,
         _ => panic!("Unsupported intrinsic method Java version: {version}"),
     }
 }

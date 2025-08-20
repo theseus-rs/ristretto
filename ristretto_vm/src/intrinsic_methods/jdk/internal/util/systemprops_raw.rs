@@ -6,7 +6,7 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-use ristretto_classfile::{JAVA_17, JAVA_21};
+use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::collections::HashMap;
@@ -57,6 +57,9 @@ pub(crate) async fn platform_properties(
     push_property(system_properties, &mut properties, "socksProxyPort")?;
     if java_version >= JAVA_21.java() {
         push_property(system_properties, &mut properties, "stderr.encoding")?;
+        if java_version >= JAVA_25.java() {
+            push_property(system_properties, &mut properties, "stdin.encoding")?;
+        }
         push_property(system_properties, &mut properties, "stdout.encoding")?;
     }
     push_property(system_properties, &mut properties, "sun.arch.abi")?;
