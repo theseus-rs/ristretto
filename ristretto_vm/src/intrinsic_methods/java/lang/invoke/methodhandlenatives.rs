@@ -334,10 +334,10 @@ async fn resolve_method(
         member_handles
             .insert(method_signature, method.into())
             .await?;
-        let _vmindex = method_descriptor.to_object(thread).await?;
+        let vmindex = method_descriptor.to_object(thread).await?;
         let mut member_self = member_self.as_object_mut()?;
         member_self.set_value("flags", Value::from(flags))?;
-        // member_self.set_value("vmindex", vmindex)?;
+        member_self.set_value("vmindex", vmindex)?;
     }
     Ok(Some(member_self))
 }
@@ -386,10 +386,10 @@ async fn resolve_field(
         member_handles
             .insert(field_signature.clone(), field_offset.into())
             .await?;
-        let _vmindex = field_signature.to_object(thread).await?;
+        let vmindex = field_signature.to_object(thread).await?;
         let mut member_self = member_self.as_object_mut()?;
         member_self.set_value("flags", Value::from(flags))?;
-        // member_self.set_value("vmindex", vmindex)?;
+        member_self.set_value("vmindex", vmindex)?;
     }
     Ok(Some(member_self))
 }
