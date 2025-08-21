@@ -7,6 +7,111 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/v0.25.0...v0.26.0) - 2025-08-21
+
+### Added
+- calculate clap styles at compile time instead of runtime
+- add startup tracing
+- add Java 25 support
+- add java/lang/invoke/MemberName.vmindex
+- optimize logging startup
+- implement invokedynamic call site cache
+- implement java/lang/Class.isRecord0()Z
+- add member handles
+- reduce memory allocations during primordial thread creation
+
+### Fixed
+- correct java.lang.Object.clone()
+- correct class name generation for anewarray instruction
+- never deep clone java.lang.Class objects
+- use private java.lang.Class constructor to create a Class object
+- update frame exception handling to create throwable using the current thread instead of the primordial thread
+- correct polymorphic calls to java.lang.invoke Holder inner classes
+- correct JVM initialization process to call java.lang.ref.Reference.<clinit>()
+
+### Other
+- update CallSiteCache to use a DashMap instead of RwLock<HashMap>
+- [**breaking**] switch to OsStr/OsString and classpath handling
+- correct lint errors
+- remove superfluous Class arc usage
+- reduce memory allocations and locks when registering primitives with the boot class loader
+- replace Reference std::sync::RwLock with parking_lot::RwLock
+- update Cargo.toml dependencies
+- define MemberNameFlags::REFERENCE_KIND_MASK using MemberNameFlags::REFERENCE_KIND_SHIFT
+- update start tracing sum logic
+- correct lint errors
+- update compatibility tests
+
+## `ristretto_vm` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.25.0...ristretto_vm-v0.26.0) - 2025-08-21
+
+### Added
+- add Java 25 support
+- add java/lang/invoke/MemberName.vmindex
+- implement java/lang/Class.isRecord0()Z
+- add member handles
+- reduce memory allocations during primordial thread creation
+- add startup tracing
+- implement invokedynamic call site cache
+
+### Fixed
+- use private java.lang.Class constructor to create a Class object
+- update frame exception handling to create throwable using the current thread instead of the primordial thread
+- correct polymorphic calls to java.lang.invoke Holder inner classes
+- correct JVM initialization process to call java.lang.ref.Reference.<clinit>()
+- correct class name generation for anewarray instruction
+
+### Other
+- define MemberNameFlags::REFERENCE_KIND_MASK using MemberNameFlags::REFERENCE_KIND_SHIFT
+- update CallSiteCache to use a DashMap instead of RwLock<HashMap>
+- [**breaking**] switch to OsStr/OsString and classpath handling
+- update start tracing sum logic
+- correct lint errors
+- replace Reference std::sync::RwLock with parking_lot::RwLock
+- correct lint errors
+- update compatibility tests
+
+## `ristretto_macros` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.25.0...ristretto_macros-v0.26.0) - 2025-08-21
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_jit` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.25.0...ristretto_jit-v0.26.0) - 2025-08-21
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classloader` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.25.0...ristretto_classloader-v0.26.0) - 2025-08-21
+
+### Added
+- add Java 25 support
+- add java/lang/invoke/MemberName.vmindex
+- optimize logging startup
+
+### Fixed
+- correct java.lang.Object.clone()
+- correct class name generation for anewarray instruction
+- never deep clone java.lang.Class objects
+
+### Other
+- remove superfluous Class arc usage
+- reduce memory allocations and locks when registering primitives with the boot class loader
+- [**breaking**] switch to OsStr/OsString and classpath handling
+- replace Reference std::sync::RwLock with parking_lot::RwLock
+- correct lint errors
+
+## `ristretto_gc` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.25.0...ristretto_gc-v0.26.0) - 2025-08-21
+
+### Added
+- implement invokedynamic call site cache
+
+### Other
+- correct lint errors
+
+## `ristretto_classfile` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.25.0...ristretto_classfile-v0.26.0) - 2025-08-21
+
+### Other
+- correct lint errors
+
 ## `ristretto_cli` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/v0.24.0...v0.25.0) - 2025-07-31
 
 ### Added
