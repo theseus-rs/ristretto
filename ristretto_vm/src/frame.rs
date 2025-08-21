@@ -198,8 +198,8 @@ impl Frame {
                 }
                 Ok(Return(value)) => return Ok(value),
                 Err(error) => {
-                    let vm = self.thread()?.vm()?;
-                    let throwable = convert_error_to_throwable(vm, error).await?;
+                    let thread = self.thread()?;
+                    let throwable = convert_error_to_throwable(&thread, error).await?;
                     let handler_program_counter = process_throwable(self, stack, throwable).await?;
                     self.program_counter
                         .store(handler_program_counter, Ordering::Relaxed);

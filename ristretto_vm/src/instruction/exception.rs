@@ -3,9 +3,9 @@ use crate::JavaError::NullPointerException;
 use crate::assignable::Assignable;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
-use crate::{Error, Result, VM};
+use crate::thread::Thread;
+use crate::{Error, Result};
 use ristretto_classloader::Value;
-use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.athrow>
 #[inline]
@@ -75,7 +75,7 @@ pub(crate) async fn process_throwable(
 /// # Errors
 ///
 /// if the error cannot be converted to a throwable
-pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Result<Value> {
+pub(crate) async fn convert_error_to_throwable(thread: &Thread, error: Error) -> Result<Value> {
     let (class_name, message) = match error {
         JavaError(java_error) => {
             let class_name = java_error.class_name().to_string();
@@ -86,7 +86,7 @@ pub(crate) async fn convert_error_to_throwable(vm: Arc<VM>, error: Error) -> Res
         _ => ("java.lang.InternalError".to_string(), format!("{error}")),
     };
 
-    let throwable = vm
+    let throwable = thread
         .object(class_name, "Ljava/lang/String;", &[message])
         .await?;
     Ok(throwable)
