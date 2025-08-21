@@ -5,7 +5,7 @@ use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{
     Between, Equal, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
-use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_24};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -396,7 +396,7 @@ pub(crate) async fn host_total_memory(
 
 #[intrinsic_method(
     "jdk/jfr/internal/JVM.hostTotalSwapMemory()J",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn host_total_swap_memory(
@@ -511,7 +511,7 @@ pub(crate) async fn mark_chunk_final(
     todo!("jdk.jfr.internal.JVM.markChunkFinal()V")
 }
 
-#[intrinsic_method("jdk/jfr/internal/JVM.nanosNow()J", GreaterThanOrEqual(JAVA_24))]
+#[intrinsic_method("jdk/jfr/internal/JVM.nanosNow()J", GreaterThanOrEqual(JAVA_25))]
 #[async_recursion(?Send)]
 pub(crate) async fn nanos_now(
     _thread: Arc<Thread>,
@@ -555,7 +555,7 @@ pub(crate) async fn register_natives(
 
 #[intrinsic_method(
     "jdk/jfr/internal/JVM.registerStackFilter([Ljava/lang/String;[Ljava/lang/String;)J",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn register_stack_filter(
@@ -727,7 +727,7 @@ pub(crate) async fn set_method_sampling_period(
 
 #[intrinsic_method(
     "jdk/jfr/internal/JVM.setMiscellaneous(JJ)V",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn set_miscellaneous(
@@ -871,7 +871,7 @@ pub(crate) async fn uncaught_exception(
 
 #[intrinsic_method(
     "jdk/jfr/internal/JVM.unregisterStackFilter(J)V",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn unregister_stack_filter(
@@ -881,6 +881,64 @@ pub(crate) async fn unregister_stack_filter(
     todo!("jdk.jfr.internal.JVM.unregisterStackFilter(J)V")
 }
 
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.drainStaleMethodTracerIds()[J",
+    GreaterThanOrEqual(JAVA_25)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn drain_stale_method_tracer_ids(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.drainStaleMethodTracerIds()[J")
+}
+
+#[intrinsic_method("jdk/jfr/internal/JVM.isProduct()Z", GreaterThanOrEqual(JAVA_25))]
+#[async_recursion(?Send)]
+pub(crate) async fn is_product(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.jfr.internal.JVM.isProduct()Z")
+}
+
+#[intrinsic_method("jdk/jfr/internal/JVM.setCPUPeriod(J)V", GreaterThanOrEqual(JAVA_25))]
+#[async_recursion(?Send)]
+pub(crate) async fn set_cpu_period(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _period = parameters.pop_long()?;
+    todo!("jdk.jfr.internal.JVM.setCPUPeriod(J)V")
+}
+
+#[intrinsic_method("jdk/jfr/internal/JVM.setCPURate(D)V", GreaterThanOrEqual(JAVA_25))]
+#[async_recursion(?Send)]
+pub(crate) async fn set_cpu_rate(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _rate = parameters.pop_double()?;
+    todo!("jdk.jfr.internal.JVM.setCPURate(D)V")
+}
+
+#[intrinsic_method(
+    "jdk/jfr/internal/JVM.setMethodTraceFilters([Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[I)[J",
+    GreaterThanOrEqual(JAVA_25)
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn set_method_trace_filters(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _flags = parameters.pop_reference()?;
+    let _patterns = parameters.pop_reference()?;
+    let _classes = parameters.pop_reference()?;
+    let _methods = parameters.pop_reference()?;
+    todo!(
+        "jdk.jfr.internal.JVM.setMethodTraceFilters([Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[I)[J"
+    )
+}
 #[cfg(test)]
 mod tests {
     use super::*;

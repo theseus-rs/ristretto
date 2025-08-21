@@ -3,14 +3,14 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThan, GreaterThanOrEqual};
-use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_24};
+use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method(
     "java/lang/VirtualThread.notifyJvmtiDisableSuspend(Z)V",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn notify_jvmti_disable_suspend(
@@ -67,7 +67,7 @@ pub(crate) async fn notify_jvmti_unmount(
 
 #[intrinsic_method(
     "java/lang/VirtualThread.postPinnedEvent(Ljava/lang/String;)V",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn post_pinned_event(
@@ -91,7 +91,7 @@ pub(crate) async fn register_natives(
 
 #[intrinsic_method(
     "java/lang/VirtualThread.takeVirtualThreadListToUnblock()Ljava/lang/VirtualThread;",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn take_virtual_thread_list_to_unblock(

@@ -3,7 +3,7 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
-use ristretto_classfile::{JAVA_21, JAVA_24};
+use ristretto_classfile::{JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -58,7 +58,7 @@ pub(crate) async fn get_glyph_cache_description(
 
 #[intrinsic_method(
     "sun/font/StrikeCache.getInvisibleGlyphPtr()J",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_invisible_glyph_ptr(

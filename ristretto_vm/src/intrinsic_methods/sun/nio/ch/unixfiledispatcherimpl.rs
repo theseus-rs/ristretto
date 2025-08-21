@@ -3,7 +3,7 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-use ristretto_classfile::{JAVA_21, JAVA_24};
+use ristretto_classfile::{JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -22,7 +22,7 @@ pub(crate) async fn allocation_granularity_0(
 
 #[intrinsic_method(
     "sun/nio/ch/UnixFileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn available_0(
@@ -58,7 +58,7 @@ pub(crate) async fn force_0(
 
 #[intrinsic_method(
     "sun/nio/ch/UnixFileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z",
-    GreaterThanOrEqual(JAVA_24)
+    GreaterThanOrEqual(JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn is_other_0(

@@ -173,6 +173,7 @@ fn system_properties(vm: &VM) -> Result<HashMap<&'static str, String>> {
     properties.insert("socksProxyPort", String::new());
 
     properties.insert("stderr.encoding", "UTF-8".to_string());
+    properties.insert("stdin.encoding", "UTF-8".to_string());
     properties.insert("stdout.encoding", "UTF-8".to_string());
 
     // TODO: implement sun.arch.abi
