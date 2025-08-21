@@ -2,7 +2,7 @@ use crate::Error::InternalError;
 use crate::Result;
 use crate::thread::Thread;
 use parking_lot::RwLock;
-use ristretto_classfile::{JAVA_8, JAVA_17};
+use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25};
 use ristretto_classloader::{Class, ClassLoader, Object, Reference, Value};
 use ristretto_gc::Gc;
 use std::sync::Arc;
@@ -269,35 +269,77 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
         return Ok(object);
     }
 
-    let java_lang_class = thread.class("java.lang.Class").await?;
-    let mut object = Object::new(java_lang_class)?;
     let class_name = class.name().replace('/', ".");
     let name = class_name.to_object(thread).await?;
-    object.set_value("name", name)?;
     let class_loader_object = match class.class_loader()? {
         Some(class_loader) => Box::pin(to_class_loader_object(thread, &class_loader)).await?,
         None => Value::Object(None),
     };
+    let component_type = class.component_type();
+    let component_type_object = if let Some(component_type) = component_type {
+        let component_type_class = thread.class(component_type).await?;
+        Box::pin(to_class_object(thread, &component_type_class)).await?
+    } else {
+        Value::Object(None)
+    };
 
-    // Set the class module if applicable
-    if !matches!(class_loader_object, Value::Object(None)) {
-        let vm = thread.vm()?;
-        if *vm.java_class_file_version() > JAVA_8 {
-            let module = thread
-                .try_invoke(
-                    "java.lang.ClassLoader",
-                    "getUnnamedModule()Ljava/lang/Module;",
-                    std::slice::from_ref(&class_loader_object),
-                )
-                .await?;
+    let vm = thread.vm()?;
+    let java_version = vm.java_class_file_version();
+    let module = if *java_version <= JAVA_8 || class_loader_object.is_null() {
+        Value::Object(None)
+    } else {
+        thread
+            .try_invoke(
+                "java.lang.ClassLoader",
+                "getUnnamedModule()Ljava/lang/Module;",
+                std::slice::from_ref(&class_loader_object),
+            )
+            .await?
+    };
+
+    let (descriptor, parameters, module) = if *java_version <= JAVA_8 {
+        (
+            "Ljava/lang/ClassLoader;",
+            vec![class_loader_object],
+            Value::Object(None),
+        )
+    } else if *java_version > JAVA_8 && *java_version < JAVA_25 {
+        (
+            "Ljava/lang/ClassLoader;Ljava/lang/Class;",
+            vec![class_loader_object, component_type_object],
+            module,
+        )
+    } else {
+        let modifiers = Value::from(class.class_file().access_flags.bits());
+        let protected_domain = Value::Object(None);
+        let primitive = Value::from(class.is_primitive());
+        (
+            "Ljava/lang/ClassLoader;Ljava/lang/Class;CLjava/security/ProtectionDomain;Z",
+            vec![
+                class_loader_object,
+                component_type_object,
+                modifiers,
+                protected_domain,
+                primitive,
+            ],
+            module,
+        )
+    };
+    let object_value = thread
+        .object("java.lang.Class", descriptor, &parameters)
+        .await?;
+
+    {
+        let mut object = object_value.as_object_mut()?;
+        object.set_value("name", name)?;
+        // Set the class module if applicable
+        if !matches!(module, Value::Object(None)) {
             object.set_value_unchecked("module", module)?;
         }
     }
-    object.set_value_unchecked("classLoader", class_loader_object)?;
 
-    let value = Value::from(object);
-    class.set_object(Some(value.clone()))?;
-    Ok(value)
+    class.set_object(Some(object_value.clone()))?;
+    Ok(object_value)
 }
 
 impl JavaObject for Arc<Class> {
