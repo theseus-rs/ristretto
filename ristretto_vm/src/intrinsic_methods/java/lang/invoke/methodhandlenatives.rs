@@ -296,9 +296,9 @@ async fn resolve_method(
     let method_name = name.as_string()?;
     let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
     let method = match class.name() {
-        "java.lang.invoke.DelegatingMethodHandle$Holder"
-        | "java.lang.invoke.DirectMethodHandle$Holder"
-        | "java.lang.invoke.Invokers$Holder" => {
+        "java/lang/invoke/DelegatingMethodHandle$Holder"
+        | "java/lang/invoke/DirectMethodHandle$Holder"
+        | "java/lang/invoke/Invokers$Holder" => {
             resolve_holder_methods(class.clone(), &method_name, &method_descriptor)?
         }
         _ => class.try_get_method(&method_name, &method_descriptor)?,
@@ -544,12 +544,12 @@ pub(crate) async fn resolve_1(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let speculative_resolve = parameters.pop_bool()?;
-    let caller = match parameters.pop() {
-        Ok(caller) => {
-            let caller = get_class(&thread, &caller).await?;
-            Some(caller)
-        }
-        Err(_) => None,
+    let caller = parameters.pop()?;
+    let caller = if caller.is_null() {
+        None
+    } else {
+        let caller = get_class(&thread, &caller).await?;
+        Some(caller)
     };
     let member_self = parameters.pop()?;
     resolve(
@@ -573,12 +573,12 @@ pub(crate) async fn resolve_2(
 ) -> Result<Option<Value>> {
     let speculative_resolve = parameters.pop_bool()?;
     let lookup_mode = LookupModeFlags::from_bits_truncate(parameters.pop_int()?);
-    let caller = match parameters.pop() {
-        Ok(caller) => {
-            let caller = get_class(&thread, &caller).await?;
-            Some(caller)
-        }
-        Err(_) => None,
+    let caller = parameters.pop()?;
+    let caller = if caller.is_null() {
+        None
+    } else {
+        let caller = get_class(&thread, &caller).await?;
+        Some(caller)
     };
     let member_self = parameters.pop()?;
     resolve(
