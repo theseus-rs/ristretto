@@ -912,7 +912,7 @@ pub(crate) async fn init_class_name(
     Ok(Some(value))
 }
 
-#[intrinsic_method("java/lang/Class.isArray()Z", Any)]
+#[intrinsic_method("java/lang/Class.isArray()Z", LessThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
 pub(crate) async fn is_array(
     thread: Arc<Thread>,
@@ -984,7 +984,7 @@ pub(crate) async fn is_instance(
     }
 }
 
-#[intrinsic_method("java/lang/Class.isInterface()Z", Any)]
+#[intrinsic_method("java/lang/Class.isInterface()Z", LessThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
 pub(crate) async fn is_interface(
     thread: Arc<Thread>,
@@ -999,7 +999,7 @@ pub(crate) async fn is_interface(
     }
 }
 
-#[intrinsic_method("java/lang/Class.isPrimitive()Z", Any)]
+#[intrinsic_method("java/lang/Class.isPrimitive()Z", LessThanOrEqual(JAVA_21))]
 #[async_recursion(?Send)]
 pub(crate) async fn is_primitive(
     thread: Arc<Thread>,
