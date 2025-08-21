@@ -32,7 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other
 - update CallSiteCache to use a DashMap instead of RwLock<HashMap>
 - [**breaking**] switch to OsStr/OsString and classpath handling
-- Merge pull request #544 from theseus-rs/optimize-clap-styles
 - correct lint errors
 - remove superfluous Class arc usage
 - reduce memory allocations and locks when registering primitives with the boot class loader
@@ -40,7 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update Cargo.toml dependencies
 - define MemberNameFlags::REFERENCE_KIND_MASK using MemberNameFlags::REFERENCE_KIND_SHIFT
 - update start tracing sum logic
-- Merge pull request #540 from theseus-rs/correct-lints
 - correct lint errors
 - update compatibility tests
 
@@ -67,7 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update CallSiteCache to use a DashMap instead of RwLock<HashMap>
 - [**breaking**] switch to OsStr/OsString and classpath handling
 - update start tracing sum logic
-- Merge pull request #540 from theseus-rs/correct-lints
 - correct lint errors
 - replace Reference std::sync::RwLock with parking_lot::RwLock
 - correct lint errors
