@@ -7,7 +7,7 @@
 //!
 //! ## Overview
 //!
-//! A pauseless, concurrent and parallel mark and sweep garbage collector implementation for the
+//! A low pause, concurrent and parallel mark and sweep garbage collector implementation for the
 //! Ristretto VM. This crate provides `Gc<T>` types for garbage-collected references, using a pure
 //! reachability analysis algorithm with automatic cycle detection and collection.
 //!

@@ -38,7 +38,7 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - Url class loading from jars and modules
 - Reading, writing, verifying classes
 - Verification of class files is supported, but is still a work in progress.
-- Pauseless, concurrent and parallel mark and sweep garbage collector
+- A low-pause, concurrent, parallel mark-and-sweep garbage collector
 - Parallel Just-In-Time (JIT) compilation for x86-64, aarch64, s390x and riscv64
 
 ### Limitations
