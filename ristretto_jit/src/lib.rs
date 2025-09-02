@@ -9,9 +9,7 @@
 //!
 //! Ristretto JIT provides a Just-In-Time compiler for the Ristretto VM. The JIT compiler generates
 //! native code from Ristretto VM bytecode, allowing for high-performance execution directly on the
-//! host machine. The library supports both standard platforms and WebAssembly targets with tailored
-//! compilation strategies. The appropriate compiler is automatically selected based on the target
-//! platform.
+//! host machine.
 //!
 //! ## Architecture
 //!
