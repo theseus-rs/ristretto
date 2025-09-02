@@ -275,6 +275,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_runtime_v25() -> Result<()> {
-        test_runtime("25.0.0.34.1").await
+        test_runtime("25.0.0.36.1").await
     }
 }

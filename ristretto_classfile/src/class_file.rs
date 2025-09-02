@@ -15,7 +15,7 @@ use std::io::Cursor;
 /// The magic number that identifies a valid Java class file.
 ///
 /// Every Java class file begins with this 4-byte value (`0xCAFE_BABE`) in big-endian format. This
-/// signature helps JVM identify valid class files and reject invalid ones.
+/// signature allows the JVM to identify valid class files and reject invalid ones.
 const MAGIC: u32 = 0xCAFE_BABE;
 
 /// `ClassFile` represents the content of a Java .class file.
