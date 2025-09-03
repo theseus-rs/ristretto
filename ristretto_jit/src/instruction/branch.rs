@@ -609,43 +609,29 @@ pub(crate) fn lookupswitch(
     program_counter: usize,
     lookup_switch: &LookupSwitch,
 ) -> Result<()> {
-    // TODO: evaluate if the lookup switch can be optimized to a jump table.
     let index = stack.pop()?;
-    let block_arguments = stack.as_block_arguments();
-    let stack_types = stack.to_type_vec(function_builder);
+    // Create a Switch for efficient jump table generation; Cranelift will optimize it to use
+    // branches, jump tables, or a combination of both
+    let mut switch = Switch::new();
 
-    for (&index_value, &offset) in &lookup_switch.pairs {
-        let else_block = function_builder.create_block();
-        append_block_params(function_builder, else_block, &stack_types);
-
-        // PC = start of tableswitch + offset (signed arithmetic)
-        let target_address = usize::try_from(i32::try_from(program_counter)?.wrapping_add(offset))?;
-        let block = *blocks
+    for (case_value, offset) in &lookup_switch.pairs {
+        let target_address =
+            usize::try_from(i32::try_from(program_counter)?.saturating_add(*offset))?;
+        let target_block = *blocks
             .get(&target_address)
             .ok_or_else(|| InvalidBlockAddress(target_address))?;
-        let index_value = i64::from(index_value);
-        let block_address = function_builder.ins().iconst(types::I32, index_value);
-        let condition_value = function_builder
-            .ins()
-            .icmp(IntCC::Equal, index, block_address);
-        function_builder.ins().brif(
-            condition_value,
-            block,
-            &block_arguments,
-            else_block,
-            &block_arguments,
-        );
-        function_builder.switch_to_block(else_block);
+
+        let case_value = u128::try_from(*case_value)?;
+        switch.set_entry(case_value, target_block);
     }
 
-    // PC = start of tableswitch + default (signed arithmetic)
     let default_address =
         usize::try_from(i32::try_from(program_counter)?.saturating_add(lookup_switch.default))?;
-    let block = blocks
+    let default_block = *blocks
         .get(&default_address)
         .ok_or_else(|| InvalidBlockAddress(default_address))?;
-    let block_arguments = stack.as_block_arguments();
-    function_builder.ins().jump(*block, &block_arguments);
+
+    switch.emit(function_builder, index, default_block);
     stack.reset(function_builder)?;
     Ok(())
 }
