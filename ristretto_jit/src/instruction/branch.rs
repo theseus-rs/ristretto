@@ -4,7 +4,7 @@ use crate::control_flow_graph::append_block_params;
 use crate::instruction::TRAP_INTERNAL_ERROR;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use cranelift::frontend::FunctionBuilder;
+use cranelift::frontend::{FunctionBuilder, Switch};
 use cranelift::prelude::{Block, InstBuilder, IntCC, TrapCode, Value, types};
 use ristretto_classfile::attributes::{LookupSwitch, TableSwitch};
 use std::collections::HashMap;
@@ -573,43 +573,30 @@ pub(crate) fn tableswitch(
     program_counter: usize,
     table_switch: &TableSwitch,
 ) -> Result<()> {
-    // TODO: evaluate if the table switch can be optimized to a jump table.
     let index = stack.pop()?;
-    let block_arguments = stack.as_block_arguments();
-    let stack_types = stack.to_type_vec(function_builder);
+    // Create a Switch for efficient jump table generation; Cranelift will optimize it to use
+    // branches, jump tables, or a combination of both
+    let mut switch = Switch::new();
 
     for (offset_index, &offset) in table_switch.offsets.iter().enumerate() {
-        let else_block = function_builder.create_block();
-        append_block_params(function_builder, else_block, &stack_types);
-
-        // PC = start of tableswitch + offset (signed arithmetic)
-        let target_address = usize::try_from(i32::try_from(program_counter)?.wrapping_add(offset))?;
-        let block = *blocks
+        let target_address =
+            usize::try_from(i32::try_from(program_counter)?.saturating_add(offset))?;
+        let target_block = *blocks
             .get(&target_address)
             .ok_or_else(|| InvalidBlockAddress(target_address))?;
-        let offset_value = i64::from(table_switch.low).saturating_add(i64::try_from(offset_index)?);
-        let block_address = function_builder.ins().iconst(types::I32, offset_value);
-        let condition_value = function_builder
-            .ins()
-            .icmp(IntCC::Equal, index, block_address);
-        function_builder.ins().brif(
-            condition_value,
-            block,
-            &block_arguments,
-            else_block,
-            &block_arguments,
-        );
-        function_builder.switch_to_block(else_block);
+
+        let case_value = i64::from(table_switch.low).saturating_add(i64::try_from(offset_index)?);
+        let case_value = u128::try_from(case_value)?;
+        switch.set_entry(case_value, target_block);
     }
 
-    // PC = start of tableswitch + default (signed arithmetic)
     let default_address =
-        usize::try_from(i32::try_from(program_counter)?.wrapping_add(table_switch.default))?;
-    let block = blocks
+        usize::try_from(i32::try_from(program_counter)?.saturating_add(table_switch.default))?;
+    let default_block = *blocks
         .get(&default_address)
         .ok_or_else(|| InvalidBlockAddress(default_address))?;
-    let block_arguments = stack.as_block_arguments();
-    function_builder.ins().jump(*block, &block_arguments);
+
+    switch.emit(function_builder, index, default_block);
     stack.reset(function_builder)?;
     Ok(())
 }
@@ -653,7 +640,7 @@ pub(crate) fn lookupswitch(
 
     // PC = start of tableswitch + default (signed arithmetic)
     let default_address =
-        usize::try_from(i32::try_from(program_counter)?.wrapping_add(lookup_switch.default))?;
+        usize::try_from(i32::try_from(program_counter)?.saturating_add(lookup_switch.default))?;
     let block = blocks
         .get(&default_address)
         .ok_or_else(|| InvalidBlockAddress(default_address))?;
