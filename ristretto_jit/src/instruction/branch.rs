@@ -579,8 +579,7 @@ pub(crate) fn tableswitch(
     let mut switch = Switch::new();
 
     for (offset_index, &offset) in table_switch.offsets.iter().enumerate() {
-        let target_address =
-            usize::try_from(i32::try_from(program_counter)?.saturating_add(offset))?;
+        let target_address = program_counter.saturating_add(usize::try_from(offset)?);
         let target_block = *blocks
             .get(&target_address)
             .ok_or_else(|| InvalidBlockAddress(target_address))?;
@@ -590,8 +589,7 @@ pub(crate) fn tableswitch(
         switch.set_entry(case_value, target_block);
     }
 
-    let default_address =
-        usize::try_from(i32::try_from(program_counter)?.saturating_add(table_switch.default))?;
+    let default_address = program_counter.saturating_add(usize::try_from(table_switch.default)?);
     let default_block = *blocks
         .get(&default_address)
         .ok_or_else(|| InvalidBlockAddress(default_address))?;
@@ -615,8 +613,7 @@ pub(crate) fn lookupswitch(
     let mut switch = Switch::new();
 
     for (case_value, offset) in &lookup_switch.pairs {
-        let target_address =
-            usize::try_from(i32::try_from(program_counter)?.saturating_add(*offset))?;
+        let target_address = program_counter.saturating_add(usize::try_from(*offset)?);
         let target_block = *blocks
             .get(&target_address)
             .ok_or_else(|| InvalidBlockAddress(target_address))?;
@@ -625,8 +622,7 @@ pub(crate) fn lookupswitch(
         switch.set_entry(case_value, target_block);
     }
 
-    let default_address =
-        usize::try_from(i32::try_from(program_counter)?.saturating_add(lookup_switch.default))?;
+    let default_address = program_counter.saturating_add(usize::try_from(lookup_switch.default)?);
     let default_block = *blocks
         .get(&default_address)
         .ok_or_else(|| InvalidBlockAddress(default_address))?;
