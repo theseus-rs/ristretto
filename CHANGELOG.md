@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/v0.26.0...v0.26.1) - 2025-09-04
+
+### Other
+- update Cargo.toml dependencies
+- update to java 25.0.0.36.1
+- update gc docs
+- update gc docs
+- simplify jit branch type casting
+- Merge branch 'main' into optimize-jit-tableswitch
+- optimize jit tableswitch instruction
+- update jit docs
+
+## `ristretto_vm` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.26.0...ristretto_vm-v0.26.1) - 2025-09-04
+
+### Other
+- update to java 25.0.0.36.1
+
+## `ristretto_jit` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.26.0...ristretto_jit-v0.26.1) - 2025-09-04
+
+### Other
+- simplify jit branch type casting
+- Merge branch 'main' into optimize-jit-tableswitch
+- optimize jit tableswitch instruction
+- update jit docs
+
+## `ristretto_classloader` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.26.0...ristretto_classloader-v0.26.1) - 2025-09-04
+
+### Other
+- update to java 25.0.0.36.1
+
+## `ristretto_gc` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.26.0...ristretto_gc-v0.26.1) - 2025-09-04
+
+### Other
+- update gc docs
+- update gc docs
+
+## `ristretto_classfile` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.26.0...ristretto_classfile-v0.26.1) - 2025-09-04
+
+### Other
+- update to java 25.0.0.36.1
+
 ## `ristretto_cli` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/v0.25.0...v0.26.0) - 2025-08-21
 
 ### Added
