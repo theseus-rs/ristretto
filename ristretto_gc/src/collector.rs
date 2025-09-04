@@ -45,10 +45,10 @@ enum GcPhase {
     ConcurrentSweep,
 }
 
-/// A pauseless, concurrent garbage collector using reachability analysis.
+/// A low pause, parallel, concurrent garbage collector using reachability analysis.
 ///
 /// This collector implements a concurrent mark-and-sweep algorithm with the following phases:
-/// 1. Initial Mark: Brief pause to mark root objects (pauseless for small root sets)
+/// 1. Initial Mark: Brief pause to mark root objects
 /// 2. Concurrent Mark: Mark reachable objects concurrently with mutator
 /// 3. Final Mark: Brief pause to handle objects modified during concurrent marking
 /// 4. Concurrent Sweep: Reclaim unmarked objects concurrently
@@ -78,7 +78,7 @@ pub struct GarbageCollector {
 }
 
 impl GarbageCollector {
-    /// Creates a new pauseless, concurrent garbage collector.
+    /// Creates a new low pause, parallel, concurrent garbage collector.
     #[must_use]
     pub fn new() -> Arc<Self> {
         Self::with_config(Configuration::default())

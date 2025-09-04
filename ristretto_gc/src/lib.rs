@@ -13,9 +13,9 @@
 //!
 //! ## Features
 //!
-//! ### **Pauseless Concurrent Collection**
+//! ### **Low Pause, Parallel, Concurrent Collection**
 //! - **Sub-millisecond pause times** (default: 100 microseconds maximum)
-//! - **Concurrent mark-and-sweep** algorithm with reachability analysis
+//! - **Parallel, Concurrent mark-and-sweep** algorithm with reachability analysis
 //! - **Background collection thread** that runs alongside application code
 //! - **Incremental processing** to maintain low latency
 //!
