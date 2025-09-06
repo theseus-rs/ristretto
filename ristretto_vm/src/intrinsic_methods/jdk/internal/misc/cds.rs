@@ -8,6 +8,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
+use tracing::debug;
 
 #[intrinsic_method(
     "jdk/internal/misc/CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",
@@ -129,9 +130,11 @@ pub(crate) async fn is_sharing_enabled_0(
 #[async_recursion(?Send)]
 pub(crate) async fn log_lambda_form_invoker(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.CDS.logLambdaFormInvoker(Ljava/lang/String;)V")
+    let log_line = parameters.pop()?.as_string()?;
+    debug!("CDS.logLambdaFormInvoker: {log_line}");
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -150,6 +153,7 @@ pub(crate) async fn needs_class_init_barrier_0(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::JavaObject;
 
     #[tokio::test]
     #[should_panic(
@@ -229,12 +233,15 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.CDS.logLambdaFormInvoker(Ljava/lang/String;)V"
-    )]
-    async fn test_log_lambda_form_invoker() {
+    async fn test_log_lambda_form_invoker() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = log_lambda_form_invoker(thread, Parameters::default()).await;
+        let line = "Test log from logLambdaFormInvoker"
+            .to_object(&thread)
+            .await?;
+        let parameters = Parameters::new(vec![line]);
+        let result = log_lambda_form_invoker(thread, parameters).await?;
+        assert!(result.is_none());
+        Ok(())
     }
 
     #[tokio::test]
