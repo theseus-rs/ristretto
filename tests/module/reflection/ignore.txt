@@ -1,0 +1,15 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[5]
+  detailMessage=String(\"Operand stack overflow\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(5)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === Module Reflection and Access Tests ===
+--- Test: Module Accessibility ---
+Error testing accessibility: illegal lookupClass: class java.lang.invoke.LambdaMetafactory
+--- Test: Package Exports ---
+Error testing package exports: illegal lookupClass: class java.lang.invoke.LambdaMetafactory
+--- Test: Module Reads ---
+Current module reads:

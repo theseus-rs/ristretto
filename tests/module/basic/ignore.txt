@@ -1,0 +1,18 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[5]
+  detailMessage=String(\"Operand stack overflow\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(5)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === Basic Module System Tests ===
+--- Test: Current Module ---
+Current module: null
+Is named: false
+Module string: unnamed module @dd11e70
+--- Test: Unnamed Module ---
+Unnamed module name: null
+Is unnamed module: true
+Unnamed module layer: null
+--- Test: Module Layer ---
