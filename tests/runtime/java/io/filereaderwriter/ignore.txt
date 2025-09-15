@@ -1,0 +1,30 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[13]
+  detailMessage=String(\"out of range integral type conversion attempted\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(13)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === FileReader and FileWriter Tests ===
+--- Basic FileReader/Writer Tests ---
+Written text with FileWriter
+File size: 42 bytes
+Character by character: Hello, World!\
+T (15 chars)
+Total chars read: 42
+Content lines:
+  Line 1: Hello, World!
+  Line 2: This is a test.
+  Line 3: Line 3 here.
+--- Character Operations Tests ---
+Written various character operations
+Read content:
+  Line 1: 'AB'
+  Line 2: 'Hello'
+  Line 3: 'World!'
+  Line 4: 'Full string'
+  Line 5: 'string'
+--- Unicode Support Tests ---
+Written Unicode text
+Unicode file size: 173 bytes

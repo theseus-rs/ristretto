@@ -1,6 +1,6 @@
 import java.math.BigInteger;
 
-/** Comprehensive test for BigInteger operations. */
+/** Tests for BigInteger operations. */
 public class Test {
 
     public static void main(String[] args) {

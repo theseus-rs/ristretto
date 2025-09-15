@@ -1,0 +1,20 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[7]
+  detailMessage=String(\"Invalid operand; expected int, found Object(class java/io/RandomAccessFile)\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(7)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === RandomAccessFile Tests ===
+--- Basic Random Access Tests ---
+Written initial data
+File length: 36
+File pointer: 36
+After seek(0), file pointer: 0
+Read 10 bytes: '0123456789'
+File pointer after read: 10
+Byte at position 15: 'F'
+Extended file length: 45
+Extended data: '_EXTENDED'
+--- Data Type Operations Tests ---

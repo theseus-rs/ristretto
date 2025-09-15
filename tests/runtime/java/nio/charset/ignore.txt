@@ -1,0 +1,17 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/NullPointerException)
+  backtrace=java/lang/StackTraceElement[19]
+  detailMessage=String(\"null 'this' reference\")
+  cause=Object(class java/lang/NullPointerException)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(19)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+  extendedMessageState=int(1)
+  extendedMessage=Object(null)
+ })))):
+stdout: === Java NIO Charset Tests ===
+--- Charset Basics Tests ---
+Default charset: UTF-8
+UTF-8 charset name: UTF-8
+UTF-8 is supported: true
+ASCII is supported: true
+ISO-8859-1 is supported: true

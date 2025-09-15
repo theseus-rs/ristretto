@@ -1,0 +1,22 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/NullPointerException)
+  backtrace=java/lang/StackTraceElement[8]
+  detailMessage=String(\"null 'this' reference\")
+  cause=Object(class java/lang/NullPointerException)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(8)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+  extendedMessageState=int(1)
+  extendedMessage=Object(null)
+ })))):
+stdout: === PipedStreams and CharArrayStreams Tests ===
+--- Piped Streams Basic Tests ---
+Written to piped output stream: 21 bytes
+Read from piped input stream: 'Hello, Piped Streams!'
+Data matches: true
+Available bytes: 9
+Read more data: 'More data'
+--- Piped Streams Threaded Tests ---
+ERROR: illegal lookupClass: class java.lang.invoke.LambdaMetafactory
+
+stderr: java.lang.IllegalArgumentException: illegal lookupClass: class java.lang.invoke.LambdaMetafactory
+")

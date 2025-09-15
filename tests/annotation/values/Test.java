@@ -11,7 +11,7 @@ enum Priority {
     String value() default "simple";
 }
 
-// Comprehensive annotation with all value types
+// Annotation with all value types
 @Retention(RetentionPolicy.RUNTIME)
 @interface AllValueTypes {
     // Primitive types

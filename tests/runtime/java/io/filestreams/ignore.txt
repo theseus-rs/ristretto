@@ -1,0 +1,18 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[6]
+  detailMessage=String(\"out of range integral type conversion attempted\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(6)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === FileInputStream and FileOutputStream Tests ===
+--- Basic File Operations Tests ---
+Wrote 42 bytes to input file
+Available bytes: 42
+Read 42 bytes
+Copied 42 bytes
+Original file size: 42
+Copied file size: 42
+Files equal: true
+--- Binary Operations Tests ---

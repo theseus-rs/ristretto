@@ -56,7 +56,7 @@ proc-macro2 = "1.0.101"
 quote = "1.0.40"
 rayon = "1.11.0"
 reqwest = { version = "0.12.23", default-features = false }
-serde = "1.0.219"
+serde = "1.0.224"
 serde_plain = "1.0.2"
 stacker = "0.1.21"
 syn = "2.0.106"

@@ -1,0 +1,78 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[5]
+  detailMessage=String(\"Operand stack overflow\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(5)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === BufferedReader and BufferedWriter Tests ===
+--- Basic Buffered Operations Tests ---
+Written content with BufferedWriter
+File size: 50 bytes
+BufferedReader ready: true
+First 10 chars: Hello, Buf
+Remaining content: 'fered World!
+Second line here
+Third line'
+--- Line Operations Tests ---
+Written 6 lines
+Line 1: 'First line of text'
+Line 2: 'Second line with numbers: 12345'
+Line 3: 'Third line with special chars: !@#$%'
+Line 4: ''
+Line 5: 'Fifth line after empty'
+Line 6: 'Last line'
+Total lines read: 6
+First line: 'First line of text'
+Skipped 10 characters
+Partial line after skip: 'e with numbers: 12345'
+--- Mark and Reset Tests ---
+Mark supported: true
+Read line 1: 'Line 0: Some test content here'
+Read line 2: 'Line 1: Some test content here'
+Marked position after reading 2 lines
+Read line 3: 'Line 2: Some test content here'
+Read line 4: 'Line 3: Some test content here'
+Reset to marked position
+Read line 3 again: 'Line 2: Some test content here'
+Read line 4 again: 'Line 3: Some test content here'
+Line 3 matches: true
+Line 4 matches: true
+--- Buffer Size Tests ---
+Testing buffer size: 8
+  Written with buffer size 8
+  Read 100 lines with buffer size 8
+  Read 4690 characters with buffer size 8
+Testing buffer size: 16
+  Written with buffer size 16
+  Read 100 lines with buffer size 16
+  Read 4690 characters with buffer size 16
+Testing buffer size: 64
+  Written with buffer size 64
+  Read 100 lines with buffer size 64
+  Read 4690 characters with buffer size 64
+Testing buffer size: 256
+  Written with buffer size 256
+  Read 100 lines with buffer size 256
+  Read 4690 characters with buffer size 256
+Testing buffer size: 1024
+  Written with buffer size 1024
+  Read 100 lines with buffer size 1024
+  Read 4690 characters with buffer size 1024
+Testing buffer size: 8192
+  Written with buffer size 8192
+  Read 100 lines with buffer size 8192
+  Read 4690 characters with buffer size 8192
+--- Mixed Operations Tests ---
+Written mixed content
+Line 1: 'Hello'
+Read 3 chars: 'Wor'
+Rest of line 2: 'ld'
+Skipped 2 characters
+Line 3: 'ti'
+Line 4: 'Full string line'
+Line 5: 'string'
+--- Exception Handling Tests ---
+Correctly caught IllegalArgumentException for zero buffer size
+Correctly caught IllegalArgumentException for negative buffer size

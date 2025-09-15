@@ -1,0 +1,22 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[10]
+  detailMessage=String(\"out of range integral type conversion attempted\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(10)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === Java NIO Buffer Tests ===
+--- ByteBuffer Tests ---
+ByteBuffer capacity: 10
+Initial position: 0
+Initial limit: 10
+Limit equals capacity: true
+Position after put: 1
+Get returns: 42
+Position after put array: 5
+Array get/put consistency: true
+Wrapped buffer capacity: 5
+Wrapped buffer position: 0
+Little endian order: LITTLE_ENDIAN
+Big endian order: BIG_ENDIAN

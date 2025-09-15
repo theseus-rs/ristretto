@@ -1,0 +1,88 @@
+InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[19]
+  detailMessage=String(\"Invalid value type: Expected a reference value\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(19)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+ })))):
+stdout: === InputStreamReader and OutputStreamWriter Tests ===
+--- Basic StreamReader/Writer Tests ---
+Written content with OutputStreamWriter
+OutputStreamWriter encoding: UTF8
+File size: 86 bytes
+InputStreamReader encoding: UTF8
+Reader ready: true
+First 15 characters: Hello, World!\
+T
+Remaining content: 'his is a test of InputStreamReader and OutputStreamWriter.
+Line 3 here.'
+--- Encoding Support Tests ---
+Written with UTF-8, actual encoding: UTF8
+File size with UTF-8: 38 bytes
+Read with UTF-8, actual encoding: UTF8
+Content: 'Test encoding: café, résumé, naïve'
+Content matches: true
+
+Written with UTF-16, actual encoding: UTF-16
+File size with UTF-16: 70 bytes
+Read with UTF-16, actual encoding: UTF-16
+Content: 'Test encoding: café, résumé, naïve'
+Content matches: true
+
+Written with ISO-8859-1, actual encoding: ISO8859_1
+File size with ISO-8859-1: 34 bytes
+Read with ISO-8859-1, actual encoding: ISO8859_1
+Content: 'Test encoding: café, résumé, naïve'
+Content matches: true
+
+Written with US-ASCII, actual encoding: ASCII
+File size with US-ASCII: 34 bytes
+Read with US-ASCII, actual encoding: ASCII
+Content: 'Test encoding: caf?, r?sum?, na?ve'
+Content matches: false
+
+--- Unicode Handling Tests ---
+Written Unicode text with UTF-8
+Unicode file size: 281 bytes
+Unicode content read back:
+  Unicode test:
+  Latin: café, résumé, piñata
+  Greek: α, β, γ, δ, ε, ζ
+  Cyrillic: А, Б, В, Г, Д
+  Math: ∑, ∏, ∆, ∞, ≠, ≤, ≥
+  Currency: €, ¥, £, $
+  Emoji: 😀, 🌟, 🚀, 🎉
+  Chinese: 你好世界
+  Japanese: こんにちは
+  Arabic: مرحبا بالعالم
+Unicode content matches: true
+UTF-16 file size: 422 bytes
+UTF-16 content matches: true
+--- Buffered Operations Tests ---
+Written buffered content with UTF-8
+Line 1: Line 0: Unicode test café résumé
+Line 2: Line 1: Unicode test café résumé
+Line 3: Line 2: Unicode test café résumé
+Line 98: Line 97: Unicode test café résumé
+Line 99: Line 98: Unicode test café résumé
+Line 100: Line 99: Unicode test café résumé
+Total lines read: 100
+Buffer size 512: read 3390 chars in 1552ms
+Buffer size 1024: read 3390 chars in 1538ms
+Buffer size 4096: read 3390 chars in 1453ms
+--- Encoding Conversion Tests ---
+Converted UTF-8 to ISO-8859-1
+Original: 'Encoding conversion test: café, résumé, naïve, piñata'
+Converted: 'Encoding conversion test: café, résumé, naïve, piñata'
+Conversion successful: true
+UTF-8 file size: 58
+ISO-8859-1 file size: 53
+--- Charset Handling Tests ---
+Written with Charset object
+Writer encoding: UTF8
+Reader encoding: UTF8
+Read text: 'Charset test: 日本語, 中文, العربية'
+Text matches: true
+Default charset: UTF8
+Available charsets sample:

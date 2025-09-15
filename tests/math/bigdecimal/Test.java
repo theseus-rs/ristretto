@@ -3,7 +3,7 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
-/** Comprehensive test for BigDecimal operations. */
+/** Tests for BigDecimal operations. */
 public class Test {
 
     public static void main(String[] args) {
