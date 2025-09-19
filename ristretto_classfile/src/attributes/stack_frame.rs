@@ -423,6 +423,7 @@ impl StackFrame {
     /// - If the number of locals or stack items exceeds `u16::MAX`.
     /// - If a stack frame fails to serialize.
     /// - If writing to the byte stream fails.
+    #[expect(clippy::match_same_arms)]
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         match self {
             StackFrame::SameFrame { frame_type } => {

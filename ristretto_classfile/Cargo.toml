@@ -24,7 +24,7 @@ indoc = { workspace = true }
 reqwest = { workspace = true, features = ["rustls-tls-native-roots"] }
 tar = { workspace = true }
 tokio = { workspace = true }
-zip = { workspace = true }
+zip = { workspace = true, features = ["deflate"] }
 
 [[bench]]
 harness = false

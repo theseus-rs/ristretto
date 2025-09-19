@@ -1370,6 +1370,7 @@ impl Instruction {
     ///
     /// If an instruction cannot be serialized to bytes.
     #[expect(clippy::too_many_lines)]
+    #[expect(clippy::match_same_arms)]
     pub fn to_bytes(&self, bytes: &mut Cursor<Vec<u8>>) -> Result<()> {
         bytes.write_u8(self.code())?;
 

@@ -1415,7 +1415,7 @@ pub(crate) async fn register_natives(
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     if vm.java_major_version() >= 17 {
-        // Set the endianness to big endian
+        // Set the endian to big endian
         let class = thread.class("jdk.internal.misc.UnsafeConstants").await?;
         class.set_static_value("BIG_ENDIAN", Value::from(true))?;
     }
