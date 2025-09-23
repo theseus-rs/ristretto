@@ -12,6 +12,7 @@ use ristretto_classfile::{BaseType, Constant, ConstantPool, FieldType};
 /// effect of executing the instruction on the stack. It updates the stack state to reflect the
 /// changes that would occur when the instruction is executed.
 #[expect(clippy::too_many_lines)]
+#[expect(clippy::match_same_arms)]
 pub(crate) fn simulate(
     stack: &mut TypeStack,
     constant_pool: &ConstantPool,

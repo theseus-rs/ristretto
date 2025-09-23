@@ -301,6 +301,7 @@ impl Constant {
     /// Returns an error if:
     /// - A UTF-8 string is more than 65535 bytes long
     /// - Writing to the buffer fails
+    #[expect(clippy::match_same_arms)]
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
         bytes.write_u8(self.tag())?;
 

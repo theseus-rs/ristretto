@@ -1,0 +1,30 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "JVM JImage Reader/Writer"
+edition.workspace = true
+keywords = ["java", "jimage"]
+license.workspace = true
+name = "ristretto_jimage"
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+byteorder = { workspace = true }
+memchr = { workspace = true }
+thiserror = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+memmap2 = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.26.0" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.26.0" }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+[[bench]]
+harness = false
+name = "jimage"
