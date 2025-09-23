@@ -41,7 +41,7 @@ byteorder = "1.5.0"
 byte-unit = "5.1.6"
 clap = "4.5.48"
 console = "0.16.1"
-cranelift = "0.123.2"
+cranelift = "0.124.1"
 criterion = { version = "0.7.0", default-features = false }
 dashmap = "6.1.0"
 dirs = "6.0.0"
