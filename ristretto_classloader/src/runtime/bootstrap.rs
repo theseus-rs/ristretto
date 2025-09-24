@@ -11,7 +11,7 @@ use tracing::{debug, warn};
 
 /// The default Java version used by the class loader. This is the version that will be used if no
 /// version is specified when creating a class loader.
-pub const DEFAULT_JAVA_VERSION: &str = "21.0.8.9.1";
+pub const DEFAULT_JAVA_VERSION: &str = "25.0.0.36.2";
 
 /// The access flags for primitive classes in the Java runtime. These classes are public, final, and
 /// abstract, meaning they cannot be instantiated and do not have any methods or fields.
