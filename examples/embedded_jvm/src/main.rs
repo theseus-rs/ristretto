@@ -22,7 +22,7 @@ async fn common_main() -> Result<()> {
     let cargo_manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let class_path = ClassPath::from(&[cargo_manifest_dir]);
     let configuration = ConfigurationBuilder::new()
-        .class_path(class_path.clone())
+        .class_path(class_path)
         .main_class("HelloWorld")
         .build()?;
     let vm = VM::new(configuration).await?;
