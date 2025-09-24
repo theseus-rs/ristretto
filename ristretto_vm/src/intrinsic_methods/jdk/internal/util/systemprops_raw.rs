@@ -32,7 +32,9 @@ pub(crate) async fn platform_properties(
     push_property(system_properties, &mut properties, "user.language")?;
     push_property(system_properties, &mut properties, "user.script")?;
     push_property(system_properties, &mut properties, "user.variant")?;
-    push_property(system_properties, &mut properties, "native.encoding")?;
+    if java_version < JAVA_25.java() {
+        push_property(system_properties, &mut properties, "native.encoding")?;
+    }
     push_property(system_properties, &mut properties, "file.separator")?;
     push_property(system_properties, &mut properties, "format.country")?;
     push_property(system_properties, &mut properties, "format.language")?;
@@ -48,6 +50,9 @@ pub(crate) async fn platform_properties(
     push_property(system_properties, &mut properties, "https.proxyPort")?;
     push_property(system_properties, &mut properties, "java.io.tmpdir")?;
     push_property(system_properties, &mut properties, "line.separator")?;
+    if java_version >= JAVA_25.java() {
+        push_property(system_properties, &mut properties, "native.encoding")?;
+    }
     push_property(system_properties, &mut properties, "os.arch")?;
     push_property(system_properties, &mut properties, "os.name")?;
     push_property(system_properties, &mut properties, "os.version")?;
