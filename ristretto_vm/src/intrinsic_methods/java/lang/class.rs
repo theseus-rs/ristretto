@@ -1149,7 +1149,7 @@ mod tests {
         let parameters = Parameters::new(vec![class_object]);
         let result = get_class_file_version_0(thread, parameters).await?;
         let version = result.expect("version").as_i32()?;
-        assert_eq!(version, i32::from(Version::Java21 { minor: 0 }.major()));
+        assert_eq!(version, i32::from(Version::Java25 { minor: 0 }.major()));
         Ok(())
     }
 
@@ -1304,9 +1304,7 @@ mod tests {
                 "public static final int java.lang.Integer.MIN_VALUE",
                 "public static final int java.lang.Integer.SIZE",
                 "public static final java.lang.Class java.lang.Integer.TYPE",
-                "static final byte[] java.lang.Integer.DigitOnes",
-                "static final byte[] java.lang.Integer.DigitTens",
-                "static final char[] java.lang.Integer.digits",
+                "static final byte[] java.lang.Integer.digits",
             ]
         );
         Ok(())

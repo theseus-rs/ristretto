@@ -45,7 +45,7 @@ pub(crate) async fn invokevirtual(
         resolve_method(&object_class, method_name, method_descriptor)?
     };
 
-    let result = thread.execute(&class, &method, &parameters).await?;
+    let result = Box::pin(thread.execute(&class, &method, &parameters)).await?;
     if let Some(result) = result {
         stack.push(result)?;
     }

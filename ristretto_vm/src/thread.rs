@@ -409,27 +409,14 @@ impl Thread {
         };
 
         if event_enabled!(Level::DEBUG) {
-            let execution_type = if rust_method.is_some() {
-                "rust"
-            } else if jit_method.is_some() {
-                "jit"
-            } else {
-                "int"
-            };
-            let access_flags = method.access_flags();
-            let system = System::new_with_specifics(
-                RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
+            self.debug_execute(
+                class_name,
+                method_name,
+                method_descriptor,
+                method,
+                rust_method.is_some(),
+                jit_method.is_some(),
             );
-
-            let pid = std::process::id() as usize;
-            let memory = if let Some(process) = system.process(Pid::from(pid)) {
-                let memory = process.memory();
-                let memory = Byte::from_u64(memory).get_appropriate_unit(UnitType::Decimal);
-                format!(" ({execution_type}; {memory:#.3})")
-            } else {
-                format!("({execution_type})")
-            };
-            debug!("execute{memory}: {class_name}.{method_name}{method_descriptor} {access_flags}");
         }
 
         let (result, frame_added) = if let Some(rust_method) = rust_method {
@@ -489,6 +476,39 @@ impl Thread {
         result
     }
 
+    /// Debug the execution of a method.
+    fn debug_execute(
+        &self,
+        class_name: &str,
+        method_name: &str,
+        method_descriptor: &str,
+        method: &Arc<Method>,
+        is_rust: bool,
+        is_jit: bool,
+    ) {
+        let execution_type = if is_rust {
+            "rust"
+        } else if is_jit {
+            "jit"
+        } else {
+            "int"
+        };
+        let access_flags = method.access_flags();
+        let system = System::new_with_specifics(
+            RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
+        );
+
+        let pid = std::process::id() as usize;
+        let memory = if let Some(process) = system.process(Pid::from(pid)) {
+            let memory = process.memory();
+            let memory = Byte::from_u64(memory).get_appropriate_unit(UnitType::Decimal);
+            format!(" ({execution_type}; {memory:#.3})")
+        } else {
+            format!("({execution_type})")
+        };
+        debug!("execute{memory}: {class_name}.{method_name}{method_descriptor} {access_flags}");
+    }
+
     /// Add a new frame to the thread and invoke the method. To invoke a method on an object
     /// reference, the object reference must be the first parameter in the parameters vector.
     ///
@@ -501,7 +521,7 @@ impl Thread {
         method: &Arc<Method>,
         parameters: &[impl RustValue],
     ) -> Result<Value> {
-        let result = self.execute(class, method, parameters).await?;
+        let result = Box::pin(self.execute(class, method, parameters)).await?;
         match result {
             Some(value) => Ok(value),
             None => Err(InternalError("No return value".to_string())),
@@ -540,7 +560,7 @@ impl Thread {
             constructor_parameters.push(value);
         }
         let parameters = process_values(self, &constructor_parameters).await?;
-        self.execute(&class, &constructor, &parameters).await?;
+        Box::pin(self.execute(&class, &constructor, &parameters)).await?;
         Ok(object)
     }
 

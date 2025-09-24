@@ -91,9 +91,7 @@ pub(crate) async fn invokeinterface(
     }
 
     // Execute the method
-    let result = thread
-        .execute(&resolved_class, &resolved_method, &parameters)
-        .await?;
+    let result = Box::pin(thread.execute(&resolved_class, &resolved_method, &parameters)).await?;
     if let Some(value) = result {
         stack.push(value)?;
     }

@@ -35,9 +35,7 @@ pub(crate) async fn invokespecial(
     let (resolved_class, resolved_method) = resolve_method(&class, method_name, method_descriptor)?;
 
     let parameters = stack.drain_last(resolved_method.parameters().len() + 1);
-    let result = thread
-        .execute(&resolved_class, &resolved_method, &parameters)
-        .await?;
+    let result = Box::pin(thread.execute(&resolved_class, &resolved_method, &parameters)).await?;
     if let Some(result) = result {
         stack.push(result)?;
     }
