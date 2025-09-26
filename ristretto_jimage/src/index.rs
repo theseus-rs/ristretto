@@ -210,7 +210,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_resource_offset_invalid() -> Result<()> {
         let image = get_test_image().await?;
-        let result = Index::get_resource_offset::<byteorder::LittleEndian>(&image, "foo/42");
+        let result =
+            Index::get_resource_offset::<byteorder::LittleEndian>(&image, "not/a/valid/path.42");
         assert!(matches!(result, Err(InvalidIndex(_))));
         Ok(())
     }
