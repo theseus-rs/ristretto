@@ -1,5 +1,5 @@
 #[cfg(feature = "startup-trace")]
-use std::sync::{LazyLock, Mutex};
+use std::sync::{LazyLock, Mutex, OnceLock};
 #[cfg(feature = "startup-trace")]
 use std::time::{Duration, Instant};
 
@@ -13,7 +13,7 @@ pub static ENABLED: LazyLock<bool> = LazyLock::new(|| {
 
 // First-call timestamp (set exactly on the first trace call)
 #[cfg(feature = "startup-trace")]
-static START: LazyLock<Mutex<Option<Instant>>> = LazyLock::new(|| Mutex::new(None));
+static START: OnceLock<Instant> = OnceLock::new();
 
 // Previous-call timestamp
 #[cfg(feature = "startup-trace")]
@@ -28,40 +28,32 @@ pub fn startup_trace_log(message: &str) {
     }
 
     let now = Instant::now();
-    let mut start_guard = START.lock().expect("failed to lock START");
     let mut last_guard = LAST.lock().expect("failed to lock LAST");
+    let start = START.get_or_init(|| {
+        *last_guard = Some(now);
+        now
+    });
 
-    if start_guard.is_none() {
-        *start_guard = Some(now);
+    if let Some(last) = *last_guard {
+        let delta_elapsed = now.checked_duration_since(last).unwrap_or(Duration::ZERO);
+        let start_elapsed = now.checked_duration_since(*start).unwrap_or(Duration::ZERO);
+        *last_guard = Some(now);
+        println!("[startup]{message}: +{delta_elapsed:.3?} (Σ {start_elapsed:.3?})");
+    } else {
         *last_guard = Some(now);
         println!(
             "[startup]{message}: +{:.3?} (Σ {:.3?})",
             Duration::ZERO,
             Duration::ZERO
         );
-        return;
     }
-
-    let start = start_guard.expect("START should be initialized");
-    let last = last_guard.expect("LAST should be initialized");
-    let delta_elapsed = now.checked_duration_since(last).unwrap_or(Duration::ZERO);
-    let start_elapsed = now.checked_duration_since(start).unwrap_or(Duration::ZERO);
-
-    *last_guard = Some(now);
-
-    println!("[startup]{message}: +{delta_elapsed:.3?} (Σ {start_elapsed:.3?})");
 }
-
-/// No-op version when the feature is disabled; zero code generation.
-#[doc(hidden)]
-#[cfg(not(feature = "startup-trace"))]
-#[inline(always)]
-pub fn startup_trace_log(_message: &str) {}
 
 /// Log a startup phase message and the time elapsed since the last `startup_trace!()` call.
 #[macro_export]
 macro_rules! startup_trace {
     ($msg:expr) => {{
+        #[cfg(feature = "startup-trace")]
         $crate::startup_trace::startup_trace_log($msg);
     }};
 }

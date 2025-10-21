@@ -1,5 +1,8 @@
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
+use std::io::Cursor;
 use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 async fn test_helloworld(java_verison: &str) -> Result<()> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -8,15 +11,23 @@ async fn test_helloworld(java_verison: &str) -> Result<()> {
         .join("classes")
         .join("classes.jar");
     let class_path = ClassPath::from(&[classes_jar_path]);
+    let stdout_buffer = Arc::new(Mutex::new(Cursor::new(Vec::<u8>::new())));
+
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())
         .main_class("HelloWorld")
         .java_version(java_verison)
+        .stdout(stdout_buffer.clone())
         .build()?;
     let vm = VM::new(configuration).await?;
-    let parameters: Vec<&str> = Vec::new();
+    let parameters = vec!["world!"];
+
     let result = vm.invoke_main(&parameters).await?;
     assert!(result.is_none());
+    let output = stdout_buffer.lock().await;
+    let output_bytes = output.get_ref();
+    let output_str = String::from_utf8(output_bytes.clone()).expect("Invalid UTF-8 output");
+    assert_eq!(output_str.trim(), "Hello world!");
     Ok(())
 }
 
