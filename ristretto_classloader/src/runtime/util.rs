@@ -5,7 +5,7 @@ use reqwest::header;
 use std::env;
 use std::env::consts;
 use std::sync::LazyLock;
-use tracing::debug;
+use tracing::{debug, warn};
 
 const DEFAULT_MAJOR_VERSION: u64 = 21;
 const GITHUB_API_VERSION_HEADER: &str = "X-GitHub-Api-Version";
@@ -59,8 +59,14 @@ pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String
     let release_versions = get_release_versions(major_version.as_str()).await?;
     for release_version in release_versions {
         if release_version.starts_with(version) {
-            let (file_name, archive) = download_archive(release_version.as_str()).await?;
-            return Ok((release_version, file_name, archive));
+            match download_archive(release_version.as_str()).await {
+                Ok((file_name, archive)) => {
+                    return Ok((release_version, file_name, archive));
+                }
+                Err(error) => {
+                    warn!("Unable to download archive: {error}");
+                }
+            }
         }
     }
 

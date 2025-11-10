@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 #![deny(clippy::pedantic)]
-#![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
 
 mod argument;

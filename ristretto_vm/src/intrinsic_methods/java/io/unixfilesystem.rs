@@ -445,7 +445,7 @@ pub(crate) async fn get_space_0(
         let disk = disks
             .iter()
             .find(|d| path.starts_with(d.mount_point()))
-            .or_else(|| disks.iter().find(|d| d.mount_point() == PathBuf::from("/")));
+            .or_else(|| disks.iter().find(|d| d.mount_point() == Path::new("/")));
 
         result = if let Some(disk) = disk {
             match space_type {

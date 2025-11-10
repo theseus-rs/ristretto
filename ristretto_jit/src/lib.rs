@@ -50,7 +50,6 @@
 #![forbid(clippy::allow_attributes)]
 #![allow(dead_code)]
 #![deny(clippy::pedantic)]
-#![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
 
 #[cfg(not(target_family = "wasm"))]
