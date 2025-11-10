@@ -127,7 +127,7 @@ impl Image {
         if resource_name != name {
             return Err(Error::ResourceNameMismatch {
                 expected: name.to_string(),
-                actual: resource_name.to_string(),
+                actual: resource_name.clone(),
             });
         }
 

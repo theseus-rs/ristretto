@@ -688,7 +688,7 @@ impl Class {
             });
         };
 
-        Ok(key.to_string())
+        Ok(key.clone())
     }
 
     /// Get the class initializer method.
