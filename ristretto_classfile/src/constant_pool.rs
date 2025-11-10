@@ -1281,7 +1281,7 @@ impl ConstantPool {
     /// ```
     pub fn try_get_formatted_string(&self, index: u16) -> Result<String> {
         let value = match self.try_get(index)? {
-            Constant::Utf8(value) => value.to_string(),
+            Constant::Utf8(value) => value.clone(),
             Constant::Integer(integer) => format!("{integer}"),
             Constant::Float(float) => format!("{float}"),
             Constant::Long(long) => format!("{long}"),

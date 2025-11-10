@@ -150,7 +150,7 @@ impl FieldType {
     pub fn class_name(&self) -> String {
         match self {
             FieldType::Base(base_type) => base_type.class_name().to_string(),
-            FieldType::Object(class_name) => class_name.to_string(),
+            FieldType::Object(class_name) => class_name.clone(),
             FieldType::Array(component_type) => match &**component_type {
                 FieldType::Base(base_type) => format!("[{}", base_type.code()),
                 FieldType::Object(class_name) => format!("[L{class_name};"),

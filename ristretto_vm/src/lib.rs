@@ -58,7 +58,6 @@
 //    |         ^^^^^^^^^^^^^^^^
 //    = note: `#[deny(clippy::large_stack_arrays)]` implied by `#[deny(clippy::pedantic)]`
 // #![deny(clippy::pedantic)]
-#![deny(clippy::unwrap_in_result)]
 #![deny(clippy::unwrap_used)]
 mod assignable;
 mod call_site_cache;
