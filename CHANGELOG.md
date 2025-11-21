@@ -7,6 +7,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_jimage` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.26.0...ristretto_jimage-v0.26.1) - 2025-11-21
+
+### Added
+- add jimage support
+
+### Other
+- address clippy errors
+
+## `ristretto_cli` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/v0.26.0...v0.26.1) - 2025-11-21
+
+### Added
+- add jimage support
+- implement jdk/internal/misc/CDS.logLambdaFormInvoker(Ljava/lang/String;)V
+
+### Fixed
+- correct logic for determining the latest corretto release to account for missing OS packages
+- correct Java 25 system property definitions
+
+### Other
+- address clippy errors
+- update java version in readme
+- update to java 25.0.0.36.1
+- update gc docs
+- update gc docs
+- simplify jit branch type casting
+- Merge branch 'main' into optimize-jit-tableswitch
+- optimize jit tableswitch instruction
+- update jit docs
+- update Cargo.toml dependencies
+- remove unnecessary mutex and code generation from startup_trace macro
+
+## `ristretto_vm` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.26.0...ristretto_vm-v0.26.1) - 2025-11-21
+
+### Added
+- add jimage support
+- implement jdk/internal/misc/CDS.logLambdaFormInvoker(Ljava/lang/String;)V
+
+### Fixed
+- correct Java 25 system property definitions
+
+### Other
+- address clippy errors
+- remove unnecessary mutex and code generation from startup_trace macro
+- update to java 25.0.0.36.1
+
+## `ristretto_macros` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.26.0...ristretto_macros-v0.26.1) - 2025-11-21
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_jit` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.26.0...ristretto_jit-v0.26.1) - 2025-11-21
+
+### Added
+- add jimage support
+
+### Other
+- address clippy errors
+- simplify jit branch type casting
+- Merge branch 'main' into optimize-jit-tableswitch
+- optimize jit tableswitch instruction
+- update jit docs
+
+## `ristretto_classloader` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.26.0...ristretto_classloader-v0.26.1) - 2025-11-21
+
+### Added
+- add jimage support
+
+### Fixed
+- correct logic for determining the latest corretto release to account for missing OS packages
+
+### Other
+- address clippy errors
+- update to java 25.0.0.36.1
+
+## `ristretto_gc` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.26.0...ristretto_gc-v0.26.1) - 2025-11-21
+
+### Other
+- address clippy errors
+- update gc docs
+- update gc docs
+
+## `ristretto_classfile` - [0.26.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.26.0...ristretto_classfile-v0.26.1) - 2025-11-21
+
+### Added
+- add jimage support
+
+### Other
+- update java version in readme
+- address clippy errors
+- update to java 25.0.0.36.1
+
 ## `ristretto_cli` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/v0.25.0...v0.26.0) - 2025-08-21
 
 ### Added
